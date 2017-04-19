@@ -1,0 +1,14 @@
+package ch.sysout.gameexplorer.ui;
+
+public interface GameViewConstants {
+	int BLANK_VIEW = 0;
+	int LIST_VIEW = 1;
+	int COVER_VIEW = 2;
+	int TABLE_VIEW = 3;
+	String SHOW_PREVIEW_PANE = "SHOW_PREVIEW_PANE";
+	String HIDE_PREVIEW_PANE = "HIDE_PREVIEW_PANE";
+	String SHOW_DETAILS_PANE = "SHOW_DETAILS_PANE";
+	String HIDE_DETAILS_PANE = "HIDE_ETAILS_PANE";
+	String UNPIN_DETAILS_PANE = "UNPIN_DETAILS_PANE";
+	String PIN_DETAILS_PANE = "PIN_DETAILS_PANE";
+}
