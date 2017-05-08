@@ -98,7 +98,7 @@
 				<configuration>
 					<archive>
 						<manifest>
-							<mainClass>ch.sysout.gameexplorer.Main</mainClass>
+							<mainClass>ch.sysout.emubro.Main</mainClass>
 						</manifest>
 					</archive>
 				</configuration>
@@ -109,7 +109,7 @@
 				<configuration>
 					<archive>
 						<manifest>
-							<mainClass>ch.sysout.gameexplorer.Main</mainClass>
+							<mainClass>ch.sysout.emubro.Main</mainClass>
 						</manifest>
 					</archive>
 					<descriptors>

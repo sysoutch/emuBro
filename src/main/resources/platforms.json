@@ -1,5 +1,40 @@
 [
    {
+      "name":"Amiga",
+      "iconFilename":"amiga.png",
+      "defaultGameCover":"snes.jpg",
+      "gameSearchModes":[
+         "FILE_FILE_NAME_MATCH",
+         "ARCHIVE_FILE_NAME_MATCH"
+      ],
+      "searchFor":"",
+      "fileStructure":[
+		
+		],
+	  "supportedArchiveTypes":[
+	  
+      ],
+      "supportedImageTypes":[
+
+      ],
+      "emulators":[
+         {
+            "name":"WinFellow",
+            "path":"",
+            "iconFilename":"winfellow.png",
+            "configFilePath":"",
+            "website":"http://petschau.github.io/WinFellow/",
+            "startParameters":"%emupath% %gamepath%",
+            "supportedFileTypes":[
+               
+            ],
+            "searchString":"^(winfellow)\\.exe$",
+			"autoSearchEnabled":true
+         }
+      ],
+	  "autoSearchEnabled":true
+   },
+   {
       "name":"Android",
       "iconFilename":"android.png",
       "defaultGameCover":"android.jpg",
@@ -28,6 +63,646 @@
                ".apk"
             ],
             "searchString":"^(andy)\\.exe$",
+			"autoSearchEnabled":true
+         }
+      ],
+	  "autoSearchEnabled":true
+   },
+   {
+      "name":"Atari 2600",
+      "iconFilename":"atari2600.png",
+      "defaultGameCover":"atari.jpg",
+      "gameSearchModes":[
+         "FILE_FILE_NAME_MATCH",
+         "ARCHIVE_FILE_NAME_MATCH"
+      ],
+      "searchFor":"",
+      "fileStructure":[
+		
+		],
+	  "supportedArchiveTypes":[
+	  
+      ],
+      "supportedImageTypes":[
+
+      ],
+      "emulators":[
+         {
+            "name":"Stella",
+            "path":"",
+            "iconFilename":"stella.png",
+            "configFilePath":"",
+            "website":"https://stella-emu.github.io/downloads.html",
+            "startParameters":"%emupath% %gamepath%",
+            "supportedFileTypes":[
+               
+            ],
+            "searchString":"^(stella)\\.exe$",
+			"autoSearchEnabled":true
+         },
+		 {
+            "name":"Pcaewin",
+            "path":"",
+            "iconFilename":"pcaewin.png",
+            "configFilePath":"",
+            "website":"http://pcae.vg-network.com/",
+            "startParameters":"%emupath% %gamepath%",
+            "supportedFileTypes":[
+               
+            ],
+            "searchString":"^(pcaewin)\\.exe$",
+			"autoSearchEnabled":true
+         },
+		 {
+            "name":"z26",
+            "path":"",
+            "iconFilename":"z26.png",
+            "configFilePath":"",
+            "website":"http://www.whimsey.com/z26/",
+            "startParameters":"%emupath% %gamepath%",
+            "supportedFileTypes":[
+               
+            ],
+            "searchString":"^(z26)\\.exe$",
+			"autoSearchEnabled":true
+         }
+      ],
+	  "autoSearchEnabled":true
+   },
+   {
+      "name":"Atari 5200",
+      "iconFilename":"atari5200.png",
+      "defaultGameCover":"atari.jpg",
+      "gameSearchModes":[
+         "FILE_FILE_NAME_MATCH",
+         "ARCHIVE_FILE_NAME_MATCH"
+      ],
+      "searchFor":"",
+      "fileStructure":[
+		
+		],
+	  "supportedArchiveTypes":[
+	  
+      ],
+      "supportedImageTypes":[
+
+      ],
+      "emulators":[
+         {
+            "name":"Atari++",
+            "path":"",
+            "iconFilename":"atariplusplus.png",
+            "configFilePath":"",
+            "website":"http://www.xl-project.com/downloads.html",
+            "startParameters":"%emupath% %gamepath%",
+            "supportedFileTypes":[
+               
+            ],
+            "searchString":"^(atari++)\\.exe$",
+			"autoSearchEnabled":true
+         },
+		 {
+            "name":"Atari800",
+            "path":"",
+            "iconFilename":"atari800.png",
+            "configFilePath":"",
+            "website":"http://atari800.sourceforge.net/download.html",
+            "startParameters":"%emupath% %gamepath%",
+            "supportedFileTypes":[
+               
+            ],
+            "searchString":"^(atari800)\\.exe$",
+			"autoSearchEnabled":true
+         },
+		 {
+            "name":"kat5200",
+            "path":"",
+            "iconFilename":"kat5200.png",
+            "configFilePath":"",
+            "website":"http://kat5200.jillybunch.com/downloads.html",
+            "startParameters":"%emupath% %gamepath%",
+            "supportedFileTypes":[
+               
+            ],
+            "searchString":"^(kat5200)\\.exe$",
+			"autoSearchEnabled":true
+         },
+		 {
+            "name":"MESS",
+            "path":"",
+            "iconFilename":"atariplusplus.png",
+            "configFilePath":"",
+            "website":"http://www.mamedev.org/release.html",
+            "startParameters":"%emupath% %gamepath%",
+            "supportedFileTypes":[
+               
+            ],
+            "searchString":"^(mess)\\.exe$",
+			"autoSearchEnabled":true
+         },
+		 {
+            "name":"VSS",
+            "path":"",
+            "iconFilename":"vss.png",
+            "configFilePath":"",
+            "website":"http://atarihq.com/danb/a5200.shtml",
+            "startParameters":"%emupath% %gamepath%",
+            "supportedFileTypes":[
+               
+            ],
+            "searchString":"^(vss)\\.exe$",
+			"autoSearchEnabled":true
+         }
+      ],
+	  "autoSearchEnabled":true
+   },
+   {
+      "name":"Atari 7800",
+      "iconFilename":"atari7800.png",
+      "defaultGameCover":"atari.jpg",
+      "gameSearchModes":[
+         "FILE_FILE_NAME_MATCH",
+         "ARCHIVE_FILE_NAME_MATCH"
+      ],
+      "searchFor":"",
+      "fileStructure":[
+		
+		],
+	  "supportedArchiveTypes":[
+	  
+      ],
+      "supportedImageTypes":[
+
+      ],
+      "emulators":[
+		 {
+            "name":"MESS",
+            "path":"",
+            "iconFilename":"atariplusplus.png",
+            "configFilePath":"",
+            "website":"http://www.mamedev.org/release.html",
+            "startParameters":"%emupath% %gamepath%",
+            "supportedFileTypes":[
+               
+            ],
+            "searchString":"^(mess)\\.exe$",
+			"autoSearchEnabled":true
+         }
+      ],
+	  "autoSearchEnabled":true
+   },
+   {
+      "name":"Atari ST",
+      "iconFilename":"atari.png",
+      "defaultGameCover":"snes.jpg",
+      "gameSearchModes":[
+         "FILE_FILE_NAME_MATCH",
+         "ARCHIVE_FILE_NAME_MATCH"
+      ],
+      "searchFor":"",
+      "fileStructure":[
+		
+		],
+	  "supportedArchiveTypes":[
+	  
+      ],
+      "supportedImageTypes":[
+
+      ],
+      "emulators":[
+         {
+            "name":"Steem",
+            "path":"",
+            "iconFilename":"steem.png",
+            "configFilePath":"steem.ini",
+            "website":"http://steem.atari.st",
+            "startParameters":"%emupath% %gamepath%",
+            "supportedFileTypes":[
+               
+            ],
+            "searchString":"^(steem.*)\\.exe$",
+			"autoSearchEnabled":true
+         }
+      ],
+	  "autoSearchEnabled":true
+   },
+  {
+      "name":"GameBoy",
+      "iconFilename":"gb.png",
+      "defaultGameCover":"gb.jpg",
+      "gameSearchModes":[
+         "FILE_FILE_NAME_MATCH",
+         "ARCHIVE_FILE_NAME_MATCH"
+      ],
+      "searchFor":"^(.+)\\.gb$",
+      "fileStructure":[
+		
+		],
+	  "supportedArchiveTypes":[
+         ".zip"
+      ],
+      "supportedImageTypes":[
+         ""
+      ],
+      "emulators":[
+         {
+            "name":"VisualBoyAdvance",
+            "path":"",
+            "iconFilename":"visualboyadvance.png",
+            "configFilePath":"vba.ini",
+            "website":"http://www.emulator-zone.com/doc.php/gba/vboyadvance.HTML",
+            "startParameters":"%emupath% %gamepath%",
+            "supportedFileTypes":[
+               ".zip"
+            ],
+            "searchString":"^(visualboyadvance)\\.exe$",
+			"autoSearchEnabled":true
+         }
+      ],
+	  "autoSearchEnabled":true
+   }, 
+	{
+      "name":"GameBoy Advance",
+      "iconFilename":"gba.png",
+      "defaultGameCover":"gba.jpg",
+      "gameSearchModes":[
+         "FILE_FILE_NAME_MATCH",
+         "ARCHIVE_FILE_NAME_MATCH"
+      ],
+      "searchFor":"^(.+)\\.gba$",
+      "fileStructure":[
+		
+		],
+	  "supportedArchiveTypes":[
+         ".zip"
+      ],
+      "supportedImageTypes":[
+         ""
+      ],
+      "emulators":[
+         {
+            "name":"VisualBoyAdvance",
+            "path":"",
+            "iconFilename":"visualboyadvance.png",
+            "configFilePath":"vba.ini",
+            "website":"http://www.emulator-zone.com/doc.php/gba/vboyadvance.HTML",
+            "startParameters":"%emupath% %gamepath%",
+            "supportedFileTypes":[
+               ".zip"
+            ],
+            "searchString":"^(visualboyadvance)\\.exe$",
+			"autoSearchEnabled":true
+         }
+      ],
+	  "autoSearchEnabled":true
+   },
+   {
+      "name":"Nintendo 64",
+      "iconFilename":"n64.png",
+      "defaultGameCover":"n64.jpg",
+      "gameSearchModes":[
+         "FILE_FILE_NAME_MATCH",
+         "ARCHIVE_FILE_NAME_MATCH",
+         "IMAGE_FILE_NAME_MATCH"
+      ],
+      "searchFor":"^(.*)\\.z64$|^(.*)\\.v64$|^(.*)\\.n64$",
+      "fileStructure":[
+		
+		],
+	  "supportedArchiveTypes":[
+         ".zip"
+      ],
+      "supportedImageTypes":[
+         ".bin"
+      ],
+      "emulators":[
+         {
+            "name":"Project64",
+            "path":"",
+            "iconFilename":"project64.png",
+            "configFilePath":"/config/project64.cfg",
+            "website":"http://www.1emulation.com/forums/files/file/1-project-64/",
+            "startParameters":"%emupath% %gamepath%",
+            "supportedFileTypes":[
+               ".bin",
+               ".zip",
+               ".z64",
+               ".v64",
+               ".n64",
+               ".rom",
+               ".usa",
+               ".jap",
+               ".pal"
+            ],
+            "searchString":"^(project64)\\.exe$",
+			"autoSearchEnabled":true
+         }
+      ],
+	  "autoSearchEnabled":true
+   },
+   {
+      "name":"Nintendo Entertainment System",
+      "iconFilename":"nes.png",
+      "defaultGameCover":"snes.jpg",
+      "gameSearchModes":[
+         "FILE_FILE_NAME_MATCH",
+         "ARCHIVE_FILE_NAME_MATCH"
+      ],
+      "searchFor":"^(.+)\\.nes$|^(.+)\\.nsf$|^(.+)\\.fds$|^(.+)\\.unf$",
+      "fileStructure":[
+		
+		],
+	  "supportedArchiveTypes":[
+         ".zip"
+      ],
+      "supportedImageTypes":[
+         ""
+      ],
+      "emulators":[
+         {
+            "name":"FCEUX",
+            "path":"",
+            "iconFilename":"fceux.png",
+            "configFilePath":"fceux.cfg",
+            "website":"http://www.fceux.com/web/download.html",
+            "startParameters":"%emupath% %gamepath%",
+            "supportedFileTypes":[
+               ".zip"
+            ],
+            "searchString":"^(fceux)\\.exe$",
+			"autoSearchEnabled":true
+         }
+      ],
+	  "autoSearchEnabled":true
+   },
+  {
+      "name":"Nintendo DS",
+      "iconFilename":"nds.png",
+      "defaultGameCover":"snes.jpg",
+      "gameSearchModes":[
+         "FILE_FILE_NAME_MATCH",
+         "ARCHIVE_FILE_NAME_MATCH"
+      ],
+      "searchFor":"^(.+)\\.nds$|^(.+)\\.srl$",
+      "fileStructure":[
+		
+		],
+	  "supportedArchiveTypes":[
+         ".zip",
+         ".rar",
+         ".7z",
+         ".gz"
+      ],
+      "supportedImageTypes":[
+
+      ],
+      "emulators":[
+         {
+            "name":"DeSmuME",
+            "path":"",
+            "iconFilename":"desmume.png",
+            "configFilePath":"",
+            "website":"http://desmume.org/download/",
+            "startParameters":"%emupath% %gamepath%",
+            "supportedFileTypes":[
+               ".nds",
+               ".ds",
+               ".srl",
+               ".zip",
+               ".7z",
+               ".rar",
+               ".gz"
+            ],
+            "searchString":"^(desmume.*)\\.exe$",
+			"autoSearchEnabled":true
+         }
+      ],
+	  "autoSearchEnabled":true
+   },
+   {
+      "name":"Nintendo 3DS",
+      "iconFilename":"3ds.png",
+      "defaultGameCover":"snes.jpg",
+      "gameSearchModes":[
+         "FILE_FILE_NAME_MATCH",
+         "ARCHIVE_FILE_NAME_MATCH"
+      ],
+      "searchFor":"^(.+)\\.3ds$|^(.+)\\.3dsx$",
+      "fileStructure":[
+		
+		],
+	  "supportedArchiveTypes":[
+      ],
+      "supportedImageTypes":[
+
+      ],
+      "emulators":[
+         {
+            "name":"citra",
+            "path":"",
+            "iconFilename":"citra.png",
+            "configFilePath":"",
+            "website":"https://citra-emu.org/download/",
+            "startParameters":"%emupath% %gamepath%",
+            "supportedFileTypes":[
+               ".3ds",
+               ".3dsx"
+			 ],
+            "searchString":"^(citra-qt)\\.exe$",
+			"autoSearchEnabled":true
+         }
+      ],
+	  "autoSearchEnabled":true
+   },
+    {
+      "name":"Nintendo GameCube",
+      "iconFilename":"ngc.png",
+      "defaultGameCover":"ngc.jpg",
+      "gameSearchModes":[
+         "FILE_FILE_NAME_MATCH",
+		 "IMAGE_FILE_NAME_MATCH"
+      ],
+      "searchFor":"^(.+)\\.gcm$|^(.+)\\.gcs$",
+      "fileStructure":[
+		
+		],
+	  "supportedArchiveTypes":[
+
+      ],
+      "supportedImageTypes":[
+			".iso",
+			".ciso"
+      ],
+      "emulators":[
+         {
+            "name":"Dolphin",
+            "path":"",
+            "iconFilename":"dolphin.png",
+            "configFilePath":"",
+            "website":"https://dolphin-emu.org/download/",
+            "startParameters":"%emupath% /e %gamepath%",
+            "supportedFileTypes":[
+               "^\\.gcm$",
+               "^\\.gcz$"
+            ],
+            "searchString":"^(dolphin)\\.exe$",
+			"autoSearchEnabled":true
+         }
+      ],
+	  "autoSearchEnabled":true
+   },
+   {
+      "name":"Nintendo Wii",
+      "iconFilename":"wii.png",
+      "defaultGameCover":"wii.jpg",
+      "gameSearchModes":[
+         "FILE_FILE_NAME_MATCH",
+		 "IMAGE_FILE_NAME_MATCH"
+      ],
+      "searchFor":"^(.+)\\.dol$|^(.+)\\.wbfs$|^(.+)\\.wad$",
+      "fileStructure":[
+		
+		],
+	  "supportedArchiveTypes":[
+
+      ],
+      "supportedImageTypes":[
+			".iso",
+			".ciso"
+      ],
+      "emulators":[
+         {
+            "name":"Dolphin",
+            "path":"",
+            "iconFilename":"dolphin.png",
+            "configFilePath":"",
+            "website":"https://dolphin-emu.org/download/",
+            "startParameters":"%emupath% /e %gamepath%",
+            "supportedFileTypes":[
+               ".wbfs",
+               ".ciso",
+               ".wad"
+            ],
+            "searchString":"^(dolphin)\\.exe$",
+			"autoSearchEnabled":true
+         }
+      ],
+	  "autoSearchEnabled":true
+   },
+   {
+      "name":"Nintendo Wii U",
+      "iconFilename":"wii-u.png",
+      "defaultGameCover":"ngc.jpg",
+      "gameSearchModes":[
+         "FILE_FILE_NAME_MATCH",
+		 "IMAGE_FILE_NAME_MATCH"
+      ],
+      "searchFor":"^(.*)\\.rpx$|^(.*)\\.wud$|^(.*)\\.wux$",
+      "fileStructure":[
+		
+		],
+	  "supportedArchiveTypes":[
+
+      ],
+      "supportedImageTypes":[
+			".iso"
+      ],
+      "emulators":[
+         {
+            "name":"Cemu",
+            "path":"",
+            "iconFilename":"blank.png",
+            "configFilePath":"",
+            "website":"http://cemu.info/#download",
+            "startParameters":"%emupath% -g %gamepath%",
+            "supportedFileTypes":[
+				".rpx",
+				".wud",
+				".wux"
+            ],
+            "searchString":"^(cemu)\\.exe$",
+			"autoSearchEnabled":true
+         }
+      ],
+	  "autoSearchEnabled":true
+   },
+   {
+      "name":"ScummVM",
+      "iconFilename":"scummvm.png",
+      "defaultGameCover":"snes.jpg",
+      "gameSearchModes":[
+         "FILE_STRUCTURE_MATCH"
+      ],
+      "supportedArchiveTypes":[
+
+      ],
+      "supportedImageTypes":[
+
+      ],
+      "searchFor":"^(.+)\\.la[0-9]+$",
+	  "fileStructure":[
+         {
+            "folderName":"RESOURCE",
+				"files":[
+					"^(.+)\\.bun$",
+					"^(.+)\\.nut$",
+					"^(.+)\\.san$",
+					"^(.+)\\.tab$"
+				]
+			}
+		],
+	  "emulators":[
+         {
+            "name":"ScummVM",
+            "path":"",
+            "iconFilename":"scummvm.png",
+            "configFilePath":"",
+            "website":"http://scummvm.org/downloads/",
+            "startParameters":"%emupath% -f -p %gamedir% %0%",
+            "supportedFileTypes":[
+			   ".la0",
+               ".bun",
+               ".nut",
+               ".san",
+               ".tab"
+            ],
+            "searchString":"^(scummvm.*)\\.exe$",
+			"autoSearchEnabled":true
+         }
+      ],
+	  "autoSearchEnabled":true
+   },
+   {
+      "name":"Sega Dreamcast",
+      "iconFilename":"dc-red.png",
+      "defaultGameCover":"dc.jpg",
+      "gameSearchModes":[
+         "FILE_FILE_NAME_MATCH",
+         "IMAGE_FILE_CONTENT_MATCH"
+      ],
+      "searchFor":"^(.*)\\.elf$",
+      "fileStructure":[
+		
+		],
+	  "supportedArchiveTypes":[
+
+      ],
+      "supportedImageTypes":[
+         ".bin"
+      ],
+      "emulators":[
+         {
+            "name":"nullDC",
+            "path":"",
+            "iconFilename":"nulldc.jpg",
+            "configFilePath":"nulldc.cfg",
+            "website":"https://code.google.com/p/nulldc/",
+            "startParameters":"%emupath% -loadbin %gamepath%",
+            "supportedFileTypes":[
+               ".bin",
+               ".elf"
+            ],
+            "searchString":"^(nulldc.*)\\.exe$",
 			"autoSearchEnabled":true
          }
       ],
@@ -161,7 +836,7 @@
             "path":"",
             "iconFilename":"rpcs3.png",
             "configFilePath":"",
-            "website":"http://rpcs3.net/category/downloads/",
+            "website":"https://rpcs3.net/download",
             "startParameters":"%emupath% -loadbin %gamepath%",
             "supportedFileTypes":[
                ".iso",
@@ -177,15 +852,15 @@
 	  "autoSearchEnabled":true
    },
    {
-      "name":"Nintendo 64",
-      "iconFilename":"n64.png",
-      "defaultGameCover":"n64.jpg",
+      "name":"Sony Playstation Portable",
+      "iconFilename":"psp.png",
+      "defaultGameCover":"psp.jpg",
       "gameSearchModes":[
          "FILE_FILE_NAME_MATCH",
          "ARCHIVE_FILE_NAME_MATCH",
          "IMAGE_FILE_NAME_MATCH"
       ],
-      "searchFor":"^(.*)\\.z64$|^(.*)\\.v64$|^(.*)\\.n64$",
+      "searchFor":"^(.+)\\.cso$|^(.+)\\.pbp$",
       "fileStructure":[
 		
 		],
@@ -193,133 +868,25 @@
          ".zip"
       ],
       "supportedImageTypes":[
-         ".bin"
+         ".iso"
       ],
       "emulators":[
          {
-            "name":"Project64",
+            "name":"PPSSPP",
             "path":"",
-            "iconFilename":"project64.png",
-            "configFilePath":"/config/project64.cfg",
-            "website":"http://www.1emulation.com/forums/files/file/1-project-64/",
+            "iconFilename":"ppsspp.png",
+            "configFilePath":"",
+            "website":"http://www.ppsspp.org/downloads.html",
             "startParameters":"%emupath% %gamepath%",
             "supportedFileTypes":[
-               ".bin",
-               ".zip",
-               ".z64",
-               ".v64",
-               ".n64",
-               ".rom",
-               ".usa",
-               ".jap",
-               ".pal"
-            ],
-            "searchString":"^(project64)\\.exe$",
-			"autoSearchEnabled":true
-         }
-      ],
-	  "autoSearchEnabled":true
-   },
-  {
-      "name":"GameBoy",
-      "iconFilename":"gb.png",
-      "defaultGameCover":"gb.jpg",
-      "gameSearchModes":[
-         "FILE_FILE_NAME_MATCH",
-         "ARCHIVE_FILE_NAME_MATCH"
-      ],
-      "searchFor":"^(.+)\\.gb$",
-      "fileStructure":[
-		
-		],
-	  "supportedArchiveTypes":[
-         ".zip"
-      ],
-      "supportedImageTypes":[
-         ""
-      ],
-      "emulators":[
-         {
-            "name":"VisualBoyAdvance",
-            "path":"",
-            "iconFilename":"visualboyadvance.png",
-            "configFilePath":"vba.ini",
-            "website":"http://www.emulator-zone.com/doc.php/gba/vboyadvance.HTML",
-            "startParameters":"%emupath% %gamepath%",
-            "supportedFileTypes":[
+               ".iso",
+               ".cso",
+               ".pbp",
+               ".elf",
+               ".prx",
                ".zip"
             ],
-            "searchString":"^(visualboyadvance)\\.exe$",
-			"autoSearchEnabled":true
-         }
-      ],
-	  "autoSearchEnabled":true
-   }, 
-	{
-      "name":"GameBoy Advance",
-      "iconFilename":"gba.png",
-      "defaultGameCover":"gba.jpg",
-      "gameSearchModes":[
-         "FILE_FILE_NAME_MATCH",
-         "ARCHIVE_FILE_NAME_MATCH"
-      ],
-      "searchFor":"^(.+)\\.gba$",
-      "fileStructure":[
-		
-		],
-	  "supportedArchiveTypes":[
-         ".zip"
-      ],
-      "supportedImageTypes":[
-         ""
-      ],
-      "emulators":[
-         {
-            "name":"VisualBoyAdvance",
-            "path":"",
-            "iconFilename":"visualboyadvance.png",
-            "configFilePath":"vba.ini",
-            "website":"http://www.emulator-zone.com/doc.php/gba/vboyadvance.HTML",
-            "startParameters":"%emupath% %gamepath%",
-            "supportedFileTypes":[
-               ".zip"
-            ],
-            "searchString":"^(visualboyadvance)\\.exe$",
-			"autoSearchEnabled":true
-         }
-      ],
-	  "autoSearchEnabled":true
-   },
-   {
-      "name":"Nintendo Entertainment System",
-      "iconFilename":"nes.png",
-      "defaultGameCover":"snes.jpg",
-      "gameSearchModes":[
-         "FILE_FILE_NAME_MATCH",
-         "ARCHIVE_FILE_NAME_MATCH"
-      ],
-      "searchFor":"^(.+)\\.nes$|^(.+)\\.nsf$|^(.+)\\.fds$|^(.+)\\.unf$",
-      "fileStructure":[
-		
-		],
-	  "supportedArchiveTypes":[
-         ".zip"
-      ],
-      "supportedImageTypes":[
-         ""
-      ],
-      "emulators":[
-         {
-            "name":"FCEUX",
-            "path":"",
-            "iconFilename":"fceux.png",
-            "configFilePath":"fceux.cfg",
-            "website":"http://www.fceux.com/web/download.html",
-            "startParameters":"%emupath% %gamepath%",
-            "supportedFileTypes":[
-               ".zip"
-            ],
-            "searchString":"^(fceux)\\.exe$",
+            "searchString":"^(ppsspp.*)\\.exe$",
 			"autoSearchEnabled":true
          }
       ],
@@ -377,7 +944,7 @@
             "path":"",
             "iconFilename":"",
             "configFilePath":"fakenesw.cfg",
-            "website":"",
+            "website":"http://fakenes.sourceforge.net/",
             "startParameters":"%emupath% %gamepath%",
             "supportedFileTypes":[
                ".zip",
@@ -386,390 +953,6 @@
             "searchString":"^(fakenesw)\\.exe$|^(fakenes)$",
 			"autoSearchEnabled":true
 		 }
-      ],
-	  "autoSearchEnabled":true
-   },
-   {
-      "name":"Sony Playstation Portable",
-      "iconFilename":"psp.png",
-      "defaultGameCover":"psp.jpg",
-      "gameSearchModes":[
-         "FILE_FILE_NAME_MATCH",
-         "ARCHIVE_FILE_NAME_MATCH",
-         "IMAGE_FILE_NAME_MATCH"
-      ],
-      "searchFor":"^(.+)\\.cso$|^(.+)\\.pbp$",
-      "fileStructure":[
-		
-		],
-	  "supportedArchiveTypes":[
-         ".zip"
-      ],
-      "supportedImageTypes":[
-         ".iso"
-      ],
-      "emulators":[
-         {
-            "name":"PPSSPP",
-            "path":"",
-            "iconFilename":"ppsspp.png",
-            "configFilePath":"",
-            "website":"http://www.ppsspp.org/downloads.html",
-            "startParameters":"%emupath% %gamepath%",
-            "supportedFileTypes":[
-               ".iso",
-               ".cso",
-               ".pbp",
-               ".elf",
-               ".prx",
-               ".zip"
-            ],
-            "searchString":"^(ppsspp.*)\\.exe$",
-			"autoSearchEnabled":true
-         }
-      ],
-	  "autoSearchEnabled":true
-   },
-   {
-      "name":"ScummVM",
-      "iconFilename":"scummvm.png",
-      "defaultGameCover":"snes.jpg",
-      "gameSearchModes":[
-         "FILE_STRUCTURE_MATCH"
-      ],
-      "supportedArchiveTypes":[
-
-      ],
-      "supportedImageTypes":[
-
-      ],
-      "searchFor":"^(.+)\\.la[0-9]+$",
-	  "fileStructure":[
-         {
-            "folderName":"RESOURCE",
-				"files":[
-					"^(.+)\\.bun$",
-					"^(.+)\\.nut$",
-					"^(.+)\\.san$",
-					"^(.+)\\.tab$"
-				]
-			}
-		],
-	  "emulators":[
-         {
-            "name":"ScummVM",
-            "path":"",
-            "iconFilename":"scummvm.png",
-            "configFilePath":"",
-            "website":"http://scummvm.org/downloads/",
-            "startParameters":"%emupath% -f -p %gamedir% %0%",
-            "supportedFileTypes":[
-			   ".la0",
-               ".bun",
-               ".nut",
-               ".san",
-               ".tab"
-            ],
-            "searchString":"^(scummvm.*)\\.exe$",
-			"autoSearchEnabled":true
-         }
-      ],
-	  "autoSearchEnabled":true
-   },
-   {
-      "name":"Sega Dreamcast",
-      "iconFilename":"dc-red.png",
-      "defaultGameCover":"dc.jpg",
-      "gameSearchModes":[
-         "FILE_FILE_NAME_MATCH",
-         "IMAGE_FILE_CONTENT_MATCH"
-      ],
-      "searchFor":"^(.*)\\.elf$",
-      "fileStructure":[
-		
-		],
-	  "supportedArchiveTypes":[
-
-      ],
-      "supportedImageTypes":[
-         ".bin"
-      ],
-      "emulators":[
-         {
-            "name":"nullDC",
-            "path":"",
-            "iconFilename":"nulldc.jpg",
-            "configFilePath":"nulldc.cfg",
-            "website":"https://code.google.com/p/nulldc/",
-            "startParameters":"%emupath% -loadbin %gamepath%",
-            "supportedFileTypes":[
-               ".bin",
-               ".elf"
-            ],
-            "searchString":"^(nulldc.*)\\.exe$",
-			"autoSearchEnabled":true
-         }
-      ],
-	  "autoSearchEnabled":true
-   },
-      {
-      "name":"Nintendo GameCube",
-      "iconFilename":"ngc.png",
-      "defaultGameCover":"ngc.jpg",
-      "gameSearchModes":[
-         "FILE_FILE_NAME_MATCH",
-		 "IMAGE_FILE_NAME_MATCH"
-      ],
-      "searchFor":"^(.+)\\.gcm$|^(.+)\\.gcs$",
-      "fileStructure":[
-		
-		],
-	  "supportedArchiveTypes":[
-
-      ],
-      "supportedImageTypes":[
-			".iso",
-			".ciso"
-      ],
-      "emulators":[
-         {
-            "name":"Dolphin",
-            "path":"",
-            "iconFilename":"dolphin.png",
-            "configFilePath":"",
-            "website":"http://www.dolphin-emulator.com/download.html",
-            "startParameters":"%emupath% /e %gamepath%",
-            "supportedFileTypes":[
-               "^\\.gcm$",
-               "^\\.gcz$"
-            ],
-            "searchString":"^(dolphin)\\.exe$",
-			"autoSearchEnabled":true
-         }
-      ],
-	  "autoSearchEnabled":true
-   },
-   {
-      "name":"Nintendo Wii",
-      "iconFilename":"wii.png",
-      "defaultGameCover":"wii.jpg",
-      "gameSearchModes":[
-         "FILE_FILE_NAME_MATCH",
-		 "IMAGE_FILE_NAME_MATCH"
-      ],
-      "searchFor":"^(.+)\\.dol$|^(.+)\\.wbfs$|^(.+)\\.wad$",
-      "fileStructure":[
-		
-		],
-	  "supportedArchiveTypes":[
-
-      ],
-      "supportedImageTypes":[
-			".iso",
-			".ciso"
-      ],
-      "emulators":[
-         {
-            "name":"Dolphin",
-            "path":"",
-            "iconFilename":"dolphin.png",
-            "configFilePath":"",
-            "website":"http://www.dolphin-emulator.com/download.html",
-            "startParameters":"%emupath% /e %gamepath%",
-            "supportedFileTypes":[
-               ".wbfs",
-               ".ciso",
-               ".wad"
-            ],
-            "searchString":"^(dolphin)\\.exe$",
-			"autoSearchEnabled":true
-         }
-      ],
-	  "autoSearchEnabled":true
-   },
-   {
-      "name":"Nintendo Wii U",
-      "iconFilename":"wii-u.png",
-      "defaultGameCover":"ngc.jpg",
-      "gameSearchModes":[
-         "FILE_FILE_NAME_MATCH",
-		 "IMAGE_FILE_NAME_MATCH"
-      ],
-      "searchFor":"^(.*)\\.rpx$|^(.*)\\.wud$|^(.*)\\.wux$",
-      "fileStructure":[
-		
-		],
-	  "supportedArchiveTypes":[
-
-      ],
-      "supportedImageTypes":[
-			".iso"
-      ],
-      "emulators":[
-         {
-            "name":"Cemu",
-            "path":"",
-            "iconFilename":"blank.png",
-            "configFilePath":"",
-            "website":"http://cemu.info/#download",
-            "startParameters":"%emupath% -g %gamepath%",
-            "supportedFileTypes":[
-				".rpx",
-				".wud",
-				".wux"
-            ],
-            "searchString":"^(cemu)\\.exe$",
-			"autoSearchEnabled":true
-         }
-      ],
-	  "autoSearchEnabled":true
-   },
-  {
-      "name":"Nintendo DS",
-      "iconFilename":"nds.png",
-      "defaultGameCover":"snes.jpg",
-      "gameSearchModes":[
-         "FILE_FILE_NAME_MATCH",
-         "ARCHIVE_FILE_NAME_MATCH"
-      ],
-      "searchFor":"^(.+)\\.nds$|^(.+)\\.srl$",
-      "fileStructure":[
-		
-		],
-	  "supportedArchiveTypes":[
-         ".zip",
-         ".rar",
-         ".7z",
-         ".gz"
-      ],
-      "supportedImageTypes":[
-
-      ],
-      "emulators":[
-         {
-            "name":"DeSmuME",
-            "path":"",
-            "iconFilename":"desmume.png",
-            "configFilePath":"",
-            "website":"http://desmume.org/download/",
-            "startParameters":"%emupath% %gamepath%",
-            "supportedFileTypes":[
-               ".nds",
-               ".ds",
-               ".srl",
-               ".zip",
-               ".7z",
-               ".rar",
-               ".gz"
-            ],
-            "searchString":"^(desmume.*)\\.exe$",
-			"autoSearchEnabled":true
-         }
-      ],
-	  "autoSearchEnabled":true
-   },
-   {
-      "name":"Nintendo 3DS",
-      "iconFilename":"3ds.png",
-      "defaultGameCover":"snes.jpg",
-      "gameSearchModes":[
-         "FILE_FILE_NAME_MATCH",
-         "ARCHIVE_FILE_NAME_MATCH"
-      ],
-      "searchFor":"^(.+)\\.3ds$|^(.+)\\.3dsx$",
-      "fileStructure":[
-		
-		],
-	  "supportedArchiveTypes":[
-      ],
-      "supportedImageTypes":[
-
-      ],
-      "emulators":[
-         {
-            "name":"citra",
-            "path":"",
-            "iconFilename":"citra.png",
-            "configFilePath":"",
-            "website":"https://citra-emu.org/download/",
-            "startParameters":"%emupath% %gamepath%",
-            "supportedFileTypes":[
-               ".3ds",
-               ".3dsx"
-			 ],
-            "searchString":"^(citra-qt)\\.exe$",
-			"autoSearchEnabled":true
-         }
-      ],
-	  "autoSearchEnabled":true
-   },
-   {
-      "name":"Atari",
-      "iconFilename":"atari.png",
-      "defaultGameCover":"snes.jpg",
-      "gameSearchModes":[
-         "FILE_FILE_NAME_MATCH",
-         "ARCHIVE_FILE_NAME_MATCH"
-      ],
-      "searchFor":"",
-      "fileStructure":[
-		
-		],
-	  "supportedArchiveTypes":[
-	  
-      ],
-      "supportedImageTypes":[
-
-      ],
-      "emulators":[
-         {
-            "name":"Steem",
-            "path":"",
-            "iconFilename":"steem.png",
-            "configFilePath":"",
-            "website":"http://steem.atari.st",
-            "startParameters":"%emupath% %gamepath%",
-            "supportedFileTypes":[
-               
-            ],
-            "searchString":"^(steem.*)\\.exe$",
-			"autoSearchEnabled":true
-         }
-      ],
-	  "autoSearchEnabled":true
-   },
-   {
-      "name":"Amiga",
-      "iconFilename":"amiga.png",
-      "defaultGameCover":"snes.jpg",
-      "gameSearchModes":[
-         "FILE_FILE_NAME_MATCH",
-         "ARCHIVE_FILE_NAME_MATCH"
-      ],
-      "searchFor":"",
-      "fileStructure":[
-		
-		],
-	  "supportedArchiveTypes":[
-	  
-      ],
-      "supportedImageTypes":[
-
-      ],
-      "emulators":[
-         {
-            "name":"WinFellow",
-            "path":"",
-            "iconFilename":"winfellow.png",
-            "configFilePath":"",
-            "website":"http://petschau.github.io/WinFellow/",
-            "startParameters":"%emupath% %gamepath%",
-            "supportedFileTypes":[
-               
-            ],
-            "searchString":"^(winfellow)\\.exe$",
-			"autoSearchEnabled":true
-         }
       ],
 	  "autoSearchEnabled":true
    },

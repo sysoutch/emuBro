@@ -31,4 +31,8 @@ public class Messages {
 		FORMATTER.setLocale(locale);
 		RESOURCES = ResourceBundle.getBundle(FILENAME);
 	}
+
+	public static Locale getDefault() {
+		return Locale.getDefault();
+	}
 }

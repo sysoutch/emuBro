@@ -21,6 +21,7 @@ public class ValidationUtil {
 	private static final String OS = System.getProperty("os.name").toLowerCase();
 
 	private static final Color SUCCESS_BACKGROUND = new Color(215, 255, 215);
+	private static final Color SUCCESS_HOVER_BACKGROUND = new Color(255, 244, 216);
 
 	/**
 	 * @param o
@@ -141,5 +142,9 @@ public class ValidationUtil {
 
 	public static Color getSuccessBackground() {
 		return SUCCESS_BACKGROUND;
+	}
+
+	public static Color getRemoveInformationBackground() {
+		return SUCCESS_HOVER_BACKGROUND;
 	}
 }
