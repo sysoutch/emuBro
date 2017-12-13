@@ -294,8 +294,8 @@ public class BroController implements ActionListener, GameListener, PlatformList
 
 	private String applicationVersion = "";
 	private String platformDetectionVersion = "";
-	private final String currentApplicationVersion = "0.0.0.1";
-	private final String currentPlatformDetectionVersion = "20170422.0";
+	private final String currentApplicationVersion = "0.0.2";
+	private final String currentPlatformDetectionVersion = "20170423.0";
 
 	GameListModel mdlLstAllGames = new GameListModel();
 	private GameListModel mdlLstRecentlyPlayed = new GameListModel();
