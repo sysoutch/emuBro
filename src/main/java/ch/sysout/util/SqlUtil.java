@@ -34,4 +34,11 @@ public class SqlUtil {
 		return "insert into " + table + " (" + formattedColumns + ") values (" + formattedValues + ")";
 	}
 
+	public static String getQuotedString(String string) {
+		return "'"+string+"'";
+	}
+
+	public static String getQuotationsMarkedString(String string) {
+		return string.replaceAll("'", "''");
+	}
 }

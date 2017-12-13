@@ -12,6 +12,7 @@ import ch.sysout.util.ValidationUtil;
 public class BroPlatform implements Platform {
 	private int id;
 	private String name;
+	private String shortName;
 	private String iconFilename;
 	private String defaultGameCover;
 	private List<String> gameSearchModes;
@@ -27,12 +28,13 @@ public class BroPlatform implements Platform {
 	private int defaultEmulatorId = EmulatorConstants.NO_EMULATOR;
 	private boolean autoSearchEnabled = true;
 
-	public BroPlatform(int id, String name, String iconFilename, String defaultGameCover, String[] gameSearchModes,
+	public BroPlatform(int id, String name, String shortName, String iconFilename, String defaultGameCover, String[] gameSearchModes,
 			String searchFor, FileStructure fileStructure[], String supportedArchiveTypes[],
 			String supportedImageTypes[], BroEmulator[] emulators, int defaultEmulatorId, boolean autoSearchEnabled) {
 		ValidationUtil.checkNullOrEmpty(name, "name");
 		this.id = id;
 		this.name = name;
+		this.shortName = shortName;
 		this.iconFilename = (iconFilename == null) ? "" : iconFilename;
 		this.defaultGameCover = (iconFilename == null) ? "" : defaultGameCover;
 		this.gameSearchModes = new ArrayList<>(Arrays.asList(gameSearchModes));
@@ -45,13 +47,14 @@ public class BroPlatform implements Platform {
 		this.autoSearchEnabled = autoSearchEnabled;
 	}
 
-	public BroPlatform(int id, String name, String iconFilename, String defaultGameCover, String[] gameSearchModes,
+	public BroPlatform(int id, String name, String shortName, String iconFilename, String defaultGameCover, String[] gameSearchModes,
 			String searchFor, FileStructure fileStructure[], String supportedArchiveTypes[],
 			String supportedImageTypes[], List<BroEmulator> emulators, int defaultEmulatorId,
 			boolean autoSearchEnabled) {
 		ValidationUtil.checkNullOrEmpty(name, "name");
 		this.id = id;
 		this.name = name;
+		this.shortName = shortName;
 		this.iconFilename = (iconFilename == null) ? "" : iconFilename;
 		this.defaultGameCover = (iconFilename == null) ? "" : defaultGameCover;
 		this.gameSearchModes = new ArrayList<>(Arrays.asList(gameSearchModes));
@@ -117,9 +120,20 @@ public class BroPlatform implements Platform {
 	 * @param name
 	 *            the name to set
 	 */
+	@Override
 	public void setName(String name) {
 		ValidationUtil.checkNullOrEmpty(name, "name");
 		this.name = name;
+	}
+
+	@Override
+	public String getShortName() {
+		return shortName == null ? "" : shortName;
+	}
+
+	@Override
+	public void setShortName(String shortName) {
+		this.shortName = shortName;
 	}
 
 	/**

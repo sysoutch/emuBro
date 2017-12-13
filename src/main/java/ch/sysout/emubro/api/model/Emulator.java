@@ -15,6 +15,8 @@ public interface Emulator extends Comparable<Emulator> {
 
 	String getSearchString();
 
+	String getSetupFileMatch();
+
 	String getIconFilename();
 
 	String getWebsite();

@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -50,25 +51,36 @@ import ch.sysout.emubro.api.event.GameRemovedEvent;
 import ch.sysout.emubro.api.event.GameSelectionEvent;
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.Platform;
+import ch.sysout.emubro.api.model.PlatformComparator;
+import ch.sysout.emubro.controller.GameSelectionListener;
 import ch.sysout.emubro.controller.ViewConstants;
+import ch.sysout.emubro.impl.event.BroGameSelectionEvent;
+import ch.sysout.emubro.impl.event.NavigationEvent;
+import ch.sysout.emubro.impl.model.GameConstants;
 import ch.sysout.emubro.ui.listener.CoversModelListener;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ScreenSizeUtil;
+import ch.sysout.util.UIUtil;
+import ch.sysout.util.ValidationUtil;
 
 public class CoverViewPanel extends ViewPanel
-implements GameListener, MouseListener, MouseMotionListener, CoversModelListener {
+implements GameListener, GameSelectionListener, MouseListener, MouseMotionListener, CoversModelListener {
 	private static final long serialVersionUID = 1L;
 
-	private Map<Integer, JComponent> components = new HashMap<>();
-	private List<GameListener> listeners = new ArrayList<>();
+	private GameCoversModel mdlCoversAllGames = new GameCoversModel();
+	private GameCoversModel mdlCoversRecentlyPlayed = new GameCoversModel();
+	private GameCoversModel mdlCoversFavorites = new GameCoversModel();
+	private GameCoversModel mdlCoversFiltered = new GameCoversModel();
+
+	private Map<Integer, AbstractButton> components = new HashMap<>();
+	private List<GameSelectionListener> selectGameListeners = new ArrayList<>();
 
 	private WrapLayout wl = new WrapLayout(FlowLayout.LEADING, 10, 20);
 
 	final JLabel lblLoadingList = new JLabel("loading list...");
-	private JPanel pnlBackGround = new JPanel(wl);
+	private JPanel pnlBackGround;
 
-	private JScrollPane sp = new JScrollPane(pnlBackGround, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
-			JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+	private JScrollPane sp;
 
 	private CoverOptionsPopupMenu mnuCoverOptions;
 
@@ -84,16 +96,28 @@ implements GameListener, MouseListener, MouseMotionListener, CoversModelListener
 	private int fontSize;
 	private ButtonGroup grp = new ButtonGroup();
 
-	private GameCoversModel mdlCoversAllGames;
+	private Map<Float, ImageIcon> scaledCovers = new HashMap<>();
 
-	public CoverViewPanel() {
+	public IconStore iconStore;
+
+	protected int selectedGame = GameConstants.NO_GAME;
+
+	private boolean touchScreenScrollEnabled;
+
+	private int viewStyle;
+
+	public CoverViewPanel(IconStore iconStore) {
 		super(new BorderLayout());
+		ValidationUtil.checkNull(iconStore, "iconStore");
+		this.iconStore = iconStore;
 		initComponents();
 		createUI();
 	}
 
 	private void initComponents() {
 		wl.setAlignOnBaseline(true);
+		pnlBackGround = new JPanel();
+		pnlBackGround.setLayout(wl);
 		pnlBackGround.add(lblLoadingList);
 		addListeners();
 	}
@@ -157,30 +181,6 @@ implements GameListener, MouseListener, MouseMotionListener, CoversModelListener
 		pnlBackGround.addMouseListener(mouseAdapter);
 	}
 
-	// @Override
-	// public void mouseDragged(MouseEvent e) {
-	// super.mouseDragged(e);
-	// sp.scrollRectToVisible(new Rectangle(0, lastMouseY, sp.getWidth(),
-	// sp.getHeight()-20));
-	// }
-	@Override
-	public void revalidate() {
-		if (pnlBackGround != null) {
-			pnlBackGround.revalidate();
-		} else {
-			super.revalidate();
-		}
-	}
-
-	@Override
-	public void repaint() {
-		if (pnlBackGround != null) {
-			pnlBackGround.repaint();
-		} else {
-			super.repaint();
-		}
-	}
-
 	private void showCoverOptionsPopupMenu(MouseEvent e) {
 		if (mnuCoverOptions == null) {
 			mnuCoverOptions = new CoverOptionsPopupMenu(currentCoverSize, false);
@@ -189,6 +189,8 @@ implements GameListener, MouseListener, MouseMotionListener, CoversModelListener
 	}
 
 	private void createUI() {
+		sp = new JScrollPane(pnlBackGround, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+				JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 		add(sp);
 		setPreferredSize(new Dimension(0, 0));
 		pnlBackGround.setBackground(UIManager.getColor("List.background"));
@@ -201,33 +203,20 @@ implements GameListener, MouseListener, MouseMotionListener, CoversModelListener
 		return pnlBackGround.requestFocusInWindow(); // TODO test this
 	}
 
-	public void setGameCoversModel(GameCoversModel mdlCoversAllGames) {
-		this.mdlCoversAllGames = mdlCoversAllGames;
-		mdlCoversAllGames.addCoversModelListener(this);
-		for (int i = 0; i < mdlCoversAllGames.getSize(); i++) {
-			if (mdlCoversAllGames.getElementAt(i) == null) {
-				System.err.println("this game is null. should normally not happen");
-				return;
-			}
-			addGame(mdlCoversAllGames.getElementAt(i));
-		}
-	}
-
 	/**
 	 * FIXME Exception in thread "AWT-EventQueue-0"
 	 * java.lang.ArrayIndexOutOfBoundsException
 	 *
-	 * @param games2
+	 * @param games
 	 */
-	public void initGameList(List<Game> games2) {
+	@Override
+	public void initGameList(List<Game> games, int currentNavView) {
 		pnlBackGround.removeAll();
 		int size = ScreenSizeUtil.adjustValueToResolution(PANEL_SIZE) + fontSize;
 		final Dimension dimension = new Dimension(size, size);
-		for (final Game game : games2) {
+		for (Game game : games) {
 			String gameTitle = game.getName();
 			int maxLength = 24;
-			gameTitle.length();
-			gameTitle.length();
 			if (gameTitle.length() > maxLength) {
 				int k = 1;
 				int newStartIndex = 0;
@@ -257,24 +246,29 @@ implements GameListener, MouseListener, MouseMotionListener, CoversModelListener
 			component.setVerticalTextPosition(SwingConstants.BOTTOM);
 			component.setToolTipText("<html><b>" + game.getName() + "</b>" + "<br>" + game.getPlatformId() + ""
 					+ "<br>Grösse: 64 KB" + "<br>Zuletzt gespielt: 27.05.2015 11:33:10" + "</html>");
+			boolean useGameCover = !game.getCoverPath().isEmpty();
+			ImageIcon icon = (useGameCover) ? ImageUtil.getImageIconFrom(game.getCoverPath(), true) : null;
+			if (icon != null) {
+				icon = ImageUtil.scaleCover(icon, currentCoverSize, CoverConstants.SCALE_HEIGHT_OPTION);
+			}
+			mdlCoversAllGames.addCover(game.getId(), icon);
+
 			component.addMouseListener(CoverViewPanel.this);
 			grp.add(component);
+			mdlCoversAllGames.addElement(game);
 			components.put(game.getId(), component);
 			pnlBackGround.add(component);
-			component.addMouseListener(new MouseAdapter() {
+			component.addActionListener(new ActionListener() {
+
 				@Override
-				public void mousePressed(MouseEvent e) {
-					super.mousePressed(e);
-					for (int i = 0; i < components.size(); i++) {
-						Object source = e.getSource();
-						if (source == components.get(i)) {
-							// Game game = explorer.getGame();
-							// GameEvent event = new GameSelectionEvent(game);
-							// fireEvent(event);
-						} else {
-							// labels.get(i).setBorder(BorderFactory.createEtchedBorder());
+				public void actionPerformed(ActionEvent e) {
+					if (selectedGame != GameConstants.NO_GAME) {
+						if (selectedGame != game.getId()) {
+							UIUtil.doHover(false, components.get(selectedGame));
 						}
 					}
+					selectedGame = game.getId();
+					fireGameSelectedEvent(game.getId());
 				}
 			});
 		}
@@ -286,6 +280,25 @@ implements GameListener, MouseListener, MouseMotionListener, CoversModelListener
 		// }
 		// });
 		// autoSetCovers();
+	}
+
+	public void initCovers() {
+		for (Entry<Integer, AbstractButton> comps : components.entrySet()) {
+			Game game = mdlCoversAllGames.getGame(comps.getKey());
+			int platformId = game.getPlatformId();
+			AbstractButton comp = comps.getValue();
+			ImageIcon icon = iconStore.getPlatformCover(platformId);
+			if (icon != null) {
+				icon = iconStore.getScaledPlatformCover(platformId, currentCoverSize);
+			}
+			comp.setIcon(icon);
+		}
+	}
+
+	protected void fireGameSelectedEvent(int i) {
+		for (GameSelectionListener l : selectGameListeners) {
+			l.gameSelected(new BroGameSelectionEvent(mdlCoversAllGames.getGame(i), null));
+		}
 	}
 
 	private void changeCoverSizeTo(int size) {
@@ -309,6 +322,11 @@ implements GameListener, MouseListener, MouseMotionListener, CoversModelListener
 	}
 
 	@Override
+	public void selectGame(int gameId) {
+
+	}
+
+	@Override
 	public void gameSelected(GameSelectionEvent e) {
 	}
 
@@ -322,6 +340,8 @@ implements GameListener, MouseListener, MouseMotionListener, CoversModelListener
 	}
 
 	protected void addGame(Game game) {
+		mdlCoversAllGames.addElement(game);
+
 		if (game == null) {
 			System.err.println("this game is null. should normally not happen");
 			return;
@@ -329,31 +349,22 @@ implements GameListener, MouseListener, MouseMotionListener, CoversModelListener
 		if (lblLoadingList.isVisible()) {
 			lblLoadingList.setVisible(false);
 		}
-		int size = ScreenSizeUtil.adjustValueToResolution(PANEL_SIZE) + fontSize;
+		int size = PANEL_SIZE + fontSize;
 		AbstractButton component = new JToggleButton(game.getName());
 		component.setContentAreaFilled(false);
 		final Dimension dimension = new Dimension(size, size);
+		component.setMinimumSize(dimension);
 		component.setPreferredSize(dimension);
+		component.setSize(dimension);
 		component.setHorizontalTextPosition(SwingConstants.CENTER);
 		component.setVerticalTextPosition(SwingConstants.BOTTOM);
-
-		boolean useGameCover = !game.getCoverPath().isEmpty();
-		ImageIcon icon = (useGameCover) ? ImageUtil.getImageIconFrom(game.getCoverPath(), true)
-				: getPlatformCover(game.getPlatformId());
-		if (icon != null) {
-			icon = ImageUtil.scaleCover(icon, currentCoverSize, CoverConstants.SCALE_AUTO_OPTION);
-			mdlCoversAllGames.addCover(game.getId(), icon);
-			component.setIcon(icon);
-		}
 		component.setToolTipText("<html><b>" + game.getName() + "</b>" + "<br>" + game.getPlatformId() + ""
 				+ "<br>Grösse: 64 KB" + "<br>Zuletzt gespielt: 27.05.2015 11:33:10" + "</html>");
-
 		component.addMouseListener(CoverViewPanel.this);
 		grp.add(component);
 		components.put(game.getId(), component);
 		pnlBackGround.add(component);
-		revalidate();
-		repaint();
+		UIUtil.revalidateAndRepaint(pnlBackGround);
 	}
 
 	protected void removeGame(Game game) {
@@ -361,14 +372,14 @@ implements GameListener, MouseListener, MouseMotionListener, CoversModelListener
 		if (component != null) {
 			components.remove(game.getId());
 			pnlBackGround.remove(component);
-			revalidate();
-			repaint();
+			UIUtil.revalidateAndRepaint(pnlBackGround);
 		}
 	}
 
 	@Override
 	public void gameRemoved(GameRemovedEvent e) {
-
+		Game game = e.getGame();
+		mdlCoversAllGames.removeElement(game);
 	}
 
 	@Override
@@ -551,13 +562,6 @@ implements GameListener, MouseListener, MouseMotionListener, CoversModelListener
 			}
 		}
 
-		public void initCovers() {
-			for (Entry<Integer, JComponent> comps : components.entrySet()) {
-				ImageIcon icon = getPlatformIcon(0);
-				((AbstractButton) comps.getValue()).setIcon(icon);
-			}
-		}
-
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			Object source = e.getSource();
@@ -594,10 +598,12 @@ implements GameListener, MouseListener, MouseMotionListener, CoversModelListener
 	public void mouseMoved(MouseEvent e) {
 	}
 
-	public void addSelectGameListener(GameListener l) {
-		listeners.add(l);
+	@Override
+	public void addSelectGameListener(GameSelectionListener l) {
+		selectGameListeners.add(l);
 	}
 
+	@Override
 	public void addRunGameListener(MouseListener l) {
 	}
 
@@ -641,6 +647,13 @@ implements GameListener, MouseListener, MouseMotionListener, CoversModelListener
 
 	}
 
+	@Override
+	public void groupByTitle() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
 	public void increaseFontSize() {
 		int newRowHeight = PANEL_SIZE;
 		int newColumnWidth = PANEL_SIZE;
@@ -652,6 +665,7 @@ implements GameListener, MouseListener, MouseMotionListener, CoversModelListener
 		}
 	}
 
+	@Override
 	public void decreaseFontSize() {
 		int newRowHeight = PANEL_SIZE;
 		int newColumnWidth = PANEL_SIZE;
@@ -663,6 +677,40 @@ implements GameListener, MouseListener, MouseMotionListener, CoversModelListener
 		}
 	}
 
+	public void initGameCovers() {
+		Set<Entry<Integer, Game>> allGames = mdlCoversAllGames.getAllGames();
+		for (Map.Entry<Integer, Game> entry : allGames) {
+			Game game = entry.getValue();
+			int gameId = game.getId();
+			int platformId = game.getPlatformId();
+			AbstractButton component = components.get(gameId);
+			ImageIcon icon = mdlCoversAllGames.getCover(gameId);
+			if (icon == null) {
+				icon = getScaledCover(platformId, currentCoverSize, CoverConstants.SCALE_HEIGHT_OPTION);
+			} else {
+				System.err.println("not null");
+			}
+			component.setIcon((icon != null) ? icon : iconStore.getPlatformCover(platformId));
+		}
+	}
+
+	private ImageIcon getScaledCover(int platformId, int currentCoverSize2, int scaleHeightOption) {
+		String s = platformId+"."+currentCoverSize2;
+		float platformIdPlusCurrentCoverSize = Float.parseFloat(s);
+		ImageIcon icon = null;
+		if (scaledCovers.containsKey(platformIdPlusCurrentCoverSize)) {
+			icon = scaledCovers.get(platformIdPlusCurrentCoverSize);
+		} else {
+			ImageIcon platformCover = iconStore.getPlatformCover(platformId);
+			if (platformCover != null) {
+				icon = ImageUtil.scaleCover(platformCover, currentCoverSize2, scaleHeightOption);
+				scaledCovers.put(platformIdPlusCurrentCoverSize, icon);
+			}
+		}
+		return icon;
+	}
+
+	@Override
 	public void setFontSize(int value) {
 		fontSize = value;
 		for (JComponent c : components.values()) {
@@ -671,18 +719,21 @@ implements GameListener, MouseListener, MouseMotionListener, CoversModelListener
 		}
 	}
 
+	@Override
 	public void addIncreaseFontListener(Action l) {
 		pnlBackGround.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_PLUS, java.awt.event.InputEvent.CTRL_DOWN_MASK),
 				"actionIncreaseFont");
 		pnlBackGround.getActionMap().put("actionIncreaseFont", l);
 	}
 
+	@Override
 	public void addDecreaseFontListener(Action l) {
 		sp.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_MINUS, java.awt.event.InputEvent.CTRL_DOWN_MASK),
 				"actionDencreaseFont");
 		sp.getActionMap().put("actionDecreaseFont", l);
 	}
 
+	@Override
 	public void addIncreaseFontListener2(MouseWheelListener l) {
 		sp.addMouseWheelListener(l);
 		//		sp.addMouseWheelListener(new MouseWheelListener() {
@@ -703,5 +754,159 @@ implements GameListener, MouseListener, MouseMotionListener, CoversModelListener
 		return ViewConstants.GROUP_BY_NONE;
 		//			return ViewConstants.GROUP_BY_PLATFORM;
 		//		throw new IllegalStateException("current viewport not known");
+	}
+
+	public void addGame2(Game game) {
+		mdlCoversAllGames.addElement(game);
+	}
+
+	public boolean isInitialized() {
+		return false;
+	}
+
+	@Override
+	public void initPlatforms(List<Platform> platforms) {
+	}
+
+	@Override
+	public void sortBy(int sortBy, PlatformComparator platformComparator) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void sortOrder(int sortOrder) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void navigationChanged(NavigationEvent e) {
+
+	}
+
+	@Override
+	public void pinColumnWidthSliderPanel(JPanel pnlColumnWidthSlider) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void unpinColumnWidthSliderPanel(JPanel pnlColumnWidthSlider) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void pinRowHeightSliderPanel(JPanel pnlRowHeightSlider) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void unpinRowHeightSliderPanel(JPanel pnlRowHeightSlider) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void gameRated(Game game) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void hideExtensions(boolean shouldHide) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void addRunGameListener(Action l) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void addOpenGamePropertiesListener(Action l) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void addRemoveGameListener(Action l) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public int getColumnWidth() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public void setColumnWidth(int value) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public int getRowHeight() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public void setRowHeight(int value) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void addCommentListener(ActionListener l) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void addOpenGameFolderListener1(MouseListener l) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void addRateListener(RateListener l) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void addRenameGameListener(Action l) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void selectNextGame() {
+	}
+
+	@Override
+	public void selectPreviousGame() {
+	}
+
+	@Override
+	public boolean isTouchScreenScrollEnabled() {
+		return touchScreenScrollEnabled;
+	}
+
+	@Override
+	public void setTouchScreenScrollEnabled(boolean touchScreenScrollEnabled) {
+		this.touchScreenScrollEnabled = touchScreenScrollEnabled;
+	}
+
+	@Override
+	public void setViewStyle(int viewStyle) {
+		this.viewStyle = viewStyle;
 	}
 }

@@ -14,6 +14,7 @@
       <!-- exclude the DLL -->
       <excludes>
         <exclude>xfiledialog:xfiledialog-dll</exclude>
+		<exclude>jxinput:jxinput-dll</exclude>		
       </excludes>
     </dependencySet>
     <!-- package the DLLs -->
@@ -21,6 +22,7 @@
       <outputDirectory>/</outputDirectory>
       <includes>
         <include>xfiledialog:xfiledialog-dll</include>
+		<include>jxinput:jxinput-dll</include>
       </includes>
     </dependencySet>
   </dependencySets>

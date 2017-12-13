@@ -13,6 +13,7 @@ import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
@@ -31,9 +32,12 @@ import javax.swing.BorderFactory;
 import javax.swing.Icon;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTree;
+import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.UIManager;
 import javax.swing.event.CellEditorListener;
@@ -50,11 +54,18 @@ import javax.swing.tree.TreeCellEditor;
 import javax.swing.tree.TreeCellRenderer;
 import javax.swing.tree.TreePath;
 
+import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.util.Icons;
+import ch.sysout.util.Messages;
+import ch.sysout.util.ScreenSizeUtil;
+
 public final class FileTree extends JPanel {
 	private static final long serialVersionUID = 1L;
 
 	private DefaultTreeModel treeModel;
 	private JTree tree;
+
+	private Dimension preferredSize = new Dimension(0, ScreenSizeUtil.adjustValueToResolution(64));
 
 	public FileTree() {
 		super(new BorderLayout());
@@ -102,6 +113,25 @@ public final class FileTree extends JPanel {
 				setCellEditor(new CheckBoxNodeEditor(fileSystemView));
 			}
 		};
+		JPopupMenu popupFileTree = new JPopupMenu();
+		JMenuItem mnuOpenFolderInExplorer;
+		mnuOpenFolderInExplorer = new JMenuItem(Messages.get(MessageConstants.OPEN_FOLDER_IN_EXPLORER));
+		mnuOpenFolderInExplorer.setIcon(ImageUtil.getImageIconFrom(Icons.get("openFolder", 16, 16)));
+		popupFileTree.add(mnuOpenFolderInExplorer);
+		tree.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				if (SwingUtilities.isRightMouseButton(e)) {
+					int row = tree.getRowForLocation(e.getX(), e.getY());
+					tree.setSelectionRow(row);
+					TreePath tp = tree.getPathForRow(row);
+					boolean showFileTreePopup = row >= 0;
+					if (showFileTreePopup) {
+						popupFileTree.show(e.getComponent(), e.getX(), e.getY());
+					}
+				}
+			}
+		});
 		tree.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
 		tree.setRootVisible(false);
 		tree.addTreeSelectionListener(new FolderSelectionListener(fileSystemView));
@@ -168,6 +198,16 @@ public final class FileTree extends JPanel {
 			}
 		}
 		return directories;
+	}
+
+	public void addOpenFolderInExplorerListener(JMenuItem mnuOpenFolderInExplorer) {
+		mnuOpenFolderInExplorer.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+
+			}
+		});
 	}
 }
 

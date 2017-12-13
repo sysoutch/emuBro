@@ -95,10 +95,10 @@ public class AddEmulatorDialog extends JDialog {
 
 		CellConstraints cc2 = new CellConstraints();
 		pnl2.add(new JScrollPane(txtStartParameters), cc2.xyw(1, 1, 3));
-		pnl2.add(new JLinkLabel("%game%"), cc2.xy(1, 3));
+		pnl2.add(new JLinkButton("%game%"), cc2.xy(1, 3));
 		pnl2.add(new JLabel("- repräsentiert das ausgewählte Spiel"), cc2.xy(3, 3));
 
-		pnl2.add(new JLinkLabel("%path%"), cc2.xy(1, 5));
+		pnl2.add(new JLinkButton("%path%"), cc2.xy(1, 5));
 		pnl2.add(new JLabel("- repräsentiert den Pfad zum ausgewählten Spiel"), cc2.xy(3, 5));
 
 		pnl.add(pnl2);

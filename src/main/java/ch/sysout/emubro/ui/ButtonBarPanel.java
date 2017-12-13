@@ -3,15 +3,15 @@ package ch.sysout.emubro.ui;
 import java.awt.Component;
 import java.awt.Insets;
 import java.awt.PopupMenu;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.AbstractButton;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 
 import ch.sysout.emubro.api.event.GameSelectionEvent;
+import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.util.Messages;
 
 public class ButtonBarPanel extends JPanel {
@@ -87,18 +87,6 @@ public class ButtonBarPanel extends JPanel {
 		removeComponent((ButtonBarButton) comp);
 	}
 
-	public void addListeners() {
-		addComponentListener(new ComponentAdapter() {
-			// private int maximizeButton = 4;
-			// private boolean abort = false;
-
-			@Override
-			public void componentResized(ComponentEvent e) {
-				checkMinimizeMaximizeButtons();
-			}
-		});
-	}
-
 	public void checkMinimizeMaximizeButtons() {
 		int currentPanelWidth = getWidth();
 		int buttonBarContentWidth = getButtonBarContentWidth();
@@ -118,30 +106,66 @@ public class ButtonBarPanel extends JPanel {
 	}
 
 	private void checkMinimizeButtons() {
-		ButtonBarButton btn = null;
-		//		for (int i = 0; i <= 6; i++) {
-		//			if (!components.get(i).getText().isEmpty()) {
-		//				if (i != 2) {
-		//					btn = components.get(i);
-		//					break;
-		//				}
-		//			}
-		//		}
+		int currentWidth = getWidth();
+		int buttonBarContentWidth = getButtonBarContentWidth();
+		int difference = currentWidth - buttonBarContentWidth;
 		if (gameSelected) {
-			if (!components.get(0).getText().isEmpty()) {
-				components.get(0).setText("");
-				if (!components.get(1).getText().isEmpty()) {
-					components.get(1).setText("");
+			if (hasText(0)) {
+				if (difference == 0) {
+					setEmptyText(0);
+					setEmptyText(1);
+					SwingUtilities.invokeLater(new Runnable() {
+
+						@Override
+						public void run() {
+							checkMinimizeButtons();
+						}
+					});
 				}
-			} else if (!components.get(6).getText().isEmpty()) {
-				components.get(6).setText("");
-			} else if (!components.get(5).getText().isEmpty()) {
-				components.get(5).setText("");
-			} else if (!components.get(4).getText().isEmpty()) {
-				components.get(4).setText("");
-			} else if (!components.get(2).getText().isEmpty()) {
-				components.get(2).setText("");
+				return;
+			} else if (hasText(6)) {
+				if (difference == 0) {
+					setEmptyText(6);
+					SwingUtilities.invokeLater(new Runnable() {
+
+						@Override
+						public void run() {
+							checkMinimizeButtons();
+						}
+					});
+				}
+				return;
+			} else if (hasText(5)) {
+				if (difference == 0) {
+					setEmptyText(5);
+					SwingUtilities.invokeLater(new Runnable() {
+
+						@Override
+						public void run() {
+							checkMinimizeButtons();
+						}
+					});
+				}
+				return;
+			} else if (hasText(4)) {
+				if (difference == 0) {
+					setEmptyText(4);
+					SwingUtilities.invokeLater(new Runnable() {
+
+						@Override
+						public void run() {
+							checkMinimizeButtons();
+						}
+					});
+				}
+				return;
+			} else if (hasText(2)) {
+				if (difference == 0) {
+					setEmptyText(2);
+				}
+				return;
 			} else {
+				System.out.println("difffff: " + difference);
 				if (components.get(6).isVisible()) {
 					components.get(6).setVisible(false);
 				} else if (components.get(5).isVisible()) {
@@ -158,19 +182,22 @@ public class ButtonBarPanel extends JPanel {
 				}
 			}
 		} else {
-			if (!components.get(0).getText().isEmpty()) {
-				components.get(0).setText("");
-				if (!components.get(1).getText().isEmpty()) {
-					components.get(1).setText("");
-				}
+			if (hasText(0)) {
+				setEmptyText(0);
+				setEmptyText(1);
 			} else {
-				if (components.get(1).isVisible()) {
-					components.get(1).setVisible(false);
-				} else if (components.get(0).isVisible()) {
-					components.get(0).setVisible(false);
-				}
+				components.get(1).setVisible(false);
+				components.get(0).setVisible(false);
 			}
 		}
+	}
+
+	private void setEmptyText(int i) {
+		components.get(i).setText("");
+	}
+
+	private boolean hasText(int index) {
+		return !components.get(index).getText().isEmpty();
 	}
 
 	private void checkMaximizeButtons() {
@@ -178,58 +205,121 @@ public class ButtonBarPanel extends JPanel {
 		int buttonBarContentWidth = getButtonBarContentWidth();
 		int difference = currentWidth - buttonBarContentWidth;
 		if (gameSelected) {
-			if (components.get(2).getText().isEmpty()) {
+			System.err.println("diff: " + difference);
+			if (!hasText(2)) {
 				if (difference > (components.get(2).getWidth() + components.get(3).getWidth())) {
-					components.get(2).setText(Messages.get("runGame"));
+					//					if (!components.get(3).isVisible() || !components.get(4).isVisible()
+					//							|| !components.get(5).isVisible() || !components.get(6).isVisible()) {
+					//						return;
+					//					}
+					components.get(2).setText(Messages.get(MessageConstants.RUN_GAME));
+					SwingUtilities.invokeLater(new Runnable() {
+
+						@Override
+						public void run() {
+							checkMaximizeButtons();
+						}
+					});
 				}
-			} else if (components.get(4).getText().isEmpty()) {
-				if (difference > components.get(2).getWidth()) {
-					components.get(4).setText(Messages.get("remove"));
+				return;
+			} else if (!hasText(4)) {
+				if (difference > (components.get(2).getWidth() + components.get(3).getWidth())) {
+					components.get(4).setText(Messages.get(MessageConstants.REMOVE));
+					SwingUtilities.invokeLater(new Runnable() {
+
+						@Override
+						public void run() {
+							checkMaximizeButtons();
+						}
+					});
 				}
-			} else if (components.get(5).getText().isEmpty()) {
+				return;
+			} else if (!hasText(5)) {
 				if (difference > components.get(4).getWidth()) {
-					components.get(5).setText(Messages.get("rename"));
-				}
-			} else if (components.get(6).getText().isEmpty()) {
-				if (difference > components.get(5).getWidth()) {
-					components.get(6).setText(Messages.get("gameProperties"));
-				}
-			} else if (components.get(0).getText().isEmpty()) {
-				if (difference > (components.get(6).getWidth() + components.get(6).getWidth())) {
-					components.get(1).setText(Messages.get("settings"));
-					if (components.get(0).getText().isEmpty()) {
-						components.get(0).setText(Messages.get("organize"));
+					if (!components.get(6).isVisible()) {
+						return;
 					}
+					components.get(5).setText(Messages.get(MessageConstants.RENAME));
+					SwingUtilities.invokeLater(new Runnable() {
+
+						@Override
+						public void run() {
+							checkMaximizeButtons();
+						}
+					});
 				}
-			} else {
-				if (!components.get(0).isVisible()) {
-					components.get(0).setVisible(true);
-				} else if (!components.get(1).isVisible()) {
-					components.get(1).setVisible(true);
-				} else if (!components.get(2).isVisible()) {
-					components.get(2).setVisible(true);
-					components.get(3).setVisible(true);
-				} else if (!components.get(4).isVisible()) {
-					components.get(4).setVisible(true);
-				} else if (!components.get(5).isVisible()) {
-					components.get(5).setVisible(true);
-				} else if (!components.get(6).isVisible()) {
-					components.get(6).setVisible(true);
+				return;
+			} else if (!hasText(6)) {
+				if (difference > components.get(5).getWidth()) {
+					components.get(6).setText(Messages.get(MessageConstants.GAME_PROPERTIES));
+					SwingUtilities.invokeLater(new Runnable() {
+
+						@Override
+						public void run() {
+							checkMaximizeButtons();
+						}
+					});
 				}
+				return;
+			} else if (!hasText(0)) {
+				if (difference > (components.get(6).getWidth() + components.get(6).getWidth())) {
+					components.get(1).setText(Messages.get(MessageConstants.SETTINGS));
+					components.get(0).setText(Messages.get(MessageConstants.ORGANIZE));
+					SwingUtilities.invokeLater(new Runnable() {
+
+						@Override
+						public void run() {
+							checkMaximizeButtons();
+						}
+					});
+				}
+				return;
+			}
+			if (!components.get(0).isVisible()) {
+				components.get(0).setVisible(true);
+				components.get(0).setText("");
+			}
+			else if (!components.get(1).isVisible()) {
+				components.get(1).setVisible(true);
+				components.get(1).setText("");
+			}
+			else if (!components.get(2).isVisible()) {
+				components.get(2).setVisible(true);
+				components.get(3).setVisible(true);
+				components.get(2).setText("");
+				components.get(3).setText("");
+			}
+			else if (!components.get(4).isVisible()) {
+				components.get(4).setVisible(true);
+				components.get(4).setText("");
+			}
+			else if (!components.get(5).isVisible()) {
+				components.get(5).setVisible(true);
+				components.get(5).setText("");
+			}
+			else if (!components.get(6).isVisible()) {
+				components.get(6).setVisible(true);
+				components.get(6).setText("");
 			}
 		} else {
 			if (components.get(0).getText().isEmpty()) {
 				if (difference > (components.get(6).getWidth() + components.get(6).getWidth())) {
-					components.get(1).setText(Messages.get("settings"));
+					if (!components.get(2).isVisible() || !components.get(3).isVisible() || !components.get(4).isVisible()
+							|| !components.get(5).isVisible() || !components.get(6).isVisible()) {
+						return;
+					}
+					components.get(1).setText(Messages.get(MessageConstants.SETTINGS));
 					if (components.get(0).getText().isEmpty()) {
-						components.get(0).setText(Messages.get("organize"));
+						components.get(0).setText(Messages.get(MessageConstants.ORGANIZE));
 					}
 				}
 			} else {
 				if (!components.get(0).isVisible()) {
 					components.get(0).setVisible(true);
+					components.get(0).setText("");
 				} else if (!components.get(1).isVisible()) {
 					components.get(1).setVisible(true);
+					components.get(1).setText("");
 				}
 			}
 		}

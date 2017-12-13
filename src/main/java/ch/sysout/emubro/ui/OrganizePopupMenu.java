@@ -88,6 +88,10 @@ class OrganizePopupMenu extends JPopupMenu {
 		itmShowMenuBar.addActionListener(l);
 	}
 
+	public void addShowNavigationListener(ActionListener l) {
+		itmShowNavigationPanel.addActionListener(l);
+	}
+
 	public void addShowPreviewListener(ActionListener l) {
 		itmShowPreviewPanel.addActionListener(l);
 	}
@@ -126,5 +130,11 @@ class OrganizePopupMenu extends JPopupMenu {
 
 	public void showMenuBar(boolean b) {
 		itmShowMenuBar.setSelected(b);
+	}
+
+	public void showNavigationPane(boolean b) {
+		itmShowNavigationPanel.setSelected(b);
+		itmShowNavigationPanel.setActionCommand(!b ? GameViewConstants.SHOW_NAVIGATION_PANE
+				: GameViewConstants.HIDE_NAVIGATION_PANE);
 	}
 }

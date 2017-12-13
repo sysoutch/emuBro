@@ -5,6 +5,7 @@ import java.util.List;
 
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.impl.BroGameAlreadyExistsException;
+import ch.sysout.emubro.impl.BroGameDeletedException;
 import ch.sysout.emubro.impl.model.BroGame;
 
 public interface GameDAO {
@@ -14,7 +15,7 @@ public interface GameDAO {
 
 	void renameGame(int gameId, String newTitle) throws SQLException;
 
-	void addGame(Game game) throws SQLException, BroGameAlreadyExistsException;
+	void addGame(Game game) throws SQLException, BroGameAlreadyExistsException, BroGameDeletedException;
 
 	boolean hasGame(Game game) throws SQLException;
 

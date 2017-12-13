@@ -8,7 +8,9 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetListener;
+import java.awt.event.ActionListener;
 import java.awt.event.MouseListener;
+import java.awt.event.MouseWheelListener;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,6 +18,7 @@ import javax.swing.Action;
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
+import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JViewport;
@@ -36,24 +39,33 @@ import javax.swing.table.TableColumnModel;
 import javax.swing.table.TableModel;
 
 import ch.sysout.emubro.api.FilterListener;
-import ch.sysout.emubro.api.GameListener;
 import ch.sysout.emubro.api.event.FilterEvent;
 import ch.sysout.emubro.api.event.GameAddedEvent;
 import ch.sysout.emubro.api.event.GameRemovedEvent;
 import ch.sysout.emubro.api.event.GameSelectionEvent;
 import ch.sysout.emubro.api.model.Game;
+import ch.sysout.emubro.api.model.Platform;
+import ch.sysout.emubro.api.model.PlatformComparator;
+import ch.sysout.emubro.controller.GameSelectionListener;
 import ch.sysout.emubro.controller.ViewConstants;
 import ch.sysout.emubro.impl.event.BroGameSelectionEvent;
+import ch.sysout.emubro.impl.event.NavigationEvent;
 import ch.sysout.emubro.impl.model.BroGame;
 import ch.sysout.emubro.impl.model.GameConstants;
 import ch.sysout.util.ScreenSizeUtil;
+import ch.sysout.util.UIUtil;
 
-public class TableViewPanel extends ViewPanel implements ListSelectionListener, GameListener, FilterListener {
+public class TableViewPanel extends ViewPanel implements ListSelectionListener, GameSelectionListener, FilterListener {
 	private static final long serialVersionUID = 1L;
+
+	private TableModel mdlTblAllGames;
+	private TableModel mdlTblGamesRecentlyPlayed;
+	private TableModel mdlTblGamesFavorites;
+	private TableModel mdlTblGamesFiltered;
 
 	private JTable tblGames;
 	private TableColumnAdjuster columnAdjuster;
-	private List<GameListener> listeners = new ArrayList<>();
+	private List<GameSelectionListener> listeners = new ArrayList<>();
 	private JScrollPane spTblGames;
 
 	// private int[] twok = { 24, 250, 180, 150, 80, 200 };
@@ -69,8 +81,16 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 
 	private boolean hideExtensions = true;
 
-	public TableViewPanel() {
+	private boolean touchScreenScrollEnabled;
+
+	private int viewStyle;
+
+	public TableViewPanel(IconStore iconStore) {
 		super(new BorderLayout());
+		mdlTblAllGames = new GameTableModel(iconStore);
+		mdlTblGamesRecentlyPlayed = new GameTableModel(iconStore);
+		mdlTblGamesFavorites = new GameTableModel(iconStore);
+		mdlTblGamesFiltered = new GameTableModel(iconStore);
 		initComponents();
 		createUI();
 	}
@@ -175,7 +195,7 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 			// lstGames.setComponentPopupMenu(b ? popup : null);
 
 			GameSelectionEvent event = new BroGameSelectionEvent(game, null);
-			for (GameListener l : listeners) {
+			for (GameSelectionListener l : listeners) {
 				l.gameSelected(event);
 			}
 
@@ -195,63 +215,12 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 	}
 
 	@Override
+	public void selectGame(int gameId) {
+
+	}
+
+	@Override
 	public void gameSelected(GameSelectionEvent e) {
-	}
-
-	/*
-	 * (non-Javadoc)
-	 *
-	 * @see
-	 * ch.sysout.gameexplorer.api.GameListener#gameAdded(ch.sysout.gameexplorer.
-	 * api.GameAddedEvent)
-	 *
-	 * FIXME Exception in thread "Thread-5" java.lang.IndexOutOfBoundsException:
-	 * Invalid range at javax.swing.DefaultRowSorter.checkAgainstModel(Unknown
-	 * Source) at javax.swing.DefaultRowSorter.rowsInserted(Unknown Source) at
-	 * javax.swing.JTable.notifySorter(Unknown Source) at
-	 * javax.swing.JTable.sortedTableChanged(Unknown Source) at
-	 * javax.swing.JTable.tableChanged(Unknown Source) at
-	 * javax.swing.table.AbstractTableModel.fireTableChanged(Unknown Source) at
-	 * javax.swing.table.AbstractTableModel.fireTableRowsInserted(Unknown
-	 * Source) at javax.swing.table.DefaultTableModel.insertRow(Unknown Source)
-	 * at javax.swing.table.DefaultTableModel.addRow(Unknown Source) at
-	 * javax.swing.table.DefaultTableModel.addRow(Unknown Source) at
-	 * ch.sysout.gameexplorer.ui.GameTableModel.addRow(GameTableModel.java:121)
-	 * at
-	 * ch.sysout.gameexplorer.ui.TableViewPanel.gameAdded(TableViewPanel.java:
-	 * 184) at ch.sysout.gameexplorer.ui.MainPanel.gameAdded(MainPanel.java:395)
-	 * at ch.sysout.gameexplorer.ui.MainFrame.gameAdded(MainFrame.java:652) at
-	 * ch.sysout.gameexplorer.impl.BroExplorer.fireGameAddedEvent(BroExplorer.
-	 * java:486) at
-	 * ch.sysout.gameexplorer.impl.BroExplorer.searchForGames(BroExplorer.java:
-	 * 471) at
-	 * ch.sysout.gameexplorer.impl.BroExplorer.searchForPlatform(BroExplorer.
-	 * java:425) at
-	 * ch.sysout.gameexplorer.impl.controller.BroController.searchForPlatforms(
-	 * BroController.java:496) at
-	 * ch.sysout.gameexplorer.impl.controller.BroController.searchForPlatforms(
-	 * BroController.java:494) at
-	 * ch.sysout.gameexplorer.impl.controller.BroController.searchForPlatforms(
-	 * BroController.java:494) at
-	 * ch.sysout.gameexplorer.impl.controller.BroController.searchForPlatforms(
-	 * BroController.java:494) at
-	 * ch.sysout.gameexplorer.impl.controller.BroController.searchForPlatforms(
-	 * BroController.java:494) at
-	 * ch.sysout.gameexplorer.impl.controller.BroController.access$17(
-	 * BroController.java:481) at
-	 * ch.sysout.gameexplorer.impl.controller.BroController$4.run(BroController.
-	 * java:469) at java.lang.Thread.run(Unknown Source)
-	 */
-	@Override
-	public void gameAdded(final GameAddedEvent e) {
-		// tblGames.revalidate();
-		// tblGames.repaint();
-	}
-
-	@Override
-	public void gameRemoved(GameRemovedEvent e) {
-		// tblGames.revalidate();
-		// tblGames.repaint();
 	}
 
 	@Override
@@ -267,14 +236,17 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 		// }
 	}
 
-	public void addSelectGameListener(GameListener l) {
+	@Override
+	public void addSelectGameListener(GameSelectionListener l) {
 		listeners.add(l);
 	}
 
+	@Override
 	public void addRunGameListener(MouseListener l) {
 		tblGames.addMouseListener(l);
 	}
 
+	@Override
 	public void addRunGameListener(Action l) {
 		tblGames.getInputMap().put(KeyStroke.getKeyStroke("pressed ENTER"), "actionRunGame");
 		tblGames.getActionMap().put("actionRunGame", l);
@@ -294,6 +266,7 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 		}
 	}
 
+	@Override
 	public void increaseFontSize() {
 		int newRowHeight = getRowHeight() + 4;
 		int newColumnWidth = getColumnWidth() + 64;
@@ -303,6 +276,7 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 		tblGames.setFont(new Font(font.getFontName(), font.getStyle(), font.getSize() + 2));
 	}
 
+	@Override
 	public void decreaseFontSize() {
 		int newRowHeight = getRowHeight() - 4;
 		int newColumnWidth = getColumnWidth() - 64;
@@ -314,18 +288,27 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 		}
 	}
 
+	@Override
 	public int getColumnWidth() {
-		return tblGames.getColumnModel().getColumn(1).getWidth();
+		if (columnModel.getColumnCount() > 1) {
+			TableColumn column = columnModel.getColumn(1);
+			int columnWidth = column.getWidth();
+			return columnWidth;
+		}
+		return 128;
 	}
 
+	@Override
 	public void setColumnWidth(int value) {
 		tblGames.getColumnModel().getColumn(1).setWidth(value);
 	}
 
+	@Override
 	public int getRowHeight() {
 		return tblGames.getRowHeight();
 	}
 
+	@Override
 	public void setRowHeight(int value) {
 		tblGames.setRowHeight(value);
 	}
@@ -337,6 +320,7 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 
 	@Override
 	public void languageChanged() {
+		((TableViewPanel) mdlTblAllGames).languageChanged();
 		List<Integer> columnWidths = new ArrayList<>();
 
 		for (int i = 0; i < tblGames.getColumnModel().getColumnCount(); i++) {
@@ -386,10 +370,6 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 		SwingUtilities.invokeLater(runnableResetColumns);
 	}
 
-	public void platformIconAdded(int platformId, ImageIcon platformIcon) {
-		((GameTableModel) tblGames.getModel()).addPlatformIcon(platformId, platformIcon);
-	}
-
 	@Override
 	public void groupByNone() {
 	}
@@ -398,6 +378,11 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 	public void groupByPlatform() {
 	}
 
+	@Override
+	public void groupByTitle() {
+	}
+
+	@Override
 	public void hideExtensions(boolean selected) {
 		hideExtensions = selected;
 	}
@@ -406,6 +391,7 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 		return tblGames.getFont().getSize();
 	}
 
+	@Override
 	public void setFontSize(int value) {
 		Font font = tblGames.getFont();
 		tblGames.setFont(new Font(font.getFontName(), font.getStyle(), value));
@@ -416,5 +402,209 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 		return ViewConstants.GROUP_BY_NONE;
 		//			return ViewConstants.GROUP_BY_PLATFORM;
 		//		throw new IllegalStateException("current viewport not known");
+	}
+
+	@Override
+	public void gameRated(Game game) {
+		if (game.getRate() > 0) {
+			if (!((GameTableModel) mdlTblGamesFavorites).contains(game)) {
+				((GameTableModel) mdlTblGamesFavorites).addRow(game);
+			}
+		} else {
+			((GameTableModel) mdlTblGamesFavorites).removeGame(game);
+		}
+		UIUtil.revalidateAndRepaint(spTblGames);
+	}
+
+	public void addGame(Game game, ImageIcon gameIcon) {
+		((GameTableModel) mdlTblAllGames).addRow(game);
+		((GameTableModel) mdlTblAllGames).addGameIcon(game.getId(), gameIcon);
+		if (game.isFavorite()) {
+			((GameTableModel) mdlTblGamesFavorites).addRow(game);
+		}
+	}
+
+	@Override
+	public void initPlatforms(List<Platform> platforms) {
+		((GameTableModel) mdlTblAllGames).initPlatforms(platforms);
+	}
+
+	@Override
+	public void gameAdded(GameAddedEvent e) {
+		Game game = e.getGame();
+		((GameTableModel) mdlTblAllGames).addRow(game);
+	}
+
+	@Override
+	public void gameRemoved(GameRemovedEvent e) {
+		Game game = e.getGame();
+		((GameTableModel) mdlTblAllGames).removeGame(game);
+		((GameTableModel) mdlTblGamesRecentlyPlayed).removeGame(game);
+		((GameTableModel) mdlTblGamesRecentlyPlayed).removeGame(game);
+		((GameTableModel) mdlTblGamesFavorites).removeGame(game);
+	}
+
+	@Override
+	public void initGameList(List<Game> games, int currentNavView) {
+		if (mdlTblAllGames.getRowCount() == 0) {
+			for (Game game : games) {
+				addGame(game, null);
+			}
+			switch (currentNavView) {
+			case NavigationPanel.ALL_GAMES:
+				tblGames.setModel(mdlTblAllGames);
+				break;
+			case NavigationPanel.RECENTLY_PLAYED:
+				tblGames.setModel(mdlTblGamesRecentlyPlayed);
+				break;
+			case NavigationPanel.FAVORITES:
+				tblGames.setModel(mdlTblGamesFavorites);
+				break;
+			default:
+				tblGames.setModel(mdlTblAllGames);
+				break;
+			}
+		}
+	}
+
+	@Override
+	public void sortOrder(int sortOrder) {
+
+	}
+
+	@Override
+	public void sortBy(int sortBy, PlatformComparator platformComparator) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void navigationChanged(NavigationEvent e) {
+		switch (e.getView()) {
+		case NavigationPanel.ALL_GAMES:
+			tblGames.setModel(mdlTblAllGames);
+			break;
+		case NavigationPanel.RECENTLY_PLAYED:
+			tblGames.setModel(mdlTblGamesRecentlyPlayed);
+			break;
+		case NavigationPanel.FAVORITES:
+			tblGames.setModel(mdlTblGamesFavorites);
+			break;
+		default:
+			tblGames.setModel(mdlTblAllGames);
+			break;
+		}
+		adjustColumns();
+	}
+
+	@Override
+	public void pinColumnWidthSliderPanel(JPanel pnlColumnWidthSlider) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void unpinColumnWidthSliderPanel(JPanel pnlColumnWidthSlider) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void pinRowHeightSliderPanel(JPanel pnlRowHeightSlider) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void unpinRowHeightSliderPanel(JPanel pnlRowHeightSlider) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void addDecreaseFontListener(Action l) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void addIncreaseFontListener(Action l) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void addIncreaseFontListener2(MouseWheelListener l) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void addOpenGamePropertiesListener(Action l) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void addRemoveGameListener(Action l) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void addCommentListener(ActionListener l) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void addOpenGameFolderListener1(MouseListener l) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void addRateListener(RateListener l) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void addRenameGameListener(Action l) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void selectNextGame() {
+		//		int nextIndex = lstGames.getSelectedIndex() + 1;
+		//		if (nextIndex < lstGames.getModel().getSize()) {
+		//			Game game = lstGames.getModel().getElementAt(nextIndex);
+		//			selectGame(game.getId());
+		//		}
+	}
+
+	@Override
+	public void selectPreviousGame() {
+		//		int previousIndex = lstGames.getSelectedIndex() - 1;
+		//		if (previousIndex < lstGames.getModel().getSize()) {
+		//			Game game = lstGames.getModel().getElementAt(previousIndex);
+		//			selectGame(game.getId());
+		//		}
+	}
+
+	@Override
+	public boolean isTouchScreenScrollEnabled() {
+		return touchScreenScrollEnabled;
+	}
+
+	@Override
+	public void setTouchScreenScrollEnabled(boolean touchScreenScrollEnabled) {
+		this.touchScreenScrollEnabled = touchScreenScrollEnabled;
+	}
+
+	@Override
+	public void setViewStyle(int viewStyle) {
+		this.viewStyle = viewStyle;
 	}
 }

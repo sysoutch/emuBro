@@ -51,10 +51,14 @@ public class ProgressPanel extends JPanel {
 
 	public void setProgressBarSpace(int i) {
 		prgBrowseComputer
-				.setMinimumSize(new Dimension(prgBrowseComputer.getWidth() + i, prgBrowseComputer.getHeight()));
+		.setMinimumSize(new Dimension(prgBrowseComputer.getWidth() + i, prgBrowseComputer.getHeight()));
 	}
 
 	public void addInterruptSearchProcessListener(ActionListener l) {
 		btnInterruptProgress.addActionListener(l);
+	}
+
+	public void languageChanguage() {
+		prgBrowseComputer.setString(" " + Messages.get("browseComputerForGames") + " ");
 	}
 }

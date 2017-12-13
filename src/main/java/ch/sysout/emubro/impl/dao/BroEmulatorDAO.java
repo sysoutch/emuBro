@@ -26,7 +26,7 @@ public class BroEmulatorDAO implements EmulatorDAO {
 		Statement stmt = conn.createStatement();
 		stmt = conn.createStatement();
 
-		String sql = "select * from emulator where emulator_id = " + id;
+		String sql = "select * from emulator where emulator_id = " + id + " and emulator_deleted != "+true;
 		ResultSet rset = stmt.executeQuery(sql);
 		Emulator emulator = null;
 		if (rset.next()) {
@@ -39,10 +39,11 @@ public class BroEmulatorDAO implements EmulatorDAO {
 				String website = rset.getString("emulator_website");
 				String startParameter = rset.getString("emulator_startParameters");
 				String searchString = rset.getString("emulator_searchString");
+				String setupFileMatch = rset.getString("emulator_setupFileMatch");
 				String[] supportedFileTypes = rset.getString("emulator_supportedFileTypes").split(" ");
 				boolean autoSearchEnabled = rset.getBoolean("emulator_autoSearchEnabled");
 				emulator = new BroEmulator(emulatorId, name, path, iconFilename, configFilePath, website,
-						startParameter, supportedFileTypes, searchString, autoSearchEnabled);
+						startParameter, supportedFileTypes, searchString, setupFileMatch, autoSearchEnabled);
 			} catch (SQLException e) {
 				e.printStackTrace();
 			}
@@ -65,12 +66,17 @@ public class BroEmulatorDAO implements EmulatorDAO {
 			String sql = SqlUtil.insertIntoWithColumnsString("emulator", "emulator_name", "emulator_path",
 					"emulator_iconFileName", "emulator_configFilePath", "emulator_website", "emulator_startParameters",
 					"emulator_searchString", "emulator_supportedFileTypes", "emulator_autoSearchEnabled",
-					"'" + emulator.getName() + "'", "'" + emulator.getPath() + "'",
-					"'" + emulator.getIconFilename() + "'", "'" + emulator.getConfigFilePath() + "'",
-					"'" + emulator.getWebsite() + "'", "'" + startParameter + "'",
-					"'" + emulator.getSearchString() + "'", "'" + supportedFileTypesString + "'",
-					emulator.isAutoSearchEnabled());
-			System.out.println("sql BroEmulatorDAO: " + sql);
+					"emulator_deleted",
+					SqlUtil.getQuotedString(emulator.getName()),
+					SqlUtil.getQuotedString(emulator.getPath()),
+					SqlUtil.getQuotedString(emulator.getIconFilename()),
+					SqlUtil.getQuotedString(emulator.getConfigFilePath()),
+					SqlUtil.getQuotedString(emulator.getWebsite()),
+					SqlUtil.getQuotedString(startParameter),
+					SqlUtil.getQuotedString(emulator.getSearchString()),
+					SqlUtil.getQuotedString(supportedFileTypesString),
+					emulator.isAutoSearchEnabled(),
+					false);
 			try {
 				stmt.executeQuery(sql);
 			} catch (SQLException e) {
@@ -95,7 +101,7 @@ public class BroEmulatorDAO implements EmulatorDAO {
 	@Override
 	public void removeEmulator(int emulatorId) throws SQLException {
 		Statement stmt = conn.createStatement();
-		String sql = "delete emulator where emulator_id=" + emulatorId;
+		String sql = "update emulator emulator_deleted="+true+" where emulator_id=" + emulatorId;
 		stmt.executeQuery(sql);
 		conn.commit();
 		stmt.close();
@@ -123,7 +129,7 @@ public class BroEmulatorDAO implements EmulatorDAO {
 	 * @throws SQLException
 	 */
 	@Override
-	public boolean hasEmulator(final int platformId, String path) throws SQLException {
+	public boolean hasEmulator(int platformId, String path) throws SQLException {
 		if (path == null || path.trim().isEmpty()) {
 			return false;
 		}
@@ -141,7 +147,7 @@ public class BroEmulatorDAO implements EmulatorDAO {
 		for (int i : rsetCopy) {
 			stmt = conn.createStatement();
 			sql = "select emulator_id, emulator_path from emulator where emulator_id =" + i
-					+ " and lower(emulator_path) = '" + pathEdited + "'";
+					+ " and lower(emulator_path) = " + SqlUtil.getQuotedString(pathEdited) + " and emulator_deleted != "+true;
 			rset = stmt.executeQuery(sql);
 			if (rset.next()) {
 				stmt.close();

@@ -6,39 +6,51 @@ import java.awt.event.FocusListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 
-import javax.swing.JLabel;
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.SwingConstants;
 
 /**
- * @author heribert
+ * @author sysout.ch
+ *
+ * this class was named JLinkLabel before and extended JLabel.
+ * The class was changed cause of the need of the ability to setFocusable(true)
  *
  */
-public class JLinkLabel extends JLabel implements MouseListener, FocusListener {
+public class JLinkButton extends JButton implements MouseListener, FocusListener {
 	private static final long serialVersionUID = 1L;
 
 	private boolean styleEnabled = true;
 	private String text = "";
 
 	{
-		addMouseListener(JLinkLabel.this);
-		addFocusListener(JLinkLabel.this);
+		addMouseListener(JLinkButton.this);
+		addFocusListener(JLinkButton.this);
 	}
 
 	/**
-	 * Creates a <code>JLinkLabel</code> instance with no image and with an
+	 * Creates a <code>JLinkButton</code> instance with no image and with an
 	 * empty string for the title.
 	 */
-	public JLinkLabel() {
+	public JLinkButton() {
 		this("");
 	}
 
 	/**
-	 * Creates a <code>JLinkLabel</code> instance with the specified text.
+	 * Creates a <code>JLinkButton</code> instance with the specified text.
 	 *
 	 * @param text
 	 */
-	public JLinkLabel(String text) {
+	public JLinkButton(String text) {
+		super.setText(text);
 		this.text = text;
+		setHorizontalAlignment(SwingConstants.LEFT);
+		setBorder(BorderFactory.createEmptyBorder());
+		setContentAreaFilled(false);
+		setFocusPainted(false);
+		doHover(false);
 	}
+
 
 	void doHover(boolean b) {
 		Cursor cursor = (b) ? Cursor.getPredefinedCursor(Cursor.HAND_CURSOR) : null;

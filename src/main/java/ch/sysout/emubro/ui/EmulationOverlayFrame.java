@@ -34,6 +34,7 @@ import javax.swing.JSeparator;
 
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.Platform;
+import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
@@ -50,14 +51,14 @@ public class EmulationOverlayFrame extends JFrame {
 	public JButton btnMenu = new JButton();
 
 	final JPopupMenu popup = new JPopupMenu();
-	private JMenuItem btnSendEsc = new JMenuItem(Messages.get("sendEsc"));
-	private JMenuItem btnSendAltEnter = new JMenuItem(Messages.get("sendAltEnter"));
-	private JButton btnShowProcessManager = new JButton(Messages.get("showProcessManager"));
+	private JMenuItem btnSendEsc = new JMenuItem(Messages.get(MessageConstants.SEND_ESC));
+	private JMenuItem btnSendAltEnter = new JMenuItem(Messages.get(MessageConstants.SEND_ALT_ENTER));
+	private JButton btnShowProcessManager = new JButton(Messages.get(MessageConstants.SHOW_PROCESS_MANAGER));
 	private JMenuItem btnShowApplication = new JMenuItem(
-			Messages.get("showApplication", Messages.get("applicationTitle")));
-	private JMenuItem btnStopEmulation = new JMenuItem(Messages.get("stopEmulation"));
-	private JMenuItem btnEmulationOverlayPanelSettings = new JMenuItem("Overlay panel settings...");
-	private JMenuItem btnHideEmulationOverlayPanel = new JMenuItem("Hide overlay panel");
+			Messages.get(MessageConstants.SHOW_APPLICATION, Messages.get(MessageConstants.APPLICATION_TITLE)));
+	private JMenuItem btnStopEmulation = new JMenuItem(Messages.get(MessageConstants.STOP_EMULATION));
+	private JMenuItem btnEmulationOverlayPanelSettings = new JMenuItem(MessageConstants.OVERLAY_PANEL_SETTINGS + "...");
+	private JMenuItem btnHideEmulationOverlayPanel = new JMenuItem(MessageConstants.HIDE_OVERLAY_PANEL);
 
 	private Game game;
 	protected Platform platform;
@@ -106,15 +107,6 @@ public class EmulationOverlayFrame extends JFrame {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				String message = "You really should note that:\n"
-						+ "That function sends an 'ESC' to the underlying window.\n"
-						+ "This can be usefull if u dont have a keyboard right now and you want to either quit the currently running emulator or game, or show/hide the menu bar.\n"
-						+ "Most of the emulators/games listen to that hot key.\n\n" + "Just one condition:\n"
-						+ "The current running emulator or game must be on top of all other windows.\n"
-						+ "If this is not the case, maybe some weird things can be happen, like closing another window or something, because of other programs hot keys.\n\n"
-						+ "Do you want to proceed?";
-				String title = "Send key";
-				JOptionPane.showConfirmDialog(EmulationOverlayFrame.this, message, title, JOptionPane.WARNING_MESSAGE);
 				EmulationOverlayFrame.this.setVisible(false);
 				EmulationOverlayFrame.this.setState(Frame.ICONIFIED);
 				TimerTask task = new TimerTask() {
@@ -149,16 +141,6 @@ public class EmulationOverlayFrame extends JFrame {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				String message = "You really should note that:\n"
-						+ "That function sends an 'Alt+Enter' to the underlying window.\n"
-						+ "This can be usefull if u dont have a keyboard right now and you want to go/leave fullscreen mode in the currently running emulator or game.\n"
-						+ "Most of the emulators/games listen to that hot key.\n\n" + "Just one condition:\n"
-						+ "The current running emulator or game must be on top of all other windows.\n"
-						+ "If this is not the case, maybe some weird things can be happen, like opening new windows or something, because of other programs hot keys.\n\n"
-						+ "Do you want to proceed?";
-				String title = "Send key";
-				JOptionPane.showConfirmDialog(EmulationOverlayFrame.this, message, title, JOptionPane.WARNING_MESSAGE);
-
 				EmulationOverlayFrame.this.setVisible(false);
 				EmulationOverlayFrame.this.setState(Frame.ICONIFIED);
 				TimerTask task = new TimerTask() {
@@ -290,9 +272,17 @@ public class EmulationOverlayFrame extends JFrame {
 				+ "<br>* Drag to move panel" + "</html>");
 
 		btnSendEsc.setIcon(ImageUtil.getImageIconFrom(Icons.get("sendKeyCommand", size2, size2)));
-		btnSendEsc.setToolTipText("Send ESC");
+		btnSendEsc.setToolTipText("<html><strong>Send ESC</strong><br>"
+				+ "That function sends 'ESC' to the underlying window.<br><br>"
+				+ "This can be useful when you dont have a keyboard right now and you want to<br>"
+				+ "either quit the currently running emulator or game, or show/hide the menu bar.<br>"
+				+ "Most of the emulators and games listen to that hot key.</html>");
 		btnSendAltEnter.setIcon(ImageUtil.getImageIconFrom(Icons.get("sendKeyCommand", size2, size2)));
-		btnSendAltEnter.setToolTipText("Send Alt+Enter");
+		btnSendAltEnter.setToolTipText("<html><strong>Send Alt+Enter</strong><br>"
+				+ "That function sends 'Alt+Enter' to the underlying window.<br><br>"
+				+ "This can be useful when you dont have a keyboard right now and you want to<br>"
+				+ "go/leave fullscreen mode in the currently running emulator or game.<br>"
+				+ "Most of the emulators and games listen to that hot key.</html>");
 		btnStopEmulation.setIcon(ImageUtil.getImageIconFrom(Icons.get("stopProcess", size2, size2)));
 		btnStopEmulation.setToolTipText("Stop emulation");
 		btnShowApplication.setIcon(ImageUtil.getImageIconFrom(Icons.get("applicationIcon", size2, size2)));
@@ -309,8 +299,8 @@ public class EmulationOverlayFrame extends JFrame {
 				String gameName = game.getName();
 				String platformName = platform.getName();
 				System.out.println(gameName);
-				String message = Messages.get("confirmStopEmulation", "" + gameName, "" + platformName);
-				Object[] params = { message, checkbox };
+				String message = Messages.get(MessageConstants.CONFIRM_STOP_EMULATION, "" + gameName, "" + platformName);
+				Object[] params = { message, " ", checkbox };
 
 				int request = JOptionPane.showConfirmDialog(null, params, title, JOptionPane.YES_NO_OPTION);
 				checkbox.isSelected();
@@ -396,7 +386,7 @@ public class EmulationOverlayFrame extends JFrame {
 	private List<Image> getIcons() {
 		List<Image> icons = new ArrayList<>();
 		String[] dimensions = { "256x256", "192x192", "128x128", "96x96", "72x72", "64x64", "48x48", "32x32", "24x24",
-				"16x16" };
+		"16x16" };
 		for (String d : dimensions) {
 			try {
 				icons.add(new ImageIcon(getClass().getResource("/images/" + d + "/logo.png")).getImage());

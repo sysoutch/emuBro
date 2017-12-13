@@ -1,7 +1,12 @@
+create table if not exists emubro (
+	emubro_dbVersion varchar(255) unique
+)
+
 create table if not exists explorer (
 	explorer_id int identity,
 	explorer_configWizardHiddenAtStartup boolean,
 	explorer_searchProcessComplete boolean,
+	explorer_searchProcessComplete2 boolean,	
 	explorer_lastSelectedGameId int
 )
 
@@ -14,13 +19,16 @@ create table if not exists emulator (
 	emulator_website varchar(255),
 	emulator_startParameters varchar(255),
 	emulator_searchString varchar(255),
+	emulator_setupFileMatch varchar(255),
 	emulator_supportedFileTypes varchar(255),
-	emulator_autoSearchEnabled boolean
+	emulator_autoSearchEnabled boolean,
+	emulator_deleted boolean
 )
 
 create table if not exists platform (
 	platform_id int identity,
 	platform_name varchar(255) unique,
+	platform_shortName varchar(255),
 	platform_iconFilename varchar(255),
 	platform_defaultGameCover varchar(255),
 	platform_gameSearchModes varchar(255),
@@ -29,7 +37,8 @@ create table if not exists platform (
 	platform_supportedArchiveTypes varchar(255),
 	platform_supportedImageTypes varchar(255),
 	platform_defaultEmulatorId int,
-	platform_autoSearchEnabled boolean
+	platform_autoSearchEnabled boolean,
+	platform_deleted boolean
 )
 
 create table if not exists fileStructure (
@@ -50,7 +59,8 @@ create table if not exists game (
 	game_playCount int,
 	game_emulatorId int,
 	game_platformId int,
-	game_platformIconFileName varchar(255)
+	game_platformIconFileName varchar(255),
+	game_deleted boolean
 )
 
 create table if not exists platform_structure (

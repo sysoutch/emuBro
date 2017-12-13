@@ -2,31 +2,29 @@ package ch.sysout.emubro.ui;
 
 import java.awt.LayoutManager;
 import java.awt.dnd.DropTargetListener;
-import java.util.HashMap;
-import java.util.Map;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseWheelListener;
+import java.util.List;
 
-import javax.swing.ImageIcon;
+import javax.swing.Action;
 import javax.swing.JPanel;
 
-import ch.sysout.util.ScreenSizeUtil;
+import ch.sysout.emubro.api.event.GameAddedEvent;
+import ch.sysout.emubro.api.event.GameRemovedEvent;
+import ch.sysout.emubro.api.model.Game;
+import ch.sysout.emubro.api.model.Platform;
+import ch.sysout.emubro.api.model.PlatformComparator;
+import ch.sysout.emubro.controller.GameSelectionListener;
+import ch.sysout.emubro.impl.event.NavigationEvent;
 
-public abstract class ViewPanel extends JPanel {
+public abstract class ViewPanel extends JPanel implements GameSelectionListener {
 	private static final long serialVersionUID = 1L;
 
 	public static final int BLANK_VIEW = GameViewConstants.BLANK_VIEW;
 	public static final int LIST_VIEW = GameViewConstants.LIST_VIEW;
 	public static final int TABLE_VIEW = GameViewConstants.TABLE_VIEW;
 	public static final int COVER_VIEW = GameViewConstants.COVER_VIEW;
-
-	private Map<Integer, ImageIcon> platformIcons = new HashMap<>();
-
-	private Map<Integer, String> emulatorIconPaths = new HashMap<>();
-	private Map<Integer, ImageIcon> emulatorIcons = new HashMap<>();
-
-	private Map<Integer, String> gameIconPaths = new HashMap<>();
-	private Map<Integer, ImageIcon> gameIcons = new HashMap<>();
-
-	private Map<Integer, ImageIcon> platformCovers = new HashMap<>();
 
 	// private BufferedImage bgImg;
 
@@ -75,98 +73,6 @@ public abstract class ViewPanel extends JPanel {
 	// }
 	// }
 
-	void addPlatformIcon(int platformId, String iconFileName) {
-		String iconFilePath = "/images/platforms/logos/" + iconFileName;
-		if (!platformIcons.containsKey(platformId)) {
-			int size = ScreenSizeUtil.adjustValueToResolution(16);
-			ImageIcon ii = ImageUtil.getImageIconFrom(iconFilePath);
-			ImageIcon ico = ImageUtil.scaleCover(ii, size, CoverConstants.SCALE_WIDTH_OPTION);
-			platformIcons.put(platformId, ico);
-		}
-	}
-
-	void removePlatformIcon(int platformId) {
-		platformIcons.remove(platformId);
-	}
-
-	public void addEmulatorIconPath(int emulatorId, String iconPath) {
-		if (!emulatorIconPaths.containsKey(emulatorId)) {
-			emulatorIconPaths.put(emulatorId, iconPath);
-		}
-	}
-
-	void removeEmulatorIcon(int emulatorId) {
-		emulatorIcons.remove(emulatorId);
-	}
-
-	public ImageIcon getEmulatorIcon(int emulatorId) {
-		if (emulatorIconPaths.containsKey(emulatorId) && !emulatorIcons.containsKey(emulatorId)) {
-			String iconFilePath = emulatorIconPaths.get(emulatorId);
-			ImageIcon ico = ImageUtil.getImageIconFrom(iconFilePath, true);
-			emulatorIcons.put(emulatorId, ico);
-		}
-		return emulatorIcons.get(emulatorId);
-	}
-
-	public void addGameIconPath(int gameId, String iconPath) {
-		if (iconPath == null || iconPath.trim().isEmpty()) {
-			return;
-		}
-		if (!gameIconPaths.containsKey(gameId)) {
-			gameIconPaths.put(gameId, iconPath);
-			String iconFilePath = gameIconPaths.get(gameId);
-			ImageIcon ico = ImageUtil.getImageIconFrom(iconFilePath, true);
-			gameIcons.put(gameId, ico);
-		}
-	}
-
-	void removeGameIcon(int gameId) {
-		gameIcons.remove(gameId);
-	}
-
-	public ImageIcon getGameIcon(int gameId) {
-		return gameIcons.get(gameId);
-	}
-
-	public ImageIcon getGameIcons(int gameId) {
-		return gameIcons.get(gameId);
-	}
-
-	void addPlatformCover(int platformId, String coverFileName) {
-		String coverFilePath = "/images/platforms/covers/" + coverFileName;
-		if (!platformCovers.containsKey(platformId)) {
-			int size = 200;
-			ImageIcon ii = ImageUtil.getImageIconFrom(coverFilePath);
-			int scaleOption = CoverConstants.SCALE_AUTO_OPTION;
-			ImageIcon cover = null;
-			if (ii != null) {
-				if (ii.getIconWidth() > size && ii.getIconWidth() >= ii.getIconHeight()) {
-					scaleOption = CoverConstants.SCALE_WIDTH_OPTION;
-				} else if (ii.getIconHeight() > size && ii.getIconWidth() < ii.getIconHeight()) {
-					scaleOption = CoverConstants.SCALE_HEIGHT_OPTION;
-				} else {
-					cover = ii;
-					platformCovers.put(platformId, cover);
-					return;
-				}
-				cover = ImageUtil.scaleCover(ii, size, scaleOption);
-			}
-			platformCovers.put(platformId, cover);
-		}
-	}
-
-	void removePlatformCover(int platformId) {
-		platformCovers.remove(platformId);
-	}
-
-	public ImageIcon getPlatformIcon(int platformId) {
-		return platformIcons.get(platformId);
-	}
-
-	public ImageIcon getPlatformCover(int platformId) {
-		return platformCovers.get(platformId);
-	}
-
 	public abstract void languageChanged();
 
 	public abstract void addGameDragDropListener(DropTargetListener l);
@@ -175,5 +81,83 @@ public abstract class ViewPanel extends JPanel {
 
 	public abstract void groupByPlatform();
 
+	public abstract void groupByTitle();
+
 	public abstract int getGroupBy();
+
+	public abstract boolean isTouchScreenScrollEnabled();
+
+	public abstract void setTouchScreenScrollEnabled(boolean touchScreenScrollEnabled);
+
+	public abstract void initPlatforms(List<Platform> platforms);
+
+	public abstract void sortBy(int sortBy, PlatformComparator platformComparator);
+
+	public abstract void sortOrder(int sortOrder);
+
+	public abstract void setFontSize(int fontSize);
+
+	public abstract void navigationChanged(NavigationEvent e);
+
+	public abstract void increaseFontSize();
+
+	public abstract void decreaseFontSize();
+
+	public abstract void pinColumnWidthSliderPanel(JPanel pnlColumnWidthSlider);
+
+	public abstract void unpinColumnWidthSliderPanel(JPanel pnlColumnWidthSlider);
+
+	public abstract void pinRowHeightSliderPanel(JPanel pnlRowHeightSlider);
+
+	public abstract void unpinRowHeightSliderPanel(JPanel pnlRowHeightSlider);
+
+	public abstract void selectGame(int gameId);
+
+	public abstract void initGameList(List<Game> games, int currentNavView);
+
+	public abstract void addSelectGameListener(GameSelectionListener l);
+
+	public abstract void addRunGameListener(Action l);
+
+	public abstract void addRunGameListener(MouseListener l);
+
+	public abstract void gameRated(Game game);
+
+	public abstract void hideExtensions(boolean shouldHide);
+
+	public abstract void addDecreaseFontListener(Action l);
+
+	public abstract void addIncreaseFontListener(Action l);
+
+	public abstract void addIncreaseFontListener2(MouseWheelListener l);
+
+	public abstract void addOpenGamePropertiesListener(Action l);
+
+	public abstract void addRemoveGameListener(Action l);
+
+	public abstract int getColumnWidth();
+
+	public abstract void setColumnWidth(int value);
+
+	public abstract int getRowHeight();
+
+	public abstract void setRowHeight(int value);
+
+	public abstract void addOpenGameFolderListener1(MouseListener l);
+
+	public abstract void addRateListener(RateListener l);
+
+	public abstract void addCommentListener(ActionListener l);
+
+	public abstract void addRenameGameListener(Action l);
+
+	public abstract void gameAdded(GameAddedEvent e);
+
+	public abstract void gameRemoved(GameRemovedEvent e);
+
+	public abstract void selectNextGame();
+
+	public abstract void selectPreviousGame();
+
+	public abstract void setViewStyle(int viewStyle);
 }

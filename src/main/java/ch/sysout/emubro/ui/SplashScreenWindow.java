@@ -122,6 +122,13 @@ public class SplashScreenWindow extends JDialog {
 		btnCancel.setText(Messages.get("close"));
 	}
 
+	public void showWarning(final String message) {
+		updateText(message);
+		lbl.setIcon(ImageUtil.getImageIconFrom(Icons.get("applicationIconOrange", size, size)));
+		prg.setIndeterminate(false);
+		btnCancel.setText(Messages.get("close"));
+	}
+
 	public void showSuccessIcon() {
 		lbl.setIcon(ImageUtil.getImageIconFrom(Icons.get("applicationIconGreen", size, size)));
 	}

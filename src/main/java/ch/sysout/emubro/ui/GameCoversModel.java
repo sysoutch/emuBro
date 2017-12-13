@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import javax.swing.ImageIcon;
 
@@ -72,19 +74,23 @@ public class GameCoversModel {
 		return games.size();
 	}
 
-	public Game getElementAt(int index) {
-		Game game = games.get(index);
+	public Game getGame(int gameId) {
+		Game game = games.get(gameId);
 		// if (game.getName().length() >= 50) {
 		// game.setName(game.getName().substring(0, 46)+"...");
 		// }
 		return game;
 	}
 
-	public Game get(int index) {
-		return games.get(index);
+	public void addCover(int gameId, ImageIcon icon) {
+		covers.put(gameId, icon);
 	}
 
-	public void addCover(int id, ImageIcon icon) {
-		covers.put(id, icon);
+	public ImageIcon getCover(int gameId) {
+		return covers.get(gameId);
+	}
+
+	public Set<Entry<Integer, Game>> getAllGames() {
+		return games.entrySet();
 	}
 }

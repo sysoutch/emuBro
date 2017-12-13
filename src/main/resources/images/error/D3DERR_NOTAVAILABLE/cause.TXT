@@ -1,1 +1,0 @@
-this error may occur, when starting emuBro over remodesktop connection

@@ -12,6 +12,7 @@ import java.util.List;
 import ch.sysout.emubro.api.dao.GameDAO;
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.impl.BroGameAlreadyExistsException;
+import ch.sysout.emubro.impl.BroGameDeletedException;
 import ch.sysout.emubro.impl.model.BroGame;
 import ch.sysout.emubro.impl.model.GameConstants;
 import ch.sysout.util.SqlUtil;
@@ -45,12 +46,17 @@ public class BroGameDAO implements GameDAO {
 
 		String gamePath = game.getPath().trim();
 
-		String sql2 = "update game set game_name='" + game.getName().replaceAll("'", "''") + "'," + "game_path='"
-				+ gamePath.replaceAll("'", "''") + "'," + "game_coverPath='" + coverPath.replaceAll("'", "''") + "',"
-				+ "game_rate=" + game.getRate() + "," + "game_added='" + dateAdded + "',"
-				+ ((lastPlayed == null) ? null : lastPlayed) + "," + "game_playCount=" + game.getPlayCount() + ","
-				+ "game_emulatorId=" + emulatorId + "," + "game_platformId=" + game.getPlatformId() + ","
-				+ "game_platformIconFileName='" + game.getPlatformIconFileName().replaceAll("'", "''") + "'"
+		String sql2 = "update game set"
+				+ "game_name=" + SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(game.getName()))+","
+				+ "game_path=" + SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(gamePath))+","
+				+ "game_coverPath=" + SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(coverPath))+","
+				+ "game_rate=" + game.getRate() + ","
+				+ "game_added='" + dateAdded + "',"
+				+ ((lastPlayed == null) ? null : lastPlayed) + ","
+				+ "game_playCount=" + game.getPlayCount() + ","
+				+ "game_emulatorId=" + emulatorId + ","
+				+ "game_platformId=" + game.getPlatformId() + ","
+				+ "game_platformIconFileName=" + SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(game.getPlatformIconFileName()))
 				+ " where game_id=" + game.getId();
 		stmt.executeQuery(sql2);
 		conn.commit();
@@ -60,7 +66,7 @@ public class BroGameDAO implements GameDAO {
 	@Override
 	public void removeGame(int gameId) throws SQLException {
 		Statement stmt = conn.createStatement();
-		String sql = "delete from game where game_id=" + gameId;
+		String sql = "update game set game_deleted=true where game_id=" + gameId;
 		stmt.executeQuery(sql);
 		conn.commit();
 		stmt.close();
@@ -69,20 +75,23 @@ public class BroGameDAO implements GameDAO {
 	@Override
 	public void renameGame(int gameId, String newTitle) throws SQLException {
 		Statement stmt = conn.createStatement();
-		String sql = "update game set game_name = '"+newTitle.replaceAll("'", "''")+"' where game_id=" + gameId;
+		String sql = "update game set game_name = '"+SqlUtil.getQuotationsMarkedString(newTitle)+"' where game_id=" + gameId;
 		stmt.executeQuery(sql);
 		conn.commit();
 		stmt.close();
 	}
 
 	@Override
-	public void addGame(Game game) throws SQLException, BroGameAlreadyExistsException {
+	public void addGame(Game game) throws SQLException, BroGameAlreadyExistsException, BroGameDeletedException {
 		ValidationUtil.checkNull(game, "game");
 		if (hasGame(game)) {
-			throw new BroGameAlreadyExistsException("game path: " + game.getPath());
+			throw new BroGameAlreadyExistsException("game does already exist: " + game.getPath());
+		}
+		if (isDeleted(game)) {
+			throw new BroGameDeletedException("game was added already, but has been deleted: " + game.getPath());
 		}
 		Statement stmt = conn.createStatement();
-		String coverPath = game.getCoverPath().replaceAll("'", "''");
+		String coverPath = SqlUtil.getQuotationsMarkedString(game.getCoverPath());
 		int emulatorId = game.getEmulatorId();
 		Date da = game.getDateAdded();
 		Date lp = game.getLastPlayed();
@@ -96,15 +105,45 @@ public class BroGameDAO implements GameDAO {
 		String gamePath = game.getPath().trim();
 		String gameName = game.getName();
 		String platformIconFileName = game.getPlatformIconFileName();
-		String sql = SqlUtil.insertIntoWithColumnsString("game", "game_name", "game_path", "game_coverPath",
-				"game_rate", "game_added", "game_lastPlayed", "game_playCount", "game_emulatorId", "game_platformId",
-				"game_platformIconFileName", "'" + gameName.replaceAll("'", "''") + "'",
-				"'" + gamePath.replaceAll("'", "''") + "'", "'" + coverPath + "'", game.getRate(),
-				"'" + dateAdded + "'", ((lastPlayed == null) ? null : lastPlayed), game.getPlayCount(), emulatorId,
-				game.getPlatformId(), "'" + platformIconFileName.replaceAll("'", "''") + "'");
+		String sql = SqlUtil.insertIntoWithColumnsString("game",
+				"game_name",
+				"game_path",
+				"game_coverPath",
+				"game_rate",
+				"game_added",
+				"game_lastPlayed",
+				"game_playCount",
+				"game_emulatorId",
+				"game_platformId",
+				"game_platformIconFileName",
+				"game_deleted",
+				SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(gameName)),
+				SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(gamePath)),
+				SqlUtil.getQuotedString(coverPath),
+				game.getRate(),
+				"'" + dateAdded + "'",
+				((lastPlayed == null) ? null : lastPlayed),
+				game.getPlayCount(), emulatorId,
+				game.getPlatformId(),
+				SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(platformIconFileName)),
+				false);
 		stmt.executeQuery(sql);
 		conn.commit();
 		stmt.close();
+	}
+
+	private boolean isDeleted(Game game) throws SQLException {
+		Statement stmt = conn.createStatement();
+		String gamePath = game.getPath();
+		String sql = "select game_deleted from game where lower(game_path) = "
+				+ SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(gamePath.toLowerCase()));
+		ResultSet rset = stmt.executeQuery(sql);
+		if (rset.next()) {
+			boolean gameDeleted = rset.getBoolean("game_deleted");
+			stmt.close();
+			return gameDeleted;
+		}
+		return false;
 	}
 
 	@Override
@@ -121,7 +160,7 @@ public class BroGameDAO implements GameDAO {
 		Statement stmt;
 		try {
 			stmt = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
-			ResultSet rs = stmt.executeQuery("select * from game");
+			ResultSet rs = stmt.executeQuery("select * from game where game_deleted != "+true);
 			if (rs.next()) {
 				rs.last();
 				return rs.getRow() > 0;
@@ -138,8 +177,8 @@ public class BroGameDAO implements GameDAO {
 		// String gamePathToMatch = gamePath.replaceAll("'",
 		// "''").toLowerCase().trim();
 		Statement stmt = conn.createStatement();
-		String sql = "select game_id, game_path from game where lower(game_path) = '" + gamePath.replaceAll("'", "''")
-		+ "'";
+		String sql = "select game_id, game_path from game where lower(game_path) = "
+				+ SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(gamePath)) + " and game_deleted != "+true;
 		ResultSet rset = stmt.executeQuery(sql);
 		boolean b = false;
 		if (rset.next()) {
@@ -157,7 +196,7 @@ public class BroGameDAO implements GameDAO {
 		Statement stmt = conn.createStatement();
 		stmt = conn.createStatement();
 
-		String sql = "select * from game where game_id = " + gameId;
+		String sql = "select * from game where game_id = " + gameId + " and game_deleted != "+true;
 		ResultSet rset = stmt.executeQuery(sql);
 		BroGame game = null;
 		if (rset.next()) {
@@ -185,7 +224,7 @@ public class BroGameDAO implements GameDAO {
 		List<Game> games = new ArrayList<>();
 		Statement stmt = conn.createStatement();
 		stmt = conn.createStatement();
-		String sql = "select * from game order by lower(game_name)";
+		String sql = "select * from game where game_deleted != "+true + " order by lower(game_name)";
 		ResultSet rset = stmt.executeQuery(sql);
 		while (rset.next()) {
 			int id = rset.getInt("game_id");
@@ -200,8 +239,8 @@ public class BroGameDAO implements GameDAO {
 	public boolean hasGame(String gamePath) throws SQLException {
 		String gamePathToMatch = gamePath.toLowerCase().trim();
 		Statement stmt = conn.createStatement();
-		String sql = "select game_id, game_path from game where lower(game_path) = '"
-				+ gamePathToMatch.replaceAll("'", "''") + "'";
+		String sql = "select game_id, game_path from game where lower(game_path) = "
+				+ SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(gamePathToMatch)) + " and game_deleted != "+true;
 		ResultSet rset = stmt.executeQuery(sql);
 		boolean b = false;
 		if (rset.next()) {

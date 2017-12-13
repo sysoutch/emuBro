@@ -44,6 +44,8 @@ import ch.sysout.emubro.api.EmulatorListener;
 import ch.sysout.emubro.api.PlatformListener;
 import ch.sysout.emubro.api.event.EmulatorEvent;
 import ch.sysout.emubro.api.event.PlatformEvent;
+import ch.sysout.emubro.api.model.Emulator;
+import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.controller.BroController.EmulatorListCellRenderer;
 import ch.sysout.emubro.controller.BroController.PlatformListCellRenderer;
@@ -56,8 +58,8 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 
 	private JTabbedPane tpMain = new JTabbedPane();
 
-	private ManagePlatformsPanel pnlManagePlatforms = new ManagePlatformsPanel();
-	private AdvancedPropertiesPanel pnlAdvancedProperties = new AdvancedPropertiesPanel();
+	private ManagePlatformsPanel pnlManagePlatforms;
+	private AdvancedPropertiesPanel pnlAdvancedProperties;
 
 	private JButton btnOk;
 	private JButton btnCancel;
@@ -65,8 +67,11 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 
 	private boolean configurationChanged;
 
-	public PropertiesFrame() {
+	private Explorer explorer;
+
+	public PropertiesFrame(Explorer explorer) {
 		super();
+		this.explorer = explorer;
 		setTitle(Messages.get("settings"));
 		setIconImages(getIcons());
 		setLayout(new BorderLayout());
@@ -87,7 +92,7 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 	 */
 	public void adjustSizeWhenNeeded() {
 		int width = getWidth();
-		setSize((int) (width * 1.25), width);
+		setSize((int) (width * 2.5), (int) (width * 1.75));
 	}
 
 	private List<Image> getIcons() {
@@ -100,6 +105,8 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 	}
 
 	private void initComponents() {
+		pnlManagePlatforms = new ManagePlatformsPanel(explorer);
+		pnlAdvancedProperties = new AdvancedPropertiesPanel();
 		tpMain.setTabPlacement(SwingConstants.TOP);
 		addListeners();
 	}
@@ -201,7 +208,7 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 		private JRadioButton rdbExitAfterGameEnd = new JRadioButton(Messages.get("exitAfterGameEnd", applicationTitle));
 		private JCheckBox chkLastGameEnd = new JCheckBox(Messages.get("lastGameEnd"));
 		private JCheckBox chkRunOnBoot = new JCheckBox(Messages.get("runOnBoot", applicationTitle));
-		private JCheckBox chkStartGameOnBoot = new JCheckBox(Messages.get("startGameOnBoot", applicationTitle));
+		//		private JCheckBox chkStartGameOnBoot = new JCheckBox(Messages.get("startGameOnBoot", applicationTitle));
 		private JCheckBox chkAssociateFilesWithApplication = new JCheckBox(
 				Messages.get("associateFilesWithApplication", applicationTitle));
 		private JCheckBox chkAssociateAllPlatforms = new JCheckBox(Messages.get("associateAllPlatforms"));
@@ -211,14 +218,14 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 		private JList<Platform> lstAssociatePlatforms = new JList<>(mdlLstAssociatePlatforms);
 		private JScrollPane spAssociatePlatforms = new JScrollPane(lstAssociatePlatforms);
 
-		private JButton btnGame = new JButton("Donkey Kong Country");
-
 		private JToggleButton btnMinimalist = new JToggleButton("Minimalist settings");
 		private JToggleButton btnRecommended = new JToggleButton("Recommended settings");
 		private JToggleButton btnHardcore = new JToggleButton("Hardcore settings");
 
-		private JLabel lblRunExternalTools = new JLabel(Messages.get("runExternalTools"));
+		private JCheckBox chkRunExternalTools = new JCheckBox(Messages.get("runExternalTools"));
 		private JScrollPane spExternalTools = new JScrollPane();
+
+		private JList<String> lstTools;
 
 		public AdvancedPropertiesPanel() {
 			super();
@@ -230,7 +237,6 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 			btnMinimalist.addActionListener(l);
 			btnRecommended.addActionListener(l);
 			btnHardcore.addActionListener(l);
-			btnGame.addActionListener(l);
 			chkAssociateAllPlatforms.addActionListener(l);
 			chkAssociateFilesWithApplication.addActionListener(l);
 			chkAutoAssociateNewPlatforms.addActionListener(l);
@@ -240,7 +246,7 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 			chkRunOnBoot.addActionListener(l);
 			chkSearchForUpdateOnStart.addActionListener(l);
 			chkShowConfigWizardOnStartup.addActionListener(l);
-			chkStartGameOnBoot.addActionListener(l);
+			//			chkStartGameOnBoot.addActionListener(l);
 			rdbExitAfterGameEnd.addActionListener(l);
 			rdbExitAfterGameStart.addActionListener(l);
 			rdbMinimizeAfterGameStart.addActionListener(l);
@@ -266,6 +272,7 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 			btnMinimalist.addActionListener(this);
 			btnRecommended.addActionListener(this);
 			btnHardcore.addActionListener(this);
+			chkRunExternalTools.addActionListener(this);
 			chkDoNothingOnGameStart.addActionListener(this);
 			chkDoNothingOnGameEnd.addActionListener(this);
 			chkAssociateFilesWithApplication.addActionListener(this);
@@ -328,12 +335,11 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 			WrapLayout layout3 = new WrapLayout(FlowLayout.LEADING);
 			layout3.setHgap(0);
 
-			JPanel pnl3 = new JPanel(layout3);
-			pnl3.setOpaque(false);
-			pnl3.setBorder(BorderFactory.createEmptyBorder());
-			pnl3.add(chkStartGameOnBoot);
-			pnl3.add(btnGame);
-			pnlBoot.add(pnl3);
+			//			JPanel pnl3 = new JPanel(layout3);
+			//			pnl3.setOpaque(false);
+			//			pnl3.setBorder(BorderFactory.createEmptyBorder());
+			//			pnl3.add(chkStartGameOnBoot);
+			//			pnlBoot.add(pnl3);
 			JPanel pnl = new JPanel(new BorderLayout());
 			pnl.setBorder(BorderFactory.createTitledBorder(Messages.get("onBoot")));
 			pnl.add(pnlBoot);
@@ -359,10 +365,10 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 
 		private JPanel createStartupPanel(Border border) {
 			DefaultListModel<String> mdlLstTools = new DefaultListModel<>();
-			JList<String> lstTools = new JList<>(mdlLstTools);
+			lstTools = new JList<>(mdlLstTools);
+			lstTools.setEnabled(false);
 			mdlLstTools.addElement("SCP Server Setup");
 			mdlLstTools.addElement("TocaEdit X360 Controller Emulator");
-			mdlLstTools.addElement("Better DS3");
 			spExternalTools.setViewportView(lstTools);
 
 			// chkShowConfigWizardOnStartup.setBorder(new EmptyBorder(new
@@ -389,7 +395,7 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 			FormLayout layoutTools = new FormLayout("pref, min, min:grow", "fill:pref, $rgap, fill:default:grow");
 			CellConstraints ccTools = new CellConstraints();
 			JPanel pnlExternalTools = new JPanel(layoutTools);
-			pnlExternalTools.add(lblRunExternalTools, ccTools.xy(1, 1));
+			pnlExternalTools.add(chkRunExternalTools, ccTools.xy(1, 1));
 			pnlExternalTools.add(spExternalTools, ccTools.xyw(1, 3, layoutTools.getColumnCount()));
 			pnl.add(pnlExternalTools, BorderLayout.SOUTH);
 			return pnl;
@@ -479,6 +485,10 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 
 			} else if (source == btnHardcore) {
 				setDefaultSettings(HARDCORE_SETTINGS);
+
+			} else if (source == chkRunExternalTools) {
+				boolean enable = ((AbstractButton) source).isSelected();
+				lstTools.setEnabled(enable);
 
 			} else if (source == chkDoNothingOnGameStart) {
 				boolean enable = !((AbstractButton) source).isSelected();
@@ -578,7 +588,7 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 			chkRunOnBoot.setSelected(runOnBoot);
 			chkSearchForUpdateOnStart.setSelected(searchForUpdateOnStart);
 			chkShowConfigWizardOnStartup.setSelected(showConfigWizardOnStartup);
-			chkStartGameOnBoot.setSelected(startGameOnBoot);
+			//			chkStartGameOnBoot.setSelected(startGameOnBoot);
 			chkLastGameEnd.setSelected(lastGameEnd);
 			rdbExitAfterGameEnd.setSelected(exitAfterGameEnd);
 			rdbExitAfterGameStart.setSelected(exitAfterGameStart);
@@ -642,7 +652,8 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 		}
 
 		public boolean isStartGameOnBootChecked() {
-			return chkStartGameOnBoot.isSelected();
+			//			return chkStartGameOnBoot.isSelected();
+			return false;
 		}
 
 		public boolean isAssociateFilesWithApplicationChecked() {
@@ -742,5 +753,10 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 
 	public void showEmulatorPropertiesPanel(boolean b) {
 		pnlManagePlatforms.showEmulatorPropertiesPanel(b);
+	}
+
+	public void configureEmulator(Platform platform, Emulator emulator) {
+		tpMain.setSelectedIndex(0);
+		pnlManagePlatforms.configureEmulator(platform, emulator);
 	}
 }

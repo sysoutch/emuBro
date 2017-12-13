@@ -9,17 +9,20 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JPanel;
 import javax.swing.JTextPane;
+import javax.swing.text.JTextComponent;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
@@ -28,6 +31,7 @@ import com.jgoodies.forms.factories.Paddings;
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 
+import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
@@ -49,10 +53,10 @@ public class AboutDialog extends JDialog implements ActionListener {
 
 	private JButton[] socialMediaButtons = new JButton[] { btnFacebook, btnTwitter, btnGooglePlus, btnYoutube };
 
-	private JButton btnClose = new JButton(Messages.get("close"));
+	private JButton btnClose = new JButton(Messages.get(MessageConstants.CLOSE));
 
 	public AboutDialog() {
-		setTitle(Messages.get("about", Messages.get("applicationTitle")));
+		setTitle(Messages.get(MessageConstants.ABOUT, Messages.get(MessageConstants.APPLICATION_TITLE)));
 		setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 		setModalityType(ModalityType.APPLICATION_MODAL);
 		setIconImages(getIcons());
@@ -62,7 +66,7 @@ public class AboutDialog extends JDialog implements ActionListener {
 
 		pack();
 		// adjustSizeWhenNeeded();
-		txtDescription.setText(Messages.get("applicationDescription", Messages.get("applicationTitle")));
+		txtDescription.setText(Messages.get(MessageConstants.APPLICATION_DESCRIPTION, Messages.get(MessageConstants.APPLICATION_TITLE)));
 		setSize(new Dimension(getWidth(),
 				getHeight()
 				// + txtDescription.getHeight()
@@ -85,26 +89,14 @@ public class AboutDialog extends JDialog implements ActionListener {
 	private void initComponents() {
 		lblIcon.setBorderPainted(false);
 		lblIcon.setContentAreaFilled(false);
-		btnFacebook.setActionCommand("https://www.facebook.com/emubr0");
-		btnTwitter.setActionCommand("https://twitter.com/sysoutch");
-		btnGooglePlus.setActionCommand("https://plus.google.com/+RainerWahnsinn77");
-		btnYoutube.setActionCommand("https://www.youtube.com/c/rainerwahnsinn77");
+		setActionCommands();
 
-		lblHeader.setOpaque(false);
-		lblCopyright.setOpaque(false);
-		txtDescription.setOpaque(false);
-		lnkWebsite.setOpaque(false);
-		lnkWebsite.setOpaque(false);
+		setOpaque(false, lblHeader, lblCopyright, txtDescription, lnkWebsite);
 
-		lblHeader.setText(Messages.get("applicationTitle"));
-		lblCopyright.setText("\u00a9 2015 sysout.ch");
-		lnkWebsite.setText(Messages.get("website"));
+		initTexts();
 		lnkWebsite.setForeground(Color.BLUE);
 
-		lblHeader.setEditable(false);
-		txtDescription.setEditable(false);
-		lblCopyright.setEditable(false);
-		lnkWebsite.setEditable(false);
+		setEditable(false, lblHeader, lblCopyright, txtDescription, lnkWebsite);
 
 		// lblHeader.setEditable(false);
 		// txtDescription.setEditable(false);
@@ -133,6 +125,31 @@ public class AboutDialog extends JDialog implements ActionListener {
 
 		setToolTipTexts();
 		addListeners();
+	}
+
+	private void initTexts() {
+		lblHeader.setText(Messages.get(MessageConstants.APPLICATION_TITLE));
+		lblCopyright.setText("\u00a9 2015-2017 sysout.ch");
+		lnkWebsite.setText(Messages.get(MessageConstants.WEBSITE));
+	}
+
+	private void setOpaque(boolean b, JComponent... components) {
+		for (JComponent c : components) {
+			c.setOpaque(false);
+		}
+	}
+
+	private void setEditable(boolean b, JTextComponent... components) {
+		for (JTextComponent c : components) {
+			c.setEditable(false);
+		}
+	}
+
+	private void setActionCommands() {
+		btnFacebook.setActionCommand("https://www.facebook.com/emubr0");
+		btnTwitter.setActionCommand("https://twitter.com/sysoutch");
+		btnGooglePlus.setActionCommand("https://plus.google.com/+RainerWahnsinn77");
+		btnYoutube.setActionCommand("https://www.youtube.com/c/rainerwahnsinn77");
 	}
 
 	private void setToolTipTexts() {
@@ -200,10 +217,9 @@ public class AboutDialog extends JDialog implements ActionListener {
 		Object source = e.getSource();
 		if (source == lblIcon) {
 			try {
-				String userHome = System.getProperty("user.home");
-				File videoFile = new File(userHome + "/" + ".emubro/videos" + "/" + "explore_the_world_of_retro_gaming.mp4");
-				Desktop.getDesktop().open(videoFile);
-			} catch (IOException e1) {
+				String url = "https://sysout.ch/emubro-trailer.mp4";
+				Desktop.getDesktop().browse(new URI(url));
+			} catch (IOException | URISyntaxException e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
@@ -220,8 +236,8 @@ public class AboutDialog extends JDialog implements ActionListener {
 	}
 
 	public void languageChanged() {
-		setTitle(Messages.get("about", Messages.get("applicationTitle")));
-		txtDescription.setText(Messages.get("applicationDescription", Messages.get("applicationTitle")));
-		btnClose.setText(Messages.get("close"));
+		setTitle(Messages.get(MessageConstants.ABOUT, Messages.get(MessageConstants.APPLICATION_TITLE)));
+		txtDescription.setText(Messages.get(MessageConstants.APPLICATION_DESCRIPTION, Messages.get(MessageConstants.APPLICATION_TITLE)));
+		btnClose.setText(Messages.get(MessageConstants.CLOSE));
 	}
 }

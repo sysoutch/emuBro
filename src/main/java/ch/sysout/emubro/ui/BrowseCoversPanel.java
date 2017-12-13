@@ -5,15 +5,15 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetListener;
+import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
+import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComponent;
@@ -29,7 +29,10 @@ import com.jgoodies.forms.factories.Paddings;
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 
+import ch.sysout.emubro.api.event.GameSelectionEvent;
+import ch.sysout.emubro.api.model.Game;
 import ch.sysout.util.Messages;
+import ch.sysout.util.UIUtil;
 
 public class BrowseCoversPanel extends JPanel {
 	private static final long serialVersionUID = 1L;
@@ -75,7 +78,7 @@ public class BrowseCoversPanel extends JPanel {
 		pnlOptions = new JPanel();
 		pnlOptions.setBorder(Paddings.TABBED_DIALOG);
 		FormLayout layout = new FormLayout("pref",
-				"fill:pref, $ugap, fill:pref, $lgap, fill:pref, $ugap, fill:pref, fill:min:grow");
+				"fill:pref, $rgap, fill:pref, $lgap, fill:pref, $rgap, fill:pref, fill:min:grow");
 		pnlOptions.setLayout(layout);
 		CellConstraints cc = new CellConstraints();
 		btnSetCoverForGame = new JButton(Messages.get("setCover"));
@@ -104,13 +107,21 @@ public class BrowseCoversPanel extends JPanel {
 				int visibleAmount = e.getAdjustable().getVisibleAmount();
 				int maximum = e.getAdjustable().getMaximum();
 				boolean b = visibleAmount < maximum;
-				int asNeeded = ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS;
+				int always = ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS;
 				int never = ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER;
-				int policy = b ? asNeeded : never;
+				int policy = b ? always : never;
 				sp.setVerticalScrollBarPolicy(policy);
 			}
 		});
 		return sp;
+	}
+
+	public void addSelectNextGameListener(ActionListener l) {
+		btnNextGame.addActionListener(l);
+	}
+
+	public void addSelectPreviousGameListener(ActionListener l) {
+		btnPreviousGame.addActionListener(l);
 	}
 
 	public void addCoverDragDropListener(DropTargetListener l) {
@@ -120,43 +131,24 @@ public class BrowseCoversPanel extends JPanel {
 	public void addPictureFromComputer(ImageIcon icon) {
 		final JToggleButton chk = new JToggleButton();
 		chk.setPreferredSize(new Dimension(160, 160));
-		chk.setBorderPainted(false);
-		chk.setContentAreaFilled(false);
+		UIUtil.doHover(false, chk);
 		chk.setIcon(icon);
-		chk.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseEntered(MouseEvent e) {
-				chk.setBorderPainted(true);
-				chk.setContentAreaFilled(true);
-			}
-
-			@Override
-			public void mouseExited(MouseEvent e) {
-				if (!chk.isSelected()) {
-					chk.setBorderPainted(false);
-					chk.setContentAreaFilled(false);
-				}
-			}
-		});
+		chk.addMouseListener(UIUtil.getMouseAdapter());
 		pnlCovers.add(chk);
 		pictures.add(chk);
 		group.add(chk);
-		pnlCovers.validate();
-		pnlCovers.repaint();
-		spCovers.validate();
-		spCovers.repaint();
+		UIUtil.validateAndRepaint(pnlCovers);
+		UIUtil.validateAndRepaint(spCovers);
 	}
 
 	public void removeAllPictures() {
 		pnlCovers.removeAll();
 		pictures.clear();
-		pnlCovers.validate();
 		while (group.getElements().hasMoreElements()) {
 			group.remove(group.getElements().nextElement());
 		}
-		pnlCovers.repaint();
-		spCovers.validate();
-		spCovers.repaint();
+		UIUtil.validateAndRepaint(pnlCovers);
+		UIUtil.validateAndRepaint(spCovers);
 	}
 
 	public void languageChanged() {
@@ -165,5 +157,20 @@ public class BrowseCoversPanel extends JPanel {
 		btnNextGame.setText(Messages.get("nextGame"));
 		btnPreviousGame.setText(Messages.get("previousGame"));
 		btnClearList.setText(Messages.get("clearList"));
+	}
+
+	public void gameSelected(GameSelectionEvent e) {
+		Game game = e.getGame();
+		boolean selected = game != null;
+		Icon ico = getSelectedCover();
+		if (ico != null) {
+			btnSetCoverForGame.setEnabled(selected);
+		}
+		btnNextGame.setEnabled(selected);
+		btnPreviousGame.setEnabled(selected);
+	}
+
+	private Icon getSelectedCover() {
+		return null;
 	}
 }

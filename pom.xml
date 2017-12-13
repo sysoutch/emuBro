@@ -79,6 +79,17 @@
 			<version>1.0</version>
 			<type>dll</type>
 		</dependency>
+		<dependency>
+			<groupId>jxinput</groupId>
+			<artifactId>jxinput</artifactId>
+			<version>0.3.4</version>
+		</dependency>
+		<dependency>
+			<groupId>jxinput</groupId>
+			<artifactId>jxinput-dll</artifactId>
+			<version>0.3.4</version>
+			<type>dll</type>
+		</dependency>
 	</dependencies>
 	<build>
 		<plugins>

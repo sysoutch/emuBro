@@ -22,20 +22,22 @@ import com.jgoodies.forms.layout.FormLayout;
 import ch.sysout.emubro.api.GameListener;
 import ch.sysout.emubro.api.event.GameAddedEvent;
 import ch.sysout.emubro.api.event.GameRemovedEvent;
-import ch.sysout.emubro.api.event.GameSelectionEvent;
+import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
+import ch.sysout.util.UIUtil;
 
-public class GameCountPanel extends JPanel implements GameListener, LanguageListener {
+public class GameCountPanel extends JPanel implements GameListener, DetailsPaneListener, LanguageListener {
 	private static final long serialVersionUID = 1L;
-	private JLabel lblGameCount = new JLabel(Messages.get("gameCount", 0));
+	private JLabel lblGameCount = new JLabel();
 	private ProgressPanel pnlProgress;
-	JButton btnShowGameDetailsPane = new JButton();
+	JButton btnShowDetailsPane = new JButton();
 	JLabel btnResize = new JLabel();
 	JButton lblBlank = new JButton();
 	private Icon iconResize;
 	private Icon iconShowGameDetailsPane;
+	//	private Icon iconGameDetailsPaneToFront;
 	private ImageIcon iconBlank;
 	private int gameCount;
 	protected Point spaceToBorder;
@@ -51,34 +53,18 @@ public class GameCountPanel extends JPanel implements GameListener, LanguageList
 		int size = ScreenSizeUtil.is3k() ? 24 : 16;
 		iconResize = ImageUtil.getImageIconFrom(Icons.get("resize", size, size));
 		iconShowGameDetailsPane = ImageUtil.getImageIconFrom(Icons.get("showDetailsPane", size, size));
+		//		iconGameDetailsPaneToFront = ImageUtil.getImageIconFrom(Icons.get("showDetailsPane", size, size));
 		iconBlank = ImageUtil.getImageIconFrom(Icons.get("blank", size, size));
 
 		lblBlank.setIcon(iconBlank);
 		lblBlank.setFocusable(false);
 		lblBlank.setFocusPainted(false);
-		lblBlank.setBorderPainted(false);
-		lblBlank.setContentAreaFilled(false);
-
-		btnShowGameDetailsPane.setVisible(false);
-		btnShowGameDetailsPane.setBorderPainted(false);
-		btnShowGameDetailsPane.setContentAreaFilled(false);
-		btnShowGameDetailsPane.setIcon(iconShowGameDetailsPane);
-		btnShowGameDetailsPane.setToolTipText("Informationsbereich einblenden (Alt+Shift+I)");
-		btnShowGameDetailsPane.setActionCommand(GameViewConstants.SHOW_DETAILS_PANE);
-		btnShowGameDetailsPane.addMouseListener(new MouseAdapter() {
-
-			@Override
-			public void mouseEntered(MouseEvent e) {
-				btnShowGameDetailsPane.setBorderPainted(true);
-				btnShowGameDetailsPane.setContentAreaFilled(true);
-			}
-
-			@Override
-			public void mouseExited(MouseEvent e) {
-				btnShowGameDetailsPane.setBorderPainted(false);
-				btnShowGameDetailsPane.setContentAreaFilled(false);
-			}
-		});
+		UIUtil.doHover(false, btnShowDetailsPane, lblBlank);
+		btnShowDetailsPane.setIcon(iconShowGameDetailsPane);
+		btnShowDetailsPane.setToolTipText("Informationsbereich einblenden (Alt+Shift+I)");
+		btnShowDetailsPane.setActionCommand(GameViewConstants.SHOW_DETAILS_PANE);
+		btnShowDetailsPane.setVisible(false);
+		btnShowDetailsPane.addMouseListener(UIUtil.getMouseAdapter());
 
 		btnResize.setIcon(iconResize);
 		btnResize.addMouseListener(new MouseAdapter() {
@@ -145,7 +131,7 @@ public class GameCountPanel extends JPanel implements GameListener, LanguageList
 
 	public void updateGameCount(int gameCount) {
 		this.gameCount = gameCount;
-		String message = gameCount == 1 ? Messages.get("gameCount1") : Messages.get("gameCount", gameCount);
+		String message = gameCount == 1 ? Messages.get(MessageConstants.GAME_COUNT1) : Messages.get(MessageConstants.GAME_COUNT, gameCount);
 		lblGameCount.setText(message);
 	}
 
@@ -157,11 +143,6 @@ public class GameCountPanel extends JPanel implements GameListener, LanguageList
 	@Override
 	public void gameRemoved(GameRemovedEvent e) {
 		updateGameCount(e.getGameCount());
-	}
-
-	@Override
-	public void gameSelected(GameSelectionEvent e) {
-
 	}
 
 	public void showOrHideResizeArea(boolean visible) {
@@ -181,11 +162,22 @@ public class GameCountPanel extends JPanel implements GameListener, LanguageList
 	}
 
 	public void addShowGameDetailsListener(ActionListener l) {
-		btnShowGameDetailsPane.addActionListener(l);
+		btnShowDetailsPane.addActionListener(l);
 	}
 
 	@Override
 	public void languageChanged() {
 		updateGameCount(gameCount);
+		pnlProgress.languageChanguage();
+	}
+
+	@Override
+	public void detailsPaneShown() {
+		btnShowDetailsPane.setVisible(false);
+	}
+
+	@Override
+	public void detailsPaneHidden() {
+		btnShowDetailsPane.setVisible(true);
 	}
 }

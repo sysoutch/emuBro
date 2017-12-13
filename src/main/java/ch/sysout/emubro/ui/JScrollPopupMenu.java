@@ -1,4 +1,4 @@
-package ch.sysout.emubro.controller;
+package ch.sysout.emubro.ui;
 
 import java.awt.Adjustable;
 import java.awt.Component;

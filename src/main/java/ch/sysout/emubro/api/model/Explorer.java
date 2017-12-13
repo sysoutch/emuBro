@@ -92,6 +92,10 @@ public interface Explorer {
 
 	String getExtensionsString();
 
+	List<Platform> getPlatformsFromCommonDirectory(String filePath);
+
+	List<String> getGameDirectoriesFromPlatform(int platformId);
+
 	// void addEmulator(Emulator emulator);
 	//
 	// void removeEmulator(Emulator emulator);

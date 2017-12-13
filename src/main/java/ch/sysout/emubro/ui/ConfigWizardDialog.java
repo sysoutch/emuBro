@@ -38,9 +38,9 @@ public class ConfigWizardDialog extends JDialog implements ActionListener {
 	private JPanel pnlFooter = new JPanel();
 
 	private JLabel lblStep1 = new JLabel2("Willkommen");
-	private JLinkLabel lnkStep2 = new JLinkLabel("Emulatoren und Spiele");
-	private JLinkLabel lnkStep3 = new JLinkLabel("Covers hinzufügen");
-	private JLinkLabel lnkStep4 = new JLinkLabel("Fertigstellen");
+	private JLinkButton lnkStep2 = new JLinkButton("Emulatoren und Spiele");
+	private JLinkButton lnkStep3 = new JLinkButton("Covers hinzufügen");
+	private JLinkButton lnkStep4 = new JLinkButton("Fertigstellen");
 
 	private JCheckBox chkDontShowAgain = new JCheckBox("Assistenten nicht mehr anzeigen");
 

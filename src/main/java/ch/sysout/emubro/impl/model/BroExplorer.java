@@ -13,6 +13,7 @@ import ch.sysout.emubro.api.model.Emulator;
 import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.Platform;
+import ch.sysout.util.FileUtil;
 
 public class BroExplorer implements Explorer {
 	private Map<Integer, Game> games = new HashMap<>();
@@ -105,6 +106,17 @@ public class BroExplorer implements Explorer {
 			}
 		}
 		return count;
+	}
+
+	private List<Game> getGamesFromPlatform(int platformId) {
+		List<Game> gameList = new ArrayList<>();
+		for (Entry<Integer, Game> entry : games.entrySet()) {
+			Game game = entry.getValue();
+			if (game.getPlatformId() == platformId) {
+				gameList.add(game);
+			}
+		}
+		return gameList;
 	}
 
 	@Override
@@ -329,6 +341,44 @@ public class BroExplorer implements Explorer {
 			}
 		}
 		return false;
+	}
+
+	@Override
+	public List<Platform> getPlatformsFromCommonDirectory(String filePath) {
+		List<Platform> matchedPlatformIds = new ArrayList<>();
+		if (getGameCount() == 0) {
+			return matchedPlatformIds;
+		}
+		String parentFolder = FileUtil.getParentDirPath(filePath);
+		do {
+			for (Game game : getGames()) {
+				String parentFolderToCheck = FilenameUtils.getFullPath(game.getPath());
+				if  (parentFolderToCheck.startsWith(parentFolder)) {
+					int platformId = game.getPlatformId();
+					Platform platform = getPlatform(platformId);
+					if (!matchedPlatformIds.contains(platform)) {
+						matchedPlatformIds.add(platform);
+					}
+				}
+			}
+			if (matchedPlatformIds.isEmpty()) {
+				parentFolder = FileUtil.getParentDirPath(parentFolder);
+			}
+		}
+		while (matchedPlatformIds.isEmpty() && !parentFolder.isEmpty());
+		return matchedPlatformIds;
+	}
+
+	@Override
+	public List<String> getGameDirectoriesFromPlatform(int platformId) {
+		List<String> directories = new ArrayList<>();
+		for (Game game : getGamesFromPlatform(platformId)) {
+			String gamePath = FileUtil.getParentDirPath(game.getPath());
+			if (!directories.contains(gamePath)) {
+				directories.add(gamePath);
+			}
+		}
+		return directories;
 	}
 
 	// @Override

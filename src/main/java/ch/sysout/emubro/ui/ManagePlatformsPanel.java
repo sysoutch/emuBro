@@ -61,6 +61,7 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.event.TreeModelEvent;
 import javax.swing.event.TreeModelListener;
+import javax.swing.filechooser.FileSystemView;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableCellRenderer;
@@ -81,6 +82,7 @@ import com.jgoodies.validation.view.ValidationComponentUtils;
 import ch.sysout.emubro.api.event.EmulatorEvent;
 import ch.sysout.emubro.api.event.PlatformEvent;
 import ch.sysout.emubro.api.model.Emulator;
+import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.controller.BroController.EmulatorListCellRenderer;
 import ch.sysout.emubro.controller.BroController.PlatformListCellRenderer;
@@ -90,6 +92,7 @@ import ch.sysout.emubro.impl.model.GameConstants;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
+import ch.sysout.util.UIUtil;
 import net.tomahawk.XFileDialog;
 
 public class ManagePlatformsPanel extends JPanel implements ActionListener {
@@ -100,8 +103,11 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 	private JSplitPane spl00;
 	private JPanel pnlPlatformsEmulatorsComboWrapper;
 
-	public ManagePlatformsPanel() {
+	private Explorer explorer;
+
+	public ManagePlatformsPanel(Explorer explorer) {
 		super(new BorderLayout());
+		this.explorer = explorer;
 		initComponents();
 		createUI();
 	}
@@ -128,6 +134,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 		spl00 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, pnlPlatformsEmulatorsComboWrapper, pnlEmulators);
 		spl00.setBorder(BorderFactory.createEmptyBorder());
 		spl00.setContinuousLayout(true);
+		spl00.setOneTouchExpandable(true);
 		add(spl00, cc.xy(1, 1));
 	}
 
@@ -247,67 +254,20 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 		}
 
 		private void initComponents() {
-			btnAddPlatform.setBorderPainted(false);
-			btnAddPlatform.setContentAreaFilled(false);
-			btnRemovePlatform.setBorderPainted(false);
-			btnRemovePlatform.setContentAreaFilled(false);
+			UIUtil.doHover(false, btnAddPlatform, btnRemovePlatform);
 			btnRemovePlatform.setEnabled(false);
-			btnEditPlatform.setBorderPainted(false);
-			btnEditPlatform.setContentAreaFilled(false);
 			btnEditPlatform.setEnabled(false);
 			lstPlatforms.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-			btnAddPlatform.addMouseListener(new MouseAdapter() {
-				@Override
-				public void mouseEntered(MouseEvent e) {
-					super.mouseEntered(e);
-					btnAddPlatform.setBorderPainted(true);
-					btnAddPlatform.setContentAreaFilled(true);
-				}
-
-				@Override
-				public void mouseExited(MouseEvent e) {
-					super.mouseExited(e);
-					btnAddPlatform.setBorderPainted(false);
-					btnAddPlatform.setContentAreaFilled(false);
-				}
-			});
-
-			btnRemovePlatform.addMouseListener(new MouseAdapter() {
-				@Override
-				public void mouseEntered(MouseEvent e) {
-					((AbstractButton) e.getSource()).setBorderPainted(true);
-					((AbstractButton) e.getSource()).setContentAreaFilled(true);
-				}
-
-				@Override
-				public void mouseExited(MouseEvent e) {
-					((AbstractButton) e.getSource()).setBorderPainted(false);
-					((AbstractButton) e.getSource()).setContentAreaFilled(false);
-				}
-			});
-
-			btnEditPlatform.addMouseListener(new MouseAdapter() {
-				@Override
-				public void mouseEntered(MouseEvent e) {
-					super.mouseEntered(e);
-					btnEditPlatform.setBorderPainted(true);
-					btnEditPlatform.setContentAreaFilled(true);
-				}
-
-				@Override
-				public void mouseExited(MouseEvent e) {
-					super.mouseExited(e);
-					btnEditPlatform.setBorderPainted(false);
-					btnEditPlatform.setContentAreaFilled(false);
-				}
-			});
+			btnAddPlatform.addMouseListener(UIUtil.getMouseAdapter());
+			btnRemovePlatform.addMouseListener(UIUtil.getMouseAdapter());
 		}
 
 		private void createUI() {
 			int rowHeight = ScreenSizeUtil.adjustValueToResolution(32);
 			lstPlatforms.setFixedCellHeight(rowHeight);
-
-			FormLayout layout = new FormLayout("pref, min, pref, $rgap:grow, pref",
+			chkShowOnlyInstalledPlatforms.setToolTipText(Messages.get("toolTipShowOnlyInstalledPlatforms"));
+			chkShowOnlyInstalledPlatforms.setMinimumSize(new Dimension(0, 0));
+			FormLayout layout = new FormLayout("min, min, pref, $rgap:grow, pref",
 					"fill:default:grow, $lgap, fill:pref, $rgap, fill:pref");
 			setLayout(layout);
 			CellConstraints cc = new CellConstraints();
@@ -326,7 +286,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 		}
 
 		private void addListeners() {
-			addActionListeners(this, btnAddPlatform, btnRemovePlatform, btnEditPlatform);
+			addActionListeners(this, btnAddPlatform, btnRemovePlatform, btnEditPlatform, chkShowOnlyInstalledPlatforms);
 		}
 
 		public void addRemovePlatformListener(Action l) {
@@ -383,7 +343,30 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 				new AddPlatformDialog().setVisible(true);
 			} else if (source == btnRemovePlatform) {
 				((DefaultListModel<Platform>) lstPlatforms.getModel()).removeElement(lstPlatforms.getSelectedValue());
+			} else if (source == chkShowOnlyInstalledPlatforms) {
+				SortedListModel<Platform> model = (SortedListModel<Platform>) lstPlatforms.getModel();
+				if (chkShowOnlyInstalledPlatforms.isSelected()) {
+					for (int i = model.getSize()-1; i >= 0; i--) {
+						int platformId = model.getElementAt(i).getId();
+						if (!hasGamesOrEmulators(platformId)) {
+							model.removeElement(model.getElementAt(i));
+						}
+					}
+				} else {
+					for (Platform platform : explorer.getPlatforms()) {
+						int platformId = platform.getId();
+						if (!hasGamesOrEmulators(platformId)) {
+							model.add(platform);
+						}
+					}
+
+				}
 			}
+		}
+
+		private boolean hasGamesOrEmulators(int platformId) {
+			return explorer.getGameCountFromPlatform(platformId) > 0
+					|| explorer.getPlatform(platformId).hasDefaultEmulator();
 		}
 
 		public void addPlatformSelectedListener(ListSelectionListener l) {
@@ -461,10 +444,13 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 		public JScrollPane spConfigurationFile;
 		private JScrollPane spEmulators;
 		private Map<Integer, ListModel<Emulator>> defaultEmulatorModels = new HashMap<>();
+		private JPanel pnlNoPlatformSelected = new JPanel();
+		private Component lastTopComponent;
 
 		public EmulatorsPanel() {
 			super(new BorderLayout());
 			setBorder(Paddings.TABBED_DIALOG);
+			pnlNoPlatformSelected.add(new JLabel("No platform currently selected.\n\nSelect a platform from the list to the left to show its emulators"));
 			int rowHeight = ScreenSizeUtil.adjustValueToResolution(32);
 			EmulatorTableModel model = new EmulatorTableModel(null);
 			tblEmulators = new JTableDoubleClickOnHeaderFix();
@@ -480,6 +466,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 			tblEmulators.setModel(model);
 			doModelShit();
 			pnlEmulatorOverview = createEmulatorOverviewPanel();
+			pnlEmulatorOverview.setVisible(false);
 			pnlSelectedEmulatorMinimized = createSelectedEmulatorMinimizedPanel();
 			pnlAddEmulator = new AddEmulatorPanel();
 			add(pnlEmulatorOverview);
@@ -490,11 +477,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 
 		private JPanel createEmulatorOverviewPanel() {
 			JPanel pnl = new JPanel(new BorderLayout());
-			btnAddEmulator.setBorderPainted(false);
-			btnAddEmulator.setContentAreaFilled(false);
-
-			btnRemoveEmulator.setBorderPainted(false);
-			btnRemoveEmulator.setContentAreaFilled(false);
+			UIUtil.doHover(false, btnAddEmulator, btnRemoveEmulator);
 
 			// lstEmulators.setPreferredSize(new Dimension(0,0));
 			btnRemoveEmulator.setEnabled(false);
@@ -531,7 +514,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 		private JPanel createSelectedEmulatorMinimizedPanel() {
 			JPanel pnl = new JPanel();
 			// pnl.setBorder(Paddings.TABBED_DIALOG);
-			FormLayout layout = new FormLayout("pref, $rgap, pref, min:grow, $rgap, pref",
+			FormLayout layout = new FormLayout("pref, $ugap, pref, min:grow, $rgap, pref",
 					"fill:pref, $rgap");
 			pnl.setLayout(layout);
 			CellConstraints cc = new CellConstraints();
@@ -566,28 +549,14 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 		private void addListeners() {
 			tblEmulators.getSelectionModel().addListSelectionListener(this);
 			btnAddEmulator.addActionListener(this);
-			btnAddEmulator.addMouseListener(new MouseAdapter() {
-				@Override
-				public void mouseEntered(MouseEvent e) {
-					((AbstractButton) e.getSource()).setBorderPainted(true);
-					((AbstractButton) e.getSource()).setContentAreaFilled(true);
-				}
-
-				@Override
-				public void mouseExited(MouseEvent e) {
-					((AbstractButton) e.getSource()).setBorderPainted(false);
-					((AbstractButton) e.getSource()).setContentAreaFilled(false);
-				}
-			});
-
+			btnAddEmulator.addMouseListener(UIUtil.getMouseAdapter());
 			pnlAddEmulator.addGoBackListener(new ActionListener() {
 
 				@Override
 				public void actionPerformed(ActionEvent e) {
 					remove(pnlAddEmulator);
 					add(pnlEmulatorOverview);
-					revalidate();
-					repaint();
+					UIUtil.revalidateAndRepaint(ManagePlatformsPanel.this);
 				}
 			});
 
@@ -598,20 +567,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 				}
 			});
 
-			btnRemoveEmulator.addMouseListener(new MouseAdapter() {
-				@Override
-				public void mouseEntered(MouseEvent e) {
-					((AbstractButton) e.getSource()).setBorderPainted(true);
-					((AbstractButton) e.getSource()).setContentAreaFilled(true);
-				}
-
-				@Override
-				public void mouseExited(MouseEvent e) {
-					((AbstractButton) e.getSource()).setBorderPainted(false);
-					((AbstractButton) e.getSource()).setContentAreaFilled(false);
-				}
-			});
-
+			btnRemoveEmulator.addMouseListener(UIUtil.getMouseAdapter());
 			btnSetDefaultEmulator.addActionListener(new ActionListener() {
 
 				@Override
@@ -632,8 +588,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 				@Override
 				public void actionPerformed(ActionEvent e) {
 					showEmulatorPropertiesPanel(false);
-					revalidate();
-					repaint();
+					UIUtil.revalidateAndRepaint(ManagePlatformsPanel.this);
 				}
 			});
 		}
@@ -700,7 +655,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 			private JPanel pnlSupportedFileTypes = new JPanel(new BorderLayout());
 			private DefaultListModel<String> mdlLstSupportedFileTypes = new DefaultListModel<>();
 			private JList<String> txtSupportedFileTypes = new JList<>(mdlLstSupportedFileTypes);
-			private JTextField txtConfigFilePath = new JTextField();
+			private JLinkButton txtConfigFilePath = new JLinkButton();
 			private JPanel pnlInputConfiguration;
 			private JScrollPane spInputConfiguration;
 			private JScrollPane spGeneralSettings;
@@ -806,16 +761,28 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 											}
 										} else {
 											try {
-												int valueInt = Integer.parseInt(value.trim());
-												spinner = new JSpinner();
-												spinner.setValue(valueInt);
-												if (arr2.length > 1) {
-													String comment = arr2[1].trim();
-													spinner.setToolTipText(comment.trim());
-													String toolTip = spinner.getToolTipText();
-													spinner.setForeground(toolTip != null && !toolTip.isEmpty()
-															? ValidationComponentUtils.getMandatoryForeground()
-																	: spinner.getForeground());
+												long valueLong = Long.parseLong(value.trim());
+												if (valueLong <= Integer.MAX_VALUE) {
+													spinner = new JSpinner();
+													spinner.setValue(valueLong);
+													if (arr2.length > 1) {
+														String comment = arr2[1].trim();
+														spinner.setToolTipText(comment.trim());
+														String toolTip = spinner.getToolTipText();
+														spinner.setForeground(toolTip != null && !toolTip.isEmpty()
+																? ValidationComponentUtils.getMandatoryForeground()
+																		: spinner.getForeground());
+													}
+												} else {
+													txtValue = new JTextField(value.trim());
+													if (arr2.length > 1) {
+														String comment = arr2[1].trim();
+														txtValue.setToolTipText(comment.trim());
+														String toolTip = txtValue.getToolTipText();
+														txtValue.setForeground(toolTip != null && !toolTip.isEmpty()
+																? ValidationComponentUtils.getMandatoryForeground()
+																		: txtValue.getForeground());
+													}
 												}
 											} catch (NumberFormatException e) {
 												txtValue = new JTextField(value.trim());
@@ -843,9 +810,9 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 													pnlGrid.add(lbl, cc.xy(5, layout.getRowCount()));
 												}
 											} else if (chkValue != null) {
+												pnlGrid.add(chkValue, cc.xy(3, layout.getRowCount()));
 												String toolTipText = chkValue.getToolTipText();
 												if (toolTipText != null && !toolTipText.trim().isEmpty()) {
-													pnlGrid.add(chkValue, cc.xy(3, layout.getRowCount()));
 													JLabel lbl = new JLabel(ImageUtil.getImageIconFrom(Icons.get("info", 16, 16)));
 													lbl.setToolTipText(toolTipText);
 													lbl.setMinimumSize(new Dimension(0, 0));
@@ -921,7 +888,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 				tpMain.addTab("General", spGeneralSettings);
 				tpMain.addTab("Input", spInputConfiguration);
 				tpMain.addTab("Advanced", pnlConfigurationFile);
-				tpMain.setTabPlacement(SwingConstants.LEFT);
+				tpMain.setTabPlacement(SwingConstants.TOP);
 				tpMain.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
 				txtConfigurationFile.setEditable(false);
 				tpMain.setVisible(false);
@@ -1228,6 +1195,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 
 				JPanel pnlConfigFilePath = new JPanel(new BorderLayout());
 				pnlConfigFilePath.add(new JLabel("File path: "), BorderLayout.WEST);
+				txtConfigFilePath.setMinimumSize(new Dimension(0, 0));
 				pnlConfigFilePath.add(txtConfigFilePath);
 				pnlConfigFilePath.add(btnFileChooser, BorderLayout.EAST);
 				pnlConfigurationFile.add(pnlConfigFilePath, cc.xy(1, 3));
@@ -1352,8 +1320,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 				pnlEmulatorConfiguration.mdlLstSupportedFileTypes.removeAllElements();
 			}
 			btnEmulatorProperties.setEnabled(b);
-			pnlEmulatorConfiguration.tpMain.revalidate();
-			pnlEmulatorConfiguration.tpMain.repaint();
+			UIUtil.revalidateAndRepaint(pnlEmulatorConfiguration.tpMain);
 		}
 
 		public void setEmulators(List<BroEmulator> emulators) {
@@ -1399,13 +1366,29 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 					tblEmulators.setModel(model);
 				}
 				doModelShit();
+
+				if (pnlNoPlatformSelected.isVisible()) {
+					pnlNoPlatformSelected.setVisible(false);
+					pnlEmulatorOverview.setVisible(true);
+					remove(pnlNoPlatformSelected);
+					add(pnlEmulatorOverview);
+				}
+			} else {
+				lastTopComponent = spl1.getTopComponent();
+				if (!pnlNoPlatformSelected.isVisible()) {
+					pnlNoPlatformSelected.setVisible(true);
+					pnlEmulatorOverview.setVisible(false);
+					pnlAddEmulator.setVisible(false);
+					remove(pnlEmulatorOverview);
+					add(pnlNoPlatformSelected);
+				}
 			}
+			UIUtil.revalidateAndRepaint(this);
 			boolean selected = selectedPlatform != null;
 			btnAddEmulator.setEnabled(selected);
-			remove(pnlAddEmulator);
-			add(pnlEmulatorOverview);
-			revalidate();
-			repaint();
+			//						remove(pnlAddEmulator);
+			//						add(pnlEmulatorOverview);
+			//			UIUtil.revalidateAndRepaint(this);
 		}
 
 		private void doModelShit() {
@@ -1439,9 +1422,18 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 					}
 					if (emu != null) {
 						//						setText(emu.getName());
+						ImageIcon ico = null;
 						if (!icons.containsKey(emu.getId())) {
-							icons.put(emu.getId(),
-									ImageUtil.getImageIconFrom("/images/emulators/" + emu.getIconFilename()));
+							String iconFilename = emu.getIconFilename();
+							if (iconFilename.trim().isEmpty() || iconFilename.equalsIgnoreCase("blank.png")) {
+								File file = new File(emu.getPath());
+								ico = (ImageIcon) FileSystemView.getFileSystemView().getSystemIcon(file);
+							}
+							if (ico == null) {
+								ico = ImageUtil.getImageIconFrom("/images/emulators/" + emu.getIconFilename());
+							}
+							ico = ImageUtil.scaleCover(ico, ScreenSizeUtil.adjustValueToResolution(24), CoverConstants.SCALE_BOTH_OPTION);
+							icons.put(emu.getId(), ico);
 						}
 						setIcon(icons.get(emu.getId()));
 						// setToolTipText("test");
@@ -1507,16 +1499,22 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 		public void showAddEmulatorPanel(Platform platform) {
 			if (platform != null) {
 				// TODO dirty workaround for repaint. change it some time
-				btnAddEmulator.setBorderPainted(false);
-				btnAddEmulator.setContentAreaFilled(false);
-				btnRemoveEmulator.setBorderPainted(false);
-				btnRemoveEmulator.setContentAreaFilled(false);
+				UIUtil.doHover(false, btnAddEmulator, btnRemoveEmulator);
 				remove(pnlEmulatorOverview);
 				add(pnlAddEmulator);
 				showDefaultEmulatorsForPlatform(platform);
-				revalidate();
-				repaint();
+				UIUtil.revalidateAndRepaint(this);
 			}
+		}
+
+		public int getEmulatorIndex(Emulator emulator) {
+			EmulatorTableModel model = (EmulatorTableModel) tblEmulators.getModel();
+			for (int i = 0; i < model.getRowCount(); i++) {
+				if (emulator == model.getEmulator(i)) {
+					return i;
+				}
+			}
+			return -1;
 		}
 	}
 
@@ -1658,5 +1656,27 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 
 	public void showAddEmulatorPanel() {
 		pnlEmulators.showAddEmulatorPanel(pnlPlatforms.lstPlatforms.getSelectedValue());
+	}
+
+	public void configureEmulator(Platform platform, Emulator emulator) {
+		EmulatorTableModel model = (EmulatorTableModel) pnlEmulators.tblEmulators.getModel();
+		//			Emulator emulator = (Emulator) model.getValueAt(tblEmulators.convertRowIndexToModel(selectedRow), -1);
+		Emulator defaultEmulator = platform.getDefaultEmulator();
+
+		pnlPlatforms.lstPlatforms.setSelectedValue(platform, true);
+		int index = -1;
+		if (emulator != null) {
+			index = pnlEmulators.getEmulatorIndex(emulator);
+		} else {
+			index = (defaultEmulator == null) ? EmulatorConstants.NO_EMULATOR
+					: pnlEmulators.getEmulatorIndex(defaultEmulator);
+		}
+		if (index < 0 || index > pnlEmulators.tblEmulators.getRowCount() + 1) {
+			pnlEmulators.btnAddEmulator.requestFocusInWindow();
+			pnlEmulators.tblEmulators.clearSelection();
+		} else {
+			pnlEmulators.btnEmulatorProperties.requestFocusInWindow();
+			pnlEmulators.tblEmulators.setRowSelectionInterval(index, index);
+		}
 	}
 }

@@ -3,6 +3,7 @@ package ch.sysout.emubro.ui;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
@@ -35,11 +36,11 @@ import ch.sysout.emubro.api.FilterListener;
 import ch.sysout.emubro.api.GameListener;
 import ch.sysout.emubro.api.event.GameAddedEvent;
 import ch.sysout.emubro.api.event.GameRemovedEvent;
-import ch.sysout.emubro.api.event.GameSelectionEvent;
 import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.impl.event.BroFilterEvent;
 import ch.sysout.emubro.impl.filter.BroCriteria;
+import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
@@ -52,7 +53,7 @@ public class GameFilterPanel extends JPanel implements GameListener {
 	private JComboBox<Platform> cmbPlatforms;
 	private JPanel pnlSearchField = new JPanel(new BorderLayout());
 	private JPanel pnlSearchFieldInner = new JPanel(new BorderLayout());
-	private JExtendedTextField txtSearchGame = new JExtendedTextField(Messages.get("searchGame") + " (Ctrl+F)");
+	private JExtendedTextField txtSearchGame = new JExtendedTextField(Messages.get(MessageConstants.SEARCH_GAME) + " (Ctrl+F)");
 	private ImageIcon icoSearch;
 	private ImageIcon icoClose;
 	private JButton btnClose;
@@ -74,6 +75,7 @@ public class GameFilterPanel extends JPanel implements GameListener {
 		// txtSearchGame.setFont(ScreenSizeUtil.defaultFont());
 
 		Border textFieldBorder = txtSearchGame.getBorder();
+		txtSearchGame.setPreferredSize(new Dimension(ScreenSizeUtil.adjustValueToResolution(256), 0));
 		txtSearchGame.setBorder(BorderFactory.createEmptyBorder());
 		pnlSearchFieldInner.setBorder(textFieldBorder);
 
@@ -114,6 +116,7 @@ public class GameFilterPanel extends JPanel implements GameListener {
 		pnl.setBorder(Paddings.DLU2);
 
 		JSplitPane splFilterPlatformAndGame = new JSplitPane();
+		splFilterPlatformAndGame.setResizeWeight(1);
 		splFilterPlatformAndGame.setBorder(BorderFactory.createEmptyBorder());
 		splFilterPlatformAndGame.setContinuousLayout(true);
 		splFilterPlatformAndGame.setLeftComponent(cmbPlatforms);
@@ -154,7 +157,7 @@ public class GameFilterPanel extends JPanel implements GameListener {
 			public void focusLost(FocusEvent e) {
 				if (txtSearchGame.getText().isEmpty()) {
 					txtSearchGame.getDocument().removeDocumentListener(documentListener);
-					txtSearchGame.setText(Messages.get("searchGame") + " (Ctrl+F)");
+					txtSearchGame.setText(Messages.get(MessageConstants.SEARCH_GAME) + " (Ctrl+F)");
 					txtSearchGame.setForeground(Color.GRAY);
 					txtSearchGame.getDocument().addDocumentListener(documentListener);
 				}
@@ -172,7 +175,9 @@ public class GameFilterPanel extends JPanel implements GameListener {
 
 	public void initPlatforms(List<Platform> platforms) {
 		for (Platform p : platforms) {
-			cmbPlatforms.addItem(p);
+			if (explorer.getGameCountFromPlatform(p.getId()) > 0) {
+				cmbPlatforms.addItem(p);
+			}
 		}
 	}
 
@@ -182,10 +187,8 @@ public class GameFilterPanel extends JPanel implements GameListener {
 				boolean isSelected, boolean cellHasFocus) {
 			JLabel label = new JLabel();
 			Platform platform = cmbPlatforms.getItemAt(index);
-			String platformName = (platform == null) ? Messages.get("filterPlatforms") : platform.getName();
-			// label.setText(Messages.get("filterPlatforms"));
+			String platformName = (platform == null) ? Messages.get(MessageConstants.FILTER_PLATFORMS) : platform.getName();
 			label.setText(platformName);
-			// label.setIcon(platform.getIconFileName());
 			return label;
 		}
 	}
@@ -199,7 +202,7 @@ public class GameFilterPanel extends JPanel implements GameListener {
 	}
 
 	boolean isSearchFieldEmpty() {
-		return txtSearchGame.getText().equals(Messages.get("searchGame") + " (Ctrl+F)");
+		return txtSearchGame.getText().equals(Messages.get(MessageConstants.SEARCH_GAME) + " (Ctrl+F)");
 	}
 
 	public void addFilterListener(FilterListener l) {
@@ -207,10 +210,10 @@ public class GameFilterPanel extends JPanel implements GameListener {
 	}
 
 	public void languageChanged() {
-		// btnPlatforms.setText(Messages.get("filterPlatforms"));
 		fireFilterEvent = false;
-		txtSearchGame.setText(Messages.get("searchGame") + " (Ctrl+F)");
+		txtSearchGame.setText(Messages.get(MessageConstants.SEARCH_GAME) + " (Ctrl+F)");
 		fireFilterEvent = true;
+		cmbPlatforms.repaint();
 	}
 
 	@Override
@@ -233,13 +236,6 @@ public class GameFilterPanel extends JPanel implements GameListener {
 
 	@Override
 	public void gameRemoved(GameRemovedEvent e) {
-
-	}
-
-	@Override
-	public void gameSelected(GameSelectionEvent e) {
-		// TODO Auto-generated method stub
-
 	}
 
 	public void setFocusInTextField() {

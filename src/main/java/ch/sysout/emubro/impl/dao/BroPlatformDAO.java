@@ -44,13 +44,32 @@ public class BroPlatformDAO implements PlatformDAO {
 
 		Statement stmt = conn.createStatement();
 		int structureId = (!platform.getFileStructure().isEmpty()) ? platform.getFileStructure().get(0).getId() : -2;
-		String sql = SqlUtil.insertIntoWithColumnsString("platform", "platform_name", "platform_iconFilename",
-				"platform_defaultGameCover", "platform_gameSearchModes", "platform_searchFor", "platform_fileStructure",
-				"platform_supportedArchiveTypes", "platform_supportedImageTypes", "platform_defaultEmulatorId",
-				"platform_autoSearchEnabled", "'" + platform.getName() + "'", "'" + platform.getIconFileName() + "'",
-				"'" + platform.getDefaultGameCover() + "'", "'" + gameSearchModesString + "'",
-				"'" + platform.getSearchFor() + "'", structureId, "'" + supportedArchiveTypesString + "'",
-				"'" + supportedImageTypesString + "'", platform.getDefaultEmulatorId(), platform.isAutoSearchEnabled());
+		String sql = SqlUtil.insertIntoWithColumnsString(
+				"platform",
+				"platform_name",
+				"platform_shortName",
+				"platform_iconFilename",
+				"platform_defaultGameCover",
+				"platform_gameSearchModes",
+				"platform_searchFor",
+				"platform_fileStructure",
+				"platform_supportedArchiveTypes",
+				"platform_supportedImageTypes",
+				"platform_defaultEmulatorId",
+				"platform_autoSearchEnabled",
+				"platform_deleted",
+				SqlUtil.getQuotedString(platform.getName()),
+				SqlUtil.getQuotedString(platform.getShortName()),
+				SqlUtil.getQuotedString(platform.getIconFileName()),
+				SqlUtil.getQuotedString(platform.getDefaultGameCover()),
+				SqlUtil.getQuotedString(gameSearchModesString),
+				SqlUtil.getQuotedString(platform.getSearchFor()),
+				structureId,
+				SqlUtil.getQuotedString(supportedArchiveTypesString),
+				SqlUtil.getQuotedString(supportedImageTypesString),
+				platform.getDefaultEmulatorId(),
+				platform.isAutoSearchEnabled(),
+				false);
 		stmt.executeQuery(sql);
 		conn.commit();
 
@@ -61,8 +80,11 @@ public class BroPlatformDAO implements PlatformDAO {
 			for (String s : files) {
 				filesString += (s + " ");
 			}
-			sql = SqlUtil.insertIntoWithColumnsString("fileStructure", "structure_folderName", "structure_files",
-					"'" + fs.getFolderName() + "'", "'" + filesString + "'");
+			sql = SqlUtil.insertIntoWithColumnsString("fileStructure",
+					"structure_folderName",
+					"structure_files",
+					SqlUtil.getQuotedString(fs.getFolderName()),
+					SqlUtil.getQuotedString(filesString));
 			stmt.executeQuery(sql);
 			conn.commit();
 
@@ -87,7 +109,7 @@ public class BroPlatformDAO implements PlatformDAO {
 	@Override
 	public void removePlatform(int platformId) throws SQLException {
 		Statement stmt = conn.createStatement();
-		String sql = "delete platform where platform_id=" + platformId;
+		String sql = "update platform platform_deleted="+true+" where platform_id=" + platformId;
 		stmt.executeQuery(sql);
 		conn.commit();
 		stmt.close();
@@ -98,12 +120,13 @@ public class BroPlatformDAO implements PlatformDAO {
 		Statement stmt = conn.createStatement();
 		stmt = conn.createStatement();
 
-		String sql = "select * from platform where platform_id = " + platformId;
+		String sql = "select * from platform where platform_id = " + platformId + " and platform_deleted != "+true;
 		ResultSet rset = stmt.executeQuery(sql);
 		Platform platform = null;
 		if (rset.next()) {
 			int id = rset.getInt("platform_id");
 			String name = rset.getString("platform_name");
+			String shortName = rset.getString("platform_shortName");
 			String iconFilename = rset.getString("platform_iconFilename");
 			String defaultGameCover = rset.getString("platform_defaultGameCover");
 			String[] gameSearchModes = rset.getString("platform_gameSearchModes").split(" ");
@@ -115,7 +138,7 @@ public class BroPlatformDAO implements PlatformDAO {
 			Collections.sort(emulators);
 			int defaultEmulatorId = rset.getInt("platform_defaultEmulatorId");
 			boolean autoSearchEnabled = rset.getBoolean("platform_autoSearchEnabled");
-			platform = new BroPlatform(id, name, iconFilename, defaultGameCover, gameSearchModes, searchFor,
+			platform = new BroPlatform(id, name, shortName, iconFilename, defaultGameCover, gameSearchModes, searchFor,
 					fileStructure, supportedArchiveTypes, supportedImageTypes, emulators, defaultEmulatorId,
 					autoSearchEnabled);
 		}
@@ -153,7 +176,7 @@ public class BroPlatformDAO implements PlatformDAO {
 		Statement stmt = conn.createStatement();
 		stmt = conn.createStatement();
 
-		String sql = "select * from emulator where emulator_id = " + emulatorId;
+		String sql = "select * from emulator where emulator_id = " + emulatorId + " and emulator_deleted != "+true;
 		ResultSet rset = stmt.executeQuery(sql);
 		Emulator emulator = null;
 		if (rset.next()) {
@@ -166,10 +189,11 @@ public class BroPlatformDAO implements PlatformDAO {
 				String website = rset.getString("emulator_website");
 				String startParameter = rset.getString("emulator_startParameters");
 				String searchString = rset.getString("emulator_searchString");
+				String setupFileMatch = rset.getString("emulator_setupFileMatch");
 				String[] supportedFileTypes = rset.getString("emulator_supportedFileTypes").split(" ");
 				boolean autoSearchEnabled = rset.getBoolean("emulator_autoSearchEnabled");
 				emulator = new BroEmulator(id, name, path, iconFilename, configFilePath, website, startParameter,
-						supportedFileTypes, searchString, autoSearchEnabled);
+						supportedFileTypes, searchString, setupFileMatch, autoSearchEnabled);
 			} catch (SQLException e) {
 				e.printStackTrace();
 			}

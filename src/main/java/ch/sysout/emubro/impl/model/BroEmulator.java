@@ -20,10 +20,11 @@ public class BroEmulator implements Emulator {
 	private String startParameters;
 	private List<String> supportedFileTypes;
 	private String searchString;
+	private String setupFileMatch;
 	private boolean autoSearchEnabled = true;
 
 	public BroEmulator(int id, String name, String path, String iconFilename, String configFilePath, String website,
-			String startParameters, String[] supportedFileTypes, String searchString, boolean autoSearchEnabled) {
+			String startParameters, String[] supportedFileTypes, String searchString, String setupFileMatch, boolean autoSearchEnabled) {
 		ValidationUtil.checkNullOrEmpty(name, "name");
 		this.id = id;
 		this.name = name;
@@ -34,11 +35,12 @@ public class BroEmulator implements Emulator {
 		this.startParameters = (startParameters == null) ? "" : startParameters;
 		this.supportedFileTypes = new ArrayList<>(Arrays.asList(supportedFileTypes));
 		this.searchString = (searchString == null) ? "" : searchString;
+		this.setupFileMatch = (setupFileMatch == null) ? "" : setupFileMatch;
 		this.autoSearchEnabled = autoSearchEnabled;
 	}
 
 	public BroEmulator(int id, String name, String path, String iconFilename, String configFilePath, String website,
-			String startParameters, List<String> supportedFileTypes, String searchString, boolean autoSearchEnabled) {
+			String startParameters, List<String> supportedFileTypes, String searchString, String setupFileMatch, boolean autoSearchEnabled) {
 		ValidationUtil.checkNullOrEmpty(name, "name");
 		ValidationUtil.checkNull(iconFilename, "iconFilename");
 		ValidationUtil.checkNull(configFilePath, "configFilePath");
@@ -52,8 +54,8 @@ public class BroEmulator implements Emulator {
 		this.website = (website == null) ? "" : website;
 		this.startParameters = (startParameters == null) ? "" : startParameters;
 		this.supportedFileTypes = new ArrayList<>(supportedFileTypes);
-		this.searchString = searchString;
 		this.searchString = (searchString == null) ? "" : searchString;
+		this.setupFileMatch = (setupFileMatch == null) ? "" : setupFileMatch;
 		this.autoSearchEnabled = autoSearchEnabled;
 	}
 
@@ -144,6 +146,11 @@ public class BroEmulator implements Emulator {
 	@Override
 	public String getSearchString() {
 		return searchString;
+	}
+
+	@Override
+	public String getSetupFileMatch() {
+		return setupFileMatch;
 	}
 
 	public void setSearchString(String searchString) {

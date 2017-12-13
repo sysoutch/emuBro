@@ -7,13 +7,14 @@ import ch.sysout.emubro.api.model.Emulator;
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.impl.BroGameAlreadyExistsException;
+import ch.sysout.emubro.impl.BroGameDeletedException;
 import ch.sysout.emubro.impl.model.BroEmulator;
 
 public interface ExplorerDAO {
 	List<Platform> getPlatforms() throws SQLException;
 	Game getGameAt(int index) throws SQLException;
 	List<Game> getGames() throws SQLException;
-	void addGame(Game game) throws SQLException, BroGameAlreadyExistsException;
+	void addGame(Game game) throws SQLException, BroGameAlreadyExistsException, BroGameDeletedException;
 	void renameGame(int gameId, String newTitle) throws SQLException;
 	void removeGame(int gameId) throws SQLException;
 	boolean hasPlatform(String name) throws SQLException;

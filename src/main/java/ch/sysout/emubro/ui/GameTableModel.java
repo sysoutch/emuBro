@@ -1,5 +1,6 @@
 package ch.sysout.emubro.ui;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,20 +13,28 @@ import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.impl.model.EmulatorConstants;
 import ch.sysout.emubro.impl.model.PlatformConstants;
+import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.util.Messages;
 
 public class GameTableModel extends DefaultTableModel {
 	private static final long serialVersionUID = 1L;
 
-	private String[] columnNames = { "", Messages.get("columnTitle"), Messages.get("columnPlatform"),
-			Messages.get("columnLastPlayed"), Messages.get("columnFilePath") };
+	private String[] columnNames = {
+			"",
+			Messages.get(MessageConstants.COLUMN_TITLE),
+			Messages.get(MessageConstants.COLUMN_PLATFORM),
+			Messages.get(MessageConstants.COLUMN_LAST_PLAYED),
+			Messages.get(MessageConstants.COLUMN_FILE_PATH)
+	};
 	private Map<Integer, Platform> platforms = new HashMap<>();
-	private Map<Integer, Game> games = new HashMap<>();
-	private Map<Integer, ImageIcon> platformIcons = new HashMap<>();
+	private List<Game> games = new ArrayList<>();
 	private Map<Integer, ImageIcon> gameIcons = new HashMap<>();
 	private Map<Integer, ImageIcon> emulatorIcons = new HashMap<>();
 
-	public GameTableModel() {
+	private IconStore iconStore;
+
+	public GameTableModel(IconStore iconStore) {
+		this.iconStore = iconStore;
 	}
 
 	@Override
@@ -49,10 +58,10 @@ public class GameTableModel extends DefaultTableModel {
 			int platformId = game.getPlatformId();
 			Platform platform = (platformId == PlatformConstants.NO_PLATFORM) ? null : platforms.get(platformId);
 			String lastPlayed = game.getLastPlayed() != null ? game.getLastPlayed().toString()
-					: Messages.get("neverPlayed");
+					: Messages.get(MessageConstants.NEVER_PLAYED);
 			switch (columnIndex) {
 			case 0:
-				ImageIcon icon = platformIcons.get(game.getPlatformId());
+				ImageIcon icon = iconStore.getPlatformIcon(game.getPlatformId());
 				value = icon;
 				break;
 			case 1:
@@ -111,29 +120,8 @@ public class GameTableModel extends DefaultTableModel {
 	}
 
 	public void addRow(Game game) {
-		games.put(games.size(), game);
-
-		// if (!emulatorIconPaths.containsKey(game.getEmulatorId())) {
-		// String emuBroCoverHome = System.getProperty("user.home")
-		// + File.separator + ".emubro" + File.separator
-		// + "emulators";
-		// String coverPath = emuBroCoverHome + File.separator
-		// + game.getEmulatorId()
-		// + ".png";
-		// emulatorIconPaths.put(game.getEmulatorId(), coverPath);
-		// }
-		// if (game.hasIcon()) {
-		// if (!gameIconPaths.containsKey(game.getId())) {
-		// gameIconPaths.put(game.getId(), game.getIconPath());
-		// }
-		// }
-		// if (!gameIconPaths.containsKey(game.getEmulatorId())) {
-		// gameIconPaths.put(game.getEmulatorId(),
-		// "C:\\Users\\heribert\\.emubro\\emulators\\"+game.getEmulatorId()+".png");
-		// }
-
 		String lastPlayed = game.getLastPlayed() != null ? game.getLastPlayed().toString()
-				: Messages.get("neverPlayed");
+				: Messages.get(MessageConstants.NEVER_PLAYED);
 		int emulatorId = game.getEmulatorId();
 		if (emulatorId == EmulatorConstants.NO_EMULATOR) {
 			int platformId = game.getPlatformId();
@@ -151,6 +139,8 @@ public class GameTableModel extends DefaultTableModel {
 		Object[] gameArr = new Object[] { getEmulatorIcon(emulatorId), game.getName(), null,
 				platforms.get(game.getPlatformId()), lastPlayed, game.getPath() };
 		super.addRow(gameArr);
+		games.add(game);
+
 		// System.out.println((getRowCount()-1) + ", "+(getRowCount()-1));
 		fireTableRowsInserted(getRowCount() - 1, getRowCount() - 1);
 	}
@@ -181,9 +171,19 @@ public class GameTableModel extends DefaultTableModel {
 		listenerList.remove(TableModelListener.class, l);
 	}
 
+	@Override
+	public void removeRow(int row) {
+		super.removeRow(row);
+		games.remove(row);
+	}
+
 	public void removeGame(Game game) {
-		// games.remove(game.getId());
-		// fireTableRowsDeleted(0, games.size());
+		for (int i = 0; i < games.size(); i++) {
+			if (games.get(i) == game) {
+				removeRow(i);
+				break;
+			}
+		}
 	}
 
 	public void languageChanged() {
@@ -193,16 +193,16 @@ public class GameTableModel extends DefaultTableModel {
 				columnNames[i] = "";
 				break;
 			case 1:
-				columnNames[i] = Messages.get("columnTitle");
+				columnNames[i] = Messages.get(MessageConstants.COLUMN_TITLE);
 				break;
 			case 2:
-				columnNames[i] = Messages.get("columnPlatform");
+				columnNames[i] = Messages.get(MessageConstants.COLUMN_PLATFORM);
 				break;
 			case 3:
-				columnNames[i] = Messages.get("columnLastPlayed");
+				columnNames[i] = Messages.get(MessageConstants.COLUMN_LAST_PLAYED);
 				break;
 			case 4:
-				columnNames[i] = Messages.get("columnFilePath");
+				columnNames[i] = Messages.get(MessageConstants.COLUMN_FILE_PATH);
 				break;
 			}
 		}
@@ -213,7 +213,7 @@ public class GameTableModel extends DefaultTableModel {
 	}
 
 	public boolean contains(Game game) {
-		return games.containsValue(game);
+		return games.contains(game);
 	}
 
 	public void addGameIcon(int gameId, ImageIcon gameIcon) {
@@ -222,10 +222,6 @@ public class GameTableModel extends DefaultTableModel {
 
 	public void addEmulatorIcon(int emulatorId, ImageIcon emulatorIcon) {
 		emulatorIcons.put(emulatorId, emulatorIcon);
-	}
-
-	public void addPlatformIcon(int platformId, ImageIcon platformIcon) {
-		platformIcons.put(platformId, platformIcon);
 	}
 
 	public void initPlatforms(List<Platform> platforms) {

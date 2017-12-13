@@ -1,19 +1,17 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
 import java.io.File;
 import java.util.List;
 
-import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
-import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
@@ -28,45 +26,52 @@ import com.jgoodies.forms.factories.Paddings;
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 
+import ch.sysout.emubro.api.EmulatorListener;
+import ch.sysout.emubro.api.GameListener;
+import ch.sysout.emubro.api.event.EmulatorEvent;
+import ch.sysout.emubro.api.event.GameAddedEvent;
+import ch.sysout.emubro.api.event.GameRemovedEvent;
+import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
+import ch.sysout.util.UIUtil;
 
-public class BrowseComputerPanel extends JPanel implements MouseListener {
+public class BrowseComputerPanel extends JPanel implements GameListener, EmulatorListener {
 	private static final long serialVersionUID = 1L;
-	private JLabel lblDragDropCover = new JLabel(Messages.get("dragAndDropFolderHere"));
-	private JButton btnAutoSearch = new JButton(Messages.get("searchNow"));
-	private JButton btnCustomSearch = new JButton(Messages.get("searchCustom"));
-	private JButton btnQuickSearch = new JButton(Messages.get("searchQuick"));
-	private JButton btnLastSearch = new JButton(Messages.get("searchLast"));
-	private JCheckBox chkGameSearch = new JCheckBox(Messages.get("searchGames"));
-	private JCheckBox chkEmulatorSearch = new JCheckBox(Messages.get("searchEmulators"));
-	private JButton btnQuickSearchNow = new JButton("Search now",
-			ImageUtil.getImageIconFrom(Icons.get("search", 16, 16)));
-	private JLabel lnkSearchResults = new JLinkLabel(Messages.get("searchLogs"));
-	private JLabel lnkSearchSettings = new JLinkLabel(Messages.get("searchProgressSettings"));
-	private JButton btnUncategorized = new JButton(Messages.get("archivesAndImageFiles", 0));
-	private JButton btnSetupFiles = new JButton(Messages.get("setupFiles", 0));
+	private JLabel lblDragDropCover = new JLabel(Messages.get(MessageConstants.DRAG_AND_DROP_FOLDER_HERE));
+	private JButton btnAutoSearch = new JButton(Messages.get(MessageConstants.SEARCH_NOW));
+	private JButton btnCustomSearch = new JButton(Messages.get(MessageConstants.SEARCH_CUSTOM));
+	private JButton btnQuickSearch = new JButton(Messages.get(MessageConstants.SEARCH_QUICK));
+	private JButton btnLastSearch = new JButton(Messages.get(MessageConstants.SEARCH_LAST));
+	private JCheckBox chkGameSearch = new JCheckBox(Messages.get(MessageConstants.SEARCH_GAMES));
+	private JCheckBox chkEmulatorSearch = new JCheckBox(Messages.get(MessageConstants.SEARCH_EMULATORS));
+	private JButton btnQuickSearchNow = new JButton(MessageConstants.SEARCH_NOW_SHORT, ImageUtil.getImageIconFrom(Icons.get("search", 16, 16)));
+	private JButton lnkSearchResults = new JLinkButton(Messages.get(MessageConstants.SEARCH_LOGS));
+	private JButton lnkSearchSettings = new JLinkButton(Messages.get(MessageConstants.SEARCH_PROGRESS_SETTINGS));
+	private JButton btnUncategorized = new JButton(Messages.get(MessageConstants.ARCHIVES_AND_IMAGE_FILES, 0));
+	private JButton btnSetupFiles = new JButton(Messages.get(MessageConstants.SETUP_FILES, 0));
 
 	private JButton btnCustomSearchNow;
 
 	private JPanel pnlBrowseOptionsPanel;
-	private JPanel pnlBrowsePanel;
 	private JScrollPane spBrowse;
 
-	private DefaultListModel<String> mdlLstBrowse;
-
-	private JLabel lblBrowse = new JLabel(Messages.get("browseCurrentDirectory"));
+	private JLabel lblBrowse = new JLabel(MessageConstants.BROWSE_CURRENT_DIRECTORY);
 	private JTextArea txtBrowseComputer;
 	private JScrollPane spBrowseComputer;
 	private FileTree tree;
 	private JPanel pnlSpace;
-	private int counterUncategorized;
-	private int counterSetupFiles;
+	private int counterUncategorized = 0;
+	private int counterSetupFiles = 0;
+	private JPanel pnlFileTree;
+	JPanel pnlLinks;
+	//	private JPanel pnlFolderLinks;
 
 	public BrowseComputerPanel() {
 		super();
 		pnlSpace = createSpacePanel();
+		//		pnlFolderLinks = createFolderLinksPanel();
 		createUI();
 	}
 
@@ -101,46 +106,49 @@ public class BrowseComputerPanel extends JPanel implements MouseListener {
 		createBrowsePanel();
 		add(spBrowseComputer);
 
-		// btnAutoSearch.setIcon(ImageUtil.getImageIconFrom(Icons.get("search",
-		// size, size)));
-		btnUncategorized.setBorderPainted(false);
-		btnUncategorized.setContentAreaFilled(false);
 		btnUncategorized.setHorizontalAlignment(SwingConstants.LEFT);
 		btnUncategorized.setVerticalAlignment(SwingConstants.CENTER);
-		btnUncategorized.setIcon(ImageUtil.getImageIconFrom(Icons.get("archivAndImage", 22, 22)));
-		btnUncategorized.addMouseListener(this);
+		btnUncategorized.setIcon(ImageUtil.getImageIconFrom(Icons.get("archiveAndImage", 22, 22)));
 
-		btnSetupFiles.setBorderPainted(false);
-		btnSetupFiles.setContentAreaFilled(false);
+		UIUtil.doHover(false, btnSetupFiles, btnUncategorized);
 		btnSetupFiles.setHorizontalAlignment(SwingConstants.LEFT);
 		btnSetupFiles.setVerticalAlignment(SwingConstants.CENTER);
 		btnSetupFiles.setIcon(ImageUtil.getImageIconFrom(Icons.get("setup", 22, 22)));
-		btnSetupFiles.addMouseListener(this);
+
+		btnUncategorized.addMouseListener(UIUtil.getMouseAdapter());
+		btnSetupFiles.addMouseListener(UIUtil.getMouseAdapter());
 
 		FormLayout layout = new FormLayout("default, $ugap:grow, $lcgap, min:grow, $rgap, $lcgap, min:grow",
 				"$ugap, fill:pref, $rgap, fill:pref");
-		JPanel pnl = new JPanel(layout);
+		pnlLinks = new JPanel(layout);
 		CellConstraints cc = new CellConstraints();
-		pnl.add(new JSeparator(), cc.xyw(1, 1, layout.getColumnCount()));
-		pnl.add(lnkSearchResults, cc.xy(1, 2));
-		pnl.add(lnkSearchSettings, cc.xy(1, 4));
-		pnl.add(new JSeparator(SwingConstants.VERTICAL), cc.xywh(3, 2, 1, 3));
-		pnl.add(btnUncategorized, cc.xywh(4, 2, 1, 3));
-		pnl.add(new JSeparator(SwingConstants.VERTICAL), cc.xywh(6, 2, 1, 3));
-		pnl.add(btnSetupFiles, cc.xywh(7, 2, 1, 3));
-		add(pnl, BorderLayout.SOUTH);
+		pnlLinks.add(new JSeparator(), cc.xyw(1, 1, layout.getColumnCount()));
+		pnlLinks.add(lnkSearchResults, cc.xy(1, 2));
+		pnlLinks.add(lnkSearchSettings, cc.xy(1, 4));
+		pnlLinks.add(new JSeparator(SwingConstants.VERTICAL), cc.xywh(3, 2, 1, 3));
+		pnlLinks.add(btnUncategorized, cc.xywh(4, 2, 1, 3));
+		pnlLinks.add(new JSeparator(SwingConstants.VERTICAL), cc.xywh(6, 2, 1, 3));
+		pnlLinks.add(btnSetupFiles, cc.xywh(7, 2, 1, 3));
+		add(pnlLinks, BorderLayout.SOUTH);
 
 		tree = new FileTree();
-		btnCustomSearchNow = new JButton(Messages.get("searchNowShort"));
+		btnCustomSearchNow = new JButton(Messages.get(MessageConstants.SEARCH_NOW_SHORT));
+		btnCustomSearchNow.setIcon(ImageUtil.getImageIconFrom(Icons.get("search", 16, 16)));
+		UIUtil.doHover(false, btnCustomSearchNow);
+		btnCustomSearchNow.addMouseListener(UIUtil.getMouseAdapter());
+		pnlFileTree = new JPanel(new BorderLayout());
+		pnlFileTree.add(tree);
+		JPanel pnlButton = new JPanel(new FlowLayout());
+		pnlButton.add(btnCustomSearchNow);
+		pnlFileTree.add(pnlButton, BorderLayout.SOUTH);
+
 		btnCustomSearch.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				remove(spBrowseComputer);
 				tree.setBorder(BorderFactory.createEmptyBorder());
-				add(tree);
-				add(btnCustomSearchNow, BorderLayout.EAST);
-				revalidate();
-				repaint();
+				add(pnlFileTree);
+				UIUtil.revalidateAndRepaint(BrowseComputerPanel.this);
 			}
 		});
 	}
@@ -171,45 +179,39 @@ public class BrowseComputerPanel extends JPanel implements MouseListener {
 
 		int size = ScreenSizeUtil.is3k() ? 32 : 24;
 		btnAutoSearch.setIcon(ImageUtil.getImageIconFrom(Icons.get("search", size, size)));
-		btnCustomSearch.setIcon(ImageUtil.getImageIconFrom(Icons.get("openGamePath", size, size)));
+		btnCustomSearch.setIcon(ImageUtil.getImageIconFrom(Icons.get("browseFolder", size, size)));
 		btnQuickSearch.setIcon(ImageUtil.getImageIconFrom(Icons.get("quickSearch", size, size)));
 		btnLastSearch.setIcon(ImageUtil.getImageIconFrom(Icons.get("recentSearch", size, size)));
 
-		btnQuickSearch.setEnabled(true);
+		btnQuickSearch.setEnabled(false);
 		btnLastSearch.setEnabled(false);
 
-		btnAutoSearch.setBorderPainted(false);
-		btnAutoSearch.setContentAreaFilled(false);
 		btnAutoSearch.setHorizontalAlignment(SwingConstants.LEFT);
 		btnAutoSearch.setVerticalAlignment(SwingConstants.TOP);
 
-		btnCustomSearch.setBorderPainted(false);
-		btnCustomSearch.setContentAreaFilled(false);
 		btnCustomSearch.setHorizontalAlignment(SwingConstants.LEFT);
 		btnCustomSearch.setVerticalAlignment(SwingConstants.TOP);
-
-		btnQuickSearch.setBorderPainted(false);
-		btnQuickSearch.setContentAreaFilled(false);
 		btnQuickSearch.setHorizontalAlignment(SwingConstants.LEFT);
 		btnQuickSearch.setVerticalAlignment(SwingConstants.TOP);
-
-		btnLastSearch.setBorderPainted(false);
-		btnLastSearch.setContentAreaFilled(false);
 		btnLastSearch.setHorizontalAlignment(SwingConstants.LEFT);
 		btnLastSearch.setVerticalAlignment(SwingConstants.TOP);
+
+		UIUtil.doHover(false, btnAutoSearch, btnCustomSearch, btnQuickSearch, btnLastSearch);
 
 		// btnQuickSearch.setEnabled(false);
 		// btnLastSearch.setEnabled(false);
 
-		btnAutoSearch.addMouseListener(this);
-		btnCustomSearch.addMouseListener(this);
-		btnQuickSearch.addMouseListener(this);
-		btnLastSearch.addMouseListener(this);
+		btnAutoSearch.addMouseListener(UIUtil.getMouseAdapter());
+		btnCustomSearch.addMouseListener(UIUtil.getMouseAdapter());
+		btnQuickSearch.addMouseListener(UIUtil.getMouseAdapter());
+		btnLastSearch.addMouseListener(UIUtil.getMouseAdapter());
 
 		pnlBrowseOptionsPanel.add(btnAutoSearch, cc.xy(1, 1));
 		pnlBrowseOptionsPanel.add(btnCustomSearch, cc.xy(3, 1));
 		pnlBrowseOptionsPanel.add(btnQuickSearch, cc.xy(1, 3));
 		pnlBrowseOptionsPanel.add(btnLastSearch, cc.xy(3, 3));
+		//		pnlBrowseOptionsPanel.add(pnlFolderLinks, cc.xyw(1, 5, layout.getColumnCount()));
+
 		lnkSearchResults.setIcon(ImageUtil.getImageIconFrom(Icons.get("serchLogs", 16, 16)));
 		lnkSearchSettings.setIcon(ImageUtil.getImageIconFrom(Icons.get("settings2", 16, 16)));
 		btnQuickSearch.addActionListener(new ActionListener() {
@@ -253,17 +255,32 @@ public class BrowseComputerPanel extends JPanel implements MouseListener {
 		return pnl;
 	}
 
+	private JPanel createFolderLinksPanel() {
+		JPanel pnl = new JPanel();
+		Component btnFolder = new JButton("Folder 1");
+		Component btnFolder2 = new JButton("Folder 2");
+		Component btnFolder3 = new JButton("Folder 3");
+		Component btnFolder4 = new JButton("Folder 4");
+		Component btnFolder5 = new JButton("Folder 5");
+		Component btnFolder6 = new JButton("Folder 6");
+		Component btnFolder7 = new JButton("Folder 7");
+		pnl.add(btnFolder);
+		pnl.add(btnFolder2);
+		pnl.add(btnFolder3);
+		pnl.add(btnFolder4);
+		pnl.add(btnFolder5);
+		pnl.add(btnFolder6);
+		pnl.add(btnFolder7);
+		return pnl;
+	}
+
 	private void createBrowsePanel() {
-		pnlBrowsePanel = new JPanel();
-		FormLayout layout = new FormLayout("min:grow", "fill:min:grow");
-		pnlBrowsePanel.setLayout(layout);
-		new CellConstraints();
-		mdlLstBrowse = new DefaultListModel<>();
 		txtBrowseComputer = new JTextArea();
 		// txtBrowse.setBorder(BorderFactory.createEmptyBorder());
 		txtBrowseComputer.setEditable(false);
 		txtBrowseComputer.setLineWrap(true);
 		txtBrowseComputer.setWrapStyleWord(false);
+		txtBrowseComputer.setPreferredSize(new Dimension(0, 0));
 		spBrowse = new JScrollPane(txtBrowseComputer);
 		spBrowse.setBorder(BorderFactory.createEmptyBorder());
 		spBrowse.getVerticalScrollBar().setUnitIncrement(16);
@@ -289,55 +306,19 @@ public class BrowseComputerPanel extends JPanel implements MouseListener {
 		new DropTarget(lblDragDropCover, l);
 	}
 
-	@Override
-	public void mouseClicked(MouseEvent e) {
-
-	}
-
-	@Override
-	public void mouseEntered(MouseEvent e) {
-		AbstractButton source = (AbstractButton) e.getSource();
-		if (source == btnAutoSearch || source == btnCustomSearch || source == btnQuickSearch || source == btnLastSearch
-				|| source == btnUncategorized || source == btnSetupFiles) {
-			source.setBorderPainted(true);
-			source.setContentAreaFilled(true);
-		}
-	}
-
-	@Override
-	public void mouseExited(MouseEvent e) {
-		AbstractButton source = (AbstractButton) e.getSource();
-		if (source == btnAutoSearch || source == btnCustomSearch || source == btnQuickSearch || source == btnLastSearch
-				|| source == btnUncategorized || source == btnSetupFiles) {
-			source.setBorderPainted(false);
-			source.setContentAreaFilled(false);
-		}
-	}
-
-	@Override
-	public void mousePressed(MouseEvent e) {
-	}
-
-	@Override
-	public void mouseReleased(MouseEvent e) {
-	}
-
 	public void searchProcessInitialized() {
 		remove(spBrowseComputer);
-		remove(tree);
+		remove(pnlFileTree);
 		add(lblBrowse, BorderLayout.NORTH);
 		add(spBrowse);
-		revalidate();
-		repaint();
+		UIUtil.revalidateAndRepaint(this);
 	}
 
 	public void searchProcessEnded() {
 		remove(lblBrowse);
 		remove(spBrowse);
-		remove(tree);
 		add(spBrowseComputer);
-		revalidate();
-		repaint();
+		UIUtil.revalidateAndRepaint(this);
 	}
 
 	public void directorySearched(String absolutePath) {
@@ -346,19 +327,22 @@ public class BrowseComputerPanel extends JPanel implements MouseListener {
 	}
 
 	public void languageChanged() {
-		lblDragDropCover.setText(Messages.get("dragAndDropFolderHere"));
-		btnAutoSearch.setText(Messages.get("searchNow"));
-		btnCustomSearch.setText(Messages.get("searchCustom"));
-		btnQuickSearch.setText(Messages.get("searchQuick"));
-		btnLastSearch.setText(Messages.get("searchLast"));
-		chkGameSearch.setText(Messages.get("searchGames"));
-		chkEmulatorSearch.setText(Messages.get("searchEmulators"));
-		btnQuickSearchNow.setText(Messages.get("searchNowShort"));
-		lnkSearchResults.setText(Messages.get("searchLogs"));
-		lnkSearchSettings.setText(Messages.get("searchProgressSettings"));
-		lblBrowse.setText(Messages.get("browseCurrentDirectory"));
-		btnUncategorized.setText(Messages.get("archivesAndImageFiles", counterUncategorized));
-		btnSetupFiles.setText(Messages.get("setupFiles", counterSetupFiles));
+		lblDragDropCover.setText(Messages.get(MessageConstants.DRAG_AND_DROP_FOLDER_HERE));
+		btnAutoSearch.setText(Messages.get(MessageConstants.SEARCH_NOW));
+		btnCustomSearch.setText(Messages.get(MessageConstants.SEARCH_CUSTOM));
+		btnQuickSearch.setText(Messages.get(MessageConstants.SEARCH_QUICK));
+		btnLastSearch.setText(Messages.get(MessageConstants.SEARCH_LAST));
+		chkGameSearch.setText(Messages.get(MessageConstants.SEARCH_GAMES));
+		chkEmulatorSearch.setText(Messages.get(MessageConstants.SEARCH_EMULATORS));
+		btnQuickSearchNow.setText(Messages.get(MessageConstants.SEARCH_NOW_SHORT));
+		lnkSearchResults.setText(Messages.get(MessageConstants.SEARCH_LOGS));
+		lnkSearchSettings.setText(Messages.get(MessageConstants.SEARCH_PROGRESS_SETTINGS));
+		lblBrowse.setText(Messages.get(MessageConstants.BROWSE_CURRENT_DIRECTORY));
+		btnUncategorized.setText(Messages.get(MessageConstants.ARCHIVES_AND_IMAGE_FILES, counterUncategorized));
+		if (counterSetupFiles < 0) {
+			System.err.println("daaaamn why is counterSetupFiles < 0 ???????????");
+		}
+		btnSetupFiles.setText(Messages.get(MessageConstants.SETUP_FILES, counterSetupFiles));
 	}
 
 	public List<File> getSelectedDirectoriesToBrowse() {
@@ -366,20 +350,20 @@ public class BrowseComputerPanel extends JPanel implements MouseListener {
 	}
 
 	public void rememberZipFile(String file) {
-		btnUncategorized.setText(Messages.get("archivesAndImageFiles", counterUncategorized++));
+		btnUncategorized.setText(Messages.get(MessageConstants.ARCHIVES_AND_IMAGE_FILES, counterUncategorized++));
 	}
 
 	public void rememberRarFile(String file) {
-		btnUncategorized.setText(Messages.get("archivesAndImageFiles", counterUncategorized++));
+		btnUncategorized.setText(Messages.get(MessageConstants.ARCHIVES_AND_IMAGE_FILES, counterUncategorized++));
 	}
 
 	public void rememberIsoFile(String file) {
-		btnUncategorized.setText(Messages.get("archivesAndImageFiles", counterUncategorized++));
+		btnUncategorized.setText(Messages.get(MessageConstants.ARCHIVES_AND_IMAGE_FILES, counterUncategorized++));
 	}
 
 	public void minimizeButtons() {
-		btnUncategorized.setText(Messages.get("archivesAndImageFiles", counterUncategorized));
-		btnSetupFiles.setText(Messages.get("setupFiles", counterSetupFiles));
+		btnUncategorized.setText(Messages.get(MessageConstants.ARCHIVES_AND_IMAGE_FILES, counterUncategorized));
+		btnSetupFiles.setText(Messages.get(MessageConstants.SETUP_FILES, counterSetupFiles));
 		btnSetupFiles.setHorizontalAlignment(SwingConstants.CENTER);
 		btnUncategorized.setHorizontalAlignment(SwingConstants.CENTER);
 		btnSetupFiles.setHorizontalTextPosition(SwingConstants.CENTER);
@@ -389,8 +373,8 @@ public class BrowseComputerPanel extends JPanel implements MouseListener {
 	}
 
 	public void maximizeButtons() {
-		btnUncategorized.setText(Messages.get("archivesAndImageFiles", counterUncategorized));
-		btnSetupFiles.setText(Messages.get("setupFiles", counterSetupFiles));
+		btnUncategorized.setText(Messages.get(MessageConstants.ARCHIVES_AND_IMAGE_FILES, counterUncategorized));
+		btnSetupFiles.setText(Messages.get(MessageConstants.SETUP_FILES, counterSetupFiles));
 		btnSetupFiles.setHorizontalAlignment(SwingConstants.LEFT);
 		btnUncategorized.setHorizontalAlignment(SwingConstants.LEFT);
 		btnSetupFiles.setHorizontalTextPosition(SwingConstants.RIGHT);
@@ -401,5 +385,31 @@ public class BrowseComputerPanel extends JPanel implements MouseListener {
 
 	public boolean isButtonsMinimized() {
 		return btnSetupFiles.getText().isEmpty() || btnUncategorized.getText().isEmpty();
+	}
+
+	@Override
+	public void gameAdded(GameAddedEvent e) {
+		btnQuickSearch.setEnabled(true);
+	}
+
+	@Override
+	public void gameRemoved(GameRemovedEvent e) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void emulatorAdded(EmulatorEvent e) {
+		btnQuickSearch.setEnabled(true);
+	}
+
+	@Override
+	public void emulatorRemoved(EmulatorEvent e) {
+		// TODO Auto-generated method stub
+
+	}
+
+	public void activateQuickSearchButton(boolean gamesOrPlatformsFound) {
+		btnQuickSearch.setEnabled(gamesOrPlatformsFound);
 	}
 }

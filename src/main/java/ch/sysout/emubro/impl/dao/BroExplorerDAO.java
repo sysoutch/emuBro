@@ -21,7 +21,9 @@ import ch.sysout.emubro.api.model.Emulator;
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.controller.HSQLDBConnection;
+import ch.sysout.emubro.impl.BroDatabaseVersionMismatchException;
 import ch.sysout.emubro.impl.BroGameAlreadyExistsException;
+import ch.sysout.emubro.impl.BroGameDeletedException;
 import ch.sysout.emubro.impl.model.BroEmulator;
 import ch.sysout.emubro.impl.model.BroGame;
 import ch.sysout.emubro.impl.model.BroPlatform;
@@ -29,6 +31,7 @@ import ch.sysout.emubro.impl.model.FileStructure;
 import ch.sysout.emubro.impl.model.GameConstants;
 import ch.sysout.emubro.impl.model.PlatformConstants;
 import ch.sysout.util.Messages;
+import ch.sysout.util.SqlUtil;
 
 public class BroExplorerDAO implements ExplorerDAO {
 	private Connection conn;
@@ -42,18 +45,26 @@ public class BroExplorerDAO implements ExplorerDAO {
 	private GameDAO gameDAO;
 	private EmulatorDAO emulatorDAO;
 	private final int explorerId;
+	private String expectedDbVersion = "1.0.0";
 
-	public BroExplorerDAO(int explorerId) throws IOException, SQLException {
+	public BroExplorerDAO(int explorerId) throws IOException, SQLException, BroDatabaseVersionMismatchException {
 		this.explorerId = explorerId;
 		HSQLDBConnection hsqldbConnection = new HSQLDBConnection(databasePath, databaseName);
-		Main.dlgSplashScreen.updateText(Messages.get("startUp"));
 		conn = hsqldbConnection.getConnection();
 		platformDAO = new BroPlatformDAO(conn);
 		gameDAO = new BroGameDAO(conn);
 		emulatorDAO = new BroEmulatorDAO(conn);
 
+		String dbVersion = getDatabaseVersion();
+		if (dbVersion != null) {
+			if (dbVersion.isEmpty() || !dbVersion.equals(expectedDbVersion)) {
+				Main.dlgSplashScreen.updateText("checking database state...");
+				throw new BroDatabaseVersionMismatchException("database version mismatch. expected: " + expectedDbVersion + " but is: " + dbVersion,
+						expectedDbVersion, dbVersion);
+			}
+		}
 		Statement stmt;
-		InputStream stream = getClass().getResourceAsStream("/create_emu_tables.sql");
+		InputStream stream = getClass().getResourceAsStream("/create_database.sql");
 		BufferedReader br = null;
 		try {
 			String lines = "";
@@ -67,8 +78,16 @@ public class BroExplorerDAO implements ExplorerDAO {
 			}
 			stmt = conn.createStatement();
 			stmt.executeQuery(lines);
-			conn.commit();
 			stmt.close();
+			try {
+				stmt = conn.createStatement();
+				stmt.executeQuery("insert into emubro (emubro_dbVersion) values ('" + expectedDbVersion + "')");
+				conn.commit();
+			} catch (SQLException e) {
+				// do nothing
+			} finally {
+				stmt.close();
+			}
 		} finally {
 			if (br != null) {
 				try {
@@ -81,6 +100,23 @@ public class BroExplorerDAO implements ExplorerDAO {
 		if (!hasExplorer()) {
 			initExplorer();
 		}
+	}
+
+	private String getDatabaseVersion() {
+		String version = "";
+		Statement stmt;
+		try {
+			stmt = conn.createStatement();
+			String sql = "select top 1 emubro_dbVersion from emubro order by emubro_dbVersion desc";
+			ResultSet rset = stmt.executeQuery(sql);
+			if (rset.next()) {
+				version = rset.getString("emubro_dbVersion");
+			}
+			stmt.close();
+		} catch (SQLException e) {
+			return null;
+		}
+		return version;
 	}
 
 	@Override
@@ -123,17 +159,24 @@ public class BroExplorerDAO implements ExplorerDAO {
 
 	@Override
 	public boolean isSearchProcessComplete() {
-		Statement stmt;
+		Statement stmt = null;
 		try {
 			stmt = conn.createStatement();
 			ResultSet rs = stmt.executeQuery(
 					"select explorer_searchProcessComplete from explorer where explorer_id=" + explorerId);
 			if (rs.next()) {
 				boolean complete = rs.getBoolean("explorer_searchProcessComplete");
+				rs.close();
 				return complete;
 			}
 		} catch (SQLException e) {
-			return false;
+			e.printStackTrace();
+		} finally {
+			try {
+				stmt.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 		return false;
 	}
@@ -194,7 +237,7 @@ public class BroExplorerDAO implements ExplorerDAO {
 	 * @throws BroGameAlreadyExistsException
 	 */
 	@Override
-	public void addGame(Game game) throws SQLException, BroGameAlreadyExistsException {
+	public void addGame(Game game) throws SQLException, BroGameAlreadyExistsException, BroGameDeletedException {
 		gameDAO.addGame(game);
 	}
 
@@ -227,7 +270,8 @@ public class BroExplorerDAO implements ExplorerDAO {
 		Statement stmt = conn.createStatement();
 		stmt = conn.createStatement();
 		String platformName = platform.getName();
-		String sql = "select * from platform where lower(platform_name) = '" + platformName.toLowerCase() + "'";
+		String sql = "select * from platform where lower(platform_name) = " +
+				SqlUtil.getQuotedString(platformName.toLowerCase());
 		ResultSet rset = stmt.executeQuery(sql);
 		int platformId = PlatformConstants.NO_PLATFORM;
 		if (rset.next()) {
@@ -284,7 +328,8 @@ public class BroExplorerDAO implements ExplorerDAO {
 	public boolean hasPlatform(String name) throws SQLException {
 		name = name.toLowerCase().trim();
 		Statement stmt = conn.createStatement();
-		String sql = "select platform_id, platform_name from platform where lower(platform_name) = '" + name + "'";
+		String sql = "select platform_id, platform_name from platform where lower(platform_name) = "
+				+ SqlUtil.getQuotedString(name);
 		ResultSet rset = stmt.executeQuery(sql);
 		String rsetCopy = "";
 		if (rset.next()) {
@@ -323,6 +368,7 @@ public class BroExplorerDAO implements ExplorerDAO {
 		while (rset.next()) {
 			int id = rset.getInt("platform_id");
 			String name = rset.getString("platform_name");
+			String shortName = rset.getString("platform_shortName");
 			String iconFilename = rset.getString("platform_iconFilename");
 			String defaultGameCover = rset.getString("platform_defaultGameCover");
 			String[] gameSearchModes = rset.getString("platform_gameSearchModes").split(" ");
@@ -333,7 +379,7 @@ public class BroExplorerDAO implements ExplorerDAO {
 			List<BroEmulator> emulators = getEmulatorsFromPlatform(id);
 			int defaultEmulatorId = rset.getInt("platform_defaultEmulatorId");
 			boolean autoSearchEnabled = rset.getBoolean("platform_autoSearchEnabled");
-			Platform platform = new BroPlatform(id, name, iconFilename, defaultGameCover, gameSearchModes, searchFor,
+			Platform platform = new BroPlatform(id, name, shortName, iconFilename, defaultGameCover, gameSearchModes, searchFor,
 					fileStructure, supportedArchiveTypes, supportedImageTypes, emulators, defaultEmulatorId,
 					autoSearchEnabled);
 			platforms.add(platform);
@@ -469,7 +515,7 @@ public class BroExplorerDAO implements ExplorerDAO {
 
 	private void doUpdate(String table, String key, String value, String whereClause) throws SQLException {
 		Statement stmt = conn.createStatement();
-		String sql = "update " + table + " set " + key + "='" + value + "'" + whereClause;
+		String sql = "update " + table + " set " + key + "=" + SqlUtil.getQuotedString(value) + whereClause;
 		stmt.executeQuery(sql);
 		conn.commit();
 		stmt.close();

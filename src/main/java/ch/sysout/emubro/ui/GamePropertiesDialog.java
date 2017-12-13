@@ -2,6 +2,7 @@ package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -27,8 +28,10 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JTabbedPane;
+import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JToggleButton;
+import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
@@ -44,8 +47,10 @@ import ch.sysout.emubro.api.model.Emulator;
 import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.Platform;
+import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
+import ch.sysout.util.UIUtil;
 
 public class GamePropertiesDialog extends JDialog {
 	private static final long serialVersionUID = 1L;
@@ -77,6 +82,7 @@ public class GamePropertiesDialog extends JDialog {
 		setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 		setModalityType(ModalityType.APPLICATION_MODAL);
 		initComponents();
+		addListeners();
 		createUI();
 		pack();
 		setMinimumSize(getPreferredSize());
@@ -90,7 +96,20 @@ public class GamePropertiesDialog extends JDialog {
 		// int width = ScreenSizeUtil.adjusight));
 	}
 
+	private void addListeners() {
+		btnCancel.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				dispose();
+			}
+		});
+	}
+
 	private void initComponents() {
+		btnOk = new JButton(Messages.get(MessageConstants.OK));
+		btnCancel = new JButton(Messages.get(MessageConstants.CANCEL));
+
 		createMainPanel();
 		FormLayout layout = new FormLayout("min:grow", "fill:min:grow");
 		JPanel pnl = new JPanel();
@@ -104,7 +123,7 @@ public class GamePropertiesDialog extends JDialog {
 		// JScrollPane spMain = new JScrollPane(pnl);
 		// spMain.setBorder(BorderFactory.createEmptyBorder());
 		// spMain.getVerticalScrollBar().setUnitIncrement(16);
-		tpMain.addTab(Messages.get("general"), sp);
+		tpMain.addTab(Messages.get(MessageConstants.GENERAL), sp);
 
 		int oldPreferredHeight = txtGameName.getPreferredSize().height;
 		SwingUtilities.invokeLater(new Runnable() {
@@ -129,9 +148,9 @@ public class GamePropertiesDialog extends JDialog {
 		layout.setColumnGroup(2, 4, 6);
 		JPanel pnlFooter = new JPanel(layout);
 		CellConstraints cc = new CellConstraints();
-		pnlFooter.add(btnOk = new JButton(Messages.get("ok")), cc.xy(2, 2));
-		pnlFooter.add(btnCancel = new JButton(Messages.get("cancel")), cc.xy(4, 2));
-		pnlFooter.add(btnApply = new JButton(Messages.get("apply")), cc.xy(6, 2));
+		pnlFooter.add(btnOk, cc.xy(2, 2));
+		pnlFooter.add(btnCancel, cc.xy(4, 2));
+		pnlFooter.add(btnApply = new JButton(Messages.get(MessageConstants.APPLY)), cc.xy(6, 2));
 		btnApply.setEnabled(false);
 		layout.setColumnGroup(2, 4, 6);
 		add(pnlFooter, BorderLayout.SOUTH);
@@ -139,7 +158,7 @@ public class GamePropertiesDialog extends JDialog {
 
 	private void createMainPanel() {
 		FormLayout layout = new FormLayout("default, $lcgap, default, $ugap:grow, $button, min, min",
-				"fill:default, fill:default:grow, $ugap, fill:pref, $ugap, fill:pref, $rgap, fill:pref, $ugap, fill:pref, $ugap,"
+				"fill:default, fill:default:grow, $ugap, fill:pref, $ugap, fill:pref, $rgap, fill:pref, fill:$ugap, fill:pref, $ugap,"
 						+ "fill:pref, $rgap, top:pref, $ugap, fill:pref, $ugap, fill:pref, $rgap, fill:pref, $rgap, fill:pref, fill:min");
 		pnlMain.setLayout(layout);
 		pnlMain.setBorder(Paddings.TABBED_DIALOG);
@@ -155,21 +174,36 @@ public class GamePropertiesDialog extends JDialog {
 		txtGameName.setWrapStyleWord(true);
 		txtGameName.setMinimumSize(new Dimension(0, 0));
 		pnlMain.add(new JSeparator(), cc.xyw(1, 4, layout.getColumnCount()));
-		pnlMain.add(new JLabel(Messages.get("columnPlatform") + ":"), cc.xy(1, 6));
+		pnlMain.add(new JLabel(Messages.get(MessageConstants.COLUMN_PLATFORM) + ":"), cc.xy(1, 6));
 		Platform platform = explorer.getPlatform(game.getPlatformId());
 		pnlMain.add(new JLabel(platform.getName()), cc.xyw(3, 6, layout.getColumnCount() - 2));
-		pnlMain.add(new JLabel(Messages.get("runWith") + ":"), cc.xy(1, 8));
+		pnlMain.add(new JLabel(Messages.get(MessageConstants.RUN_WITH) + ":"), cc.xy(1, 8));
 		Emulator emulator = explorer.getEmulatorFromPlatform(platform.getId());
 		String emulatorName = (emulator != null) ? emulator.getName() : "-";
 		pnlMain.add(new JLabel(emulatorName), cc.xy(3, 8));
-		pnlMain.add(btnModify = new JToggleButton(Messages.get("modify")), cc.xy(5, 8));
+		pnlMain.add(btnModify = new JToggleButton(Messages.get(MessageConstants.MODIFY)), cc.xy(5, 8));
+
+		EmulatorTableModel model = new EmulatorTableModel(platform.getEmulators());
+		JTableDoubleClickOnHeaderFix tblEmulators = new JTableDoubleClickOnHeaderFix();
+		tblEmulators.setPreferredScrollableViewportSize(tblEmulators.getPreferredSize());
+		//		tblEmulators.setRowHeight(rowHeight);
+		tblEmulators.setAutoscrolls(false);
+		tblEmulators.getTableHeader().setReorderingAllowed(false);
+		tblEmulators.setIntercellSpacing(new Dimension(0, 0));
+		tblEmulators.setFillsViewportHeight(true);
+		tblEmulators.setShowGrid(false);
+		tblEmulators.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+		tblEmulators.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		tblEmulators.setModel(model);
+		Component spEmulators = new JScrollPane(tblEmulators);
 		btnModify.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (btnModify.isSelected()) {
 					layout.setRowSpec(2, RowSpec.decode("fill:pref"));
-					layout.setRowSpec(9, RowSpec.decode("$ugap:grow"));
+					layout.setRowSpec(9, RowSpec.decode("fill:$ugap:grow"));
+					pnlMain.add(spEmulators, cc.xyw(1, 9, layout.getColumnCount()));
 					GamePropertiesDialog diss = GamePropertiesDialog.this;
 					int superHeight = (int) (diss.getPreferredSize().getHeight());
 					//					if (diss.getHeight() < diss.getPreferredSize().getHeight() + 128)) {
@@ -180,22 +214,17 @@ public class GamePropertiesDialog extends JDialog {
 							diss.setSize(new Dimension(diss.getWidth(), superHeight + (128 - diss.getHeight() - superHeight)));
 						}
 					}
-					diss.getLocationOnScreen().getX();
-					diss.getLocationOnScreen().getY();
-					pnlMain.revalidate();
-					pnlMain.repaint();
+					UIUtil.revalidateAndRepaint(pnlMain);
 				} else {
+					pnlMain.remove(spEmulators);
 					layout.setRowSpec(2, RowSpec.decode("fill:pref:grow"));
-					layout.setRowSpec(9, RowSpec.decode("$ugap"));
+					layout.setRowSpec(9, RowSpec.decode("fill:$ugap"));
 					GamePropertiesDialog diss = GamePropertiesDialog.this;
 					int superHeight = (int) diss.getPreferredSize().getHeight();
 					if (diss.getHeight() <= superHeight+128) {
 						diss.setSize(new Dimension(diss.getWidth(), superHeight));
 					}
-					diss.getLocationOnScreen().getX();
-					diss.getLocationOnScreen().getY();
-					pnlMain.revalidate();
-					pnlMain.repaint();
+					UIUtil.revalidateAndRepaint(pnlMain);
 				}
 			}
 		});
@@ -204,9 +233,9 @@ public class GamePropertiesDialog extends JDialog {
 		String name = FilenameUtils.getName(game.getPath());
 		String parent = FilenameUtils.getFullPathNoEndSeparator(game.getPath());
 
-		pnlMain.add(new JLabel("Dateiname:"), cc.xy(1, 12));
+		pnlMain.add(new JLabel(Messages.get(MessageConstants.FILE_NAME) + ":"), cc.xy(1, 12));
 		pnlMain.add(txtGameFilename = new JLabel(name), cc.xyw(3, 12, layout.getColumnCount() - 2));
-		pnlMain.add(new JLabel(Messages.get("columnFilePath") + ":"), cc.xy(1, 14	));
+		pnlMain.add(new JLabel(Messages.get(MessageConstants.COLUMN_FILE_PATH) + ":"), cc.xy(1, 14	));
 		pnlMain.add(txtGamePath = new JTextArea(parent), cc.xyw(3, 14, layout.getColumnCount() - 2));
 
 		txtGameFilename.setMinimumSize(new Dimension(0, 0));
@@ -257,26 +286,26 @@ public class GamePropertiesDialog extends JDialog {
 			int playCount = game.getPlayCount();
 			switch (playCount) {
 			case 0:
-				sPlayCount = Messages.get("neverPlayed");
+				sPlayCount = Messages.get(MessageConstants.NEVER_PLAYED);
 				break;
 			case 1:
-				sPlayCount = Messages.get("playCount3", playCount);
+				sPlayCount = Messages.get(MessageConstants.PLAY_COUNT3, playCount);
 				break;
 			default:
-				sPlayCount = Messages.get("playCount2", playCount);
+				sPlayCount = Messages.get(MessageConstants.PLAY_COUNT2, playCount);
 			}
 
 			String ago = "";
 			if (days > 0) {
-				ago = days + " " + ((days == 1) ? Messages.get("day") : Messages.get("days"));
+				ago = days + " " + ((days == 1) ? Messages.get(MessageConstants.DAY) : Messages.get(MessageConstants.DAYS));
 			} else if (hours > 0) {
-				ago = hours + " " + ((hours == 1) ? Messages.get("hour") : Messages.get("hours"));
+				ago = hours + " " + ((hours == 1) ? Messages.get(MessageConstants.HOUR) : Messages.get(MessageConstants.HOURS));
 			} else if (minutes > 0) {
-				ago = minutes + " " + ((minutes == 1) ? Messages.get("minute") : Messages.get("minutes"));
+				ago = minutes + " " + ((minutes == 1) ? Messages.get(MessageConstants.MINUTE) : Messages.get(MessageConstants.MINUTES));
 			} else {
-				ago = ((seconds == 0) ? Messages.get("justNow")
+				ago = ((seconds == 0) ? Messages.get(MessageConstants.JUST_NOW)
 						: (seconds + " "
-								+ ((seconds == 1) ? Messages.get("second") : Messages.get("seconds"))));
+								+ ((seconds == 1) ? Messages.get(MessageConstants.SECOND) : Messages.get(MessageConstants.SECONDS))));
 			}
 			if (Locale.getDefault().equals(Locale.GERMAN)) {
 				ago = "Vor " + ago;
@@ -288,17 +317,17 @@ public class GamePropertiesDialog extends JDialog {
 				ago = "Avant " + ago;
 			}
 			formattedLastPlayed = ago;
-			pnlMain.add(new JLabel(formattedLastPlayed), cc.xyw(3, 20, layout.getColumnCount() - 2));
-			pnlMain.add(new JLabel(sPlayCount), cc.xyw(3, 22, layout.getColumnCount() - 2));
+			pnlMain.add(new JLabel(sPlayCount), cc.xyw(3, 20, layout.getColumnCount() - 2));
+			pnlMain.add(new JLabel(formattedLastPlayed), cc.xyw(3, 22, layout.getColumnCount() - 2));
 		}
 		Date dateAdded = game.getDateAdded();
 		String formattedDateAdded = dateFormat.format(dateAdded);
 
 		pnlMain.add(new JSeparator(), cc.xyw(1, 16, layout.getColumnCount()));
-		pnlMain.add(new JLabel(Messages.get("dateAdded") + ":"), cc.xy(1, 18));
+		pnlMain.add(new JLabel(Messages.get(MessageConstants.DATE_ADDED) + ":"), cc.xy(1, 18));
 		pnlMain.add(new JLabel(formattedDateAdded), cc.xyw(3, 18, layout.getColumnCount() - 2));
-		pnlMain.add(new JLabel(Messages.get("playCount") + ":"), cc.xy(1, 20));
-		pnlMain.add(new JLabel(Messages.get("lastPlayed") + ":"), cc.xy(1, 22));
+		pnlMain.add(new JLabel(Messages.get(MessageConstants.PLAY_COUNT) + ":"), cc.xy(1, 20));
+		pnlMain.add(new JLabel(Messages.get(MessageConstants.LAST_PLAYED) + ":"), cc.xy(1, 22));
 	}
 
 	private void setGamePathUnderlined(boolean underlined) {
@@ -319,6 +348,6 @@ public class GamePropertiesDialog extends JDialog {
 	}
 
 	public void languageChanged() {
-		tpMain.getTabComponentAt(0).setName(Messages.get("general"));
+		tpMain.getTabComponentAt(0).setName(Messages.get(MessageConstants.GENERAL));
 	}
 }

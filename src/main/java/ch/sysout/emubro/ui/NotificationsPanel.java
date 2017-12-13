@@ -2,11 +2,13 @@ package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
+import java.awt.LayoutManager;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
@@ -15,28 +17,26 @@ import java.util.List;
 import java.util.Map;
 
 import javax.swing.AbstractButton;
+import javax.swing.Action;
 import javax.swing.BorderFactory;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JEditorPane;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JTextPane;
-import javax.swing.SwingConstants;
 import javax.swing.border.Border;
-import javax.swing.border.CompoundBorder;
-import javax.swing.border.EmptyBorder;
-import javax.swing.text.DefaultStyledDocument;
-import javax.swing.text.Style;
-import javax.swing.text.StyleConstants;
-import javax.swing.text.StyleContext;
-import javax.swing.text.StyledDocument;
 
 import com.jgoodies.forms.factories.Paddings;
+import com.jgoodies.forms.layout.CellConstraints;
+import com.jgoodies.forms.layout.FormLayout;
 import com.jgoodies.validation.view.ValidationComponentUtils;
 
+import ch.sysout.emubro.controller.NotificationElementListener;
 import ch.sysout.util.Icons;
+import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
+import ch.sysout.util.UIUtil;
 import ch.sysout.util.ValidationUtil;
 
 public class NotificationsPanel extends JPanel {
@@ -46,8 +46,8 @@ public class NotificationsPanel extends JPanel {
 	private HashMap<JPanel, JPanel> test = new HashMap<>();
 
 	private List<NotificationElement> notificationElements = new ArrayList<>();
-	private Map<JTextPane, NotificationElement> labels = new HashMap<>();
-	private Map<List<JLabel>, NotificationElement> links = new HashMap<>();
+	private Map<JEditorPane, NotificationElement> labels = new HashMap<>();
+	private Map<List<AbstractButton>, NotificationElement> links = new HashMap<>();
 
 	private Map<Integer, ImageIcon> infoIcons = new HashMap<>();
 	private Map<Integer, ImageIcon> infoImportantIcons = new HashMap<>();
@@ -61,6 +61,8 @@ public class NotificationsPanel extends JPanel {
 	private Icon iconHideMessageHover = ImageUtil.getImageIconFrom(Icons.get("hideDetailsPaneHover", 16, 16));
 
 	private Dimension minimumNotificationsHeight = new Dimension(0, ScreenSizeUtil.adjustValueToResolution(96));
+
+	private List<NotificationElementListener> listeners = new ArrayList<>();
 
 	@Override
 	public Dimension getMinimumSize() {
@@ -82,12 +84,9 @@ public class NotificationsPanel extends JPanel {
 	}
 
 	public void addNotificationElement(NotificationElement element3) {
-		String message = element3.getMessage();
-		element3.getMessageKey();
-		List<String> actionMessages = element3.getActionMessages();
+		String message = element3.getMessage().replace("<html>", "").replace("</html>", "");
+		Map<String, Action> actionMessages = element3.getActionMessages();
 		int notificationType = element3.getNotificationType();
-		element3.getListener();
-
 		if (notificationElements != null && notificationElements.contains(element3)) {
 			return;
 		}
@@ -95,17 +94,28 @@ public class NotificationsPanel extends JPanel {
 		final JPanel pnl = new JPanel(new GridLayout(0, 1));
 		// pnl.setBackground(backgroundColor);
 
-		JTextPane label = new JTextPane();
+		JEditorPane label = new JEditorPane("text/html", "");
+		//		label.setLineWrap(true);
+		//		label.setWrapStyleWord(true);
 		Font oldFont = label.getFont();
-		label.setContentType("text/html");
-		label.setFont(oldFont);
+		//		label.setContentType("text/html");
 		label.setEditable(false);
-		label.setText(message);
+		label.setFocusable(false);
+		label.setFont(oldFont);
+		label.setText("<font face=\"verdana\">"+message+"</font>");
 		labels.put(label, element3);
 
 		int size = ScreenSizeUtil.adjustValueToResolution(16);
 		final JPanel pnl2 = new JPanel(new BorderLayout(0, 2));
 		pnl2.setBorder(Paddings.DLU4);
+		LayoutManager formLayoutPnlLabel = new FormLayout("min",
+				"fill:min");
+		JPanel pnlIcon = new JPanel(formLayoutPnlLabel);
+
+		pnlIcon.setBorder(Paddings.DLU4);
+		CellConstraints cc = new CellConstraints();
+		JLabel lblIcon = new JLabel();
+		pnlIcon.add(lblIcon, cc.xy(1, 1));
 		pnl2.add(label, BorderLayout.NORTH);
 
 		// HTMLEditorKit kit = new HTMLEditorKit();
@@ -114,29 +124,19 @@ public class NotificationsPanel extends JPanel {
 		WrapLayout wrapLayout = new WrapLayout();
 		wrapLayout.setAlignment(FlowLayout.LEFT);
 		JPanel pnl3 = new JPanel(wrapLayout);
-		List<JLabel> links2 = new ArrayList<>();
-		for (String s : actionMessages) {
-			JLabel lnk = new JLabel();
+		List<AbstractButton> links2 = new ArrayList<>();
+		for (Map.Entry<String, Action> action : actionMessages.entrySet()) {
+			JButton lnk = new JLinkButton(Messages.get(action.getKey()));
 			links2.add(lnk);
-			lnk.setText("<html><a href=''>" + s + "</a></html>");
-			lnk.addMouseListener(new MouseAdapter() {
-				@Override
-				public void mouseEntered(MouseEvent e) {
-					setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-				}
-
-				@Override
-				public void mouseExited(MouseEvent e) {
-					setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-				}
-			});
+			lnk.setActionCommand(action.getKey());
+			lnk.addActionListener(action.getValue());
 			// lnk.setIcon(ImageUtil.getImageIconFrom(Icons.get("blank", size,
 			// size)));
 			JPanel pnlLnk = new JPanel();
 			pnlLnk.setOpaque(false);
 			Border border = pnlLnk.getBorder();
-			Border margin = new EmptyBorder(0, 10, 0, 0);
-			pnlLnk.setBorder(new CompoundBorder(border, margin));
+			//			Border margin = new EmptyBorder(0, 10, 0, 0);
+			//			pnlLnk.setBorder(new CompoundBorder(border, margin));
 			pnlLnk.add(lnk);
 			pnl3.add(pnlLnk);
 		}
@@ -145,8 +145,7 @@ public class NotificationsPanel extends JPanel {
 		pnl2.add(pnl3, BorderLayout.WEST);
 
 		AbstractButton btnHideMessage = new JButton(iconHideMessage);
-		btnHideMessage.setBorderPainted(false);
-		btnHideMessage.setContentAreaFilled(false);
+		UIUtil.doHover(false, btnHideMessage);
 		btnHideMessage.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseEntered(MouseEvent e) {
@@ -159,19 +158,26 @@ public class NotificationsPanel extends JPanel {
 			}
 		});
 		pnl2.add(btnHideMessage, BorderLayout.EAST);
-		pnl.add(pnl2);
-		StyleContext context = new StyleContext();
-		StyledDocument document = new DefaultStyledDocument(context);
-		Style labelStyle = context.getStyle(StyleContext.DEFAULT_STYLE);
-		Icon icon = null;
+		JPanel pnlpnl = new JPanel(new BorderLayout());
+		pnlpnl.add(pnlIcon, BorderLayout.WEST);
+		pnlpnl.add(pnl2, BorderLayout.CENTER);
+		pnl.add(pnlpnl);
+
+		//		StyleContext context = new StyleContext();
+		//		StyledDocument document = new DefaultStyledDocument(context);
+		//		Style labelStyle = context.getStyle(StyleContext.DEFAULT_STYLE);
+		//		JLabel lbl = new JLabel(message, null, SwingConstants.LEFT);
+		//		StyleConstants.setComponent(labelStyle, lbl);
+		//		label.setDocument(document);
+
 		switch (notificationType) {
 		case NotificationElement.INFORMATION:
 			if (!infoIcons.containsKey(size)) {
 				infoIcons.put(size, ImageUtil.getImageIconFrom(Icons.get("info", size, size)));
 			}
-			icon = infoIcons.get(size);
-			//			label.setIcon(infoIcons.get(size));
+			lblIcon.setIcon(infoIcons.get(size));
 			label.setBackground(Color.WHITE);
+			pnlIcon.setBackground(Color.WHITE);
 			pnl2.setBackground(Color.WHITE);
 			pnl3.setBackground(Color.WHITE);
 			pnl.setBorder(BorderFactory.createLineBorder(Color.white.darker()));
@@ -180,11 +186,11 @@ public class NotificationsPanel extends JPanel {
 			if (!infoImportantIcons.containsKey(size)) {
 				infoImportantIcons.put(size, ImageUtil.getImageIconFrom(Icons.get("infoImportant", size, size)));
 			}
-			icon = infoImportantIcons.get(size);
-			//			label.setIcon(infoImportantIcons.get(size));
+			lblIcon.setIcon(infoImportantIcons.get(size));
 			// pnl2.setBackground(ValidationComponentUtils.getMandatoryBackground());
 			// pnl3.setBackground(ValidationComponentUtils.getMandatoryBackground());
 			label.setBackground(Color.WHITE);
+			pnlIcon.setBackground(Color.WHITE);
 			pnl2.setBackground(Color.WHITE);
 			pnl3.setBackground(Color.WHITE);
 			pnl.setBorder(BorderFactory.createLineBorder(ValidationComponentUtils.getMandatoryBackground().darker()));
@@ -193,9 +199,9 @@ public class NotificationsPanel extends JPanel {
 			if (!warningIcons.containsKey(size)) {
 				warningIcons.put(size, ImageUtil.getImageIconFrom(Icons.get("warning", size, size)));
 			}
-			icon = warningIcons.get(size);
-			//			label.setIcon(warningIcons.get(size));
+			lblIcon.setIcon(warningIcons.get(size));
 			label.setBackground(ValidationComponentUtils.getWarningBackground());
+			pnlIcon.setBackground(ValidationComponentUtils.getWarningBackground());
 			pnl2.setBackground(ValidationComponentUtils.getWarningBackground());
 			pnl3.setBackground(ValidationComponentUtils.getWarningBackground());
 			pnl.setBorder(BorderFactory.createLineBorder(ValidationComponentUtils.getWarningBackground().darker()));
@@ -204,9 +210,9 @@ public class NotificationsPanel extends JPanel {
 			if (!errorIcons.containsKey(size)) {
 				errorIcons.put(size, ImageUtil.getImageIconFrom(Icons.get("error", size, size)));
 			}
-			icon = errorIcons.get(size);
-			//			label.setIcon(errorIcons.get(size));
+			lblIcon.setIcon(errorIcons.get(size));
 			label.setBackground(ValidationComponentUtils.getErrorBackground());
+			pnlIcon.setBackground(ValidationComponentUtils.getErrorBackground());
 			pnl2.setBackground(ValidationComponentUtils.getErrorBackground());
 			pnl3.setBackground(ValidationComponentUtils.getErrorBackground());
 			pnl.setBorder(BorderFactory.createLineBorder(ValidationComponentUtils.getErrorBackground().darker()));
@@ -215,9 +221,9 @@ public class NotificationsPanel extends JPanel {
 			if (!successIcons.containsKey(size)) {
 				successIcons.put(size, ImageUtil.getImageIconFrom(Icons.get("default", size, size)));
 			}
-			icon = successIcons.get(size);
-			//			label.setIcon(successIcons.get(size));
+			lblIcon.setIcon(successIcons.get(size));
 			label.setBackground(ValidationUtil.getSuccessBackground());
+			pnlIcon.setBackground(ValidationUtil.getSuccessBackground());
 			pnl2.setBackground(ValidationUtil.getSuccessBackground());
 			pnl3.setBackground(ValidationUtil.getSuccessBackground());
 			pnl.setBorder(BorderFactory.createLineBorder(ValidationUtil.getSuccessBackground().darker()));
@@ -225,12 +231,16 @@ public class NotificationsPanel extends JPanel {
 		default:
 			break;
 		}
-		JLabel lbl = new JLabel(message, icon, SwingConstants.LEFT);
-		StyleConstants.setComponent(labelStyle, lbl);
-		label.setDocument(document);
 		pnlGrid.add(pnl);
-		pnlGrid.revalidate();
-		pnlGrid.repaint();
+		test.put(pnl, pnl);
+		btnHideMessage.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				removeNotificationElement(pnl);
+			}
+		});
+		UIUtil.revalidateAndRepaint(pnlGrid);
 
 		// int value = ScreenSizeUtil.adjustValueToResolution(6);
 		// add(Box.createRigidArea(new Dimension(0, value)));
@@ -239,11 +249,22 @@ public class NotificationsPanel extends JPanel {
 
 	public void removeNotificationElement(JPanel pnl) {
 		if (test.containsKey(pnl)) {
-			remove(test.get(pnl));
+			pnlGrid.remove(test.get(pnl));
 			test.remove(pnl);
+			fireNotificationElementRemoved();
+			UIUtil.revalidateAndRepaint(this);
+		}
+	}
 
-			revalidate();
-			repaint();
+	public void addNotificationElementListener(NotificationElementListener l) {
+		if (!listeners.contains(l)) {
+			listeners.add(l);
+		}
+	}
+
+	private void fireNotificationElementRemoved() {
+		for (NotificationElementListener l : listeners) {
+			l.notificationElementRemoved();
 		}
 	}
 
@@ -254,16 +275,12 @@ public class NotificationsPanel extends JPanel {
 		setToolTipTexts();
 	}
 
-	/**
-	 *
-	 */
 	private void setToolTipTexts() {
 		lblGameCover.setToolTipText("Hier klicken um Cover hinzuzufügen");
 	}
 
 	private void createUI() {
 		add(pnlGrid, BorderLayout.NORTH);
-		// setBorder(Paddings.TABBED_DIALOG);
 	}
 
 	public int getElementCount() {
@@ -271,18 +288,14 @@ public class NotificationsPanel extends JPanel {
 	}
 
 	public void languageChanged() {
-		for (JTextPane lbl : labels.keySet()) {
+		for (JEditorPane lbl : labels.keySet()) {
 			NotificationElement messageKey = labels.get(lbl);
-			String text = messageKey.getMessage();
-			lbl.setText(text);
+			String text = messageKey.getMessage().replace("<html>", "").replace("</html>", "");
+			lbl.setText("<font face=\"verdana\">"+text+"</font>");
 		}
-		for (List<JLabel> lnk : links.keySet()) {
-			NotificationElement messageKey = links.get(lnk);
-			List<String> text = messageKey.getActionMessages();
-			int counter = 0;
-			for (JLabel lbl : lnk) {
-				lbl.setText("<html><a href=''>" + text.get(counter) + "</a></html>");
-				counter++;
+		for (List<AbstractButton> lnk : links.keySet()) {
+			for (AbstractButton lbl : lnk) {
+				lbl.setText("<html><a href=''>" + Messages.get(lbl.getActionCommand()) + "</a></html>");
 			}
 		}
 	}

@@ -2,7 +2,10 @@ package ch.sysout.emubro.ui;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.MissingResourceException;
+
+import javax.swing.Action;
 
 import ch.sysout.emubro.controller.NotificationElementListener;
 import ch.sysout.util.Messages;
@@ -16,22 +19,14 @@ public class NotificationElement {
 
 	private String[] messageKey;
 	private String[] actionMessageKeys2;
-	private String[][] actionMessageKeys;
+	private Map<String, Action> actionMessageKeys;
 	private int notificationType;
 	private NotificationElementListener listener;
 
-	public NotificationElement(String[] messageKey, String[][] actionMessageKeys, int notificationType,
+	public NotificationElement(String[] messageKey, Map<String, Action> actionMessageKeys, int notificationType,
 			NotificationElementListener listener) {
 		this.messageKey = messageKey;
 		this.actionMessageKeys = actionMessageKeys;
-		this.notificationType = notificationType;
-		this.listener = listener;
-	}
-
-	public NotificationElement(String[] messageKey, String[] actionMessageKeys, int notificationType,
-			NotificationElementListener listener) {
-		this.messageKey = messageKey;
-		actionMessageKeys2 = actionMessageKeys;
 		this.notificationType = notificationType;
 		this.listener = listener;
 	}
@@ -58,22 +53,8 @@ public class NotificationElement {
 		return messageKey;
 	}
 
-	public List<String> getActionMessages() {
-		if (actionMessageKeys2 != null) {
-			return translateActionMessageKeys(actionMessageKeys2);
-		} else {
-			if (actionMessageKeys != null) {
-				List<String> sArr2 = new ArrayList<>();
-				for (String[] sArr : actionMessageKeys) {
-					List<String> bla = translateActionMessageKeys(sArr);
-					for (String bla2 : bla) {
-						sArr2.add(bla2);
-					}
-				}
-				return sArr2;
-			}
-		}
-		return null;
+	public Map<String, Action> getActionMessages() {
+		return actionMessageKeys;
 	}
 
 	private List<String> translateActionMessageKeys(String[] keys) {
@@ -99,9 +80,5 @@ public class NotificationElement {
 
 	public int getNotificationType() {
 		return notificationType;
-	}
-
-	public NotificationElementListener getListener() {
-		return listener;
 	}
 }

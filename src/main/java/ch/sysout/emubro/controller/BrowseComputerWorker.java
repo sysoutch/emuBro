@@ -6,9 +6,12 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.attribute.DosFileAttributes;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipException;
 
+import javax.swing.Action;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 
@@ -21,6 +24,7 @@ import org.apache.commons.io.filefilter.RegexFileFilter;
 import com.github.junrar.exception.RarException;
 
 import ch.sysout.emubro.api.model.Platform;
+import ch.sysout.emubro.impl.BroGameDeletedException;
 import ch.sysout.emubro.ui.NotificationElement;
 import ch.sysout.util.ValidationUtil;
 
@@ -55,6 +59,12 @@ class BrowseComputerWorker extends SwingWorker<Void, File> {
 
 	private void searchTest2(File root) {
 		String extensionsString = controller.explorer.getExtensionsRegexString();
+
+		//		String filename = extensionsString;
+		//		File baseDir = root;
+		//		FindFile ff = new FindFile(filename, baseDir, 6);
+		//		ff.findFile(controller);
+
 		IOFileFilter fileFilter = new RegexFileFilter(extensionsString, IOCase.INSENSITIVE) {
 			private static final long serialVersionUID = 1L;
 
@@ -85,6 +95,8 @@ class BrowseComputerWorker extends SwingWorker<Void, File> {
 							} catch (IOException e) {
 								// TODO Auto-generated catch block
 								e.printStackTrace();
+							} catch (BroGameDeletedException e) {
+								// TODO Auto-generated catch block
 							}
 						}
 						// return true;
@@ -93,7 +105,7 @@ class BrowseComputerWorker extends SwingWorker<Void, File> {
 				return false;
 			}
 
-			private void searchForPlatform(File filePath) throws ZipException, RarException, IOException {
+			private void searchForPlatform(File filePath) throws ZipException, RarException, IOException, BroGameDeletedException {
 				boolean useDefaultPlatforms = controller.explorer.getDefaultPlatforms() != null
 						&& controller.explorer.getDefaultPlatforms().size() > 0;
 						searchForGameOrEmulator(filePath, useDefaultPlatforms);
@@ -114,11 +126,9 @@ class BrowseComputerWorker extends SwingWorker<Void, File> {
 			// }
 
 			private void searchForGameOrEmulator(File file, boolean useDefaultPlatforms)
-					throws ZipException, RarException, IOException {
+					throws ZipException, RarException, IOException, BroGameDeletedException {
 				String filePath = file.getAbsolutePath();
-				if (controller.workerBrowseComputer.isDone()) {
-					return;
-				}
+
 				try {
 					Platform p0 = controller.isGameOrEmulator(filePath, useDefaultPlatforms);
 					if (p0 != null) {
@@ -271,8 +281,10 @@ class BrowseComputerWorker extends SwingWorker<Void, File> {
 	protected void done() {
 		try {
 			if (!controller.searchProcessInterrupted) {
+				Map<String, Action> actionKeys = new HashMap<>();
+				actionKeys.put("hideMessage", null);
 				NotificationElement element = new NotificationElement(new String[] { "searchProcessCompleted" },
-						new String[] { "hideMessage" }, NotificationElement.INFORMATION, null);
+						actionKeys, NotificationElement.INFORMATION, null);
 				controller.view.showInformation(element);
 				controller.explorerDAO.searchProcessComplete();
 			}

@@ -10,9 +10,11 @@ public class PlatformComparator implements Comparator<Game> {
 	}
 
 	@Override
-	public int compare(Game o1, Game o2) {
-		// int cmp = o1.getPlatformId() > o2.getPlatformId() ? +1 :
-		// o1.getPlatformId() < o2.getPlatformId() ? -1 : 0;
-		return explorer.getPlatform(o1.getPlatformId()).compareTo(explorer.getPlatform(o2.getPlatformId()));
+	public int compare(Game gameOne, Game gameTwo) {
+		int platformIdGameOne = gameOne.getPlatformId();
+		int platformIdGameTwo = gameTwo.getPlatformId();
+		Platform p1 = explorer.getPlatform(platformIdGameOne);
+		Platform p2 = explorer.getPlatform(platformIdGameTwo);
+		return p1.compareTo(p2);
 	}
 }

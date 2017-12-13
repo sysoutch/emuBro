@@ -2,6 +2,7 @@ package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -9,9 +10,6 @@ import java.awt.Image;
 import java.awt.Insets;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetListener;
-import java.awt.event.ActionListener;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
@@ -25,10 +23,10 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import javax.swing.Action;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.Icon;
+import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
@@ -37,6 +35,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextPane;
 import javax.swing.ScrollPaneConstants;
+import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
 import javax.swing.text.SimpleAttributeSet;
@@ -49,18 +48,17 @@ import com.jgoodies.forms.factories.Paddings;
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 
-import ch.sysout.emubro.api.GameListener;
-import ch.sysout.emubro.api.event.GameAddedEvent;
-import ch.sysout.emubro.api.event.GameRemovedEvent;
 import ch.sysout.emubro.api.event.GameSelectionEvent;
 import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.Platform;
+import ch.sysout.emubro.controller.GameSelectionListener;
+import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 
-public class PreviewPanePanel extends JPanel implements GameListener {
+public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 	private static final long serialVersionUID = 1L;
 
 	private SelectionPanel pnlSelection = new SelectionPanel();
@@ -75,9 +73,10 @@ public class PreviewPanePanel extends JPanel implements GameListener {
 	public ViewContextMenu popupView;
 	private GameContextMenu popupGame;
 
-	public PreviewPanePanel(Explorer explorer) {
+	public PreviewPanePanel(Explorer explorer, GameContextMenu popupGame) {
 		super();
 		this.explorer = explorer;
+		this.popupGame = popupGame;
 		initComponents();
 		createUI();
 	}
@@ -89,51 +88,10 @@ public class PreviewPanePanel extends JPanel implements GameListener {
 		pnlNoSelection.setMinimumSize(new Dimension(0, 0));
 		spSelection.setVisible(false);
 		initNoSelectionText();
-		addListeners();
 	}
 
 	private void initNoSelectionText() {
 		pnlNoSelection.initNoSelectionText();
-	}
-
-	private void addListeners() {
-		addComponentListener(new ComponentAdapter() {
-			@Override
-			public void componentResized(ComponentEvent e) {
-				// this have been done due a repaint bug when maximize frame and
-				// not showing selected game informations
-				getRootPane().validate();
-				getRootPane().repaint();
-			}
-		});
-	}
-
-	public void addRunGameListener(ActionListener l) {
-		popupGame.addRunGameListener(l);
-	}
-
-	public void addCoverFromComputerListener(ActionListener l) {
-		popupGame.addCoverFromComputerListener(l);
-	}
-
-	public void addCoverFromWebListener(ActionListener l) {
-		popupGame.addCoverFromWebListener(l);
-	}
-
-	public void addTrailerFromWebListener(ActionListener l) {
-		popupGame.addTrailerFromWebListener(l);
-	}
-
-	public void addRemoveGameListener(Action l) {
-		popupGame.addRemoveGameListener(l);
-	}
-
-	public void addRenameGameListener(Action l) {
-		popupGame.addRenameGameListener(l);
-	}
-
-	public void addOpenGamePropertiesListener(ActionListener l) {
-		popupGame.addOpenGamePropertiesListener(l);
 	}
 
 	public void addCoverDragDropListener(DropTargetListener l) {
@@ -142,7 +100,6 @@ public class PreviewPanePanel extends JPanel implements GameListener {
 
 	public void addRateListener(RateListener l) {
 		pnlSelection.pnlRatingBar.addRateListener(l);
-		popupGame.addRateListener(l);
 	}
 
 	private void createUI() {
@@ -155,6 +112,7 @@ public class PreviewPanePanel extends JPanel implements GameListener {
 		spSelection.setBorder(BorderFactory.createEmptyBorder());
 		pnlSelection.setBorder(new EmptyBorder(new Insets(0, border, 0, border)));
 		pnlNoSelection.setBorder(new EmptyBorder(new Insets(border, border, border, border)));
+		//		pnlNoSelection.setBorder(BorderFactory.createLoweredSoftBevelBorder());
 
 		BoxLayout layout = new BoxLayout(this, BoxLayout.PAGE_AXIS);
 		setLayout(layout);
@@ -198,8 +156,6 @@ public class PreviewPanePanel extends JPanel implements GameListener {
 			spSelection.setVisible(false);
 			pnlNoSelection.setVisible(true);
 		}
-		getRootPane().revalidate();
-		getRootPane().repaint();
 	}
 
 	private void restoreLastScrollBarValues() {
@@ -225,30 +181,23 @@ public class PreviewPanePanel extends JPanel implements GameListener {
 		}
 	}
 
-	@Override
-	public void gameAdded(GameAddedEvent e) {
-	}
-
-	@Override
-	public void gameRemoved(GameRemovedEvent e) {
-	}
-
 	class SelectionPanel extends ScrollablePanel {
 		private static final long serialVersionUID = 1L;
 		private JLabel txtGameTitle = new JLabel("Game Title");
 		private JLabel txtPlatformTitle = new JLabel2("Platform Title");
 		private AutoScaleImagePanel pnlAutoScaleImage = new AutoScaleImagePanel();
-		private RatingBarPanel pnlRatingBar = new RatingBarPanel(Messages.get("rateGame"), false);
+		private RatingBarPanel pnlRatingBar = new RatingBarPanel(Messages.get(MessageConstants.RATE_GAME), false);
 		private DateAddedPanel pnlDateAdded = new DateAddedPanel();
 		private PlayCountPanel pnlPlayCount = new PlayCountPanel();
 		private LastPlayedPanel pnlLastPlayed = new LastPlayedPanel();
 		private PathPanel pnlPath = new PathPanel();
 
-		private JMenu mnuAddCover = new JMenu(Messages.get("addCover"));
-		private JMenuItem itmAddCoverFromComputer = new JMenuItem(Messages.get("addCoverFromComputer"));
-		private JMenuItem itmAddCoverFromWeb = new JMenuItem(Messages.get("coverFromWeb"));
-		private JMenuItem itmRemoveCover = new JMenuItem(Messages.get("removeCover"));
+		private JMenu mnuAddCover = new JMenu(Messages.get(MessageConstants.ADD_COVER));
+		private JMenuItem itmAddCoverFromComputer = new JMenuItem(Messages.get(MessageConstants.ADD_COVER_FROM_COMPUTER));
+		private JMenuItem itmAddCoverFromWeb = new JMenuItem(Messages.get(MessageConstants.COVER_FROM_WEB));
+		private JMenuItem itmRemoveCover = new JMenuItem(Messages.get(MessageConstants.REMOVE_COVER));
 		private JPanel pnl;
+		private JButton btnComment;
 
 		public SelectionPanel() {
 			setLayout(new BorderLayout());
@@ -258,10 +207,21 @@ public class PreviewPanePanel extends JPanel implements GameListener {
 		}
 
 		private void initComponents() {
-			popupGame = new GameContextMenu();
-			setComponentPopupMenu(popupGame);
 			initGameTitle();
 			initPlatformTitle();
+
+			addMouseListener(new MouseAdapter() {
+				@Override
+				public void mouseClicked(MouseEvent e) {
+					if (SwingUtilities.isRightMouseButton(e)) {
+						showGamePopupMenu(e.getComponent(), e.getX(), e.getY());
+					}
+				}
+			});
+		}
+
+		protected void showGamePopupMenu(Component component, int x, int y) {
+			popupGame.show(component, x, y);
 		}
 
 		private void setIcons() {
@@ -277,7 +237,7 @@ public class PreviewPanePanel extends JPanel implements GameListener {
 			txtGameTitle.setMinimumSize(new Dimension(0, 0));
 			txtPlatformTitle.setMinimumSize(new Dimension(0, 0));
 			FormLayout layoutTop = new FormLayout("min:grow",
-					"default, $rgap, default, $ugap, default, $ugap, default, $ugap,"
+					"default, $rgap, default, $ugap, default, $ugap, default, $lgap, default, $ugap,"
 							+ " fill:pref, $lgap, fill:pref, fill:$ugap, fill:pref, fill:$ugap," + " fill:default");
 			pnl = new JPanel(layoutTop);
 			int columnCount = layoutTop.getColumnCount();
@@ -287,10 +247,19 @@ public class PreviewPanePanel extends JPanel implements GameListener {
 			pnl.add(txtPlatformTitle, ccSelection.xyw(1, 3, columnCount));
 			pnl.add(pnlAutoScaleImage, ccSelection.xyw(1, 5, columnCount));
 			pnl.add(pnlRatingBar, ccSelection.xyw(1, 7, columnCount));
-			pnl.add(pnlPlayCount, ccSelection.xyw(1, 9, columnCount));
-			pnl.add(pnlLastPlayed, ccSelection.xyw(1, 11, columnCount));
-			pnl.add(pnlDateAdded, ccSelection.xyw(1, 13, columnCount));
-			pnl.add(pnlPath, ccSelection.xyw(1, 15, columnCount));
+
+			btnComment = new JButton(Messages.get(MessageConstants.GAME_COMMENT));
+			btnComment.setMinimumSize(new Dimension(0, 0));
+			btnComment.setHorizontalAlignment(SwingConstants.LEFT);
+			btnComment.setIcon(ImageUtil.getImageIconFrom(Icons.get("gameComment", 16, 16)));
+			JPanel pnlCommentWrapper = new JPanel(new BorderLayout());
+			pnlCommentWrapper.add(btnComment, BorderLayout.WEST);
+			pnl.add(pnlCommentWrapper, ccSelection.xyw(1, 9, columnCount));
+
+			pnl.add(pnlPlayCount, ccSelection.xyw(1, 11, columnCount));
+			pnl.add(pnlLastPlayed, ccSelection.xyw(1, 13, columnCount));
+			pnl.add(pnlDateAdded, ccSelection.xyw(1, 15, columnCount));
+			pnl.add(pnlPath, ccSelection.xyw(1, 17, columnCount));
 			add(pnl);
 		}
 
@@ -305,7 +274,7 @@ public class PreviewPanePanel extends JPanel implements GameListener {
 
 		protected void setGameTitle(String s, Icon icon) {
 			String gameTitle = s.replace(".", " ").replace("_", " ");
-			txtGameTitle.setText(Messages.get("gameTitleLarge", "<html><strong>" + gameTitle + "</strong></html>"));
+			txtGameTitle.setText(Messages.get(MessageConstants.GAME_TITLE_LARGE, "<html><strong>" + gameTitle + "</strong></html>"));
 			txtGameTitle.setIcon(icon);
 		}
 
@@ -333,7 +302,7 @@ public class PreviewPanePanel extends JPanel implements GameListener {
 		class DateAddedPanel extends JPanel {
 			private static final long serialVersionUID = 1L;
 			private JLabel lblDateAdded = new JLabel2(
-					"<html><strong>" + Messages.get("dateAdded") + "</strong></html>");
+					"<html><strong>" + Messages.get(MessageConstants.DATE_ADDED) + "</strong></html>");
 			private JTextArea txtDateAdded2 = new JTextArea("MM d, yyy HH:mm:ss");
 
 			public DateAddedPanel() {
@@ -350,15 +319,7 @@ public class PreviewPanePanel extends JPanel implements GameListener {
 			}
 
 			private void createUI() {
-				txtDateAdded2.setMinimumSize(new Dimension(0, 0)); // do not
-				// delete
-				// that
-				// line.
-				// otherwise
-				// text
-				// doesnt
-				// wrap
-				// correctly
+				txtDateAdded2.setMinimumSize(new Dimension(0, 0));
 				setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
 				add(lblDateAdded);
 				add(txtDateAdded2);
@@ -378,7 +339,7 @@ public class PreviewPanePanel extends JPanel implements GameListener {
 		class PlayCountPanel extends JPanel {
 			private static final long serialVersionUID = 1L;
 			private JLabel lblPlayCount = new JLabel2(
-					"<html><strong>" + Messages.get("playCount") + "</strong></html>");
+					"<html><strong>" + Messages.get(MessageConstants.PLAY_COUNT) + "</strong></html>");
 			private JTextArea txtPlayCount2 = new JTextArea();
 
 			public PlayCountPanel() {
@@ -395,15 +356,7 @@ public class PreviewPanePanel extends JPanel implements GameListener {
 			}
 
 			private void createUI() {
-				txtPlayCount2.setMinimumSize(new Dimension(0, 0)); // do not
-				// delete
-				// that
-				// line.
-				// otherwise
-				// text
-				// doesnt
-				// wrap
-				// correctly
+				txtPlayCount2.setMinimumSize(new Dimension(0, 0));
 				setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
 				add(lblPlayCount);
 				add(txtPlayCount2);
@@ -413,31 +366,31 @@ public class PreviewPanePanel extends JPanel implements GameListener {
 				String s = "";
 				switch (playCount) {
 				case 0:
-					s = Messages.get("neverPlayed");
+					s = Messages.get(MessageConstants.NEVER_PLAYED);
 					break;
 				case 1:
-					s = Messages.get("playCount3", playCount);
+					s = Messages.get(MessageConstants.PLAY_COUNT3, playCount);
 					break;
 				default:
-					s = Messages.get("playCount2", playCount);
+					s = Messages.get(MessageConstants.PLAY_COUNT2, playCount);
 				}
 				txtPlayCount2.setText(s);
 			}
 
 			public void languageChanged() {
-				lblPlayCount.setText("<html><strong>" + Messages.get("playCount") + "</strong></html>");
+				lblPlayCount.setText("<html><strong>" + Messages.get(MessageConstants.PLAY_COUNT) + "</strong></html>");
 				String s = "";
 				if (currentGame != null) {
 					int playCount = currentGame.getPlayCount();
 					switch (playCount) {
 					case 0:
-						s = Messages.get("neverPlayed");
+						s = Messages.get(MessageConstants.NEVER_PLAYED);
 						break;
 					case 1:
-						s = Messages.get("playCount3", playCount);
+						s = Messages.get(MessageConstants.PLAY_COUNT3, playCount);
 						break;
 					default:
-						s = Messages.get("playCount2", playCount);
+						s = Messages.get(MessageConstants.PLAY_COUNT2, playCount);
 					}
 					txtPlayCount2.setText(s);
 				}
@@ -462,20 +415,9 @@ public class PreviewPanePanel extends JPanel implements GameListener {
 			}
 
 			private void createUI() {
-				// JPanel pnl2 = new JPanel(new WrapLayout(FlowLayout.LEFT));
-				txtLastPlayed2.setMinimumSize(new Dimension(0, 0)); // do not
-				// delete
-				// that
-				// line.
-				// otherwise
-				// text
-				// doesnt
-				// wrap
-				// correctly
+				txtLastPlayed2.setMinimumSize(new Dimension(0, 0));
 				setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
 				add(txtLastPlayed2);
-
-				// pnl2.add(pnl);
 			}
 
 			protected void setLastPlayed(Date lastPlayed) {
@@ -496,26 +438,26 @@ public class PreviewPanePanel extends JPanel implements GameListener {
 
 					String ago = "";
 					if (days > 0) {
-						ago = days + " " + ((days == 1) ? Messages.get("day") : Messages.get("days"));
+						ago = days + " " + ((days == 1) ? Messages.get(MessageConstants.DAY) : Messages.get(MessageConstants.DAYS));
 					} else if (hours > 0) {
-						ago = hours + " " + ((hours == 1) ? Messages.get("hour") : Messages.get("hours"));
+						ago = hours + " " + ((hours == 1) ? Messages.get(MessageConstants.HOUR) : Messages.get(MessageConstants.HOURS));
 					} else if (minutes > 0) {
-						ago = minutes + " " + ((minutes == 1) ? Messages.get("minute") : Messages.get("minutes"));
+						ago = minutes + " " + ((minutes == 1) ? Messages.get(MessageConstants.MINUTE) : Messages.get(MessageConstants.MINUTES));
 					} else {
-						ago = ((seconds == 0) ? Messages.get("justNow")
+						ago = ((seconds == 0) ? Messages.get(MessageConstants.JUST_NOW)
 								: (seconds + " "
-										+ ((seconds == 1) ? Messages.get("second") : Messages.get("seconds"))));
+										+ ((seconds == 1) ? Messages.get(MessageConstants.SECOND) : Messages.get(MessageConstants.SECONDS))));
 					}
 					if (Locale.getDefault().equals(Locale.GERMAN)) {
-						ago = "Vor " + ago;
+						ago = ((hours == 0 && minutes == 0 && seconds == 0) ? "" : "Vor ") + ago;
 					}
 					if (Locale.getDefault().equals(Locale.ENGLISH)) {
-						ago += " ago";
+						ago += ((hours == 0 && minutes == 0 && seconds == 0) ? "" : " ago");
 					}
 					if (Locale.getDefault().equals(Locale.FRENCH)) {
-						ago = "Avant " + ago;
+						ago = ((hours == 0 && minutes == 0 && seconds == 0) ? "" : "Avant ") + ago;
 					}
-					s = Messages.get("lastPlayedShort") + ": " + ago;
+					s = Messages.get(MessageConstants.LAST_PLAYED_SHORT) + ": " + ago;
 				}
 				txtLastPlayed2.setText(s);
 			}
@@ -537,26 +479,26 @@ public class PreviewPanePanel extends JPanel implements GameListener {
 						long days = TimeUnit.MILLISECONDS.toDays(now.getTime() - lastPlayed.getTime());
 						String ago = "";
 						if (days > 0) {
-							ago = days + " " + ((days == 1) ? Messages.get("day") : Messages.get("days"));
+							ago = days + " " + ((days == 1) ? Messages.get(MessageConstants.DAY) : Messages.get(MessageConstants.DAYS));
 						} else if (hours > 0) {
-							ago = hours + " " + ((hours == 1) ? Messages.get("hour") : Messages.get("hours"));
+							ago = hours + " " + ((hours == 1) ? Messages.get(MessageConstants.HOUR) : Messages.get(MessageConstants.HOURS));
 						} else if (minutes > 0) {
-							ago = minutes + " " + ((minutes == 1) ? Messages.get("minute") : Messages.get("minutes"));
+							ago = minutes + " " + ((minutes == 1) ? Messages.get(MessageConstants.MINUTE) : Messages.get(MessageConstants.MINUTES));
 						} else {
-							ago = ((seconds == 0) ? Messages.get("justNow")
+							ago = ((seconds == 0) ? Messages.get(MessageConstants.JUST_NOW)
 									: (seconds + " "
-											+ ((seconds == 1) ? Messages.get("second") : Messages.get("seconds"))));
+											+ ((seconds == 1) ? Messages.get(MessageConstants.SECOND) : Messages.get(MessageConstants.SECONDS))));
 						}
 						if (Locale.getDefault().equals(Locale.GERMAN)) {
-							ago = "Vor " + ago;
+							ago = ((hours == 0 && minutes == 0 && seconds == 0) ? "" : "Vor ") + ago;
 						}
 						if (Locale.getDefault().equals(Locale.ENGLISH)) {
-							ago += " ago";
+							ago += ((hours == 0 && minutes == 0 && seconds == 0) ? "" : " ago");
 						}
 						if (Locale.getDefault().equals(Locale.FRENCH)) {
-							ago = "Avant " + ago;
+							ago = ((hours == 0 && minutes == 0 && seconds == 0) ? "" : "Avant ") + ago;
 						}
-						s = Messages.get("lastPlayedShort") + ": " + ago;
+						s = Messages.get(MessageConstants.LAST_PLAYED_SHORT) + ": " + ago;
 					}
 					txtLastPlayed2.setText(s);
 				}
@@ -572,8 +514,10 @@ public class PreviewPanePanel extends JPanel implements GameListener {
 			private Font fontNotUnderline;
 			private Map<TextAttribute, Integer> fontAttributesNotUnderlined = new HashMap<>();
 			private Map<TextAttribute, Integer> fontAttributes = new HashMap<>();
-			private JLabel lblFilename = new JLabel2("<html><strong>" + Messages.get("fileName") + "</strong></html>");
-			private JLabel lblFileLocation = new JLabel2("<html><strong>" + Messages.get("fileLocation") + "</strong></html>");
+			private JLabel lblFilename = new JLabel2("<html><strong>" + Messages.get(MessageConstants.FILE_NAME) + "</strong></html>");
+			private JLabel lblFileInformations = new JLabel2("<html><strong>" + Messages.get(MessageConstants.FILE_INFORMATIONS) + "</strong></html>");
+			private JLabel lblFileLocation = new JLabel2("<html><strong>" + Messages.get(MessageConstants.FILE_LOCATION) + "</strong></html>");
+
 			public PathPanel() {
 				initPathLink();
 				createUI();
@@ -619,19 +563,13 @@ public class PreviewPanePanel extends JPanel implements GameListener {
 			}
 
 			private void createUI() {
-				// setBorder(pnlDateAdded.getBorder());
-				txtFilename.setMinimumSize(new Dimension(0, 0)); // do not delete
-				txtPath.setMinimumSize(new Dimension(0, 0)); // do not delete
-				// that line.
-				// otherwise
-				// text doesnt
-				// wrap
-				// correctly
+				txtFilename.setMinimumSize(new Dimension(0, 0));
+				txtPath.setMinimumSize(new Dimension(0, 0));
+				lblFileInformations.setMinimumSize(new Dimension(0, 0));
 				setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
-				add(lblFilename);
-				add(txtFilename);
 				add(new JLabel(" "));
-				add(lblFileLocation);
+				add(lblFileInformations);
+				add(txtFilename);
 				add(txtPath);
 			}
 
@@ -661,8 +599,9 @@ public class PreviewPanePanel extends JPanel implements GameListener {
 			}
 
 			public void languageChanged() {
-				lblFilename.setText("<html><strong>" + Messages.get("fileName") + "</strong></html>");
-				lblFileLocation.setText("<html><strong>" + Messages.get("fileLocation") + "</strong></html>");
+				//				lblFilename.setText("<html><strong>" + Messages.get("fileName") + "</strong></html>");
+				//				lblFileLocation.setText("<html><strong>" + Messages.get("fileLocation") + "</strong></html>");
+				lblFileInformations.setText("<html><strong>" + Messages.get(MessageConstants.FILE_INFORMATIONS) + "</strong></html>");
 			}
 
 			public void addOpenGameFolderListener(MouseListener l) {
@@ -676,12 +615,11 @@ public class PreviewPanePanel extends JPanel implements GameListener {
 			} else {
 				pnlSelection.pnlAutoScaleImage.setGameCover(image);
 			}
-			getRootPane().revalidate();
-			getRootPane().repaint();
 		}
 
 		public void languageChanged() {
-			pnlDateAdded.lblDateAdded.setText(("<html><strong>" + Messages.get("dateAdded") + "</strong></html>"));
+			btnComment.setText(Messages.get(MessageConstants.GAME_COMMENT));
+			pnlDateAdded.lblDateAdded.setText(("<html><strong>" + Messages.get(MessageConstants.DATE_ADDED) + "</strong></html>"));
 			pnlRatingBar.languageChanged();
 			pnlPlayCount.languageChanged();
 			pnlLastPlayed.languageChanged();
@@ -700,7 +638,7 @@ public class PreviewPanePanel extends JPanel implements GameListener {
 		public void initNoSelectionText() {
 			popupView = new ViewContextMenu();
 			setComponentPopupMenu(popupView);
-			txtNoSelection.setText(Messages.get("noSelection"));
+			txtNoSelection.setText(Messages.get(MessageConstants.NO_SELECTION));
 			// txtNoSelection.setMinimumSize(new Dimension(0, 0));
 			txtNoSelection.setOpaque(false);
 			txtNoSelection.setEnabled(false);
@@ -720,7 +658,7 @@ public class PreviewPanePanel extends JPanel implements GameListener {
 		}
 
 		public void languageChanged() {
-			txtNoSelection.setText(Messages.get("noSelection"));
+			txtNoSelection.setText(Messages.get(MessageConstants.NO_SELECTION));
 		}
 	}
 
@@ -753,10 +691,6 @@ public class PreviewPanePanel extends JPanel implements GameListener {
 
 	public boolean isScrollBarVisible() {
 		return spSelection.getVerticalScrollBar().isVisible();
-	}
-
-	public void addOpenGameFolderListener(ActionListener l) {
-		popupGame.addOpenGameFolder(l);
 	}
 
 	public void addOpenGameFolderListener(MouseListener l) {

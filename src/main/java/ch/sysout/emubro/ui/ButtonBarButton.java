@@ -5,6 +5,8 @@ import javax.swing.DefaultButtonModel;
 import javax.swing.Icon;
 import javax.swing.JButton;
 
+import ch.sysout.util.UIUtil;
+
 public class ButtonBarButton extends JButton {
 	private static final long serialVersionUID = 1L;
 
@@ -15,8 +17,7 @@ public class ButtonBarButton extends JButton {
 	public ButtonBarButton(String label, Icon icon, String toolTipText) {
 		this(label, icon);
 		setFocusable(false);
-		setBorderPainted(false);
-		setContentAreaFilled(false);
+		UIUtil.doHover(false, this);
 		setToolTipText(toolTipText);
 	}
 

@@ -17,16 +17,15 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 
-import ch.sysout.emubro.api.GameListener;
-import ch.sysout.emubro.api.event.GameAddedEvent;
-import ch.sysout.emubro.api.event.GameRemovedEvent;
 import ch.sysout.emubro.api.event.GameSelectionEvent;
 import ch.sysout.emubro.api.model.Game;
+import ch.sysout.emubro.controller.GameSelectionListener;
+import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 
-public class RatingBarPanel extends JPanel implements ActionListener, FocusListener, MouseListener, GameListener {
+public class RatingBarPanel extends JPanel implements ActionListener, FocusListener, MouseListener, GameSelectionListener {
 	private static final long serialVersionUID = 1L;
 
 	public static final int MAXIMUM_RATE = 5;
@@ -214,17 +213,9 @@ public class RatingBarPanel extends JPanel implements ActionListener, FocusListe
 		showCurrentRate();
 	}
 
-	@Override
-	public void gameAdded(GameAddedEvent e) {
-	}
-
-	@Override
-	public void gameRemoved(GameRemovedEvent e) {
-	}
-
 	public void languageChanged() {
 		if (!lblRate.getText().isEmpty()) {
-			lblRate.setText("<html><strong>" + Messages.get("rateGame") + "</strong></html>");
+			lblRate.setText("<html><strong>" + Messages.get(MessageConstants.RATE_GAME) + "</strong></html>");
 		}
 	}
 }

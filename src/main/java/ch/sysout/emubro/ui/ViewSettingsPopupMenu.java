@@ -4,9 +4,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 import javax.swing.ButtonGroup;
-import javax.swing.JMenu;
 import javax.swing.JPopupMenu;
 import javax.swing.JRadioButtonMenuItem;
+import javax.swing.JSeparator;
 
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
@@ -20,12 +20,8 @@ class ViewSettingsPopupMenu extends JPopupMenu implements ActionListener {
 	private JRadioButtonMenuItem itm3 = new JRadioButtonMenuItem(Messages.get("viewCoversNormal"));
 	private JRadioButtonMenuItem itm4 = new JRadioButtonMenuItem(Messages.get("viewCoversSmall"));
 	private JRadioButtonMenuItem itm5 = new JRadioButtonMenuItem(Messages.get("viewCoversSmallest"));
-	private JMenu mnuList = new JMenu(Messages.get("viewList"));
 	private JRadioButtonMenuItem itmList = new JRadioButtonMenuItem(Messages.get("viewListHorizontalSb"));
-	private JRadioButtonMenuItem itmListViewNoHorizontalScrollBar = new JRadioButtonMenuItem(
-			Messages.get("viewListVerticalSb"));
-	private JRadioButtonMenuItem itmListViewOneColumn = new JRadioButtonMenuItem(Messages.get("viewListOneColumn"));
-
+	private JRadioButtonMenuItem itmElements = new JRadioButtonMenuItem(Messages.get("viewListVerticalSb"));
 	private JRadioButtonMenuItem itmDetails = new JRadioButtonMenuItem(Messages.get("viewDetails"));
 
 	public ViewSettingsPopupMenu() {
@@ -36,20 +32,17 @@ class ViewSettingsPopupMenu extends JPopupMenu implements ActionListener {
 		grp.add(itm4);
 		grp.add(itm5);
 		grp.add(itmList);
-		grp.add(itmListViewNoHorizontalScrollBar);
-		grp.add(itmListViewOneColumn);
+		grp.add(itmElements);
 		grp.add(itmDetails);
-
-		mnuList.add(itmList);
-		mnuList.add(itmListViewNoHorizontalScrollBar);
-		mnuList.add(itmListViewOneColumn);
 
 		add(itm1);
 		add(itm2);
 		add(itm3);
 		add(itm4);
 		add(itm5);
-		add(mnuList);
+		add(new JSeparator());
+		add(itmList);
+		add(itmElements);
 		add(itmDetails);
 
 		setAccelerators();
@@ -66,15 +59,14 @@ class ViewSettingsPopupMenu extends JPopupMenu implements ActionListener {
 		itm3.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewCovers", size, size)));
 		itm4.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewCovers", size, size)));
 		itm5.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewCovers", size, size)));
-		mnuList.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewList", size, size)));
 		itmList.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewList", size, size)));
-		itmListViewNoHorizontalScrollBar.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewList", size, size)));
-		itmListViewOneColumn.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewList", size, size)));
+		itmElements.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewList", size, size)));
 		itmDetails.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewTable", size, size)));
 	}
 
 	public void addChangeToListViewListener(ActionListener l) {
 		itmList.addActionListener(l);
+		itmElements.addActionListener(l);
 	}
 
 	public void addChangeToTableViewListener(ActionListener l) {

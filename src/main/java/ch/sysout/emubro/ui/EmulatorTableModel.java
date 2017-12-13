@@ -1,5 +1,6 @@
 package ch.sysout.emubro.ui;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -7,6 +8,7 @@ import java.util.Map;
 
 import javax.swing.ImageIcon;
 import javax.swing.event.TableModelListener;
+import javax.swing.filechooser.FileSystemView;
 import javax.swing.table.DefaultTableModel;
 
 import ch.sysout.emubro.api.model.Emulator;
@@ -63,7 +65,7 @@ public class EmulatorTableModel extends DefaultTableModel {
 		case 0:
 			return rowIndex == defaultEmulator ? iconDefault : null;
 		case 1:
-			return emulatorName;
+			return "<html><strong>"+emulatorName+"</strong></html>";
 		case 2:
 			return emulatorPath;
 		}
@@ -102,18 +104,37 @@ public class EmulatorTableModel extends DefaultTableModel {
 	public void addRow(Emulator emulator) {
 		if (emulator.isInstalled()) {
 			emulators.add((BroEmulator) emulator);
+			ImageIcon ico = null;
 			if (!icons.containsKey(emulator.getId())) {
 				int size = ScreenSizeUtil.adjustValueToResolution(16);
-				ImageIcon ico = ImageUtil.getImageIconFrom("/images/emulators/" + emulator.getIconFilename());
+				String iconFilename = emulator.getIconFilename();
+				if (iconFilename.trim().isEmpty() || iconFilename.equalsIgnoreCase("blank.png")) {
+					File file = new File(emulator.getPath());
+					ico = (ImageIcon) FileSystemView.getFileSystemView().getSystemIcon(file);
+					//					int width = ico.getIconWidth();
+					//					int height = ico.getIconHeight();
+					//
+					//					double size2 = 32;
+					//					double factor2 = (height / size2);
+					//					if (height > size2) {
+					//						height = (int) (height / factor2);
+					//						width = (int) (width / factor2);
+					//					}
+					//					BufferedImage bi = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+					//					Graphics2D g2d = bi.createGraphics();
+					//					g2d.addRenderingHints(new RenderingHints(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY));
+					//					g2d.drawImage(ico.getImage(), 0, 0, width, height, null);
+				}
+				if (ico == null) {
+					ico = ImageUtil.getImageIconFrom("/images/emulators/" + emulator.getIconFilename());
+				}
 				if (ico != null) {
 					ico = ImageUtil.scaleCover(ico, size, CoverConstants.SCALE_BOTH_OPTION);
 				}
 				icons.put(emulator.getId(), ico);
-			} else {
-				icons.get(emulator.getId());
 			}
 
-			Object[] emulatorArr = new Object[] { icons.get(emulator.getId()), emulator.getName(), emulator.getPath() };
+			Object[] emulatorArr = new Object[] { null, emulator.getName(), emulator.getPath() };
 			super.addRow(emulatorArr);
 			// System.out.println((getRowCount()-1) + ", "+(getRowCount()-1));
 			fireTableRowsInserted(getRowCount() - 1, getRowCount() - 1);

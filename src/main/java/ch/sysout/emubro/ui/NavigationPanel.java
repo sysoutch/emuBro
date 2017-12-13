@@ -10,8 +10,6 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,7 +20,6 @@ import javax.swing.GrayFilter;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
-import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -36,40 +33,40 @@ import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 
 import ch.sysout.emubro.api.GameViewListener;
-import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.impl.event.NavigationEvent;
+import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
+import ch.sysout.util.UIUtil;
 
-public class NavigationPanel extends JPanel implements ActionListener, MouseListener, GameViewListener {
+public class NavigationPanel extends JPanel implements ActionListener, GameViewListener {
 	public static final long serialVersionUID = 1L;
 	public static final int ALL_GAMES = 0;
 	public static final int RECENTLY_PLAYED = 1;
 	public static final int FAVORITES = 2;
+	public static final String MINIMIZED = "min";
+	public static final String CENTERED = "centered";
+	public static final String MAXIMIZED = "maximized";
 
-	private JToggleButton btnAllGames = new JToggleButton(Messages.get("allGames"));
-	private JToggleButton btnRecentlyPlayed = new JToggleButton(Messages.get("recentlyPlayed"));
-	private JToggleButton btnFavorites = new JToggleButton(Messages.get("favorites"));
-	// private AbstractButton btnPlatformFilter = new
-	// JButton(Messages.get("setPlatformFilter"));
-
+	private JToggleButton btnAllGames = new JToggleButton(Messages.get(MessageConstants.ALL_GAMES));
+	private JToggleButton btnRecentlyPlayed = new JToggleButton(Messages.get(MessageConstants.RECENTLY_PLAYED));
+	private JToggleButton btnFavorites = new JToggleButton(Messages.get(MessageConstants.FAVORITES));
 	private List<JToggleButton> platformButtons = new ArrayList<>();
-
 	private AbstractButton[] buttons = new AbstractButton[] { btnAllGames, btnRecentlyPlayed, btnFavorites };
 
 	private int oldWidth;
 	private boolean minimizing;
 	private JScrollPane spNavigationButtons;
 	private JPanel pnlPlatforms;
-	// private JSplitPane splPlatformFilter;
 	private FormLayout layoutPopup;
 	private CellConstraints ccPopup;
 	private JDialog dlgPopup = new JDialog();
-	private AbstractButton btnSelectAll = new JButton(Messages.get("selectAll"));
-	private AbstractButton btnSelectNone = new JButton(Messages.get("unselectAll"));
-	private AbstractButton btnSelectInvert = new JButton(Messages.get("selectInvert"));
+	private AbstractButton btnSelectAll = new JButton(Messages.get(MessageConstants.SELECT_ALL));
+	private AbstractButton btnSelectNone = new JButton(Messages.get(MessageConstants.UNSELECT_ALL));
+	private AbstractButton btnSelectInvert = new JButton(Messages.get(MessageConstants.SELECT_INVERT));
 	private JPanel pnlPopup;
+	private int currentNavView = ALL_GAMES;
 
 	public NavigationPanel() {
 		super(new BorderLayout());
@@ -90,26 +87,21 @@ public class NavigationPanel extends JPanel implements ActionListener, MouseList
 		btnAllGames.setHorizontalTextPosition(SwingConstants.RIGHT);
 		btnAllGames.setVerticalTextPosition(SwingConstants.CENTER);
 		btnAllGames.setFocusable(false);
-		btnAllGames.setContentAreaFilled(false);
 		btnAllGames.setBorder(new EmptyBorder(insets));
-		// btnAllGames.setMnemonic(KeyEvent.VK_G);
 
 		btnRecentlyPlayed.setHorizontalAlignment(SwingConstants.LEFT);
 		btnRecentlyPlayed.setHorizontalTextPosition(SwingConstants.RIGHT);
 		btnRecentlyPlayed.setVerticalTextPosition(SwingConstants.CENTER);
 		btnRecentlyPlayed.setFocusable(false);
-		btnRecentlyPlayed.setContentAreaFilled(false);
 		btnRecentlyPlayed.setBorder(new EmptyBorder(insets));
-		// btnRecentlyPlayed.setMnemonic(KeyEvent.VK_P);
 
 		btnFavorites.setHorizontalAlignment(SwingConstants.LEFT);
 		btnFavorites.setHorizontalTextPosition(SwingConstants.RIGHT);
 		btnFavorites.setVerticalTextPosition(SwingConstants.CENTER);
 		btnFavorites.setFocusable(false);
-		btnFavorites.setContentAreaFilled(false);
 		btnFavorites.setBorder(new EmptyBorder(insets));
-		// btnFavorites.setMnemonic(KeyEvent.VK_F);
 
+		UIUtil.doHover(false, btnAllGames, btnRecentlyPlayed, btnFavorites);
 		dlgPopup.setLayout(new BorderLayout());
 		dlgPopup.setUndecorated(true);
 		layoutPopup = new FormLayout("min:grow");
@@ -121,17 +113,16 @@ public class NavigationPanel extends JPanel implements ActionListener, MouseList
 		setIcons();
 		addToButtonGroup(new ButtonGroup(), btnAllGames, btnRecentlyPlayed, btnFavorites);
 		addListeners();
-		btnAllGames.setSelected(true);
 	}
 
 	private void setToolTipTexts() {
-		btnAllGames.setToolTipText(Messages.get("allGames"));
-		btnRecentlyPlayed.setToolTipText(Messages.get("recentlyPlayed"));
-		btnFavorites.setToolTipText(Messages.get("favorites"));
-		// btnPlatformFilter.setToolTipText(Messages.get("setPlatformFilter"));
+		btnAllGames.setToolTipText(Messages.get(MessageConstants.ALL_GAMES));
+		btnRecentlyPlayed.setToolTipText(Messages.get(MessageConstants.RECENTLY_PLAYED));
+		btnFavorites.setToolTipText(Messages.get(MessageConstants.FAVORITES));
 	}
 
 	private void createUI() {
+		//		setBorder(BorderFactory.createEtchedBorder());
 		FormLayout layout = new FormLayout("default:grow", "fill:default, min, fill:default, min, fill:default");
 		JPanel pnl = new JPanel(layout);
 		CellConstraints cc = new CellConstraints();
@@ -156,6 +147,7 @@ public class NavigationPanel extends JPanel implements ActionListener, MouseList
 		spNavigationButtons.repaint();
 		spNavigationButtons.setBorder(BorderFactory.createEmptyBorder());
 		spNavigationButtons.getVerticalScrollBar().setUnitIncrement(16);
+		spNavigationButtons.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
 		spNavigationButtons.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 
 		new JPanel(new BorderLayout());
@@ -322,9 +314,6 @@ public class NavigationPanel extends JPanel implements ActionListener, MouseList
 		}
 	}
 
-	public void initPlatforms(List<Platform> platforms) {
-	}
-
 	// private void addToggleButton(FormLayout layout2, CellConstraints cc2,
 	// String string, String string2) {
 	// JToggleButton btn = new JToggleButton("");
@@ -420,7 +409,9 @@ public class NavigationPanel extends JPanel implements ActionListener, MouseList
 	}
 
 	private void addListeners() {
-		addMouseListeners(btnAllGames, btnRecentlyPlayed, btnFavorites);
+		btnAllGames.addMouseListener(UIUtil.getMouseAdapterKeepHoverWhenSelected());
+		btnRecentlyPlayed.addMouseListener(UIUtil.getMouseAdapterKeepHoverWhenSelected());
+		btnFavorites.addMouseListener(UIUtil.getMouseAdapterKeepHoverWhenSelected());
 		// addActionListeners(btnPlatformFilter);
 		// addComponentListener(new ComponentAdapter() {
 		// @Override
@@ -463,17 +454,13 @@ public class NavigationPanel extends JPanel implements ActionListener, MouseList
 		// fixPlatformDividerMinimumLocation();
 	}
 
+	public boolean isMinimized() {
+		return btnAllGames.getText().isEmpty();
+	}
+
 	public void centerContentWidth() {
 		for (AbstractButton btn : buttons) {
-			if (btn == btnAllGames) {
-				btnAllGames.setText(Messages.get("allGames"));
-			}
-			if (btn == btnRecentlyPlayed) {
-				btnRecentlyPlayed.setText(Messages.get("recentlyPlayed"));
-			}
-			if (btn == btnFavorites) {
-				btnFavorites.setText(Messages.get("favorites"));
-			}
+			setButtonText(btn);
 			// if (btn == btnPlatformFilter) {
 			// btnPlatformFilter.setText(Messages.get("setPlatformFilter"));
 			// }
@@ -484,25 +471,40 @@ public class NavigationPanel extends JPanel implements ActionListener, MouseList
 		// fixPlatformDividerMinimumLocation();
 	}
 
+	public boolean isCentered() {
+		return !btnAllGames.getText().isEmpty() && btnAllGames.getHorizontalTextPosition() == SwingConstants.CENTER;
+	}
+
+	private void setButtonText(AbstractButton btn) {
+		if (btn == btnAllGames) {
+			String baseText = Messages.get(MessageConstants.ALL_GAMES);
+			String text = (btnAllGames.isSelected()) ? "<html><strong>"+baseText+"</strong></html>" : baseText;
+			btnAllGames.setText(text);
+		}
+		if (btn == btnRecentlyPlayed) {
+			String baseText = Messages.get(MessageConstants.RECENTLY_PLAYED);
+			String text = (btnRecentlyPlayed.isSelected()) ? "<html><strong>"+baseText+"</strong></html>" : baseText;
+			btnRecentlyPlayed.setText(text);
+		}
+		if (btn == btnFavorites) {
+			String baseText = Messages.get(MessageConstants.FAVORITES);
+			String text = (btnFavorites.isSelected()) ? "<html><strong>"+baseText+"</strong></html>" : baseText;
+			btnFavorites.setText(text);
+		}
+	}
+
 	public void maximizeContentWidth() {
 		for (AbstractButton btn : buttons) {
-			if (btn == btnAllGames) {
-				btnAllGames.setText(Messages.get("allGames"));
-			}
-			if (btn == btnRecentlyPlayed) {
-				btnRecentlyPlayed.setText(Messages.get("recentlyPlayed"));
-			}
-			if (btn == btnFavorites) {
-				btnFavorites.setText(Messages.get("favorites"));
-			}
-			// if (btn == btnPlatformFilter) {
-			// btnPlatformFilter.setText(Messages.get("setPlatformFilter"));
-			// }
+			setButtonText(btn);
 			btn.setHorizontalTextPosition(SwingConstants.RIGHT);
 			btn.setHorizontalAlignment(SwingConstants.LEFT);
 			btn.setVerticalTextPosition(SwingConstants.CENTER);
 		}
 		// fixPlatformDividerMinimumLocation();
+	}
+
+	public boolean isMaximized() {
+		return !btnAllGames.getText().isEmpty() && btnAllGames.getHorizontalTextPosition() == SwingConstants.RIGHT;
 	}
 
 	// private void fixPlatformDividerMinimumLocation() {
@@ -540,12 +542,6 @@ public class NavigationPanel extends JPanel implements ActionListener, MouseList
 			height += btn.getHeight();
 		}
 		return height;
-	}
-
-	private void addMouseListeners(JComponent... components) {
-		for (JComponent c : components) {
-			c.addMouseListener(this);
-		}
 	}
 
 	@Override
@@ -626,79 +622,43 @@ public class NavigationPanel extends JPanel implements ActionListener, MouseList
 	// }
 
 	@Override
-	public void mouseClicked(MouseEvent e) {
-
-	}
-
-	@Override
-	public void mouseEntered(MouseEvent e) {
-		Object source = e.getSource();
-		if (source == btnAllGames || source == btnRecentlyPlayed || source == btnFavorites) {
-			((AbstractButton) source).setContentAreaFilled(true);
-			((AbstractButton) source).setBorderPainted(true);
-		}
-	}
-
-	@Override
-	public void mouseExited(MouseEvent e) {
-		Object source = e.getSource();
-		if (source == btnAllGames || source == btnRecentlyPlayed || source == btnFavorites) {
-			if (!((AbstractButton) source).isSelected()) {
-				((AbstractButton) source).setContentAreaFilled(false);
-			}
-		}
-	}
-
-	@Override
-	public void mousePressed(MouseEvent e) {
-
-	}
-
-	@Override
-	public void mouseReleased(MouseEvent e) {
-
-	}
-
-	@Override
 	public void navigationChanged(NavigationEvent e) {
-		// btnAllGames.setText(Messages.get("allGames"));
-		// btnRecentlyPlayed.setText(Messages.get("recentlyPlayed"));
-		// btnFavorites.setText(Messages.get("favorites"));
+		changeNav(e.getView());
+	}
 
+	private void changeNav(int view) {
 		String prefix = "<html><strong>";
 		String postfix = "</strong></html>";
-		switch (e.getView()) {
+		switch (view) {
 		case NavigationPanel.ALL_GAMES:
 			if (!btnAllGames.getText().isEmpty()) {
-				btnAllGames.setText(prefix + Messages.get("allGames") + postfix);
+				btnAllGames.setText(prefix + Messages.get(MessageConstants.ALL_GAMES) + postfix);
 			}
 			if (!btnRecentlyPlayed.getText().isEmpty()) {
-				btnRecentlyPlayed.setText(Messages.get("recentlyPlayed"));
+				btnRecentlyPlayed.setText(Messages.get(MessageConstants.RECENTLY_PLAYED));
 			}
 			if (!btnFavorites.getText().isEmpty()) {
-				btnFavorites.setText(Messages.get("favorites"));
+				btnFavorites.setText(Messages.get(MessageConstants.FAVORITES));
 			}
 			btnAllGames.setSelected(true);
-			btnAllGames.setContentAreaFilled(true);
-			btnRecentlyPlayed.setContentAreaFilled(false);
-			btnFavorites.setContentAreaFilled(false);
-			spNavigationButtons.getVerticalScrollBar()
-			.setValue(spNavigationButtons.getVerticalScrollBar().getMinimum());
+			UIUtil.doHover(true, btnAllGames);
+			UIUtil.doHover(false, btnRecentlyPlayed, btnFavorites);
+			spNavigationButtons.getVerticalScrollBar().setValue(spNavigationButtons.getVerticalScrollBar()
+					.getMinimum());
 			break;
 		case NavigationPanel.RECENTLY_PLAYED:
 			if (!btnAllGames.getText().isEmpty()) {
-				btnAllGames.setText(Messages.get("allGames"));
+				btnAllGames.setText(Messages.get(MessageConstants.ALL_GAMES));
 			}
 			if (!btnRecentlyPlayed.getText().isEmpty()) {
-				btnRecentlyPlayed.setText(prefix + Messages.get("recentlyPlayed") + postfix);
+				btnRecentlyPlayed.setText(prefix + Messages.get(MessageConstants.RECENTLY_PLAYED) + postfix);
 			}
 			if (!btnFavorites.getText().isEmpty()) {
-				btnFavorites.setText(Messages.get("favorites"));
+				btnFavorites.setText(Messages.get(MessageConstants.FAVORITES));
 			}
 			btnRecentlyPlayed.setSelected(true);
-			btnAllGames.setContentAreaFilled(false);
-			btnRecentlyPlayed.setContentAreaFilled(true);
-			btnFavorites.setContentAreaFilled(false);
+			UIUtil.doHover(false, btnAllGames, btnFavorites);
+			UIUtil.doHover(true, btnRecentlyPlayed);
 			Rectangle bounds = spNavigationButtons.getViewport().getViewRect();
 			Dimension size = spNavigationButtons.getViewport().getViewSize();
 			int x = (size.width - bounds.width) / 2;
@@ -707,22 +667,22 @@ public class NavigationPanel extends JPanel implements ActionListener, MouseList
 			break;
 		case NavigationPanel.FAVORITES:
 			if (!btnAllGames.getText().isEmpty()) {
-				btnAllGames.setText(Messages.get("allGames"));
+				btnAllGames.setText(Messages.get(MessageConstants.ALL_GAMES));
 			}
 			if (!btnRecentlyPlayed.getText().isEmpty()) {
-				btnRecentlyPlayed.setText(Messages.get("recentlyPlayed"));
+				btnRecentlyPlayed.setText(Messages.get(MessageConstants.RECENTLY_PLAYED));
 			}
 			if (!btnFavorites.getText().isEmpty()) {
-				btnFavorites.setText(prefix + Messages.get("favorites") + postfix);
+				btnFavorites.setText(prefix + Messages.get(MessageConstants.FAVORITES) + postfix);
 			}
 			btnFavorites.setSelected(true);
-			btnAllGames.setContentAreaFilled(false);
-			btnRecentlyPlayed.setContentAreaFilled(false);
-			btnFavorites.setContentAreaFilled(true);
-			spNavigationButtons.getVerticalScrollBar()
-			.setValue(spNavigationButtons.getVerticalScrollBar().getMaximum());
+			UIUtil.doHover(false, btnAllGames, btnRecentlyPlayed);
+			UIUtil.doHover(true, btnFavorites);
+			spNavigationButtons.getVerticalScrollBar().setValue(spNavigationButtons.getVerticalScrollBar()
+					.getMaximum());
 			break;
 		}
+		currentNavView = view;
 		handleContentAlignmentIfNeeded();
 	}
 
@@ -743,17 +703,7 @@ public class NavigationPanel extends JPanel implements ActionListener, MouseList
 	}
 
 	public void languageChanged() {
-		if (!btnAllGames.getText().isEmpty()) {
-			btnAllGames.setText(Messages.get("allGames"));
-			btnRecentlyPlayed.setText(Messages.get("recentlyPlayed"));
-			btnFavorites.setText(Messages.get("favorites"));
-			// btnPlatformFilter.setText(Messages.get("setPlatformFilter"));
-		}
-		btnSelectAll.setText(Messages.get("selectAll"));
-		btnSelectNone.setText(Messages.get("unselectAll"));
-		btnSelectInvert.setText(Messages.get("selectInvert"));
-		// btnPlatforms.setPrototypeDisplayValue(Messages.get("filterPlatforms"));
-
+		changeNav(currentNavView);
 		setToolTipTexts();
 	}
 
@@ -766,32 +716,53 @@ public class NavigationPanel extends JPanel implements ActionListener, MouseList
 		return buttons;
 	}
 
-	public String getLongestLabel() {
-		String longestText = "";
-		String buttonText = Messages.get("allGames");
-		String buttonText1 = Messages.get("recentlyPlayed");
-		String buttonText2 = Messages.get("favorites");
-		String buttonText3 = Messages.get("setPlatformFilter");
-		int textLength = buttonText.length();
-		int textLength1 = buttonText1.length();
-		int textLength2 = buttonText2.length();
-		int textLength3 = buttonText3.length();
-		if (textLength > longestText.length()) {
-			longestText = buttonText;
-		}
-		if (textLength1 > longestText.length()) {
-			longestText = buttonText1;
-		}
-		if (textLength2 > longestText.length()) {
-			longestText = buttonText2;
-		}
-		if (textLength3 > longestText.length()) {
-			longestText = buttonText3;
-		}
-		return longestText;
-	}
-
 	public JScrollPane getSpNavigationButtons() {
 		return spNavigationButtons;
+	}
+
+	public String getNavigationPaneState() {
+		String state = NavigationPanel.MINIMIZED;
+		if (isMinimized()) {
+			state = NavigationPanel.MINIMIZED;
+		}
+		if (isCentered()) {
+			state = NavigationPanel.CENTERED;
+		}
+		if (isMaximized()) {
+			state = NavigationPanel.MAXIMIZED;
+		}
+		return state;
+	}
+
+	public void setNavigationPaneState(String state) {
+		if (state.equals(MINIMIZED)) {
+			minimizeContentWidth();
+		}
+		if (state.equals(CENTERED)) {
+			centerContentWidth();
+		}
+		if (state.equals(MAXIMIZED)) {
+			maximizeContentWidth();
+		}
+	}
+
+	public int getSelectedNavigationItem() {
+		if (btnAllGames.isSelected()) {
+			return ALL_GAMES;
+		}
+		if (btnRecentlyPlayed.isSelected()) {
+			return RECENTLY_PLAYED;
+		}
+		if (btnFavorites.isSelected()) {
+			return FAVORITES;
+		}
+		return ALL_GAMES;
+	}
+
+	public String getLongestLabel() {
+		String buttonText = Messages.get(MessageConstants.ALL_GAMES);
+		String buttonText1 = Messages.get(MessageConstants.RECENTLY_PLAYED);
+		String buttonText2 = Messages.get(MessageConstants.FAVORITES);
+		return UIUtil.getLongestLabel(buttonText, buttonText1, buttonText2);
 	}
 }

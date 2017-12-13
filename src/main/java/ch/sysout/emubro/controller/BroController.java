@@ -1,5 +1,6 @@
 package ch.sysout.emubro.controller;
 
+import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Desktop;
 import java.awt.Dialog.ModalityType;
@@ -26,8 +27,6 @@ import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
-import java.awt.event.FocusAdapter;
-import java.awt.event.FocusEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
@@ -62,6 +61,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.Enumeration;
@@ -69,6 +69,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -79,10 +80,10 @@ import java.util.zip.ZipFile;
 import javax.imageio.ImageIO;
 import javax.swing.AbstractButton;
 import javax.swing.Action;
-import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
+import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -100,13 +101,14 @@ import javax.swing.JToggleButton;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
+import javax.swing.UIManager;
 import javax.swing.WindowConstants;
+import javax.swing.border.TitledBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.filechooser.FileSystemView;
-import javax.swing.table.TableModel;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -140,32 +142,24 @@ import au.com.bytecode.opencsv.CSVWriter;
 import ch.sysout.emubro.Main;
 import ch.sysout.emubro.api.EmulatorListener;
 import ch.sysout.emubro.api.FilterListener;
-import ch.sysout.emubro.api.GameListener;
 import ch.sysout.emubro.api.PlatformListener;
 import ch.sysout.emubro.api.dao.ExplorerDAO;
 import ch.sysout.emubro.api.event.EmulatorEvent;
 import ch.sysout.emubro.api.event.FilterEvent;
-import ch.sysout.emubro.api.event.GameAddedEvent;
-import ch.sysout.emubro.api.event.GameRemovedEvent;
 import ch.sysout.emubro.api.event.GameSelectionEvent;
 import ch.sysout.emubro.api.event.PlatformEvent;
-import ch.sysout.emubro.api.filter.Criteria;
-import ch.sysout.emubro.api.filter.Filter;
 import ch.sysout.emubro.api.model.Emulator;
 import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.api.model.PlatformComparator;
 import ch.sysout.emubro.impl.BroGameAlreadyExistsException;
+import ch.sysout.emubro.impl.BroGameDeletedException;
 import ch.sysout.emubro.impl.event.BroEmulatorAddedEvent;
 import ch.sysout.emubro.impl.event.BroGameAddedEvent;
-import ch.sysout.emubro.impl.event.BroGameRemovedEvent;
 import ch.sysout.emubro.impl.event.BroGameSelectionEvent;
 import ch.sysout.emubro.impl.event.BroPlatformAddedEvent;
 import ch.sysout.emubro.impl.event.NavigationEvent;
-import ch.sysout.emubro.impl.filter.GameFilter;
-import ch.sysout.emubro.impl.filter.NullFilter;
-import ch.sysout.emubro.impl.filter.PlatformFilter;
 import ch.sysout.emubro.impl.model.BroEmulator;
 import ch.sysout.emubro.impl.model.BroGame;
 import ch.sysout.emubro.impl.model.BroPlatform;
@@ -177,10 +171,7 @@ import ch.sysout.emubro.ui.AboutDialog;
 import ch.sysout.emubro.ui.CoverConstants;
 import ch.sysout.emubro.ui.EmulationOverlayFrame;
 import ch.sysout.emubro.ui.FileTypeConstants;
-import ch.sysout.emubro.ui.GameCoversModel;
-import ch.sysout.emubro.ui.GameListModel;
 import ch.sysout.emubro.ui.GamePropertiesDialog;
-import ch.sysout.emubro.ui.GameTableModel;
 import ch.sysout.emubro.ui.GameViewConstants;
 import ch.sysout.emubro.ui.HelpDialog;
 import ch.sysout.emubro.ui.ImageUtil;
@@ -193,92 +184,20 @@ import ch.sysout.emubro.ui.PropertiesFrame;
 import ch.sysout.emubro.ui.RateEvent;
 import ch.sysout.emubro.ui.RateListener;
 import ch.sysout.emubro.ui.RatingBarPanel;
+import ch.sysout.emubro.ui.SortedListModel;
+import ch.sysout.emubro.ui.SplashScreenWindow;
 import ch.sysout.emubro.ui.UpdateDialog;
 import ch.sysout.emubro.ui.ViewPanel;
+import ch.sysout.emubro.ui.ViewPanelManager;
+import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.util.FileUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
+import ch.sysout.util.UIUtil;
 import ch.sysout.util.ValidationUtil;
 
-public class BroController implements ActionListener, GameListener, PlatformListener, EmulatorListener {
-
-	public class HideExtensionsListener implements ActionListener {
-
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			view.hideExtensions(((AbstractButton) e.getSource()).isSelected());
-		}
-	}
-
-	public class BroRateListener implements RateListener {
-		@Override
-		public void rateChanged(RateEvent e) {
-			rateGame(e.getGame());
-		}
-	}
-
-	public class LanguageGermanListener implements ActionListener {
-
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			changeLanguage(Locale.GERMAN);
-		}
-	}
-
-	public class LanguageEnglishListener implements ActionListener {
-
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			changeLanguage(Locale.ENGLISH);
-		}
-	}
-
-	public class LanguageFrenchListener implements ActionListener {
-
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			changeLanguage(Locale.FRENCH);
-		}
-	}
-
-	public class PlatformListCellRenderer extends DefaultListCellRenderer {
-		private static final long serialVersionUID = 1L;
-
-		@Override
-		public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected,
-				boolean cellHasFocus) {
-			JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-			BroPlatform platform = ((BroPlatform) value);
-			ImageIcon icon = platformIcons.get(platform.getIconFileName());
-			label.setIcon(icon);
-			return label;
-		}
-	}
-
-	public class EmulatorListCellRenderer extends DefaultListCellRenderer {
-		private static final long serialVersionUID = 1L;
-
-		@Override
-		public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected,
-				boolean cellHasFocus) {
-			JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-
-			// String iconPath = value ==
-			// pnlPlatforms.lstPlatforms.getSelectedValue().getDefaultEmulatorId()
-			// ? "/images/"+resolution+"/dialog-ok-apply-5.png"
-			// : "/images/"+resolution+"/empty.png";
-
-			// File svgFile = new
-			// File("D:/files/workspace/JGameExplorer/res/images/dialog-ok-apply-5.svg");
-			// ImageIcon icon = ImageUtil.getImageIconFrom(svgFile);
-			// label.setIcon(icon);
-			BroEmulator emulator = ((BroEmulator) value);
-			ImageIcon icon = emulatorIcons.get(emulator.getIconFilename());
-			label.setIcon(icon);
-			return label;
-		}
-	}
-
+public class BroController implements ActionListener, PlatformListener, EmulatorListener, GameSelectionListener {
 	Explorer explorer;
 	MainFrame view;
 	private PropertiesFrame frameProperties;
@@ -290,31 +209,18 @@ public class BroController implements ActionListener, GameListener, PlatformList
 	private List<String> alreadyCheckedDirectories = new ArrayList<>();
 	private Properties properties;
 
-	private List<Process> processes = new ArrayList<>();
+	private Map<Game, Map<Process, Integer>> processes = new HashMap<>();
 
 	private String applicationVersion = "";
 	private String platformDetectionVersion = "";
 	private final String currentApplicationVersion = "0.0.2";
-	private final String currentPlatformDetectionVersion = "20170423.0";
-
-	GameListModel mdlLstAllGames = new GameListModel();
-	private GameListModel mdlLstRecentlyPlayed = new GameListModel();
-	private GameListModel mdlLstFavorites = new GameListModel();
-	private GameListModel mdlLstFilteredGames = new GameListModel();
-	TableModel mdlTblAllGames = new GameTableModel();
-	private TableModel mdlTblGamesRecentlyPlayed = new GameTableModel();
-	private TableModel mdlTblGamesFavorites = new GameTableModel();
-	private TableModel mdlTblGamesFiltered = new GameTableModel();
-	private GameCoversModel mdlCoversRecentlyPlayed = new GameCoversModel();
-	private GameCoversModel mdlCoversFavorites = new GameCoversModel();
-	private GameCoversModel mdlCoversFiltered = new GameCoversModel();
-	private GameCoversModel mdlCoversAllGames = new GameCoversModel();
+	private final String currentPlatformDetectionVersion = "20170826.0";
 
 	private int navigationPaneDividerLocation;
-	private int previewPanelDividerLocation;
-	private int gameDetailsPanelDividerLocation;
+	private String navigationPaneState;
+	private int previewPanelWidth;
+	private int gameDetailsPanelHeight;
 	private int splGameFilterDividerLocation;
-	private int detailsPanePanel;
 	private int detailsPaneNotificationTab;
 	private String language;
 
@@ -322,25 +228,54 @@ public class BroController implements ActionListener, GameListener, PlatformList
 	private List<Timer> timerListRunningGames = new ArrayList<>();
 	private EmulationOverlayFrame frameEmulationOverlay;
 
-	private static final String[] propertyKeys = { "x", "y", "width", "height", "maximized", "show_menubar",
-			"show_navigationpane", "show_previewpane", "show_detailspane", "navigation_item", "view", "platform",
-			"show_wizard", "navigationpane_dividerlocation", "previewpane_dividerlocation",
-			"gamedetailspane_dividerlocation", "view_panel", "gamefilterpane_dividerlocation", "detailspane_panel",
-			"detailspane_notificationtab", "language", "detailspane_unpinned", "columnWidth", "rowHeight", "fontSize",
-			"gamefilter_visible", "sortOrder", "groupOrder", "sortBy", "groupBy" };
+	private static final String[] propertyKeys = {
+			"x",
+			"y",
+			"width",
+			"height",
+			"maximized",
+			"show_menubar",						 	// 5
+			"show_navigationpane",
+			"show_previewpane",
+			"show_detailspane",
+			"BLANK",
+			"view",									// 10
+			"platform",
+			"show_wizard",
+			"navigationpane_dividerlocation",
+			"previewpane_width",
+			"gamedetailspane_height",				// 15
+			"view_panel",
+			"gamefilterpane_dividerlocation",
+			"detailspane_notificationtab",
+			"language",
+			"detailspane_unpinned",					// 20
+			"columnWidth",
+			"rowHeight",
+			"fontSize",
+			"gamefilter_visible",
+			"sortOrder",							// 25
+			"groupOrder",
+			"sortBy",
+			"groupBy",
+			"lastFrameDetailsPaneX",
+			"lastFrameDetailsPaneY",					// 30
+			"lastPnlDetailsPreferredWidth",
+			"lastPnlDetailsPreferredHeight",
+			"navigationPaneState"
+	};
 
-	private DefaultListModel<Platform> mdlPropertiesLstPlatforms = new DefaultListModel<>();
+	private SortedListModel<Platform> mdlPropertiesLstPlatforms = new SortedListModel<>();
 	private Map<String, ImageIcon> platformIcons = new HashMap<>();
 	private Map<String, ImageIcon> emulatorIcons = new HashMap<>();
+	private Map<String, Icon> emulatorFileIcons = new HashMap<>();
 	long searchProcessStarted;
 	private List<String> encryptedFiles = new ArrayList<>();
 	BrowseComputerWorker workerBrowseComputer;
 	List<PlatformListener> platformListeners = new ArrayList<>();
 	List<EmulatorListener> emulatorListeners = new ArrayList<>();
-	List<GameListener> gameListeners = new ArrayList<>();
 	private List<LanguageListener> languageListeners = new ArrayList<>();
 	boolean searchProcessInterrupted;
-	private Map<Integer, GamePropertiesDialog> activeGamePropertiesDialogs = new HashMap<>();
 	private List<String> zipFiles = new ArrayList<>();
 	private List<String> rarFiles = new ArrayList<>();
 	private List<String> isoFiles = new ArrayList<>();
@@ -350,6 +285,13 @@ public class BroController implements ActionListener, GameListener, PlatformList
 	private boolean previewPaneVisible;
 	private boolean navigationPaneVisible;
 	private boolean menuBarVisible;
+	private boolean detailsPaneUnpinned;
+	private int lastDetailsPaneX;
+	private int  lastDetailsPaneY;
+	private int lastDetailsPreferredWidth;
+	private int lastDetailsPreferredHeight;
+	private SplashScreenWindow dlgSplashScreen;
+	private int preferredWidthAtFirstStart;
 
 	public BroController(ExplorerDAO explorerDAO, Explorer model, MainFrame view) {
 		this.explorerDAO = explorerDAO;
@@ -364,88 +306,133 @@ public class BroController implements ActionListener, GameListener, PlatformList
 	public void rateGame(Game game) {
 		try {
 			explorerDAO.setRate(game.getId(), game.getRate());
-			if (game.getRate() > 0) {
-				if (!mdlLstFavorites.contains(game)) {
-					mdlLstFavorites.addElement(game);
-				}
-				if (!((GameTableModel) mdlTblGamesFavorites).contains(game)) {
-					((GameTableModel) mdlTblGamesFavorites).addRow(game);
-				}
-				view.revalidate();
-				view.repaint();
-			} else {
-				if (mdlLstFavorites.contains(game)) {
-					mdlLstFavorites.removeElement(game);
-					if (view.getGameListModel() == mdlLstFavorites) {
-						GameSelectionEvent e2 = new BroGameSelectionEvent(null, null);
-						gameSelected(e2);
-						view.gameSelected(e2);
-					}
-				}
-				if (((GameTableModel) mdlTblGamesFavorites).contains(game)) {
-					((GameTableModel) mdlTblGamesFavorites).removeGame(game);
-				}
-				view.revalidate();
-				view.repaint();
-				return;
-			}
+			view.gameRated(game);
 		} catch (SQLException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
 	}
 
-	public void createView() {
-		view.adjustSplitPaneDividerSizes();
+	private void commentGame(Game game) {
+		JOptionPane.showInputDialog("");
+	}
 
+	public void createView() throws Exception {
+		view.adjustSplitPaneDividerSizes();
+		Map<String, Action> actionKeysGreeting = new HashMap<>();
+		actionKeysGreeting.put("notifications_thanks", null);
 		NotificationElement notficationElement = new NotificationElement(
-				new String[] { "greeting", "applicationTitle" }, new String[] { "notifications_thanks" },
-				NotificationElement.INFORMATION, new NotificationElementListener());
+				new String[] { "greeting", "applicationTitle" }, actionKeysGreeting,
+				NotificationElement.INFORMATION, null);
 		view.showInformation(notficationElement);
 
 		if (!explorer.isSearchProcessComplete()) {
+			Map<String, Action> actionKeys = new HashMap<>();
+			Action action = new Action() {
+
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					searchForPlatforms();
+					view.switchDetailsTabTo(1);
+				}
+
+				@Override
+				public void setEnabled(boolean b) {
+				}
+
+				@Override
+				public void removePropertyChangeListener(PropertyChangeListener listener) {
+					// TODO Auto-generated method stub
+
+				}
+
+				@Override
+				public void putValue(String key, Object value) {
+					// TODO Auto-generated method stub
+
+				}
+
+				@Override
+				public boolean isEnabled() {
+					// TODO Auto-generated method stub
+					return false;
+				}
+
+				@Override
+				public Object getValue(String key) {
+					// TODO Auto-generated method stub
+					return null;
+				}
+
+				@Override
+				public void addPropertyChangeListener(PropertyChangeListener listener) {
+					// TODO Auto-generated method stub
+
+				}
+			};
+			actionKeys.put("browseComputer", action);
+			actionKeys.put("hideMessage", null);
+
 			NotificationElement element = new NotificationElement(new String[] { "browseComputerForGamesAndEmulators" },
-					new String[][] { { "browseComputer" }, { "hideMessage" } },
-					NotificationElement.INFORMATION_MANDATORY, null);
+					actionKeys, NotificationElement.INFORMATION_MANDATORY, null);
 			view.showInformation(element);
 		}
-
+		Map<String, Action> actionKeysFixedDrive = new HashMap<>();
+		actionKeysFixedDrive.put("hideMessage", null);
 		NotificationElement element = new NotificationElement(new String[] { "fixedDriveNotAvailable", "L:" },
-				new String[] { "hideMessage" }, NotificationElement.SUCCESS, null);
+				actionKeysFixedDrive, NotificationElement.SUCCESS, null);
 		view.showInformation(element);
 
-		String[][] stringArr3 = { { "checkAgain" }, { "fixDriveLetters" }, { "hideMessage" } };
-		NotificationElement element2 = new NotificationElement(new String[] { "driveNotAvailable", "L:" }, stringArr3,
+		Map<String, Action> actionKeysDriveLetter = new HashMap<>();
+		actionKeysDriveLetter.put("checkAgain", null);
+		actionKeysDriveLetter.put("fixDriveLetters", null);
+		actionKeysDriveLetter.put("hideMessage", null);
+		NotificationElement element2 = new NotificationElement(new String[] { "driveNotAvailable", "L:" }, actionKeysDriveLetter,
 				NotificationElement.ERROR, null);
 		view.showInformation(element2);
 
-		String propertyView = properties.getProperty(propertyKeys[16]);
-		int viewPanel = (propertyView != null && !propertyView.isEmpty()) ? Integer.parseInt(propertyView)
-				: ViewPanel.LIST_VIEW;
-		view.setGameListModel(mdlLstAllGames);
-		view.setGameTableModel(mdlTblAllGames);
-		view.setGameCoversModel(mdlCoversAllGames);
-		view.changeToViewPanel(viewPanel);
-		String columnWidth = properties.getProperty(propertyKeys[22]);
-		String rowHeight = properties.getProperty(propertyKeys[23]);
+
+		//setLastViewState();
+
+		detailsPaneUnpinned = Boolean.parseBoolean(properties.getProperty(propertyKeys[20]));
+		String lastDetailsPaneXString = properties.getProperty(propertyKeys[29]);
+		String lastDetailsPaneYString = properties.getProperty(propertyKeys[30]);
+		String lastDetailsPreferredWidthString = properties.getProperty(propertyKeys[31]);
+		String lastDetailsPreferredHeightString = properties.getProperty(propertyKeys[32]);
+
+		lastDetailsPaneX = (lastDetailsPaneXString != null && !lastDetailsPaneXString.isEmpty() ?
+				Integer.parseInt(lastDetailsPaneXString) : -1);
+		lastDetailsPaneY = (lastDetailsPaneYString != null && !lastDetailsPaneYString.isEmpty() ?
+				Integer.parseInt(lastDetailsPaneYString) : -1);
+		lastDetailsPreferredWidth = (lastDetailsPreferredWidthString != null && !lastDetailsPreferredWidthString.isEmpty() ?
+				Integer.parseInt(lastDetailsPreferredWidthString) : -1);
+		lastDetailsPreferredHeight = (lastDetailsPreferredHeightString != null && !lastDetailsPreferredHeightString.isEmpty() ?
+				Integer.parseInt(lastDetailsPreferredHeightString) : -1);
+		String columnWidth = properties.getProperty(propertyKeys[21]);
+		String rowHeight = properties.getProperty(propertyKeys[22]);
 		if (columnWidth != null) {
 			view.setColumnWidth(Integer.valueOf(columnWidth));
 		}
 		if (rowHeight != null) {
 			view.setRowHeight(Integer.valueOf(rowHeight));
 		}
-		String fontSize = properties.getProperty(propertyKeys[24]);
+		String fontSize = properties.getProperty(propertyKeys[23]);
 		if (fontSize != null) {
 			view.setFontSize(Integer.valueOf(fontSize));
 		}
 	}
 
-	public void adjustSplitPaneLocations(int width, int height) {
-		view.adjustSplitPaneDividerLocations(width, height);
+	private void setLastViewState() {
+		String propertyView = properties.getProperty(propertyKeys[16]);
+		int viewPanel = (propertyView != null && !propertyView.isEmpty()) ? Integer.parseInt(propertyView)
+				: ViewPanel.LIST_VIEW;
+		int viewType = Integer.valueOf(properties.getProperty(propertyKeys[10]));
+		view.changeToViewPanel(viewPanel, explorer.getGames());
+		view.navigationChanged(new NavigationEvent(viewType));
 	}
 
 	public void addListeners() {
-		addGameListener(this);
+		ViewPanelManager viewManager = view.getViewManager();
 		addPlatformListener(this);
 		addEmulatorListener(this);
 		view.addListeners();
@@ -477,12 +464,16 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		view.addSortByPlatformListener(new SortByPlatformListener());
 		view.addGroupByNoneListener(new GroupByNoneListener());
 		view.addGroupByPlatformListener(new GroupByPlatformListener());
+		view.addGroupByTitleListener(new GroupByTitleListener());
 		view.addFilterListener(new GameFilterListener());
 		view.addPlatformFilterListener(new PlatformFilterListener());
-		view.addSelectGameListener(this);
-		view.addRunGameListener(new RunGameListener());
-		view.addRunGameListener1(new RunGameListener());
-		view.addRunGameListener2(new RunGameListener());
+		viewManager.addSelectGameListener(this);
+		viewManager.addSelectGameListener(view);
+		RunGameListener runGameListener = new RunGameListener();
+		view.addRunGameListener(runGameListener);
+		view.addRunGameListener1(runGameListener);
+		view.addRunGameListener2(runGameListener);
+		view.addConfigureEmulatorListener(new ConfigureEmulatorListener());
 		view.addCoverFromComputerListener(new CoverFromComputerListener());
 		view.addCoverFromWebListener(new CoverFromWebListener());
 		view.addTrailerFromWebListener(new TrailerFromWebListener());
@@ -494,19 +485,27 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		view.addAddEmulatorListener(new AddEmulatorListener());
 		view.addRemoveEmulatorListener(new RemoveEmulatorListener());
 		view.addLoadDiscListener(new LoadDiscListener());
+		view.addShowNavigationPaneListener(new ShowNavigationPaneListener());
 		view.addShowPreviewPaneListener(new ShowPreviewPaneListener());
 		view.addShowGameDetailsListener(new ShowGameDetailsListener());
 		view.addOpenGamePropertiesListener(new OpenGamePropertiesListener());
 		view.addOpenGamePropertiesListener1(new OpenGamePropertiesListener());
-		view.addIncreaseFontListener(new IncreaseFontListener());
-		view.addIncreaseFontListener2(new IncreaseFontListener());
-		view.addDecreaseFontListener(new DereaseFontListener());
-		view.addOpenGameFolderListener(new OpenGameFolderListener());
-		view.addOpenGameFolderListener1(new OpenGameFolderListener());
+		viewManager.addIncreaseFontListener(new IncreaseFontListener());
+		viewManager.addIncreaseFontListener2(new IncreaseFontListener());
+		viewManager.addDecreaseFontListener(new DereaseFontListener());
+
+		ActionListener openGameFolderActionListener = new OpenGameFolderListener();
+		view.addOpenGameFolderListener(openGameFolderActionListener);
+
+		MouseListener openGameFolderMouseListener = new OpenGameFolderListener();
+		view.addOpenGameFolderListener1(openGameFolderMouseListener);
+		viewManager.addOpenGameFolderListener1(openGameFolderMouseListener);
+
 		view.addShowOrganizeContextMenuListener(new ShowOrganizeContextMenuListener());
 		view.addShowContextMenuListener(new ShowContextMenuListener());
 		//		view.addSetFilterListener(new AddFilterListener());
 		view.addHideExtensionsListener(new HideExtensionsListener());
+		view.addTouchScreenOptimizedScrollListener(new TouchScreenOptimizedScrollListener());
 		view.addOpenHelpListener(new OpenHelpListener());
 		view.addOpenAboutListener(new OpenAboutListener());
 		view.addOpenUpdateListener(new OpenCheckForUpdatesListener());
@@ -516,6 +515,7 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		view.addRowHeightSliderListener(new RowHeightSliderListener());
 		view.addBroComponentListener(new BroComponentListener());
 		view.addRateListener(new BroRateListener());
+		view.addCommentListener(new BroCommentListener());
 		view.addWindowListener(new WindowAdapter() {
 
 			@Override
@@ -534,22 +534,11 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		view.showOrHideResizeArea();
 	}
 
-	/**
-	 * this method adjusts the window size when the window width is shorter than
-	 * the window height.<br>
-	 * it simply looks nicer if its wider.
-	 */
-	public void adjustSizeWhenNeeded() {
-		if (view.getHeight() < view.getWidth()) {
-			view.setSize(view.getWidth(), (int) (view.getWidth() * 0.825));
-		}
-	}
-
 	public boolean loadAppDataFromLastSession() {
 		properties = new Properties();
 		String homePath = System.getProperty("user.home");
 		String path = homePath += homePath.endsWith(File.separator) ? ""
-				: File.separator + "." + Messages.get("applicationTitle").toLowerCase();
+				: File.separator + "." + Messages.get(MessageConstants.APPLICATION_TITLE).toLowerCase();
 		new File(path).mkdir();
 		File file = new File(path + File.separator + "window" + ".properties");
 		if (file.exists()) {
@@ -578,8 +567,8 @@ public class BroController implements ActionListener, GameListener, PlatformList
 	}
 
 	public UpdateObject retrieveLatestRevisionInformations() throws MalformedURLException, IOException {
-		String urlPath = Messages.get("updateServer");
-		urlPath += (!urlPath.endsWith("/") ? "/" : "") + Messages.get("updateInfoFile");
+		String urlPath = Messages.get(MessageConstants.UPDATE_SERVER);
+		urlPath += (!urlPath.endsWith("/") ? "/" : "") + Messages.get(MessageConstants.UPDATE_INFO_FILE);
 		URL url = null;
 		url = new URL(urlPath);
 		BufferedReader in;
@@ -616,8 +605,8 @@ public class BroController implements ActionListener, GameListener, PlatformList
 	}
 
 	private String retrieveChangelog() throws MalformedURLException, IOException {
-		String urlPath = Messages.get("updateServer");
-		urlPath += (!urlPath.endsWith("/") ? "/" : "") + Messages.get("changelogFile");
+		String urlPath = Messages.get(MessageConstants.UPDATE_SERVER);
+		urlPath += (!urlPath.endsWith("/") ? "/" : "") + Messages.get(MessageConstants.CHANGELOG_FILE);
 		URL url = null;
 		url = new URL(urlPath);
 		BufferedReader in;
@@ -642,17 +631,16 @@ public class BroController implements ActionListener, GameListener, PlatformList
 
 			@Override
 			public void run() {
-				String urlPath = Messages.get("website");
-				urlPath += (!urlPath.endsWith("/") ? "/" : "") + Messages.get("updateInfoFile");
+				String urlPath = Messages.get(MessageConstants.WEBSITE);
+				urlPath += (!urlPath.endsWith("/") ? "/" : "") + Messages.get(MessageConstants.UPDATE_INFO_FILE);
 				try {
 					URL url = new URL(urlPath);
 					URLConnection con;
 					try {
 						con = url.openConnection();
-
 						con.setReadTimeout(20000);
 						String userHome = System.getProperty("user.home");
-						File applicationFile = new File(userHome + "/" + Messages.get("applicationTitle") + ".jar");
+						File applicationFile = new File(userHome + "/" + Messages.get(MessageConstants.APPLICATION_TITLE) + ".jar");
 						try {
 							FileUtils.copyURLToFile(url, applicationFile);
 							System.err.println("update has been successfully installed");
@@ -773,14 +761,6 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		emulatorListeners.add(l);
 	}
 
-	public void addGameListener(GameListener l) {
-		gameListeners.add(l);
-	}
-
-	public void removeGameListener(GameListener l) {
-		gameListeners.remove(l);
-	}
-
 	public List<BroPlatform> getDefaultPlatforms() {
 		return explorer.getDefaultPlatforms();
 	}
@@ -791,7 +771,7 @@ public class BroController implements ActionListener, GameListener, PlatformList
 			p.setDefaultEmulatorId(EmulatorConstants.NO_EMULATOR);
 			Platform p2 = null;
 			if (!explorer.hasPlatform(p.getName())) {
-				p2 = addPlatform(p);
+				p2 = addOrGetPlatform(p);
 			} else {
 				p2 = explorer.getPlatform(p.getName());
 			}
@@ -957,41 +937,8 @@ public class BroController implements ActionListener, GameListener, PlatformList
 	public void showView(boolean applyData) throws FileNotFoundException, SQLException {
 		initDefaultPlatforms();
 		if (properties != null) {
-			boolean gameFilterPanelVisible = Boolean.parseBoolean(properties.getProperty(propertyKeys[25]));
-			String sortOrderProperty = properties.getProperty(propertyKeys[26]);
-			int sortOrder;
-			int groupOrder;
-			int sortBy;
-			int groupBy;
-			try {
-				sortOrder = Integer.parseInt(sortOrderProperty);
-			} catch (NumberFormatException e) {
-				sortOrder = ViewConstants.SORT_ASCENDING;
-			}
-			try {
-				groupOrder = Integer.parseInt(properties.getProperty(propertyKeys[27]));
-			} catch (NumberFormatException e) {
-				groupOrder = ViewConstants.GROUP_ASCENDING;
-			}
-			try {
-				sortBy = Integer.parseInt(properties.getProperty(propertyKeys[28]));
-			} catch (NumberFormatException e) {
-				sortBy = ViewConstants.SORT_BY_TITLE;
-			}
-			try {
-				groupBy = Integer.parseInt(properties.getProperty(propertyKeys[29]));
-			} catch (NumberFormatException e) {
-				groupBy = ViewConstants.GROUP_BY_NONE;
-			}
-			view.showFilterPanel(gameFilterPanelVisible);
-			sortGameList(sortOrder);
-			sortBy(sortBy);
-			groupBy(groupBy);
-		} else {
-			view.showGameDetailsPane(true, ScreenSizeUtil.adjustValueToResolution(256));
-			view.showPreviewPane(true);
+			showView2();
 		}
-
 		view.addComponentListener(new ComponentAdapter() {
 			@Override
 			public void componentShown(ComponentEvent e) {
@@ -1015,51 +962,84 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		//
 		// @Override
 		// public void run() {
-		view.setGameListModel(mdlLstAllGames);
-		view.navigationChanged(new NavigationEvent(NavigationPanel.ALL_GAMES));
-		addListeners();
-		if (applyData) {
-			menuBarVisible = Boolean.parseBoolean(properties.getProperty(propertyKeys[5]));
-			navigationPaneVisible = Boolean.parseBoolean(properties.getProperty(propertyKeys[6]));
-			previewPaneVisible = Boolean.parseBoolean(properties.getProperty(propertyKeys[7]));
-			detailsPaneVisible = Boolean.parseBoolean(properties.getProperty(propertyKeys[8]));
-			view.showMenuBar(menuBarVisible);
-			view.showNavigationPane(navigationPaneVisible);
-			view.showGameDetailsPane(detailsPaneVisible);
-			setDividerLocations();
-			// dont remove invokelater here. otherwise locations may not set
-			// correctly when opening frame in maximized state
-			SwingUtilities.invokeLater(new Runnable() {
 
-				@Override
-				public void run() {
-					if (view.getExtendedState() == Frame.MAXIMIZED_BOTH) {
-						setDividerLocations();
-					}
-				}
-			});
+		if (applyData) {
+			showOrHideMenuBarAndPanels();
+			setLastViewState();
+			view.toFront();
 		} else {
-			adjustSplitPaneLocations(view.getWidth(), view.getHeight());
 			int minWidth = ScreenSizeUtil.adjustValueToResolution(256);
-			view.showPreviewPane(true, view.getWidth() - minWidth);
+			view.showPreviewPane(true, minWidth);
 			view.showNavigationPane(true);
 			view.showGameDetailsPane(true);
+			view.navigationChanged(new NavigationEvent(NavigationPanel.ALL_GAMES));
+			//			view.changeToViewPanel(GameViewConstants.LIST_VIEW, explorer.getGames());
 		}
-		try {
-			int selectedGameId = explorerDAO.getSelectedGameId();
-			SwingUtilities.invokeLater(new Runnable() {
+		view.gameSelected(new BroGameSelectionEvent(null, null));
+		addListeners();
+		showConfigurationWizardIfNeeded();
+	}
 
-				@Override
-				public void run() {
-					view.selectGame(selectedGameId);
-					view.validate();
-					view.repaint();
-					view.showPreviewPane(previewPaneVisible, view.getWidth() - previewPanelDividerLocation);
-				}
-			});
-		} catch (SQLException e2) {
-			e2.printStackTrace();
+	private void showView2() {
+		boolean gameFilterPanelVisible = getGameFilterPanelVisibleFromProperties();
+		view.showFilterPanel(gameFilterPanelVisible);
+
+		int sortOrder = getSortOrderFromProperties();
+		sortGameList(sortOrder);
+
+		int sortBy = getSortByFromProperties();
+		switch (sortBy) {
+		case ViewConstants.SORT_BY_PLATFORM:
+			sortBy(sortBy, (PlatformComparator) platformComparator);
+			break;
+		case ViewConstants.SORT_BY_TITLE:
+			sortBy(sortBy, null);
+			break;
 		}
+
+		int groupOrder = getGroupOrderFromProperties();
+		int groupBy = getGroupByFromProperties();
+		groupBy(groupBy);
+	}
+
+	private boolean getGameFilterPanelVisibleFromProperties() {
+		return Boolean.parseBoolean(properties.getProperty(propertyKeys[24]));
+	}
+
+	private int getSortOrderFromProperties() {
+		String sortOrderProperty = properties.getProperty(propertyKeys[25]);
+		try {
+			return Integer.parseInt(sortOrderProperty);
+		} catch (NumberFormatException e) {
+			return ViewConstants.SORT_ASCENDING;
+		}
+	}
+
+	private int getGroupByFromProperties() {
+		try {
+			return Integer.parseInt(properties.getProperty(propertyKeys[28]));
+		} catch (NumberFormatException e) {
+			return ViewConstants.GROUP_BY_NONE;
+		}
+	}
+
+	private int getSortByFromProperties() {
+		try {
+			return Integer.parseInt(properties.getProperty(propertyKeys[27]));
+		} catch (NumberFormatException e) {
+			return ViewConstants.SORT_BY_TITLE;
+		}
+	}
+
+	private int getGroupOrderFromProperties() {
+		try {
+			return Integer.parseInt(properties.getProperty(propertyKeys[26]));
+		} catch (NumberFormatException e) {
+			return ViewConstants.GROUP_ASCENDING;
+		}
+	}
+
+	private void showConfigurationWizardIfNeeded() {
 		try {
 			if (!explorerDAO.isConfigWizardHiddenAtStartup()) {
 				SwingUtilities.invokeLater(new Runnable() {
@@ -1076,6 +1056,30 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		}
 	}
 
+	private void showOrHideMenuBarAndPanels() {
+		menuBarVisible = Boolean.parseBoolean(properties.getProperty(propertyKeys[5]));
+		navigationPaneVisible = Boolean.parseBoolean(properties.getProperty(propertyKeys[6]));
+		previewPaneVisible = Boolean.parseBoolean(properties.getProperty(propertyKeys[7]));
+		detailsPaneVisible = Boolean.parseBoolean(properties.getProperty(propertyKeys[8]));
+		view.showMenuBar(menuBarVisible);
+		view.showNavigationPane(navigationPaneVisible, navigationPaneDividerLocation, navigationPaneState);
+		view.showDetailsPane(detailsPaneVisible, gameDetailsPanelHeight,
+				detailsPaneUnpinned, lastDetailsPaneX, lastDetailsPaneY, lastDetailsPreferredWidth, lastDetailsPreferredHeight);
+		view.showPreviewPane(previewPaneVisible, previewPanelWidth);
+		// dont remove invokelater here. otherwise locations may not set
+		// correctly when opening frame in maximized state
+		//			SwingUtilities.invokeLater(new Runnable() {
+		//
+		//				@Override
+		//				public void run() {
+		//					if (view.getExtendedState() == Frame.MAXIMIZED_BOTH) {
+		//						view.showPreviewPane(previewPaneVisible, previewPanelWidth);
+		//						view.showGameDetailsPane(detailsPaneVisible, gameDetailsPanelHeight);
+		//					}
+		//				}
+		//			});
+	}
+
 	public void initGameList() throws SQLException {
 		List<Game> games = explorerDAO.getGames();
 		List<Platform> platforms = explorerDAO.getPlatforms();
@@ -1083,42 +1087,28 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		explorer.setPlatforms(platforms);
 		if (games != null && !games.isEmpty()) {
 			view.updateGameCount(games.size());
-			view.initGameIcons(games);
-			view.initPlatforms(platforms);
-
-			mdlLstAllGames.removeAllElements();
-			((GameTableModel) mdlTblAllGames).removeAllElements();
-			((GameTableModel) mdlTblAllGames).initPlatforms(platforms);
-			mdlCoversAllGames.removeAllElements();
-			for (Game game : games) {
-				mdlLstAllGames.addElement(game);
-				((GameTableModel) mdlTblAllGames).addRow(game);
-				((GameTableModel) mdlTblAllGames).addGameIcon(game.getId(),
-						view.getCurrentViewPanel().getGameIcon(game.getId()));
-				mdlCoversAllGames.addElement(game);
-				if (game.isFavorite()) {
-					mdlLstFavorites.addElement(game);
-					((GameTableModel) mdlTblGamesFavorites).addRow(game);
-				}
-				// ImageIcon icon = new ImageIcon(game.getCoverPath() + "/" +
-				// title + ".jpg");
-				// File file = new File(icon.getDescription());
-				// if (file.exists()) {
-				// game.setCoverPath(file.getAbsolutePath());
-				// }
-			}
-			view.adjustColumns();
-			Main.hideSplashScreen();
-		} else {
-			Main.hideSplashScreen();
+			view.initGames(games);
 		}
+		view.initPlatforms(platforms);
+		boolean emulatorsFound = false;
+		for (Platform p : platforms) {
+			for (Emulator emu : p.getEmulators()) {
+				if (emu.isInstalled()) {
+					emulatorsFound = true;
+					break;
+				}
+			}
+		}
+		boolean gamesOrPlatformsFound = games.size() > 0 || emulatorsFound;
+		view.activateQuickSearchButton(gamesOrPlatformsFound);
+		Main.hideSplashScreen();
 	}
 
 	private void saveWindowInformations() {
 		try {
 			String homePath = System.getProperty("user.home");
 			String path = homePath + (homePath.endsWith(File.separator) ? ""
-					: File.separator + "." + Messages.get("applicationTitle").toLowerCase());
+					: File.separator + "." + Messages.get(MessageConstants.APPLICATION_TITLE).toLowerCase());
 			new File(path).mkdir();
 
 			String fullPath = path += File.separator + "window" + ".properties";
@@ -1127,7 +1117,7 @@ public class BroController implements ActionListener, GameListener, PlatformList
 
 			boolean maximized = view.getExtendedState() == Frame.MAXIMIZED_BOTH;
 			FileWriter fw = new FileWriter(file, false);
-			fw.append("# window properties output by " + Messages.get("applicationTitle") + "\r\n" + "# " + new Date()
+			fw.append("# window properties output by " + Messages.get(MessageConstants.APPLICATION_TITLE) + "\r\n" + "# " + new Date()
 					+ "\r\n\r\n");
 			fw.append(propertyKeys[0] + "=" + view.getLocation().x + "\r\n"); // x
 			fw.append(propertyKeys[1] + "=" + view.getLocation().y + "\r\n"); // y
@@ -1138,27 +1128,45 @@ public class BroController implements ActionListener, GameListener, PlatformList
 			fw.append(propertyKeys[6] + "=" + true + "\r\n"); // show_navigationpane
 			fw.append(propertyKeys[7] + "=" + view.isPreviewPaneVisible() + "\r\n"); // show_previewpane
 			fw.append(propertyKeys[8] + "=" + view.isDetailsPaneVisible() + "\r\n"); // show_detailspane
-			fw.append(propertyKeys[9] + "=" + true + "\r\n"); // navigation_item
-			fw.append(propertyKeys[10] + "=" + "all_games" + "\r\n"); // view
+			fw.append(propertyKeys[9] + "=" + true + "\r\n"); // BLANK
+			fw.append(propertyKeys[10] + "=" + view.getSelectedNavigationItem() + "\r\n"); // view
 			fw.append(propertyKeys[11] + "=" + "Playstation 2" + "\r\n"); // platform
 			fw.append(propertyKeys[12] + "=" + explorer.isConfigWizardHiddenAtStartup() + "\r\n"); // show_wizard
 			fw.append(propertyKeys[13] + "=" + view.getSplNavigationPane().getDividerLocation() + "\r\n"); // navigationpane_dividerlocation
-			fw.append(propertyKeys[14] + "=" + (view.getWidth() - view.getSplPreviewPane().getDividerLocation()) + "\r\n"); // previewpane_dividerlocation
-			fw.append(propertyKeys[15] + "=" + view.getSplGameDetailsPane().getDividerLocation() + "\r\n"); // gamedetailspane_dividerlocation
+			fw.append(propertyKeys[14] + "=" + (view.getSplPreviewPaneWidth()) + "\r\n"); // previewpane_width
+			fw.append(propertyKeys[15] + "=" + (view.getSplDetailsPaneHeight()) + "\r\n"); // gamedetailspane_height
 			fw.append(propertyKeys[16] + "=" + view.getCurrentViewPanelType() + "\r\n"); // view panel
 			fw.append(propertyKeys[17] + "=" + 0 + "\r\n"); // gamefilterpane_dividerlocation
-			fw.append(propertyKeys[18] + "=" + view.getSplGameDetailsPane().getDividerLocation() + "\r\n"); // detailspane_panel
-			fw.append(propertyKeys[19] + "=" + view.getDetailsPaneNotificationTab() + "\r\n"); // detailspane_notificationtab
-			fw.append(propertyKeys[20] + "=" + Messages.getDefault() + "\r\n"); // language
-			fw.append(propertyKeys[21] + "=" + view.isDetailsPaneUnpinned() + "\r\n"); // game details pane unpinned
-			fw.append(propertyKeys[22] + "=" + view.getColumnWidth() + "\r\n"); // column width
-			fw.append(propertyKeys[23] + "=" + view.getRowHeight() + "\r\n"); // row height
-			fw.append(propertyKeys[24] + "=" + view.getFontSize() + "\r\n"); // font size
-			fw.append(propertyKeys[25] + "=" + view.isGameFilterPanelVisible() + "\r\n"); // gamefilter visible
-			fw.append(propertyKeys[26] + "=" + view.getSortOrder() + "\r\n"); // sort order
-			fw.append(propertyKeys[27] + "=" + view.getGroupOrder() + "\r\n"); // group order
-			fw.append(propertyKeys[28] + "=" + view.getSortBy() + "\r\n"); // sort by
-			fw.append(propertyKeys[29] + "=" + view.getGroupBy() + "\r\n"); // group by
+			fw.append(propertyKeys[18] + "=" + view.getDetailsPaneNotificationTab() + "\r\n"); // detailspane_notificationtab
+			fw.append(propertyKeys[19] + "=" + Messages.getDefault().getLanguage() + "\r\n"); // language
+			fw.append(propertyKeys[20] + "=" + view.isDetailsPaneUnpinned() + "\r\n"); // game details pane unpinned
+			fw.append(propertyKeys[21] + "=" + view.getColumnWidth() + "\r\n"); // column width
+			fw.append(propertyKeys[22] + "=" + view.getRowHeight() + "\r\n"); // row height
+			fw.append(propertyKeys[23] + "=" + view.getFontSize() + "\r\n"); // font size
+			fw.append(propertyKeys[24] + "=" + view.isGameFilterPanelVisible() + "\r\n"); // gamefilter visible
+			fw.append(propertyKeys[25] + "=" + view.getSortOrder() + "\r\n"); // sort order
+			fw.append(propertyKeys[26] + "=" + view.getGroupOrder() + "\r\n"); // group order
+			fw.append(propertyKeys[27] + "=" + view.getSortBy() + "\r\n"); // sort by
+			fw.append(propertyKeys[28] + "=" + view.getGroupBy() + "\r\n"); // group by
+			Point detailsLocation = view.getLastFrameDetailsPaneLocation();
+			int lastDetailsX = -1;
+			int lastDetailsY= -1;
+			if (detailsLocation != null) {
+				lastDetailsX = detailsLocation.x;
+				lastDetailsY = detailsLocation.y;
+			}
+			fw.append(propertyKeys[29] + "=" + lastDetailsX + "\r\n"); // last frame details pane x
+			fw.append(propertyKeys[30] + "=" + lastDetailsY + "\r\n"); // last frame details pane y
+			Dimension detailsSize = view.getLastPnlDetailsPreferredSize();
+			int lastDetailsWidth = -1;
+			int lastDetailsHeight = -1;
+			if (detailsSize != null) {
+				lastDetailsWidth = (int) detailsSize.getWidth();
+				lastDetailsHeight = (int) detailsSize.getHeight();
+			}
+			fw.append(propertyKeys[31] + "=" + lastDetailsWidth + "\r\n"); // last details preferred wiidth
+			fw.append(propertyKeys[32] + "=" + lastDetailsHeight + "\r\n"); // last details preferred height
+			fw.append(propertyKeys[33] + "=" + view.getNavigationPaneState() + "\r\n"); // group by
 			fw.close();
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -1173,14 +1181,13 @@ public class BroController implements ActionListener, GameListener, PlatformList
 				int width = Integer.parseInt(properties.getProperty(propertyKeys[2]));
 				int height = Integer.parseInt(properties.getProperty(propertyKeys[3]));
 				boolean maximized = Boolean.parseBoolean(properties.getProperty(propertyKeys[4]));
-				properties.getProperty(propertyKeys[10]);
 				navigationPaneDividerLocation = Integer.parseInt(properties.getProperty(propertyKeys[13]));
-				previewPanelDividerLocation = Integer.parseInt(properties.getProperty(propertyKeys[14]));
-				gameDetailsPanelDividerLocation = Integer.parseInt(properties.getProperty(propertyKeys[15]));
+				navigationPaneState = properties.getProperty(propertyKeys[33]);
+				previewPanelWidth = Integer.parseInt(properties.getProperty(propertyKeys[14]));
+				gameDetailsPanelHeight = Integer.parseInt(properties.getProperty(propertyKeys[15]));
 				splGameFilterDividerLocation = Integer.parseInt(properties.getProperty(propertyKeys[17]));
-				detailsPanePanel = Integer.parseInt(properties.getProperty(propertyKeys[18]));
-				detailsPaneNotificationTab = Integer.parseInt(properties.getProperty(propertyKeys[19]));
-				language = properties.getProperty(propertyKeys[20]);
+				detailsPaneNotificationTab = Integer.parseInt(properties.getProperty(propertyKeys[18]));
+				language = properties.getProperty(propertyKeys[19]);
 				changeLanguage(new Locale(language));
 
 				Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(view.getGraphicsConfiguration());
@@ -1204,7 +1211,16 @@ public class BroController implements ActionListener, GameListener, PlatformList
 				if (y < 0) {
 					y = 0;
 				}
+				preferredWidthAtFirstStart = view.getWidth();
 				if (maximized) {
+					/**
+					 * setSize has been done here to set initial window size to "nice".
+					 * TODO maybe change this sometime to set size to last user defined size like it was before going to fullscreen
+					 *
+					 * - hint -
+					 * button bar button should all be visible and maximized at this point for "correct" sizing
+					 */
+					view.setSize(new Dimension(preferredWidthAtFirstStart, (int) (preferredWidthAtFirstStart / 1.25)));
 					view.setLocationRelativeTo(null);
 					// view.setSize(ScreenSizeUtil.screenSize()); // maximize
 					// frame showup fix
@@ -1216,6 +1232,8 @@ public class BroController implements ActionListener, GameListener, PlatformList
 			} catch (Exception e) {
 				throw e;
 			}
+		} else {
+			throw new IllegalArgumentException("unexpected tokens");
 		}
 	}
 
@@ -1236,7 +1254,6 @@ public class BroController implements ActionListener, GameListener, PlatformList
 				if (dlgUpdates != null) {
 					dlgUpdates.languageChanged();
 				}
-				((GameTableModel) mdlTblAllGames).languageChanged();
 				if (renameGameListener != null) {
 					renameGameListener.languageChanged();
 				}
@@ -1256,15 +1273,15 @@ public class BroController implements ActionListener, GameListener, PlatformList
 				return null;
 			}
 		}
-		if (fileType == FileTypeConstants.TXT) {
+		if (fileType == FileTypeConstants.TXT_FILE) {
 			return exportGameListToTxtFile();
-		} else if (fileType == FileTypeConstants.CSV) {
+		} else if (fileType == FileTypeConstants.CSV_FILE) {
 			return exportGameListToCsvFile();
-		} else if (fileType == FileTypeConstants.XML) {
+		} else if (fileType == FileTypeConstants.XML_FILE) {
 			return exportGameListToXmlFile();
 		} else {
-			throw new IllegalArgumentException("option must be one of " + "FileTypeConstants.TXT, "
-					+ "FileTypeConstants.CSV, " + "FileTypeConstants.XML");
+			throw new IllegalArgumentException("option must be one of " + "FileTypeConstants.TXT_FILE, "
+					+ "FileTypeConstants.CSV_FILE, " + "FileTypeConstants.XML_FILE");
 		}
 	}
 
@@ -1275,7 +1292,6 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		try {
 			fileTxt = new File("gamelist.txt");
 			fileTxt.delete();
-
 			fw = new FileWriter(fileTxt, true);
 			bw = new BufferedWriter(fw);
 			for (Game game : explorer.getGames()) {
@@ -1296,10 +1312,6 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		}
 	}
 
-	/**
-	 * @throws IOException
-	 * @throws SQLException
-	 */
 	private File exportGameListToCsvFile() throws IOException, SQLException {
 		List<String[]> allLines = new ArrayList<>();
 		for (Game g : explorer.getGames()) {
@@ -1399,43 +1411,74 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		return file;
 	}
 
-	private void fireGameRemovedEvent(Game element) {
-		for (GameListener l : gameListeners) {
-			l.gameRemoved(new BroGameRemovedEvent(element, explorer.getGameCount()));
-		}
-	}
-
 	private void runGame() {
 		if (explorer.hasCurrentGame()) {
-			try {
-				runGame1();
-			} catch (SQLException e2) {
-				// TODO Auto-generated catch block
-				e2.printStackTrace();
+			Game game = explorer.getCurrentGame();
+			if (game == null) {
+				return;
 			}
+			if (processes.containsKey(game)) {
+				boolean gameAlreadyRunning = isGameAlreadyRunning(game);
+				if (gameAlreadyRunning) {
+					int request = JOptionPane.showConfirmDialog(view, Messages.get(MessageConstants.GAME_ALREADY_RUNNING),
+							Messages.get(MessageConstants.GAME_ALREADY_RUNNING_TITLE), JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+					if (request != JOptionPane.YES_OPTION) {
+						return;
+					}
+				}
+			}
+			Platform platform = explorer.getPlatform(game.getPlatformId());
+			if (dlgSplashScreen == null) {
+				dlgSplashScreen = new SplashScreenWindow("Game has been started..");
+			}
+			dlgSplashScreen.setLocationRelativeTo(view);
+			dlgSplashScreen.setVisible(true);
+
+			SwingUtilities.invokeLater(new Runnable() {
+
+				@Override
+				public void run() {
+					try {
+						runGame1(game, platform);
+					} catch (SQLException e2) {
+						// TODO Auto-generated catch block
+						e2.printStackTrace();
+					}
+				}
+			});
 		}
 	}
 
-	private void runGame1() throws SQLException {
-		Game game = explorer.getCurrentGame();
-		if (game == null) {
-			return;
-		}
-		Platform platform = explorer.getPlatform(game.getPlatformId());
+	private void runGame1(Game game, Platform platform) throws SQLException {
 		Emulator emulator = null;
 		if (!game.hasEmulator()) {
-			if (platform.getEmulators() != null && platform.getEmulators().size() > 0) {
+			List<BroEmulator> emulators = platform.getEmulators();
+			if (platform.getEmulators() != null && emulators.size() > 0) {
 				emulator = platform.getDefaultEmulator();
 				if (emulator == null) {
-					JOptionPane.showMessageDialog(view, "Platform has no default emulator",
-							Messages.get("err_startingGame"), JOptionPane.ERROR_MESSAGE | JOptionPane.OK_OPTION);
+					boolean noInstalledEmulators = true;
+					for (BroEmulator emu : emulators) {
+						if (emu.isInstalled()) {
+							noInstalledEmulators = false;
+							break;
+						}
+					}
+					if (noInstalledEmulators) {
+						JOptionPane.showMessageDialog(view,
+								"Für dieses Spiel sind keine Emulatoren verfügbar.\n\n"
+										+ "<html><a href=''>Hier klicken</a> um geeignete Emulatoren für dieses Spiel zu finden.</html>",
+										Messages.get(MessageConstants.ERR_STARTING_GAME), JOptionPane.ERROR_MESSAGE | JOptionPane.OK_OPTION);
+					} else {
+						JOptionPane.showMessageDialog(view, "Platform has no default emulator",
+								Messages.get(MessageConstants.ERR_STARTING_GAME), JOptionPane.ERROR_MESSAGE | JOptionPane.OK_OPTION);
+					}
 					return;
 				}
 			} else {
 				JOptionPane.showMessageDialog(view,
 						"Für dieses Spiel sind keine Emulatoren verfügbar.\n\n"
 								+ "<html><a href=''>Hier klicken</a> um geeignete Emulatoren für dieses Spiel zu finden.</html>",
-								Messages.get("err_startingGame"), JOptionPane.ERROR_MESSAGE | JOptionPane.OK_OPTION);
+								Messages.get(MessageConstants.ERR_STARTING_GAME), JOptionPane.ERROR_MESSAGE | JOptionPane.OK_OPTION);
 				return;
 			}
 		} else {
@@ -1444,31 +1487,33 @@ public class BroController implements ActionListener, GameListener, PlatformList
 			if (emulator == null) {
 				JOptionPane.showMessageDialog(view,
 						"There is something wrong with the emulator associated with this game.",
-						Messages.get("err_startingGame"), JOptionPane.ERROR_MESSAGE | JOptionPane.OK_OPTION);
+						Messages.get(MessageConstants.ERR_STARTING_GAME), JOptionPane.ERROR_MESSAGE | JOptionPane.OK_OPTION);
 				return;
 			}
 		}
-
 		String gamePath2 = game.getPath();
 		String emulatorPath = emulator.getPath();
 		if (ValidationUtil.isWindows()) {
 			emulatorPath = emulatorPath.replace("%windir%", System.getenv("WINDIR"));
 		}
+		String emulatorStartParameters = emulator.getStartParameters();
+
 		File emulatorFile = new File(emulatorPath);
-		if (!doGame(gamePath2) || !doEmulator(emulatorFile)) {
+		if (!checkGameFile(gamePath2) || !checkEmulatorFile(emulatorFile)) {
+			dlgSplashScreen.dispose();
 			return;
 		}
-		int confirmRun = JOptionPane.showConfirmDialog(view,
-				"If you have never started a game of that platform before, maybe the controller input settings are missing.\n\n"
-						+ "Do yo want to run the game anyway?",
-						"title", JOptionPane.WARNING_MESSAGE);
-		if (confirmRun != JOptionPane.YES_OPTION) {
-			return;
-		}
-		String[] startParameters = (emulator.getStartParameters()).split(" ");
+		//		int confirmRun = JOptionPane.showConfirmDialog(view,
+		//				"If you have never started a game of that platform before, maybe the controller input settings are missing.\n\n"
+		//						+ "Do yo want to run the game anyway?",
+		//						"title", JOptionPane.WARNING_MESSAGE);
+		//		if (confirmRun != JOptionPane.YES_OPTION) {
+		//			return;
+		//		}
+		String[] startParameters = (emulatorStartParameters).split(" ");
 		List<String> startParametersList = new ArrayList<>();
 
-		if (emulator.getPath().endsWith(".exe")) {
+		if (emulatorPath.endsWith(".exe")) {
 			if (ValidationUtil.isWindows()) {
 				// String parentFile = emulatorFile.getParent();
 				// String emuFilename = emulatorFile.getName();
@@ -1481,16 +1526,28 @@ public class BroController implements ActionListener, GameListener, PlatformList
 			}
 		}
 
-		String emuPath = emulator.getPath();
 		String parentFile = emulatorFile.getParent();
 		// String emuFilename = emulatorFile.getName();
 		String gamePath = game.getPath();
+		String gamePathToLower = gamePath.toLowerCase();
+		if (gamePathToLower.endsWith(".exe")
+				|| gamePathToLower.endsWith(".bat")
+				|| gamePathToLower.endsWith(".cmd")
+				|| gamePathToLower.endsWith(".js")) {
+			try {
+				String damnu = gamePath;
+				Runtime.getRuntime().exec("\""+damnu+"\"", null, new File(gamePath).getParentFile());
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 		startParametersList.add("cd");
 		startParametersList.add("/d");
 		startParametersList.add("\"" + parentFile + "\"");
 		startParametersList.add("&&");
-		if (emuPath.toLowerCase().contains("project64 2.")) {
-			startParametersList.add("\"" + emuPath + "\"");
+		if (emulatorPath.toLowerCase().contains("project64 2.")) {
+			startParametersList.add("\"" + emulatorPath + "\"");
 			startParametersList.add("\"" + gamePath + "\"");
 		} else {
 			for (int i = 0; i < startParameters.length; i++) {
@@ -1503,8 +1560,8 @@ public class BroController implements ActionListener, GameListener, PlatformList
 					String[] fileNameWithoutExtension = gamePath.split(getSeparatorBackslashed());
 					String last = FilenameUtils
 							.removeExtension(fileNameWithoutExtension[fileNameWithoutExtension.length - 1]);
-					String pathFinal = startParameters[i].replace("%emupath%", "\"" + emuPath + "\"")
-							.replace("%emudir%", "\"" + Paths.get(emuPath).getParent().toString() + "\"")
+					String pathFinal = startParameters[i].replace("%emupath%", "\"" + emulatorPath + "\"")
+							.replace("%emudir%", "\"" + Paths.get(emulatorPath).getParent().toString() + "\"")
 							.replace("%emufilename%", emulatorFile.getName().toString())
 							.replace("%gamepath%", "\"" + gamePath + "\"")
 							.replace("%gamedir%", "\"" + gameFolder + "\"")
@@ -1518,6 +1575,7 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		}
 
 		try {
+			dlgSplashScreen.showSuccess("Everything ok. Game starts now..");
 			frameEmulationOverlay = new EmulationOverlayFrame(game, platform);
 			frameEmulationOverlay.addShowApplicationListener(new ActionListener() {
 
@@ -1530,6 +1588,7 @@ public class BroController implements ActionListener, GameListener, PlatformList
 			view.setState(Frame.ICONIFIED);
 			frameEmulationOverlay.setLocation(ScreenSizeUtil.getWidth() - frameEmulationOverlay.getWidth(), 0);
 			frameEmulationOverlay.setVisible(true);
+			dlgSplashScreen.dispose();
 			runGame2(game, startParametersList);
 		} catch (IOException e) {
 			SwingUtilities.invokeLater(new Runnable() {
@@ -1541,20 +1600,33 @@ public class BroController implements ActionListener, GameListener, PlatformList
 					view.toFront();
 					view.repaint();
 					JOptionPane op = new GameOptionsPane();
-					op.setMessage(Messages.get("err_startingGameConfigError") + e.getMessage());
+					op.setMessage(Messages.get(MessageConstants.ERR_STARTING_GAME_CONFIG_ERROR) + e.getMessage());
 					op.setMessageType(JOptionPane.ERROR_MESSAGE | JOptionPane.OK_OPTION);
-					JDialog dlg = op.createDialog(view, Messages.get("err_startingGame"));
+					JDialog dlg = op.createDialog(view, Messages.get(MessageConstants.ERR_STARTING_GAME));
 					dlg.setVisible(true);
 				}
 			});
 		}
 	}
 
-	private boolean doEmulator(File emulatorFile) {
+	private boolean isGameAlreadyRunning(Game game) {
+		Map<Process, Integer> lb = processes.get(game);
+		for (Entry<Process, Integer> entry2 : lb.entrySet()) {
+			Process pc = entry2.getKey();
+			Integer pId = entry2.getValue();
+			if (pc.isAlive()) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private boolean checkEmulatorFile(File emulatorFile) {
 		if (!emulatorFile.exists()) {
 			String emulatorPath = emulatorFile.getPath();
 			if (emulatorPath == null || emulatorPath.trim().isEmpty()) {
-				JOptionPane.showMessageDialog(view, Messages.get("emulatorNoPath"), Messages.get("err_startingGame"),
+				dlgSplashScreen.dispose();
+				JOptionPane.showMessageDialog(view, Messages.get(MessageConstants.EMULATOR_NO_PATH), Messages.get(MessageConstants.ERR_STARTING_GAME),
 						JOptionPane.ERROR_MESSAGE | JOptionPane.OK_OPTION);
 				return false;
 			}
@@ -1567,37 +1639,49 @@ public class BroController implements ActionListener, GameListener, PlatformList
 					}
 				}
 				if (rootNotAvailable) {
-					JOptionPane.showMessageDialog(view, Messages.get("emulatorNotFound2"),
-							Messages.get("err_startingGame"), JOptionPane.ERROR_MESSAGE | JOptionPane.OK_OPTION);
+					dlgSplashScreen.dispose();
+					JOptionPane.showMessageDialog(view, Messages.get(MessageConstants.EMULATOR_NOT_FOUND) + "\n" + Messages.get(MessageConstants.EMULATOR_NOT_FOUND_POST_FIX),
+							Messages.get(MessageConstants.ERR_STARTING_GAME), JOptionPane.ERROR_MESSAGE | JOptionPane.OK_OPTION);
 					return false;
 				}
 			}
-			JOptionPane.showMessageDialog(view, Messages.get("emulatorNotFound"), Messages.get("err_startingGame"),
+			dlgSplashScreen.dispose();
+			JOptionPane.showMessageDialog(view, Messages.get(MessageConstants.EMULATOR_NOT_FOUND), Messages.get(MessageConstants.ERR_STARTING_GAME),
 					JOptionPane.ERROR_MESSAGE | JOptionPane.OK_OPTION);
 			return false;
 		}
 		return true;
 	}
 
-	private boolean doGame(String gamePath) {
+	private boolean checkGameFile(String gamePath) {
 		File gameFile = new File(gamePath);
 		if (!gameFile.exists()) {
 			if (ValidationUtil.isWindows()) {
 				for (File f : File.listRoots()) {
 					String root = f.getAbsolutePath().toLowerCase();
 					if (gamePath.toLowerCase().startsWith(root)) {
-						JOptionPane.showMessageDialog(view, Messages.get("gameNotFound"),
-								Messages.get("err_startingGame"), JOptionPane.ERROR_MESSAGE | JOptionPane.OK_OPTION);
+						dlgSplashScreen.dispose();
+						JOptionPane.showMessageDialog(view, Messages.get(MessageConstants.GAME_NOT_FOUND),
+								MessageConstants.ERR_STARTING_GAME, JOptionPane.ERROR_MESSAGE | JOptionPane.OK_OPTION);
 						return false;
 					}
 				}
-				JOptionPane.showMessageDialog(view,
-						"Laufwerk " + gameFile.getAbsolutePath().substring(0, 2) + " ist nicht eingebunden oder der Laufwerksbuchstabe hat sich geändert.\n\n"
-								+ "Verbinde das entsprechende Medium wieder mit dem Computer, oder lege einen\nneuen Laufwerksbuchstaben fest.",
-								Messages.get("err_startingGame"), JOptionPane.ERROR_MESSAGE | JOptionPane.OK_OPTION);
+				String unmountedDriveLetter = gameFile.getAbsolutePath().substring(0, 2);
+				if (unmountedDriveLetter.equals("\\\\")) {
+					dlgSplashScreen.dispose();
+					JOptionPane.showMessageDialog(view,
+							"cannot access network share",
+							MessageConstants.ERR_STARTING_GAME, JOptionPane.ERROR_MESSAGE | JOptionPane.OK_OPTION);
+				} else {
+					dlgSplashScreen.dispose();
+					JOptionPane.showMessageDialog(view,
+							Messages.get(MessageConstants.DRIVE_NOT_MOUNTED, unmountedDriveLetter),
+							MessageConstants.ERR_STARTING_GAME, JOptionPane.ERROR_MESSAGE | JOptionPane.OK_OPTION);
+				}
 				return false;
 			} else {
-				JOptionPane.showMessageDialog(view, Messages.get("gameNotFound2"), Messages.get("err_startingGame"),
+				dlgSplashScreen.dispose();
+				JOptionPane.showMessageDialog(view, MessageConstants.GAME_NOT_FOUND + "\n" + Messages.get(MessageConstants.GAME_NOT_FOUND_POST_FIX), MessageConstants.ERR_STARTING_GAME,
 						JOptionPane.ERROR_MESSAGE | JOptionPane.OK_OPTION);
 				return false;
 			}
@@ -1616,14 +1700,12 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		ProcessBuilder builder = new ProcessBuilder(startParametersList);
 		Process p = builder.start();
 		frameEmulationOverlay.setProcess(p);
-		processes.add(p);
 		if (p != null) {
 			TimerTask taskRunGame = new TimerTask() {
 
 				@Override
 				public void run() {
-					if (!p.isAlive()) { // TODO Process.isAlive() is part of jdk
-						// 8
+					if (!p.isAlive()) {
 						p.destroy();
 						int exitValue = p.exitValue();
 						SwingUtilities.invokeLater(new Runnable() {
@@ -1662,7 +1744,6 @@ public class BroController implements ActionListener, GameListener, PlatformList
 			game.setPlayCount(game.getPlayCount() + 1);
 			game.setLastPlayed(new Date());
 			view.updatePlayCountForCurrentGame();
-			mdlLstRecentlyPlayed.addElement(game);
 
 			try {
 				explorerDAO.updatePlayCount(game);
@@ -1671,15 +1752,19 @@ public class BroController implements ActionListener, GameListener, PlatformList
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+			List<Integer> pidsNew = getTaskList(taskName);
+			if (pidsNew.size() > 0) {
+				Integer newPID = pidsNew.get(pidsNew.size()-1);
 
-			checkNewPid(taskName);
-		}
-	}
-
-	private void checkNewPid(String taskName) throws IOException {
-		List<Integer> pidsNew = getTaskList(taskName);
-		if (pidsNew.size() > 0) {
-			frameEmulationOverlay.setPID(pidsNew.get(0));
+				if (processes.containsKey(game)) {
+					processes.get(game).put(p, newPID);
+				} else {
+					Map<Process, Integer> pMap = new HashMap<>();
+					pMap.put(p, newPID);
+					processes.put(game, pMap);
+				}
+				frameEmulationOverlay.setPID(newPID);
+			}
 		}
 	}
 
@@ -1759,18 +1844,12 @@ public class BroController implements ActionListener, GameListener, PlatformList
 
 	private void openGamePropertiesFrame() {
 		Game game = explorer.getCurrentGame();
-		GamePropertiesDialog dlgGameProperties = null;
-		if (!activeGamePropertiesDialogs.containsKey(game.getId())) {
+		if (game != null) {
+			GamePropertiesDialog dlgGameProperties = null;
 			dlgGameProperties = new GamePropertiesDialog(explorer);
 			dlgGameProperties.setLocationRelativeTo(view);
-			activeGamePropertiesDialogs.put(game.getId(), dlgGameProperties);
-		} else {
-			dlgGameProperties = activeGamePropertiesDialogs.get(game.getId());
-			if (!dlgGameProperties.isVisible()) {
-				dlgGameProperties.setLocationRelativeTo(view);
-			}
+			dlgGameProperties.setVisible(true);
 		}
-		dlgGameProperties.setVisible(true);
 	}
 
 	private void increaseFontSize() {
@@ -1789,8 +1868,8 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		// + "You can manually start the search process at any time");
 		// }
 		if (workerBrowseComputer != null && !workerBrowseComputer.isDone()) {
-			String msg = Messages.get("exitRequestSearchInProgress");
-			String title = Messages.get("exitRequest");
+			String msg = Messages.get(MessageConstants.EXIT_REQUEST_SEARCH_IN_PROGRESS);
+			String title = Messages.get(MessageConstants.EXIT_REQUEST);
 			int request = JOptionPane.showConfirmDialog(view, msg, title, JOptionPane.YES_NO_OPTION);
 			if (request == JOptionPane.YES_OPTION) {
 				try {
@@ -1850,11 +1929,32 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		// }
 		saveWindowInformations();
 		view.setVisible(false);
-		for (Process pc : processes) {
-			if (pc.isAlive()) {
-				JOptionPane.showConfirmDialog(view, "Do you want to also close the currently running games?", "",
-						JOptionPane.YES_NO_CANCEL_OPTION);
-				break;
+		for (Entry<Game, Map<Process, Integer>> entry : processes.entrySet()) {
+			Map<Process, Integer> pc2 = entry.getValue();
+			for (Entry<Process, Integer> entry2 : pc2.entrySet()) {
+				Process pc = entry2.getKey();
+				Integer pId = entry2.getValue();
+				if (pc.isAlive()) {
+					int request = JOptionPane.showConfirmDialog(view, "Do you want to also close the currently running games?", "",
+							JOptionPane.YES_NO_CANCEL_OPTION);
+					if (request == JOptionPane.OK_OPTION) {
+						if (ValidationUtil.isWindows()) {
+							try {
+								Runtime.getRuntime().exec("cmd.exe /c taskkill -IM " + pId);
+							} catch (IOException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}
+						} else if (ValidationUtil.isUnix()) {
+							try {
+								Runtime.getRuntime().exec("kill " + pId);
+							} catch (IOException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}
+						}
+					}
+				}
 			}
 		}
 		// boolean b = false;
@@ -2043,6 +2143,8 @@ public class BroController implements ActionListener, GameListener, PlatformList
 	}
 
 	class GameDragDropListener implements DropTargetListener {
+		private Platform lastSelectedPlatformFromAddGameChooser;
+
 		@Override
 		public void drop(DropTargetDropEvent event) {
 			event.acceptDrop(DnDConstants.ACTION_MOVE);
@@ -2053,6 +2155,15 @@ public class BroController implements ActionListener, GameListener, PlatformList
 					if (flavor.isFlavorJavaFileListType()) {
 						@SuppressWarnings("unchecked")
 						List<File> files = (List<File>) transferable.getTransferData(flavor);
+						if (files.size() > 1) {
+							//							String message = "You are about to drop " + files.size() + " files.\n"
+							//									+ "Do you want to";
+							//							String title = "Add multiple files";
+							//							int result = JOptionPane.showConfirmDialog(view, message, title, JOptionPane.YES_NO_OPTION);
+							//							if (result == JOptionPane.YES_OPTION) {
+							//								askUserBeforeAddGame = false;
+							//							}
+						}
 						for (File file : files) {
 							if (file.isDirectory()) {
 								File[] subFolderFiles = file.listFiles();
@@ -2083,8 +2194,8 @@ public class BroController implements ActionListener, GameListener, PlatformList
 
 		private void checkAddGame(File file) throws ZipException, SQLException, RarException, IOException {
 			if (explorer.hasGame(file.getAbsolutePath())) {
-				if (view.getGameListModel() == mdlLstFavorites) {
-					Game game = explorer.getGame(file.getAbsolutePath());
+				Game game = explorer.getGame(file.getAbsolutePath());
+				if (view.isFilterFavoriteActive()) {
 					if (!game.isFavorite()) {
 						game.setRate(RatingBarPanel.MAXIMUM_RATE);
 						rateGame(game);
@@ -2100,6 +2211,7 @@ public class BroController implements ActionListener, GameListener, PlatformList
 					String title = "Game already exists";
 					JOptionPane.showMessageDialog(view, message, title, JOptionPane.INFORMATION_MESSAGE);
 				}
+				view.getViewManager().selectGame(game.getId());
 				return;
 			}
 			Platform p0 = isGameOrEmulator(file.getAbsolutePath(), true);
@@ -2116,17 +2228,35 @@ public class BroController implements ActionListener, GameListener, PlatformList
 					}
 				}
 				if (doAddGame) {
-					String message = "<html><h3>Platform " + p0.getName() + " detected.</h3>" + file.getAbsolutePath()
-					+ "<br><br>" + "Do you want to add this game now?<br><br>"
-					+ "<a href=''>False platform detection</a></html>";
-					String title = "Platform detected";
-					int result = JOptionPane.showConfirmDialog(view, message, title, JOptionPane.YES_NO_OPTION);
-					if (result == JOptionPane.YES_OPTION) {
-						addGame(p0, file);
+					//					if (askBeforeAddGame) {
+					//						String message = "<html><h3>Platform " + p0.getName() + " detected.</h3>" + file.getAbsolutePath()
+					//						+ "<br><br>" + "Do you want to add this game now?<br><br>"
+					//						+ "<a href=''>False platform detection</a></html>";
+					//						String title = "Platform detected";
+					//
+					//						JCheckBox chkDontAsk = new JCheckBox("Add further games without asking me");
+					//						Object[] objectArr = { message, " ", chkDontAsk };
+					//						int result = JOptionPane.showConfirmDialog(view, objectArr, title, JOptionPane.YES_NO_OPTION);
+					//						if (result == JOptionPane.YES_OPTION) {
+					//							askBeforeAddGame = !chkDontAsk.isSelected();
+					//							try {
+					//								addGame(p0, file);
+					//							} catch (BroGameDeletedException e) {
+					//								JOptionPane.showConfirmDialog(view, Messages.get("gameDeleted"),
+					//										Messages.get("gameDeletedTitle"), JOptionPane.YES_NO_OPTION);
+					//							}
+					//						}
+					//					} else {
+					try {
+						addGame(p0, file, true);
+					} catch (BroGameDeletedException e) {
+						JOptionPane.showConfirmDialog(view, Messages.get(MessageConstants.GAME_DELETED),
+								Messages.get(MessageConstants.GAME_DELETED_TITLE), JOptionPane.YES_NO_OPTION);
 					}
+					//					}
 				}
 			} else {
-				String filePath = file.getAbsolutePath().toLowerCase();
+				String filePath = file.getAbsolutePath();
 				if (file.getAbsolutePath().toLowerCase().endsWith(".zip")) {
 					String message = "<html><h3>This is a ZIP-Compressed archive.</h3>" + file.getAbsolutePath()
 					+ "<br><br>" + "Do you want to auto detect the platform for the containing game?<br><br>"
@@ -2137,7 +2267,28 @@ public class BroController implements ActionListener, GameListener, PlatformList
 						String b = zipFileContainsGame(file.getAbsolutePath(), explorer.getExtensions());
 						if (b != null && !b.isEmpty()) {
 							Platform p = isGameInArchive(b, true);
-							addGame(p, file);
+							try {
+								addGame(p, file);
+							} catch (BroGameDeletedException e) {
+								JOptionPane.showConfirmDialog(view, "deleted");
+							}
+						}
+					} else if (result == JOptionPane.NO_OPTION) {
+						message = "<html><h3>This is a ZIP-Compressed archive.</h3>"
+								+ "Different platforms may use this file.<br><br>"
+								+ "Select a platform from the list below to categorize the game.</html>";
+						Platform[] objectsArr = getObjectsForPlatformChooserDialog(filePath);
+						Platform defaultt = getDefaultPlatformFromChooser(filePath, objectsArr);
+						Platform selected = (Platform) JOptionPane.showInputDialog(view, message, title,
+								JOptionPane.WARNING_MESSAGE, null, objectsArr, defaultt);
+						lastSelectedPlatformFromAddGameChooser = selected;
+						Platform p2 = addOrGetPlatform(selected);
+						if (p2 != null) {
+							try {
+								addGame(p2, file);
+							} catch (BroGameDeletedException e) {
+								JOptionPane.showConfirmDialog(view, "deleted");
+							}
 						}
 					}
 				} else if (file.getAbsolutePath().toLowerCase().endsWith(".rar")) {
@@ -2150,38 +2301,101 @@ public class BroController implements ActionListener, GameListener, PlatformList
 						String b = rarFileContainsGame(file.getAbsolutePath(), explorer.getExtensions());
 						if (b != null && !b.isEmpty()) {
 							Platform p = isGameInArchive(b, true);
-							addGame(p, file);
+							try {
+								addGame(p, file);
+							} catch (BroGameDeletedException e) {
+								JOptionPane.showConfirmDialog(view, "deleted");
+							}
 						} else {
 							String message1 = "Platform was not detected.";
 							String title1 = "Platform not detected";
 							JOptionPane.showMessageDialog(view, message1, title1, JOptionPane.WARNING_MESSAGE);
 						}
 					}
-				} else if (filePath.endsWith(".iso") || filePath.endsWith(".bin") || filePath.endsWith(".img")) {
+				} else if (filePath.toLowerCase().endsWith(".iso") || filePath.toLowerCase().endsWith(".cso")
+						|| filePath.toLowerCase().endsWith(".bin") || filePath.toLowerCase().endsWith(".img")) {
 					String message = "<html><h3>This is an image file.</h3>"
 							+ "Different platforms may use this file.<br><br>"
 							+ "Select a platform from the list below to categorize the game.</html>";
 					String title = "Disc image";
-					List<Platform> objects = new ArrayList<>();
-					for (Platform p : getPlatformMatches(FilenameUtils.getExtension(filePath))) {
-						objects.add(p);
-					}
-					Platform[] objectsArr = objects.toArray(new Platform[objects.size()]);
-					Platform defaultt = objectsArr != null && objectsArr.length > 0 ? objectsArr[0] : null;
+					Platform[] objectsArr = getObjectsForPlatformChooserDialog(filePath);
+					Platform defaultt = getDefaultPlatformFromChooser(filePath, objectsArr);
 					Platform selected = (Platform) JOptionPane.showInputDialog(view, message, title,
 							JOptionPane.WARNING_MESSAGE, null, objectsArr, defaultt);
-					addPlatform(selected, file);
+					lastSelectedPlatformFromAddGameChooser = selected;
+					Platform p2 = addOrGetPlatform(selected);
+					if (p2 != null) {
+						try {
+							addGame(p2, file);
+						} catch (BroGameDeletedException e) {
+							JOptionPane.showConfirmDialog(view, "deleted");
+						}
+					}
 				} else if (file.getAbsolutePath().toLowerCase().endsWith(".cue")) {
 					String message = "This is an addition file to an image file. Different platforms may use this file.\n\n"
 							+ "Select a platform from the list below to categorize the game.";
 					String title = "Disc image";
-					JOptionPane.showMessageDialog(view, message, title, JOptionPane.WARNING_MESSAGE);
+					Platform[] objectsArr = getObjectsForPlatformChooserDialog(filePath);
+					Platform defaultt = getDefaultPlatformFromChooser(filePath, objectsArr);
+					Platform selected = (Platform) JOptionPane.showInputDialog(view, message, title,
+							JOptionPane.WARNING_MESSAGE, null, objectsArr, defaultt);
+					lastSelectedPlatformFromAddGameChooser = selected;
+					Platform p2 = addOrGetPlatform(selected);
+					if (p2 != null) {
+						try {
+							addGame(p2, file);
+						} catch (BroGameDeletedException e) {
+							JOptionPane.showConfirmDialog(view, "deleted");
+						}
+					}
 				} else {
 					String message = "Platform was not detected.";
 					String title = "Platform not detected";
 					JOptionPane.showMessageDialog(view, message, title, JOptionPane.WARNING_MESSAGE);
 				}
 			}
+		}
+
+		private Platform getDefaultPlatformFromChooser(String filePath, Platform[] objectsArr) {
+			Platform defaultt = null;
+			List<Platform> matchedPlatforms = explorer.getPlatformsFromCommonDirectory(filePath);
+			if (!matchedPlatforms.isEmpty()) {
+				for (Platform mp : matchedPlatforms) {
+					for (Platform p : objectsArr) {
+						if (p.getName().equals(mp.getName())) {
+							if (matchedPlatforms.size() > 1) {
+								for (Platform p9 : matchedPlatforms) {
+									if (lastSelectedPlatformFromAddGameChooser == null) {
+										defaultt = matchedPlatforms.get(0);
+										break;
+									}
+									if (p9.getName().equals(lastSelectedPlatformFromAddGameChooser.getName())) {
+										defaultt = lastSelectedPlatformFromAddGameChooser;
+										break;
+									}
+								}
+							} else {
+								defaultt = p;
+							}
+							if (defaultt != null) {
+								break;
+							}
+						}
+					}
+					if (defaultt != null) {
+						break;
+					}
+				}
+			}
+			return defaultt;
+		}
+
+		private Platform[] getObjectsForPlatformChooserDialog(String filePath) {
+			List<Platform> objects = new ArrayList<>();
+			for (Platform p : getPlatformMatches(FilenameUtils.getExtension(filePath.toLowerCase()))) {
+				objects.add(p);
+			}
+			return objects.toArray(new Platform[objects.size()]);
 		}
 
 		private List<Platform> getPlatformMatches(String extension) {
@@ -2341,7 +2555,7 @@ public class BroController implements ActionListener, GameListener, PlatformList
 				if (files.size() > 75) {
 					int request = JOptionPane.showConfirmDialog(view,
 							"Wow you have a lot of picture files in there.\r\n" + "Elements: " + files.size() + "\r\n\r\n"
-									+ "Are you sure you want to display them all?",
+									+ "Are you sure you want to add them all?",
 									"Confirm", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 					if (request != JOptionPane.YES_OPTION) {
 						return -1;
@@ -2405,7 +2619,7 @@ public class BroController implements ActionListener, GameListener, PlatformList
 			Game currentGame = explorer.getCurrentGame();
 			sortGameList(ViewConstants.SORT_ASCENDING);
 			if (currentGame != null) {
-				view.selectGame(currentGame.getId());
+				//				view.selectGameNoListeners(currentGame.getId());
 			}
 		}
 	}
@@ -2414,11 +2628,7 @@ public class BroController implements ActionListener, GameListener, PlatformList
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			Game currentGame = explorer.getCurrentGame();
 			sortGameList(ViewConstants.SORT_DESCENDING);
-			if (currentGame != null) {
-				view.selectGame(currentGame.getId());
-			}
 		}
 	}
 
@@ -2426,11 +2636,7 @@ public class BroController implements ActionListener, GameListener, PlatformList
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			Game currentGame = explorer.getCurrentGame();
-			sortBy(ViewConstants.SORT_BY_TITLE);
-			if (currentGame != null) {
-				view.selectGame(currentGame.getId());
-			}
+			sortBy(ViewConstants.SORT_BY_TITLE, null);
 		}
 	}
 
@@ -2438,11 +2644,7 @@ public class BroController implements ActionListener, GameListener, PlatformList
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			Game currentGame = explorer.getCurrentGame();
-			sortBy(ViewConstants.SORT_BY_PLATFORM);
-			if (currentGame != null) {
-				view.selectGame(currentGame.getId());
-			}
+			sortBy(ViewConstants.SORT_BY_PLATFORM, (PlatformComparator) platformComparator);
 		}
 	}
 
@@ -2462,64 +2664,19 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		}
 	}
 
+	public class GroupByTitleListener implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			groupBy(ViewConstants.GROUP_BY_TITLE);
+		}
+	}
+
 	public class GameFilterListener implements FilterListener {
 
 		@Override
 		public void filterSet(FilterEvent e) {
-			Criteria criteria = e.getCriteria();
-			if (!criteria.getText().isEmpty()) {
-				Filter<Game> filter = new GameFilter();
-				mdlLstFilteredGames.removeAllElements();
-				view.updateGameCount(mdlLstAllGames.getSize());
-				int counter = 0;
-				List<Game> test = new ArrayList<>();
-				for (Game g : mdlLstAllGames.getAllElements()) {
-					if (filter.match(criteria, g)) {
-						test.add(g);
-						counter++;
-					}
-				}
-				mdlLstFilteredGames.addElements(test);
-
-				final int counterFinal = counter;
-				SwingUtilities.invokeLater(new Runnable() {
-
-					/*
-					 * This invokeLater has been done cause of a known java bug
-					 * "AWT-EventQueue-0"
-					 * java.lang.ArrayIndexOutOfBoundsException when calling
-					 * setModel()
-					 */
-					@Override
-					public void run() {
-						view.setGameTableModel(mdlTblGamesFiltered);
-						// view.setGameCoversModel(mdlCoversFiltered);
-						view.setGameListModel(mdlLstFilteredGames, true);
-						view.updateGameCount(mdlLstFilteredGames.getSize());
-
-						view.setGameTableModel(mdlTblGamesFiltered);
-						// view.setGameCoversModel(mdlCoversFiltered);
-						view.filterSet(e, counterFinal);
-					}
-				});
-			} else {
-				new NullFilter();
-				mdlLstFilteredGames.clear();
-				SwingUtilities.invokeLater(new Runnable() {
-					/*
-					 * This invokeLater has been done cause of a known java bug
-					 * "AWT-EventQueue-0"
-					 * java.lang.ArrayIndexOutOfBoundsException when calling
-					 * setModel()
-					 */
-					@Override
-					public void run() {
-						view.setGameListModel(mdlLstAllGames);
-						view.updateGameCount(mdlLstAllGames.getSize());
-						view.filterSet(e, -1);
-					}
-				});
-			}
+			view.filterSet(e);
 		}
 	}
 
@@ -2527,67 +2684,7 @@ public class BroController implements ActionListener, GameListener, PlatformList
 
 		@Override
 		public void filterSet(FilterEvent e) {
-			Criteria criteria = e.getCriteria();
-			if (!criteria.getText().isEmpty()) {
-				Filter<Platform> filter = new PlatformFilter();
-				mdlLstFilteredGames.removeAllElements();
-				view.updateGameCount(mdlLstAllGames.getSize());
-				int counter = 0;
-				List<Game> test = new ArrayList<>();
-				for (Game g : mdlLstAllGames.getAllElements()) {
-					if (filter.match(criteria, explorer.getPlatform(g.getPlatformId()))) {
-						test.add(g);
-						counter++;
-					}
-				}
-				mdlLstFilteredGames.addElements(test);
-
-				final int counterFinal = counter;
-				SwingUtilities.invokeLater(new Runnable() {
-
-					/*
-					 * This invokeLater has been done cause of a known java bug
-					 * "AWT-EventQueue-0"
-					 * java.lang.ArrayIndexOutOfBoundsException when calling
-					 * setModel()
-					 */
-					@Override
-					public void run() {
-						view.setGameTableModel(mdlTblGamesFiltered);
-						// view.setGameCoversModel(mdlCoversFiltered);
-						view.setGameListModel(mdlLstFilteredGames, true);
-						view.updateGameCount(mdlLstFilteredGames.getSize());
-
-						view.setGameTableModel(mdlTblGamesFiltered);
-						// view.setGameCoversModel(mdlCoversFiltered);
-						view.filterSet(e, counterFinal);
-					}
-				});
-			} else {
-				new NullFilter();
-				mdlLstFilteredGames.clear();
-				SwingUtilities.invokeLater(new Runnable() {
-					/*
-					 * This invokeLater has been done cause of a known java bug
-					 * "AWT-EventQueue-0"
-					 * java.lang.ArrayIndexOutOfBoundsException when calling
-					 * setModel()
-					 */
-					@Override
-					public void run() {
-						view.setGameListModel(mdlLstAllGames);
-						view.updateGameCount(mdlLstAllGames.getSize());
-						view.filterSet(e, -1);
-					}
-				});
-			}
-
-			// List<Game> games;
-			// FilterEvent event = new FilterEvent(filter,
-			// games, new Criteria(txtSearchGame.getText()));
-			// fireEvent(event);
-			// adjustBackgroundColor(filter);
-
+			view.filterSet(e);
 		}
 	}
 
@@ -2601,10 +2698,11 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		public void mouseClicked(MouseEvent e) {
 			// lastSelectedIndex = lstGames.getSelectedIndex();
 
+			boolean rightMouseButton = (e.getModifiers() & InputEvent.BUTTON3_MASK) == InputEvent.BUTTON3_MASK;
 			if (e.getSource() instanceof JList) {
 				@SuppressWarnings("unchecked")
 				JList<Game> lstGames = (JList<Game>) e.getSource();
-				if (e.getClickCount() == 2) {
+				if (!rightMouseButton && e.getClickCount() == 2) {
 					if (e.getModifiersEx() == InputEvent.ALT_DOWN_MASK) {
 						openGamePropertiesFrame();
 						return;
@@ -2615,7 +2713,7 @@ public class BroController implements ActionListener, GameListener, PlatformList
 			}
 			if (e.getSource() instanceof JTable) {
 				e.getSource();
-				if (e.getClickCount() == 2) {
+				if (!rightMouseButton && e.getClickCount() == 2) {
 					if (e.getModifiersEx() == InputEvent.ALT_DOWN_MASK) {
 						openGamePropertiesFrame();
 						return;
@@ -2625,7 +2723,7 @@ public class BroController implements ActionListener, GameListener, PlatformList
 				}
 			}
 			if (e.getSource() instanceof JToggleButton) {
-				if (e.getClickCount() == 2) {
+				if (!rightMouseButton && e.getClickCount() == 2) {
 					if (e.getModifiersEx() == InputEvent.ALT_DOWN_MASK) {
 						openGamePropertiesFrame();
 						return;
@@ -2745,6 +2843,14 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		}
 	}
 
+	class ConfigureEmulatorListener implements ActionListener {
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			showPropertiesFrame(explorer.getCurrentGame());
+			System.err.println("open properties for current game: "+explorer.getCurrentGame());
+		}
+	}
+
 	class CoverFromComputerListener implements ActionListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
@@ -2755,16 +2861,14 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			Game currentGame = explorer.getCurrentGame();
+			String gameName = currentGame.getName();
 			Platform platform = explorer.getPlatform(currentGame.getPlatformId());
-			String platformName = platform.getName();
-			String searchString = currentGame.getName() + " " + platformName + " cover";
-			String url = "https://www.google.ch/search?q="+searchString.replace(" ", "+")+"&tbm=isch";
-			try {
-				Desktop.getDesktop().browse(new URI(url));
-			} catch (IOException | URISyntaxException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
+			String platformShortName = platform.getShortName();
+			String defPlatformName = (platformShortName != null && !platformShortName.trim().isEmpty())
+					? platformShortName : platform.getName();
+			String searchString = gameName + " " + defPlatformName + " cover";
+			String url = "https://www.google.com/search?q="+searchString.replace(" ", "+").replace("&", "%26")+"&tbm=isch";
+			openWebsite(url);
 		}
 	}
 
@@ -2774,26 +2878,23 @@ public class BroController implements ActionListener, GameListener, PlatformList
 			Game currentGame = explorer.getCurrentGame();
 			String gameName = currentGame.getName();
 			Platform platform = explorer.getPlatform(currentGame.getPlatformId());
-			String platformName = platform.getName();
-			String searchString = gameName + " " + platformName + " gameplay";
-			String url = "https://www.youtube.com/results?search_query="+searchString.replace(" ", "+")+"&tbm=vid";
-			try {
-				Desktop.getDesktop().browse(new URI(url));
-			} catch (IOException | URISyntaxException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
+			String platformShortName = platform.getShortName();
+			String defPlatformName = (platformShortName != null && !platformShortName.trim().isEmpty())
+					? platformShortName : platform.getName();
+			String searchString = gameName + " " + defPlatformName + " gameplay";
+			String url = "https://www.youtube.com/results?search_query="+searchString.replace(" ", "+").replace("&", "%26") + "&tbm=vid";
+			openWebsite(url);
 		}
 	}
 
 	class RenameGameListener implements Action {
-		private JButton btnAutoSetLetterCase = new JButton(Messages.get("capitalSmallLetters"));
-		private JLabel lblSpaces = new JLabel(Messages.get("replace"));
-		private JLabel lblBrackets = new JLabel(Messages.get("removeBrackets"));
-		private JLabel lblOr = new JLabel(Messages.get("or"));
-		private JButton btnSpacesDots = new JButton(Messages.get("dots"));
-		private JButton btnSpacesUnderlines = new JButton(Messages.get("underlines"));
-		private JButton btnSpacesCamelCase = new JButton(Messages.get("splitCamelCase"));
+		private JButton btnAutoSetLetterCase = new JButton(Messages.get(MessageConstants.CAPITAL_SMALL_LETTERS));
+		private JLabel lblSpaces = new JLabel(Messages.get(MessageConstants.REPLACE));
+		private JLabel lblBrackets = new JLabel(Messages.get(MessageConstants.REMOVE_BRACKETS));
+		private JLabel lblOr = new JLabel(Messages.get(MessageConstants.OR));
+		private JButton btnSpacesDots = new JButton(Messages.get(MessageConstants.DOTS));
+		private JButton btnSpacesUnderlines = new JButton(Messages.get(MessageConstants.UNDERLINES));
+		private JButton btnSpacesCamelCase = new JButton(Messages.get(MessageConstants.SPLIT_CAMEL_CASE));
 		//		private JButton btnBracket1 = new JButton("(PAL), (Europe), ...");
 		private JButton btnBracket1 = new JButton("(  )");
 		//		private JButton btnBracket2 = new JButton("[SCES-12345], [!], ...");
@@ -2807,13 +2908,13 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		private ListSelectionListener listener2;
 		private AdjustmentListener listener3;
 		private AdjustmentListener listener4;
-		private JCheckBox chkRenameFile = new JCheckBox(Messages.get("renameFileOnDisk"));
+		private JCheckBox chkRenameFile = new JCheckBox(Messages.get(MessageConstants.RENAME_FILE_ON_DISK));
 		private JTextField txtRenameFile = new JTextField("");
-		private JLabel lblBracketsExample = new JLabel(Messages.get("BracketsExample"));
-		private JLabel lblWithSpaces = new JLabel(Messages.get("withSpaces"));
-		private JCheckBox chkDots = new JCheckBox(Messages.get("removeDots"));
-		private JCheckBox chkUnderlines = new JCheckBox(Messages.get("removeUnderlines"));
-		protected boolean showMorOptions;
+		private JLabel lblBracketsExample = new JLabel(Messages.get(MessageConstants.BRACKETS_EXAMPLE));
+		private JLabel lblWithSpaces = new JLabel(Messages.get(MessageConstants.WITH_SPACES));
+		private JCheckBox chkDots = new JCheckBox(Messages.get(MessageConstants.REMOVE_DOTS));
+		private JCheckBox chkUnderlines = new JCheckBox(Messages.get(MessageConstants.REMOVE_UNDERLINES));
+		protected boolean showMoreOptions;
 
 		{
 			btnAutoSetLetterCase.addActionListener(this);
@@ -2825,18 +2926,18 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		}
 
 		public void languageChanged() {
-			btnAutoSetLetterCase = new JButton(Messages.get("capitalSmallLetters"));
-			lblSpaces.setText(Messages.get("replace"));
-			lblBrackets.setText(Messages.get("removeBrackets"));
-			lblOr.setText(Messages.get("or"));
-			btnSpacesDots.setText(Messages.get("dots"));
-			btnSpacesUnderlines.setText(Messages.get("underlines"));
-			btnSpacesCamelCase.setText(Messages.get("splitCamelCase"));
-			chkRenameFile.setText(Messages.get("renameFileOnDisk"));
-			lblBracketsExample.setText(Messages.get("BracketsExample"));
-			lblWithSpaces.setText(Messages.get("withSpaces"));
-			chkDots.setText(Messages.get("removeDots"));
-			chkUnderlines.setText(Messages.get("removeUnderlines"));
+			btnAutoSetLetterCase = new JButton(Messages.get(MessageConstants.CAPITAL_SMALL_LETTERS));
+			lblSpaces.setText(Messages.get(MessageConstants.REPLACE));
+			lblBrackets.setText(Messages.get(MessageConstants.REMOVE_BRACKETS));
+			lblOr.setText(Messages.get(MessageConstants.OR));
+			btnSpacesDots.setText(Messages.get(MessageConstants.DOTS));
+			btnSpacesUnderlines.setText(Messages.get(MessageConstants.UNDERLINES));
+			btnSpacesCamelCase.setText(Messages.get(MessageConstants.SPLIT_CAMEL_CASE));
+			chkRenameFile.setText(Messages.get(MessageConstants.RENAME_FILE_ON_DISK));
+			lblBracketsExample.setText(Messages.get(MessageConstants.BRACKETS_EXAMPLE));
+			lblWithSpaces.setText(Messages.get(MessageConstants.WITH_SPACES));
+			chkDots.setText(Messages.get(MessageConstants.REMOVE_DOTS));
+			chkUnderlines.setText(Messages.get(MessageConstants.REMOVE_UNDERLINES));
 		}
 
 		@Override
@@ -2894,7 +2995,7 @@ public class BroController implements ActionListener, GameListener, PlatformList
 			String withoutBrackets = source.replaceAll("^.*(\\"+bracketType1+".*\\"+bracketType2+").*$", "$1");
 			boolean hasBrackets = withoutBrackets.contains(""+bracketType1) && withoutBrackets.contains(""+bracketType2);
 			if (hasBrackets) {
-				cmbParentFolders.getEditor().setItem(source.replace(withoutBrackets, "").trim());
+				cmbParentFolders.getEditor().setItem(source.replace(withoutBrackets, "").trim().replaceAll("\\s+"," "));
 			}
 			return hasBrackets;
 		}
@@ -2912,10 +3013,11 @@ public class BroController implements ActionListener, GameListener, PlatformList
 			for (int i = folderNames.length-1; i >= 0; i--) {
 				reverseList.add(folderNames[i]);
 			}
-			String lblEnterNewName = Messages.get("enterNewName");
+			String lblEnterNewName = Messages.get(MessageConstants.ENTER_NEW_NAME);
 			String[] arrReverseList = reverseList.toArray(new String[reverseList.size()]);
 			cmbParentFolders = new JExtendedComboBox<Object>(arrReverseList);
 			txtRenameFile.setEnabled(false);
+			chkRenameFile.setOpaque(false);
 			chkRenameFile.addActionListener(new ActionListener() {
 
 				@Override
@@ -2925,7 +3027,7 @@ public class BroController implements ActionListener, GameListener, PlatformList
 					txtRenameFile.getParent().repaint();
 				}
 			});
-			String toolTipParentFolders = Messages.get("chooseNameFromParentFolder");
+			String toolTipParentFolders = Messages.get(MessageConstants.CHOOSE_NAME_FROM_PARENT_FOLDER);
 			cmbParentFolders.setToolTipText(toolTipParentFolders);
 			cmbParentFolders.setEditable(true);
 			FormLayout layoutWrapper = new FormLayout("pref, $ugap, pref, min:grow, min",
@@ -2933,10 +3035,47 @@ public class BroController implements ActionListener, GameListener, PlatformList
 			layoutWrapper.setRowGroup(1, 3, 5, 7);
 			//			layoutWrapper.setRowGroup(1, 3, 5);
 			CellConstraints cc = new CellConstraints();
-			JPanel pnlWrapWrapper = new JPanel(new FlowLayout(FlowLayout.LEFT));
-			pnlWrapWrapper.setBorder(BorderFactory.createTitledBorder(Messages.get("renamingOptions")));
+			JPanel pnlWrapWrapper = new JPanel(new BorderLayout());
+			TitledBorder titledBorder = new TitledBorder(null, Messages.get(MessageConstants.RENAMING_OPTIONS), 0, TitledBorder.TOP);
+			JButton btn = new JButton();
+			btn.setFocusPainted(false);
+			btn.setContentAreaFilled(false);
+			btn.setBorder(titledBorder);
+			btn.add(pnlWrapWrapper);
+			btn.addMouseListener(new MouseAdapter() {
+				@Override
+				public void mouseEntered(MouseEvent e) {
+					super.mouseEntered(e);
+					btn.setContentAreaFilled(true);
+				}
+				@Override
+				public void mouseExited(MouseEvent e) {
+					super.mouseExited(e);
+					btn.setContentAreaFilled(false);
+				}
+			});
+			btn.addActionListener(new ActionListener() {
 
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					showMoreOptions = false;
+				}
+			});
+
+			System.out.println("border insets: " +btn.getBorder().getBorderInsets(btn));
 			JPanel pnlWrapper = new JPanel(layoutWrapper);
+			pnlWrapper.addMouseListener(new MouseAdapter() {
+				@Override
+				public void mouseEntered(MouseEvent e) {
+					super.mouseEntered(e);
+					btn.setContentAreaFilled(false);
+				}
+				@Override
+				public void mouseExited(MouseEvent e) {
+					super.mouseExited(e);
+					btn.setContentAreaFilled(false);
+				}
+			});
 			//			pnlWrapper.setBackground(ValidationComponentUtils.getMandatoryBackground());
 			pnlWrapper.setBorder(Paddings.TABBED_DIALOG);
 			JPanel pnlBrackets = new JPanel(new FlowLayout(FlowLayout.LEFT));
@@ -2971,60 +3110,24 @@ public class BroController implements ActionListener, GameListener, PlatformList
 			//			btnBracket2.setBackground(Color.RED);
 			//			btnSpacesDots.setBackground(Color.ORANGE);
 			//			btnSpacesUnderlines.setBackground(Color.ORANGE);
-			btnAutoSetLetterCase.setBackground(ValidationComponentUtils.getMandatoryForeground());
-			btnSpacesCamelCase.setBackground(ValidationComponentUtils.getMandatoryForeground());
 			pnlBrackets.setBackground(ValidationComponentUtils.getErrorBackground());
 			pnlSpaces.setBackground(ValidationComponentUtils.getWarningBackground());
 			//			pnlAutoCase.setBackground(ValidationComponentUtils.getMandatoryBackground());
 			//			pnlCamelCase.setBackground(ValidationComponentUtils.getMandatoryBackground());
 
-			JToggleButton btnMoreRenamingOptions = new JToggleButton(Messages.get("renamingOptions"));
+			JToggleButton btnMoreRenamingOptions = new JToggleButton(Messages.get(MessageConstants.RENAMING_OPTIONS));
 			int size = ScreenSizeUtil.is3k() ? 24 : 16;
 			btnMoreRenamingOptions.setIcon(ImageUtil.getImageIconFrom(Icons.get("arrowDown", size, size)));
 			btnMoreRenamingOptions.setHorizontalAlignment(SwingConstants.LEFT);
-			btnMoreRenamingOptions.setBorderPainted(false);
-			btnMoreRenamingOptions.setContentAreaFilled(false);
-			btnMoreRenamingOptions.addMouseListener(new MouseAdapter() {
-				@Override
-				public void mouseEntered(MouseEvent e) {
-					super.mouseEntered(e);
-					AbstractButton source = (AbstractButton) e.getSource();
-					source.setBorderPainted(true);
-					source.setContentAreaFilled(true);
-				}
-
-				@Override
-				public void mouseExited(MouseEvent e) {
-					super.mouseExited(e);
-					AbstractButton source = (AbstractButton) e.getSource();
-					source.setBorderPainted(false);
-					source.setContentAreaFilled(false);
-				}
-			});
-			btnMoreRenamingOptions.addFocusListener(new FocusAdapter() {
-				@Override
-				public void focusGained(FocusEvent e) {
-					super.focusGained(e);
-					AbstractButton source = (AbstractButton) e.getSource();
-					source.setBorderPainted(true);
-					source.setContentAreaFilled(true);
-				}
-
-				@Override
-				public void focusLost(FocusEvent e) {
-					super.focusLost(e);
-					AbstractButton source = (AbstractButton) e.getSource();
-					source.setBorderPainted(false);
-					source.setContentAreaFilled(false);
-				}
-			});
+			UIUtil.doHover(false, btnMoreRenamingOptions);
+			btnMoreRenamingOptions.addMouseListener(UIUtil.getMouseAdapter());
 			btnMoreRenamingOptions.addActionListener(new ActionListener() {
 
 				@Override
 				public void actionPerformed(ActionEvent evt) {
 					Window w = SwingUtilities.getWindowAncestor(btnMoreRenamingOptions);
 					if (w != null) {
-						showMorOptions = true;
+						showMoreOptions = true;
 						w.dispose();
 					}
 				}
@@ -3041,7 +3144,7 @@ public class BroController implements ActionListener, GameListener, PlatformList
 					cmbParentFolders,
 					toolTipParentFolders,
 					"\n",
-					pnlWrapWrapper,
+					btn,
 					"\n",
 					chkRenameFile,
 					txtRenameFile
@@ -3050,16 +3153,16 @@ public class BroController implements ActionListener, GameListener, PlatformList
 			cmbParentFolders.getEditor().selectAll();
 
 			int resp = JOptionPane.CANCEL_OPTION;
-			if (!showMorOptions) {
-				resp = JOptionPane.showConfirmDialog(view, message, Messages.get("renameGame"),
+			if (!showMoreOptions) {
+				resp = JOptionPane.showConfirmDialog(view, message, Messages.get(MessageConstants.RENAME_GAME),
 						JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
 				if (resp == JOptionPane.CANCEL_OPTION) {
 					return;
 				}
 			}
 			if (resp != JOptionPane.OK_OPTION) {
-				if (showMorOptions) {
-					resp = JOptionPane.showConfirmDialog(view, messageEnlarged, Messages.get("renameGame"),
+				if (showMoreOptions) {
+					resp = JOptionPane.showConfirmDialog(view, messageEnlarged, Messages.get(MessageConstants.RENAME_GAME),
 							JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
 				}
 			}
@@ -3145,8 +3248,8 @@ public class BroController implements ActionListener, GameListener, PlatformList
 									chkUnderlines.setVisible(underlines);
 									chkDots.setSelected(dots);
 									chkUnderlines.setSelected(underlines);
-									JCheckBox chkNeverShowThisAgain = new JCheckBox(Messages.get("renameWithoutAsk"));
-									String msg = Messages.get("renameOtherGames")+"\n";
+									JCheckBox chkNeverShowThisAgain = new JCheckBox(Messages.get(MessageConstants.RENAME_WITHOUT_ASK));
+									String msg = Messages.get(MessageConstants.RENAME_OTHER_GAMES)+"\n";
 									List<Object> messageList = new ArrayList<>();
 									messageList.add(msg);
 									List<JCheckBox> dynamicCheckBoxes = new ArrayList<>();
@@ -3175,7 +3278,7 @@ public class BroController implements ActionListener, GameListener, PlatformList
 									messageList.add(chkNeverShowThisAgain);
 									Object[] stockArr = new Object[messageList.size()];
 									stockArr = messageList.toArray(stockArr);
-									String title = Messages.get("showRenameGamesDialog");
+									String title = Messages.get(MessageConstants.SHOW_RENAME_GAMES_DIALOG);
 									int request = JOptionPane.showConfirmDialog(view, stockArr, title, JOptionPane.YES_NO_OPTION);
 									if (request == JOptionPane.YES_OPTION) {
 										dots = chkDots.isSelected();
@@ -3205,7 +3308,7 @@ public class BroController implements ActionListener, GameListener, PlatformList
 			dlg.setModalityType(ModalityType.APPLICATION_MODAL);
 			dlg.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 			FormLayout layout = new FormLayout("min:grow, $rgap, min:grow",
-					"fill:default:grow");
+					"fill:default, $rgap, fill:default:grow, $rgap, fill:default");
 			CellConstraints cc = new CellConstraints();
 			JPanel pnl = new JPanel();
 			pnl.setLayout(layout);
@@ -3242,6 +3345,46 @@ public class BroController implements ActionListener, GameListener, PlatformList
 			};
 			lstMatches.addListSelectionListener(listener);
 			lstPreviews.addListSelectionListener(listener2);
+
+
+			JPanel pnlOptions = new JPanel();
+			FormLayout layoutWrapper = new FormLayout("pref, $ugap, pref, min:grow, min",
+					"min, $rgap, min, $rgap, min, $rgap, min");
+			layoutWrapper.setRowGroup(1, 3, 5, 7);
+			//			layoutWrapper.setRowGroup(1, 3, 5);
+			CellConstraints cc2 = new CellConstraints();
+			JPanel pnlWrapWrapper = new JPanel(new BorderLayout());
+			JPanel pnlWrapper = new JPanel(layoutWrapper);
+			JPanel pnlBrackets = new JPanel(new FlowLayout(FlowLayout.LEFT));
+			pnlBrackets.add(lblBrackets);
+			pnlBrackets.add(btnBracket1);
+			pnlBrackets.add(lblOr);
+			pnlBrackets.add(btnBracket2);
+			pnlBrackets.add(lblBracketsExample);
+			pnlWrapper.add(pnlBrackets, cc2.xyw(1, 1, layoutWrapper.getColumnCount()-1));
+
+			JPanel pnlSpaces = new JPanel(new FlowLayout(FlowLayout.LEFT));
+			pnlSpaces.add(lblSpaces);
+			pnlSpaces.add(btnSpacesDots);
+			pnlSpaces.add(lblOr);
+			pnlSpaces.add(btnSpacesUnderlines);
+			pnlSpaces.add(lblWithSpaces);
+			pnlWrapper.add(pnlSpaces, cc2.xyw(1, 3, layoutWrapper.getColumnCount()-1));
+
+			JPanel pnlAutoCase = new JPanel(new FlowLayout(FlowLayout.LEFT));
+			JPanel pnlCamelCase = new JPanel(new FlowLayout(FlowLayout.LEFT));
+			//			pnlAutoCase.setBackground(ValidationComponentUtils.getMandatoryBackground());
+			//			pnlCamelCase.setBackground(ValidationComponentUtils.getMandatoryBackground());
+
+			pnlAutoCase.add(btnAutoSetLetterCase);
+			pnlCamelCase.add(btnSpacesCamelCase);
+			pnlWrapper.add(pnlAutoCase, cc2.xyw(1, 5, layoutWrapper.getColumnCount()));
+			pnlWrapper.add(pnlCamelCase, cc2.xyw(1, 7, layoutWrapper.getColumnCount()));
+
+			pnlWrapWrapper.add(pnlWrapper);
+			pnlOptions.add(pnlWrapWrapper);
+
+
 			JScrollPane spMatches = new JScrollPane(lstMatches);
 			JScrollPane spPreview = new JScrollPane(lstPreviews);
 			spMatches.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener() {
@@ -3278,8 +3421,29 @@ public class BroController implements ActionListener, GameListener, PlatformList
 				}
 			};
 			spPreview.getHorizontalScrollBar().addAdjustmentListener(listener4);
-			pnl.add(spMatches, cc.xy(1, 1));
-			pnl.add(spPreview, cc.xy(3, 1));
+			JButton btnRenameGames = new JButton("rename now");
+			btnRenameGames.addActionListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					for (int i = 0; i < lstMatches.getModel().getSize(); i++) {
+						Game g = lstMatches.getModel().getElementAt(i);
+						String newName = lstPreviews.getModel().getElementAt(i);
+						explorer.renameGame(g.getId(), newName);
+						try {
+							explorerDAO.renameGame(g.getId(), newName);
+						} catch (SQLException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
+					}
+					dlg.dispose();
+				}
+			});
+			pnl.add(pnlOptions, cc.xyw(1, 1, layout.getColumnCount()));
+			pnl.add(spMatches, cc.xy(1, 3));
+			pnl.add(spPreview, cc.xy(3, 3));
+			pnl.add(btnRenameGames, cc.xyw(1, 5, layout.getColumnCount()));
 			dlg.add(pnl);
 			checkForRenamingGames(dynamicCheckBoxes, dots, underlines);
 			dlg.pack();
@@ -3294,11 +3458,11 @@ public class BroController implements ActionListener, GameListener, PlatformList
 				String gameName = g.getName();
 				for (JCheckBox chk : dynamicCheckBoxes) {
 					if (chk.isSelected()) {
-						if (g.getName().toLowerCase().contains(chk.getText().trim().toLowerCase())) {
+						if (g.getName().toLowerCase().contains(chk.getText().trim().replaceAll("\\s+"," ").toLowerCase())) {
 							if (!mdlLstMatches.contains(g)) {
 								mdlLstMatches.addElement(g);
 							}
-							gameName = gameName.replace(chk.getText().trim(), "");
+							gameName = gameName.replace(chk.getText(), "").trim().replaceAll("\\s+"," ");
 						}
 					}
 				}
@@ -3306,13 +3470,13 @@ public class BroController implements ActionListener, GameListener, PlatformList
 					if (!mdlLstMatches.contains(g)) {
 						mdlLstMatches.addElement(g);
 					}
-					gameName = gameName.replace(".", " ");
+					gameName = gameName.replace(".", " ").trim().replaceAll("\\s+"," ");
 				}
 				if (underlines && gameName.contains("_")) {
 					if (!mdlLstMatches.contains(g)) {
 						mdlLstMatches.addElement(g);
 					}
-					gameName = gameName.replace("_", " ");
+					gameName = gameName.replace("_", " ").trim().replaceAll("\\s+"," ");
 				}
 				if (mdlLstMatches.contains(g)) {
 					mdlLstPreviews.addElement(gameName);
@@ -3367,27 +3531,17 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		private void removeGame() {
 			Game game = explorer.getCurrentGame();
 			int request = JOptionPane.showConfirmDialog(view,
-					"Do you really want to remove this game?\n\n" + game.getName() + "\n"
-							+ explorer.getPlatform(game.getPlatformId()).getName(),
-							"Remove game", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+					Messages.get(MessageConstants.CONFIRM_REMOVE_GAME, game.getName(),
+							explorer.getPlatform(game.getPlatformId()).getName()),
+					"Remove game", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 			if (request == JOptionPane.YES_OPTION) {
 				int gameId = explorer.getCurrentGame().getId();
-				mdlLstAllGames.removeElement(game);
-				mdlLstFavorites.removeElement(game);
-				mdlLstFilteredGames.removeElement(game);
-				mdlLstRecentlyPlayed.removeElement(game);
-				((GameTableModel) mdlTblAllGames).removeGame(game);
-				((GameTableModel) mdlTblGamesRecentlyPlayed).removeGame(game);
-				((GameTableModel) mdlTblGamesRecentlyPlayed).removeGame(game);
-				((GameTableModel) mdlTblGamesFavorites).removeGame(game);
-				mdlCoversAllGames.removeElement(game);
 				explorer.removeGame(game);
 				try {
 					explorerDAO.removeGame(gameId);
 				} catch (SQLException e1) {
 					e1.printStackTrace();
 				}
-				fireGameRemovedEvent(explorer.getCurrentGame());
 			}
 		}
 
@@ -3597,6 +3751,17 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		}
 	}
 
+	class ShowNavigationPaneListener implements ActionListener {
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			if (e.getActionCommand().equals(GameViewConstants.SHOW_NAVIGATION_PANE)) {
+				view.showNavigationPane(true);
+			} else if (e.getActionCommand().equals(GameViewConstants.HIDE_NAVIGATION_PANE)) {
+				view.showNavigationPane(false);
+			}
+		}
+	}
+
 	class ShowPreviewPaneListener implements ActionListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
@@ -3680,45 +3845,100 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		}
 	}
 
-	public void quickSearch() {
-		List<String> directories = new ArrayList<>();
-		for (Game g : explorer.getGames()) {
-			String fullPath = FilenameUtils.getFullPath(g.getPath());
-			if (!directories.contains(fullPath) && explorer.getPlatform(g.getPlatformId()).isAutoSearchEnabled()) {
-				directories.add(fullPath);
-			}
+	public void openWebsite(String url) {
+		try {
+			Desktop.getDesktop().browse(new URI(url));
+		} catch (IOException | URISyntaxException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
 		}
-		System.out.println(getCommonDirectories(directories));
 	}
 
-	private List<String> getCommonDirectories(List<String> directories) {
-		return directories;
+	public void quickSearch() {
+		List<String> gameDirectories = new ArrayList<>();
+		List<String> emulatorDirectories = new ArrayList<>();
+		for (Game g : explorer.getGames()) {
+			String fullPath = FilenameUtils.getFullPath(g.getPath());
+			if (!gameDirectories.contains(fullPath)
+					&& explorer.getPlatform(g.getPlatformId()).isAutoSearchEnabled()) {
+				if (fullPath.startsWith("D:")) {
+					gameDirectories.add(fullPath);
+				}
+			}
+		}
+		for (Platform p : explorer.getPlatforms()) {
+			for (Emulator emu : p.getEmulators()) {
+				if (emu.isInstalled()) {
+					String fullPath = FilenameUtils.getFullPath(emu.getPath());
+					emulatorDirectories.add(fullPath);
+				}
+			}
+		}
+		List<String> allCommonDirectories = new ArrayList<>();
+		for (Platform p : explorer.getPlatforms()) {
+			List<String> commonDirs;
+			System.out.println(p.getName() + " " + (commonDirs = getCommonDirectories(p.getId())));
+			for (String dir : commonDirs) {
+				if (!allCommonDirectories.contains(dir)) {
+					allCommonDirectories.add(dir);
+				}
+			}
+		}
+		Collections.sort(allCommonDirectories);
+		Collections.reverse(allCommonDirectories);
+		System.out.println(allCommonDirectories);
+	}
+
+	private List<String> getCommonDirectories(int platformId) {
+		List<String> directories = explorer.getGameDirectoriesFromPlatform(platformId);
+		System.err.println(explorer.getPlatform(platformId).getName() + " " + directories);
+		List<String> commonDirectories = new ArrayList<>();
+		for (String dir : directories) {
+			if (commonDirectories.isEmpty()) {
+				commonDirectories.add(dir);
+				continue;
+			}
+			boolean removed = false;
+			for (int i = commonDirectories.size()-1; i >= 0; i--) {
+				boolean rootFolder = dir.split(getSeparatorBackslashed()).length <= 1;
+				if (!rootFolder) {
+					String parentDirs = dir;
+					do {
+						if (commonDirectories.get(i).startsWith(parentDirs)) {
+							commonDirectories.set(i, parentDirs);
+							parentDirs = "";
+							removed = true;
+						}
+					}
+					while (!(parentDirs = getParentFolderFromString(parentDirs)).isEmpty()
+							&& parentDirs.split(getSeparatorBackslashed()).length > 1);
+				}
+			}
+			if (!removed) {
+				if (!commonDirectories.contains(dir)) {
+					commonDirectories.add(dir);
+				}
+			}
+		}
+		return commonDirectories;
+	}
+
+	private String getParentFolderFromString(String dir) {
+		return FileUtil.getParentDirPath(dir);
+		//		String[] dirArr = dir.split(getSeparatorBackslashed());
+		//		String bla = "";
+		//		for (int i = 0; i < dirArr.length-1; i++) {
+		//			bla += dirArr[i] + File.separator;
+		//		}
+		//		return bla;
 	}
 
 	public void sortGameList(int sortOrder) {
-		switch (sortOrder) {
-		case ViewConstants.SORT_ASCENDING:
-			mdlLstAllGames.sort();
-			break;
-		case ViewConstants.SORT_DESCENDING:
-			mdlLstAllGames.sortReverseOrder();
-			break;
-		default:
-			return;
-		}
 		view.sortOrder(sortOrder);
 	}
 
-	public void sortBy(int sortBy) {
-		switch (sortBy) {
-		case ViewConstants.SORT_BY_PLATFORM:
-			mdlLstAllGames.sortByPlatform(platformComparator);
-			break;
-		case ViewConstants.SORT_BY_TITLE:
-			mdlLstAllGames.sort();
-			break;
-		}
-		view.sortBy(sortBy);
+	public void sortBy(int sortBy, PlatformComparator platformComparator) {
+		view.sortBy(sortBy, platformComparator);
 	}
 
 	public void groupBy(int groupBy) {
@@ -3726,12 +3946,16 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		case ViewConstants.GROUP_BY_PLATFORM:
 			view.groupByPlatform();
 			break;
+		case ViewConstants.GROUP_BY_TITLE:
+			view.groupByTitle();
+			break;
 		case ViewConstants.GROUP_BY_NONE:
 			view.groupByNone();
+			break;
 		}
 	}
 
-	public Platform addPlatform(Platform selected) {
+	public Platform addOrGetPlatform(Platform selected) {
 		Platform p2 = null;
 		if (selected != null) {
 			if (!explorer.hasPlatform(selected.getName())) {
@@ -3753,17 +3977,6 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		return p2;
 	}
 
-	public void addPlatform(Platform selected, File file) throws IOException {
-		Platform p2 = addPlatform(selected);
-		if (p2 != null) {
-			try {
-				addGame(p2, file);
-			} catch (SQLException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-	}
 	private void discardConfigurationChanges() {
 	}
 
@@ -4043,40 +4256,13 @@ public class BroController implements ActionListener, GameListener, PlatformList
 	class OpenPropertiesListener implements ActionListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			if (frameProperties == null) {
-				frameProperties = new PropertiesFrame();
-				frameProperties.setLocationRelativeTo(view);
-				frameProperties.addPlatformSelectedListener(new PlatformSelectedListener());
-				frameProperties.addRemovePlatformListener(new RemovePlatformListener());
-				frameProperties.addRemoveEmulatorListener(new RemoveEmulatorListener());
-				frameProperties.addOpenEmulatorPropertiesPanelListener(new OpenEmulatorPanelListener());
-				frameProperties.addOpenEmulatorPropertiesPanelListener2(new OpenEmulatorPanelListener());
-				frameProperties.adjustSplitPaneDividerSizes();
-				frameProperties.adjustSplitPaneDividerLocations();
-				frameProperties.setPlatformListModel(mdlPropertiesLstPlatforms);
-				frameProperties.addSaveConfigurationListener(new SaveConfigurationListener());
-				frameProperties.setSaveAndExitConfigurationListener(new SaveAndExitConfigurationListener());
-				frameProperties.setDiscardChangesAndExitListener(new DiscardChangesAndExitListener());
-				frameProperties.addChangeConfigurationListener(new ChangeConfigurationListener());
-				addPlatformListener(frameProperties);
-				addEmulatorListener(frameProperties);
-				initializePlatforms(explorer.getPlatforms(), explorer.getDefaultPlatforms());
-				frameProperties.setPlatformListCellRenderer(new PlatformListCellRenderer());
-				frameProperties.setEmulatorListCellRenderer(new EmulatorListCellRenderer());
-			}
-			if (frameProperties.isVisible()) {
-				frameProperties.setState(Frame.NORMAL);
-				frameProperties.toFront();
-			} else {
-				frameProperties.setVisible(true);
-			}
+			showPropertiesFrame();
 		}
 	}
 
 	public void initializePlatforms(List<Platform> list, List<BroPlatform> list2) {
-		mdlPropertiesLstPlatforms.removeAllElements();
 		for (Platform p : list) {
-			mdlPropertiesLstPlatforms.addElement(p);
+			mdlPropertiesLstPlatforms.add(p);
 			if (!platformIcons.containsKey(p.getIconFileName())) {
 				String iconFilename = p.getIconFileName();
 				if (iconFilename != null && !iconFilename.trim().isEmpty()) {
@@ -4104,12 +4290,50 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		// mdlPropertiesLstPlatforms.addElement(p);
 		// }
 	}
+	public void showPropertiesFrame() {
+		showPropertiesFrame(null);
+	}
+
+	public void showPropertiesFrame(Game game) {
+		if (frameProperties == null) {
+			frameProperties = new PropertiesFrame(explorer);
+			frameProperties.setLocationRelativeTo(view);
+			frameProperties.addPlatformSelectedListener(new PlatformSelectedListener());
+			frameProperties.addRemovePlatformListener(new RemovePlatformListener());
+			frameProperties.addRemoveEmulatorListener(new RemoveEmulatorListener());
+			frameProperties.addOpenEmulatorPropertiesPanelListener(new OpenEmulatorPanelListener());
+			frameProperties.addOpenEmulatorPropertiesPanelListener2(new OpenEmulatorPanelListener());
+			frameProperties.adjustSplitPaneDividerSizes();
+			frameProperties.adjustSplitPaneDividerLocations();
+			frameProperties.setPlatformListModel(mdlPropertiesLstPlatforms);
+			frameProperties.addSaveConfigurationListener(new SaveConfigurationListener());
+			frameProperties.setSaveAndExitConfigurationListener(new SaveAndExitConfigurationListener());
+			frameProperties.setDiscardChangesAndExitListener(new DiscardChangesAndExitListener());
+			frameProperties.addChangeConfigurationListener(new ChangeConfigurationListener());
+			addPlatformListener(frameProperties);
+			addEmulatorListener(frameProperties);
+			initializePlatforms(explorer.getPlatforms(), explorer.getDefaultPlatforms());
+			frameProperties.setPlatformListCellRenderer(new PlatformListCellRenderer());
+			frameProperties.setEmulatorListCellRenderer(new EmulatorListCellRenderer());
+		}
+		if (game != null) {
+			Emulator emulator = explorer.getEmulatorFromGame(game.getId());
+			Platform platform = explorer.getPlatform(game.getPlatformId());
+			frameProperties.configureEmulator(platform, emulator);
+		}
+		if (frameProperties.isVisible()) {
+			frameProperties.setState(Frame.NORMAL);
+			frameProperties.toFront();
+		} else {
+			frameProperties.setVisible(true);
+		}
+	}
 
 	class ExportGameListToTxtListener implements ActionListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			try {
-				File file = exportGameListTo(FileTypeConstants.TXT);
+				File file = exportGameListTo(FileTypeConstants.TXT_FILE);
 				if (file != null) {
 					Desktop.getDesktop().open(file);
 				}
@@ -4125,7 +4349,7 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		@Override
 		public void actionPerformed(ActionEvent arg0) {
 			try {
-				File file = exportGameListTo(FileTypeConstants.CSV);
+				File file = exportGameListTo(FileTypeConstants.CSV_FILE);
 				if (file != null) {
 					Desktop.getDesktop().open(file);
 				}
@@ -4142,7 +4366,7 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		public void actionPerformed(ActionEvent e) {
 			File file;
 			try {
-				file = exportGameListTo(FileTypeConstants.XML);
+				file = exportGameListTo(FileTypeConstants.XML_FILE);
 				if (file != null) {
 					try {
 						Desktop.getDesktop().open(file);
@@ -4165,7 +4389,7 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			int divLocation = view.getSplPreviewPane().getDividerLocation();
-			view.changeToViewPanel(GameViewConstants.LIST_VIEW);
+			view.changeToViewPanel(GameViewConstants.LIST_VIEW, explorer.getGames());
 			view.getSplPreviewPane().setDividerLocation(divLocation); // this
 			// has
 			// been
@@ -4184,16 +4408,14 @@ public class BroController implements ActionListener, GameListener, PlatformList
 			// preferred
 			// sizes
 			// idk)
-			view.setGameListModel(mdlLstAllGames);
 		}
 	}
 
 	class ChangeToTableViewListener implements ActionListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			view.setGameTableModel(mdlTblAllGames);
 			int divLocation = view.getSplPreviewPane().getDividerLocation();
-			view.changeToViewPanel(GameViewConstants.TABLE_VIEW);
+			view.changeToViewPanel(GameViewConstants.TABLE_VIEW, explorer.getGames());
 			view.getSplPreviewPane().setDividerLocation(divLocation); // this
 			// has
 			// been
@@ -4218,9 +4440,12 @@ public class BroController implements ActionListener, GameListener, PlatformList
 	class ChangeToCoverViewListener implements ActionListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			view.setGameCoversModel(mdlCoversAllGames);
 			int divLocation = view.getSplPreviewPane().getDividerLocation();
-			view.changeToViewPanel(GameViewConstants.COVER_VIEW);
+			if (view.isViewPanelInitialized(GameViewConstants.COVER_VIEW)) {
+				view.changeToViewPanel(GameViewConstants.COVER_VIEW, null);
+			} else {
+				view.changeToViewPanel(GameViewConstants.COVER_VIEW, explorer.getGames());
+			}
 			//			view.getSplGameDetailsPane().setDividerLocation(divLocationDetailsPane);
 			view.getSplPreviewPane().setDividerLocation(divLocation); // this
 			// has
@@ -4251,8 +4476,6 @@ public class BroController implements ActionListener, GameListener, PlatformList
 
 				@Override
 				public void run() {
-					view.setGameListModel(mdlLstAllGames);
-					view.setGameTableModel(mdlTblAllGames);
 					view.navigationChanged(new NavigationEvent(NavigationPanel.ALL_GAMES));
 				}
 			});
@@ -4266,7 +4489,6 @@ public class BroController implements ActionListener, GameListener, PlatformList
 
 				@Override
 				public void run() {
-					view.setGameListModel(mdlLstRecentlyPlayed, true);
 					view.navigationChanged(new NavigationEvent(NavigationPanel.RECENTLY_PLAYED));
 				}
 			});
@@ -4280,8 +4502,6 @@ public class BroController implements ActionListener, GameListener, PlatformList
 
 				@Override
 				public void run() {
-					view.setGameListModel(mdlLstFavorites, true);
-					view.setGameTableModel(mdlTblGamesFavorites, true);
 					view.navigationChanged(new NavigationEvent(NavigationPanel.FAVORITES));
 				}
 			});
@@ -4314,7 +4534,9 @@ public class BroController implements ActionListener, GameListener, PlatformList
 					boolean goFullScreen = !view.isUndecorated();
 					if (goFullScreen) {
 						fullScreen = view.getExtendedState() == Frame.MAXIMIZED_BOTH;
-						lastWindowSize = view.getSize();
+						if (!fullScreen) {
+							lastWindowSize = view.getSize();
+						}
 						lastWindowLocation = view.getLocationOnScreen();
 					}
 					view.setVisible(false);
@@ -4328,10 +4550,13 @@ public class BroController implements ActionListener, GameListener, PlatformList
 					} else {
 						if (lastWindowSize != null) {
 							if (fullScreen) {
+								view.setSize(new Dimension(preferredWidthAtFirstStart, (int) (preferredWidthAtFirstStart / 1.25)));
+								view.setLocation(lastWindowLocation.x, lastWindowLocation.y);
 								view.setExtendedState(Frame.MAXIMIZED_BOTH);
+							} else {
+								view.setSize(lastWindowSize);
+								view.setLocation(lastWindowLocation.x, lastWindowLocation.y);
 							}
-							view.setSize(lastWindowSize);
-							view.setLocation(lastWindowLocation.x, lastWindowLocation.y);
 						}
 						//						view.setLocationRelativeTo(null);
 					}
@@ -4402,6 +4627,8 @@ public class BroController implements ActionListener, GameListener, PlatformList
 			}
 			dlgHelp.setLocationRelativeTo(view);
 			dlgHelp.setVisible(true);
+
+			dlgHelp.showContent("/help/00-intro.html");
 		}
 	}
 
@@ -4454,16 +4681,20 @@ public class BroController implements ActionListener, GameListener, PlatformList
 			try {
 				uo = retrieveLatestRevisionInformations();
 				if (uo.isApplicationUpdateAvailable()) {
+					Map<String, Action> actionKeys = new HashMap<>();
+					actionKeys.put("updateNow", null);
+					actionKeys.put("updateLater", null);
 					NotificationElement element = new NotificationElement(new String[] { "applicationUpdateAvailable" },
-							new String[][] { { "updateNow" }, { "updateLater" } },
-							NotificationElement.INFORMATION_MANDATORY, null);
+							actionKeys, NotificationElement.INFORMATION_MANDATORY, null);
 					view.showInformation(element);
 					view.applicationUpdateAvailable();
 				}
 				if (uo.isSignatureUpdateAvailable()) {
+					Map<String, Action> actionKeys = new HashMap<>();
+					actionKeys.put("updateNow", null);
+					actionKeys.put("updateLater", null);
 					NotificationElement element = new NotificationElement(new String[] { "signatureUpdateAvailable" },
-							new String[][] { { "updateNow" }, { "updateLater" } },
-							NotificationElement.INFORMATION_MANDATORY, null);
+							actionKeys, NotificationElement.INFORMATION_MANDATORY, null);
 					view.showInformation(element);
 					view.signatureUpdateAvailable();
 				}
@@ -4550,12 +4781,6 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		view.searchProcessEnded();
 	}
 
-	public void setDividerLocations() {
-		view.getSplGameDetailsPane().setDividerLocation(gameDetailsPanelDividerLocation);
-		view.setDetailsPaneNotificationTab(detailsPaneNotificationTab);
-		view.getSplNavigationPane().setDividerLocation(navigationPaneDividerLocation);
-	}
-
 	@Override
 	public void gameSelected(GameSelectionEvent e) {
 		int gameId = e.getGame() != null ? e.getGame().getId() : GameConstants.NO_GAME;
@@ -4625,16 +4850,6 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		view.emulatorRemoved(e);
 	}
 
-	@Override
-	public void gameAdded(GameAddedEvent e) {
-		view.gameAdded(e);
-	}
-
-	@Override
-	public void gameRemoved(GameRemovedEvent e) {
-		view.gameRemoved(e);
-	}
-
 	public Platform isGameInArchive(String fileName, boolean useDefaultPlatforms) {
 		List<Platform> platforms = (List<Platform>) (useDefaultPlatforms ? explorer.getDefaultPlatforms()
 				: explorer.getPlatforms());
@@ -4695,7 +4910,7 @@ public class BroController implements ActionListener, GameListener, PlatformList
 						if (!explorer.hasPlatform(p2.getName())) {
 							emulator = new BroEmulator(EmulatorConstants.NO_EMULATOR, name, filePath2, iconFilename,
 									configFilePath, website, startParameters, supportedFileTypes, e.getSearchString(),
-									autoSearchEnabled);
+									e.getSetupFileMatch(), autoSearchEnabled);
 							try {
 								explorerDAO.addPlatform(p2);
 								p2 = explorerDAO.getPlatform(explorerDAO.getLastAddedPlatformId());
@@ -4715,7 +4930,7 @@ public class BroController implements ActionListener, GameListener, PlatformList
 							}
 							emulator = new BroEmulator(EmulatorConstants.NO_EMULATOR, name, filePath2, iconFilename,
 									configFilePath, website, startParameters, supportedFileTypes, e.getSearchString(),
-									autoSearchEnabled);
+									e.getSetupFileMatch(), autoSearchEnabled);
 							p2.addEmulator((BroEmulator) emulator);
 						}
 
@@ -4853,21 +5068,11 @@ public class BroController implements ActionListener, GameListener, PlatformList
 			}
 		});
 	}
-
-	void fireGameAddedEvent(Game element) {
-		SwingUtilities.invokeLater(new Runnable() {
-
-			@Override
-			public void run() {
-				for (GameListener l : gameListeners) {
-					GameAddedEvent event = new BroGameAddedEvent(element, explorer.getGameCount());
-					l.gameAdded(event);
-				}
-			}
-		});
+	public void addGame(Platform p0, File file) throws BroGameDeletedException {
+		addGame(p0, file, false);
 	}
 
-	public void addGame(Platform p0, File file) throws IOException, SQLException {
+	public void addGame(Platform p0, File file, boolean shouldSelectGame) throws BroGameDeletedException {
 		String filePath = file.getAbsolutePath();
 		String[] arr = filePath.split(getSeparatorBackslashed());
 		String fileName = arr[arr.length - 1];
@@ -4907,24 +5112,36 @@ public class BroController implements ActionListener, GameListener, PlatformList
 				ImageIO.write(bi, "png", new File(iconPathString));
 				element.setIconPath(iconPathString);
 				explorerDAO.setGameIconPath(element.getId(), iconPathString);
-				// ((GameTableModel)
-				// mdlTblAllGames).addGameIcon(element.getId(),
-				// view.getCurrentViewPanel().getGameIcon(element.getId()));
-				((GameTableModel) mdlTblAllGames).addGameIcon(element.getId(), ii);
+				//				((GameTableModel) mdlTblAllGames).addGameIcon(element.getId(), ii);
 			}
 			explorer.addGame(element);
-			mdlLstAllGames.addElement(element);
-			if (view.getGameListModel() == mdlLstFavorites) {
-				element.setRate(RatingBarPanel.MAXIMUM_RATE);
-				mdlLstFavorites.addElement(element);
-			}
-			// ((GameTableModel) mdlTblAllGames).addRow(element);
-			mdlCoversAllGames.addElement(element);
-			fireGameAddedEvent(element);
+			SwingUtilities.invokeLater(new Runnable() {
+
+				@Override
+				public void run() {
+					view.gameAdded(new BroGameAddedEvent(element, p0, explorer.getGameCount()));
+					if (shouldSelectGame) {
+						SwingUtilities.invokeLater(new Runnable() {
+
+							@Override
+							public void run() {
+								view.getViewManager().selectGame(element.getId());
+							}
+						});
+					}
+				}
+			});
 		} catch (BroGameAlreadyExistsException e) {
-			String message = "This game does already exist.";
-			String title = "Game already exists";
-			JOptionPane.showMessageDialog(view, message, title, JOptionPane.ERROR_MESSAGE);
+			//			String message = "This game does already exist.";
+			//			String title = "Game already exists";
+			//			JOptionPane.showMessageDialog(view, message, title, JOptionPane.ERROR_MESSAGE);
+			System.err.println("game does already exist: "+e.getMessage());
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
 
@@ -4944,5 +5161,106 @@ public class BroController implements ActionListener, GameListener, PlatformList
 		isoFiles.add(filePath);
 		view.rememberIsoFile(filePath);
 		explorerDAO.rememberIsoFile(filePath);
+	}
+
+	public class HideExtensionsListener implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			view.hideExtensions(((AbstractButton) e.getSource()).isSelected());
+		}
+	}
+
+	public class TouchScreenOptimizedScrollListener implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			AbstractButton btn = (AbstractButton) e.getSource();
+			view.setTouchScreenOpimizedScrollEnabled(btn.isSelected());
+		}
+	}
+
+	public class BroRateListener implements RateListener {
+		@Override
+		public void rateChanged(RateEvent e) {
+			rateGame(e.getGame());
+		}
+	}
+
+	public class BroCommentListener implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			commentGame(explorer.getCurrentGame());
+		}
+	}
+
+	public class LanguageGermanListener implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			changeLanguage(Locale.GERMAN);
+		}
+	}
+
+	public class LanguageEnglishListener implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			changeLanguage(Locale.ENGLISH);
+		}
+	}
+
+	public class LanguageFrenchListener implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			changeLanguage(Locale.FRENCH);
+		}
+	}
+
+	public class PlatformListCellRenderer extends DefaultListCellRenderer {
+		private static final long serialVersionUID = 1L;
+
+		@Override
+		public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected,
+				boolean cellHasFocus) {
+			JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+			BroPlatform platform = ((BroPlatform) value);
+			boolean hasDefaultEmulator = platform.hasDefaultEmulator();
+			boolean hasNoGamesAndEmulators = explorer.getGameCountFromPlatform(platform.getId()) == 0
+					&& !hasDefaultEmulator;
+			//			label.setForeground((hasDefaultEmulator) ? Color.BLUE : UIManager.getColor("Label.foregroundColor"));
+			label.setText((hasDefaultEmulator) ? "<html><strong>"+platform.getName()+"</strong></html>" : platform.getName());
+			label.setForeground((hasNoGamesAndEmulators) ? UIManager.getColor("Label.disabledForeground") : UIManager.getColor("Label.foreground"));
+			ImageIcon icon = platformIcons.get(platform.getIconFileName());
+			label.setIcon(icon);
+			label.setDisabledIcon(icon);
+			return label;
+		}
+	}
+
+	public class EmulatorListCellRenderer extends DefaultListCellRenderer {
+		private static final long serialVersionUID = 1L;
+
+		@Override
+		public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected,
+				boolean cellHasFocus) {
+			JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+
+			// String iconPath = value ==
+			// pnlPlatforms.lstPlatforms.getSelectedValue().getDefaultEmulatorId()
+			// ? "/images/"+resolution+"/dialog-ok-apply-5.png"
+			// : "/images/"+resolution+"/empty.png";
+
+			// File svgFile = new
+			// File("D:/files/workspace/JGameExplorer/res/images/dialog-ok-apply-5.svg");
+			// ImageIcon icon = ImageUtil.getImageIconFrom(svgFile);
+			// label.setIcon(icon);
+			BroEmulator emulator = ((BroEmulator) value);
+			Icon icon = emulatorIcons.get(emulator.getIconFilename());
+			label.setIcon(icon);
+			return label;
+		}
 	}
 }

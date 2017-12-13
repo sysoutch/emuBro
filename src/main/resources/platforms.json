@@ -1,6 +1,7 @@
 [
    {
       "name":"Amiga",
+	  "shortName":"amiga",
       "iconFilename":"amiga.png",
       "defaultGameCover":"snes.jpg",
       "gameSearchModes":[
@@ -29,13 +30,17 @@
                
             ],
             "searchString":"^(winfellow)\\.exe$",
+			"setupFileMatch":"",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          }
       ],
+	  "directExecutionMode":"none",
 	  "autoSearchEnabled":true
    },
    {
       "name":"Android",
+	  "shortName":"android",
       "iconFilename":"android.png",
       "defaultGameCover":"android.jpg",
       "gameSearchModes":[
@@ -63,13 +68,16 @@
                ".apk"
             ],
             "searchString":"^(andy)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          }
       ],
+	  "directExecutionMode":"none",
 	  "autoSearchEnabled":true
    },
    {
       "name":"Atari 2600",
+	  "shortName":"atari 2600",
       "iconFilename":"atari2600.png",
       "defaultGameCover":"atari.jpg",
       "gameSearchModes":[
@@ -98,6 +106,7 @@
                
             ],
             "searchString":"^(stella)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          },
 		 {
@@ -111,6 +120,7 @@
                
             ],
             "searchString":"^(pcaewin)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          },
 		 {
@@ -124,13 +134,16 @@
                
             ],
             "searchString":"^(z26)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          }
       ],
+	  "directExecutionMode":"none",
 	  "autoSearchEnabled":true
    },
    {
       "name":"Atari 5200",
+	  "shortName":"atari 5200",
       "iconFilename":"atari5200.png",
       "defaultGameCover":"atari.jpg",
       "gameSearchModes":[
@@ -159,6 +172,7 @@
                
             ],
             "searchString":"^(atari++)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          },
 		 {
@@ -172,6 +186,7 @@
                
             ],
             "searchString":"^(atari800)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          },
 		 {
@@ -185,6 +200,7 @@
                
             ],
             "searchString":"^(kat5200)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          },
 		 {
@@ -198,6 +214,7 @@
                
             ],
             "searchString":"^(mess)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          },
 		 {
@@ -211,13 +228,16 @@
                
             ],
             "searchString":"^(vss)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          }
       ],
+	  "directExecutionMode":"none",
 	  "autoSearchEnabled":true
    },
    {
       "name":"Atari 7800",
+	  "shortName":"atari 7800",
       "iconFilename":"atari7800.png",
       "defaultGameCover":"atari.jpg",
       "gameSearchModes":[
@@ -246,13 +266,16 @@
                
             ],
             "searchString":"^(mess)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          }
       ],
+	  "directExecutionMode":"none",
 	  "autoSearchEnabled":true
    },
    {
       "name":"Atari ST",
+	  "shortName":"atari st",
       "iconFilename":"atari.png",
       "defaultGameCover":"snes.jpg",
       "gameSearchModes":[
@@ -280,14 +303,17 @@
             "supportedFileTypes":[
                
             ],
-            "searchString":"^(steem.*)\\.exe$",
+            "searchString":"^(steem)\\.exe$|^(steem.*\\+)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          }
       ],
+	  "directExecutionMode":"none",
 	  "autoSearchEnabled":true
    },
   {
       "name":"GameBoy",
+	  "shortName":"gameboy",
       "iconFilename":"gb.png",
       "defaultGameCover":"gb.jpg",
       "gameSearchModes":[
@@ -316,13 +342,16 @@
                ".zip"
             ],
             "searchString":"^(visualboyadvance)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          }
       ],
+	  "directExecutionMode":"none",
 	  "autoSearchEnabled":true
    }, 
 	{
       "name":"GameBoy Advance",
+	  "shortName":"gba",
       "iconFilename":"gba.png",
       "defaultGameCover":"gba.jpg",
       "gameSearchModes":[
@@ -351,14 +380,17 @@
                ".zip"
             ],
             "searchString":"^(visualboyadvance)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          }
       ],
+	  "directExecutionMode":"none",
 	  "autoSearchEnabled":true
    },
    {
       "name":"Nintendo 64",
-      "iconFilename":"n64.png",
+      "shortName":"n64",
+	  "iconFilename":"n64.png",
       "defaultGameCover":"n64.jpg",
       "gameSearchModes":[
          "FILE_FILE_NAME_MATCH",
@@ -395,14 +427,17 @@
                ".pal"
             ],
             "searchString":"^(project64)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          }
       ],
+	  "directExecutionMode":"none",
 	  "autoSearchEnabled":true
    },
    {
       "name":"Nintendo Entertainment System",
-      "iconFilename":"nes.png",
+      "shortName":"nes",
+	  "iconFilename":"nes.png",
       "defaultGameCover":"snes.jpg",
       "gameSearchModes":[
          "FILE_FILE_NAME_MATCH",
@@ -430,14 +465,17 @@
                ".zip"
             ],
             "searchString":"^(fceux)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          }
       ],
+	  "directExecutionMode":"none",
 	  "autoSearchEnabled":true
    },
   {
       "name":"Nintendo DS",
-      "iconFilename":"nds.png",
+      "shortName":"nds",
+	  "iconFilename":"nds.png",
       "defaultGameCover":"snes.jpg",
       "gameSearchModes":[
          "FILE_FILE_NAME_MATCH",
@@ -474,14 +512,17 @@
                ".gz"
             ],
             "searchString":"^(desmume.*)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          }
       ],
+	  "directExecutionMode":"none",
 	  "autoSearchEnabled":true
    },
    {
       "name":"Nintendo 3DS",
-      "iconFilename":"3ds.png",
+      "shortName":"3ds",
+	  "iconFilename":"3ds.png",
       "defaultGameCover":"snes.jpg",
       "gameSearchModes":[
          "FILE_FILE_NAME_MATCH",
@@ -509,15 +550,18 @@
                ".3dsx"
 			 ],
             "searchString":"^(citra-qt)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          }
       ],
+	  "directExecutionMode":"none",
 	  "autoSearchEnabled":true
    },
     {
       "name":"Nintendo GameCube",
-      "iconFilename":"ngc.png",
-      "defaultGameCover":"ngc.jpg",
+      "shortName":"gcn",
+	  "iconFilename":"gcn.png",
+      "defaultGameCover":"gcn.jpg",
       "gameSearchModes":[
          "FILE_FILE_NAME_MATCH",
 		 "IMAGE_FILE_NAME_MATCH"
@@ -546,13 +590,31 @@
                "^\\.gcz$"
             ],
             "searchString":"^(dolphin)\\.exe$",
+			"setupFileMatch":"",
+			"autoSearchEnabled":true
+         },
+		 {
+            "name":"Dolphin VR",
+            "path":"",
+            "iconFilename":"dolphin.png",
+            "configFilePath":"",
+            "website":"https://dolphinvr.wordpress.com/downloads/",
+            "startParameters":"%emupath% /e %gamepath%",
+            "supportedFileTypes":[
+               "^\\.gcm$",
+               "^\\.gcz$"
+            ],
+            "searchString":"^(dolphin)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          }
       ],
+	  "directExecutionMode":"none",
 	  "autoSearchEnabled":true
    },
    {
       "name":"Nintendo Wii",
+	  "shortName":"wii",
       "iconFilename":"wii.png",
       "defaultGameCover":"wii.jpg",
       "gameSearchModes":[
@@ -571,7 +633,8 @@
 			".ciso"
       ],
       "emulators":[
-         {
+      
+	  {
             "name":"Dolphin",
             "path":"",
             "iconFilename":"dolphin.png",
@@ -584,15 +647,33 @@
                ".wad"
             ],
             "searchString":"^(dolphin)\\.exe$",
+			"setupFileMatch":"",
+			"autoSearchEnabled":true
+         },
+		 {
+            "name":"Dolphin VR",
+            "path":"",
+            "iconFilename":"dolphin.png",
+            "configFilePath":"",
+            "website":"https://dolphinvr.wordpress.com/downloads/",
+            "startParameters":"%emupath% /e %gamepath%",
+            "supportedFileTypes":[
+               "^\\.gcm$",
+               "^\\.gcz$"
+            ],
+            "searchString":"^(dolphin)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          }
       ],
+	  "directExecutionMode":"none",
 	  "autoSearchEnabled":true
    },
    {
       "name":"Nintendo Wii U",
-      "iconFilename":"wii-u.png",
-      "defaultGameCover":"ngc.jpg",
+      "shortName":"wii u",
+	  "iconFilename":"wii-u.png",
+      "defaultGameCover":"gcn.jpg",
       "gameSearchModes":[
          "FILE_FILE_NAME_MATCH",
 		 "IMAGE_FILE_NAME_MATCH"
@@ -621,13 +702,16 @@
 				".wux"
             ],
             "searchString":"^(cemu)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          }
       ],
+	  "directExecutionMode":"none",
 	  "autoSearchEnabled":true
    },
    {
       "name":"ScummVM",
+	  "shortName":"scummvm",
       "iconFilename":"scummvm.png",
       "defaultGameCover":"snes.jpg",
       "gameSearchModes":[
@@ -667,13 +751,16 @@
                ".tab"
             ],
             "searchString":"^(scummvm.*)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          }
       ],
+	  "directExecutionMode":"none",
 	  "autoSearchEnabled":true
    },
    {
       "name":"Sega Dreamcast",
+	  "shortName":"dreamcast",
       "iconFilename":"dc-red.png",
       "defaultGameCover":"dc.jpg",
       "gameSearchModes":[
@@ -703,13 +790,16 @@
                ".elf"
             ],
             "searchString":"^(nulldc.*)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          }
       ],
+	  "directExecutionMode":"none",
 	  "autoSearchEnabled":true
    },
    {
       "name":"Sony Playstation 1",
+	  "shortName":"psx",
       "iconFilename":"ps1.png",
       "defaultGameCover":"ps1.jpg",
       "gameSearchModes":[
@@ -748,6 +838,7 @@
                ".ecm"
             ],
             "searchString":"^(epsxe)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          },
 		 {
@@ -760,14 +851,17 @@
             "supportedFileTypes":[
             ],
             "searchString":"^(fpse)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          }
       ],
+	  "directExecutionMode":"none",
 	  "autoSearchEnabled":true
    },
    {
       "name":"Sony Playstation 2",
-      "iconFilename":"ps2.png",
+      "shortName":"ps2",
+	  "iconFilename":"ps2.png",
       "defaultGameCover":"ps2.jpg",
       "gameSearchModes":[
          "FILE_FILE_NAME_MATCH",
@@ -803,13 +897,16 @@
                ".nrg"
             ],
             "searchString":"^(pcsx2-r\\d+)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          }
       ],
+	  "directExecutionMode":"none",
 	  "autoSearchEnabled":true
    },
       {
       "name":"Sony Playstation 3",
+	  "shortName":"ps3",
       "iconFilename":"ps3.png",
       "defaultGameCover":"ps3.jpg",
       "gameSearchModes":[
@@ -846,13 +943,16 @@
                ".nrg"
             ],
             "searchString":"^(rpcs3)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          }
       ],
+	  "directExecutionMode":"none",
 	  "autoSearchEnabled":true
    },
    {
       "name":"Sony Playstation Portable",
+	  "shortName":"psp",
       "iconFilename":"psp.png",
       "defaultGameCover":"psp.jpg",
       "gameSearchModes":[
@@ -860,7 +960,7 @@
          "ARCHIVE_FILE_NAME_MATCH",
          "IMAGE_FILE_NAME_MATCH"
       ],
-      "searchFor":"^(.+)\\.cso$|^(.+)\\.pbp$",
+      "searchFor":"^(.+)\\.pbp$",
       "fileStructure":[
 		
 		],
@@ -868,7 +968,8 @@
          ".zip"
       ],
       "supportedImageTypes":[
-         ".iso"
+         ".iso",
+		 ".cso"
       ],
       "emulators":[
          {
@@ -887,13 +988,16 @@
                ".zip"
             ],
             "searchString":"^(ppsspp.*)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          }
       ],
+	  "directExecutionMode":"none",
 	  "autoSearchEnabled":true
    },
    {
       "name":"Super Nintendo",
+	  "shortName":"snes",
       "iconFilename":"snes.png",
       "defaultGameCover":"snes.jpg",
       "gameSearchModes":[
@@ -917,12 +1021,13 @@
             "iconFilename":"snes9x.png",
             "configFilePath":"snes9x.conf",
             "website":"http://www.snes9x.com/downloads.php",
-            "startParameters":"%emupath% %gamepath%",
+            "startParameters":"%emupath% %gamepath% -fullscreen",
             "supportedFileTypes":[
                ".zip",
                ".smc"
             ],
             "searchString":"^(snes9x.*)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          },
          {
@@ -937,6 +1042,7 @@
                ".smc"
             ],
             "searchString":"^(zsnesw)\\.exe$|^(zsnes)$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          },
 		 {
@@ -951,13 +1057,16 @@
                ".smc"
             ],
             "searchString":"^(fakenesw)\\.exe$|^(fakenes)$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
 		 }
       ],
-	  "autoSearchEnabled":true
+	    "directExecutionMode":"none",
+		"autoSearchEnabled":true
    },
    {
       "name":"Microsoft Xbox",
+	  "shortName":"xbox",
       "iconFilename":"win-8.png",
       "defaultGameCover":"windows.jpg",
       "gameSearchModes":[
@@ -985,6 +1094,7 @@
                
             ],
             "searchString":"^(qemu)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          },
 		 {
@@ -998,6 +1108,7 @@
                
             ],
             "searchString":"^(xqemu)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          },
 		 {
@@ -1011,13 +1122,16 @@
                
             ],
             "searchString":"^(xeon)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          }
       ],
-	  "autoSearchEnabled":true
+	    "directExecutionMode":"none",
+		"autoSearchEnabled":true
    },
    {
       "name":"Microsoft Xbox 360",
+	  "shortName":"xbox 360",
       "iconFilename":"win-8.png",
       "defaultGameCover":"windows.jpg",
       "gameSearchModes":[
@@ -1045,19 +1159,22 @@
                
             ],
             "searchString":"^(xenia)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":true
          }
       ],
+  	  "directExecutionMode":"none",
 	  "autoSearchEnabled":true
    },
    {
       "name":"Microsoft Windows",
+	  "shortName":"pc",
       "iconFilename":"win-8.png",
       "defaultGameCover":"windows.jpg",
       "gameSearchModes":[
          "FILE_FILE_NAME_MATCH"
       ],
-      "searchFor":"^(.+)\\.exe$",
+      "searchFor":"^(.+)\\.exe$|^(.+)\\.bat$|^(.+)\\.cmd$|^(.+)\\.js$",
       "fileStructure":[
 		
 		],
@@ -1079,9 +1196,11 @@
                
             ],
             "searchString":"^(cmd)\\.exe$",
+			"setupFileMatch":"",
 			"autoSearchEnabled":false
          }	  
       ],
+	  "directExecutionMode":"windows",
 	  "autoSearchEnabled":false
    }
 ]

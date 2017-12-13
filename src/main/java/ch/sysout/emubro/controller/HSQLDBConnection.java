@@ -5,13 +5,12 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
-import org.hsqldb.HsqlException;
 import org.hsqldb.jdbcDriver;
 
 public class HSQLDBConnection {
 	private Connection connection;
 
-	public HSQLDBConnection(String databasePath, String databaseName) throws SQLException, HsqlException {
+	public HSQLDBConnection(String databasePath, String databaseName) throws SQLException {
 		String fullPath = databasePath + (databasePath.endsWith("" + File.separatorChar) ? "" : File.separatorChar)
 				+ databaseName;
 		DriverManager.registerDriver(new jdbcDriver());

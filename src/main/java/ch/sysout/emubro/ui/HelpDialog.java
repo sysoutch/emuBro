@@ -5,11 +5,16 @@ import java.awt.Component;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.JButton;
 import javax.swing.JDialog;
+import javax.swing.JEditorPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
@@ -25,6 +30,7 @@ import com.jgoodies.forms.layout.FormLayout;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
+import ch.sysout.util.UIUtil;
 
 public class HelpDialog extends JDialog implements ActionListener {
 	private static final long serialVersionUID = 1L;
@@ -43,6 +49,10 @@ public class HelpDialog extends JDialog implements ActionListener {
 
 	private JButton btnClose = new JButton(Messages.get("close"));
 
+	private JEditorPane edit1;
+
+	private JScrollPane sp;
+
 	public HelpDialog() {
 		setTitle("Help");
 		setDefaultCloseOperation(DISPOSE_ON_CLOSE);
@@ -52,10 +62,15 @@ public class HelpDialog extends JDialog implements ActionListener {
 		// setResizable(false);
 		initComponents();
 		createUI();
-
 		pack();
-		// adjustSizeWhenNeeded();
-		setMinimumSize(getSize());
+		adjustSizeWhenNeeded();
+		//		setMinimumSize(getSize());
+	}
+
+	public void adjustSizeWhenNeeded() {
+		int width = getWidth();
+		int height = getHeight();
+		setSize((int) (width * 1.25), height);
 	}
 
 	private List<Image> getIcons() {
@@ -135,7 +150,6 @@ public class HelpDialog extends JDialog implements ActionListener {
 		pnl.add(createContentPanel(), BorderLayout.CENTER);
 
 		add(pnl, BorderLayout.CENTER);
-
 	}
 
 	private Component createButtonBarPanel() {
@@ -168,14 +182,29 @@ public class HelpDialog extends JDialog implements ActionListener {
 	}
 
 	private Component createContentPanel() {
-		JPanel pnl = new JPanel();
-		FormLayout layout = new FormLayout(
-				"min, $lcgap, min, $rgap, min, $lcgap, min, $lcgap, min, $rgap, min, $lcgap, min, min:grow",
-				"fill:min, $rgap, fill:min:grow");
-		pnl.setLayout(layout);
-		new CellConstraints();
-
+		JPanel pnl = new JPanel(new BorderLayout());
+		edit1 = new JEditorPane("text/html", "");
+		sp = new JScrollPane(edit1);
+		sp.getVerticalScrollBar().setUnitIncrement(16);
+		pnl.add(sp);
 		return pnl;
+	}
+
+	public void showContent(String path) {
+		StringBuilder out = new StringBuilder();
+		try {
+			InputStream is = HelpDialog.class.getResourceAsStream(path);
+			BufferedReader bi = new BufferedReader(new InputStreamReader(is));
+			String line;
+			while ((line = bi.readLine()) != null) {
+				out.append(line);
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		edit1.setText(out.toString());
+		UIUtil.scrollToTop(edit1);
 	}
 
 	@Override
