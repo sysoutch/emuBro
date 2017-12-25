@@ -78,6 +78,7 @@ import ch.sysout.emubro.impl.model.BroGame;
 import ch.sysout.emubro.impl.model.EmulatorConstants;
 import ch.sysout.emubro.impl.model.PlatformConstants;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.ImageUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
@@ -358,7 +359,22 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 	private void initializeNavigationAndCurrentViewAndPreviewPane() {
 		pnlNavigation = new NavigationPanel();
 		splNavigationAndCurrentViewAndPreviewPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, true, pnlNavigation,
-				splCurrentViewAndPreviewPane);
+				splCurrentViewAndPreviewPane) {
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public int getMinimumDividerLocation() {
+				int iconWidth = pnlNavigation.getMinimumButtonWidth();
+				JScrollBar navigationVerticalScrollBar = pnlNavigation.getSpNavigationButtons().getVerticalScrollBar();
+				int scrollBarWidth = navigationVerticalScrollBar.getWidth();
+				if (scrollBarWidth == 0) {
+					scrollBarWidth = ((Integer)UIManager.get("ScrollBar.width")).intValue();
+				}
+				int dividerSize = splNavigationAndCurrentViewAndPreviewPane.getDividerSize();
+				int border = pnlNavigation.getButtonInsets() + scrollBarWidth + dividerSize;
+				return ScreenSizeUtil.adjustValueToResolution(iconWidth + border);
+			}
+		};
 		splNavigationAndCurrentViewAndPreviewPane.getLeftComponent().setVisible(false);
 		splNavigationAndCurrentViewAndPreviewPane.setBorder(BorderFactory.createEmptyBorder());
 		splNavigationAndCurrentViewAndPreviewPane.setResizeWeight(0);
@@ -384,15 +400,11 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 					int iconWidth = button.getIcon().getIconWidth();
 					JScrollBar navigationVerticalScrollBar = pnlNavigation.getSpNavigationButtons().getVerticalScrollBar();
 					int scrollBarWidth = navigationVerticalScrollBar.getWidth();
-					System.out.println("1st: "+scrollBarWidth);
 					if (scrollBarWidth == 0) {
-						System.out.println("2nd: "+scrollBarWidth);
 						scrollBarWidth = ((Integer)UIManager.get("ScrollBar.width")).intValue();
-						System.out.println("3rd: "+scrollBarWidth);
-						//							pnlNavigation.getSpNavigationButtons().setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
 					}
 					int dividerSize = splNavigationAndCurrentViewAndPreviewPane.getDividerSize();
-					int border = button.getInsets().left + button.getInsets().right + scrollBarWidth + dividerSize;
+					int border = pnlNavigation.getButtonInsets() + scrollBarWidth + dividerSize;
 					int widthWithTextOnOneLine = textWidth + iconWidth + border + button.getIconTextGap();
 					int widthWithTextBottom = ((textWidth >= iconWidth) ? textWidth : iconWidth) + border;
 					if (newValue < iconWidth + border) {
@@ -520,7 +532,9 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 						splCurrentViewAndPreviewPane.setDividerLocation(splCurrentViewAndPreviewPane.getMinimumDividerLocation());
 						return;
 					}
+					setPreviewPaneMovingWeight();
 					lastUserDefinedPreviewWidth = getParent().getWidth() - splCurrentViewAndPreviewPane.getDividerLocation() + loc;
+					lastPreviewPaneWidth = lastUserDefinedPreviewWidth;
 
 					int divLocation = pnlPreviewPane.getWidth();
 					int dividerSize = splCurrentViewAndPreviewPane.getDividerSize();
@@ -562,12 +576,14 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				@Override
 				public void mouseDragged(MouseEvent e) {
 					lastUserDefinedDetailsHeight = getHeight() - splDetailsPane.getDividerLocation();
+					lastDetailsHeight = lastUserDefinedDetailsHeight;
 					int minimumDetailsDividerLocation = splDetailsPane.getMinimumDividerLocation();
 					boolean detailsDividerEqualOrLessThanMinimum = splDetailsPane.getDividerLocation() <= minimumDetailsDividerLocation;
 					if (detailsDividerEqualOrLessThanMinimum) {
 						splDetailsPane.setDividerLocation(minimumDetailsDividerLocation);
 						return;
 					}
+					setDetailsPaneMovingWeight();
 					if (splDetailsPane.getDividerLocation() == splDetailsPane.getMaximumDividerLocation()) {
 						//						if (splDetailsPane.getLastDividerLocation() < splDetailsPane.getDividerLocation()) {
 
@@ -1677,8 +1693,6 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 			private static final long serialVersionUID = 1L;
 			final Color colorFavorite = new Color(250, 176, 42);
 			private Border borderHover = BorderFactory.createLineBorder(pnlListView.getGameList().getSelectionBackground(), 2, false);
-			//			private Border borderMargin = new EmptyBorder(10, 10, 10, 10);
-			//			private Border borderCompoundHover = new CompoundBorder(borderHover, borderMargin);
 
 			@Override
 			public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected,
@@ -1688,10 +1702,9 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				BroGame game = (BroGame) value;
 				checkGameIcon(game, label);
 				checkCriteria(label, isSelected);
-				checkIsFavorite(game, label);
+				checkFontAndFontSize(game, label);
 				checkIsGameSelected(index, label);
 				checkHideExtensions(viewManager.isHideExtensionsEnabled(), game.getPath(), label);
-				checkFontAndFontSize(label);
 				if (pnlListView.isDragging()) {
 					setEnabled(true);
 				}
@@ -1719,12 +1732,17 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				}
 			}
 
-			private void checkFontAndFontSize(JLabel label) {
+			private void checkFontAndFontSize(BroGame game, JLabel label) {
 				Font labelFont = label.getFont();
 				if (viewManager.getFontSize() <= 0) {
 					viewManager.setFontSize(label.getFont().getSize());
 				}
-				label.setFont(new Font(labelFont.getName(), Font.PLAIN, pnlListView.getfontSize()));
+				if (game.isFavorite()) {
+					label.setForeground(colorFavorite);
+					label.setFont(new Font(labelFont.getName(), Font.BOLD, pnlListView.getFontSize()));
+				} else {
+					label.setFont(new Font(labelFont.getName(), Font.PLAIN, pnlListView.getFontSize()));
+				}
 			}
 
 			private void checkHideExtensions(boolean hideExtensions, String gamePath, JLabel label) {
@@ -1744,13 +1762,6 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				}
 				if (index == pnlListView.getGameList().getSelectedIndex()) {
 					label.setForeground(UIManager.getColor("List.selectionForeground"));
-				}
-			}
-
-			private void checkIsFavorite(BroGame game, JLabel label) {
-				if (game.isFavorite()) {
-					label.setForeground(colorFavorite);
-					label.setText("<html><strong>" + label.getText() + "</strong></html>");
 				}
 			}
 
@@ -1799,12 +1810,6 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				}
 			}
 		});
-	}
-
-	public void initGameCovers() {
-		if (getCurrentViewPanelType() == ViewPanel.COVER_VIEW) {
-			pnlCoverView.initGameCovers();
-		}
 	}
 
 	public String getNavigationPaneState() {

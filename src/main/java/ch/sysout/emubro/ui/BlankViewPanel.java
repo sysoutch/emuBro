@@ -254,4 +254,8 @@ public class BlankViewPanel extends ViewPanel {
 	@Override
 	public void setViewStyle(int viewStyle) {
 	}
+
+	@Override
+	public void addUpdateGameCountListener(UpdateGameCountListener l) {
+	}
 }

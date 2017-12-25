@@ -21,7 +21,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -58,6 +57,7 @@ import ch.sysout.emubro.impl.event.BroGameSelectionEvent;
 import ch.sysout.emubro.impl.event.NavigationEvent;
 import ch.sysout.emubro.impl.model.GameConstants;
 import ch.sysout.emubro.ui.listener.CoversModelListener;
+import ch.sysout.ui.ImageUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ScreenSizeUtil;
 import ch.sysout.util.UIUtil;
@@ -246,13 +246,6 @@ implements GameListener, GameSelectionListener, MouseListener, MouseMotionListen
 			component.setVerticalTextPosition(SwingConstants.BOTTOM);
 			component.setToolTipText("<html><b>" + game.getName() + "</b>" + "<br>" + game.getPlatformId() + ""
 					+ "<br>Grösse: 64 KB" + "<br>Zuletzt gespielt: 27.05.2015 11:33:10" + "</html>");
-			boolean useGameCover = !game.getCoverPath().isEmpty();
-			ImageIcon icon = (useGameCover) ? ImageUtil.getImageIconFrom(game.getCoverPath(), true) : null;
-			if (icon != null) {
-				icon = ImageUtil.scaleCover(icon, currentCoverSize, CoverConstants.SCALE_HEIGHT_OPTION);
-			}
-			mdlCoversAllGames.addCover(game.getId(), icon);
-
 			component.addMouseListener(CoverViewPanel.this);
 			grp.add(component);
 			mdlCoversAllGames.addElement(game);
@@ -287,12 +280,28 @@ implements GameListener, GameSelectionListener, MouseListener, MouseMotionListen
 			Game game = mdlCoversAllGames.getGame(comps.getKey());
 			int platformId = game.getPlatformId();
 			AbstractButton comp = comps.getValue();
-			ImageIcon icon = iconStore.getPlatformCover(platformId);
-			if (icon != null) {
+			ImageIcon icon = iconStore.getGameCover(game.getId());
+			if (icon == null) {
+				//				icon = iconStore.getPlatformCover(platformId);
 				icon = iconStore.getScaledPlatformCover(platformId, currentCoverSize);
 			}
 			comp.setIcon(icon);
 		}
+
+		//		Set<Entry<Integer, Game>> allGames = mdlCoversAllGames.getAllGames();
+		//		for (Map.Entry<Integer, Game> entry : allGames) {
+		//			Game game = entry.getValue();
+		//			int gameId = game.getId();
+		//			int platformId = game.getPlatformId();
+		//			AbstractButton component = components.get(gameId);
+		//			ImageIcon icon = iconStore.getGameIcon(gameId);
+		//			if (icon == null) {
+		//				icon = getScaledCover(platformId, currentCoverSize, CoverConstants.SCALE_HEIGHT_OPTION);
+		//			} else {
+		//				System.err.println("not null");
+		//			}
+		//			component.setIcon((icon != null) ? icon : iconStore.getPlatformCover(platformId));
+		//		}
 	}
 
 	protected void fireGameSelectedEvent(int i) {
@@ -677,23 +686,6 @@ implements GameListener, GameSelectionListener, MouseListener, MouseMotionListen
 		}
 	}
 
-	public void initGameCovers() {
-		Set<Entry<Integer, Game>> allGames = mdlCoversAllGames.getAllGames();
-		for (Map.Entry<Integer, Game> entry : allGames) {
-			Game game = entry.getValue();
-			int gameId = game.getId();
-			int platformId = game.getPlatformId();
-			AbstractButton component = components.get(gameId);
-			ImageIcon icon = mdlCoversAllGames.getCover(gameId);
-			if (icon == null) {
-				icon = getScaledCover(platformId, currentCoverSize, CoverConstants.SCALE_HEIGHT_OPTION);
-			} else {
-				System.err.println("not null");
-			}
-			component.setIcon((icon != null) ? icon : iconStore.getPlatformCover(platformId));
-		}
-	}
-
 	private ImageIcon getScaledCover(int platformId, int currentCoverSize2, int scaleHeightOption) {
 		String s = platformId+"."+currentCoverSize2;
 		float platformIdPlusCurrentCoverSize = Float.parseFloat(s);
@@ -908,5 +900,10 @@ implements GameListener, GameSelectionListener, MouseListener, MouseMotionListen
 	@Override
 	public void setViewStyle(int viewStyle) {
 		this.viewStyle = viewStyle;
+	}
+
+	@Override
+	public void addUpdateGameCountListener(UpdateGameCountListener l) {
+
 	}
 }

@@ -73,6 +73,7 @@ import ch.sysout.emubro.impl.event.BroGameSelectionEvent;
 import ch.sysout.emubro.impl.event.NavigationEvent;
 import ch.sysout.emubro.impl.model.GameConstants;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.ImageUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 import ch.sysout.util.UIUtil;
@@ -145,22 +146,13 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	protected int mouseX;
 	protected int mouseY;
 	private boolean touchScreenScrollEnabled;
+	private List<UpdateGameCountListener> gameCountListeners = new ArrayList<>();
 
 	public ListViewPanel(GameContextMenu popupGame) {
 		super(new BorderLayout());
 		this.popupGame = popupGame;
 		initPopupGroup();
 		add(createScrollPane(lstGames));
-		lstGames.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseClicked(MouseEvent e) {
-				if (SwingUtilities.isRightMouseButton(e)) {
-					int row = mouseOver;
-					lstGames.setSelectedIndex(row);
-					showGamePopupMenu(e.getComponent(), e.getX(), e.getY());
-				}
-			}
-		});
 		lstGames.addKeyListener(new KeyAdapter() {
 			@Override
 			public void keyPressed(KeyEvent e) {
@@ -226,8 +218,10 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				lst.setEnabled(true);
 				lst.requestFocusInWindow();
 				if (SwingUtilities.isRightMouseButton(e)) {
-					if (mouseOver > -1) {
-						lst.setSelectedIndex(mouseOver);
+					int index = lst.locationToIndex(e.getPoint());
+					if (index > -1) {
+						lst.setSelectedIndex(index);
+						showGamePopupMenu(e.getComponent(), e.getX(), e.getY());
 					}
 				}
 				if (sp.getCursor() == cursorDrag) {
@@ -1066,22 +1060,38 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 
 	@Override
 	public void navigationChanged(NavigationEvent e) {
+		int gameCount = 0;
 		switch (e.getView()) {
 		case NavigationPanel.ALL_GAMES:
+			gameCount = mdlLstAllGames.getSize();
 			lstGames.setModel(mdlLstAllGames);
 			lstGames.setBackground(UIManager.getColor("List.background"));
 			setViewStyle(lstGames, defaultViewStyle);
 			break;
 		case NavigationPanel.RECENTLY_PLAYED:
+			gameCount = mdlLstRecentlyPlayed.getSize();
 			lstGames.setModel(mdlLstRecentlyPlayed);
 			lstGames.setBackground(UIManager.getColor("List.background"));
 			setViewStyle(lstGames, defaultViewStyle);
 			break;
 		case NavigationPanel.FAVORITES:
+			gameCount = mdlLstFavorites.getSize();
 			lstGames.setModel(mdlLstFavorites);
 			lstGames.setBackground(new Color(10, 42, 64));
 			setViewStyle(lstGames, defaultViewStyle);
 			break;
+		}
+		fireUpdateGameCountEvent(gameCount);
+	}
+
+	@Override
+	public void addUpdateGameCountListener(UpdateGameCountListener l) {
+		gameCountListeners.add(l);
+	}
+
+	private void fireUpdateGameCountEvent(int gameCount) {
+		for (UpdateGameCountListener l : gameCountListeners) {
+			l.gameCountUpdated(gameCount);
 		}
 	}
 
@@ -1125,7 +1135,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		}
 	}
 
-	public int getfontSize() {
+	public int getFontSize() {
 		return currentFontSize;
 	}
 

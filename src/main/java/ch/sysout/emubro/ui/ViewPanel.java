@@ -160,4 +160,6 @@ public abstract class ViewPanel extends JPanel implements GameSelectionListener 
 	public abstract void selectPreviousGame();
 
 	public abstract void setViewStyle(int viewStyle);
+
+	public abstract void addUpdateGameCountListener(UpdateGameCountListener l);
 }

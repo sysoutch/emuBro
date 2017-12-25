@@ -19,24 +19,25 @@ import ch.sysout.emubro.impl.model.BroExplorer;
 import ch.sysout.emubro.ui.CoverViewPanel;
 import ch.sysout.emubro.ui.EmulationOverlayFrame;
 import ch.sysout.emubro.ui.MainFrame;
-import ch.sysout.emubro.ui.ManagePlatformsPanel;
 import ch.sysout.emubro.ui.PreviewPanePanel;
 import ch.sysout.emubro.ui.RatingBarPanel;
 import ch.sysout.emubro.ui.SplashScreenWindow;
 import ch.sysout.emubro.ui.TableViewPanel;
 import ch.sysout.emubro.ui.ViewPanel;
+import ch.sysout.emubro.ui.properties.ManagePlatformsPanel;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ValidationUtil;
 
 /**
  * -- General ---
+ * TODO ask user when exit emuBro to store generated icons (as example when scaling covers) on disk
  * FIXME update name changes in coverviewpanel
  * FIXME right click no game bug > popupgame instead of popupview
  * TODO check letter search key pressing feature in table view and maybe implement it urself
  * TODO show hint dialog when starting game that has multiple emulators
  * TODO tooltip at details pane buttons pin unpin hide
- * TODO optional feature: emulator version differation.
+ * TODO optional feature: emulator version ditfferation.
  * TODO process map maybe remove processes they are no longer active. cause game thinks it is already running after second time playing
  * TODO when adding multiple files, make one big dialog for everything that could happen
  * TODO when game in archive has no specific platform show up choose platform dialog (and empty archive bug) / platform not detected

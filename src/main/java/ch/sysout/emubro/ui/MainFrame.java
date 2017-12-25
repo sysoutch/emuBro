@@ -89,6 +89,7 @@ import ch.sysout.emubro.controller.ViewConstants;
 import ch.sysout.emubro.impl.event.NavigationEvent;
 import ch.sysout.emubro.impl.model.BroEmulator;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.ImageUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
@@ -99,7 +100,7 @@ import ch.sysout.util.UIUtil;
  *
  */
 public class MainFrame extends JFrame implements ActionListener, GameViewListener, GameListener, GameSelectionListener, PlatformListener,
-EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, PreviewPaneListener {
+EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, PreviewPaneListener, UpdateGameCountListener {
 	private static final long serialVersionUID = 1L;
 	private static final String TITLE = Messages.get(MessageConstants.APPLICATION_TITLE);
 	private JMenuBar mnb;
@@ -367,9 +368,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmSetFilter = new JRadioButtonMenuItem();
 		itmChooseDetails = new JMenuItem();
 		itmHideExtensions = new JCheckBoxMenuItem();
-		itmHideExtensions.setSelected(true);
 		itmTouchScreenOptimizedScroll = new JCheckBoxMenuItem();
-		itmTouchScreenOptimizedScroll.setSelected(true);
 		itmRefresh = new JMenuItem();
 		itmFullScreen = new JCheckBoxMenuItem();
 		itmLanguageDe = new JRadioButtonMenuItem();
@@ -679,6 +678,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		addActionListeners(btnOrganize, btnChangeView, btnMoreOptionsChangeView, btnSetFilter);
 
 		pnlMain.addNavigationSplitPaneListener();
+		viewManager.addUpdateGameCountListener(this);
 	}
 
 	private void addMouseListeners(Component... o) {
@@ -1478,13 +1478,13 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	@Override
 	public void gameSelected(GameSelectionEvent e) {
 		boolean b = e.getGame() != null;
+		pnlButtonBar.gameSelected(e);
 		btnRunGame.setVisible(b);
 		btnMoreOptionsRunGame.setVisible(b);
 		btnGameProperties.setVisible(b);
 		btnRemoveGame.setVisible(b);
 		btnRenameGame.setVisible(b);
 		pnlMain.gameSelected(e);
-		pnlButtonBar.gameSelected(e);
 	}
 
 	@Override
@@ -2181,10 +2181,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		return pnlMain.getLastPnlDetailsPreferredSize();
 	}
 
-	public void initGameCovers() {
-		pnlMain.initGameCovers();
-	}
-
 	public String getNavigationPaneState() {
 		return pnlMain.getNavigationPaneState();
 	}
@@ -2233,5 +2229,10 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		btnPreviewPane.setIcon(iconPreviewPaneShow);
 		btnPreviewPane.setToolTipText(Messages.get(MessageConstants.SHOW_PREVIEW_PANE));
 		btnPreviewPane.setActionCommand(GameViewConstants.SHOW_PREVIEW_PANE);
+	}
+
+	@Override
+	public void gameCountUpdated(int gameCount) {
+		updateGameCount(gameCount);
 	}
 }

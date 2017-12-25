@@ -7,8 +7,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import javax.swing.ImageIcon;
-
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.ui.listener.CoversModelListener;
@@ -16,7 +14,6 @@ import ch.sysout.emubro.ui.listener.CoversModelListener;
 public class GameCoversModel {
 	private Map<Integer, Platform> platforms = new HashMap<>();
 	private Map<Integer, Game> games = new HashMap<>();
-	private Map<Integer, ImageIcon> covers = new HashMap<>();
 
 	private List<CoversModelListener> listeners = new ArrayList<>();
 
@@ -80,14 +77,6 @@ public class GameCoversModel {
 		// game.setName(game.getName().substring(0, 46)+"...");
 		// }
 		return game;
-	}
-
-	public void addCover(int gameId, ImageIcon icon) {
-		covers.put(gameId, icon);
-	}
-
-	public ImageIcon getCover(int gameId) {
-		return covers.get(gameId);
 	}
 
 	public Set<Entry<Integer, Game>> getAllGames() {

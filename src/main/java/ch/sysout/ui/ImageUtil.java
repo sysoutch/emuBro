@@ -1,4 +1,4 @@
-package ch.sysout.emubro.ui;
+package ch.sysout.ui;
 
 import java.awt.Image;
 import java.awt.image.BufferedImage;
@@ -8,6 +8,8 @@ import java.net.URL;
 
 import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
+
+import ch.sysout.emubro.ui.CoverConstants;
 
 public class ImageUtil {
 

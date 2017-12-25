@@ -35,6 +35,7 @@ import com.jgoodies.forms.layout.FormLayout;
 import ch.sysout.emubro.api.GameViewListener;
 import ch.sysout.emubro.impl.event.NavigationEvent;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.ImageUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
@@ -707,6 +708,10 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 		setToolTipTexts();
 	}
 
+	public int getMinimumButtonWidth() {
+		return btnAllGames.getIcon().getIconWidth();
+	}
+
 	public int getButtonWidth() {
 		int width = btnAllGames.getWidth();
 		return width;
@@ -764,5 +769,9 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 		String buttonText1 = Messages.get(MessageConstants.RECENTLY_PLAYED);
 		String buttonText2 = Messages.get(MessageConstants.FAVORITES);
 		return UIUtil.getLongestLabel(buttonText, buttonText1, buttonText2);
+	}
+
+	public int getButtonInsets() {
+		return btnAllGames.getInsets().left + btnAllGames.getInsets().right;
 	}
 }

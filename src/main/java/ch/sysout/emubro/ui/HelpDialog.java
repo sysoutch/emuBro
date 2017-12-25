@@ -21,12 +21,15 @@ import javax.swing.JSeparator;
 import javax.swing.JTextField;
 import javax.swing.JTree;
 import javax.swing.SwingConstants;
+import javax.swing.event.HyperlinkEvent;
+import javax.swing.event.HyperlinkListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 
 import com.jgoodies.forms.factories.Paddings;
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 
+import ch.sysout.ui.ImageUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
@@ -138,6 +141,7 @@ public class HelpDialog extends JDialog implements ActionListener {
 
 		// create the tree by passing in the root node
 		treeTopics = new JTree(root);
+		expandAllNodes(treeTopics, 0, treeTopics.getRowCount());
 	}
 
 	private void createUI() {
@@ -181,9 +185,27 @@ public class HelpDialog extends JDialog implements ActionListener {
 		return pnl;
 	}
 
+	private void expandAllNodes(JTree tree, int startingIndex, int rowCount) {
+		for (int i = startingIndex; i < rowCount; i++) {
+			tree.expandRow(i);
+		}
+		if (tree.getRowCount() != rowCount) {
+			expandAllNodes(tree, rowCount, tree.getRowCount());
+		}
+	}
+
 	private Component createContentPanel() {
 		JPanel pnl = new JPanel(new BorderLayout());
 		edit1 = new JEditorPane("text/html", "");
+		edit1.setEditable(false);
+		edit1.addHyperlinkListener(new HyperlinkListener() {
+			public void hyperlinkUpdate(HyperlinkEvent hle) {
+				if (HyperlinkEvent.EventType.ACTIVATED.equals(hle.getEventType())) {
+					System.out.println(hle.getURL());
+				}
+			}
+		});
+
 		sp = new JScrollPane(edit1);
 		sp.getVerticalScrollBar().setUnitIncrement(16);
 		pnl.add(sp);

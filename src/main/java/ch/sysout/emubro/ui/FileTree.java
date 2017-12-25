@@ -55,6 +55,7 @@ import javax.swing.tree.TreeCellRenderer;
 import javax.swing.tree.TreePath;
 
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.ImageUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
@@ -121,6 +122,12 @@ public final class FileTree extends JPanel {
 		tree.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
+				int row = tree.getRowForLocation(e.getX(), e.getY());
+				tree.setSelectionRow(row);
+			}
+
+			@Override
+			public void mouseReleased(MouseEvent e) {
 				if (SwingUtilities.isRightMouseButton(e)) {
 					int row = tree.getRowForLocation(e.getX(), e.getY());
 					tree.setSelectionRow(row);

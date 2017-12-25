@@ -105,15 +105,15 @@ public class ButtonBarPanel extends JPanel {
 		lastPanelWidth = currentPanelWidth;
 	}
 
-	private void checkMinimizeButtons() {
+	void checkMinimizeButtons() {
 		int currentWidth = getWidth();
 		int buttonBarContentWidth = getButtonBarContentWidth();
 		int difference = currentWidth - buttonBarContentWidth;
 		if (gameSelected) {
 			if (hasText(0)) {
 				if (difference == 0) {
-					setEmptyText(0);
-					setEmptyText(1);
+					setEmptyTextForComponent(0);
+					setEmptyTextForComponent(1);
 					SwingUtilities.invokeLater(new Runnable() {
 
 						@Override
@@ -125,7 +125,7 @@ public class ButtonBarPanel extends JPanel {
 				return;
 			} else if (hasText(6)) {
 				if (difference == 0) {
-					setEmptyText(6);
+					setEmptyTextForComponent(6);
 					SwingUtilities.invokeLater(new Runnable() {
 
 						@Override
@@ -137,7 +137,7 @@ public class ButtonBarPanel extends JPanel {
 				return;
 			} else if (hasText(5)) {
 				if (difference == 0) {
-					setEmptyText(5);
+					setEmptyTextForComponent(5);
 					SwingUtilities.invokeLater(new Runnable() {
 
 						@Override
@@ -149,7 +149,7 @@ public class ButtonBarPanel extends JPanel {
 				return;
 			} else if (hasText(4)) {
 				if (difference == 0) {
-					setEmptyText(4);
+					setEmptyTextForComponent(4);
 					SwingUtilities.invokeLater(new Runnable() {
 
 						@Override
@@ -161,7 +161,7 @@ public class ButtonBarPanel extends JPanel {
 				return;
 			} else if (hasText(2)) {
 				if (difference == 0) {
-					setEmptyText(2);
+					setEmptyTextForComponent(2);
 				}
 				return;
 			} else {
@@ -183,8 +183,8 @@ public class ButtonBarPanel extends JPanel {
 			}
 		} else {
 			if (hasText(0)) {
-				setEmptyText(0);
-				setEmptyText(1);
+				setEmptyTextForComponent(0);
+				setEmptyTextForComponent(1);
 			} else {
 				components.get(1).setVisible(false);
 				components.get(0).setVisible(false);
@@ -192,7 +192,7 @@ public class ButtonBarPanel extends JPanel {
 		}
 	}
 
-	private void setEmptyText(int i) {
+	private void setEmptyTextForComponent(int i) {
 		components.get(i).setText("");
 	}
 
@@ -200,12 +200,11 @@ public class ButtonBarPanel extends JPanel {
 		return !components.get(index).getText().isEmpty();
 	}
 
-	private void checkMaximizeButtons() {
+	void checkMaximizeButtons() {
 		int currentWidth = getWidth();
 		int buttonBarContentWidth = getButtonBarContentWidth();
 		int difference = currentWidth - buttonBarContentWidth;
 		if (gameSelected) {
-			System.err.println("diff: " + difference);
 			if (!hasText(2)) {
 				if (difference > (components.get(2).getWidth() + components.get(3).getWidth())) {
 					//					if (!components.get(3).isVisible() || !components.get(4).isVisible()
@@ -335,6 +334,6 @@ public class ButtonBarPanel extends JPanel {
 	}
 
 	public void gameSelected(GameSelectionEvent e) {
-		gameSelected = e.getGame() != null;
+		gameSelected = e.getGame () != null;
 	}
 }

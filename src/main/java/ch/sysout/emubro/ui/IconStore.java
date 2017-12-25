@@ -5,6 +5,7 @@ import java.util.Map;
 
 import javax.swing.ImageIcon;
 
+import ch.sysout.ui.ImageUtil;
 import ch.sysout.util.ScreenSizeUtil;
 
 public class IconStore {
@@ -14,7 +15,10 @@ public class IconStore {
 	private Map<Integer, ImageIcon> emulatorIcons = new HashMap<>();
 
 	private Map<Integer, String> gameIconPaths = new HashMap<>();
+	private Map<Integer, String> gameCoverPaths = new HashMap<>();
+
 	private Map<Integer, ImageIcon> gameIcons = new HashMap<>();
+	private Map<Integer, ImageIcon> gameCovers = new HashMap<>();
 
 	private Map<Integer, ImageIcon> platformCovers = new HashMap<>();
 
@@ -130,5 +134,21 @@ public class IconStore {
 
 	public ImageIcon getGameIcons(int gameId) {
 		return gameIcons.get(gameId);
+	}
+
+	public void addGameCoverPath(int gameId, String coverPath) {
+		if (coverPath == null || coverPath.trim().isEmpty()) {
+			return;
+		}
+		if (!gameCoverPaths.containsKey(gameId)) {
+			gameCoverPaths.put(gameId, coverPath);
+			String coverFilePath = gameCoverPaths.get(gameId);
+			ImageIcon ico = ImageUtil.getImageIconFrom(coverFilePath, true);
+			gameCovers.put(gameId, ico);
+		}
+	}
+
+	public ImageIcon getGameCover(int gameId) {
+		return gameCovers.get(gameId);
 	}
 }

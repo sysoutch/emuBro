@@ -109,6 +109,7 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 		TableCellRenderer renderer = tblGames.getTableHeader().getDefaultRenderer();
 		((JLabel) renderer).setHorizontalAlignment(SwingConstants.LEFT);
 		tblGames.getTableHeader().setDefaultRenderer(renderer);
+		tblGames.setIntercellSpacing(new Dimension(0, 0));
 		tblGames.setShowGrid(false);
 		tblGames.getColumnModel().setColumnMargin(0);
 		tblGames.setAutoscrolls(false);
@@ -320,7 +321,7 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 
 	@Override
 	public void languageChanged() {
-		((TableViewPanel) mdlTblAllGames).languageChanged();
+		((GameTableModel) mdlTblAllGames).languageChanged();
 		List<Integer> columnWidths = new ArrayList<>();
 
 		for (int i = 0; i < tblGames.getColumnModel().getColumnCount(); i++) {
@@ -346,7 +347,7 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 			@Override
 			public void run() {
 				((GameTableModel) tblGames.getModel()).setColumnIdentifiersNow();
-				if (keyFinal.getColumn() != -1) {
+				if (keyFinal != null && keyFinal.getColumn() != -1) {
 					SortOrder sortOrder = keyFinal.getSortOrder();
 					tblGames.getRowSorter().toggleSortOrder(keyFinal.getColumn());
 					if (sortOrder == SortOrder.DESCENDING) {
@@ -606,5 +607,9 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 	@Override
 	public void setViewStyle(int viewStyle) {
 		this.viewStyle = viewStyle;
+	}
+
+	@Override
+	public void addUpdateGameCountListener(UpdateGameCountListener l) {
 	}
 }

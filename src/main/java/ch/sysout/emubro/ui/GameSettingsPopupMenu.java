@@ -16,6 +16,7 @@ import javax.swing.filechooser.FileSystemView;
 import ch.sysout.emubro.api.model.Emulator;
 import ch.sysout.emubro.impl.model.BroEmulator;
 import ch.sysout.emubro.impl.model.EmulatorConstants;
+import ch.sysout.ui.ImageUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;

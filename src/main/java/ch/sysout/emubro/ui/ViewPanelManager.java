@@ -404,4 +404,16 @@ public class ViewPanelManager {
 	public boolean isHideExtensionsEnabled() {
 		return hideExtensions;
 	}
+
+	public int getGameCountOfCurrentView() {
+		return 0;
+	}
+
+	public void addUpdateGameCountListener(UpdateGameCountListener l) {
+		for (ViewPanel pnl : panels) {
+			if (pnl != null) {
+				pnl.addUpdateGameCountListener(l);
+			}
+		}
+	}
 }

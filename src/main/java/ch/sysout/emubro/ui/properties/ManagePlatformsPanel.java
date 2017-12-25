@@ -1,4 +1,4 @@
-package ch.sysout.emubro.ui;
+package ch.sysout.emubro.ui.properties;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -56,12 +56,12 @@ import javax.swing.ListModel;
 import javax.swing.ListSelectionModel;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.event.TreeModelEvent;
 import javax.swing.event.TreeModelListener;
-import javax.swing.filechooser.FileSystemView;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableCellRenderer;
@@ -89,6 +89,15 @@ import ch.sysout.emubro.controller.BroController.PlatformListCellRenderer;
 import ch.sysout.emubro.impl.model.BroEmulator;
 import ch.sysout.emubro.impl.model.EmulatorConstants;
 import ch.sysout.emubro.impl.model.GameConstants;
+import ch.sysout.emubro.ui.AddEmulatorPanel;
+import ch.sysout.emubro.ui.AddPlatformDialog;
+import ch.sysout.emubro.ui.EmulatorTableCellRenderer;
+import ch.sysout.emubro.ui.EmulatorTableModel;
+import ch.sysout.emubro.ui.JLinkButton;
+import ch.sysout.emubro.ui.JTableDoubleClickOnHeaderFix;
+import ch.sysout.emubro.ui.SortedListModel;
+import ch.sysout.emubro.ui.TableColumnAdjuster;
+import ch.sysout.ui.ImageUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
@@ -642,6 +651,16 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 				btnSetDefaultEmulator.setText(Messages.get("setDefault"));
 				btnEmulatorProperties.setVisible(true);
 			}
+			SwingUtilities.invokeLater(new Runnable() {
+
+				@Override
+				public void run() {
+					JList<Platform> lst = pnlPlatforms.lstPlatforms;
+					JTable tbl = pnlEmulators.tblEmulators;
+					lst.ensureIndexIsVisible(pnlPlatforms.lstPlatforms.getSelectedIndex());
+					tbl.scrollRectToVisible(tbl.getCellRect(tbl.getSelectedRow(), 0, true));
+				}
+			});
 		}
 
 		class EmulatorConfigurationPanel extends JPanel {
@@ -1386,90 +1405,26 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 			UIUtil.revalidateAndRepaint(this);
 			boolean selected = selectedPlatform != null;
 			btnAddEmulator.setEnabled(selected);
-			//						remove(pnlAddEmulator);
-			//						add(pnlEmulatorOverview);
-			//			UIUtil.revalidateAndRepaint(this);
 		}
 
 		private void doModelShit() {
-			TableColumnModel tcm = tblEmulators.getColumnModel();
-
-			DefaultTableCellRenderer renderer = new DefaultTableCellRenderer() {
-				private static final long serialVersionUID = 1L;
-				private Map<Integer, ImageIcon> icons = new HashMap<>();
-
-				@Override
-				public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
-						boolean hasFocus, int row, int column) {
-					super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-					EmulatorTableModel model = (EmulatorTableModel) tblEmulators.getModel();
-					// Emulator emu = selectedRow == -1 ? null : (Emulator)
-					// model.getValueAt(tblEmulators.convertRowIndexToModel(selectedRow),
-					// -1);
-
-					Emulator emu = (Emulator) model.getValueAt(tblEmulators.convertRowIndexToModel(row), -1);
-					int selectedIndex = pnlPlatforms.lstPlatforms.getSelectedIndex();
-
-					ListModel<Platform> model2 = pnlPlatforms.lstPlatforms.getModel();
-					Platform plat = model2.getElementAt(selectedIndex);
-					if (plat.hasDefaultEmulator()) {
-						Emulator defaultEmulator = plat.getDefaultEmulator();
-						if (defaultEmulator != null && defaultEmulator.equals(emu)) {
-							if (model.getDefaultEmulator() != row) {
-								model.setDefault(row);
-							}
-						}
-					}
-					if (emu != null) {
-						//						setText(emu.getName());
-						ImageIcon ico = null;
-						if (!icons.containsKey(emu.getId())) {
-							String iconFilename = emu.getIconFilename();
-							if (iconFilename.trim().isEmpty() || iconFilename.equalsIgnoreCase("blank.png")) {
-								File file = new File(emu.getPath());
-								ico = (ImageIcon) FileSystemView.getFileSystemView().getSystemIcon(file);
-							}
-							if (ico == null) {
-								ico = ImageUtil.getImageIconFrom("/images/emulators/" + emu.getIconFilename());
-							}
-							ico = ImageUtil.scaleCover(ico, ScreenSizeUtil.adjustValueToResolution(24), CoverConstants.SCALE_BOTH_OPTION);
-							icons.put(emu.getId(), ico);
-						}
-						setIcon(icons.get(emu.getId()));
-						// setToolTipText("test");
-					}
-
-					return this;
-				}
-			};
-			tcm.getColumn(1).setCellRenderer(renderer);
-
-			TableCellRenderer renderer2 = tblEmulators.getTableHeader().getDefaultRenderer();
-			((JLabel) renderer2).setHorizontalAlignment(SwingConstants.LEFT);
-			tblEmulators.getTableHeader().setDefaultRenderer(renderer2);
-
-			TableColumn column0 = tcm.getColumn(0);
-
-			// JLabel blueLabel = new JLabel("",
-			// ImageUtil.getImageIconFrom(Icons.get("defaultDisable", 16, 16)),
-			// JLabel.CENTER);
-			// TableCellRenderer cellRenderer = new
-			// JComponentTableCellRenderer();
-			// column0.setHeaderRenderer(cellRenderer);
-			// Border headerBorder =
-			// UIManager.getBorder("TableHeader.cellBorder");
-			// blueLabel.setBorder(headerBorder);
-			// column0.setHeaderValue(blueLabel);
-
-			// TableColumn column1 = tcm.getColumn(0);
-			// tblEmulators.getColumn(2).setCellRenderer(new
-			// IconTextCellRenderer());
-
-			TableColumnAdjuster adjuster = new TableColumnAdjuster(tblEmulators);
-			adjuster.adjustColumn(0);
-			adjuster.adjustColumn(1);
-			column0.setResizable(false);
-			tblEmulators.setAutoResizeMode(JTable.AUTO_RESIZE_LAST_COLUMN);
+			int selectedIndex = pnlPlatforms.lstPlatforms.getSelectedIndex();
+			if (selectedIndex != GameConstants.NO_GAME) {
+				TableColumnModel tcm = tblEmulators.getColumnModel();
+				ListModel<Platform> model2 = pnlPlatforms.lstPlatforms.getModel();
+				Platform platform = model2.getElementAt(selectedIndex);
+				DefaultTableCellRenderer renderer = new EmulatorTableCellRenderer(platform);
+				tcm.getColumn(1).setCellRenderer(renderer);
+				TableCellRenderer renderer2 = tblEmulators.getTableHeader().getDefaultRenderer();
+				((JLabel) renderer2).setHorizontalAlignment(SwingConstants.LEFT);
+				tblEmulators.getTableHeader().setDefaultRenderer(renderer2);
+				TableColumn column0 = tcm.getColumn(0);
+				TableColumnAdjuster adjuster = new TableColumnAdjuster(tblEmulators);
+				adjuster.adjustColumn(0);
+				adjuster.adjustColumn(1);
+				column0.setResizable(false);
+				tblEmulators.setAutoResizeMode(JTable.AUTO_RESIZE_LAST_COLUMN);
+			}
 		}
 
 		@Override

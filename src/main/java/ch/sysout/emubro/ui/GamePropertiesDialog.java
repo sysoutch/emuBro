@@ -2,7 +2,6 @@ package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -22,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -35,6 +35,10 @@ import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.TableCellRenderer;
+import javax.swing.table.TableColumn;
+import javax.swing.table.TableColumnModel;
 
 import org.apache.commons.io.FilenameUtils;
 
@@ -48,8 +52,10 @@ import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.ImageUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
+import ch.sysout.util.ScreenSizeUtil;
 import ch.sysout.util.UIUtil;
 
 public class GamePropertiesDialog extends JDialog {
@@ -71,6 +77,8 @@ public class GamePropertiesDialog extends JDialog {
 	private Game game;
 
 	private JToggleButton btnModify;
+
+	private JComponent pnlSpEmulators;
 
 	public GamePropertiesDialog(Explorer explorer) {
 		super();
@@ -183,10 +191,11 @@ public class GamePropertiesDialog extends JDialog {
 		pnlMain.add(new JLabel(emulatorName), cc.xy(3, 8));
 		pnlMain.add(btnModify = new JToggleButton(Messages.get(MessageConstants.MODIFY)), cc.xy(5, 8));
 
+		int rowHeight = ScreenSizeUtil.adjustValueToResolution(32);
 		EmulatorTableModel model = new EmulatorTableModel(platform.getEmulators());
-		JTableDoubleClickOnHeaderFix tblEmulators = new JTableDoubleClickOnHeaderFix();
+		JTable tblEmulators = new JTableDoubleClickOnHeaderFix();
 		tblEmulators.setPreferredScrollableViewportSize(tblEmulators.getPreferredSize());
-		//		tblEmulators.setRowHeight(rowHeight);
+		tblEmulators.setRowHeight(rowHeight);
 		tblEmulators.setAutoscrolls(false);
 		tblEmulators.getTableHeader().setReorderingAllowed(false);
 		tblEmulators.setIntercellSpacing(new Dimension(0, 0));
@@ -195,7 +204,10 @@ public class GamePropertiesDialog extends JDialog {
 		tblEmulators.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 		tblEmulators.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		tblEmulators.setModel(model);
-		Component spEmulators = new JScrollPane(tblEmulators);
+		JScrollPane spEmulators = new JScrollPane(tblEmulators);
+		pnlSpEmulators = new JPanel(new BorderLayout());
+		pnlSpEmulators.setBorder(Paddings.DLU4);
+		pnlSpEmulators.add(spEmulators);
 		btnModify.addActionListener(new ActionListener() {
 
 			@Override
@@ -203,7 +215,7 @@ public class GamePropertiesDialog extends JDialog {
 				if (btnModify.isSelected()) {
 					layout.setRowSpec(2, RowSpec.decode("fill:pref"));
 					layout.setRowSpec(9, RowSpec.decode("fill:$ugap:grow"));
-					pnlMain.add(spEmulators, cc.xyw(1, 9, layout.getColumnCount()));
+					pnlMain.add(pnlSpEmulators, cc.xyw(1, 9, layout.getColumnCount()));
 					GamePropertiesDialog diss = GamePropertiesDialog.this;
 					int superHeight = (int) (diss.getPreferredSize().getHeight());
 					//					if (diss.getHeight() < diss.getPreferredSize().getHeight() + 128)) {
@@ -215,15 +227,20 @@ public class GamePropertiesDialog extends JDialog {
 						}
 					}
 					UIUtil.revalidateAndRepaint(pnlMain);
+					for (int i = 0; i < model.getRowCount(); i++) {
+						if (platform.getDefaultEmulator() == model.getEmulator(i)) {
+							tblEmulators.setRowSelectionInterval(i, i);
+							break;
+						}
+					}
+					tblEmulators.scrollRectToVisible(tblEmulators.getCellRect(tblEmulators.getSelectedRow(), 0, true));
 				} else {
-					pnlMain.remove(spEmulators);
+					pnlMain.remove(pnlSpEmulators);
 					layout.setRowSpec(2, RowSpec.decode("fill:pref:grow"));
 					layout.setRowSpec(9, RowSpec.decode("fill:$ugap"));
 					GamePropertiesDialog diss = GamePropertiesDialog.this;
 					int superHeight = (int) diss.getPreferredSize().getHeight();
-					if (diss.getHeight() <= superHeight+128) {
-						diss.setSize(new Dimension(diss.getWidth(), superHeight));
-					}
+					diss.setSize(new Dimension(diss.getWidth(), superHeight));
 					UIUtil.revalidateAndRepaint(pnlMain);
 				}
 			}
@@ -328,6 +345,19 @@ public class GamePropertiesDialog extends JDialog {
 		pnlMain.add(new JLabel(formattedDateAdded), cc.xyw(3, 18, layout.getColumnCount() - 2));
 		pnlMain.add(new JLabel(Messages.get(MessageConstants.PLAY_COUNT) + ":"), cc.xy(1, 20));
 		pnlMain.add(new JLabel(Messages.get(MessageConstants.LAST_PLAYED) + ":"), cc.xy(1, 22));
+
+		TableColumnModel tcm = tblEmulators.getColumnModel();
+		DefaultTableCellRenderer renderer = new EmulatorTableCellRenderer(platform);
+		tcm.getColumn(1).setCellRenderer(renderer);
+		TableCellRenderer renderer2 = tblEmulators.getTableHeader().getDefaultRenderer();
+		((JLabel) renderer2).setHorizontalAlignment(SwingConstants.LEFT);
+		tblEmulators.getTableHeader().setDefaultRenderer(renderer2);
+		TableColumn column0 = tcm.getColumn(0);
+		TableColumnAdjuster adjuster = new TableColumnAdjuster(tblEmulators);
+		adjuster.adjustColumn(0);
+		adjuster.adjustColumn(1);
+		column0.setResizable(false);
+		tblEmulators.setAutoResizeMode(JTable.AUTO_RESIZE_LAST_COLUMN);
 	}
 
 	private void setGamePathUnderlined(boolean underlined) {

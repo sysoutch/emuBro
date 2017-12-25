@@ -14,6 +14,8 @@ import javax.swing.table.DefaultTableModel;
 import ch.sysout.emubro.api.model.Emulator;
 import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.impl.model.BroEmulator;
+import ch.sysout.emubro.impl.model.EmulatorConstants;
+import ch.sysout.ui.ImageUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
@@ -27,7 +29,7 @@ public class EmulatorTableModel extends DefaultTableModel {
 	private Map<Integer, ImageIcon> icons = new HashMap<>();
 	private ImageIcon iconDefault;
 
-	private int defaultEmulator;
+	private int defaultEmulator = EmulatorConstants.NO_EMULATOR;
 
 	public EmulatorTableModel(List<BroEmulator> emulators) {
 		int size = (ScreenSizeUtil.is3k()) ? 24 : 16;

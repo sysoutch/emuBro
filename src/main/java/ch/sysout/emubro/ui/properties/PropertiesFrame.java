@@ -1,4 +1,4 @@
-package ch.sysout.emubro.ui;
+package ch.sysout.emubro.ui.properties;
 
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
@@ -50,6 +50,7 @@ import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.controller.BroController.EmulatorListCellRenderer;
 import ch.sysout.emubro.controller.BroController.PlatformListCellRenderer;
 import ch.sysout.emubro.impl.model.BroEmulator;
+import ch.sysout.emubro.ui.WrapLayout;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 
