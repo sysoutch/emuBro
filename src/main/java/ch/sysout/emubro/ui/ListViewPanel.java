@@ -5,6 +5,7 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Font;
+import java.awt.KeyboardFocusManager;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
@@ -31,16 +32,17 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import javax.swing.AbstractButton;
 import javax.swing.Action;
 import javax.swing.BorderFactory;
+import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListSelectionModel;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComponent;
+import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -53,8 +55,11 @@ import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.ToolTipManager;
 import javax.swing.UIManager;
+import javax.swing.border.Border;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+
+import org.apache.commons.io.FilenameUtils;
 
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.ColumnSpec;
@@ -64,6 +69,7 @@ import com.jgoodies.forms.layout.RowSpec;
 import ch.sysout.emubro.api.event.GameAddedEvent;
 import ch.sysout.emubro.api.event.GameRemovedEvent;
 import ch.sysout.emubro.api.event.GameSelectionEvent;
+import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.api.model.PlatformComparator;
@@ -71,7 +77,10 @@ import ch.sysout.emubro.controller.GameSelectionListener;
 import ch.sysout.emubro.controller.ViewConstants;
 import ch.sysout.emubro.impl.event.BroGameSelectionEvent;
 import ch.sysout.emubro.impl.event.NavigationEvent;
+import ch.sysout.emubro.impl.model.BroGame;
+import ch.sysout.emubro.impl.model.EmulatorConstants;
 import ch.sysout.emubro.impl.model.GameConstants;
+import ch.sysout.emubro.impl.model.PlatformConstants;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.ImageUtil;
 import ch.sysout.util.Messages;
@@ -142,17 +151,23 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	private ListCellRenderer<? super Game> cellRenderer;
 	private IconStore iconStore;
 	private boolean doNotFireSelectGameEvent;
-	private List<Platform> platforms;
 	protected int mouseX;
 	protected int mouseY;
 	private boolean touchScreenScrollEnabled;
 	private List<UpdateGameCountListener> gameCountListeners = new ArrayList<>();
+	private Explorer explorer;
+	private ViewPanelManager viewManager;
+	private Color favoritesBackground = new Color(10, 42, 64);
+	protected Game currentGame;
 
-	public ListViewPanel(GameContextMenu popupGame) {
+	public ListViewPanel(Explorer explorer, ViewPanelManager viewManager, GameContextMenu popupGame) {
 		super(new BorderLayout());
+		this.explorer = explorer;
+		this.viewManager = viewManager;
 		this.popupGame = popupGame;
 		initPopupGroup();
 		add(createScrollPane(lstGames));
+		setGameListRenderer();
 		lstGames.addKeyListener(new KeyAdapter() {
 			@Override
 			public void keyPressed(KeyEvent e) {
@@ -286,7 +301,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 					//					+ explorer.getPlatform(text.getPlatformId()) + "<br><strong>" + Messages.get("lastPlayed") + ": </strong>"
 					+ (lastPlayed != null ? lastPlayed : Messages.get(MessageConstants.NEVER_PLAYED_SHORT))
 					+ "<br><strong>" + Messages.get(MessageConstants.DATE_ADDED) + ": </strong>" + text.getDateAdded()
-					+ "<br><strong>" + Messages.get(MessageConstants.FILE_LOCATION) + ": </strong>" + text.getPath()
+					+ "<br><strong>" + Messages.get(MessageConstants.FILE_LOCATION) + ": </strong>" + explorer.getFiles(text).get(0)
 					+ "</html>");
 					mouseOver = index;
 				} else {
@@ -366,13 +381,146 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	protected void smoothScrollOut(JScrollPane sp, JList<Game> lst) {
 	}
 
-	public void setGameListRenderer(ListCellRenderer<? super Game> cellRenderer) {
+	private void setGameListRenderer(ListCellRenderer<? super Game> cellRenderer) {
 		setGameListRenderer(lstGames, cellRenderer);
 	}
 
-	public void setGameListRenderer(JList<Game> lst, ListCellRenderer<? super Game> cellRenderer) {
+	private void setGameListRenderer(JList<Game> lst, ListCellRenderer<? super Game> cellRenderer) {
 		this.cellRenderer = cellRenderer;
 		lst.setCellRenderer(cellRenderer);
+	}
+
+	public void setGameListRenderer() {
+		setGameListRenderer(new DefaultListCellRenderer() {
+			private static final long serialVersionUID = 1L;
+			Color colorFavorite = new Color(250, 176, 42);
+			//			final Color colorFavorite = Color.BLUE;
+			//			final Color colorError = ValidationComponentUtils.getErrorBackground();
+			private Border borderHover = BorderFactory.createLineBorder(getGameList().getSelectionBackground(), 2, false);
+
+			@Override
+			public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected,
+					boolean cellHasFocus) {
+				JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected,
+						cellHasFocus);
+				BroGame game = (BroGame) value;
+				checkGameIcon(game, label);
+				checkCriteria(label, isSelected);
+				checkFontAndFontSize(game, label, isSelected);
+				checkIsGameSelected(index, label);
+				//				checkHideExtensions(viewManager.isHideExtensionsEnabled(), explorer.getFiles(game).get(0), label);
+				if (isDragging()) {
+					setEnabled(true);
+				}
+				return label;
+			}
+
+			private void checkGameIcon(BroGame game, JLabel label) {
+				Icon gameIcon = viewManager.getIconStore().getGameIcon(game.getId());
+				if (gameIcon != null) {
+					label.setIcon(gameIcon);
+					label.setDisabledIcon(gameIcon);
+				} else {
+					int emulatorId = game.getEmulatorId();
+					if (emulatorId == EmulatorConstants.NO_EMULATOR) {
+						int platformId = game.getPlatformId();
+						if (platformId == PlatformConstants.NO_PLATFORM) {
+							// should not happen in general. there is a bug
+							// somewhere else
+						} else {
+							Icon platformIcon = viewManager.getIconStore().getPlatformIcon(platformId);
+							label.setIcon(platformIcon);
+							label.setDisabledIcon(platformIcon);
+						}
+					}
+				}
+			}
+
+			private void checkFontAndFontSize(BroGame game, JLabel label, boolean isSelected) {
+				Font labelFont = label.getFont();
+				if (viewManager.getFontSize() <= 0) {
+					viewManager.setFontSize(label.getFont().getSize());
+				}
+				if (game.isFavorite()) {
+					label.setForeground(colorFavorite);
+					//					label.setBackground(colorWarning);
+					label.setFont(new Font(labelFont.getName(), Font.BOLD, getFontSize()));
+				} else {
+					label.setFont(new Font(labelFont.getName(), Font.PLAIN, getFontSize()));
+				}
+				if (!isSelected) {
+					//					String driveLetter = game.getPath().substring(0, 1);
+					//					if (!driveLetter.equals("\\\\") && viewManager.isDriveUnmounted(driveLetter)) {
+					//						label.setForeground(colorError);
+					//					}
+				}
+			}
+
+			private void checkHideExtensions(boolean hideExtensions, String gamePath, JLabel label) {
+				if (!hideExtensions) {
+					String fileExtension = FilenameUtils.getExtension(gamePath);
+					if (explorer.isKnownExtension(fileExtension)) {
+						String newText = label.getText() + "." + fileExtension;
+						label.setText(newText);
+					}
+				}
+			}
+
+			private void checkIsGameSelected(int index, JLabel label) {
+				if (index > -1 && index == getMouseOver() && index != getGameList().getSelectedIndex()) {
+					label.setForeground(getGameList().getSelectionBackground());
+					label.setBorder(borderHover);
+				}
+				if (index == getGameList().getSelectedIndex()) {
+					label.setForeground(UIManager.getColor("List.selectionForeground"));
+				}
+			}
+
+			private void checkCriteria(JLabel label, boolean isSelected) {
+				//				if (criteria != null
+				//						&& label.getText().toLowerCase().contains(criteria.getText().trim().toLowerCase())) {
+				//					int length = criteria.getText().length();
+				//					for (int i = 0; i < label.getText().length(); i++) {
+				//						if (length < 0 || label.getText().length() < length) {
+				//							continue;
+				//						}
+				//						String labelText = label.getText();
+				//						String criteriaText = criteria.getText();
+				//						/*
+				//						 * Exception in thread "AWT-EventQueue-0"
+				//						 * java.lang.StringIndexOutOfBoundsException: String
+				//						 * index out of range: 47 at
+				//						 * java.lang.String.substring(Unknown Source) at
+				//						 * ch.sysout.gameexplorer.ui.NewNewListViewPanel$1.
+				//						 * getListCellRendererComponent(NewNewListViewPanel.java
+				//						 * :176) at
+				//						 * javax.swing.plaf.basic.BasicListUI.updateLayoutState(
+				//						 * Unknown Source) at
+				//						 * javax.swing.plaf.basic.BasicListUI.
+				//						 * maybeUpdateLayoutState(Unknown Source) at
+				//						 * javax.swing.plaf.basic.BasicListUI.locationToIndex(
+				//						 * Unknown Source) at
+				//						 * javax.swing.JList.locationToIndex(Unknown Source) at
+				//						 * ch.sysout.gameexplorer.ui.NewNewListViewPanel$2.
+				//						 * mouseMoved(NewNewListViewPanel.java:208)
+				//						 */
+				//						if (labelText.substring(i, i + length).equalsIgnoreCase(criteriaText)) {
+				//							String newString = labelText;
+				//							if (!isSelected) {
+				//								newString = "<html>" + label.getText().substring(0, i)
+				//										+ "<span style=\"background-color: #38D878; color: white\">"
+				//										// + "<span style=\"color: #38D878\">"
+				//										+ label.getText().substring(i, i + length) + "</span>"
+				//										+ label.getText().substring(i + length, label.getText().length()) + "</html>";
+				//
+				//								label.setText(newString);
+				//							}
+				//							break;
+				//						}
+				//			}
+				//			}
+			}
+		});
 	}
 
 	@Override
@@ -522,6 +670,15 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 			lst.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, InputEvent.ALT_DOWN_MASK),
 					"actionOpenGameProperties");
 			lst.getActionMap().put("actionOpenGameProperties", l);
+		}
+	}
+
+	@Override
+	public void addAddGameOrEmulatorFromClipboardListener(Action l) {
+		for (JList<Game> lst : sps.keySet()) {
+			lst.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_V, InputEvent.CTRL_DOWN_MASK),
+					"actionAddGameOrEmulatorFromClipboard");
+			lst.getActionMap().put("actionAddGameOrEmulatorFromClipboard", l);
 		}
 	}
 
@@ -681,7 +838,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 			CellConstraints cc = new CellConstraints();
 			int x = 1;
 			int y = 1;
-			for (Platform p : platforms) {
+			for (Platform p : explorer.getPlatforms()) {
 				JList<Game> lst = new JList<>();
 				GameListModel mdlAll = (GameListModel) lstGames.getModel();
 				GameListModel mdlNew = new GameListModel();
@@ -700,7 +857,25 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 
 					@Override
 					public void valueChanged(ListSelectionEvent e) {
-						deselectSelectionOfOtherLists(lst);
+						if (doNotFireSelectGameEvent) {
+							return;
+						}
+						if (!e.getValueIsAdjusting()) {
+							int index = lst.getSelectedIndex();
+							boolean b = index != GameConstants.NO_GAME;
+							Game game = null;
+							if (b) {
+								game = lst.getSelectedValue();
+							}
+							currentGame = game;
+							//			lstGames.setComponentPopupMenu(b ? popupGame : null);
+
+							GameSelectionEvent event = new BroGameSelectionEvent(game, null);
+							for (GameSelectionListener l : selectGameListeners) {
+								l.gameSelected(event);
+							}
+							deselectSelectionOfOtherLists(lst);
+						}
 					}
 				});
 				lst.addKeyListener(createKeyListener(lst));
@@ -783,45 +958,154 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		KeyAdapter adapter = new KeyAdapter() {
 			@Override
 			public void keyPressed(KeyEvent e) {
-				if (e.getKeyCode() == KeyEvent.VK_RIGHT) {
-					System.out.println(e.getKeyCode());
-					boolean selectFirstGameInNextList = false;
-					for (Entry<JList<Game>, JScrollPane> entry : sps.entrySet()) {
-						if (entry.getKey() == lstGames) {
-							continue;
-						}
-						if (selectFirstGameInNextList) {
-							JList<Game> lstTemp = entry.getKey();
-							if (lstTemp.isVisible()) {
-								lstTemp.requestFocusInWindow();
-								lstTemp.setSelectedIndex(0);
-								lstTemp.ensureIndexIsVisible(0);
-								selectFirstGameInNextList = false;
+				if (viewStyle == 1) {
+					if (e.getKeyCode() == KeyEvent.VK_RIGHT) {
+						final Game oldCurrentGame = currentGame;
+						SwingUtilities.invokeLater(new Runnable() {
+
+							@Override
+							public void run() {
+								if (oldCurrentGame == currentGame) {
+									KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
+									manager.focusNextComponent();
+								}
 							}
-							//									break;
-						} else if (entry.getKey() == lst) {
-							selectFirstGameInNextList = true;
-						}
+						});
+						//					System.out.println(e.getKeyCode());
+						//					boolean selectFirstGameInNextList = false;
+						//					for (Entry<JList<Game>, JScrollPane> entry : sps.entrySet()) {
+						//						if (entry.getKey() == lstGames) {
+						//							continue;
+						//						}
+						//						if (selectFirstGameInNextList) {
+						//							JList<Game> lstTemp = entry.getKey();
+						//							if (lstTemp.isVisible()) {
+						//								lstTemp.requestFocusInWindow();
+						//								lstTemp.setSelectedIndex(0);
+						//								lstTemp.ensureIndexIsVisible(0);
+						//								selectFirstGameInNextList = false;
+						//							}
+						//							//									break;
+						//						} else if (entry.getKey() == lst) {
+						//							selectFirstGameInNextList = true;
+						//						}
+						//					}
 					}
 				}
 				if (e.getKeyCode() == KeyEvent.VK_LEFT) {
-					System.out.println(e.getKeyCode());
-					JList<Game> previousEntry = null;
-					for (Entry<JList<Game>, JScrollPane> entry : sps.entrySet()) {
-						if (entry.getKey() == lstGames) {
-							continue;
-						}
-						if (entry.getKey() == lst) {
-							if (previousEntry != null) {
-								previousEntry.requestFocusInWindow();
-								previousEntry.setSelectedIndex(0);
-								previousEntry.ensureIndexIsVisible(0);
+					if (viewStyle == 1) {
+						final Game oldCurrentGame = currentGame;
+						SwingUtilities.invokeLater(new Runnable() {
+
+							@Override
+							public void run() {
+								if (oldCurrentGame == currentGame) {
+									KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
+									manager.focusPreviousComponent();
+
+								}
 							}
-							//									break;
-						}
-						if (previousEntry == null && entry.getKey().isVisible()) {
-							previousEntry = entry.getKey();
-						}
+						});
+						//					System.out.println(e.getKeyCode());
+						//					JList<Game> previousEntry = null;
+						//					for (Entry<JList<Game>, JScrollPane> entry : sps.entrySet()) {
+						//						if (entry.getKey() == lstGames) {
+						//							continue;
+						//						}
+						//						if (entry.getKey() == lst) {
+						//							if (previousEntry != null) {
+						//								previousEntry.requestFocusInWindow();
+						//								previousEntry.setSelectedIndex(0);
+						//								previousEntry.ensureIndexIsVisible(0);
+						//							}
+						//							//									break;
+						//						}
+						//						if (previousEntry == null && entry.getKey().isVisible()) {
+						//							previousEntry = entry.getKey();
+						//						}
+						//					}
+					}
+				}
+
+				if (e.getKeyCode() == KeyEvent.VK_DOWN) {
+					if (viewStyle == 2) {
+						final Game oldCurrentGame = currentGame;
+						SwingUtilities.invokeLater(new Runnable() {
+
+							@Override
+							public void run() {
+								if (oldCurrentGame == currentGame) {
+									KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
+									manager.focusNextComponent();
+									SwingUtilities.invokeLater(new Runnable() {
+
+										@Override
+										public void run() {
+											manager.focusNextComponent();
+										}
+									});
+								}
+							}
+						});
+						//					System.out.println(e.getKeyCode());
+						//					boolean selectFirstGameInNextList = false;
+						//					for (Entry<JList<Game>, JScrollPane> entry : sps.entrySet()) {
+						//						if (entry.getKey() == lstGames) {
+						//							continue;
+						//						}
+						//						if (selectFirstGameInNextList) {
+						//							JList<Game> lstTemp = entry.getKey();
+						//							if (lstTemp.isVisible()) {
+						//								lstTemp.requestFocusInWindow();
+						//								lstTemp.setSelectedIndex(0);
+						//								lstTemp.ensureIndexIsVisible(0);
+						//								selectFirstGameInNextList = false;
+						//							}
+						//							//									break;
+						//						} else if (entry.getKey() == lst) {
+						//							selectFirstGameInNextList = true;
+						//						}
+						//					}
+					}
+				}
+				if (e.getKeyCode() == KeyEvent.VK_UP) {
+					if (viewStyle == 2) {
+						final Game oldCurrentGame = currentGame;
+						SwingUtilities.invokeLater(new Runnable() {
+
+							@Override
+							public void run() {
+								if (oldCurrentGame == currentGame) {
+									KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
+									manager.focusPreviousComponent();
+									SwingUtilities.invokeLater(new Runnable() {
+
+										@Override
+										public void run() {
+											manager.focusPreviousComponent();
+										}
+									});
+								}
+							}
+						});
+						//					System.out.println(e.getKeyCode());
+						//					JList<Game> previousEntry = null;
+						//					for (Entry<JList<Game>, JScrollPane> entry : sps.entrySet()) {
+						//						if (entry.getKey() == lstGames) {
+						//							continue;
+						//						}
+						//						if (entry.getKey() == lst) {
+						//							if (previousEntry != null) {
+						//								previousEntry.requestFocusInWindow();
+						//								previousEntry.setSelectedIndex(0);
+						//								previousEntry.ensureIndexIsVisible(0);
+						//							}
+						//							//									break;
+						//						}
+						//						if (previousEntry == null && entry.getKey().isVisible()) {
+						//							previousEntry = entry.getKey();
+						//						}
+						//					}
 					}
 				}
 			}
@@ -921,7 +1205,25 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 
 					@Override
 					public void valueChanged(ListSelectionEvent e) {
-						deselectSelectionOfOtherLists(lst);
+						if (doNotFireSelectGameEvent) {
+							return;
+						}
+						if (!e.getValueIsAdjusting()) {
+							int index = lst.getSelectedIndex();
+							boolean b = index != GameConstants.NO_GAME;
+							Game game = null;
+							if (b) {
+								game = lst.getSelectedValue();
+							}
+							currentGame = game;
+							//			lstGames.setComponentPopupMenu(b ? popupGame : null);
+
+							GameSelectionEvent event = new BroGameSelectionEvent(game, null);
+							for (GameSelectionListener l : selectGameListeners) {
+								l.gameSelected(event);
+							}
+							deselectSelectionOfOtherLists(lst);
+						}
 					}
 				});
 				lst.addKeyListener(createKeyListener(lst));
@@ -1077,7 +1379,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		case NavigationPanel.FAVORITES:
 			gameCount = mdlLstFavorites.getSize();
 			lstGames.setModel(mdlLstFavorites);
-			lstGames.setBackground(new Color(10, 42, 64));
+			lstGames.setBackground(favoritesBackground);
 			setViewStyle(lstGames, defaultViewStyle);
 			break;
 		}
@@ -1221,11 +1523,6 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	}
 
 	@Override
-	public void initPlatforms(List<Platform> platforms) {
-		this.platforms = platforms;
-	}
-
-	@Override
 	public void pinColumnWidthSliderPanel(JPanel pnlColumnWidthSlider) {
 		add(pnlColumnWidthSlider, BorderLayout.SOUTH);
 		pnlColumnWidthSlider.setVisible(true);
@@ -1305,5 +1602,10 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	@Override
 	public void setTouchScreenScrollEnabled(boolean touchScreenScrollEnabled) {
 		this.touchScreenScrollEnabled = touchScreenScrollEnabled;
+	}
+
+	@Override
+	public void gameCoverAdded(int gameId, ImageIcon ico) {
+
 	}
 }

@@ -165,29 +165,29 @@ public class ButtonBarPanel extends JPanel {
 				}
 				return;
 			} else {
-				System.out.println("difffff: " + difference);
-				if (components.get(6).isVisible()) {
-					components.get(6).setVisible(false);
-				} else if (components.get(5).isVisible()) {
-					components.get(5).setVisible(false);
-				} else if (components.get(4).isVisible()) {
-					components.get(4).setVisible(false);
-				} else if (components.get(2).isVisible()) {
-					components.get(2).setVisible(false);
-					components.get(3).setVisible(false);
-				} else if (components.get(1).isVisible()) {
-					components.get(1).setVisible(false);
-				} else if (components.get(0).isVisible()) {
-					components.get(0).setVisible(false);
-				}
+				//				System.out.println("difffff: " + difference);
+				//				if (components.get(6).isVisible()) {
+				//					components.get(6).setVisible(false);
+				//				} else if (components.get(5).isVisible()) {
+				//					components.get(5).setVisible(false);
+				//				} else if (components.get(4).isVisible()) {
+				//					components.get(4).setVisible(false);
+				//				} else if (components.get(2).isVisible()) {
+				//					components.get(2).setVisible(false);
+				//					components.get(3).setVisible(false);
+				//				} else if (components.get(1).isVisible()) {
+				//					components.get(1).setVisible(false);
+				//				} else if (components.get(0).isVisible()) {
+				//					components.get(0).setVisible(false);
+				//				}
 			}
 		} else {
 			if (hasText(0)) {
 				setEmptyTextForComponent(0);
 				setEmptyTextForComponent(1);
 			} else {
-				components.get(1).setVisible(false);
-				components.get(0).setVisible(false);
+				//				components.get(1).setVisible(false);
+				//				components.get(0).setVisible(false);
 			}
 		}
 	}

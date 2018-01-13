@@ -1,22 +1,19 @@
 package ch.sysout.emubro.api.model;
 
 import java.util.List;
+import java.util.Map;
 
 import ch.sysout.emubro.impl.model.BroGame;
 import ch.sysout.emubro.impl.model.BroPlatform;
 
 public interface Explorer {
-	void addGame(Game game);
+	void addGame(Game game, String filePath);
 
 	void removeGame(Game game);
 
 	void renameGame(int id, String newName);
 
-	boolean hasGame(String path);
-
 	Game getGame(int gameId);
-
-	Game getGame(String path);
 
 	Game getCurrentGame();
 
@@ -95,6 +92,26 @@ public interface Explorer {
 	List<Platform> getPlatformsFromCommonDirectory(String filePath);
 
 	List<String> getGameDirectoriesFromPlatform(int platformId);
+
+	boolean hasGamesWithSameChecksum();
+
+	List<Game> getGamesWithSameChecksum();
+
+	boolean hasFile(String absolutePath);
+
+	Game getGameForFile(String path);
+
+	List<String> getFiles(Game game);
+
+	void setFilesForGame(int gameId, List<String> files);
+
+	void addFile(int gameId, String filePath);
+
+	String getChecksum(int checksumId);
+
+	void addChecksum(int checksumId, String checksum);
+
+	void setChecksums(Map<Integer, String> checksums);
 
 	// void addEmulator(Emulator emulator);
 	//

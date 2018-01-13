@@ -1,6 +1,8 @@
 package ch.sysout.emubro.ui;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.swing.ImageIcon;
@@ -23,6 +25,9 @@ public class IconStore {
 	private Map<Integer, ImageIcon> platformCovers = new HashMap<>();
 
 	private Map<Integer, Map<Integer, ImageIcon>> scaledPlatformCovers = new HashMap<>();
+	private Map<Integer, Map<Integer, ImageIcon>> scaledGameCovers = new HashMap<>();
+
+	private List<GameCoverListener> gameCoverListeners = new ArrayList<>();
 
 	void addPlatformCover(int platformId, String coverFileName) {
 		String coverFilePath = "/images/platforms/covers/" + coverFileName;
@@ -71,6 +76,9 @@ public class IconStore {
 				scaledIconMap.put(currentCoverSize, icon);
 			}
 		} else {
+			if (icon == null) {
+				return null;
+			}
 			Map<Integer, ImageIcon> newMap = new HashMap<>();
 			icon = ImageUtil.scaleCover(icon, currentCoverSize, CoverConstants.SCALE_HEIGHT_OPTION);
 			newMap.put(currentCoverSize, icon);
@@ -145,10 +153,44 @@ public class IconStore {
 			String coverFilePath = gameCoverPaths.get(gameId);
 			ImageIcon ico = ImageUtil.getImageIconFrom(coverFilePath, true);
 			gameCovers.put(gameId, ico);
+			fireGameCoverAddedEvent(gameId, ico);
+		}
+	}
+
+	private void fireGameCoverAddedEvent(int gameId, ImageIcon ico) {
+		for (GameCoverListener l : gameCoverListeners) {
+			l.gameCoverAdded(gameId, ico);
 		}
 	}
 
 	public ImageIcon getGameCover(int gameId) {
 		return gameCovers.get(gameId);
+	}
+
+	public ImageIcon getScaledGameCover(int gameId, int currentCoverSize) {
+		ImageIcon icon = getGameCover(gameId);
+		Map<Integer, ImageIcon> scaledIconMap = scaledGameCovers.get(gameId);
+		if (scaledIconMap != null) {
+			if (scaledIconMap.containsKey(currentCoverSize)) {
+				icon = scaledIconMap.get(currentCoverSize);
+			}
+			else {
+				icon = ImageUtil.scaleCover(icon, currentCoverSize, CoverConstants.SCALE_HEIGHT_OPTION);
+				scaledIconMap.put(currentCoverSize, icon);
+			}
+		} else {
+			if (icon == null) {
+				return null;
+			}
+			Map<Integer, ImageIcon> newMap = new HashMap<>();
+			icon = ImageUtil.scaleCover(icon, currentCoverSize, CoverConstants.SCALE_HEIGHT_OPTION);
+			newMap.put(currentCoverSize, icon);
+			scaledGameCovers.put(gameId, newMap);
+		}
+		return icon;
+	}
+
+	public void addGameCoverListener(GameCoverListener l) {
+		gameCoverListeners.add(l);
 	}
 }

@@ -307,6 +307,10 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 		new DropTarget(lblDragDropCover, l);
 	}
 
+	public void addShowUncategorizedFilesDialogListener(ActionListener l) {
+		btnUncategorized.addActionListener(l);
+	}
+
 	public void searchProcessInitialized() {
 		remove(spBrowseComputer);
 		remove(pnlFileTree);
@@ -395,8 +399,9 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 
 	@Override
 	public void gameRemoved(GameRemovedEvent e) {
-		// TODO Auto-generated method stub
-
+		if (e.getGameCount() == 0) {
+			btnQuickSearch.setEnabled(false);
+		}
 	}
 
 	@Override

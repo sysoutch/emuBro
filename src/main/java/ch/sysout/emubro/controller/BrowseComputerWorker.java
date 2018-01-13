@@ -132,7 +132,7 @@ class BrowseComputerWorker extends SwingWorker<Void, File> {
 				try {
 					Platform p0 = controller.isGameOrEmulator(filePath, useDefaultPlatforms);
 					if (p0 != null) {
-						if (controller.explorer.hasGame(filePath)) {
+						if (controller.explorer.hasFile(filePath)) {
 							return;
 						}
 						controller.addGame(p0, file);

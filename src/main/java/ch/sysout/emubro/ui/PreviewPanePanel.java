@@ -51,7 +51,6 @@ import com.jgoodies.forms.layout.FormLayout;
 import ch.sysout.emubro.api.event.GameSelectionEvent;
 import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.api.model.Game;
-import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.controller.GameSelectionListener;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.ImageUtil;
@@ -74,10 +73,13 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 	public ViewContextMenu popupView;
 	private GameContextMenu popupGame;
 
-	public PreviewPanePanel(Explorer explorer, GameContextMenu popupGame) {
+	private IconStore iconStore;
+
+	public PreviewPanePanel(Explorer explorer, GameContextMenu popupGame, IconStore iconStore) {
 		super();
 		this.explorer = explorer;
 		this.popupGame = popupGame;
+		this.iconStore = iconStore;
 		initComponents();
 		createUI();
 	}
@@ -133,25 +135,14 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			spSelection.setVisible(true);
 			pnlNoSelection.setVisible(false);
 			pnlSelection.initPlatformTitle();
-
-			Platform p = explorer.getPlatform(e.getGame().getPlatformId());
-			String iconPath = "/images/platforms/logos/" + p.getIconFileName();
-			Icon icon = ImageUtil.scaleCover(iconPath, false, 16,
-					CoverConstants.SCALE_HEIGHT_OPTION);
+			int platformId = currentGame.getPlatformId();
+			Icon icon = iconStore.getPlatformIcon(platformId);
 			pnlSelection.setGameTitle(currentGame.getName(), null);
-			pnlSelection.setPlatformTitle(explorer.getPlatform(currentGame.getPlatformId()).getName(), icon);
-			String path = currentGame.getCoverPath();
-			System.err.println(path);
-
-			if (path == null || path.trim().isEmpty()) {
-				// pnlSelection.pnlAutoScaleImage.setGameCover(icon);
-			} else {
-				// pnlSelection.pnlAutoScaleImage.setGameCover(path, true);
-			}
+			pnlSelection.setPlatformTitle(explorer.getPlatform(platformId).getName(), icon);
 			pnlSelection.setDateAdded(currentGame.getDateAdded());
 			pnlSelection.setPlayCount(currentGame.getPlayCount());
 			pnlSelection.setLastPlayed(currentGame.getLastPlayed());
-			pnlSelection.setGamePath(currentGame.getPath());
+			//			pnlSelection.setGamePath(currentGame.getPath());
 			restoreLastScrollBarValues();
 		} else {
 			spSelection.setVisible(false);
@@ -213,7 +204,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 
 			addMouseListener(new MouseAdapter() {
 				@Override
-				public void mouseClicked(MouseEvent e) {
+				public void mouseReleased(MouseEvent e) {
 					if (SwingUtilities.isRightMouseButton(e)) {
 						showGamePopupMenu(e.getComponent(), e.getX(), e.getY());
 					}

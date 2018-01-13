@@ -15,9 +15,9 @@ public interface GameDAO {
 
 	void renameGame(int gameId, String newTitle) throws SQLException;
 
-	void addGame(Game game) throws SQLException, BroGameAlreadyExistsException, BroGameDeletedException;
+	void addGame(Game game, String filePath) throws SQLException, BroGameAlreadyExistsException, BroGameDeletedException;
 
-	boolean hasGame(Game game) throws SQLException;
+	int hasGame(Game game) throws SQLException;
 
 	boolean hasGames();
 
@@ -25,7 +25,7 @@ public interface GameDAO {
 
 	List<Game> getGames() throws SQLException;
 
-	boolean hasGame(String gamePath) throws SQLException;
+	boolean hasGame(int gameChecksumId) throws SQLException;
 
 	void updateLastPlayed(Game game) throws SQLException;
 
@@ -40,4 +40,8 @@ public interface GameDAO {
 	void setIconPath(int gameId, String iconPath) throws SQLException;
 
 	void setCoverPath(int id, String coverPath) throws SQLException;
+
+	void restoreGame(Game game) throws SQLException;
+
+	Game getGameByChecksumId(int checksumId) throws SQLException;
 }

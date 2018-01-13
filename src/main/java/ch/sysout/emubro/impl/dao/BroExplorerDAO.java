@@ -10,7 +10,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import ch.sysout.emubro.Main;
 import ch.sysout.emubro.api.dao.EmulatorDAO;
@@ -32,6 +34,7 @@ import ch.sysout.emubro.impl.model.GameConstants;
 import ch.sysout.emubro.impl.model.PlatformConstants;
 import ch.sysout.util.Messages;
 import ch.sysout.util.SqlUtil;
+import ch.sysout.util.ValidationUtil;
 
 public class BroExplorerDAO implements ExplorerDAO {
 	private Connection conn;
@@ -210,8 +213,45 @@ public class BroExplorerDAO implements ExplorerDAO {
 	}
 
 	@Override
+	public Game getGameByChecksumId(int checksumId) throws SQLException {
+		return gameDAO.getGameByChecksumId(checksumId);
+	}
+
+	@Override
 	public Platform getPlatform(int platformId) throws SQLException {
 		return platformDAO.getPlatform(platformId);
+	}
+
+	@Override
+	public void addChecksum(String checksum) throws SQLException {
+		ValidationUtil.checkNull(checksum, "checksum");
+		if (!hasChecksum(checksum)) {
+			Statement stmt = conn.createStatement();
+			String sql = SqlUtil.insertIntoWithColumnsString("checksum", "checksum_checksum",
+					SqlUtil.getQuotedString(checksum));
+			try {
+				stmt.executeQuery(sql);
+			} catch (SQLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			conn.commit();
+		}
+	}
+
+	private boolean hasChecksum(String checksum) throws SQLException {
+		if (checksum == null || checksum.trim().isEmpty()) {
+			return false;
+		}
+		Statement stmt = conn.createStatement();
+		String sql = "select checksum_id, checksum_checksum from checksum where checksum_checksum =" + SqlUtil.getQuotedString(checksum);
+		ResultSet rset = stmt.executeQuery(sql);
+		if (rset.next()) {
+			stmt.close();
+			return true;
+		}
+		stmt.close();
+		return false;
 	}
 
 	@Override
@@ -219,16 +259,90 @@ public class BroExplorerDAO implements ExplorerDAO {
 		return gameDAO.getGames();
 	}
 
-	/**
-	 * FIXME CHECK ' ''
-	 *
-	 * @param gamePath
-	 * @return
-	 * @throws SQLException
-	 */
 	@Override
-	public boolean hasGame(String gamePath) throws SQLException {
-		return gameDAO.hasGame(gamePath);
+	public List<String> getFiles() throws SQLException {
+		List<String> filesList = new ArrayList<>();
+		Statement stmt = conn.createStatement();
+		stmt = conn.createStatement();
+		String sql = "select * from file order by file_path)";
+		ResultSet rset = stmt.executeQuery(sql);
+		while (rset.next()) {
+			String path = rset.getString("file_path");
+			filesList.add(path);
+		}
+		stmt.close();
+		return filesList;
+	}
+
+	@Override
+	public List<String> getFilesForGame(int gameId) throws SQLException {
+		List<String> files = new ArrayList<>();
+		Statement stmt = conn.createStatement();
+		stmt = conn.createStatement();
+
+		String sql = "select * from game_file where game_id = " + gameId
+				+ " order by game_id, file_id";
+		ResultSet rset = stmt.executeQuery(sql);
+		while (rset.next()) {
+			int fileId = rset.getInt("file_id");
+			String file = getFile(fileId);
+			files.add(file);
+		}
+		stmt.close();
+		return files;
+
+	}
+
+	@Override
+	public Map<Integer, String> getChecksums() throws SQLException {
+		Map<Integer, String> checksums = new HashMap<>();
+		Statement stmt = conn.createStatement();
+		stmt = conn.createStatement();
+		String sql = "select * from checksum order by checksum_id";
+		ResultSet rset = stmt.executeQuery(sql);
+		while (rset.next()) {
+			int checksumId = rset.getInt("checksum_id");
+			String checksum = rset.getString("checksum_checksum");
+			checksums.put(checksumId, checksum);
+		}
+		stmt.close();
+		return checksums;
+	}
+
+	@Override
+	public int getChecksumId(String checksum) {
+		try {
+			Statement stmt = conn.createStatement();
+			stmt = conn.createStatement();
+			String sql = "select * from checksum where checksum_checksum = " + SqlUtil.getQuotedString(checksum);
+			ResultSet rset = stmt.executeQuery(sql);
+			int id = -1;
+			if (rset.next()) {
+				id = rset.getInt("checksum_id");
+			}
+			stmt.close();
+			return id;
+		} catch (SQLException e) {
+			return -1;
+		}
+	}
+
+	private String getFile(int fileId) throws SQLException {
+		Statement stmt = conn.createStatement();
+		stmt = conn.createStatement();
+		String sql = "select * from file where file_id = " + fileId;
+		ResultSet rset = stmt.executeQuery(sql);
+		String path = null;
+		if (rset.next()) {
+			path = rset.getString("file_path");
+		}
+		stmt.close();
+		return path;
+	}
+
+	@Override
+	public boolean hasGame(int gameChecksumId) throws SQLException {
+		return gameDAO.hasGame(gameChecksumId);
 	}
 
 	/**
@@ -237,8 +351,13 @@ public class BroExplorerDAO implements ExplorerDAO {
 	 * @throws BroGameAlreadyExistsException
 	 */
 	@Override
-	public void addGame(Game game) throws SQLException, BroGameAlreadyExistsException, BroGameDeletedException {
-		gameDAO.addGame(game);
+	public void addGame(Game game, String filePath) throws SQLException, BroGameAlreadyExistsException, BroGameDeletedException {
+		gameDAO.addGame(game, filePath);
+	}
+
+	@Override
+	public void restoreGame(Game game) throws SQLException {
+		gameDAO.restoreGame(game);
 	}
 
 	@Override
@@ -289,6 +408,20 @@ public class BroExplorerDAO implements ExplorerDAO {
 	@Override
 	public int getLastAddedEmulatorId() throws SQLException {
 		return emulatorDAO.getLastAddedEmulatorId();
+	}
+
+	@Override
+	public int getLastAddedChecksumId() throws SQLException {
+		Statement stmt = conn.createStatement();
+		stmt = conn.createStatement();
+		String sql = "select TOP 1 checksum_id from checksum order by checksum_id desc";
+		ResultSet rset = stmt.executeQuery(sql);
+		int checksumId = -1;
+		if (rset.next()) {
+			checksumId = rset.getInt("checksum_id");
+		}
+		stmt.close();
+		return checksumId;
 	}
 
 	@Override

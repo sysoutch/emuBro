@@ -43,8 +43,8 @@ import ch.sysout.emubro.api.event.FilterEvent;
 import ch.sysout.emubro.api.event.GameAddedEvent;
 import ch.sysout.emubro.api.event.GameRemovedEvent;
 import ch.sysout.emubro.api.event.GameSelectionEvent;
+import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.api.model.Game;
-import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.api.model.PlatformComparator;
 import ch.sysout.emubro.controller.GameSelectionListener;
 import ch.sysout.emubro.controller.ViewConstants;
@@ -85,12 +85,12 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 
 	private int viewStyle;
 
-	public TableViewPanel(IconStore iconStore) {
+	public TableViewPanel(Explorer explorer, IconStore iconStore) {
 		super(new BorderLayout());
-		mdlTblAllGames = new GameTableModel(iconStore);
-		mdlTblGamesRecentlyPlayed = new GameTableModel(iconStore);
-		mdlTblGamesFavorites = new GameTableModel(iconStore);
-		mdlTblGamesFiltered = new GameTableModel(iconStore);
+		mdlTblAllGames = new GameTableModel(explorer, iconStore);
+		mdlTblGamesRecentlyPlayed = new GameTableModel(explorer, iconStore);
+		mdlTblGamesFavorites = new GameTableModel(explorer, iconStore);
+		mdlTblGamesFiltered = new GameTableModel(explorer, iconStore);
 		initComponents();
 		createUI();
 	}
@@ -426,11 +426,6 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 	}
 
 	@Override
-	public void initPlatforms(List<Platform> platforms) {
-		((GameTableModel) mdlTblAllGames).initPlatforms(platforms);
-	}
-
-	@Override
 	public void gameAdded(GameAddedEvent e) {
 		Game game = e.getGame();
 		((GameTableModel) mdlTblAllGames).addRow(game);
@@ -500,26 +495,28 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 
 	@Override
 	public void pinColumnWidthSliderPanel(JPanel pnlColumnWidthSlider) {
-		// TODO Auto-generated method stub
-
+		add(pnlColumnWidthSlider, BorderLayout.SOUTH);
+		pnlColumnWidthSlider.setVisible(true);
+		UIUtil.revalidateAndRepaint(this);
 	}
 
 	@Override
 	public void unpinColumnWidthSliderPanel(JPanel pnlColumnWidthSlider) {
-		// TODO Auto-generated method stub
-
+		remove(pnlColumnWidthSlider);
+		UIUtil.revalidateAndRepaint(this);
 	}
 
 	@Override
 	public void pinRowHeightSliderPanel(JPanel pnlRowHeightSlider) {
-		// TODO Auto-generated method stub
-
+		add(pnlRowHeightSlider, BorderLayout.EAST);
+		pnlRowHeightSlider.setVisible(true);
+		UIUtil.revalidateAndRepaint(this);
 	}
 
 	@Override
 	public void unpinRowHeightSliderPanel(JPanel pnlRowHeightSlider) {
-		// TODO Auto-generated method stub
-
+		remove(pnlRowHeightSlider);
+		UIUtil.revalidateAndRepaint(this);
 	}
 
 	@Override
@@ -611,5 +608,15 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 
 	@Override
 	public void addUpdateGameCountListener(UpdateGameCountListener l) {
+	}
+
+	@Override
+	public void gameCoverAdded(int gameId, ImageIcon ico) {
+
+	}
+
+	@Override
+	public void addAddGameOrEmulatorFromClipboardListener(Action l) {
+
 	}
 }

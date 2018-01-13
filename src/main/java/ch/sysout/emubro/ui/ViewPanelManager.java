@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.Action;
+import javax.swing.ImageIcon;
 import javax.swing.JPanel;
 
 import ch.sysout.emubro.api.event.GameAddedEvent;
@@ -21,8 +22,9 @@ import ch.sysout.emubro.controller.GameSelectionListener;
 import ch.sysout.emubro.impl.event.NavigationEvent;
 import ch.sysout.emubro.impl.model.BroEmulator;
 import ch.sysout.emubro.impl.model.GameConstants;
+import ch.sysout.util.ScreenSizeUtil;
 
-public class ViewPanelManager {
+public class ViewPanelManager implements GameCoverListener {
 	List<ViewPanel> panels = new ArrayList<>();
 	private IconStore iconStore;
 	private List<Platform> platforms;
@@ -37,12 +39,13 @@ public class ViewPanelManager {
 	private List<GameSelectionListener> selectGameListeners = new ArrayList<>();
 	private List<Action> runGameListeners1 = new ArrayList<>();
 	private List<MouseListener> runGameListeners2 = new ArrayList<>();
-	private List<Action> renameGameFolderListeners = new ArrayList<>();
+	private List<Action> renameGameListeners = new ArrayList<>();
 	private List<Action> removeGameListeners = new ArrayList<>();
 	private List<Action> increaseFontListeners = new ArrayList<>();
 	private List<MouseWheelListener> increaseFontListeners2 = new ArrayList<>();
 	private List<Action> decreaseFontListeners = new ArrayList<>();
 	private List<ActionListener> openGamePropertiesListeners = new ArrayList<>();
+	private List<ActionListener> addGameOrEmulatorFromClipboardListeners = new ArrayList<>();
 	private List<ActionListener> openGameFolderListeners = new ArrayList<>();
 	private List<MouseListener> openGameFolderListeners1 = new ArrayList<>();
 	private List<RateListener> rateListeners = new ArrayList<>();
@@ -51,9 +54,12 @@ public class ViewPanelManager {
 	private boolean touchScreenScrollEnabled;
 	private int viewStyle;
 	private boolean hideExtensions;
+	private int currentCoverSize = ScreenSizeUtil.adjustValueToResolution(CoverConstants.LARGE_COVERS);
+	private List<String> unmountedDriveLetters = new ArrayList<>();
 
 	public ViewPanelManager(IconStore iconStore) {
 		this.iconStore = iconStore;
+		iconStore.addGameCoverListener(this);
 	}
 
 	public void initGames(List<Game> games) {
@@ -61,6 +67,9 @@ public class ViewPanelManager {
 			if (game != null) {
 				if (game.hasIcon()) {
 					iconStore.addGameIconPath(game.getId(), game.getIconPath());
+				}
+				if (game.hasCover()) {
+					iconStore.addGameCoverPath(game.getId(), game.getCoverPath());
 				}
 			}
 		}
@@ -96,7 +105,6 @@ public class ViewPanelManager {
 		panels.add(pnlView);
 		pnlView.initGameList(games, currentNavView);
 		pnlView.setViewStyle(viewStyle);
-		pnlView.initPlatforms(platforms);
 		pnlView.sortBy(sortBy, platformComparator);
 		pnlView.sortOrder(sortOrder);
 		pnlView.setFontSize(fontSize);
@@ -113,6 +121,12 @@ public class ViewPanelManager {
 		}
 		for (Action l : runGameListeners1) {
 			pnlView.addRunGameListener(l);
+		}
+		for (Action l : renameGameListeners) {
+			pnlView.addRenameGameListener(l);
+		}
+		for (Action l : removeGameListeners) {
+			pnlView.addRemoveGameListener(l);
 		}
 		for (MouseWheelListener l : increaseFontListeners2) {
 			pnlView.addIncreaseFontListener2(l);
@@ -329,8 +343,17 @@ public class ViewPanelManager {
 		}
 	}
 
+	public void addAddGameOrEmulatorFromClipboardListener(Action l) {
+		addGameOrEmulatorFromClipboardListeners.add(l);
+		for (ViewPanel pnl : panels) {
+			if (pnl != null) {
+				pnl.addAddGameOrEmulatorFromClipboardListener(l);
+			}
+		}
+	}
+
 	public void addRenameGameListener(Action l) {
-		renameGameFolderListeners.add(l);
+		renameGameListeners.add(l);
 		for (ViewPanel pnl : panels) {
 			if (pnl != null) {
 				pnl.addRenameGameListener(l);
@@ -340,6 +363,7 @@ public class ViewPanelManager {
 
 	public void gameAdded(GameAddedEvent e) {
 		iconStore.addGameIconPath(e.getGame().getId(), e.getGame().getIconPath());
+		iconStore.addGameCoverPath(e.getGame().getId(), e.getGame().getCoverPath());
 		Platform p = e.getPlatform();
 		iconStore.addPlatformIcon(p.getId(), p.getIconFileName());
 		for (ViewPanel pnl : panels) {
@@ -415,5 +439,37 @@ public class ViewPanelManager {
 				pnl.addUpdateGameCountListener(l);
 			}
 		}
+	}
+
+	public void addGameCoverPath(int gameId, String gameCoverPath) {
+		iconStore.addGameCoverPath(gameId, gameCoverPath);
+	}
+
+	@Override
+	public void gameCoverAdded(int gameId, ImageIcon ico) {
+		ico = iconStore.getScaledGameCover(gameId, currentCoverSize);
+		for (ViewPanel pnl : panels) {
+			if (pnl != null) {
+				pnl.gameCoverAdded(gameId, ico);
+			}
+		}
+	}
+
+	public int getCurrentCoverSize() {
+		return currentCoverSize;
+	}
+
+	public void setCurrentCoverSize(int currentCoverSize) {
+		this.currentCoverSize = currentCoverSize;
+	}
+
+	public void addUnmountedDriveLetter(String unmountedDriveLetter) {
+		if (!unmountedDriveLetters.contains(unmountedDriveLetter)) {
+			unmountedDriveLetters.add(unmountedDriveLetter);
+		}
+	}
+
+	public boolean isDriveUnmounted(String driveLetter) {
+		return unmountedDriveLetters.contains(driveLetter);
 	}
 }

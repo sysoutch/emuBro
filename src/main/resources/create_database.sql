@@ -41,6 +41,16 @@ create table if not exists platform (
 	platform_deleted boolean
 )
 
+create table if not exists file (
+	file_id int identity,
+	file_path varchar(255) unique
+)
+
+create table if not exists checksum (
+	checksum_id int identity,
+	checksum_checksum char(32) unique
+)
+
 create table if not exists fileStructure (
 	structure_id int identity,
 	structure_folderName varchar(255),
@@ -50,7 +60,8 @@ create table if not exists fileStructure (
 create table if not exists game (
 	game_id int identity,
 	game_name varchar(255),
-	game_path varchar(255) unique,
+	game_defaultFileId int,
+	game_checksumId int,
 	game_iconPath varchar(255),
 	game_coverPath varchar(255),
 	game_rate int,
@@ -71,6 +82,11 @@ create table if not exists platform_structure (
 create table if not exists platform_emulator (
 	platform_id int references platform(platform_id),
 	emulator_id int references emulator(emulator_id)
+)
+
+create table if not exists game_file (
+	game_id int references game(game_id),
+	file_id int references file(file_id)
 )
 
 create table if not exists extension (

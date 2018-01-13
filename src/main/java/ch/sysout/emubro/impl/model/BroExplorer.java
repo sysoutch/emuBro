@@ -17,7 +17,7 @@ import ch.sysout.util.FileUtil;
 
 public class BroExplorer implements Explorer {
 	private Map<Integer, Game> games = new HashMap<>();
-	private Map<String, Integer> games2 = new HashMap<>();
+	private Map<String, Integer> files = new HashMap<>();
 
 	private Map<Integer, Platform> platforms = new HashMap<>();
 	private Map<String, Integer> platforms2 = new HashMap<>();
@@ -28,17 +28,18 @@ public class BroExplorer implements Explorer {
 	private boolean showConfigWizardAtStartup;
 	private String extensionsString = "";
 	private List<String> extensions;
+	private Map<Integer, String> checksums = new HashMap<>();
 
 	@Override
-	public void addGame(Game game) {
+	public void addGame(Game game, String filePath) {
 		games.put(game.getId(), game);
-		games2.put(game.getPath(), game.getId());
+		files.put(filePath, game.getId());
 	}
 
 	@Override
 	public void removeGame(Game game) {
 		games.remove(game.getId());
-		games2.remove(game.getPath());
+		files.values().remove(game.getId());
 	}
 
 	@Override
@@ -84,10 +85,15 @@ public class BroExplorer implements Explorer {
 	@Override
 	public void setGames(List<Game> games) {
 		this.games.clear();
-		games2.clear();
 		for (Game g : games) {
 			this.games.put(g.getId(), g);
-			games2.put(g.getPath(), g.getId());
+		}
+	}
+
+	@Override
+	public void setFilesForGame(int gameId, List<String> files) {
+		for (String file : files) {
+			this.files.put(file, gameId);
 		}
 	}
 
@@ -215,20 +221,6 @@ public class BroExplorer implements Explorer {
 	}
 
 	@Override
-	public Game getGame(String path) {
-		if (games2.containsKey(path)) {
-			Integer gameId = games2.get(path);
-			return games.get(gameId);
-		}
-		return null;
-	}
-
-	@Override
-	public boolean hasGame(String path) {
-		return games2.containsKey(path);
-	}
-
-	@Override
 	public void setPlatforms(List<Platform> platforms) {
 		this.platforms.clear();
 		platforms2.clear();
@@ -352,7 +344,7 @@ public class BroExplorer implements Explorer {
 		String parentFolder = FileUtil.getParentDirPath(filePath);
 		do {
 			for (Game game : getGames()) {
-				String parentFolderToCheck = FilenameUtils.getFullPath(game.getPath());
+				String parentFolderToCheck = FilenameUtils.getFullPath(getFiles(game).get(0));
 				if  (parentFolderToCheck.startsWith(parentFolder)) {
 					int platformId = game.getPlatformId();
 					Platform platform = getPlatform(platformId);
@@ -373,12 +365,64 @@ public class BroExplorer implements Explorer {
 	public List<String> getGameDirectoriesFromPlatform(int platformId) {
 		List<String> directories = new ArrayList<>();
 		for (Game game : getGamesFromPlatform(platformId)) {
-			String gamePath = FileUtil.getParentDirPath(game.getPath());
+			String gamePath = FileUtil.getParentDirPath(getFiles(game).get(0));
 			if (!directories.contains(gamePath)) {
 				directories.add(gamePath);
 			}
 		}
 		return directories;
+	}
+
+	@Override
+	public Game getGameForFile(String path) {
+		return games.get(files.get(path));
+	}
+
+	@Override
+	public List<String> getFiles(Game game) {
+		List<String> filePaths = new ArrayList<>();
+		for (Entry<String, Integer> entry : files.entrySet()) {
+			if (entry.getValue() == game.getId()) {
+				filePaths.add(entry.getKey());
+			}
+		}
+		return filePaths;
+	}
+
+	@Override
+	public boolean hasGamesWithSameChecksum() {
+		return false;
+	}
+
+	@Override
+	public List<Game> getGamesWithSameChecksum() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public boolean hasFile(String absolutePath) {
+		return files.containsKey(absolutePath);
+	}
+
+	@Override
+	public void addFile(int gameId, String filePath) {
+		files.put(filePath, gameId);
+	}
+
+	@Override
+	public void addChecksum(int checksumId, String checksum) {
+		checksums.put(checksumId, checksum);
+	}
+
+	@Override
+	public String getChecksum(int checksumId) {
+		return checksums.get(checksumId);
+	}
+
+	@Override
+	public void setChecksums(Map<Integer, String> checksums) {
+		this.checksums = checksums;
 	}
 
 	// @Override

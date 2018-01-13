@@ -247,8 +247,8 @@ public class GamePropertiesDialog extends JDialog {
 		});
 		pnlMain.add(new JSeparator(), cc.xyw(1, 10, layout.getColumnCount()));
 
-		String name = FilenameUtils.getName(game.getPath());
-		String parent = FilenameUtils.getFullPathNoEndSeparator(game.getPath());
+		String name = FilenameUtils.getName(explorer.getFiles(game).get(0));
+		String parent = FilenameUtils.getFullPathNoEndSeparator(explorer.getFiles(game).get(0));
 
 		pnlMain.add(new JLabel(Messages.get(MessageConstants.FILE_NAME) + ":"), cc.xy(1, 12));
 		pnlMain.add(txtGameFilename = new JLabel(name), cc.xyw(3, 12, layout.getColumnCount() - 2));

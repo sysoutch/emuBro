@@ -923,6 +923,10 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		viewManager.addOpenGamePropertiesListener(l);
 	}
 
+	public void addAddGameOrEmulatorFromClipboardListener(Action l) {
+		viewManager.addAddGameOrEmulatorFromClipboardListener(l);
+	}
+
 	public void addOpenGameFolderListener1(MouseListener l) {
 		pnlMain.getPreviewPane().addOpenGameFolderListener(l);
 	}
@@ -1489,12 +1493,10 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	@Override
 	public void platformAdded(PlatformEvent e) {
-		pnlMain.platformAdded(e);
 	}
 
 	@Override
 	public void platformRemoved(PlatformEvent e) {
-		pnlMain.platformRemoved(e);
 	}
 
 	@Override
@@ -1517,7 +1519,10 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	@Override
 	public void gameRemoved(GameRemovedEvent e) {
+		pnlGameFilter.gameRemoved(e);
 		pnlGameCount.gameRemoved(e);
+		viewManager.gameRemoved(e);
+		pnlMain.gameRemoved(e);
 	}
 
 	public class ShowMenuBarListener implements ActionListener {
@@ -1796,8 +1801,12 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		pnlMain.addCoverToLibraryDragDropListener(l);
 	}
 
+	public void addShowUncategorizedFilesDialogListener(ActionListener l) {
+		pnlMain.addShowUncategorizedFilesDialogListener(l);
+	}
+
 	public void addRateListener(RateListener l) {
-		pnlMain.getPreviewPane().addRateListener(l);
+		pnlMain.addRateListener(l);
 		viewManager.addRateListener(l);
 	}
 

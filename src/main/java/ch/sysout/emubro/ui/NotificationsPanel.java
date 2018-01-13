@@ -11,7 +11,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -95,16 +97,16 @@ public class NotificationsPanel extends JPanel {
 		final JPanel pnl = new JPanel(new GridLayout(0, 1));
 		// pnl.setBackground(backgroundColor);
 
-		JEditorPane label = new JEditorPane("text/html", "");
+		JEditorPane editorPane = new JEditorPane("text/html", "");
 		//		label.setLineWrap(true);
 		//		label.setWrapStyleWord(true);
-		Font oldFont = label.getFont();
+		Font oldFont = editorPane.getFont();
 		//		label.setContentType("text/html");
-		label.setEditable(false);
-		label.setFocusable(false);
-		label.setFont(oldFont);
-		label.setText("<font face=\"verdana\">"+message+"</font>");
-		labels.put(label, element3);
+		editorPane.setEditable(false);
+		editorPane.setFocusable(false);
+		editorPane.setFont(oldFont);
+		editorPane.setText("<font face=\"verdana\">"+message+"</font>");
+		labels.put(editorPane, element3);
 
 		int size = ScreenSizeUtil.adjustValueToResolution(16);
 		final JPanel pnl2 = new JPanel(new BorderLayout(0, 2));
@@ -117,7 +119,7 @@ public class NotificationsPanel extends JPanel {
 		CellConstraints cc = new CellConstraints();
 		JLabel lblIcon = new JLabel();
 		pnlIcon.add(lblIcon, cc.xy(1, 1));
-		pnl2.add(label, BorderLayout.NORTH);
+		pnl2.add(editorPane, BorderLayout.NORTH);
 
 		// HTMLEditorKit kit = new HTMLEditorKit();
 		// StyleSheet styleSheet = kit.getStyleSheet();
@@ -162,6 +164,19 @@ public class NotificationsPanel extends JPanel {
 		JPanel pnlpnl = new JPanel(new BorderLayout());
 		pnlpnl.add(pnlIcon, BorderLayout.WEST);
 		pnlpnl.add(pnl2, BorderLayout.CENTER);
+		JLabel lblTimestamp = new JLabel();
+		//		label.setLineWrap(true);
+		//		label.setWrapStyleWord(true);
+		//		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+		SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+		Date date = new Date();
+		lblTimestamp.setText(sdf.format(date));
+		lblTimestamp.setBorder(Paddings.DLU2);
+		lblTimestamp.setOpaque(true);
+		lblTimestamp.setEnabled(false);
+		lblTimestamp.setFocusable(false);
+		lblTimestamp.setFont(lblTimestamp.getFont().deriveFont(12.0f).deriveFont(Font.ITALIC));
+		pnlpnl.add(lblTimestamp, BorderLayout.SOUTH);
 		pnl.add(pnlpnl);
 
 		//		StyleContext context = new StyleContext();
@@ -170,17 +185,17 @@ public class NotificationsPanel extends JPanel {
 		//		JLabel lbl = new JLabel(message, null, SwingConstants.LEFT);
 		//		StyleConstants.setComponent(labelStyle, lbl);
 		//		label.setDocument(document);
-
 		switch (notificationType) {
 		case NotificationElement.INFORMATION:
 			if (!infoIcons.containsKey(size)) {
 				infoIcons.put(size, ImageUtil.getImageIconFrom(Icons.get("info", size, size)));
 			}
 			lblIcon.setIcon(infoIcons.get(size));
-			label.setBackground(Color.WHITE);
+			editorPane.setBackground(Color.WHITE);
 			pnlIcon.setBackground(Color.WHITE);
 			pnl2.setBackground(Color.WHITE);
 			pnl3.setBackground(Color.WHITE);
+			lblTimestamp.setBackground(Color.WHITE);
 			pnl.setBorder(BorderFactory.createLineBorder(Color.white.darker()));
 			break;
 		case NotificationElement.INFORMATION_MANDATORY:
@@ -190,10 +205,11 @@ public class NotificationsPanel extends JPanel {
 			lblIcon.setIcon(infoImportantIcons.get(size));
 			// pnl2.setBackground(ValidationComponentUtils.getMandatoryBackground());
 			// pnl3.setBackground(ValidationComponentUtils.getMandatoryBackground());
-			label.setBackground(Color.WHITE);
+			editorPane.setBackground(Color.WHITE);
 			pnlIcon.setBackground(Color.WHITE);
 			pnl2.setBackground(Color.WHITE);
 			pnl3.setBackground(Color.WHITE);
+			lblTimestamp.setBackground(Color.WHITE);
 			pnl.setBorder(BorderFactory.createLineBorder(ValidationComponentUtils.getMandatoryBackground().darker()));
 			break;
 		case NotificationElement.WARNING:
@@ -201,10 +217,11 @@ public class NotificationsPanel extends JPanel {
 				warningIcons.put(size, ImageUtil.getImageIconFrom(Icons.get("warning", size, size)));
 			}
 			lblIcon.setIcon(warningIcons.get(size));
-			label.setBackground(ValidationComponentUtils.getWarningBackground());
+			editorPane.setBackground(ValidationComponentUtils.getWarningBackground());
 			pnlIcon.setBackground(ValidationComponentUtils.getWarningBackground());
 			pnl2.setBackground(ValidationComponentUtils.getWarningBackground());
 			pnl3.setBackground(ValidationComponentUtils.getWarningBackground());
+			lblTimestamp.setBackground(ValidationComponentUtils.getWarningBackground());
 			pnl.setBorder(BorderFactory.createLineBorder(ValidationComponentUtils.getWarningBackground().darker()));
 			break;
 		case NotificationElement.ERROR:
@@ -212,10 +229,11 @@ public class NotificationsPanel extends JPanel {
 				errorIcons.put(size, ImageUtil.getImageIconFrom(Icons.get("error", size, size)));
 			}
 			lblIcon.setIcon(errorIcons.get(size));
-			label.setBackground(ValidationComponentUtils.getErrorBackground());
+			editorPane.setBackground(ValidationComponentUtils.getErrorBackground());
 			pnlIcon.setBackground(ValidationComponentUtils.getErrorBackground());
 			pnl2.setBackground(ValidationComponentUtils.getErrorBackground());
 			pnl3.setBackground(ValidationComponentUtils.getErrorBackground());
+			lblTimestamp.setBackground(ValidationComponentUtils.getErrorBackground());
 			pnl.setBorder(BorderFactory.createLineBorder(ValidationComponentUtils.getErrorBackground().darker()));
 			break;
 		case NotificationElement.SUCCESS:
@@ -223,10 +241,11 @@ public class NotificationsPanel extends JPanel {
 				successIcons.put(size, ImageUtil.getImageIconFrom(Icons.get("default", size, size)));
 			}
 			lblIcon.setIcon(successIcons.get(size));
-			label.setBackground(ValidationUtil.getSuccessBackground());
+			editorPane.setBackground(ValidationUtil.getSuccessBackground());
 			pnlIcon.setBackground(ValidationUtil.getSuccessBackground());
 			pnl2.setBackground(ValidationUtil.getSuccessBackground());
 			pnl3.setBackground(ValidationUtil.getSuccessBackground());
+			lblTimestamp.setBackground(ValidationUtil.getSuccessBackground());
 			pnl.setBorder(BorderFactory.createLineBorder(ValidationUtil.getSuccessBackground().darker()));
 			break;
 		default:

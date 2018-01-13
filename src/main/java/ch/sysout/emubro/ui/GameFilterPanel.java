@@ -226,6 +226,25 @@ public class GameFilterPanel extends JPanel implements GameListener {
 		}
 	}
 
+	@Override
+	public void gameRemoved(GameRemovedEvent e) {
+		//		int platformId = e.getGame().getPlatformId();
+		//		Platform platform;
+		//		if ((platform = getPlatform(platformId)) != null) {
+		//			cmbPlatforms.removeItem(platform);
+		//		}
+	}
+
+	private Platform getPlatform(int platformId) {
+		for (int i = 0; i < cmbPlatforms.getItemCount(); i++) {
+			Platform platform = cmbPlatforms.getItemAt(i);
+			if (platform.getId() == platformId) {
+				return platform;
+			}
+		}
+		return null;
+	}
+
 	private boolean hasPlatform(Platform platform) {
 		for (int i = 0; i < cmbPlatforms.getItemCount(); i++) {
 			if (cmbPlatforms.getItemAt(i).equals(platform)) {
@@ -233,10 +252,6 @@ public class GameFilterPanel extends JPanel implements GameListener {
 			}
 		}
 		return false;
-	}
-
-	@Override
-	public void gameRemoved(GameRemovedEvent e) {
 	}
 
 	public void setFocusInTextField() {

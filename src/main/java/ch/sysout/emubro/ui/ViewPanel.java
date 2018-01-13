@@ -13,12 +13,11 @@ import javax.swing.JPanel;
 import ch.sysout.emubro.api.event.GameAddedEvent;
 import ch.sysout.emubro.api.event.GameRemovedEvent;
 import ch.sysout.emubro.api.model.Game;
-import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.api.model.PlatformComparator;
 import ch.sysout.emubro.controller.GameSelectionListener;
 import ch.sysout.emubro.impl.event.NavigationEvent;
 
-public abstract class ViewPanel extends JPanel implements GameSelectionListener {
+public abstract class ViewPanel extends JPanel implements GameSelectionListener, GameCoverListener {
 	private static final long serialVersionUID = 1L;
 
 	public static final int BLANK_VIEW = GameViewConstants.BLANK_VIEW;
@@ -88,8 +87,6 @@ public abstract class ViewPanel extends JPanel implements GameSelectionListener 
 	public abstract boolean isTouchScreenScrollEnabled();
 
 	public abstract void setTouchScreenScrollEnabled(boolean touchScreenScrollEnabled);
-
-	public abstract void initPlatforms(List<Platform> platforms);
 
 	public abstract void sortBy(int sortBy, PlatformComparator platformComparator);
 
@@ -162,4 +159,6 @@ public abstract class ViewPanel extends JPanel implements GameSelectionListener 
 	public abstract void setViewStyle(int viewStyle);
 
 	public abstract void addUpdateGameCountListener(UpdateGameCountListener l);
+
+	public abstract void addAddGameOrEmulatorFromClipboardListener(Action l);
 }

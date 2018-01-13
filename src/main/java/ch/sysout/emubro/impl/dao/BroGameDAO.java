@@ -43,12 +43,8 @@ public class BroGameDAO implements GameDAO {
 			long lastPlayedLong = lp.getTime();
 			lastPlayed = new java.sql.Timestamp(lastPlayedLong);
 		}
-
-		String gamePath = game.getPath().trim();
-
 		String sql2 = "update game set"
 				+ "game_name=" + SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(game.getName()))+","
-				+ "game_path=" + SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(gamePath))+","
 				+ "game_coverPath=" + SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(coverPath))+","
 				+ "game_rate=" + game.getRate() + ","
 				+ "game_added='" + dateAdded + "',"
@@ -82,15 +78,35 @@ public class BroGameDAO implements GameDAO {
 	}
 
 	@Override
-	public void addGame(Game game) throws SQLException, BroGameAlreadyExistsException, BroGameDeletedException {
+	public void addGame(Game game, String filePath) throws SQLException, BroGameAlreadyExistsException, BroGameDeletedException {
 		ValidationUtil.checkNull(game, "game");
-		if (hasGame(game)) {
-			throw new BroGameAlreadyExistsException("game does already exist: " + game.getPath());
-		}
-		if (isDeleted(game)) {
-			throw new BroGameDeletedException("game was added already, but has been deleted: " + game.getPath());
-		}
 		Statement stmt = conn.createStatement();
+
+		if (!hasFile(filePath)) {
+			String sql2 = SqlUtil.insertIntoWithColumnsString("file", "file_path",
+					SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(filePath)));
+			stmt.executeQuery(sql2);
+			conn.commit();
+		}
+		int gameId = GameConstants.NO_GAME;
+		if ((gameId = hasGame(game)) != GameConstants.NO_GAME) {
+			if (!hasGameFile(gameId, getFileId(filePath))) {
+				String sql3 = SqlUtil.insertIntoWithColumnsString("game_file", "game_id", "file_id",
+						gameId, getFileId(filePath));
+				stmt = conn.createStatement();
+				stmt.executeQuery(sql3);
+				conn.commit();
+			}
+			stmt.close();
+			BroGameAlreadyExistsException ex = new BroGameAlreadyExistsException("game or copy of game does already exist: " + filePath);
+			ex.setGameId(gameId);
+			throw ex;
+		}
+
+		if (isDeleted(game)) {
+			throw new BroGameDeletedException("game was added already, but has been deleted: " + game.getName(), game);
+		}
+
 		String coverPath = SqlUtil.getQuotationsMarkedString(game.getCoverPath());
 		int emulatorId = game.getEmulatorId();
 		Date da = game.getDateAdded();
@@ -102,12 +118,12 @@ public class BroGameDAO implements GameDAO {
 			long lastPlayedLong = lp.getTime();
 			lastPlayed = new java.sql.Timestamp(lastPlayedLong);
 		}
-		String gamePath = game.getPath().trim();
 		String gameName = game.getName();
 		String platformIconFileName = game.getPlatformIconFileName();
 		String sql = SqlUtil.insertIntoWithColumnsString("game",
 				"game_name",
-				"game_path",
+				"game_defaultFileId",
+				"game_checksumId",
 				"game_coverPath",
 				"game_rate",
 				"game_added",
@@ -118,7 +134,8 @@ public class BroGameDAO implements GameDAO {
 				"game_platformIconFileName",
 				"game_deleted",
 				SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(gameName)),
-				SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(gamePath)),
+				game.getDefaultFileId(),
+				game.getChecksumId(),
 				SqlUtil.getQuotedString(coverPath),
 				game.getRate(),
 				"'" + dateAdded + "'",
@@ -129,14 +146,64 @@ public class BroGameDAO implements GameDAO {
 				false);
 		stmt.executeQuery(sql);
 		conn.commit();
+
+		String sql3 = SqlUtil.insertIntoWithColumnsString("game_file", "game_id", "file_id",
+				getLastAddedGameId(), getLastAddedFileId());
+		stmt.executeQuery(sql3);
+		conn.commit();
+
 		stmt.close();
+	}
+
+	@Override
+	public void restoreGame(Game game) throws SQLException {
+		Statement stmt = conn.createStatement();
+		String sql = "update game set game_deleted=false where game_checksumId="+game.getChecksumId();
+		stmt.executeQuery(sql);
+		conn.commit();
+		stmt.close();
+	}
+
+	private int getFileId(String filePath) throws SQLException {
+		Statement stmt = conn.createStatement();
+		stmt = conn.createStatement();
+		String sql = "select file_id from file where file_path = " + SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(filePath));
+		ResultSet rset = stmt.executeQuery(sql);
+		int fileId = -1;
+		if (rset.next()) {
+			fileId = rset.getInt("file_id");
+		}
+		return fileId;
+	}
+
+	private boolean hasGameFile(int gameId, int fileId) throws SQLException {
+		String sql = "select * from game_file where game_id=" + gameId + " and file_id=" + fileId;
+		Statement stmt = conn.createStatement();
+		ResultSet rset = stmt.executeQuery(sql);
+		if (rset.next()) {
+			stmt.close();
+			return true;
+		}
+		stmt.close();
+		return false;
+	}
+
+	private int getLastAddedFileId() throws SQLException {
+		Statement stmt = conn.createStatement();
+		stmt = conn.createStatement();
+		String sql = "select TOP 1 file_id from file order by file_id desc";
+		ResultSet rset = stmt.executeQuery(sql);
+		int fileId = -1;
+		if (rset.next()) {
+			fileId = rset.getInt("file_id");
+		}
+		stmt.close();
+		return fileId;
 	}
 
 	private boolean isDeleted(Game game) throws SQLException {
 		Statement stmt = conn.createStatement();
-		String gamePath = game.getPath();
-		String sql = "select game_deleted from game where lower(game_path) = "
-				+ SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(gamePath.toLowerCase()));
+		String sql = "select game_deleted from game where game_checksumId = " + game.getChecksumId();
 		ResultSet rset = stmt.executeQuery(sql);
 		if (rset.next()) {
 			boolean gameDeleted = rset.getBoolean("game_deleted");
@@ -172,23 +239,17 @@ public class BroGameDAO implements GameDAO {
 	}
 
 	@Override
-	public boolean hasGame(Game game) throws SQLException {
-		String gamePath = game.getPath().toLowerCase();
-		// String gamePathToMatch = gamePath.replaceAll("'",
-		// "''").toLowerCase().trim();
+	public int hasGame(Game game) throws SQLException {
 		Statement stmt = conn.createStatement();
-		String sql = "select game_id, game_path from game where lower(game_path) = "
-				+ SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(gamePath)) + " and game_deleted != "+true;
+		String sql = "select game_id, game_checksumId from game where game_checksumId = "
+				+ game.getChecksumId() + " and game_deleted != "+true;
 		ResultSet rset = stmt.executeQuery(sql);
-		boolean b = false;
+		int gameId = -1;
 		if (rset.next()) {
-			String gamePathFromDb = rset.getString("game_path").toLowerCase().trim();
-			if (gamePathFromDb.equals(gamePath)) {
-				b = true;
-			}
+			gameId = rset.getInt("game_id");
 		}
 		stmt.close();
-		return b;
+		return gameId;
 	}
 
 	@Override
@@ -202,7 +263,8 @@ public class BroGameDAO implements GameDAO {
 		if (rset.next()) {
 			int id = rset.getInt("game_id");
 			String name = rset.getString("game_name");
-			String path = rset.getString("game_path");
+			int defaultFileId = rset.getInt("game_defaultFileId");
+			int checksumId = rset.getInt("game_checksumId");
 			String iconPath = rset.getString("game_iconPath");
 			String coverPath = rset.getString("game_coverPath");
 			int rate = rset.getInt("game_rate");
@@ -212,7 +274,35 @@ public class BroGameDAO implements GameDAO {
 			int emulatorId = rset.getInt("game_emulatorId");
 			int platformId = rset.getInt("game_platformId");
 			String platformIconFileName = rset.getString("game_platformIconFileName");
-			game = new BroGame(id, name, path, iconPath, coverPath, rate, dateAdded, lastPlayed, playCount, emulatorId,
+			game = new BroGame(id, name, defaultFileId, checksumId, iconPath, coverPath, rate, dateAdded, lastPlayed, playCount, emulatorId,
+					platformId, platformIconFileName);
+		}
+		stmt.close();
+		return game;
+	}
+
+	@Override
+	public BroGame getGameByChecksumId(int checksumId) throws SQLException {
+		Statement stmt = conn.createStatement();
+		stmt = conn.createStatement();
+
+		String sql = "select * from game where game_checksumId = " + checksumId + " and game_deleted != "+true;
+		ResultSet rset = stmt.executeQuery(sql);
+		BroGame game = null;
+		if (rset.next()) {
+			int id = rset.getInt("game_id");
+			String name = rset.getString("game_name");
+			int defaultFileId = rset.getInt("game_defaultFileId");
+			String iconPath = rset.getString("game_iconPath");
+			String coverPath = rset.getString("game_coverPath");
+			int rate = rset.getInt("game_rate");
+			java.util.Date dateAdded = rset.getDate("game_added");
+			java.util.Date lastPlayed = rset.getDate("game_lastPlayed");
+			int playCount = rset.getInt("game_playCount");
+			int emulatorId = rset.getInt("game_emulatorId");
+			int platformId = rset.getInt("game_platformId");
+			String platformIconFileName = rset.getString("game_platformIconFileName");
+			game = new BroGame(id, name, defaultFileId, checksumId, iconPath, coverPath, rate, dateAdded, lastPlayed, playCount, emulatorId,
 					platformId, platformIconFileName);
 		}
 		stmt.close();
@@ -236,16 +326,29 @@ public class BroGameDAO implements GameDAO {
 	}
 
 	@Override
-	public boolean hasGame(String gamePath) throws SQLException {
-		String gamePathToMatch = gamePath.toLowerCase().trim();
+	public boolean hasGame(int gameChecksumId) throws SQLException {
 		Statement stmt = conn.createStatement();
-		String sql = "select game_id, game_path from game where lower(game_path) = "
-				+ SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(gamePathToMatch)) + " and game_deleted != "+true;
+		String sql = "select game_id, game_checksumId from game where game_checksumId = " + gameChecksumId + " and game_deleted != "+true;
 		ResultSet rset = stmt.executeQuery(sql);
 		boolean b = false;
 		if (rset.next()) {
-			String gamePathFromDb = rset.getString("game_path").toLowerCase().trim();
-			if (gamePathFromDb.equals(gamePathToMatch)) {
+			int gameChecksumFromDb = rset.getInt("game_checksumId");
+			if (gameChecksumFromDb == gameChecksumId) {
+				b = true;
+			}
+		}
+		stmt.close();
+		return b;
+	}
+
+	public boolean hasFile(String gameFilePath) throws SQLException {
+		Statement stmt = conn.createStatement();
+		String sql = "select file_id, file_path from file where file_path = " + SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(gameFilePath));
+		ResultSet rset = stmt.executeQuery(sql);
+		boolean b = false;
+		if (rset.next()) {
+			String gameChecksumFromDb = rset.getString("file_path");
+			if (gameChecksumFromDb.equals(gameFilePath)) {
 				b = true;
 			}
 		}

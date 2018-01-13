@@ -1,6 +1,7 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -84,12 +85,10 @@ implements GameListener, GameSelectionListener, MouseListener, MouseMotionListen
 
 	private CoverOptionsPopupMenu mnuCoverOptions;
 
-	private int currentCoverSize = ScreenSizeUtil.adjustValueToResolution(CoverConstants.MEDIUM_COVERS);
-
 	protected int lastMouseY;
 	protected int lastScrollDistance;
 
-	protected int PANEL_SIZE = ScreenSizeUtil.adjustValueToResolution(currentCoverSize / 2 * 3);
+	protected int PANEL_SIZE;
 
 	private Map<Integer, Platform> platforms = new HashMap<>();
 
@@ -106,10 +105,16 @@ implements GameListener, GameSelectionListener, MouseListener, MouseMotionListen
 
 	private int viewStyle;
 
-	public CoverViewPanel(IconStore iconStore) {
+	private int currentCoverSize;
+
+	private Color colorFavorite = new Color(250, 176, 42);
+
+	public CoverViewPanel(int currentCoverSize, IconStore iconStore) {
 		super(new BorderLayout());
 		ValidationUtil.checkNull(iconStore, "iconStore");
 		this.iconStore = iconStore;
+		this.currentCoverSize = currentCoverSize;
+		PANEL_SIZE = ScreenSizeUtil.adjustValueToResolution(currentCoverSize / 2 * 3);
 		initComponents();
 		createUI();
 	}
@@ -239,7 +244,12 @@ implements GameListener, GameSelectionListener, MouseListener, MouseMotionListen
 			Platform p = platforms.get(game.getPlatformId());
 			AbstractButton component = new JToggleButton(text);
 			Font f = component.getFont();
-			component.setFont(new Font(f.getName(), f.getStyle(), fontSize));
+			if (game.isFavorite()) {
+				component.setForeground(colorFavorite);
+				component.setFont(new Font(text, Font.BOLD, fontSize));
+			} else {
+				component.setFont(new Font(text, Font.PLAIN, fontSize));
+			}
 			component.setContentAreaFilled(false);
 			component.setPreferredSize(dimension);
 			component.setHorizontalTextPosition(SwingConstants.CENTER);
@@ -280,7 +290,7 @@ implements GameListener, GameSelectionListener, MouseListener, MouseMotionListen
 			Game game = mdlCoversAllGames.getGame(comps.getKey());
 			int platformId = game.getPlatformId();
 			AbstractButton comp = comps.getValue();
-			ImageIcon icon = iconStore.getGameCover(game.getId());
+			ImageIcon icon = iconStore.getScaledGameCover(game.getId(), currentCoverSize);
 			if (icon == null) {
 				//				icon = iconStore.getPlatformCover(platformId);
 				icon = iconStore.getScaledPlatformCover(platformId, currentCoverSize);
@@ -308,26 +318,6 @@ implements GameListener, GameSelectionListener, MouseListener, MouseMotionListen
 		for (GameSelectionListener l : selectGameListeners) {
 			l.gameSelected(new BroGameSelectionEvent(mdlCoversAllGames.getGame(i), null));
 		}
-	}
-
-	private void changeCoverSizeTo(int size) {
-		currentCoverSize = size;
-		PANEL_SIZE = ScreenSizeUtil.adjustValueToResolution(currentCoverSize / 2 * 3);
-		// for (int i = 0; i < explorer.getGameCount(); i++) {
-		// Game game = explorer.getGameAt(i);
-		// String coverPath = game.getCoverPath();
-		//
-		// if (game.hasCover()) {
-		// ImageIcon icon = scaleCover(coverPath, size,
-		// CoverConstants.SCALE_AUTO_OPTION);
-		// buttons.get(i).setIcon(icon);
-		// } else {
-		// Random rand = new Random();
-		// int index = rand.nextInt(icons.size());
-		// buttons.get(i).setIcon(scaleCover(icons.get(index),
-		// size, CoverConstants.SCALE_AUTO_OPTION));
-		// }
-		// }
 	}
 
 	@Override
@@ -573,22 +563,8 @@ implements GameListener, GameSelectionListener, MouseListener, MouseMotionListen
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			Object source = e.getSource();
-			// Game game = components.get(0);
-			// BroGameSelectionEvent event = new BroGameSelectionEvent(game);
-			// fireEvent(event);
+			// TODO Auto-generated method stub
 
-			if (source == itmHugeCovers) {
-				changeCoverSizeTo(HUGE_COVERS);
-			} else if (source == itmLargeCovers) {
-				changeCoverSizeTo(LARGE_COVERS);
-			} else if (source == itmMediumCovers) {
-				changeCoverSizeTo(MEDIUM_COVERS);
-			} else if (source == itmSmallCovers) {
-				changeCoverSizeTo(SMALL_COVERS);
-			} else if (source == itmTinyCovers) {
-				changeCoverSizeTo(TINY_COVERS);
-			}
 		}
 	}
 
@@ -757,10 +733,6 @@ implements GameListener, GameSelectionListener, MouseListener, MouseMotionListen
 	}
 
 	@Override
-	public void initPlatforms(List<Platform> platforms) {
-	}
-
-	@Override
 	public void sortBy(int sortBy, PlatformComparator platformComparator) {
 		// TODO Auto-generated method stub
 
@@ -779,32 +751,40 @@ implements GameListener, GameSelectionListener, MouseListener, MouseMotionListen
 
 	@Override
 	public void pinColumnWidthSliderPanel(JPanel pnlColumnWidthSlider) {
-		// TODO Auto-generated method stub
-
+		add(pnlColumnWidthSlider, BorderLayout.SOUTH);
+		pnlColumnWidthSlider.setVisible(true);
+		UIUtil.revalidateAndRepaint(this);
 	}
 
 	@Override
 	public void unpinColumnWidthSliderPanel(JPanel pnlColumnWidthSlider) {
-		// TODO Auto-generated method stub
-
+		remove(pnlColumnWidthSlider);
+		UIUtil.revalidateAndRepaint(this);
 	}
 
 	@Override
 	public void pinRowHeightSliderPanel(JPanel pnlRowHeightSlider) {
-		// TODO Auto-generated method stub
-
+		add(pnlRowHeightSlider, BorderLayout.EAST);
+		pnlRowHeightSlider.setVisible(true);
+		UIUtil.revalidateAndRepaint(this);
 	}
 
 	@Override
 	public void unpinRowHeightSliderPanel(JPanel pnlRowHeightSlider) {
-		// TODO Auto-generated method stub
-
+		remove(pnlRowHeightSlider);
+		UIUtil.revalidateAndRepaint(this);
 	}
 
 	@Override
 	public void gameRated(Game game) {
-		// TODO Auto-generated method stub
-
+		AbstractButton component = components.get(game.getId());
+		if (game.isFavorite()) {
+			component.setForeground(colorFavorite);
+			component.setFont(new Font(component.getText(), Font.BOLD, fontSize));
+		} else {
+			component.setForeground(UIManager.getColor("List.foregroundColor"));
+			component.setFont(new Font(component.getText(), Font.PLAIN, fontSize));
+		}
 	}
 
 	@Override
@@ -904,6 +884,17 @@ implements GameListener, GameSelectionListener, MouseListener, MouseMotionListen
 
 	@Override
 	public void addUpdateGameCountListener(UpdateGameCountListener l) {
+
+	}
+
+	@Override
+	public void gameCoverAdded(int gameId, ImageIcon ico) {
+		components.get(gameId).setIcon(ico);
+		System.err.println("g yeah brää");
+	}
+
+	@Override
+	public void addAddGameOrEmulatorFromClipboardListener(Action l) {
 
 	}
 }

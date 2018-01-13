@@ -9,6 +9,7 @@ import javax.swing.ImageIcon;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableModel;
 
+import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.impl.model.EmulatorConstants;
@@ -26,14 +27,15 @@ public class GameTableModel extends DefaultTableModel {
 			Messages.get(MessageConstants.COLUMN_LAST_PLAYED),
 			Messages.get(MessageConstants.COLUMN_FILE_PATH)
 	};
-	private Map<Integer, Platform> platforms = new HashMap<>();
 	private List<Game> games = new ArrayList<>();
 	private Map<Integer, ImageIcon> gameIcons = new HashMap<>();
 	private Map<Integer, ImageIcon> emulatorIcons = new HashMap<>();
 
+	private Explorer explorer;
 	private IconStore iconStore;
 
-	public GameTableModel(IconStore iconStore) {
+	public GameTableModel(Explorer explorer, IconStore iconStore) {
+		this.explorer = explorer;
 		this.iconStore = iconStore;
 	}
 
@@ -56,7 +58,7 @@ public class GameTableModel extends DefaultTableModel {
 		}
 		if (game != null) {
 			int platformId = game.getPlatformId();
-			Platform platform = (platformId == PlatformConstants.NO_PLATFORM) ? null : platforms.get(platformId);
+			Platform platform = (platformId == PlatformConstants.NO_PLATFORM) ? null : explorer.getPlatform(platformId);
 			String lastPlayed = game.getLastPlayed() != null ? game.getLastPlayed().toString()
 					: Messages.get(MessageConstants.NEVER_PLAYED);
 			switch (columnIndex) {
@@ -74,7 +76,7 @@ public class GameTableModel extends DefaultTableModel {
 				value = lastPlayed;
 				break;
 			case 4:
-				value = game.getPath();
+				value = "";
 				break;
 			}
 			return value;
@@ -125,19 +127,15 @@ public class GameTableModel extends DefaultTableModel {
 		int emulatorId = game.getEmulatorId();
 		if (emulatorId == EmulatorConstants.NO_EMULATOR) {
 			int platformId = game.getPlatformId();
-			if (platforms != null && !platforms.isEmpty()) {
-				Platform platform = platforms.get(platformId);
-				if (platform != null) {
-					emulatorId = platform.getDefaultEmulatorId();
-				} else {
-					// platforms are not up to date !!
-				}
+			Platform platform = explorer.getPlatform(platformId);
+			if (platform != null) {
+				emulatorId = platform.getDefaultEmulatorId();
 			} else {
-				// you forgot to initialize the platforms !!
+				// platforms are not up to date !!
 			}
 		}
 		Object[] gameArr = new Object[] { getEmulatorIcon(emulatorId), game.getName(), null,
-				platforms.get(game.getPlatformId()), lastPlayed, game.getPath() };
+				explorer.getPlatform(game.getPlatformId()), lastPlayed, "" };
 		super.addRow(gameArr);
 		games.add(game);
 
@@ -222,11 +220,5 @@ public class GameTableModel extends DefaultTableModel {
 
 	public void addEmulatorIcon(int emulatorId, ImageIcon emulatorIcon) {
 		emulatorIcons.put(emulatorId, emulatorIcon);
-	}
-
-	public void initPlatforms(List<Platform> platforms) {
-		for (Platform p : platforms) {
-			this.platforms.put(p.getId(), p);
-		}
 	}
 }

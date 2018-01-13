@@ -1,17 +1,15 @@
 package ch.sysout.emubro.impl.model;
 
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 
-import ch.sysout.emubro.api.GameListener;
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.util.ValidationUtil;
 
 public class BroGame implements Game {
 	private int id;
 	private String name;
-	private String path;
+	private int defaultFileId;
+	private int checksumId;
 	private String iconPath;
 	private String coverPath;
 	private int rate;
@@ -21,14 +19,14 @@ public class BroGame implements Game {
 	private int emulatorId;
 	private int platformId;
 	private String platformIconFileName;
-	private List<GameListener> listeners = new ArrayList<>();
 
-	public BroGame(int id, String name, String path, String iconPath, String coverPath, int rate, Date dateAdded,
+	public BroGame(int id, String name, int defaultFileId, int checksumId, String iconPath, String coverPath, int rate, Date dateAdded,
 			Date lastPlayed, int playCount, int emulatorId, int platformId, String platformIconFileName) {
 		ValidationUtil.checkNullOrEmpty(name, "name");
 		this.id = id;
 		this.name = name;
-		this.path = (path == null) ? "" : path;
+		this.defaultFileId = defaultFileId;
+		this.checksumId = checksumId;
 		this.iconPath = (iconPath == null) ? "" : iconPath;
 		this.coverPath = (coverPath == null) ? "" : coverPath;
 		this.rate = rate;
@@ -52,14 +50,18 @@ public class BroGame implements Game {
 	}
 
 	@Override
-	public String getPath() {
-		return path;
+	public int getChecksumId() {
+		return checksumId;
 	}
 
 	@Override
-	public void setPath(String path) {
-		ValidationUtil.checkNull(path, "path");
-		this.path = path;
+	public int getDefaultFileId() {
+		return defaultFileId;
+	}
+
+	@Override
+	public void setDefaultFileId(int defaultFileId) {
+		this.defaultFileId = defaultFileId;
 	}
 
 	@Override

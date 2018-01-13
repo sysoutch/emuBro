@@ -1,5 +1,6 @@
 package ch.sysout.emubro.ui;
 
+import java.awt.Color;
 import java.awt.dnd.DropTargetListener;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseListener;
@@ -7,13 +8,13 @@ import java.awt.event.MouseWheelListener;
 import java.util.List;
 
 import javax.swing.Action;
+import javax.swing.ImageIcon;
 import javax.swing.JPanel;
 
 import ch.sysout.emubro.api.event.GameAddedEvent;
 import ch.sysout.emubro.api.event.GameRemovedEvent;
 import ch.sysout.emubro.api.event.GameSelectionEvent;
 import ch.sysout.emubro.api.model.Game;
-import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.api.model.PlatformComparator;
 import ch.sysout.emubro.controller.GameSelectionListener;
 import ch.sysout.emubro.controller.ViewConstants;
@@ -21,6 +22,10 @@ import ch.sysout.emubro.impl.event.NavigationEvent;
 
 public class BlankViewPanel extends ViewPanel {
 	private static final long serialVersionUID = 1L;
+
+	public BlankViewPanel() {
+		setBackground(Color.WHITE);
+	}
 
 	@Override
 	public void initGameList(List<Game> games, int currentNavView) {
@@ -49,10 +54,6 @@ public class BlankViewPanel extends ViewPanel {
 	@Override
 	public int getGroupBy() {
 		return ViewConstants.GROUP_BY_NONE;
-	}
-
-	@Override
-	public void initPlatforms(List<Platform> platforms) {
 	}
 
 	@Override
@@ -257,5 +258,13 @@ public class BlankViewPanel extends ViewPanel {
 
 	@Override
 	public void addUpdateGameCountListener(UpdateGameCountListener l) {
+	}
+
+	@Override
+	public void gameCoverAdded(int gameId, ImageIcon ico) {
+	}
+
+	@Override
+	public void addAddGameOrEmulatorFromClipboardListener(Action l) {
 	}
 }

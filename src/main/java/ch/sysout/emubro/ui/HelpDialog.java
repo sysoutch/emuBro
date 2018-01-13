@@ -98,6 +98,7 @@ public class HelpDialog extends JDialog implements ActionListener {
 		DefaultMutableTreeNode gamesNode2 = new DefaultMutableTreeNode("Drag and drop");
 
 		DefaultMutableTreeNode node0 = new DefaultMutableTreeNode("Configure platforms");
+		DefaultMutableTreeNode node01 = new DefaultMutableTreeNode("Configure emulators");
 
 		DefaultMutableTreeNode node1 = new DefaultMutableTreeNode("Explore computer");
 		DefaultMutableTreeNode node10 = new DefaultMutableTreeNode("Search now");
@@ -123,6 +124,7 @@ public class HelpDialog extends JDialog implements ActionListener {
 		root.add(gamesNode);
 
 		root.add(node0);
+		root.add(node01);
 
 		node1.add(node10);
 		node1.add(node11);
@@ -199,6 +201,7 @@ public class HelpDialog extends JDialog implements ActionListener {
 		edit1 = new JEditorPane("text/html", "");
 		edit1.setEditable(false);
 		edit1.addHyperlinkListener(new HyperlinkListener() {
+			@Override
 			public void hyperlinkUpdate(HyperlinkEvent hle) {
 				if (HyperlinkEvent.EventType.ACTIVATED.equals(hle.getEventType())) {
 					System.out.println(hle.getURL());

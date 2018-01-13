@@ -12,7 +12,7 @@ public interface Game extends Comparable<Game> {
 
 	/**
 	 * returns the game title
-	 * 
+	 *
 	 * @return
 	 */
 	String getName();
@@ -25,19 +25,11 @@ public interface Game extends Comparable<Game> {
 	void setName(String title);
 
 	/**
-	 * returns the game path
+	 * returns the checksum id
 	 *
 	 * @return
 	 */
-	String getPath();
-
-	/**
-	 * sets the game path
-	 *
-	 * @param path
-	 *            the path to the file this object refers to
-	 */
-	void setPath(String path);
+	int getChecksumId();
 
 	/**
 	 * returns the game icon path
@@ -97,54 +89,31 @@ public interface Game extends Comparable<Game> {
 	 */
 	void setLastPlayed(Date date);
 
-	/**
-	 * @return
-	 */
 	int getPlayCount();
 
-	/**
-	 * @param count
-	 */
 	void setPlayCount(int count);
 
-	/**
-	 * @return
-	 */
 	boolean isFavorite();
 
-	/**
-	 * @return
-	 */
 	int getRate();
 
-	/**
-	 * @param rate
-	 */
 	void setRate(int rate);
 
-	/**
-	 * @return
-	 */
 	int getPlatformId();
 
-	/**
-	 * @return
-	 */
 	int getEmulatorId();
 
 	void setEmulator(int emulatorId);
 
 	boolean hasEmulator();
 
-	/**
-	 * @param lastAddedGameId
-	 */
 	void setId(int gameId);
 
-	/**
-	 * @return
-	 */
 	String getPlatformIconFileName();
 
 	Date getDateAdded();
+
+	int getDefaultFileId();
+
+	void setDefaultFileId(int defaultFileId);
 }

@@ -896,7 +896,7 @@
                ".mdf",
                ".nrg"
             ],
-            "searchString":"^(pcsx2-r\\d+)\\.exe$",
+            "searchString":"^(pcsx2-r\\d+)\\.exe$|^(pcsx2)\\.exe$",
 			"setupFileMatch":"",
 			"autoSearchEnabled":true
          }

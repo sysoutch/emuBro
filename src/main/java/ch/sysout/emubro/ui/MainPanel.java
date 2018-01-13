@@ -1,7 +1,6 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -25,20 +24,14 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import javax.swing.AbstractButton;
 import javax.swing.Action;
 import javax.swing.BorderFactory;
-import javax.swing.DefaultListCellRenderer;
-import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JCheckBox;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollBar;
 import javax.swing.JSplitPane;
@@ -46,12 +39,9 @@ import javax.swing.ListModel;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.WindowConstants;
-import javax.swing.border.Border;
 import javax.swing.plaf.SplitPaneUI;
 import javax.swing.plaf.basic.BasicSplitPaneUI;
 import javax.swing.table.TableModel;
-
-import org.apache.commons.io.FilenameUtils;
 
 import com.jgoodies.forms.factories.Paddings;
 import com.jgoodies.forms.layout.CellConstraints;
@@ -61,6 +51,7 @@ import ch.sysout.emubro.api.PlatformListener;
 import ch.sysout.emubro.api.event.EmulatorEvent;
 import ch.sysout.emubro.api.event.FilterEvent;
 import ch.sysout.emubro.api.event.GameAddedEvent;
+import ch.sysout.emubro.api.event.GameRemovedEvent;
 import ch.sysout.emubro.api.event.GameSelectionEvent;
 import ch.sysout.emubro.api.event.PlatformEvent;
 import ch.sysout.emubro.api.filter.Criteria;
@@ -74,9 +65,6 @@ import ch.sysout.emubro.impl.event.NavigationEvent;
 import ch.sysout.emubro.impl.filter.GameFilter;
 import ch.sysout.emubro.impl.filter.NullFilter;
 import ch.sysout.emubro.impl.filter.PlatformFilter;
-import ch.sysout.emubro.impl.model.BroGame;
-import ch.sysout.emubro.impl.model.EmulatorConstants;
-import ch.sysout.emubro.impl.model.PlatformConstants;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.ImageUtil;
 import ch.sysout.util.Icons;
@@ -106,7 +94,6 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 	protected int lastLocation;
 	protected int counter;
 	protected boolean resizeNavigationPanelEnabled;
-	private Map<String, ImageIcon> gameCovers = new HashMap<>();
 	private Explorer explorer;
 	protected JFrame frameDetailsPane;
 	protected WindowListener frameDetailsWindowAdapter;
@@ -181,9 +168,6 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				//								lastHeight = frameDetailsPane.getHeight();
 			};
 		};
-
-		pnlBlankView = new BlankViewPanel();
-		changeViewPanelTo(pnlBlankView);
 	}
 
 	protected void fireDetailsFrameClosingEvent() {
@@ -339,7 +323,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 
 	private void initializeCurrentViewAndPreviewPane() {
 		if (pnlPreviewPane == null) {
-			pnlPreviewPane = new PreviewPanePanel(explorer, popupGame);
+			pnlPreviewPane = new PreviewPanePanel(explorer, popupGame, viewManager.getIconStore());
 		}
 		pnlPreviewPane.setMinimumSize(new Dimension(0, 0));
 		splCurrentViewAndPreviewPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, true,
@@ -364,7 +348,6 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 
 			@Override
 			public int getMinimumDividerLocation() {
-				int iconWidth = pnlNavigation.getMinimumButtonWidth();
 				JScrollBar navigationVerticalScrollBar = pnlNavigation.getSpNavigationButtons().getVerticalScrollBar();
 				int scrollBarWidth = navigationVerticalScrollBar.getWidth();
 				if (scrollBarWidth == 0) {
@@ -372,7 +355,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				}
 				int dividerSize = splNavigationAndCurrentViewAndPreviewPane.getDividerSize();
 				int border = pnlNavigation.getButtonInsets() + scrollBarWidth + dividerSize;
-				return ScreenSizeUtil.adjustValueToResolution(iconWidth + border);
+				return ScreenSizeUtil.adjustValueToResolution(ScreenSizeUtil.adjustValueToResolution(32) + border);
 			}
 		};
 		splNavigationAndCurrentViewAndPreviewPane.getLeftComponent().setVisible(false);
@@ -457,15 +440,14 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 		switch (defaultViewPanel) {
 		case ViewPanel.LIST_VIEW:
 			if (pnlListView == null) {
-				pnlListView = new ListViewPanel(popupGame);
+				pnlListView = new ListViewPanel(explorer, viewManager, popupGame);
 				viewManager.initializeViewPanel(pnlListView, games);
-				setGameListRenderer();
 			}
 			viewManager.setCurrentViewPanel(pnlListView);
 			break;
 		case ViewPanel.TABLE_VIEW:
 			if (pnlTableView == null) {
-				pnlTableView = new TableViewPanel(viewManager.getIconStore());
+				pnlTableView = new TableViewPanel(explorer, viewManager.getIconStore());
 				viewManager.initializeViewPanel(pnlTableView, games);
 			}
 			viewManager.setCurrentViewPanel(pnlTableView);
@@ -473,7 +455,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 			break;
 		case ViewPanel.COVER_VIEW:
 			if (pnlCoverView == null) {
-				pnlCoverView = new CoverViewPanel(viewManager.getIconStore());
+				pnlCoverView = new CoverViewPanel(viewManager.getCurrentCoverSize(), viewManager.getIconStore());
 				viewManager.initializeViewPanel(pnlCoverView, games);
 				SwingUtilities.invokeLater(new Runnable() {
 
@@ -486,7 +468,10 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 			viewManager.setCurrentViewPanel(pnlCoverView);
 			break;
 		default:
-			viewManager.setCurrentViewPanel(pnlListView);
+			if (pnlBlankView == null) {
+				pnlBlankView = new BlankViewPanel();
+			}
+			viewManager.setCurrentViewPanel(pnlBlankView);
 		}
 		changeViewPanelTo(viewManager.getCurrentViewPanel());
 		viewManager.getCurrentViewPanel().requestFocusInWindow();
@@ -935,10 +920,10 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 			String gameCoverPath = game.getCoverPath();
 			ImageIcon img;
 			if (gameCoverPath != null && !gameCoverPath.trim().isEmpty()) {
-				if (!gameCovers.containsKey(gameCoverPath) || gameCovers.get(gameCoverPath) == null) {
-					gameCovers.put(gameCoverPath, ImageUtil.getImageIconFrom(gameCoverPath, true));
-				}
-				img = gameCovers.get(gameCoverPath);
+				IconStore iconStore = viewManager.getIconStore();
+				int gameId = game.getId();
+				viewManager.addGameCoverPath(gameId, gameCoverPath);
+				img = iconStore.getGameCover(gameId);
 			} else {
 				int platformId = e.getGame().getPlatformId();
 				img = viewManager.getIconStore().getPlatformCover(platformId);
@@ -1028,6 +1013,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 		checkMinimizePreviewPane();
 		checkMinimizeDetailsPane();
 		checkDetailsPaneTemporaryUnpinned();
+		UIUtil.revalidateAndRepaint(this); // dont remove this. otherwise when starting in fullscreen then restore size panels would not hide if needed
 	}
 
 	private void setPreviewPaneResizeWeight() {
@@ -1057,34 +1043,36 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				setPreviewPaneResizeWeight();
 				if (lastUserSettingsNotInitialized) {
 					lastUserDefinedPreviewWidth = newPreviewWidth;
-				} else {
-					if (isPreviewPaneMovingWeight()) {
-						if (newPreviewWidth <= lastUserDefinedPreviewWidth) {
-							setPreviewPaneResizeWeight();
-						} else {
-							splCurrentViewAndPreviewPane.setDividerLocation(getWidth() - lastUserDefinedPreviewWidth);
-							System.out.println("yayyyyyyyy");
-						}
-					} else if (isPreviewPaneResizeWeight()) {
-						boolean previewDividerLesserThanUserDefined = newPreviewWidth < lastUserDefinedPreviewWidth;
-						boolean previewDividerGreaterThanUserDefined = newPreviewWidth > lastUserDefinedPreviewWidth;
-						if (previewDividerLesserThanUserDefined) {
-							setLastPreviewPaneDividerLocation();
-							int divLocation = splCurrentViewAndPreviewPane.getDividerLocation();
-							int dividerSize = splCurrentViewAndPreviewPane.getDividerSize();
-							int scrollBarSize = pnlPreviewPane.getScrollBarSize();
-							int limit = (int) pnlPreviewPane.getPreferredSize().getWidth() + dividerSize
-									+ (pnlPreviewPane.isScrollBarVisible() ? scrollBarSize : 0);
+				}
+				if (isPreviewPaneMovingWeight()) {
+					if (newPreviewWidth <= lastUserDefinedPreviewWidth) {
+						setPreviewPaneResizeWeight();
+					} else {
+						splCurrentViewAndPreviewPane.setDividerLocation(getWidth() - lastUserDefinedPreviewWidth);
+						System.out.println("yayyyyyyyy");
+					}
+				} else if (isPreviewPaneResizeWeight()) {
+					boolean previewDividerLesserThanUserDefined = newPreviewWidth < lastUserDefinedPreviewWidth;
+					boolean previewDividerGreaterThanUserDefined = newPreviewWidth > lastUserDefinedPreviewWidth;
+					if (previewDividerLesserThanUserDefined) {
+						setLastPreviewPaneDividerLocation();
+						int divLocation = splCurrentViewAndPreviewPane.getDividerLocation();
+						int dividerSize = splCurrentViewAndPreviewPane.getDividerSize();
+						int scrollBarSize = pnlPreviewPane.getScrollBarSize();
+						int limit = (int) pnlPreviewPane.getPreferredSize().getWidth() + dividerSize
+								+ (pnlPreviewPane.isScrollBarVisible() ? scrollBarSize : 0);
 
-							int minimumPreviewPaneWidth = splCurrentViewAndPreviewPane.getMaximumDividerLocation() - limit;
-							if (divLocation >= minimumPreviewPaneWidth) {
-								showPreviewPane(false);
-								firePreviewPaneHiddenEvent();
-							}
-						} else if (previewDividerGreaterThanUserDefined) {
-							setPreviewPaneMovingWeight();
-							setLastPreviewPaneDividerLocation();
+						int minimumPreviewPaneWidth = splCurrentViewAndPreviewPane.getMaximumDividerLocation() - limit;
+						if (divLocation >= minimumPreviewPaneWidth) {
+							showPreviewPane(false);
+							firePreviewPaneHiddenEvent();
 						}
+					} else if (previewDividerGreaterThanUserDefined) {
+						setPreviewPaneMovingWeight();
+						setLastPreviewPaneDividerLocation();
+					} else {
+						showPreviewPane(false);
+						firePreviewPaneHiddenEvent();
 					}
 				}
 			} else {
@@ -1322,13 +1310,10 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 
 	@Override
 	public void platformAdded(PlatformEvent e) {
-		Platform p = e.getPlatform();
-		viewManager.getIconStore().addPlatformIcon(p.getId(), p.getIconFileName());
 	}
 
 	@Override
 	public void platformRemoved(PlatformEvent e) {
-
 	}
 
 	public int getColumnWidth() {
@@ -1405,6 +1390,10 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 		pnlDetails.pnlBrowseCovers.addCoverDragDropListener(l);
 	}
 
+	public void addShowUncategorizedFilesDialogListener(ActionListener l) {
+		pnlDetails.pnlBrowseComputer.addShowUncategorizedFilesDialogListener(l);
+	}
+
 	public void addPictureFromComputer(ImageIcon icon) {
 		pnlDetails.pnlBrowseCovers.addPictureFromComputer(icon);
 	}
@@ -1415,7 +1404,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 
 	public void gameCoverChanged(Game game, Image i) {
 		String gameCoverPath = game.getCoverPath();
-		gameCovers.put(gameCoverPath, ImageUtil.getImageIconFrom(gameCoverPath, true));
+		viewManager.addGameCoverPath(game.getId(), gameCoverPath);
 		pnlPreviewPane.gameCoverChanged(game, i);
 		doDirtyGameCoverRepaintFix();
 	}
@@ -1683,133 +1672,9 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 	public void addPreviewPaneListener(PreviewPaneListener l) {
 		previewPaneListeners.add(l);
 	}
+
 	public void addDetailsPaneListener(DetailsPaneListener l) {
 		detailsPaneListeners.add(l);
-	}
-
-	public void setGameListRenderer() {
-		DefaultListCellRenderer renderer;
-		pnlListView.setGameListRenderer(renderer = new DefaultListCellRenderer() {
-			private static final long serialVersionUID = 1L;
-			final Color colorFavorite = new Color(250, 176, 42);
-			private Border borderHover = BorderFactory.createLineBorder(pnlListView.getGameList().getSelectionBackground(), 2, false);
-
-			@Override
-			public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected,
-					boolean cellHasFocus) {
-				JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected,
-						cellHasFocus);
-				BroGame game = (BroGame) value;
-				checkGameIcon(game, label);
-				checkCriteria(label, isSelected);
-				checkFontAndFontSize(game, label);
-				checkIsGameSelected(index, label);
-				checkHideExtensions(viewManager.isHideExtensionsEnabled(), game.getPath(), label);
-				if (pnlListView.isDragging()) {
-					setEnabled(true);
-				}
-				return label;
-			}
-
-			private void checkGameIcon(BroGame game, JLabel label) {
-				Icon gameIcon = viewManager.getIconStore().getGameIcon(game.getId());
-				if (gameIcon != null) {
-					label.setIcon(gameIcon);
-					label.setDisabledIcon(gameIcon);
-				} else {
-					int emulatorId = game.getEmulatorId();
-					if (emulatorId == EmulatorConstants.NO_EMULATOR) {
-						int platformId = game.getPlatformId();
-						if (platformId == PlatformConstants.NO_PLATFORM) {
-							// should not happen in general. there is a bug
-							// somewhere else
-						} else {
-							Icon platformIcon = viewManager.getIconStore().getPlatformIcon(platformId);
-							label.setIcon(platformIcon);
-							label.setDisabledIcon(platformIcon);
-						}
-					}
-				}
-			}
-
-			private void checkFontAndFontSize(BroGame game, JLabel label) {
-				Font labelFont = label.getFont();
-				if (viewManager.getFontSize() <= 0) {
-					viewManager.setFontSize(label.getFont().getSize());
-				}
-				if (game.isFavorite()) {
-					label.setForeground(colorFavorite);
-					label.setFont(new Font(labelFont.getName(), Font.BOLD, pnlListView.getFontSize()));
-				} else {
-					label.setFont(new Font(labelFont.getName(), Font.PLAIN, pnlListView.getFontSize()));
-				}
-			}
-
-			private void checkHideExtensions(boolean hideExtensions, String gamePath, JLabel label) {
-				if (!hideExtensions) {
-					String fileExtension = FilenameUtils.getExtension(gamePath);
-					if (explorer.isKnownExtension(fileExtension)) {
-						String newText = label.getText() + "." + fileExtension;
-						label.setText(newText);
-					}
-				}
-			}
-
-			private void checkIsGameSelected(int index, JLabel label) {
-				if (index > -1 && index == pnlListView.getMouseOver() && index != pnlListView.getGameList().getSelectedIndex()) {
-					label.setForeground(pnlListView.getGameList().getSelectionBackground());
-					label.setBorder(borderHover);
-				}
-				if (index == pnlListView.getGameList().getSelectedIndex()) {
-					label.setForeground(UIManager.getColor("List.selectionForeground"));
-				}
-			}
-
-			private void checkCriteria(JLabel label, boolean isSelected) {
-				if (criteria != null
-						&& label.getText().toLowerCase().contains(criteria.getText().trim().toLowerCase())) {
-					int length = criteria.getText().length();
-					for (int i = 0; i < label.getText().length(); i++) {
-						if (length < 0 || label.getText().length() < length) {
-							continue;
-						}
-						String labelText = label.getText();
-						String criteriaText = criteria.getText();
-						/*
-						 * Exception in thread "AWT-EventQueue-0"
-						 * java.lang.StringIndexOutOfBoundsException: String
-						 * index out of range: 47 at
-						 * java.lang.String.substring(Unknown Source) at
-						 * ch.sysout.gameexplorer.ui.NewNewListViewPanel$1.
-						 * getListCellRendererComponent(NewNewListViewPanel.java
-						 * :176) at
-						 * javax.swing.plaf.basic.BasicListUI.updateLayoutState(
-						 * Unknown Source) at
-						 * javax.swing.plaf.basic.BasicListUI.
-						 * maybeUpdateLayoutState(Unknown Source) at
-						 * javax.swing.plaf.basic.BasicListUI.locationToIndex(
-						 * Unknown Source) at
-						 * javax.swing.JList.locationToIndex(Unknown Source) at
-						 * ch.sysout.gameexplorer.ui.NewNewListViewPanel$2.
-						 * mouseMoved(NewNewListViewPanel.java:208)
-						 */
-						if (labelText.substring(i, i + length).equalsIgnoreCase(criteriaText)) {
-							String newString = labelText;
-							if (!isSelected) {
-								newString = "<html>" + label.getText().substring(0, i)
-										+ "<span style=\"background-color: #38D878; color: white\">"
-										// + "<span style=\"color: #38D878\">"
-										+ label.getText().substring(i, i + length) + "</span>"
-										+ label.getText().substring(i + length, label.getText().length()) + "</html>";
-
-								label.setText(newString);
-							}
-							break;
-						}
-					}
-				}
-			}
-		});
 	}
 
 	public String getNavigationPaneState() {
@@ -1886,5 +1751,14 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 
 	public void gameAdded(GameAddedEvent e) {
 		pnlDetails.pnlBrowseComputer.gameAdded(e);
+	}
+
+	public void gameRemoved(GameRemovedEvent e) {
+		pnlDetails.pnlBrowseComputer.gameRemoved(e);
+	}
+
+	public void addRateListener(RateListener l) {
+		pnlPreviewPane.addRateListener(l);
+		popupGame.addRateListener(l);
 	}
 }

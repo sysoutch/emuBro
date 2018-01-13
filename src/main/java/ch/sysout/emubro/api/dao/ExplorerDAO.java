@@ -2,6 +2,7 @@ package ch.sysout.emubro.api.dao;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 
 import ch.sysout.emubro.api.model.Emulator;
 import ch.sysout.emubro.api.model.Game;
@@ -14,7 +15,7 @@ public interface ExplorerDAO {
 	List<Platform> getPlatforms() throws SQLException;
 	Game getGameAt(int index) throws SQLException;
 	List<Game> getGames() throws SQLException;
-	void addGame(Game game) throws SQLException, BroGameAlreadyExistsException, BroGameDeletedException;
+	void addGame(Game game, String filePath) throws SQLException, BroGameAlreadyExistsException, BroGameDeletedException;
 	void renameGame(int gameId, String newTitle) throws SQLException;
 	void removeGame(int gameId) throws SQLException;
 	boolean hasPlatform(String name) throws SQLException;
@@ -40,7 +41,7 @@ public interface ExplorerDAO {
 	int getLastAddedEmulatorId() throws SQLException;
 	int getLastAddedGameId() throws SQLException;
 	int getPlatformId(Platform platform) throws SQLException;
-	boolean hasGame(String path) throws SQLException;
+	boolean hasGame(int checksumId) throws SQLException;
 	int getGameCount();
 	void closeConnection() throws SQLException;
 	void removeEmulator(int emulatorId) throws SQLException;
@@ -52,4 +53,12 @@ public interface ExplorerDAO {
 	void rememberZipFile(String absolutePath);
 	void rememberRarFile(String absolutePath);
 	void rememberIsoFile(String absolutePath);
+	void addChecksum(String checksum) throws SQLException;
+	Map<Integer, String> getChecksums() throws SQLException;
+	int getLastAddedChecksumId() throws SQLException;
+	List<String> getFiles() throws SQLException;
+	List<String> getFilesForGame(int gameId) throws SQLException;
+	int getChecksumId(String checksum);
+	void restoreGame(Game game) throws SQLException;
+	Game getGameByChecksumId(int checksumId) throws SQLException;
 }

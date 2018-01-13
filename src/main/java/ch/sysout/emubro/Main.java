@@ -31,13 +31,26 @@ import ch.sysout.util.ValidationUtil;
 
 /**
  * -- General ---
+ * FIXME platform disappears when adding first file and checkbox is selected to show only own platforms
+ * TODO when changing view check if sliders should be visible
+ * FIXME cover doesnt change in coverviewpanel after add second cover for a game
+ * FIXME rename camel case bug after game search auto and sublines removed
+ * TODO unselect game after remove
+ * TODO uninstall platform after last game removed
+ * TODO commented games show blue
+ * FIXME bei mä2: games suchen, emulator download blank view
+ * TODO shift delete + checkbox in remove dialog
+ * TODO rename dialog checkbox also in default view
+ * FIXME alt enter  doesnt work in listview panel when not starting in list viewpanel
+ * FIXME apply name change in cover view panel
+ * TODO show favorite color in game names in cover view panel
  * TODO ask user when exit emuBro to store generated icons (as example when scaling covers) on disk
  * FIXME update name changes in coverviewpanel
  * FIXME right click no game bug > popupgame instead of popupview
  * TODO check letter search key pressing feature in table view and maybe implement it urself
  * TODO show hint dialog when starting game that has multiple emulators
  * TODO tooltip at details pane buttons pin unpin hide
- * TODO optional feature: emulator version ditfferation.
+ * TODO optional feature: emulator version differation.
  * TODO process map maybe remove processes they are no longer active. cause game thinks it is already running after second time playing
  * TODO when adding multiple files, make one big dialog for everything that could happen
  * TODO when game in archive has no specific platform show up choose platform dialog (and empty archive bug) / platform not detected
@@ -109,7 +122,6 @@ import ch.sysout.util.ValidationUtil;
  * TODO welcome screen with option to set language close to the configwizard u made u know?
  * TODO right click on table headers for options
  * TODO init frames does more work than fired events (settingsdialog, view panels,..)
- * TODO dont write in database on every game / emu match. wait for last game / emu
  * TODO implement alternative config file paths
  * TODO case sensitive search
  * TODO maybe read iso to categorize
@@ -305,19 +317,17 @@ public class Main {
 			int currentVersion = Integer.valueOf(e2.getCurrentVersion().replace(".", ""));
 
 			if (expectedVersion > currentVersion) {
-				JOptionPane.showConfirmDialog(dlgSplashScreen, "Cannot open database.\n"
-						+ "The version of "+ Messages.get(MessageConstants.APPLICATION_TITLE) +", expects a newer database version.\n\n"
-						+ "Expected Version: " + e2.getExpectedVersion() + "\n"
-						+ "Current Version: " + e2.getCurrentVersion()+"\n\n"
-						+ "Do you want to update the database now?\n\n"
+				JOptionPane.showConfirmDialog(dlgSplashScreen, "Cannot open database because you are using a newer version of "+Messages.get(MessageConstants.APPLICATION_TITLE)+".\n\n"
+						+ "Expected database version: " + e2.getExpectedVersion() + "\n"
+						+ "Current database version: " + e2.getCurrentVersion()+"\n\n"
+						+ "Do you want to update the database now?\n"
 						+ "Press \"No\" if you want to choose another database instead.",
 						"Initializing failure", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
 			} else {
-				JOptionPane.showConfirmDialog(dlgSplashScreen, "Cannot open database.\n"
-						+ "The version of "+ Messages.get(MessageConstants.APPLICATION_TITLE) + ", expects an older database version.\n\n"
-						+ "Expected Version: " + e2.getExpectedVersion() + "\n"
-						+ "Current Version: " + e2.getCurrentVersion()+"\n\n"
-						+ "Do you want to update "+ Messages.get(MessageConstants.APPLICATION_TITLE) + " now?\n\n"
+				JOptionPane.showConfirmDialog(dlgSplashScreen, "Cannot open database because you are using an older version of "+Messages.get(MessageConstants.APPLICATION_TITLE)+".\n\n"
+						+ "Expected database version: " + e2.getExpectedVersion() + "\n"
+						+ "Current database version: " + e2.getCurrentVersion()+"\n\n"
+						+ "Do you want to update "+ Messages.get(MessageConstants.APPLICATION_TITLE) + " now?\n"
 						+ "Pres \"No\" if you want to choose another database instead.",
 						"Initializing failure", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
 			}
