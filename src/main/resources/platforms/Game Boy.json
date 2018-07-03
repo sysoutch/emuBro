@@ -1,0 +1,37 @@
+{  
+   "shortName":"game boy",
+   "iconFilename":"gb.png",
+   "defaultGameCover":"gb.jpg",
+   "gameSearchModes":[  
+      "FILE_FILE_NAME_MATCH",
+      "ARCHIVE_FILE_NAME_MATCH"
+   ],
+   "searchFor":"^(.+)\\.gb$",
+   "fileStructure":[  
+
+   ],
+   "supportedArchiveTypes":[  
+      ".zip"
+   ],
+   "supportedImageTypes":[  
+      ""
+   ],
+   "emulators":[  
+      {  
+         "name":"VisualBoyAdvance",
+         "path":"",
+         "iconFilename":"visualboyadvance.png",
+         "configFilePath":"vba.ini",
+         "website":"http://www.emulator-zone.com/doc.php/gba/vboyadvance.HTML",
+         "startParameters":"%emupath% %gamepath%",
+         "supportedFileTypes":[  
+            ".zip"
+         ],
+         "searchString":"^(visualboyadvance)\\.exe$",
+         "setupFileMatch":"",
+         "autoSearchEnabled":true
+      }
+   ],
+   "directExecutionMode":"none",
+   "autoSearchEnabled":true
+}

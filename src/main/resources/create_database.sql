@@ -41,6 +41,12 @@ create table if not exists platform (
 	platform_deleted boolean
 )
 
+create table if not exists tag (
+	tag_id int identity,
+	tag_name varchar(255) unique,
+	tag_hexColor varchar(7)
+)
+
 create table if not exists file (
 	file_id int identity,
 	file_path varchar(255) unique
@@ -68,7 +74,7 @@ create table if not exists game (
 	game_added timestamp,
 	game_lastPlayed timestamp,
 	game_playCount int,
-	game_emulatorId int,
+	game_defaultEmulatorId int,
 	game_platformId int,
 	game_platformIconFileName varchar(255),
 	game_deleted boolean
@@ -87,6 +93,11 @@ create table if not exists platform_emulator (
 create table if not exists game_file (
 	game_id int references game(game_id),
 	file_id int references file(file_id)
+)
+
+create table if not exists game_tag (
+	game_id int references game(game_id),
+	tag_id int references tag(tag_id)
 )
 
 create table if not exists extension (

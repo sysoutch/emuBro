@@ -1,0 +1,45 @@
+{  
+   "shortName":"ps2",
+   "iconFilename":"ps2.png",
+   "defaultGameCover":"ps2.jpg",
+   "gameSearchModes":[  
+      "FILE_FILE_NAME_MATCH",
+      "IMAGE_FILE_NAME_MATCH"
+   ],
+   "searchFor":"",
+   "fileStructure":[  
+
+   ],
+   "supportedArchiveTypes":[  
+
+   ],
+   "supportedImageTypes":[  
+      ".iso",
+      ".bin",
+      ".img",
+      ".mdf",
+      ".nrg"
+   ],
+   "emulators":[  
+      {  
+         "name":"PCSX2",
+         "path":"",
+         "iconFilename":"pcsx2.png",
+         "configFilePath":"",
+         "website":"http://pcsx2.net/download/releases.html",
+         "startParameters":"%emupath% %gamepath%",
+         "supportedFileTypes":[  
+            ".iso",
+            ".bin",
+            ".img",
+            ".mdf",
+            ".nrg"
+         ],
+         "searchString":"^(pcsx2-r\\d+)\\.exe$|^(pcsx2)\\.exe$",
+         "setupFileMatch":"",
+         "autoSearchEnabled":true
+      }
+   ],
+   "directExecutionMode":"none",
+   "autoSearchEnabled":true
+}

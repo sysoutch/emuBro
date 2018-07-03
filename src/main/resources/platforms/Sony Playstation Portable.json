@@ -1,0 +1,44 @@
+{  
+   "shortName":"psp",
+   "iconFilename":"psp.png",
+   "defaultGameCover":"psp.jpg",
+   "gameSearchModes":[  
+      "FILE_FILE_NAME_MATCH",
+      "ARCHIVE_FILE_NAME_MATCH",
+      "IMAGE_FILE_NAME_MATCH"
+   ],
+   "searchFor":"^(.+)\\.pbp$",
+   "fileStructure":[  
+
+   ],
+   "supportedArchiveTypes":[  
+      ".zip"
+   ],
+   "supportedImageTypes":[  
+      ".iso",
+      ".cso"
+   ],
+   "emulators":[  
+      {  
+         "name":"PPSSPP",
+         "path":"",
+         "iconFilename":"ppsspp.png",
+         "configFilePath":"",
+         "website":"http://www.ppsspp.org/downloads.html",
+         "startParameters":"%emupath% %gamepath%",
+         "supportedFileTypes":[  
+            ".iso",
+            ".cso",
+            ".pbp",
+            ".elf",
+            ".prx",
+            ".zip"
+         ],
+         "searchString":"^(ppsspp.*)\\.exe$",
+         "setupFileMatch":"",
+         "autoSearchEnabled":true
+      }
+   ],
+   "directExecutionMode":"none",
+   "autoSearchEnabled":true
+}

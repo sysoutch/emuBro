@@ -1,0 +1,38 @@
+{
+  "name":"Atari 7800",
+  "shortName":"atari 7800",
+  "iconFilename":"atari7800.png",
+  "defaultGameCover":"atari.jpg",
+  "gameSearchModes":[
+	 "FILE_FILE_NAME_MATCH",
+	 "ARCHIVE_FILE_NAME_MATCH"
+  ],
+  "searchFor":"",
+  "fileStructure":[
+	
+	],
+  "supportedArchiveTypes":[
+  
+  ],
+  "supportedImageTypes":[
+
+  ],
+  "emulators":[
+	 {
+		"name":"MESS",
+		"path":"",
+		"iconFilename":"atariplusplus.png",
+		"configFilePath":"",
+		"website":"http://www.mamedev.org/release.html",
+		"startParameters":"%emupath% %gamepath%",
+		"supportedFileTypes":[
+		   
+		],
+		"searchString":"^(mess)\\.exe$",
+		"setupFileMatch":"",
+		"autoSearchEnabled":true
+	 }
+  ],
+  "directExecutionMode":"none",
+  "autoSearchEnabled":true
+}

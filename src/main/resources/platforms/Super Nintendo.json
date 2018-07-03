@@ -1,0 +1,68 @@
+{  
+   "shortName":"snes",
+   "iconFilename":"snes.png",
+   "defaultGameCover":"snes.jpg",
+   "gameSearchModes":[  
+      "FILE_FILE_NAME_MATCH",
+      "ARCHIVE_FILE_NAME_MATCH"
+   ],
+   "searchFor":"^(.+)\\.smc$",
+   "fileStructure":[  
+
+   ],
+   "supportedArchiveTypes":[  
+      ".zip"
+   ],
+   "supportedImageTypes":[  
+      ""
+   ],
+   "emulators":[  
+      {  
+         "name":"Snes9x",
+         "path":"",
+         "iconFilename":"snes9x.png",
+         "configFilePath":"snes9x.conf",
+         "website":"http://www.snes9x.com/downloads.php",
+         "startParameters":"%emupath% %gamepath% -fullscreen",
+         "supportedFileTypes":[  
+            ".zip",
+            ".smc"
+         ],
+         "searchString":"^(snes9x.*)\\.exe$",
+         "setupFileMatch":"",
+         "autoSearchEnabled":true
+      },
+      {  
+         "name":"ZSNES",
+         "path":"",
+         "iconFilename":"zsnes.png",
+         "configFilePath":"",
+         "website":"http://www.emuparadise.me/Super_Nintendo_Entertainment_System_(SNES)_Emulators/Windows/ZSNES/24",
+         "startParameters":"%emupath% %gamepath%",
+         "supportedFileTypes":[  
+            ".zip",
+            ".smc"
+         ],
+         "searchString":"^(zsnesw)\\.exe$|^(zsnes)$",
+         "setupFileMatch":"",
+         "autoSearchEnabled":true
+      },
+      {  
+         "name":"FakeNES",
+         "path":"",
+         "iconFilename":"",
+         "configFilePath":"fakenesw.cfg",
+         "website":"http://fakenes.sourceforge.net/",
+         "startParameters":"%emupath% %gamepath%",
+         "supportedFileTypes":[  
+            ".zip",
+            ".smc"
+         ],
+         "searchString":"^(fakenesw)\\.exe$|^(fakenes)$",
+         "setupFileMatch":"",
+         "autoSearchEnabled":true
+      }
+   ],
+   "directExecutionMode":"none",
+   "autoSearchEnabled":true
+}

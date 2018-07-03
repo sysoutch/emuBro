@@ -1,0 +1,36 @@
+{  
+   "shortName":"xbox 360",
+   "iconFilename":"win-8.png",
+   "defaultGameCover":"windows.jpg",
+   "gameSearchModes":[  
+      "FILE_FILE_NAME_MATCH"
+   ],
+   "searchFor":"",
+   "fileStructure":[  
+
+   ],
+   "supportedArchiveTypes":[  
+
+   ],
+   "supportedImageTypes":[  
+
+   ],
+   "emulators":[  
+      {  
+         "name":"Xenia",
+         "path":"",
+         "iconFilename":"xenia.png",
+         "configFilePath":"",
+         "website":"http://xenia.jp/",
+         "startParameters":"%gamepath%",
+         "supportedFileTypes":[  
+
+         ],
+         "searchString":"^(xenia)\\.exe$",
+         "setupFileMatch":"",
+         "autoSearchEnabled":true
+      }
+   ],
+   "directExecutionMode":"none",
+   "autoSearchEnabled":true
+}

@@ -1,0 +1,36 @@
+{  
+   "shortName":"android",
+   "iconFilename":"android.png",
+   "defaultGameCover":"android.jpg",
+   "gameSearchModes":[  
+      "FILE_FILE_NAME_MATCH"
+   ],
+   "searchFor":"^(.+)\\.apk$",
+   "fileStructure":[  
+
+   ],
+   "supportedArchiveTypes":[  
+
+   ],
+   "supportedImageTypes":[  
+
+   ],
+   "emulators":[  
+      {  
+         "name":"Andy",
+         "path":"",
+         "iconFilename":"andy.png",
+         "configFilePath":"",
+         "website":"http://www.andyroid.net/",
+         "startParameters":"%emupath% %gamepath%",
+         "supportedFileTypes":[  
+            ".apk"
+         ],
+         "searchString":"^(andy)\\.exe$",
+         "setupFileMatch":"",
+         "autoSearchEnabled":true
+      }
+   ],
+   "directExecutionMode":"none",
+   "autoSearchEnabled":true
+}

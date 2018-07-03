@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>ch.sysout</groupId>
 	<artifactId>emubro</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.0.9-SNAPSHOT</version>
 	<name>emubro</name>
 	<packaging>jar</packaging>
 
@@ -90,6 +90,22 @@
 			<version>0.3.4</version>
 			<type>dll</type>
 		</dependency>
+		 <dependency>
+	        <groupId>net.java.jinput</groupId>
+	        <artifactId>jinput</artifactId>
+	       <version>2.0.9</version>
+	   </dependency>
+	   <dependency>
+	       <groupId>net.java.jinput</groupId>
+	       <artifactId>jinput</artifactId>
+	       <version>2.0.9</version>
+	       <classifier>natives-all</classifier>
+	   </dependency>
+		<dependency>
+		  <groupId>org.jsoup</groupId>
+		  <artifactId>jsoup</artifactId>
+		  <version>1.11.3</version>
+		</dependency>
 	</dependencies>
 	<build>
 		<plugins>
@@ -137,6 +153,11 @@
 						</goals>
 					</execution>
 				</executions>
+			</plugin>
+			<plugin>
+				<groupId>com.googlecode.mavennatives</groupId>
+				<artifactId>maven-nativedependencies-plugin</artifactId>
+				<version>1.0.0</version>
 			</plugin>
 		</plugins>
 	</build>

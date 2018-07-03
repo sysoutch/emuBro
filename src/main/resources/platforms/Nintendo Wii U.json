@@ -1,0 +1,39 @@
+{  
+   "shortName":"wii u",
+   "iconFilename":"wii-u.png",
+   "defaultGameCover":"gcn.jpg",
+   "gameSearchModes":[  
+      "FILE_FILE_NAME_MATCH",
+      "IMAGE_FILE_NAME_MATCH"
+   ],
+   "searchFor":"^(.*)\\.rpx$|^(.*)\\.wud$|^(.*)\\.wux$",
+   "fileStructure":[  
+
+   ],
+   "supportedArchiveTypes":[  
+
+   ],
+   "supportedImageTypes":[  
+      ".iso"
+   ],
+   "emulators":[  
+      {  
+         "name":"Cemu",
+         "path":"",
+         "iconFilename":"blank.png",
+         "configFilePath":"",
+         "website":"http://cemu.info/#download",
+         "startParameters":"%emupath% -g %gamepath%",
+         "supportedFileTypes":[  
+            ".rpx",
+            ".wud",
+            ".wux"
+         ],
+         "searchString":"^(cemu)\\.exe$",
+         "setupFileMatch":"",
+         "autoSearchEnabled":true
+      }
+   ],
+   "directExecutionMode":"none",
+   "autoSearchEnabled":true
+}

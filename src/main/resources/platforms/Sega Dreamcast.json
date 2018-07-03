@@ -1,0 +1,38 @@
+{  
+   "shortName":"dreamcast",
+   "iconFilename":"dc-red.png",
+   "defaultGameCover":"dc.jpg",
+   "gameSearchModes":[  
+      "FILE_FILE_NAME_MATCH",
+      "IMAGE_FILE_CONTENT_MATCH"
+   ],
+   "searchFor":"^(.*)\\.elf$",
+   "fileStructure":[  
+
+   ],
+   "supportedArchiveTypes":[  
+
+   ],
+   "supportedImageTypes":[  
+      ".bin"
+   ],
+   "emulators":[  
+      {  
+         "name":"nullDC",
+         "path":"",
+         "iconFilename":"nulldc.jpg",
+         "configFilePath":"nulldc.cfg",
+         "website":"https://code.google.com/p/nulldc/",
+         "startParameters":"%emupath% -loadbin %gamepath%",
+         "supportedFileTypes":[  
+            ".bin",
+            ".elf"
+         ],
+         "searchString":"^(nulldc.*)\\.exe$",
+         "setupFileMatch":"",
+         "autoSearchEnabled":true
+      }
+   ],
+   "directExecutionMode":"none",
+   "autoSearchEnabled":true
+}

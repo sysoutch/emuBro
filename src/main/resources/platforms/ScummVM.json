@@ -1,0 +1,48 @@
+{  
+   "shortName":"scummvm",
+   "iconFilename":"scummvm.png",
+   "defaultGameCover":"snes.jpg",
+   "gameSearchModes":[  
+      "FILE_STRUCTURE_MATCH"
+   ],
+   "supportedArchiveTypes":[  
+
+   ],
+   "supportedImageTypes":[  
+
+   ],
+   "searchFor":"^(.+)\\.la[0-9]+$",
+   "fileStructure":[  
+      {  
+         "folderName":"RESOURCE",
+         "files":[  
+            "^(.+)\\.bun$",
+            "^(.+)\\.nut$",
+            "^(.+)\\.san$",
+            "^(.+)\\.tab$"
+         ]
+      }
+   ],
+   "emulators":[  
+      {  
+         "name":"ScummVM",
+         "path":"",
+         "iconFilename":"scummvm.png",
+         "configFilePath":"",
+         "website":"http://scummvm.org/downloads/",
+         "startParameters":"%emupath% -f -p %gamedir% %0%",
+         "supportedFileTypes":[  
+            ".la0",
+            ".bun",
+            ".nut",
+            ".san",
+            ".tab"
+         ],
+         "searchString":"^(scummvm.*)\\.exe$",
+         "setupFileMatch":"",
+         "autoSearchEnabled":true
+      }
+   ],
+   "directExecutionMode":"none",
+   "autoSearchEnabled":true
+}

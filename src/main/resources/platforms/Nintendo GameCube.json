@@ -1,0 +1,54 @@
+{  
+   "shortName":"gcn",
+   "iconFilename":"gcn.png",
+   "defaultGameCover":"gcn.jpg",
+   "gameSearchModes":[  
+      "FILE_FILE_NAME_MATCH",
+      "IMAGE_FILE_NAME_MATCH"
+   ],
+   "searchFor":"^(.+)\\.gcm$|^(.+)\\.gcs$",
+   "fileStructure":[  
+
+   ],
+   "supportedArchiveTypes":[  
+
+   ],
+   "supportedImageTypes":[  
+      ".iso",
+      ".ciso"
+   ],
+   "emulators":[  
+      {  
+         "name":"Dolphin",
+         "path":"",
+         "iconFilename":"dolphin.png",
+         "configFilePath":"",
+         "website":"https://dolphin-emu.org/download/",
+         "startParameters":"%emupath% /e %gamepath%",
+         "supportedFileTypes":[  
+            "^\\.gcm$",
+            "^\\.gcz$"
+         ],
+         "searchString":"^(dolphin)\\.exe$",
+         "setupFileMatch":"",
+         "autoSearchEnabled":true
+      },
+      {  
+         "name":"Dolphin VR",
+         "path":"",
+         "iconFilename":"dolphin.png",
+         "configFilePath":"",
+         "website":"https://dolphinvr.wordpress.com/downloads/",
+         "startParameters":"%emupath% /e %gamepath%",
+         "supportedFileTypes":[  
+            "^\\.gcm$",
+            "^\\.gcz$"
+         ],
+         "searchString":"^(dolphin)\\.exe$",
+         "setupFileMatch":"",
+         "autoSearchEnabled":true
+      }
+   ],
+   "directExecutionMode":"none",
+   "autoSearchEnabled":true
+}

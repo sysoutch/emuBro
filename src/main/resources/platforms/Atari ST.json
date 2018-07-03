@@ -1,0 +1,37 @@
+{  
+   "shortName":"atari st",
+   "iconFilename":"atari.png",
+   "defaultGameCover":"snes.jpg",
+   "gameSearchModes":[  
+      "FILE_FILE_NAME_MATCH",
+      "ARCHIVE_FILE_NAME_MATCH"
+   ],
+   "searchFor":"",
+   "fileStructure":[  
+
+   ],
+   "supportedArchiveTypes":[  
+
+   ],
+   "supportedImageTypes":[  
+
+   ],
+   "emulators":[  
+      {  
+         "name":"Steem",
+         "path":"",
+         "iconFilename":"steem.png",
+         "configFilePath":"steem.ini",
+         "website":"http://steem.atari.st",
+         "startParameters":"%emupath% %gamepath%",
+         "supportedFileTypes":[  
+
+         ],
+         "searchString":"^(steem)\\.exe$|^(steem.*\\+)\\.exe$",
+         "setupFileMatch":"",
+         "autoSearchEnabled":true
+      }
+   ],
+   "directExecutionMode":"none",
+   "autoSearchEnabled":true
+}

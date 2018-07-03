@@ -1,0 +1,38 @@
+{  
+   "shortName":"3ds",
+   "iconFilename":"3ds.png",
+   "defaultGameCover":"snes.jpg",
+   "gameSearchModes":[  
+      "FILE_FILE_NAME_MATCH",
+      "ARCHIVE_FILE_NAME_MATCH"
+   ],
+   "searchFor":"^(.+)\\.3ds$|^(.+)\\.3dsx$",
+   "fileStructure":[  
+
+   ],
+   "supportedArchiveTypes":[  
+
+   ],
+   "supportedImageTypes":[  
+
+   ],
+   "emulators":[  
+      {  
+         "name":"citra",
+         "path":"",
+         "iconFilename":"citra.png",
+         "configFilePath":"",
+         "website":"https://citra-emu.org/download/",
+         "startParameters":"%emupath% %gamepath%",
+         "supportedFileTypes":[  
+            ".3ds",
+            ".3dsx"
+         ],
+         "searchString":"^(citra-qt)\\.exe$",
+         "setupFileMatch":"",
+         "autoSearchEnabled":true
+      }
+   ],
+   "directExecutionMode":"none",
+   "autoSearchEnabled":true
+}
