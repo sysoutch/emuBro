@@ -2,9 +2,6 @@ package ch.sysout.emubro.util;
 
 public class MessageConstants {
 	public static final String APPLICATION_TITLE = "applicationTitle";
-	public static final String UPDATE_INFO_FILE = "updateInfoFile";
-	public static final String UPDATE_SERVER = "updateServer";
-	public static final String CHANGELOG_FILE = "changelogFile";
 	public static final String WEBSITE = "website";
 	public static final String GAME_ALREADY_RUNNING = "gameAlreadyRunning";
 	public static final String GAME_ALREADY_RUNNING_TITLE = "gameAlreadyRunningTitle";

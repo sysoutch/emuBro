@@ -250,7 +250,7 @@ GameSelectionListener, BrowseComputerListener {
 
 	private String applicationVersion = "";
 	private String platformDetectionVersion = "";
-	private String downloadLink = "";
+	private String latestRelease = "https://api.github.com/repos/sysoutch/emuBro/releases/latest";
 	private final String currentApplicationVersion = "0.7.0";
 	private final String currentPlatformDetectionVersion = "20180827.0";
 
@@ -727,13 +727,11 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	public UpdateObject retrieveLatestRevisionInformations() throws MalformedURLException, IOException {
-		String urlPath = Messages.get(MessageConstants.UPDATE_SERVER);
-		urlPath += (!urlPath.endsWith("/") ? "/" : "") + Messages.get(MessageConstants.UPDATE_INFO_FILE);
+		String urlPath = latestRelease;
 		URL url = null;
 		url = new URL(urlPath);
 		BufferedReader in;
-		HttpURLConnection con = (HttpURLConnection)
-				url.openConnection();
+		HttpURLConnection con = (HttpURLConnection) url.openConnection();
 		con.setConnectTimeout(5000);
 		con.setReadTimeout(5000);
 		InputStream is = con.getInputStream();
@@ -757,45 +755,36 @@ GameSelectionListener, BrowseComputerListener {
 					}
 				}
 			}
-			if (inputLine.startsWith("download_link")) {
-				String[] arr = inputLine.split("=");
-				if (arr.length < 2) {
+			if (inputLine.startsWith("browser_download_url")) {
 
-				} else {
-					downloadLink = arr[1].trim();
-					if (downloadLink != null && !downloadLink.isEmpty()) {
-
-					}
-				}
 			}
+
 		}
 		in.close();
 		UpdateObject uo = new UpdateObject(applicationUpdateAvailable, signatureUpdateAvailable,
-				applicationVersion, platformDetectionVersion, downloadLink);
+				applicationVersion, platformDetectionVersion, latestRelease);
 		return uo;
 	}
 
 	private String retrieveChangelog() throws MalformedURLException, IOException {
-		//		String urlPath = Messages.get(MessageConstants.UPDATE_SERVER);
-		//		urlPath += (!urlPath.endsWith("/") ? "/" : "") + Messages.get(MessageConstants.CHANGELOG_FILE);
-		//		URL url = null;
-		//		url = new URL(urlPath);
-		//		BufferedReader in;
-		//		HttpURLConnection con = (HttpURLConnection)
-		//				url.openConnection();
-		//		con.setConnectTimeout(5000);
-		//		con.setReadTimeout(5000);
-		//		InputStream is = con.getInputStream();
-		//		Reader reader = new InputStreamReader(is);
-		//		in = new BufferedReader(reader);
-		//		StringBuffer sb = new StringBuffer();
-		//		String inputLine;
-		//		while ((inputLine = in.readLine()) != null) {
-		//			sb.append(inputLine + "\r\n");
-		//		}
-		//		in.close();
-		//		return sb.toString();
-		return "initial beta release";
+		String urlPath = latestRelease;
+		URL url = null;
+		url = new URL(urlPath);
+		BufferedReader in;
+		HttpURLConnection con = (HttpURLConnection)
+				url.openConnection();
+		con.setConnectTimeout(5000);
+		con.setReadTimeout(5000);
+		InputStream is = con.getInputStream();
+		Reader reader = new InputStreamReader(is);
+		in = new BufferedReader(reader);
+		StringBuffer sb = new StringBuffer();
+		String inputLine;
+		while ((inputLine = in.readLine()) != null) {
+			sb.append(inputLine + "\r\n");
+		}
+		in.close();
+		return sb.toString();
 	}
 
 	public void installUpdate() {
@@ -803,8 +792,7 @@ GameSelectionListener, BrowseComputerListener {
 
 			@Override
 			public void run() {
-				String urlPath = Messages.get(MessageConstants.WEBSITE);
-				urlPath += (!urlPath.endsWith("/") ? "/" : "") + Messages.get(MessageConstants.UPDATE_INFO_FILE);
+				String urlPath = latestRelease;
 				try {
 					URL url = new URL(urlPath);
 					URLConnection con;
