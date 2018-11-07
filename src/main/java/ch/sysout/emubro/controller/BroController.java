@@ -251,7 +251,7 @@ GameSelectionListener, BrowseComputerListener {
 	private String applicationVersion = "";
 	private String platformDetectionVersion = "";
 	private String downloadLink = "";
-	private final String currentApplicationVersion = "0.1.0";
+	private final String currentApplicationVersion = "0.7.0";
 	private final String currentPlatformDetectionVersion = "20180827.0";
 
 	private int navigationPaneDividerLocation;
