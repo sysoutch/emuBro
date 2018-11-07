@@ -5,8 +5,10 @@ create table if not exists emubro (
 create table if not exists explorer (
 	explorer_id int identity,
 	explorer_configWizardHiddenAtStartup boolean,
+	explorer_showGreetingNotification boolean,
+	explorer_showBrowseComputerNotification boolean,
 	explorer_searchProcessComplete boolean,
-	explorer_searchProcessComplete2 boolean,	
+	explorer_searchProcessComplete2 boolean,
 	explorer_lastSelectedGameId int
 )
 
@@ -71,8 +73,8 @@ create table if not exists game (
 	game_iconPath varchar(255),
 	game_coverPath varchar(255),
 	game_rate int,
-	game_added timestamp,
-	game_lastPlayed timestamp,
+	game_added datetime,
+	game_lastPlayed datetime,
 	game_playCount int,
 	game_defaultEmulatorId int,
 	game_platformId int,
