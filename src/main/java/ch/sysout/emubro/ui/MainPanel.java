@@ -490,6 +490,14 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 			viewManager.setCurrentViewPanel(pnlListView);
 			setViewStyle(ViewPanel.CONTENT_VIEW);
 			break;
+		case ViewPanel.SLIDER_VIEW:
+			if (pnlListView == null) {
+				pnlListView = new ListViewPanel(explorer, viewManager, popupGame, popupView);
+				viewManager.initializeViewPanel(pnlListView, games);
+			}
+			viewManager.setCurrentViewPanel(pnlListView);
+			setViewStyle(ViewPanel.SLIDER_VIEW);
+			break;
 		case ViewPanel.COVER_VIEW:
 			if (pnlListView == null) {
 				pnlListView = new ListViewPanel(explorer, viewManager, popupGame, popupView);

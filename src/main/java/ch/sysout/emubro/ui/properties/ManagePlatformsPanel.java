@@ -103,7 +103,6 @@ import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 import ch.sysout.util.UIUtil;
-import de.hardcode.jxinput.JXInputManager;
 import net.tomahawk.XFileDialog;
 
 public class ManagePlatformsPanel extends JPanel implements ActionListener {
@@ -1131,9 +1130,6 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 			}
 
 			private Component createTopPanel() {
-				int cnt = JXInputManager.getNumberOfDevices();
-				System.out.println("controller count " + cnt);
-
 				//				/* Create an event object for the underlying plugin to populate */
 				//				Event event = new Event();
 				//

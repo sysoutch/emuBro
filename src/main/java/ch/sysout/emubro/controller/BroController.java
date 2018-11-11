@@ -153,6 +153,10 @@ import org.xml.sax.SAXException;
 import com.github.junrar.Archive;
 import com.github.junrar.exception.RarException;
 import com.github.junrar.rarfile.FileHeader;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.jgoodies.forms.factories.Paddings;
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
@@ -250,8 +254,8 @@ GameSelectionListener, BrowseComputerListener {
 
 	private String applicationVersion = "";
 	private String platformDetectionVersion = "";
-	private String latestRelease = "https://api.github.com/repos/sysoutch/emuBro/releases/latest";
-	private final String currentApplicationVersion = "0.7.0";
+	private String latestRelease = "https://api.github.com/repos/sysoutch/emuBro/releases";
+	public static final String currentApplicationVersion = "0.7.1";
 	private final String currentPlatformDetectionVersion = "20180827.0";
 
 	private int navigationPaneDividerLocation;
@@ -335,6 +339,8 @@ GameSelectionListener, BrowseComputerListener {
 	private Map<Platform, NodeList> gameTagListFiles = new HashMap<>();
 	private AddEmulatorDialog dlgAddEmulator;
 	private CoverBroFrame frameCoverBro;
+	public UpdateObject uo;
+	public UpdateApplicationListener updateApplicationListener;
 
 	public BroController(ExplorerDAO explorerDAO, Explorer model, MainFrame view) {
 		this.explorerDAO = explorerDAO;
@@ -582,6 +588,7 @@ GameSelectionListener, BrowseComputerListener {
 		view.addChangeToElementViewListener(new ChangeToElementViewListener());
 		view.addChangeToTableViewListener(new ChangeToTableViewListener());
 		view.addChangeToContentViewListener(new ChangeToContentViewListener());
+		view.addChangeToSliderViewListener(new ChangeToSliderViewListener());
 		view.addChangeToCoverViewListener(new ChangeToCoverViewListener());
 		view.addLanguageGermanListener(new LanguageGermanListener());
 		view.addLanguageEnglishListener(new LanguageEnglishListener());
@@ -728,8 +735,7 @@ GameSelectionListener, BrowseComputerListener {
 
 	public UpdateObject retrieveLatestRevisionInformations() throws MalformedURLException, IOException {
 		String urlPath = latestRelease;
-		URL url = null;
-		url = new URL(urlPath);
+		URL url = new URL(urlPath);
 		BufferedReader in;
 		HttpURLConnection con = (HttpURLConnection) url.openConnection();
 		con.setConnectTimeout(5000);
@@ -740,29 +746,35 @@ GameSelectionListener, BrowseComputerListener {
 		String inputLine;
 		boolean applicationUpdateAvailable = false;
 		boolean signatureUpdateAvailable = false;
-		while ((inputLine = in.readLine()) != null) {
-			if (inputLine.startsWith("app_version")) {
-				applicationVersion = inputLine.split("=")[1].trim();
-				if (applicationVersion != null && !applicationVersion.isEmpty()) {
-					applicationUpdateAvailable = isApplicationUpdateAvailable();
-				}
-			}
-			if (inputLine.startsWith("platform_detection_version")) {
-				platformDetectionVersion = inputLine.split("=")[1].trim();
-				if (platformDetectionVersion != null && !platformDetectionVersion.isEmpty()) {
-					if (isPlatformDetectionUpdateAvailable()) {
-						signatureUpdateAvailable = true;
-					}
-				}
-			}
-			if (inputLine.startsWith("browser_download_url")) {
 
-			}
-
-		}
+		JsonParser jsonParser = new JsonParser();
+		String readLine = in.readLine();
 		in.close();
+		String json = readLine;
+		JsonArray arr = jsonParser.parse(json).getAsJsonArray();
+		JsonObject obj = arr.get(0).getAsJsonObject();
+		JsonElement jsonElement = obj.get("tag_name");
+		applicationVersion = jsonElement.getAsString();
+		applicationUpdateAvailable = isApplicationUpdateAvailable();
+
+		JsonArray jsonArrayAssets = obj.get("assets").getAsJsonArray();
+		String downloadLink = "";
+		for (int i = 0; i < jsonArrayAssets.size(); i++) {
+			JsonObject el = jsonArrayAssets.get(i).getAsJsonObject();
+			System.out.println(el.get("name"));
+			if (ValidationUtil.isWindows()) {
+				if (el.get("name").getAsString().equals("emuBro.exe")) {
+					downloadLink = el.get("browser_download_url").getAsString();
+				}
+			} else {
+				if (el.get("name").getAsString().equals("emuBro.jar")) {
+					downloadLink = el.get("browser_download_url").getAsString();
+				}
+			}
+		}
+
 		UpdateObject uo = new UpdateObject(applicationUpdateAvailable, signatureUpdateAvailable,
-				applicationVersion, platformDetectionVersion, latestRelease);
+				applicationVersion, platformDetectionVersion, downloadLink);
 		return uo;
 	}
 
@@ -788,22 +800,39 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	public void installUpdate() {
+		if (uo.getDownloadLink().isEmpty()) {
+			dlgUpdates.setCurrentState("download link not retrieved");
+			return;
+		}
+		dlgUpdates.setCurrentState("Downloading update...");
+		dlgUpdates.downloadInProgress();
 		Thread t = new Thread(new Runnable() {
 
 			@Override
 			public void run() {
-				String urlPath = latestRelease;
+				String urlPath = uo.getDownloadLink();
 				try {
 					URL url = new URL(urlPath);
 					URLConnection con;
 					try {
 						con = url.openConnection();
 						con.setReadTimeout(20000);
-						String userHome = System.getProperty("user.home");
-						File applicationFile = new File(userHome + "/" + Messages.get(MessageConstants.APPLICATION_TITLE) + ".jar");
+						String userTmp = System.getProperty("java.io.tmpdir");
+						String pathname = userTmp + Messages.get(MessageConstants.APPLICATION_TITLE) + ".tmp";
+						File applicationFile = new File(pathname);
 						try {
 							FileUtils.copyURLToFile(url, applicationFile);
-							System.err.println("update has been successfully installed");
+							System.err.println("update has been downloaded");
+
+							SwingUtilities.invokeLater(new Runnable() {
+
+								@Override
+								public void run() {
+									dlgUpdates.setCurrentState("Download finished");
+									dlgUpdates.dispose();
+									checkAndExit(true);
+								}
+							});
 							// view.showInformation("Update ready to install",
 							// "restart "+Messages.get("applicationTitle"),
 							// NotificationElement.INFORMATION, null);
@@ -851,6 +880,8 @@ GameSelectionListener, BrowseComputerListener {
 	 *         strings are _numerically_ equal.
 	 */
 	public Integer versionCompare(String str1, String str2) {
+		str1 = str1.replace("v", "");
+		str2 = str2.replace("v", "");
 		if (str1 != null && str2 != null && !str1.trim().isEmpty() && !str2.trim().isEmpty()) {
 			String[] vals1 = str1.split("\\.");
 			String[] vals2 = str2.split("\\.");
@@ -2179,6 +2210,10 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	public void checkAndExit() {
+		checkAndExit(false);
+	}
+
+	public void checkAndExit(boolean installUpdate) {
 		// if (!explorer.isSearchProgressComplete()) {
 		// JOptionPane.showConfirmDialog(view, "Browsing for platforms is
 		// currently in progress.\n"
@@ -2186,10 +2221,7 @@ GameSelectionListener, BrowseComputerListener {
 		// + "You can manually start the search process at any time");
 		// }
 		if (workerBrowseComputer != null && !workerBrowseComputer.isDone()) {
-			String msg = Messages.get(MessageConstants.EXIT_REQUEST_SEARCH_IN_PROGRESS);
-			String title = Messages.get(MessageConstants.EXIT_REQUEST);
-			int request = JOptionPane.showConfirmDialog(view, msg, title, JOptionPane.YES_NO_OPTION);
-			if (request == JOptionPane.YES_OPTION) {
+			if (installUpdate) {
 				try {
 					interruptSearchProcess();
 				} catch (SQLException e) {
@@ -2197,7 +2229,19 @@ GameSelectionListener, BrowseComputerListener {
 					e.printStackTrace();
 				}
 			} else {
-				return;
+				String msg = Messages.get(MessageConstants.EXIT_REQUEST_SEARCH_IN_PROGRESS);
+				String title = Messages.get(MessageConstants.EXIT_REQUEST);
+				int request = JOptionPane.showConfirmDialog(view, msg, title, JOptionPane.YES_NO_OPTION);
+				if (request == JOptionPane.YES_OPTION) {
+					try {
+						interruptSearchProcess();
+					} catch (SQLException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				} else {
+					return;
+				}
 			}
 		}
 		//		try {
@@ -2276,17 +2320,44 @@ GameSelectionListener, BrowseComputerListener {
 			} catch (SQLException e) {
 				e.printStackTrace();
 			} finally {
-				System.exit(0);
+				exitNow(installUpdate);
 			}
 		}
 		try {
 			if (quitNow()) {
-				System.exit(0);
+				exitNow(installUpdate);
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
-			System.exit(0);
+		} finally {
+			exitNow(installUpdate);
 		}
+	}
+
+	private void exitNow(boolean installUpdate) {
+		if (installUpdate) {
+			try {
+				String userTmp = System.getProperty("java.io.tmpdir");
+				String pathname = userTmp + Messages.get(MessageConstants.APPLICATION_TITLE) + ".tmp";
+				String userDir = System.getProperty("user.dir");
+				String command = "";
+				if (ValidationUtil.isWindows()) {
+					command = "cmd /c ping localhost -n 2 > nul"
+							+ " && move /Y \""+pathname+"\" \""+userDir+"/"+Messages.get(MessageConstants.APPLICATION_TITLE)+".exe\""
+							+ " && start "+Messages.get(MessageConstants.APPLICATION_TITLE)+".exe --changelog";
+				} else {
+					command = "sleep 2"
+							+ " && mv -f \""+pathname+"\" \""+userDir+"/"+Messages.get(MessageConstants.APPLICATION_TITLE)+".jar\""
+							+ " && java -jar "+Messages.get(MessageConstants.APPLICATION_TITLE)+".jar --changelog";
+				}
+				Runtime.getRuntime().exec(command);
+			} catch (IOException e) {
+				e.printStackTrace();
+			} finally {
+				System.exit(0);
+			}
+		}
+		System.exit(0);
 	}
 
 	private boolean quitNow() throws SQLException {
@@ -2452,8 +2523,9 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	private void checkPicture(File file) {
-		UIUtil.showInformationMessage(view, "It seems you wanted to add this as a cover for the current selected game, right?",
-				"add cover");
+		showImageEditDialog();
+		ConvertImageWorker worker = new ConvertImageWorker(file);
+		worker.execute();
 	}
 
 	private void askUserToCategorize(String filePath, File file) throws SQLException {
@@ -2899,6 +2971,7 @@ GameSelectionListener, BrowseComputerListener {
 					}
 					if (!currentGame.get(0).getCoverPath().equals(coverPath)) {
 						currentGame.get(0).setCoverPath(coverPath);
+						view.gameCoverChanged(currentGame.get(0), resized);
 						try {
 							explorerDAO.setGameCoverPath(currentGame.get(0).getId(), coverPath);
 						} catch (SQLException e2) {
@@ -2963,11 +3036,11 @@ GameSelectionListener, BrowseComputerListener {
 						List<File> files = (List<File>) transferable.getTransferData(flavor);
 						for (File file : files) {
 							if (file.isFile()) {
+								showImageEditDialog();
 								ConvertImageWorker worker = new ConvertImageWorker(file);
 								worker.execute();
 							}
 						}
-						showImageEditDialog();
 					}
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -3014,7 +3087,7 @@ GameSelectionListener, BrowseComputerListener {
 					BufferedImage bi = ImageIO.read(file);
 					width = bi.getWidth();
 					height = bi.getHeight();
-					//					publish(resized);
+					publish(bi);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -3032,6 +3105,7 @@ GameSelectionListener, BrowseComputerListener {
 		@Override
 		protected void process(List<Image> chunks) {
 			for (Image i : chunks) {
+				frameCoverBro.addImage((BufferedImage) i);
 				//				view.gameCoverChanged(explorer.getCurrentGames(), i);
 				// explorerDAO.setCover(model.getCurrentGame(), new
 				// ImageIcon(i));
@@ -3040,6 +3114,7 @@ GameSelectionListener, BrowseComputerListener {
 
 		@Override
 		protected void done() {
+
 		}
 	}
 
@@ -3576,8 +3651,8 @@ GameSelectionListener, BrowseComputerListener {
 				String defPlatformName = (platformShortName != null && !platformShortName.trim().isEmpty())
 						? platformShortName : platform.getName();
 				String coverOrIcon = "cover OR icon";
-				String site = "https://www.gametdb.com/";
-				boolean useSpecificSite = true;
+				String site = "";
+				boolean useSpecificSite = site != null && !site.trim().isEmpty();
 				String searchString = (useSpecificSite ? "site:"+site + " "  : "") + gameName + " " + defPlatformName + " " + coverOrIcon;
 				String url = "https://www.google.com/search?q="+searchString.replace(" ", "+").replace("&", "%26")+"&tbm=isch";
 				try {
@@ -5690,6 +5765,32 @@ GameSelectionListener, BrowseComputerListener {
 		}
 	}
 
+	class ChangeToSliderViewListener implements ActionListener {
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			int divLocation = view.getSplPreviewPane().getDividerLocation();
+			view.changeToViewPanel(GameViewConstants.SLIDER_VIEW, explorer.getGames());
+			view.getSplPreviewPane().setDividerLocation(divLocation); // this
+			// has
+			// been
+			// done,
+			// cause
+			// otherwise
+			// preview
+			// panel
+			// magically
+			// changes
+			// size
+			// (cause
+			// of
+			// other
+			// panels
+			// preferred
+			// sizes
+			// idk)
+		}
+	}
+
 	class ChangeToCoverViewListener implements ActionListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
@@ -5885,7 +5986,7 @@ GameSelectionListener, BrowseComputerListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			if (dlgAbout == null) {
-				dlgAbout = new AboutDialog();
+				dlgAbout = new AboutDialog(currentApplicationVersion);
 				dlgAbout.addOpenContactSiteListener(new OpenContactSiteListener());
 			}
 			dlgAbout.setLocationRelativeTo(view);
@@ -5916,9 +6017,17 @@ GameSelectionListener, BrowseComputerListener {
 			if (dlgUpdates == null) {
 				dlgUpdates = new UpdateDialog(currentApplicationVersion, currentPlatformDetectionVersion);
 				dlgUpdates.addSearchForUpdatesListener(new CheckForUpdatesListener());
+				dlgUpdates.addUpdateNowListener(updateApplicationListener = new UpdateApplicationListener());
 			}
 			dlgUpdates.setLocationRelativeTo(view);
 			dlgUpdates.setVisible(true);
+			SwingUtilities.invokeLater(new Runnable() {
+
+				@Override
+				public void run() {
+					checkForUpdates();
+				}
+			});
 		}
 	}
 
@@ -5926,71 +6035,55 @@ GameSelectionListener, BrowseComputerListener {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			UpdateObject uo;
-			try {
-				uo = retrieveLatestRevisionInformations();
-				System.out.println(uo.getDownloadLink());
-				if (uo.isApplicationUpdateAvailable()) {
-					Map<String, Action> actionKeys = new HashMap<>();
-					actionKeys.put("updateNow", null);
-					actionKeys.put("updateLater", null);
-					NotificationElement element = new NotificationElement(new String[] { "applicationUpdateAvailable" },
-							actionKeys, NotificationElement.INFORMATION_MANDATORY, null);
-					view.showInformation(element);
-					view.applicationUpdateAvailable();
-				}
-				if (uo.isSignatureUpdateAvailable()) {
-					Map<String, Action> actionKeys = new HashMap<>();
-					actionKeys.put("updateNow", null);
-					actionKeys.put("updateLater", null);
-					NotificationElement element = new NotificationElement(new String[] { "signatureUpdateAvailable" },
-							actionKeys, NotificationElement.INFORMATION_MANDATORY, null);
-					view.showInformation(element);
-					view.signatureUpdateAvailable();
-				}
-				if (dlgUpdates.isVisible()) {
-					dlgUpdates.setVersionInformations(uo);
-				}
-			} catch (MalformedURLException e1) {
-				if (dlgUpdates.isVisible()) {
-					dlgUpdates.setVersionInformations(null);
-				}
-			} catch (IOException e1) {
-				if (dlgUpdates.isVisible()) {
-					dlgUpdates.setVersionInformations(null);
-				}
-			}
-			try {
-				String changelog = retrieveChangelog();
-				if (dlgUpdates.isVisible()) {
-					dlgUpdates.setChangelog(changelog);
-				}
-			} catch (IOException e1) {
-				e1.printStackTrace();
-			}
+			checkForUpdates();
 		}
 	}
 
-	class UpdateApplicationListener implements MouseListener {
+	class UpdateApplicationListener implements Action, ActionListener {
+
 		@Override
-		public void mouseClicked(MouseEvent e) {
+		public void actionPerformed(ActionEvent e) {
+			if (uo != null) {
+				dlgUpdates.setLocationRelativeTo(view);
+				dlgUpdates.setVisible(true);
+				installUpdate();
+			}
 		}
 
 		@Override
-		public void mouseEntered(MouseEvent e) {
+		public void addPropertyChangeListener(PropertyChangeListener listener) {
+			// TODO Auto-generated method stub
+
 		}
 
 		@Override
-		public void mouseExited(MouseEvent e) {
+		public Object getValue(String key) {
+			// TODO Auto-generated method stub
+			return null;
 		}
 
 		@Override
-		public void mousePressed(MouseEvent e) {
+		public boolean isEnabled() {
 			installUpdate();
+			return false;
 		}
 
 		@Override
-		public void mouseReleased(MouseEvent e) {
+		public void putValue(String key, Object value) {
+			// TODO Auto-generated method stub
+
+		}
+
+		@Override
+		public void removePropertyChangeListener(PropertyChangeListener listener) {
+			// TODO Auto-generated method stub
+
+		}
+
+		@Override
+		public void setEnabled(boolean b) {
+			// TODO Auto-generated method stub
+
 		}
 	}
 
@@ -6036,6 +6129,56 @@ GameSelectionListener, BrowseComputerListener {
 		workerBrowseComputer.searchProcessInterrupted();
 		workerBrowseComputer.cancel(true);
 		view.searchProcessEnded();
+	}
+
+	public void checkForUpdates() {
+		try {
+			uo = retrieveLatestRevisionInformations();
+			dlgUpdates.setCurrentState(""+uo.getApplicationVersion());
+			dlgUpdates.applicationUpdateAvailable(uo.isApplicationUpdateAvailable());
+
+			System.out.println(uo.getDownloadLink());
+			if (uo.isApplicationUpdateAvailable()) {
+				Map<String, Action> actionKeys = new HashMap<>();
+				actionKeys.put("updateNow", updateApplicationListener);
+				actionKeys.put("updateLater", null);
+				NotificationElement element = new NotificationElement(new String[] { "applicationUpdateAvailable" },
+						actionKeys, NotificationElement.INFORMATION_MANDATORY, null);
+				view.showInformation(element);
+				dlgUpdates.setCurrentState("<html><center>"+Messages.get(MessageConstants.APPLICATION_UPDATE_AVAILABLE)
+				+"<br/>("+uo.getApplicationVersion()+")</center></html>");
+			} else {
+				dlgUpdates.setCurrentState("Your version is up to date");
+			}
+			if (uo.isSignatureUpdateAvailable()) {
+				Map<String, Action> actionKeys = new HashMap<>();
+				actionKeys.put("updateNow", null);
+				actionKeys.put("updateLater", null);
+				NotificationElement element = new NotificationElement(new String[] { "signatureUpdateAvailable" },
+						actionKeys, NotificationElement.INFORMATION_MANDATORY, null);
+				view.showInformation(element);
+				view.signatureUpdateAvailable();
+			}
+			if (dlgUpdates.isVisible()) {
+				dlgUpdates.setVersionInformations(uo);
+			}
+		} catch (MalformedURLException e1) {
+			if (dlgUpdates.isVisible()) {
+				dlgUpdates.setVersionInformations(null);
+			}
+		} catch (IOException e1) {
+			if (dlgUpdates.isVisible()) {
+				dlgUpdates.setVersionInformations(null);
+			}
+		}
+		try {
+			String changelog = retrieveChangelog();
+			if (dlgUpdates.isVisible()) {
+				dlgUpdates.setChangelog(changelog);
+			}
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
 	}
 
 	@Override
@@ -6410,7 +6553,7 @@ GameSelectionListener, BrowseComputerListener {
 				g2d.drawImage(ii.getImage(), 0, 0, width, height, null);
 				String emuBroIconHome = System.getProperty("user.dir") + File.separator + "emubro-resources" + File.separator
 						+ "images" + File.separator + "games" + File.separator + "icons";
-				String iconPathString = emuBroIconHome + File.separator + explorer.getChecksum(element.getChecksumId()) + File.separator + System.currentTimeMillis() + ".png";
+				String iconPathString = emuBroIconHome + File.separator + explorer.getPlatform(element.getPlatformId()).getShortName() + File.separator + element.getName() + ".png";
 				File iconHomeFile = new File(iconPathString);
 				if (!iconHomeFile.exists()) {
 					iconHomeFile.mkdirs();

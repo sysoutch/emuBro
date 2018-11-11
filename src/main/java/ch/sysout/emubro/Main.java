@@ -11,6 +11,7 @@ import java.io.InputStreamReader;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -60,10 +61,14 @@ public class Main {
 		dlgSplashScreen = new SplashScreenWindow(Messages.get(MessageConstants.INIT_APPLICATION, Messages.get(MessageConstants.APPLICATION_TITLE)));
 		dlgSplashScreen.setLocationRelativeTo(null);
 		dlgSplashScreen.setVisible(true);
-		initializeApplication();
+		initializeApplication(args);
 	}
 
 	public static void initializeApplication() {
+		initializeApplication("");
+	}
+
+	public static void initializeApplication(String... args) {
 		final Point defaultDlgSplashScreenLocation = dlgSplashScreen.getLocation();
 		String userHome = System.getProperty("user.home");
 		String applicationHome = userHome += userHome.endsWith(File.separator) ? "" : File.separator + ".emubro";
@@ -80,8 +85,22 @@ public class Main {
 					try {
 						Explorer explorer = new BroExplorer();
 						String defaultPlatformsFilePath = System.getProperty("user.dir") + "/emubro-resources/platforms.json";
-						List<BroPlatform> defaultPlatforms = initDefaultPlatforms(defaultPlatformsFilePath);
-						List<BroTag> defaultTags = initDefaultTags(System.getProperty("user.dir") + "/emubro-resources/tags.json");
+						List<BroPlatform> defaultPlatforms = null;
+						try {
+							defaultPlatforms = initDefaultPlatforms(defaultPlatformsFilePath);
+						} catch (FileNotFoundException eFNF) {
+							defaultPlatforms = new ArrayList<>();
+							JOptionPane.showConfirmDialog(dlgSplashScreen, "oops. platforms resources not found");
+						}
+
+						List<BroTag> defaultTags = null;
+						try {
+							defaultTags = initDefaultTags(System.getProperty("user.dir") + "/emubro-resources/tags.json");
+						} catch (FileNotFoundException eFNF) {
+							defaultTags = new ArrayList<>();
+							JOptionPane.showConfirmDialog(dlgSplashScreen, "oops. tags resources not found");
+						}
+
 						//					explorer.setDefaultPlatforms(defaultPlatforms);
 						explorer.setDefaultTags(defaultTags);
 						mainFrame = new MainFrame(defaultLookAndFeel, explorer);
@@ -132,6 +151,10 @@ public class Main {
 						controller.setDefaultPlatforms(defaultPlatforms);
 						controller.setDefaultTags(defaultTags);
 						controller.showView(applyData);
+						if (args.length > 0 && args[0].equals("--changelog")) {
+							JOptionPane.showMessageDialog(mainFrame, "--- emuBro v"+BroController.currentApplicationVersion+" ---\n"
+									+ "\nUpdate successful!");
+						}
 						if (applyData) {
 							//						controller.setDividerLocations();
 							//						// dont remove invokelater here. otherwise locations may
@@ -296,7 +319,7 @@ public class Main {
 		}
 	}
 
-	public static List<BroPlatform> initDefaultPlatforms(String defaultPlatformsFilePath) throws FileNotFoundException, SQLException {
+	public static List<BroPlatform> initDefaultPlatforms(String defaultPlatformsFilePath) throws FileNotFoundException {
 		InputStream is = new FileInputStream(defaultPlatformsFilePath);
 		BufferedReader br = new BufferedReader(new InputStreamReader(is));
 		java.lang.reflect.Type collectionType = new TypeToken<List<BroPlatform>>() {
@@ -312,7 +335,7 @@ public class Main {
 		return platforms;
 	}
 
-	public static List<BroTag> initDefaultTags(String defaultTagsFilePath) throws FileNotFoundException, SQLException {
+	public static List<BroTag> initDefaultTags(String defaultTagsFilePath) throws FileNotFoundException {
 		InputStream is = new FileInputStream(defaultTagsFilePath);
 		BufferedReader br = new BufferedReader(new InputStreamReader(is));
 		java.lang.reflect.Type collectionType = new TypeToken<List<BroTag>>() {

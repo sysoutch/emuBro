@@ -203,6 +203,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	private JRadioButtonMenuItem itmElementView;
 	private JRadioButtonMenuItem itmTableView;
 	private JRadioButtonMenuItem itmContentView;
+	private JRadioButtonMenuItem itmSliderView;
 	private JRadioButtonMenuItem itmCoverView;
 	private JRadioButtonMenuItem itmSortTitle;
 	private JRadioButtonMenuItem itmSortPlatform;
@@ -489,6 +490,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmElementView = new JRadioButtonMenuItem();
 		itmContentView = new JRadioButtonMenuItem();
 		itmTableView = new JRadioButtonMenuItem();
+		itmSliderView = new JRadioButtonMenuItem();
 		itmCoverView = new JRadioButtonMenuItem();
 		itmSortTitle = new JRadioButtonMenuItem();
 		itmSortPlatform = new JRadioButtonMenuItem();
@@ -1481,6 +1483,12 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		viewManager.getBlankViewPanel().addChangeToContentViewListener(l);
 	}
 
+	public void addChangeToSliderViewListener(ActionListener l) {
+		itmSliderView.addActionListener(l);
+		//		pnlMain.addChangeToCoverViewListener(l);
+		//		viewManager.getBlankViewPanel().addChangeToCoverViewListener(l);
+	}
+
 	public void addChangeToCoverViewListener(ActionListener l) {
 		itmCoverView.addActionListener(l);
 		pnlMain.addChangeToCoverViewListener(l);
@@ -1690,14 +1698,14 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		addComponentsToJComponent(mnuSetCoverSize, sliderCoverSize);
 
 		addComponentsToJComponent(mnuView, itmWelcomeView,
-				new JSeparator(), itmListView, itmElementView, itmTableView, itmContentView, itmCoverView,
+				new JSeparator(), itmListView, itmElementView, itmTableView, itmContentView, itmSliderView, itmCoverView,
 				new JSeparator(), mnuSetCoverSize,
 				new JSeparator(), mnuSort, mnuGroup,
 				new JSeparator(), itmRefresh,
 				new JSeparator(), itmSetFilter, /*itmChooseDetails,*/
 				/* new JSeparator(), */mnuChangeTo,
 				new JSeparator(), itmSetColumnWidth, itmSetRowHeight,
-				new JSeparator(), itmHideExtensions, itmTouchScreenOptimizedScroll,
+				new JSeparator(), itmTouchScreenOptimizedScroll,
 				new JSeparator(), itmFullScreen);
 
 		addComponentsToJComponent(mnuManageTags, itmAutoSearchTags, itmManuallyAddTag);
@@ -2380,6 +2388,9 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		case ViewPanel.CONTENT_VIEW:
 			itmContentView.setSelected(true);
 			break;
+		case ViewPanel.SLIDER_VIEW:
+			itmSliderView.setSelected(true);
+			break;
 		case ViewPanel.COVER_VIEW:
 			itmCoverView.setSelected(true);
 			break;
@@ -2717,6 +2728,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmElementView.setText(Messages.get(MessageConstants.VIEW_ELEMENTS));
 		itmTableView.setText(Messages.get(MessageConstants.VIEW_TABLE));
 		itmContentView.setText(Messages.get(MessageConstants.VIEW_CONTENT));
+		itmSliderView.setText(Messages.get(MessageConstants.VIEW_SLIDER));
 		itmCoverView.setText(Messages.get(MessageConstants.VIEW_COVERS));
 		mnuSetCoverSize.setText(Messages.get(MessageConstants.SET_COVER_SIZE));
 		itmSortTitle.setText(Messages.get(MessageConstants.BY_TITLE));

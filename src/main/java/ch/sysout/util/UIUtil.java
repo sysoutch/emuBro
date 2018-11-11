@@ -34,6 +34,8 @@ import javax.swing.JRootPane;
 import javax.swing.KeyStroke;
 import javax.swing.text.JTextComponent;
 
+import ch.sysout.emubro.ui.AboutDialog;
+
 public class UIUtil {
 	private static MouseAdapter mouseAdapter;
 	private static MouseAdapter mouseAdapterKeepHoverWhenSelected;
@@ -184,6 +186,10 @@ public class UIUtil {
 
 	public static void showInformationMessage(Component component, String message, String title) {
 		JOptionPane.showMessageDialog(component, message, title, JOptionPane.INFORMATION_MESSAGE);
+	}
+
+	public static void showQuestionMessage(AboutDialog component, String message, String title) {
+		JOptionPane.showConfirmDialog(component, message, title, JOptionPane.YES_NO_CANCEL_OPTION);
 	}
 
 	public static void showWarningMessage(Component component, String message, String title) {

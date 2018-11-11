@@ -1,5 +1,6 @@
 package ch.sysout.emubro.ui;
 
+import java.awt.Color;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -9,7 +10,7 @@ import java.util.List;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
-import javax.swing.JScrollPane;
+import javax.swing.JProgressBar;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.UIManager;
@@ -45,11 +46,15 @@ public class UpdateDialog extends JDialog implements ActionListener {
 
 	private JTextArea txtChangelog = new JTextArea();
 
+	private JButton btnGettingAppVersion;
+
+	private CellConstraints cc;
+
 	public UpdateDialog(String currentApplicationVersion, String currentPlatformDetectionVersion) {
 		setTitle("Update");
 		setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-		setModalityType(ModalityType.APPLICATION_MODAL);
 		setIconImages(getIcons());
+		setAlwaysOnTop(true);
 		// setResizable(false);
 		txtYourVersion = new JTextField(currentApplicationVersion);
 		txtYourDetectionVersion = new JTextField(currentPlatformDetectionVersion);
@@ -64,6 +69,10 @@ public class UpdateDialog extends JDialog implements ActionListener {
 
 	public void addSearchForUpdatesListener(ActionListener l) {
 		btnCheckForUpdates.addActionListener(l);
+	}
+
+	public void addUpdateNowListener(ActionListener l) {
+		btnGettingAppVersion.addActionListener(l);
 	}
 
 	private List<Image> getIcons() {
@@ -84,25 +93,16 @@ public class UpdateDialog extends JDialog implements ActionListener {
 
 	private void createUI() {
 		txtChangelog.setBackground(UIManager.getColor("TextArea.background"));
-		FormLayout layout = new FormLayout("min, $lcgap, min:grow, min, min, $rgap, min",
-				"fill:pref, $lgap, fill:pref, $ugap, fill:pref, $lgap, fill:pref, $ugap, fill:pref, $ugap, fill:pref, $pgap, fill:default:grow");
+		FormLayout layout = new FormLayout("default:grow",
+				"fill:pref:grow");
 		setLayout(layout);
 		getRootPane().setBorder(Paddings.DIALOG);
-		CellConstraints cc = new CellConstraints();
-		add(btnCheckForUpdates, cc.xy(1, 1));
-
-		add(lblYourVersion, cc.xy(1, 3));
-		add(txtYourVersion, cc.xyw(3, 3, 5));
-		add(lblOurVersion, cc.xy(1, 5));
-		add(txtOurVersion, cc.xyw(3, 5, 5));
-
-		add(lblYourDetectionVersion, cc.xy(1, 7));
-		add(txtYourDetectionVersion, cc.xyw(3, 7, 5));
-		add(lblOurDetectionVersion, cc.xy(1, 9));
-		add(txtOurDetectionVersion, cc.xyw(3, 9, 5));
-
-		add(btnUpdateNow, cc.xy(7, 11));
-		add(new JScrollPane(txtChangelog), cc.xyw(1, 13, layout.getColumnCount()));
+		cc = new CellConstraints();
+		btnGettingAppVersion = new JButton("<html><center>Getting latest release informations"
+				+ "<br/>...</center></html>");
+		btnCheckForUpdates.setOpaque(true);
+		btnGettingAppVersion.setEnabled(false);
+		add(btnGettingAppVersion, cc.xy(1, 1));
 	}
 
 	@Override
@@ -129,5 +129,25 @@ public class UpdateDialog extends JDialog implements ActionListener {
 	public void setChangelog(String changelog) {
 		txtChangelog.setText(changelog);
 		txtChangelog.setCaretPosition(0);
+	}
+
+	public void setCurrentState(String string) {
+		btnGettingAppVersion.setText(string);
+	}
+
+	public void applicationUpdateAvailable(boolean applicationUpdateAvailable) {
+		Color available = Color.red;
+		Color upToDate = Color.green;
+		btnGettingAppVersion.setEnabled(applicationUpdateAvailable);
+		btnGettingAppVersion.setForeground(applicationUpdateAvailable ? available : upToDate);
+	}
+
+	public void downloadInProgress() {
+		remove(btnGettingAppVersion);
+		JProgressBar pb = new JProgressBar();
+		pb.setString("Downloading...");
+		pb.setStringPainted(true);
+		pb.setIndeterminate(true);
+		add(pb, cc.xy(1, 1));
 	}
 }

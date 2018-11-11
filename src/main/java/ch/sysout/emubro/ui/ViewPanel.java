@@ -30,10 +30,8 @@ public abstract class ViewPanel extends JPanel implements GameSelectionListener,
 	public static final int ELEMENT_VIEW = GameViewConstants.ELEMENT_VIEW;
 	public static final int TABLE_VIEW = GameViewConstants.TABLE_VIEW;
 	public static final int CONTENT_VIEW = GameViewConstants.CONTENT_VIEW;
+	public static final int SLIDER_VIEW = GameViewConstants.SLIDER_VIEW;
 	public static final int COVER_VIEW = GameViewConstants.COVER_VIEW;
-
-
-	// private BufferedImage bgImg;
 
 	public ViewPanel() {
 		super();

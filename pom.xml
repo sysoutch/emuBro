@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>ch.sysout</groupId>
 	<artifactId>emubro</artifactId>
-	<version>0.7.0-SNAPSHOT</version>
+	<version>0.7.1-SNAPSHOT</version>
 	<name>emubro</name>
 	<packaging>jar</packaging>
 
@@ -79,28 +79,6 @@
 			<version>1.0</version>
 			<type>dll</type>
 		</dependency>
-		<dependency>
-			<groupId>jxinput</groupId>
-			<artifactId>jxinput</artifactId>
-			<version>0.3.4</version>
-		</dependency>
-		<dependency>
-			<groupId>jxinput</groupId>
-			<artifactId>jxinput-dll</artifactId>
-			<version>0.3.4</version>
-			<type>dll</type>
-		</dependency>
-		 <dependency>
-	        <groupId>net.java.jinput</groupId>
-	        <artifactId>jinput</artifactId>
-	       <version>2.0.9</version>
-	   </dependency>
-	   <dependency>
-	       <groupId>net.java.jinput</groupId>
-	       <artifactId>jinput</artifactId>
-	       <version>2.0.9</version>
-	       <classifier>natives-all</classifier>
-	   </dependency>
 		<dependency>
 		  <groupId>org.jsoup</groupId>
 		  <artifactId>jsoup</artifactId>

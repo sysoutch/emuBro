@@ -41,7 +41,7 @@ public class ViewPanelManager implements GameCoverListener {
 	private int rowHeight = ScreenSizeUtil.adjustValueToResolution(30);
 	private int columnWidth = ScreenSizeUtil.adjustValueToResolution(250);
 	private int fontSize;
-	
+
 	private BlankViewPanel pnlBlankView = new BlankViewPanel();
 	private ViewPanel currentViewPanel = pnlBlankView;
 	private int selectedGameId = GameConstants.NO_GAME;

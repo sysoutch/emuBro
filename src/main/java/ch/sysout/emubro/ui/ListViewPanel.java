@@ -391,7 +391,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 						lastMouseY = e.getYOnScreen();
 						lastVerticalScrollBarValue = sp.getVerticalScrollBar().getValue();
 					}
-				} else if (viewStyle == ViewPanel.LIST_VIEW) {
+				} else if (viewStyle == ViewPanel.LIST_VIEW || viewStyle == ViewPanel.SLIDER_VIEW) {
 					if (sp.getHorizontalScrollBar().isVisible()) {
 						if (sp.getCursor() != cursorDrag) {
 							sp.setCursor(cursorDrag);
@@ -459,6 +459,12 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 					label.setHorizontalAlignment(SwingConstants.LEFT);
 					label.setHorizontalTextPosition(SwingConstants.RIGHT);
 					label.setVerticalTextPosition(SwingConstants.TOP);
+				}
+				if (viewStyle == ViewPanel.SLIDER_VIEW) {
+					label.setHorizontalAlignment(SwingConstants.CENTER);
+					label.setHorizontalTextPosition(SwingConstants.CENTER);
+					label.setVerticalTextPosition(SwingConstants.BOTTOM);
+					list.setFixedCellHeight(sps.get(list).getViewport().getHeight());
 				}
 				if (viewStyle == ViewPanel.LIST_VIEW || viewStyle == ViewPanel.ELEMENT_VIEW) {
 					label.setHorizontalAlignment(SwingConstants.LEFT);
@@ -609,21 +615,28 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		case ViewPanel.ELEMENT_VIEW:
 			layoutOrientation = JList.HORIZONTAL_WRAP;
 			break;
+		case ViewPanel.SLIDER_VIEW:
+			layoutOrientation = JList.HORIZONTAL_WRAP;
+			break;
 		case ViewPanel.COVER_VIEW:
 			layoutOrientation = JList.HORIZONTAL_WRAP;
 			break;
 		}
 		for (Map.Entry<JList<Game>, JScrollPane> entry : sps.entrySet()) {
 			entry.getKey().setLayoutOrientation(layoutOrientation);
+			entry.getKey().setFixedCellHeight(entry.getValue().getViewport().getHeight());
+			if (viewStyle == ViewPanel.SLIDER_VIEW) {
+				entry.getKey().setVisibleRowCount(1);
+			} else {
+				SwingUtilities.invokeLater(new Runnable() {
 
-			SwingUtilities.invokeLater(new Runnable() {
-
-				@Override
-				public void run() {
-					fixRowCountForVisibleColumns(entry.getKey());
-					entry.getKey().ensureIndexIsVisible(entry.getKey().getSelectedIndex());
-				}
-			});
+					@Override
+					public void run() {
+						fixRowCountForVisibleColumns(entry.getKey());
+						entry.getKey().ensureIndexIsVisible(entry.getKey().getSelectedIndex());
+					}
+				});
+			}
 		}
 	}
 

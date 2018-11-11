@@ -475,6 +475,11 @@ public class CoverBroFrame extends JFrame {
 
 	public void setImage(BufferedImage bi) {
 		pnlImageEdit.setImage(bi);
+		pnlImageEdit.repaint();
+	}
+
+	public void addImage(BufferedImage i) {
+		setImage(i);
 	}
 
 	public Image getResizedImage() {

@@ -45,5 +45,6 @@ public class AutoScaleImagePanel extends JPanel {
 			bi.flush();
 			setPreferredSize(new Dimension(bi.getWidth(this), bi.getHeight(this)));
 		}
+		repaint();
 	}
 }

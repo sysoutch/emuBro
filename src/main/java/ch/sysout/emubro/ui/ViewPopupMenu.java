@@ -30,6 +30,7 @@ class ViewPopupMenu extends JPopupMenu implements ActionListener {
 	private JRadioButtonMenuItem itmElements = new JRadioButtonMenuItem(Messages.get(MessageConstants.VIEW_ELEMENTS));
 	private JRadioButtonMenuItem itmDetails = new JRadioButtonMenuItem(Messages.get(MessageConstants.VIEW_TABLE));
 	private JRadioButtonMenuItem itmContent = new JRadioButtonMenuItem(Messages.get(MessageConstants.VIEW_CONTENT));
+	private JRadioButtonMenuItem itmSlider = new JRadioButtonMenuItem(Messages.get(MessageConstants.VIEW_SLIDER));
 	private JRadioButtonMenuItem itmCovers = new JRadioButtonMenuItem(Messages.get(MessageConstants.VIEW_COVERS));
 
 	private JMenu mnuSetCoverSize = new JMenu(Messages.get(MessageConstants.SET_COVER_SIZE));
@@ -149,6 +150,7 @@ class ViewPopupMenu extends JPopupMenu implements ActionListener {
 		itmElements.setText(Messages.get(MessageConstants.VIEW_ELEMENTS));
 		itmDetails.setText(Messages.get(MessageConstants.VIEW_TABLE));
 		itmContent.setText(Messages.get(MessageConstants.VIEW_CONTENT));
+		itmSlider.setText(Messages.get(MessageConstants.VIEW_SLIDER));
 		itmCovers.setText(Messages.get(MessageConstants.VIEW_COVERS));
 		mnuSetCoverSize.setText(Messages.get(MessageConstants.SET_COVER_SIZE));
 	}

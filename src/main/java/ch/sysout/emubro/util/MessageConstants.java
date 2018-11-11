@@ -73,6 +73,7 @@ public class MessageConstants {
 	public static final String VIEW_ELEMENTS = "viewElements";
 	public static final String VIEW_TABLE = "viewTable";
 	public static final String VIEW_CONTENT = "viewContent";
+	public static final String VIEW_SLIDER = "viewSlider";
 	public static final String VIEW_COVERS = "viewCovers";
 	public static final String VIEW_COVERS_BIGGEST = "viewCoversBiggest";
 	public static final String VIEW_COVERS_BIG = "viewCoversBig";

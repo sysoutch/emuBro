@@ -61,7 +61,12 @@ public class AboutDialog extends JDialog implements ActionListener {
 
 	private int fancyButtonClickCounter;
 
-	public AboutDialog() {
+	private String applicationVersion;
+
+	private int fancyClickCounter;
+
+	public AboutDialog(String applicationVersion) {
+		this.applicationVersion = applicationVersion;
 		setTitle(Messages.get(MessageConstants.ABOUT, Messages.get(MessageConstants.APPLICATION_TITLE)));
 		setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 		setModalityType(ModalityType.APPLICATION_MODAL);
@@ -135,7 +140,7 @@ public class AboutDialog extends JDialog implements ActionListener {
 	}
 
 	private void initTexts() {
-		lblHeader.setText(Messages.get(MessageConstants.APPLICATION_TITLE));
+		lblHeader.setText(Messages.get(MessageConstants.APPLICATION_TITLE) + " v" + applicationVersion);
 		String currentYear = Year.now().toString();
 		lblCopyright.setText("\u00a9 2015 - " + currentYear + " sysout.ch");
 		lnkWebsite.setText(Messages.get(MessageConstants.WEBSITE));
@@ -157,7 +162,7 @@ public class AboutDialog extends JDialog implements ActionListener {
 		btnDiscord.setActionCommand("https://discordapp.com/invite/KFYCgqY");
 		btnFacebook.setActionCommand("https://www.facebook.com/emubr0");
 		btnTwitter.setActionCommand("https://twitter.com/sysoutch");
-		btnYoutube.setActionCommand("https://www.youtube.com/c/rainerwahnsinn77");
+		btnYoutube.setActionCommand("https://www.youtube.com/channel/UC9zQuEiPjnRv2LXVqR57K1Q");
 		btnGitHub.setActionCommand("https://github.com/sysoutch/emubro");
 	}
 
@@ -230,18 +235,23 @@ public class AboutDialog extends JDialog implements ActionListener {
 	public void actionPerformed(ActionEvent e) {
 		Object source = e.getSource();
 		if (source == lblIcon) {
-			UIUtil.showInformationMessage(this, "Maybe you didn't read the tooltip text. You should not click this button!", "Destroy world");
-			UIUtil.showInformationMessage(this, "Anyways, you've clicked the button already", "Destroy world");
-			UIUtil.showInformationMessage(this, "Every time when i ask people not to click my buttons, they click my buttons.", "Destroy world now");
-			UIUtil.showInformationMessage(this, "How would you feel if I click your buttons?", "Destroy world maybe now");
-			UIUtil.showInformationMessage(this, "Now you have to live with the consequences", "Destruction is incoming");
-
-			try {
-				String url = "https://www.youtube.com/watch?v=1PNoHDD5iXo";
-				Desktop.getDesktop().browse(new URI(url));
-			} catch (IOException | URISyntaxException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
+			fancyClickCounter++;
+			if (fancyClickCounter == 1) {
+				UIUtil.showWarningMessage(this, "Yes this is a button."
+						+ "\nMaybe you didn't read the tooltip text. You should not click this button!"
+						+ "\n\nPls do not click it again, thanks.", "I forgive you");
+			} else if (fancyClickCounter > 1) {
+				UIUtil.showQuestionMessage(this, "Noooooooo why did you press the button again?!", "Destroy world");
+				UIUtil.showInformationMessage(this, "Every time when i ask people not to click my buttons, they click my buttons.", "Destroy world now");
+				UIUtil.showQuestionMessage(this, "How would you feel if I click your buttons?", "Destroy world maybe now");
+				UIUtil.showWarningMessage(this, "Now you have to live with the consequences", "Destruction is incoming");
+				try {
+					String url = "https://www.youtube.com/watch?v=1PNoHDD5iXo";
+					Desktop.getDesktop().browse(new URI(url));
+				} catch (IOException | URISyntaxException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
 			}
 		} else if (source == lnkWebsite) {
 			try {

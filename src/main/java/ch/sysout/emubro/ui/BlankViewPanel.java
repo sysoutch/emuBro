@@ -6,7 +6,6 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.dnd.DropTargetListener;
-import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseWheelListener;
@@ -18,7 +17,6 @@ import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.SwingUtilities;
 import javax.swing.border.Border;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.TitledBorder;
@@ -58,6 +56,7 @@ public class BlankViewPanel extends ViewPanel {
 	private JButton lnkElementView = new JLinkButton(Messages.get(MessageConstants.VIEW_ELEMENTS));
 	private JButton lnkTableView = new JLinkButton(Messages.get(MessageConstants.VIEW_TABLE));
 	private JButton lnkContentView = new JLinkButton(Messages.get(MessageConstants.VIEW_CONTENT));
+	private JButton lnkSliderView = new JLinkButton(Messages.get(MessageConstants.VIEW_SLIDER));
 	private JButton lnkCoverView = new JLinkButton(Messages.get(MessageConstants.VIEW_COVERS));
 
 	private JButton lnkHelp = new JLinkButton(Messages.get(MessageConstants.HELP));
@@ -179,6 +178,7 @@ public class BlankViewPanel extends ViewPanel {
 		lnkElementView.setText(Messages.get(MessageConstants.VIEW_ELEMENTS));
 		lnkTableView.setText(Messages.get(MessageConstants.VIEW_TABLE));
 		lnkContentView.setText(Messages.get(MessageConstants.VIEW_CONTENT));
+		lnkSliderView.setText(Messages.get(MessageConstants.VIEW_SLIDER));
 		lnkCoverView.setText(Messages.get(MessageConstants.VIEW_COVERS));
 		lnkHelp.setText(Messages.get(MessageConstants.HELP));
 		lnkUpdateEmubro.setText(Messages.get(MessageConstants.SEARCH_FOR_UPDATES));
@@ -439,7 +439,7 @@ public class BlankViewPanel extends ViewPanel {
 	public void addChangeToListViewListener(ActionListener l) {
 		lnkListView.addActionListener(l);
 	}
-	
+
 	public void addChangeToElementViewListener(ActionListener l) {
 		lnkElementView.addActionListener(l);
 	}
@@ -455,7 +455,7 @@ public class BlankViewPanel extends ViewPanel {
 	public void addChangeToCoverViewListener(ActionListener l) {
 		lnkCoverView.addActionListener(l);
 	}
-	
+
 	public void addOpenHelpListener(ActionListener l) {
 		lnkHelp.addActionListener(l);
 	}
@@ -471,7 +471,7 @@ public class BlankViewPanel extends ViewPanel {
 	public void addAutoSearchListener(ActionListener l) {
 		lnkBrowseComputer.addActionListener(l);
 	}
-	
+
 	public void addAddFilesListener(ActionListener l) {
 		lnkAddFiles.addActionListener(l);
 	}
