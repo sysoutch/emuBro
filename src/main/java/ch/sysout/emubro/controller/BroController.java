@@ -56,12 +56,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.io.StringReader;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
@@ -82,9 +86,13 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.Scanner;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -93,10 +101,12 @@ import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
+import java.util.zip.ZipInputStream;
 
 import javax.imageio.ImageIO;
 import javax.swing.AbstractButton;
 import javax.swing.Action;
+import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
@@ -111,6 +121,7 @@ import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JProgressBar;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JSlider;
@@ -142,6 +153,15 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.LineIterator;
 import org.apache.commons.io.filefilter.IOFileFilter;
+import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.protocol.HTTP;
 import org.codehaus.plexus.util.StringUtils;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
@@ -255,7 +275,7 @@ GameSelectionListener, BrowseComputerListener {
 	private String applicationVersion = "";
 	private String platformDetectionVersion = "";
 	private String latestRelease = "https://api.github.com/repos/sysoutch/emuBro/releases";
-	public static final String currentApplicationVersion = "0.7.1";
+	public static final String currentApplicationVersion = "0.8.0";
 	private final String currentPlatformDetectionVersion = "20180827.0";
 
 	private int navigationPaneDividerLocation;
@@ -341,6 +361,9 @@ GameSelectionListener, BrowseComputerListener {
 	private CoverBroFrame frameCoverBro;
 	public UpdateObject uo;
 	public UpdateApplicationListener updateApplicationListener;
+	private Map<String, Properties> mapProps = new HashMap<>();
+	private JDialog dlgDownloadCovers;
+	private JProgressBar progress;
 
 	public BroController(ExplorerDAO explorerDAO, Explorer model, MainFrame view) {
 		this.explorerDAO = explorerDAO;
@@ -633,6 +656,7 @@ GameSelectionListener, BrowseComputerListener {
 		view.addAutoSearchTagsAllListener(new AutoSearchTagsAllListener());
 		view.addAutoSearchTagsListener(new AutoSearchTagsListener());
 		view.addCoverFromWebListener(new CoverFromWebListener());
+		view.addCoverFromEmuBroListener(new CoverFromEmuBroListener());
 		view.addTrailerFromWebListener(new TrailerFromWebListener());
 		view.addSearchNetworkListener(new SearchNetworkListener());
 		view.addRenameGameListener(renameGameListener = new RenameGameListener());
@@ -951,12 +975,12 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	@Override
-	public void searchForPlatform(File filePath) {
+	public void searchForPlatform(File file) {
 		List<Platform> platforms = explorer.getPlatforms();
 		//		boolean useDefaultPlatforms = defaultPlatforms != null
 		//				&& defaultPlatforms.size() > 0;
 		try {
-			searchForGameOrEmulator(filePath);
+			searchForGameOrEmulator(file);
 		} catch (ZipException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -986,6 +1010,34 @@ GameSelectionListener, BrowseComputerListener {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		askUserDownloadGameCovers();
+	}
+
+	private void askUserDownloadGameCovers(List<Game> games) {
+		if (games == null || games.isEmpty()) {
+			return;
+		}
+		int request = JOptionPane.showConfirmDialog(view, "Search and download game covers for missing covers?", "Search covers", JOptionPane.YES_NO_OPTION);
+		if (request == JOptionPane.YES_OPTION) {
+			downloadGameCoverZip(games);
+		}
+	}
+
+	private void askUserDownloadGameCovers(Game game) {
+		if (game == null) {
+			return;
+		}
+		int request = JOptionPane.showConfirmDialog(view, "Search and download game cover?", "Search cover", JOptionPane.YES_NO_OPTION);
+		if (request == JOptionPane.YES_OPTION) {
+			List<Game> list = new ArrayList<>();
+			list.add(game);
+			downloadGameCoverZip(list);
+		}
+	}
+
+	private void askUserDownloadGameCovers() {
+		List<Game> gamesWithoutCovers = explorer.getGamesWithoutCovers();
+		askUserDownloadGameCovers(gamesWithoutCovers);
 	}
 
 	// private void searchForEmulators(String filePath, boolean
@@ -1013,7 +1065,8 @@ GameSelectionListener, BrowseComputerListener {
 				if (explorer.hasFile(filePath)) {
 					return;
 				}
-				addGame(p0, file);
+				boolean downloadCover = false;
+				addGame(p0, file, downloadCover);
 				return;
 			}
 		} catch (SQLException e) {
@@ -1398,7 +1451,7 @@ GameSelectionListener, BrowseComputerListener {
 			fw.append(propertyKeys[13] + "=" + view.getSplNavigationPane().getDividerLocation() + "\r\n"); // navigationpane_dividerlocation
 			fw.append(propertyKeys[14] + "=" + (view.getSplPreviewPaneWidth()) + "\r\n"); // previewpane_width
 			fw.append(propertyKeys[15] + "=" + (view.getSplDetailsPaneHeight()) + "\r\n"); // gamedetailspane_height
-			fw.append(propertyKeys[16] + "=" + view.getCurrentViewPanelType() + "\r\n"); // view panel
+			fw.append(propertyKeys[16] + "=" + view.getCurrentView() + "\r\n"); // view panel
 			fw.append(propertyKeys[17] + "=" + 0 + "\r\n"); // gamefilterpane_dividerlocation
 			fw.append(propertyKeys[18] + "=" + view.getDetailsPaneNotificationTab() + "\r\n"); // detailspane_notificationtab
 			fw.append(propertyKeys[19] + "=" + Messages.getDefault().getLanguage() + "\r\n"); // language
@@ -2387,14 +2440,14 @@ GameSelectionListener, BrowseComputerListener {
 	 * @throws RarException
 	 * @throws IOException
 	 */
-	private void checkAddGame(File file) throws ZipException, SQLException, RarException, IOException {
+	private void checkAddGame(File file, boolean downloadCover) throws ZipException, SQLException, RarException, IOException {
 		String filePath = file.getAbsolutePath();
 		if (ValidationUtil.isPictureFile(file)) {
 			checkPicture(file);
 			return;
 		}
 		if (ValidationUtil.isWindows() && ValidationUtil.isLinkFile(file)) {
-			checkLink(file);
+			checkLink(file, downloadCover);
 			return;
 		}
 		if (explorer.hasFile(filePath)) {
@@ -2402,8 +2455,6 @@ GameSelectionListener, BrowseComputerListener {
 			if (view.getViewManager().isFilterFavoriteActive() && !game.isFavorite()) {
 				game.setRate(RatingBarPanel.MAXIMUM_RATE);
 				rateGame(game);
-			} else {
-				gameAlreadyExists();
 			}
 			view.getViewManager().selectGame(game.getId());
 			return;
@@ -2436,22 +2487,22 @@ GameSelectionListener, BrowseComputerListener {
 				if (doAddGame) {
 					if (filePath.toLowerCase().endsWith(".exe")
 							|| filePath.toLowerCase().endsWith(".msi")) {
-						checkExe(filePath, p0, file);
+						checkExe(filePath, p0, file, downloadCover);
 					} else {
-						addGame(p0, file, true, view.getViewManager().isFilterFavoriteActive());
+						addGame(p0, file, true, view.getViewManager().isFilterFavoriteActive(), downloadCover);
 					}
 				}
 			} else {
 				if (isZipFile(filePath)) {
-					checkZip(filePath, file);
+					checkZip(filePath, file, downloadCover);
 				}else if (is7ZipFile(filePath)) {
-					check7Zip(filePath, file);
+					check7Zip(filePath, file, downloadCover);
 				} else if (isRarFile(filePath)) {
-					checkRar(filePath, file);
+					checkRar(filePath, file, downloadCover);
 				} else if (isImageFile(filePath)) {
-					checkImage(filePath, file);
+					checkImage(filePath, file, downloadCover);
 				} else if (isMetaFile(filePath)) {
-					checkMetaFile(filePath, file);
+					checkMetaFile(filePath, file, downloadCover);
 				} else {
 					if (ValidationUtil.isWindows()) {
 						askUserToCategorize(filePath, file);
@@ -2495,7 +2546,7 @@ GameSelectionListener, BrowseComputerListener {
 								String newSearchFor = "^(.+)\\."+fileExtension+"$";
 								selectedPlatform.addSearchFor(newSearchFor);
 								explorerDAO.addSearchFor(selectedPlatform.getId(), newSearchFor);
-								addGame(selectedPlatform, file, true, view.getViewManager().isFilterFavoriteActive());
+								addGame(selectedPlatform, file, true, view.getViewManager().isFilterFavoriteActive(), downloadCover);
 								System.out.println(selectedPlatform.getSearchFor());
 							}
 						}
@@ -2513,13 +2564,6 @@ GameSelectionListener, BrowseComputerListener {
 				return;
 			}
 		}
-	}
-
-	private void gameAlreadyExists() {
-		String message = "<html><h3>This game already exists.</h3>"
-				+ "The game does already exist in your list.</html>";
-		String title = "Game already exists";
-		JOptionPane.showMessageDialog(view, message, title, JOptionPane.INFORMATION_MESSAGE);
 	}
 
 	private void checkPicture(File file) {
@@ -2564,7 +2608,7 @@ GameSelectionListener, BrowseComputerListener {
 				String newSearchFor = "^(.+)\\."+fileExtension+"$";
 				selectedPlatform.addSearchFor(newSearchFor);
 				explorerDAO.addSearchFor(selectedPlatform.getId(), newSearchFor);
-				addGame(selectedPlatform, file, true, view.getViewManager().isFilterFavoriteActive());
+				addGame(selectedPlatform, file, true, view.getViewManager().isFilterFavoriteActive(), true);
 				System.out.println(selectedPlatform.getSearchFor());
 			}
 		}
@@ -2591,7 +2635,7 @@ GameSelectionListener, BrowseComputerListener {
 		return filePath.toLowerCase().endsWith(".cue");
 	}
 
-	private void checkMetaFile(String filePath, File file) {
+	private void checkMetaFile(String filePath, File file, boolean downloadCover) {
 		String message = "This is a metadata file. Different platforms may use this file.\n\n"
 				+ "Select a platform from the list below to categorize the game.";
 		String title = "Disc image";
@@ -2602,11 +2646,11 @@ GameSelectionListener, BrowseComputerListener {
 		lastSelectedPlatformFromGameChooser = selected;
 		Platform p2 = addOrGetPlatform(selected);
 		if (p2 != null) {
-			addGame(p2, file, true, view.getViewManager().isFilterFavoriteActive());
+			addGame(p2, file, true, view.getViewManager().isFilterFavoriteActive(), downloadCover);
 		}
 	}
 
-	private void checkImage(String filePath, File file) {
+	private void checkImage(String filePath, File file, boolean downloadCover) {
 		String message = "<html><h3>This is an image file.</h3>"
 				+ "Different platforms may use this file.<br><br>"
 				+ "Select a platform from the list below to categorize the game.</html>";
@@ -2618,7 +2662,7 @@ GameSelectionListener, BrowseComputerListener {
 		lastSelectedPlatformFromGameChooser = selected;
 		Platform p2 = addOrGetPlatform(selected);
 		if (p2 != null) {
-			addGame(p2, file, true, view.getViewManager().isFilterFavoriteActive());
+			addGame(p2, file, true, view.getViewManager().isFilterFavoriteActive(), downloadCover);
 			//					if (p2.getUseGameRegionCodes()) {
 			if (filePath.toLowerCase().endsWith(".bin")
 					|| filePath.toLowerCase().endsWith(".img")
@@ -2667,7 +2711,7 @@ GameSelectionListener, BrowseComputerListener {
 		}
 	}
 
-	private void checkRar(String filePath, File file) throws RarException, IOException {
+	private void checkRar(String filePath, File file, boolean downloadCover) throws RarException, IOException {
 		String message = "<html><h3>This is a RAR-Compressed archive.</h3>" + filePath
 				+ "<br><br>" + "Do you want to auto detect the platform for the containing game?<br><br>"
 				+ "When you press \"No\", you have to categorize it for yourself.</html>";
@@ -2677,7 +2721,7 @@ GameSelectionListener, BrowseComputerListener {
 			String b = rarFileContainsGame(filePath, explorer.getExtensions());
 			if (b != null && !b.isEmpty()) {
 				Platform p = isGameInArchive(b);
-				addGame(p, file, true, view.getViewManager().isFilterFavoriteActive());
+				addGame(p, file, true, view.getViewManager().isFilterFavoriteActive(), downloadCover);
 			} else {
 				String message1 = Messages.get(MessageConstants.PLATFORM_NOT_RECOGNIZED) + "\n\n"
 						+ filePath + "\n\n"
@@ -2705,12 +2749,12 @@ GameSelectionListener, BrowseComputerListener {
 		}
 	}
 
-	private void checkLink(File file) throws IOException, SQLException, RarException {
+	private void checkLink(File file, boolean downloadCover) throws IOException, SQLException, RarException {
 		LnkParser lnkParser = new LnkParser(file);
-		checkAddGame(new File(lnkParser.getRealFilename()));
+		checkAddGame(new File(lnkParser.getRealFilename()), downloadCover);
 	}
 
-	private void checkZip(String filePath, File file) throws ZipException, IOException {
+	private void checkZip(String filePath, File file, boolean downloadCover) throws ZipException, IOException {
 		String message = "<html><h3>This is a ZIP-Compressed archive.</h3>" + filePath
 				+ "<br><br>" + "Do you want to auto detect the platform for the containing game?<br><br>"
 				+ "When you press \"No\", you have to categorize it for yourself.</html>";
@@ -2721,7 +2765,7 @@ GameSelectionListener, BrowseComputerListener {
 			if (b != null && !b.isEmpty()) {
 				Platform p = isGameInArchive(b);
 				try {
-					addGame(p, file);
+					addGame(p, file, downloadCover);
 				} catch (BroGameDeletedException e) {
 					JOptionPane.showConfirmDialog(view, "deleted");
 				}
@@ -2737,12 +2781,12 @@ GameSelectionListener, BrowseComputerListener {
 			lastSelectedPlatformFromGameChooser = selected;
 			Platform p2 = addOrGetPlatform(selected);
 			if (p2 != null) {
-				addGame(p2, file, true, view.getViewManager().isFilterFavoriteActive());
+				addGame(p2, file, true, view.getViewManager().isFilterFavoriteActive(), downloadCover);
 			}
 		}
 	}
 
-	private void check7Zip(String filePath, File file) {
+	private void check7Zip(String filePath, File file, boolean downloadCover) {
 		String message = "<html><h3>This is a 7-Zip-Compressed archive.</h3>" + filePath
 				+ "<br><br>" + "Currently you must unzip it yourself and then add the game.<br/><br/>"
 				+ "<a href='bla.com'>Download 7-Zip to unzip this archive</a></html>";
@@ -2750,7 +2794,7 @@ GameSelectionListener, BrowseComputerListener {
 		JOptionPane.showMessageDialog(view, message, title, JOptionPane.OK_OPTION);
 	}
 
-	private void checkExe(String filePath, Platform p0, File file) throws BroEmulatorDeletedException {
+	private void checkExe(String filePath, Platform p0, File file, boolean downloadCover) throws BroEmulatorDeletedException {
 		String title = Messages.get(MessageConstants.PLATFORM_NOT_RECOGNIZED_TITLE);
 		List<Platform> platforms = explorer.getPlatforms();
 		Platform[] objectsArr = platforms.toArray(new Platform[platforms.size()]);
@@ -2807,7 +2851,7 @@ GameSelectionListener, BrowseComputerListener {
 		if (request == JOptionPane.OK_OPTION) {
 			if (isGame) {
 				System.out.println("This should add new game "+ p0.getName());
-				addGame(p0, file, true, view.getViewManager().isFilterFavoriteActive());
+				addGame(p0, file, true, view.getViewManager().isFilterFavoriteActive(), downloadCover);
 			} else {
 				Platform selectedPlatform = (Platform) cmbPlatforms.getSelectedItem();
 				System.out.println("This should add new emulator for platform "+ selectedPlatform.getName());
@@ -2855,6 +2899,7 @@ GameSelectionListener, BrowseComputerListener {
 		//		JList<String> lstFolderFiles = new JList<>();
 		//		DefaultListModel<String> mdlLstFolderFiles = new DefaultListModel<>();
 		//		lstFolderFiles.setModel(mdlLstFolderFiles);
+		List<Game> games = new ArrayList<>();
 		for (File file : files) {
 			if (file.isDirectory()) {
 				//				mdlLstFolderFiles.addElement(file.getAbsolutePath());
@@ -2867,7 +2912,9 @@ GameSelectionListener, BrowseComputerListener {
 				//								}
 			} else {
 				try {
-					checkAddGame(file);
+					checkAddGame(file, false);
+					Game game = explorer.getGameForFile(file.getAbsolutePath());
+					games.add(game);
 				} catch (SQLException | RarException | IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -2876,6 +2923,13 @@ GameSelectionListener, BrowseComputerListener {
 				//				gamesToCheck.add(file);
 			}
 		}
+		SwingUtilities.invokeLater(new Runnable() {
+
+			@Override
+			public void run() {
+				askUserDownloadGameCovers(games);
+			}
+		});
 		//		dlgCheckFolder.add(lstFolderFiles);
 		//		dlgCheckFolder.pack();
 		//		dlgCheckFolder.setVisible(true);
@@ -2954,31 +3008,7 @@ GameSelectionListener, BrowseComputerListener {
 				@Override
 				public void actionPerformed(ActionEvent e) {
 					Image resized = frameCoverBro.getResizedImage();
-					List<Game> currentGame = explorer.getCurrentGames();
-					String emuBroCoverHome = System.getProperty("user.dir") + File.separator + "emubro-resources"
-							+ File.separator + "images" + File.separator + "games" + File.separator + "covers";
-					String coverPath = emuBroCoverHome + File.separator + explorer.getChecksum(currentGame.get(0).getChecksumId())
-					+ File.separator + System.currentTimeMillis() + ".png";
-					File coverHomeFile = new File(coverPath);
-					if (!coverHomeFile.exists()) {
-						coverHomeFile.mkdirs();
-					}
-					try {
-						ImageIO.write((RenderedImage) resized, "png", new File(coverPath));
-					} catch (IOException e2) {
-						// TODO Auto-generated catch block
-						e2.printStackTrace();
-					}
-					if (!currentGame.get(0).getCoverPath().equals(coverPath)) {
-						currentGame.get(0).setCoverPath(coverPath);
-						view.gameCoverChanged(currentGame.get(0), resized);
-						try {
-							explorerDAO.setGameCoverPath(currentGame.get(0).getId(), coverPath);
-						} catch (SQLException e2) {
-							// TODO Auto-generated catch block
-							e2.printStackTrace();
-						}
-					}
+					setCoverForGame(explorer.getCurrentGames().get(0), resized);
 					//					publish(resized);
 				}
 			});
@@ -2986,6 +3016,98 @@ GameSelectionListener, BrowseComputerListener {
 		frameCoverBro.setLocationRelativeTo(view);
 		frameCoverBro.setVisible(true);
 		//		frameCoverBro.setImage(bi);
+	}
+
+	public Properties parsePropertiesString(String s) throws IOException {
+		// grr at load() returning void rather than the Properties object
+		// so this takes 3 lines instead of "return new Properties().load(...);"
+		final Properties p = new Properties();
+		p.load(new StringReader(s));
+		return p;
+	}
+
+	public String readStringFromURL(String requestURL) throws IOException {
+		InputStream stream = new URL(requestURL).openStream();
+		try (Scanner scanner = new Scanner(stream, StandardCharsets.UTF_8.toString())) {
+			scanner.useDelimiter("\\A");
+			return scanner.hasNext() ? scanner.next() : "";
+		}
+	}
+
+	public Set<Object> getAllKeys(Properties prop){
+		Set<Object> keys = prop.keySet();
+		return keys;
+	}
+
+	public String getPropertyValue(Properties prop, String key) {
+		return prop.getProperty(key);
+	}
+
+	private void setCoverForGameUsingOriginalFile(Game game, InputStream is) throws IOException {
+		String emuBroCoverHome = System.getProperty("user.dir") + File.separator + "emubro-resources"
+				+ File.separator + "games" + File.separator + "covers";
+		String gameCoverDir = emuBroCoverHome + File.separator + explorer.getChecksum(game.getChecksumId());
+		String coverPath = gameCoverDir + File.separator + System.currentTimeMillis() + ".png";
+
+		new File(gameCoverDir).mkdirs();
+		Files.copy(is, Paths.get(coverPath));
+		if (!game.getCoverPath().equals(coverPath)) {
+			game.setCoverPath(coverPath);
+			SwingUtilities.invokeLater(new Runnable() {
+
+				@Override
+				public void run() {
+					Image image;
+					try {
+						image = ImageUtil.getBufferedImageFrom(is);
+						is.close();
+						view.gameCoverChanged(game, image);
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+			});
+			try {
+				explorerDAO.setGameCoverPath(game.getId(), coverPath);
+			} catch (SQLException e2) {
+				// TODO Auto-generated catch block
+				e2.printStackTrace();
+			}
+		}
+	}
+
+	protected void setCoverForGame(Game game, Image resized) {
+		String emuBroCoverHome = System.getProperty("user.dir") + File.separator + "emubro-resources"
+				+ File.separator + "games" + File.separator + "covers";
+		String coverPath = emuBroCoverHome + File.separator + explorer.getChecksum(game.getChecksumId())
+		+ File.separator + System.currentTimeMillis() + ".png";
+		File coverHomeFile = new File(coverPath);
+		if (!coverHomeFile.exists()) {
+			coverHomeFile.mkdirs();
+		}
+		try {
+			ImageIO.write((RenderedImage) resized, "png", new File(coverPath));
+		} catch (IOException e2) {
+			// TODO Auto-generated catch block
+			e2.printStackTrace();
+		}
+		if (!game.getCoverPath().equals(coverPath)) {
+			game.setCoverPath(coverPath);
+			SwingUtilities.invokeLater(new Runnable() {
+
+				@Override
+				public void run() {
+					view.gameCoverChanged(game, resized);
+				}
+			});
+			try {
+				explorerDAO.setGameCoverPath(game.getId(), coverPath);
+			} catch (SQLException e2) {
+				// TODO Auto-generated catch block
+				e2.printStackTrace();
+			}
+		}
 	}
 
 	class AutoSearchListener implements ActionListener {
@@ -3205,7 +3327,7 @@ GameSelectionListener, BrowseComputerListener {
 							if (file.isDirectory()) {
 								checkAddGames(files);
 							} else {
-								checkAddGame(file);
+								checkAddGame(file, true);
 							}
 						}
 						if (files.size() > 1) {
@@ -3637,6 +3759,14 @@ GameSelectionListener, BrowseComputerListener {
 		public void actionPerformed(ActionEvent e) {
 			List<Game> allGames = explorer.getGames();
 			autoSearchTags(allGames, false);
+		}
+	}
+
+	class CoverFromEmuBroListener implements ActionListener {
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			List<Game> games = explorer.getCurrentGames();
+			downloadGameCoverZip(games);
 		}
 	}
 
@@ -4707,6 +4837,229 @@ GameSelectionListener, BrowseComputerListener {
 		}
 	}
 
+	private void downloadGameCoverZip(final List<Game> games) {
+		showDownloadCoversDialog();
+
+		Thread t = new Thread(new Runnable() {
+			@Override
+			public void run() {
+				SwingUtilities.invokeLater(new Runnable() {
+
+					@Override
+					public void run() {
+						progress.setString("Check games and set real titles");
+					}
+				});
+				List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
+				JsonArray mJSONArray = new JsonArray();
+
+				for (final Game game : games) {
+					String platformShortName = explorer.getPlatform(game.getPlatformId()).getShortName();
+					Properties gameTitlesProperties;
+					try {
+						gameTitlesProperties = getTitlesProperties(platformShortName);
+						checkTitlesAndSetRealGameNames(game, gameTitlesProperties);
+					} catch (IOException e1) {
+						e1.printStackTrace();
+					}
+					JsonObject jsonObject = new JsonObject();
+					jsonObject.addProperty("platform", platformShortName);
+					jsonObject.addProperty("type", "3dcovers");
+					jsonObject.addProperty("lang", "en");
+					jsonObject.addProperty("gamecode", game.getGameCode());
+					mJSONArray.add(jsonObject);
+				}
+				nameValuePairs.add(new BasicNameValuePair("arr", String.valueOf(mJSONArray.toString())));
+
+				HttpClient httpclient = HttpClients.createDefault();
+				String url = "https://emubro.net/zipCovers.php";
+				HttpPost httppost = new HttpPost(url);
+
+				try {
+					httppost.setEntity(new UrlEncodedFormEntity(nameValuePairs, HTTP.UTF_8));
+
+					SwingUtilities.invokeLater(new Runnable() {
+
+						@Override
+						public void run() {
+							progress.setString("request missing covers");
+						}
+					});
+					//Execute and get the response.
+					HttpResponse response = httpclient.execute(httppost);
+					BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
+					StringBuffer result = new StringBuffer();
+					String line = "";
+					while ((line = rd.readLine()) != null) {
+						result.append(line);
+					}
+					rd.close();
+
+					String coverZip = result.toString();
+					URL urlCoverZip = new URL(coverZip);
+					String userTmp = System.getProperty("java.io.tmpdir");
+					String pathname = userTmp + FilenameUtils.getName(coverZip);
+					File coverFileFile = new File(pathname);
+
+					SwingUtilities.invokeLater(new Runnable() {
+
+						@Override
+						public void run() {
+							progress.setString("downloading cover zip");
+						}
+					});
+					FileUtils.copyURLToFile(urlCoverZip, coverFileFile);
+
+					ZipFile zip = null;
+					try {
+						zip = new ZipFile(pathname);
+					} catch (ZipException e) {
+						SwingUtilities.invokeLater(new Runnable() {
+
+							@Override
+							public void run() {
+								progress.setIndeterminate(false);
+								progress.setString("failed to unzip");
+
+								Timer timer = new Timer();
+								TimerTask task = new TimerTask() {
+
+									@Override
+									public void run() {
+										dlgDownloadCovers.dispose();
+										cancel();
+									}
+								};
+								timer.schedule(task, 1000);
+							}
+						});
+						throw e;
+					}
+					if (zip != null) {
+						try {
+							SwingUtilities.invokeLater(new Runnable() {
+
+								@Override
+								public void run() {
+									progress.setString("setting covers");
+								}
+							});
+
+							//get the zip file content
+							ZipInputStream zis = new ZipInputStream(new FileInputStream(pathname));
+							//get the zipped file list entry
+							ZipEntry ze = zis.getNextEntry();
+
+							while (ze != null) {
+								String fileName = ze.getName();
+								InputStream is = zip.getInputStream(ze);
+								for (Game game : games) {
+									String gameCode = game.getGameCode();
+									if (!gameCode.isEmpty()) {
+										if (gameCode.equalsIgnoreCase(FilenameUtils.removeExtension(FilenameUtils.getName(fileName)))) {
+											setCoverForGameUsingOriginalFile(game, is);
+											break;
+										}
+									}
+								}
+								ze = zis.getNextEntry();
+							}
+							zis.closeEntry();
+							zis.close();
+							zip.close();
+							coverFileFile.delete();
+							SwingUtilities.invokeLater(new Runnable() {
+
+								@Override
+								public void run() {
+									progress.setIndeterminate(false);
+									progress.setString("covers added");
+
+									Timer timer = new Timer();
+									TimerTask task = new TimerTask() {
+
+										@Override
+										public void run() {
+											dlgDownloadCovers.dispose();
+											cancel();
+										}
+									};
+									timer.schedule(task, 1000);
+								}
+							});
+						} catch(IOException ex){
+							ex.printStackTrace();
+						}
+					}
+				} catch (UnsupportedEncodingException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (ClientProtocolException e) {
+					SwingUtilities.invokeLater(new Runnable() {
+
+						@Override
+						public void run() {
+							progress.setIndeterminate(false);
+							progress.setString("check your connection");
+
+							Timer timer = new Timer();
+							TimerTask task = new TimerTask() {
+
+								@Override
+								public void run() {
+									dlgDownloadCovers.dispose();
+									cancel();
+								}
+							};
+							timer.schedule(task, 2000);
+						}
+					});
+				} catch (IOException e) {
+					SwingUtilities.invokeLater(new Runnable() {
+
+						@Override
+						public void run() {
+							progress.setIndeterminate(false);
+							progress.setString("failed to download covers");
+
+							Timer timer = new Timer();
+							TimerTask task = new TimerTask() {
+
+								@Override
+								public void run() {
+									dlgDownloadCovers.dispose();
+									cancel();
+								}
+							};
+							timer.schedule(task, 2000);
+						}
+					});
+					e.printStackTrace();
+				}
+			}
+		});
+		t.start();
+	}
+
+	private void showDownloadCoversDialog() {
+		if (dlgDownloadCovers == null) {
+			dlgDownloadCovers = new JDialog();
+			dlgDownloadCovers.setAlwaysOnTop(true);
+			dlgDownloadCovers.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+			dlgDownloadCovers.getRootPane().setBorder(BorderFactory.createLoweredBevelBorder());
+			dlgDownloadCovers.setUndecorated(true);
+			progress = new JProgressBar();
+			progress.setBorder(Paddings.DLU2);
+			progress.setStringPainted(true);
+			progress.setString("Check games and set real titles");
+			progress.setIndeterminate(true);
+			dlgDownloadCovers.add(progress);
+			dlgDownloadCovers.pack();
+		}
+		dlgDownloadCovers.setLocationRelativeTo(view);
+		dlgDownloadCovers.setVisible(true);
+	}
+
 	public void autoSearchTags(List<Game> games, boolean showFeedback) {
 		for (Game game : games) {
 			Platform platform = explorer.getPlatform(game.getPlatformId());
@@ -5148,40 +5501,59 @@ GameSelectionListener, BrowseComputerListener {
 		}
 
 		private void pasteGameFromClipboard() {
-			try {
-				List<File> data = (List<File>) Toolkit.getDefaultToolkit()
-						.getSystemClipboard().getData(DataFlavor.javaFileListFlavor);
-				System.err.println("clipboard data: " + data);
-				int request = JOptionPane.YES_OPTION;
-				if (data.size() > 1) {
-					request = JOptionPane.showConfirmDialog(view, Messages.get(MessageConstants.CLIPBOARD_ADD_MULTIPLE_FILES, Messages.get(MessageConstants.APPLICATION_TITLE), data.size()),
-							"", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-					if (request == JOptionPane.YES_OPTION) {
-						checkAddGames(data);
-					}
-				} else if (data.size() == 1) {
-					try {
-						File file = data.get(0);
-						if (file.isDirectory()) {
-							checkAddGames(data);
-						} else {
-							checkAddGame(file);
-						}
-					} catch (SQLException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					} catch (RarException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
+			Transferable transferable2 = Toolkit.getDefaultToolkit().getSystemClipboard().getContents(null);
+			if (transferable2 != null && transferable2.isDataFlavorSupported(DataFlavor.imageFlavor)) {
+				try {
+					Image img = (Image) transferable2.getTransferData(DataFlavor.imageFlavor);
+					showImageEditDialog();
+					frameCoverBro.setImage((BufferedImage) img);
+					//					Game game = explorer.hasCurrentGame() ? explorer.getCurrentGames().get(0) : null;
+					//					if (game != null) {
+					//						setCoverForGame(game, img);
+					//					}
+				} catch (UnsupportedFlavorException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
 				}
-			} catch (HeadlessException e1) {
-				e1.printStackTrace();
-			} catch (UnsupportedFlavorException e1) {
-				JOptionPane.showMessageDialog(view, Messages.get(MessageConstants.ERR_CLIPBOARD,
-						Messages.get(MessageConstants.APPLICATION_TITLE)));
-			} catch (IOException e1) {
-				e1.printStackTrace();
+			} else {
+				try {
+					List<File> data = (List<File>) Toolkit.getDefaultToolkit()
+							.getSystemClipboard().getData(DataFlavor.javaFileListFlavor);
+					System.err.println("clipboard data: " + data);
+					int request = JOptionPane.YES_OPTION;
+					if (data.size() > 1) {
+						request = JOptionPane.showConfirmDialog(view, Messages.get(MessageConstants.CLIPBOARD_ADD_MULTIPLE_FILES, Messages.get(MessageConstants.APPLICATION_TITLE), data.size()),
+								"", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+						if (request == JOptionPane.YES_OPTION) {
+							checkAddGames(data);
+						}
+					} else if (data.size() == 1) {
+						try {
+							File file = data.get(0);
+							if (file.isDirectory()) {
+								checkAddGames(data);
+							} else {
+								checkAddGame(file, true);
+							}
+						} catch (SQLException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						} catch (RarException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					}
+				} catch (HeadlessException e1) {
+					e1.printStackTrace();
+				} catch (UnsupportedFlavorException e1) {
+					JOptionPane.showMessageDialog(view, Messages.get(MessageConstants.ERR_CLIPBOARD,
+							Messages.get(MessageConstants.APPLICATION_TITLE)));
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
 			}
 		}
 
@@ -5452,7 +5824,7 @@ GameSelectionListener, BrowseComputerListener {
 			if (!platformIcons.containsKey(p.getIconFileName())) {
 				String iconFilename = p.getIconFileName();
 				if (iconFilename != null && !iconFilename.trim().isEmpty()) {
-					ImageIcon icon = ImageUtil.getImageIconFrom(System.getProperty("user.dir") + "/emubro-resources/images/platforms/logos/" + iconFilename, true);
+					ImageIcon icon = ImageUtil.getImageIconFrom(System.getProperty("user.dir") + "/emubro-resources/platforms/logos/" + iconFilename, true);
 					if (icon != null) {
 						int size = ScreenSizeUtil.adjustValueToResolution(24);
 						icon = ImageUtil.scaleCover(icon, size, CoverConstants.SCALE_WIDTH_OPTION);
@@ -5462,7 +5834,7 @@ GameSelectionListener, BrowseComputerListener {
 			}
 			for (Emulator emu : p.getEmulators()) {
 				if (!emulatorIcons.containsKey(emu.getIconFilename())) {
-					ImageIcon icon = ImageUtil.getImageIconFrom(System.getProperty("user.dir") + "/emubro-resources/images/emulators/"
+					ImageIcon icon = ImageUtil.getImageIconFrom(System.getProperty("user.dir") + "/emubro-resources/platforms/emulators/"
 							+ emu.getIconFilename(), true);
 					if (icon != null) {
 						int size = ScreenSizeUtil.adjustValueToResolution(24);
@@ -6128,7 +6500,14 @@ GameSelectionListener, BrowseComputerListener {
 	public void interruptSearchProcess() throws SQLException {
 		workerBrowseComputer.searchProcessInterrupted();
 		workerBrowseComputer.cancel(true);
-		view.searchProcessEnded();
+		SwingUtilities.invokeLater(new Runnable() {
+
+			@Override
+			public void run() {
+				view.searchProcessEnded();
+				askUserDownloadGameCovers();
+			}
+		});
 	}
 
 	public void checkForUpdates() {
@@ -6465,11 +6844,11 @@ GameSelectionListener, BrowseComputerListener {
 		});
 	}
 
-	public void addGame(Platform p0, File file) throws BroGameDeletedException {
-		addGame(p0, file, false, false);
+	public void addGame(Platform p0, File file, boolean downloadCover) throws BroGameDeletedException {
+		addGame(p0, file, false, false, false);
 	}
 
-	public void addGame(Platform p0, File file, boolean manuallyAdded, boolean favorite) {
+	public void addGame(Platform p0, File file, boolean manuallyAdded, boolean favorite, boolean downloadCover) {
 		String checksum = null;
 		if (digest == null) {
 			try {
@@ -6505,7 +6884,7 @@ GameSelectionListener, BrowseComputerListener {
 		int platformId = p0.getId();
 		String platformIconFileName = p0.getIconFileName();
 		int defaultFileId = -1;
-		Game element = new BroGame(GameConstants.NO_GAME, fileName, defaultFileId, explorerDAO.getChecksumId(checksum), null, null, 0, dateAdded, null, 0,
+		Game element = new BroGame(GameConstants.NO_GAME, fileName, "", defaultFileId, explorerDAO.getChecksumId(checksum), null, null, 0, dateAdded, null, 0,
 				EmulatorConstants.NO_EMULATOR, platformId, platformIconFileName);
 		String defaultGameCover = p0.getDefaultGameCover();
 		view.getViewManager().getIconStore().addPlatformCover(platformId, defaultGameCover);
@@ -6526,6 +6905,9 @@ GameSelectionListener, BrowseComputerListener {
 					if (request == JOptionPane.YES_OPTION) {
 						explorerDAO.restoreGame(e.getGame());
 						element = explorerDAO.getGameByChecksumId(e.getGame().getChecksumId());
+						if (downloadCover) {
+							downloadCover = !element.hasCover();
+						}
 						for (Tag tag : explorerDAO.getTagsForGame(element.getId())) {
 							element.addTag(tag);
 						}
@@ -6580,14 +6962,20 @@ GameSelectionListener, BrowseComputerListener {
 					}
 				}
 			});
+			if (downloadCover) {
+				askUserDownloadGameCovers(gameFinal);
+			}
+			//	        BlockingQueue queue = new ArrayBlockingQueue(1024);
+			//			ExecutorService pool = Executors.newFixedThreadPool(5);
+			//			Download obj = new Download(queue);
+			//			pool.execute(obj); //start download and place on queue once completed
+			//			Object data = queue.take(); //get completely downloaded item
+
 		} catch (BroGameAlreadyExistsException e) {
 			//			String message = "This game does already exist.";
 			//			String title = "Game already exists";
 			//			JOptionPane.showMessageDialog(view, message, title, JOptionPane.ERROR_MESSAGE);
 			explorer.addFile(e.getGameId(), filePath);
-			if (manuallyAdded) {
-				gameAlreadyExists();
-			}
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -6797,6 +7185,72 @@ GameSelectionListener, BrowseComputerListener {
 			label.setIcon(icon);
 			return label;
 		}
+	}
+
+	private void checkTitlesAndSetRealGameNames(Game game, Properties p) {
+		String gameName = game.getName();
+		String gameCode = game.getGameCode();
+		String realName = gameName;
+		String propKey = p.getProperty(gameCode.toUpperCase());
+		String propKey2 = p.getProperty(gameName.toUpperCase());
+		if (propKey != null && !propKey.isEmpty()) {
+			realName = propKey;
+			explorer.setGameCode(game.getId(), gameCode);
+		} else if (propKey2 != null && !propKey2.isEmpty()) {
+			realName = propKey2;
+			explorer.setGameCode(game.getId(), gameName);
+		} else {
+			Set<Object> keys = getAllKeys(p);
+			Map<String, String> map = new TreeMap<>();
+
+			for (Object k : keys) {
+				String key = (String) k;
+				String valueToCheck = getPropertyValue(p, key);
+				if (valueToCheck.toLowerCase().startsWith(gameName.toLowerCase())) {
+					map.put(valueToCheck, key);
+				}
+			}
+			realName = gameName;
+			if (map.size() > 1) {
+				SortedSet<String> keySet = new TreeSet<>(map.keySet());
+				System.out.println("matched strings: "+keySet);
+
+				Object[] arr = keySet.toArray();
+				String n = (String) JOptionPane.showInputDialog(view, "Select the correct name for your game "+gameName,
+						"Select game name", JOptionPane.QUESTION_MESSAGE, null, arr, arr[0]);
+				if (n != null && !n.trim().isEmpty()) {
+					realName = n;
+					explorer.setGameCode(game.getId(), map.get(n));
+				}
+			} else if (map.size() == 1) {
+				Entry<String, String> hm = map.entrySet().stream().findFirst().get();
+				realName = hm.getKey();
+				explorer.setGameCode(game.getId(), hm.getValue());
+			} else {
+				realName = gameName;
+			}
+		}
+		explorer.renameGame(game.getId(), realName);
+		try {
+			explorerDAO.setGameCode(game.getId(), explorer.getGame(game.getId()).getGameCode());
+			explorerDAO.renameGame(game.getId(), realName);
+		} catch (SQLException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+	}
+
+	private Properties getTitlesProperties(String platformShortName) throws IOException {
+		String titles = "https://emubro.net/coverpacks/"+platformShortName+"/titles/en/db.txt";
+		Properties p;
+		if (!mapProps.containsKey(platformShortName)) {
+			String titlesString = readStringFromURL(titles);
+			p = parsePropertiesString(titlesString);
+			mapProps.put(platformShortName, p);
+		} else {
+			p = mapProps.get(platformShortName);
+		}
+		return p;
 	}
 
 	@Override

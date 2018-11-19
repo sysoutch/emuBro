@@ -172,7 +172,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 				pnlSelection.setPlayCount(-1);
 				pnlSelection.setLastPlayed(null);
 				pnlSelection.setTags(null);
-				gameCoverChanged(null);
+				gameCoverChanged(null, null);
 				pnlSelection.pnlAutoScaleImage.setVisible(false);
 				pnlSelection.pnlPlayCount.setVisible(false);
 				pnlSelection.pnlDateAdded.setVisible(false);
@@ -642,11 +642,17 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			}
 		}
 
-		public void gameCoverChanged(Image image) {
-			if (image == null) {
-				pnlSelection.pnlAutoScaleImage.setGameCover(null);
+		public void gameCoverChanged(Game game, Image image) {
+			if (currentGames != null && currentGames.size() == 1
+					&& currentGames.get(0) == game) {
+				pnlSelection.setGameTitle(game.getName(), null);
+				if (image == null) {
+					pnlSelection.pnlAutoScaleImage.setGameCover(null);
+				} else {
+					pnlSelection.pnlAutoScaleImage.setGameCover(image);
+				}
 			} else {
-				pnlSelection.pnlAutoScaleImage.setGameCover(image);
+				pnlSelection.pnlAutoScaleImage.setGameCover(null);
 			}
 		}
 
@@ -821,8 +827,8 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		}
 	}
 
-	public void gameCoverChanged(Image i) {
-		pnlSelection.gameCoverChanged(i);
+	public void gameCoverChanged(Game game, Image i) {
+		pnlSelection.gameCoverChanged(game, i);
 	}
 
 	public void languageChanged() {

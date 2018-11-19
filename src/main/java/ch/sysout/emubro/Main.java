@@ -19,6 +19,8 @@ import javax.swing.JOptionPane;
 import javax.swing.LookAndFeel;
 import javax.swing.UIManager;
 
+import org.apache.commons.io.FileUtils;
+
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.jgoodies.looks.windows.WindowsLookAndFeel;
@@ -84,7 +86,7 @@ public class Main {
 					dlgSplashScreen.setText(Messages.get(MessageConstants.ALMOST_READY));
 					try {
 						Explorer explorer = new BroExplorer();
-						String defaultPlatformsFilePath = System.getProperty("user.dir") + "/emubro-resources/platforms.json";
+						String defaultPlatformsFilePath = System.getProperty("user.dir") + "/emubro-resources/platforms";
 						List<BroPlatform> defaultPlatforms = null;
 						try {
 							defaultPlatforms = initDefaultPlatforms(defaultPlatformsFilePath);
@@ -95,7 +97,7 @@ public class Main {
 
 						List<BroTag> defaultTags = null;
 						try {
-							defaultTags = initDefaultTags(System.getProperty("user.dir") + "/emubro-resources/tags.json");
+							defaultTags = initDefaultTags(System.getProperty("user.dir") + "/emubro-resources/tags");
 						} catch (FileNotFoundException eFNF) {
 							defaultTags = new ArrayList<>();
 							JOptionPane.showConfirmDialog(dlgSplashScreen, "oops. tags resources not found");
@@ -197,8 +199,12 @@ public class Main {
 						updateBro.updateDatabaseFrom(e2.getCurrentVersion());
 						updateDatabaseVersion(conn, e2.getExpectedVersion());
 						initializeApplication();
+					} catch (SQLException e) {
+						dlgSplashScreen.showError("failure in update script");
+						e.printStackTrace();
 					} catch (IllegalArgumentException e) {
 						dlgSplashScreen.showError("cannot access update file");
+						e.printStackTrace();
 					}
 				} else {
 					dlgSplashScreen.showWarning(Messages.get(MessageConstants.DATABASE_VERSION_MISMATCH));
@@ -320,32 +326,41 @@ public class Main {
 	}
 
 	public static List<BroPlatform> initDefaultPlatforms(String defaultPlatformsFilePath) throws FileNotFoundException {
-		InputStream is = new FileInputStream(defaultPlatformsFilePath);
-		BufferedReader br = new BufferedReader(new InputStreamReader(is));
-		java.lang.reflect.Type collectionType = new TypeToken<List<BroPlatform>>() {
-		}.getType();
-		Gson gson = new Gson();
-		List<BroPlatform> platforms = ((List<BroPlatform>) gson.fromJson(br, collectionType));
-		try {
-			br.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		List<BroPlatform> platforms = new ArrayList<>();
+		File dir = new File(defaultPlatformsFilePath);
+		for (File f : FileUtils.listFiles(dir, new String[] { "json" }, false)) {
+			InputStream is = new FileInputStream(f);
+			BufferedReader br = new BufferedReader(new InputStreamReader(is));
+			java.lang.reflect.Type collectionType = new TypeToken<BroPlatform>() {
+			}.getType();
+			Gson gson = new Gson();
+
+			platforms.add((BroPlatform) gson.fromJson(br, collectionType));
+			try {
+				br.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		return platforms;
 	}
 
 	public static List<BroTag> initDefaultTags(String defaultTagsFilePath) throws FileNotFoundException {
-		InputStream is = new FileInputStream(defaultTagsFilePath);
-		BufferedReader br = new BufferedReader(new InputStreamReader(is));
-		java.lang.reflect.Type collectionType = new TypeToken<List<BroTag>>() {
-		}.getType();
-		Gson gson = new Gson();
-		List<BroTag> tags = ((List<BroTag>) gson.fromJson(br, collectionType));
-		try {
-			br.close();
-		} catch (IOException e) {
-			e.printStackTrace();
+		List<BroTag> tags = new ArrayList<>();
+		File dir = new File(defaultTagsFilePath);
+		for (File f : FileUtils.listFiles(dir, new String[] { "json" }, false)) {
+			InputStream is = new FileInputStream(f);
+			BufferedReader br = new BufferedReader(new InputStreamReader(is));
+			java.lang.reflect.Type collectionType = new TypeToken<BroTag>() {
+			}.getType();
+			Gson gson = new Gson();
+			tags.add((BroTag) gson.fromJson(br, collectionType));
+			try {
+				br.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 		return tags;
 	}

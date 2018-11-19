@@ -702,7 +702,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	private void setButtonGroups() {
 		addToButtonGroup(new ButtonGroup(), itmWelcomeView, itmListView, itmElementView, itmContentView, itmTableView,
-				itmCoverView);
+				itmSliderView, itmCoverView);
 		addToButtonGroup(new ButtonGroup(), itmSortTitle, itmSortPlatform);
 		addToButtonGroup(new ButtonGroup(), itmSortAscending, itmSortDescending);
 		addToButtonGroup(new ButtonGroup(), itmGroupTitle, itmGroupPlatform, itmGroupBlank);
@@ -1540,6 +1540,10 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		pnlMain.getPopupGame().addAutoSearchTagsListener(l);
 	}
 
+	public void addCoverFromEmuBroListener(ActionListener l) {
+		pnlMain.getPopupGame().addCoverFromEmuBroListener(l);
+	}
+
 	public void addCoverFromWebListener(ActionListener l) {
 		pnlMain.getPopupGame().addCoverFromWebListener(l);
 	}
@@ -2180,10 +2184,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	public boolean isPreviewPaneVisible() {
 		return pnlMain.isPreviewPaneVisible();
-	}
-
-	public int getCurrentViewPanelType() {
-		return pnlMain.getCurrentViewPanelType();
 	}
 
 	public ViewPanel getCurrentViewPanel() {
@@ -3082,5 +3082,9 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	public void updateFilter() {
 		viewManager.filterSet(new BroFilterEvent(pnlGameFilter.getSelectedPlatformId(), pnlGameFilter.getCriteria()));
+	}
+
+	public int getCurrentView() {
+		return pnlMain.getCurrentView();
 	}
 }

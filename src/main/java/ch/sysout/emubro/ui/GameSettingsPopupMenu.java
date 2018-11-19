@@ -50,7 +50,7 @@ class GameSettingsPopupMenu extends JPopupMenu {
 				continue;
 			}
 			String s = "<html><strong>" + emu.getName() + "</strong> <br>(" + emu.getPath() + ")</html>";
-			String path = "/images/emulators/" + emu.getIconFilename();
+			String path = "/platforms/emulators/" + emu.getIconFilename();
 			Icon icon = ImageUtil.getImageIconFrom(path);
 			if (icon == null) {
 				icon = FileSystemView.getFileSystemView().getSystemIcon(new File(emu.getPath()));

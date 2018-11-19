@@ -48,4 +48,5 @@ public interface GameDAO {
 
 	List<Tag> getTags(int gameId) throws SQLException;
 
+	void setGameCode(int id, String gameCode) throws SQLException;
 }

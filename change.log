@@ -26,10 +26,29 @@ Covers, Descriptions und Tags: http://www.nintendolife.com/
 https://www.lifewire.com/command-line-commands-for-control-panel-applets-2626060
 
 +-----------+
+| 	v0.8.0	 |
++-----------+
+- new feature: auto download covers for games
+- added: slider view
+- added: a game can now have an id. e.g. (Mario Kart Wii RMCP01)
+- fixed: startup speed improved a lot by lazy loading game covers
+- changed: emubro-resources folder structure
+- 
++-----------+
+| 	v0.7.1	 |
++-----------+
+- initial beta release
+
++-----------+
 | 	v0.7.0	 |
 +-----------+
+test release
 
 -- to do ---
+TODO download emulator feature
+TODO download game titles properties at start/add game and ask to update titles db somehow
+	also ask once for multiple games
+TODO settings: add cover settings manager (cover pack download + local store)
 FIXME last view content or covers not set at next start up
 FIXME sort behaviour
 			- sort ascending after sort by platform does sort by title asc

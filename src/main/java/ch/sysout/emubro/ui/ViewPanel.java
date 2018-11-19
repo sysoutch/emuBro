@@ -22,7 +22,7 @@ import ch.sysout.emubro.api.model.PlatformComparator;
 import ch.sysout.emubro.controller.GameSelectionListener;
 import ch.sysout.emubro.impl.event.NavigationEvent;
 
-public abstract class ViewPanel extends JPanel implements GameSelectionListener, GameCoverListener {
+public abstract class ViewPanel extends JPanel implements GameSelectionListener {
 	private static final long serialVersionUID = 1L;
 
 	public static final int BLANK_VIEW = GameViewConstants.BLANK_VIEW;

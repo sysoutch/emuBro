@@ -29,8 +29,8 @@ public class IconStore {
 
 	private List<GameCoverListener> gameCoverListeners = new ArrayList<>();
 
-	private String currentPlatformLogosDirectory = System.getProperty("user.dir")+"/emubro-resources/images/platforms/logos";
-	private String currentPlatformCoversDirectory = System.getProperty("user.dir")+"/emubro-resources/images/platforms/covers";
+	private String currentPlatformLogosDirectory = System.getProperty("user.dir")+"/emubro-resources/platforms/logos";
+	private String currentPlatformCoversDirectory = System.getProperty("user.dir")+"/emubro-resources/platforms/covers";
 
 	public void addPlatformCover(int platformId, String coverFileName) {
 		String coverFilePath = currentPlatformCoversDirectory + "/" + coverFileName;
@@ -166,20 +166,18 @@ public class IconStore {
 		}
 		if (!gameCoverPaths.containsKey(gameId)) {
 			gameCoverPaths.put(gameId, coverPath);
-			String coverFilePath = gameCoverPaths.get(gameId);
-			ImageIcon ico = ImageUtil.getImageIconFrom(coverFilePath, true);
-			gameCovers.put(gameId, ico);
-			fireGameCoverAddedEvent(gameId, ico);
-		}
-	}
-
-	private void fireGameCoverAddedEvent(int gameId, ImageIcon ico) {
-		for (GameCoverListener l : gameCoverListeners) {
-			l.gameCoverAdded(gameId, ico);
 		}
 	}
 
 	public ImageIcon getGameCover(int gameId) {
+		if (!gameCovers.containsKey(gameId)) {
+			if (!gameCoverPaths.containsKey(gameId)) {
+				return null;
+			}
+			String coverFilePath = gameCoverPaths.get(gameId);
+			ImageIcon ico = ImageUtil.getImageIconFrom(coverFilePath, true);
+			gameCovers.put(gameId, ico);
+		}
 		return gameCovers.get(gameId);
 	}
 

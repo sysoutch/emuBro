@@ -5,9 +5,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -112,13 +109,13 @@ public class BroGameDAO implements GameDAO {
 
 		String coverPath = SqlUtil.getQuotationsMarkedString(game.getCoverPath());
 		int defaultEmulatorId = game.getDefaultEmulatorId();
-		ZonedDateTime dateAdded = game.getDateAdded();
+		//		ZonedDateTime dateAdded = game.getDateAdded();
 		ZonedDateTime lastPlayed = game.getLastPlayed();
+		//		dateAdded = ZonedDateTime.of(LocalDate.now().atTime(11, 30), ZoneOffset.UTC);
 
-		dateAdded = ZonedDateTime.of(LocalDate.now().atTime(11, 30), ZoneOffset.UTC);
-		ZoneId swissZone = ZoneId.of("Europe/Zurich");
-		ZonedDateTime swissZoned = dateAdded.withZoneSameInstant(swissZone);
-		LocalDateTime swissLocal = swissZoned.toLocalDateTime();
+		//		ZoneId swissZone = ZoneId.of("Europe/Zurich");
+		//		ZonedDateTime swissZoned = dateAdded.withZoneSameInstant(swissZone);
+		//		LocalDateTime swissLocal = swissZoned.toLocalDateTime();
 
 		String gameName = game.getName();
 		String platformIconFileName = game.getPlatformIconFileName();
@@ -264,6 +261,7 @@ public class BroGameDAO implements GameDAO {
 		if (rset.next()) {
 			int id = rset.getInt("game_id");
 			String name = rset.getString("game_name");
+			String gameCode = rset.getString("game_gameCode");
 			int defaultFileId = rset.getInt("game_defaultFileId");
 			int checksumId = rset.getInt("game_checksumId");
 			String iconPath = rset.getString("game_iconPath");
@@ -284,7 +282,7 @@ public class BroGameDAO implements GameDAO {
 			int defaultEmulatorId = rset.getInt("game_defaultEmulatorId");
 			int platformId = rset.getInt("game_platformId");
 			String platformIconFileName = rset.getString("game_platformIconFileName");
-			game = new BroGame(id, name, defaultFileId, checksumId, iconPath, coverPath, rate, dateAdded, lastPlayed, playCount, defaultEmulatorId,
+			game = new BroGame(id, name, gameCode, defaultFileId, checksumId, iconPath, coverPath, rate, dateAdded, lastPlayed, playCount, defaultEmulatorId,
 					platformId, platformIconFileName);
 		}
 		stmt.close();
@@ -330,21 +328,26 @@ public class BroGameDAO implements GameDAO {
 		if (rset.next()) {
 			int id = rset.getInt("game_id");
 			String name = rset.getString("game_name");
+			String gameCode = rset.getString("game_gameCode");
 			int defaultFileId = rset.getInt("game_defaultFileId");
 			String iconPath = rset.getString("game_iconPath");
 			String coverPath = rset.getString("game_coverPath");
 			int rate = rset.getInt("game_rate");
-			//			Date dateAdded = rset.getDate("game_added");
-			//			Date lastPlayed = rset.getDate("game_lastPlayed");
-			//			LocalDateTime dateTimeAddded = LocalDateTime.ofInstant(dateAdded.toInstant(), ZoneId.systemDefault());
-			//			LocalDateTime dateTimeLastPlayed = LocalDateTime.ofInstant(lastPlayed.toInstant(), ZoneId.systemDefault());
-			ZonedDateTime dateAdded = ZonedDateTime.parse(rset.getString("game_added"));
-			ZonedDateTime lastPlayed = ZonedDateTime.parse(rset.getString("game_lastPlayed"));
+			Timestamp tmpDateAdded = rset.getTimestamp("game_added");
+			Timestamp tmpLastPlayed = rset.getTimestamp("game_lastPlayed");
+			ZonedDateTime dateAdded = null;
+			ZonedDateTime lastPlayed = null;
+			if (tmpDateAdded != null) {
+				dateAdded = ZonedDateTime.ofInstant(tmpDateAdded.toInstant(), ZoneOffset.UTC);
+			}
+			if (tmpLastPlayed != null) {
+				lastPlayed = ZonedDateTime.ofInstant(tmpLastPlayed.toInstant(), ZoneOffset.UTC);
+			}
 			int playCount = rset.getInt("game_playCount");
 			int defaultEmulatorId = rset.getInt("game_defaultEmulatorId");
 			int platformId = rset.getInt("game_platformId");
 			String platformIconFileName = rset.getString("game_platformIconFileName");
-			game = new BroGame(id, name, defaultFileId, checksumId, iconPath, coverPath, rate, dateAdded, lastPlayed, playCount, defaultEmulatorId,
+			game = new BroGame(id, name, gameCode, defaultFileId, checksumId, iconPath, coverPath, rate, dateAdded, lastPlayed, playCount, defaultEmulatorId,
 					platformId, platformIconFileName);
 		}
 		stmt.close();
@@ -474,6 +477,15 @@ public class BroGameDAO implements GameDAO {
 		Statement stmt = conn.createStatement();
 		String sql = "delete from game_tag where game_id="+gameId+" and tag_id="+tagId;
 		stmt = conn.createStatement();
+		stmt.executeQuery(sql);
+		conn.commit();
+		stmt.close();
+	}
+
+	@Override
+	public void setGameCode(int gameId, String gameCode) throws SQLException {
+		Statement stmt = conn.createStatement();
+		String sql = "update game set game_gameCode = '"+SqlUtil.getQuotationsMarkedString(gameCode)+"' where game_id=" + gameId;
 		stmt.executeQuery(sql);
 		conn.commit();
 		stmt.close();

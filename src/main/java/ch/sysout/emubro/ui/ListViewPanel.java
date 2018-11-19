@@ -92,7 +92,6 @@ import ch.sysout.emubro.impl.model.EmulatorConstants;
 import ch.sysout.emubro.impl.model.GameConstants;
 import ch.sysout.emubro.impl.model.PlatformConstants;
 import ch.sysout.emubro.util.MessageConstants;
-import ch.sysout.ui.ImageUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 import ch.sysout.util.UIUtil;
@@ -488,58 +487,68 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				return label;
 			}
 
-			private void checkGameIcon(JList<?> list, BroGame game, JLabel label) { int currentCoverSize = ScreenSizeUtil.adjustValueToResolution(viewManager.getCurrentCoverSize());
-			int borderHeight = ScreenSizeUtil.adjustValueToResolution(16);
-			Icon gameIcon = (viewStyle == ViewPanel.LIST_VIEW || viewStyle == ViewPanel.ELEMENT_VIEW) ?
-					viewManager.getIconStore().getGameIcon(game.getId())
-					: viewManager.getIconStore().getScaledGameCover(game.getId(), currentCoverSize);
-					if (gameIcon != null) {
-						label.setIcon(gameIcon);
-						label.setDisabledIcon(gameIcon);
+			private void checkGameIcon(JList<?> list, BroGame game, JLabel label) {
+				int currentCoverSize = ScreenSizeUtil.adjustValueToResolution(viewManager.getCurrentCoverSize());
+				int borderHeight = ScreenSizeUtil.adjustValueToResolution(16);
+				Icon gameIcon = null;
+				if (viewStyle == ViewPanel.LIST_VIEW) {
+					gameIcon = viewManager.getIconStore().getGameIcon(game.getId());
+				} else if (viewStyle == ViewPanel.ELEMENT_VIEW) {
+					gameIcon = viewManager.getIconStore().getGameIcon(game.getId());
+				} else if (viewStyle == ViewPanel.CONTENT_VIEW) {
+					gameIcon = viewManager.getIconStore().getScaledGameCover(game.getId(), currentCoverSize);
+				} else if (viewStyle == ViewPanel.SLIDER_VIEW) {
+					gameIcon = viewManager.getIconStore().getScaledGameCover(game.getId(), currentCoverSize);
+				} else if (viewStyle == ViewPanel.COVER_VIEW) {
+					gameIcon = viewManager.getIconStore().getScaledGameCover(game.getId(), currentCoverSize);
+				}
+				if (gameIcon != null) {
+					label.setIcon(gameIcon);
+					label.setDisabledIcon(gameIcon);
+				} else {
+					int platformId = game.getPlatformId();
+					if (platformId == PlatformConstants.NO_PLATFORM) {
+						// should not happen in general. there is a bug
+						// somewhere else
 					} else {
-						int platformId = game.getPlatformId();
-						if (platformId == PlatformConstants.NO_PLATFORM) {
-							// should not happen in general. there is a bug
-							// somewhere else
-						} else {
-							Icon platformIcon = (viewStyle == ViewPanel.LIST_VIEW || viewStyle == ViewPanel.ELEMENT_VIEW) ?
-									viewManager.getIconStore().getPlatformIcon(platformId)
-									: viewManager.getIconStore().getScaledPlatformCover(platformId, currentCoverSize);
-									label.setIcon(platformIcon);
-									label.setDisabledIcon(platformIcon);
-						}
-						label.setIconTextGap(ScreenSizeUtil.adjustValueToResolution(8));
+						Icon platformIcon = (viewStyle == ViewPanel.LIST_VIEW || viewStyle == ViewPanel.ELEMENT_VIEW) ?
+								viewManager.getIconStore().getPlatformIcon(platformId)
+								: viewManager.getIconStore().getScaledPlatformCover(platformId, currentCoverSize);
+								label.setIcon(platformIcon);
+								label.setDisabledIcon(platformIcon);
+					}
+					label.setIconTextGap(ScreenSizeUtil.adjustValueToResolution(8));
+					label.setBorder(borderEmpty);
+				}
+				if (viewStyle == ViewPanel.CONTENT_VIEW) {
+					String gameName = game.getName();
+					Platform platform = explorer.getPlatform(game.getPlatformId());
+					ZonedDateTime dateAdded = game.getDateAdded();
+					ZonedDateTime lastPlayed = game.getLastPlayed();
+					int rating = game.getRate();
+					label.setText("<html><strong>" + gameName + "</strong><br>"
+							+ platform.getName() + "<br>"
+							+ "Rating: " + rating + " stars<br>"
+							+ "Last played: " + ((lastPlayed != null) ? lastPlayed : "Never played") + "<br>"
+							+ "Added: " + dateAdded + "</html>");
+
+					int textGap = currentCoverSize - label.getIcon().getIconWidth();
+					if (textGap > 0) {
+						label.setBorder(getFunkyBorder(textGap / 2 + ScreenSizeUtil.adjustValueToResolution(8)));
+						label.setIconTextGap(textGap / 2 + ScreenSizeUtil.adjustValueToResolution(8));
+					} else {
+						label.setIconTextGap(textGap + ScreenSizeUtil.adjustValueToResolution(8));
 						label.setBorder(borderEmpty);
 					}
-					if (viewStyle == ViewPanel.CONTENT_VIEW) {
-						String gameName = game.getName();
-						Platform platform = explorer.getPlatform(game.getPlatformId());
-						ZonedDateTime dateAdded = game.getDateAdded();
-						ZonedDateTime lastPlayed = game.getLastPlayed();
-						int rating = game.getRate();
-						label.setText("<html><strong>" + gameName + "</strong><br>"
-								+ platform.getName() + "<br>"
-								+ "Rating: " + rating + " stars<br>"
-								+ "Last played: " + ((lastPlayed != null) ? lastPlayed : "Never played") + "<br>"
-								+ "Added: " + dateAdded + "</html>");
-
-						int textGap = currentCoverSize - label.getIcon().getIconWidth();
-						if (textGap > 0) {
-							label.setBorder(getFunkyBorder(textGap / 2 + ScreenSizeUtil.adjustValueToResolution(8)));
-							label.setIconTextGap(textGap / 2 + ScreenSizeUtil.adjustValueToResolution(8));
-						} else {
-							label.setIconTextGap(textGap + ScreenSizeUtil.adjustValueToResolution(8));
-							label.setBorder(borderEmpty);
-						}
-						if (label.getPreferredSize().height > list.getFixedCellHeight()) {
-							setRowHeight(list, label.getPreferredSize().height + borderHeight);
-						}
+					if (label.getPreferredSize().height > list.getFixedCellHeight()) {
+						setRowHeight(list, label.getPreferredSize().height + borderHeight);
 					}
-					if (viewStyle == ViewPanel.COVER_VIEW) {
-						if (label.getPreferredSize().height > list.getFixedCellHeight()) {
-							setRowHeight(list, label.getPreferredSize().height + borderHeight);
-						}
+				}
+				if (viewStyle == ViewPanel.COVER_VIEW) {
+					if (label.getPreferredSize().height > list.getFixedCellHeight()) {
+						setRowHeight(list, label.getPreferredSize().height + borderHeight);
 					}
+				}
 			}
 
 			private Border getFunkyBorder(int left) {
@@ -624,14 +633,21 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		}
 		for (Map.Entry<JList<Game>, JScrollPane> entry : sps.entrySet()) {
 			entry.getKey().setLayoutOrientation(layoutOrientation);
-			entry.getKey().setFixedCellHeight(entry.getValue().getViewport().getHeight());
 			if (viewStyle == ViewPanel.SLIDER_VIEW) {
 				entry.getKey().setVisibleRowCount(1);
+				entry.getKey().setFixedCellHeight(entry.getValue().getViewport().getHeight());
 			} else {
 				SwingUtilities.invokeLater(new Runnable() {
 
 					@Override
 					public void run() {
+						if (viewStyle == ViewPanel.COVER_VIEW) {
+							entry.getKey().setFixedCellHeight(cellHeight);
+						} else if (viewStyle == ViewPanel.CONTENT_VIEW) {
+							entry.getKey().setFixedCellHeight(cellHeight + borderHeight);
+						} else {
+							entry.getKey().setFixedCellHeight(fontHeight + borderHeight);
+						}
 						fixRowCountForVisibleColumns(entry.getKey());
 						entry.getKey().ensureIndexIsVisible(entry.getKey().getSelectedIndex());
 					}
@@ -1007,8 +1023,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				// btn.setBorder(titledBorder);
 				//				btn.setContentAreaFilled(false);
 				btn.setHorizontalAlignment(SwingConstants.LEFT);
-				ImageIcon platformIcon = ImageUtil.getImageIconFrom("/images/platforms/logos/" + p.getIconFileName(),
-						false);
+				ImageIcon platformIcon = viewManager.getIconStore().getPlatformIcon(p.getId());
 				btn.setIcon(platformIcon);
 				btn.setDisabledIcon(platformIcon);
 				btn.setComponentPopupMenu(popupGroup);
@@ -1661,11 +1676,6 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	@Override
 	public void setTouchScreenScrollEnabled(boolean touchScreenScrollEnabled) {
 		this.touchScreenScrollEnabled = touchScreenScrollEnabled;
-	}
-
-	@Override
-	public void gameCoverAdded(int gameId, ImageIcon ico) {
-
 	}
 
 	@Override

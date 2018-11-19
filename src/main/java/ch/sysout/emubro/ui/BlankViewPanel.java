@@ -13,7 +13,6 @@ import java.util.List;
 
 import javax.swing.Action;
 import javax.swing.BorderFactory;
-import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -388,10 +387,6 @@ public class BlankViewPanel extends ViewPanel {
 
 	@Override
 	public void addUpdateGameCountListener(UpdateGameCountListener l) {
-	}
-
-	@Override
-	public void gameCoverAdded(int gameId, ImageIcon ico) {
 	}
 
 	@Override

@@ -48,7 +48,6 @@ class Finder extends SimpleFileVisitor<Path> {
 			Path name = file.getFileName();
 			if (name != null && matcher.matches(name)) {
 				numMatches++;
-				System.out.println("file found: " + file);
 				fireSearchForPlatformEvent(file.toFile());
 			}
 		}

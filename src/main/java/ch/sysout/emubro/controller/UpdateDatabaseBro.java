@@ -15,7 +15,8 @@ public class UpdateDatabaseBro {
 		this.conn = conn;
 	}
 
-	public void updateDatabaseFrom(String currentVersion) throws IllegalArgumentException {
+	public void updateDatabaseFrom(String currentVersion) throws IllegalArgumentException, SQLException {
+		System.out.println("/update_database_"+currentVersion+".sql");
 		// add column here and initialize
 		InputStream stream = getClass().getResourceAsStream("/update_database_"+currentVersion+".sql");
 		boolean updateFileNotExists = stream == null;
@@ -38,9 +39,6 @@ public class UpdateDatabaseBro {
 			stmt.executeQuery(lines);
 			stmt.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} finally {

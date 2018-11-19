@@ -769,11 +769,6 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 	}
 
 	@Override
-	public void gameCoverAdded(int gameId, ImageIcon ico) {
-
-	}
-
-	@Override
 	public void addAddGameOrEmulatorFromClipboardListener(Action l) {
 		tblGames.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_V, InputEvent.CTRL_DOWN_MASK),
 				"actionAddGameOrEmulatorFromClipboard");

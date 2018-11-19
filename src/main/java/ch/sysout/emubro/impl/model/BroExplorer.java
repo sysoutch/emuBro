@@ -86,6 +86,18 @@ public class BroExplorer implements Explorer {
 	}
 
 	@Override
+	public List<Game> getGamesWithoutCovers() {
+		List<Game> gameList = new ArrayList<>();
+		for (Entry<Integer, Game> entry : games.entrySet()) {
+			Game game = entry.getValue();
+			if (!game.hasCover()) {
+				gameList.add(game);
+			}
+		}
+		return gameList;
+	}
+
+	@Override
 	public Game getGame(int gameId) {
 		return games.get(gameId);
 	}
@@ -672,6 +684,10 @@ public class BroExplorer implements Explorer {
 		return tmpTags;
 	}
 
+	@Override
+	public void setGameCode(int id, String gameCode) {
+		games.get(id).setGameCode(gameCode);
+	}
 	// @Override
 	// public void setEmulators(List<Emulator> emulators) {
 	// this.emulators.clear();

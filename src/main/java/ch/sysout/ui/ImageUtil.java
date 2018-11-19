@@ -5,6 +5,7 @@ import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 
 import javax.imageio.ImageIO;
@@ -187,5 +188,9 @@ public class ImageUtil {
 
 		// Return the buffered image
 		return bimage;
+	}
+
+	public static Image getBufferedImageFrom(InputStream is) throws IOException {
+		return ImageIO.read(is);
 	}
 }

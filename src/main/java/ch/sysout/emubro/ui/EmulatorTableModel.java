@@ -128,7 +128,7 @@ public class EmulatorTableModel extends DefaultTableModel {
 					//					g2d.drawImage(ico.getImage(), 0, 0, width, height, null);
 				}
 				if (ico == null) {
-					ico = ImageUtil.getImageIconFrom(System.getProperty("user.dir") + "/emubro-resources/images/emulators/"+emulator.getIconFilename(), true);
+					ico = ImageUtil.getImageIconFrom(System.getProperty("user.dir") + "/emubro-resources/platforms/emulators/"+emulator.getIconFilename(), true);
 				}
 				if (ico != null) {
 					ico = ImageUtil.scaleCover(ico, size, CoverConstants.SCALE_BOTH_OPTION);

@@ -46,7 +46,7 @@ public class BroExplorerDAO implements ExplorerDAO {
 	private GameDAO gameDAO;
 	private EmulatorDAO emulatorDAO;
 	private final int explorer_id;
-	private String expectedDbVersion = "0.1.0";
+	private String expectedDbVersion = "0.2.0";
 
 	public BroExplorerDAO(int explorer_id, Connection conn) throws IOException, SQLException, BroDatabaseVersionMismatchException {
 		this.explorer_id = explorer_id;
@@ -852,5 +852,10 @@ public class BroExplorerDAO implements ExplorerDAO {
 	@Override
 	public void setLastDirFromFolderChooser(String lastDirFromFolderChooser) throws SQLException {
 		doUpdate("explorer", "explorer_lastDirFromFolderChooser", lastDirFromFolderChooser, "explorer_id=0");
+	}
+
+	@Override
+	public void setGameCode(int id, String gameCode) throws SQLException {
+		gameDAO.setGameCode(id, gameCode);
 	}
 }

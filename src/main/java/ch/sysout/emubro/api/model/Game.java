@@ -127,4 +127,8 @@ public interface Game extends Comparable<Game> {
 	void removeTag(int tagId);
 
 	Tag getTag(int tagId);
+
+	String getGameCode();
+
+	void setGameCode(String gameCode);
 }

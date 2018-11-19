@@ -36,7 +36,6 @@ public class FindFile {
 			try {
 				File dir = dirQueue.take();
 				while (dir != null) {
-					System.err.println("while dir: "+dir.getAbsolutePath());
 					final File[] fi = dir.listFiles();
 					if (fi != null) {
 						for (final File file : fi) {
@@ -98,7 +97,6 @@ public class FindFile {
 						//						end();
 					}
 					dir = dirQueue.take();
-					System.err.println("eeeeeeeeeeeeeeend");
 				}
 			} catch (final InterruptedException ie) {
 				// file found or error
@@ -128,7 +126,6 @@ public class FindFile {
 				if (filename.toLowerCase().matches(name.toLowerCase())) {
 					//					end();
 					//					return file;
-					System.err.println(file.getAbsolutePath());
 				}
 				file = fileQueue.take();
 			}

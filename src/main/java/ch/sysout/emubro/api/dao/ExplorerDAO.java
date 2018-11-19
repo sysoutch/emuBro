@@ -153,4 +153,6 @@ public interface ExplorerDAO {
 	String getLastDirFromFolderChooser() throws SQLException;
 
 	void setLastDirFromFolderChooser(String absolutePath) throws SQLException;
+
+	void setGameCode(int id, String realName) throws SQLException;
 }

@@ -68,6 +68,7 @@ create table if not exists fileStructure (
 create table if not exists game (
 	game_id int identity,
 	game_name varchar(255),
+	game_gameCode varchar(255),
 	game_defaultFileId int,
 	game_checksumId int,
 	game_iconPath varchar(255),

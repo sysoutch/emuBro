@@ -950,7 +950,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 					int platformId = game.getPlatformId();
 					img = viewManager.getIconStore().getPlatformCover(platformId);
 				}
-				pnlPreviewPane.gameCoverChanged((img != null) ? img.getImage() : null);
+				pnlPreviewPane.gameCoverChanged(game, (img != null) ? img.getImage() : null);
 			}
 		}
 	}
@@ -1010,20 +1010,6 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 
 	public boolean isPreviewPaneVisible() {
 		return pnlPreviewPane.isVisible();
-	}
-
-	public int getCurrentViewPanelType() {
-		ViewPanel currentViewPanel = viewManager.getCurrentViewPanel();
-		if (currentViewPanel == pnlBlankView) {
-			return ViewPanel.BLANK_VIEW;
-		}
-		if (currentViewPanel == pnlListView) {
-			return ViewPanel.LIST_VIEW;
-		}
-		if (currentViewPanel == pnlTableView) {
-			return ViewPanel.TABLE_VIEW;
-		}
-		return ViewPanel.BLANK_VIEW;
 	}
 
 	public ViewPanel getCurrentViewPanel() {
@@ -1403,7 +1389,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 	public void gameCoverChanged(Game game, Image i) {
 		String gameCoverPath = game.getCoverPath();
 		viewManager.addGameCoverPath(game.getId(), gameCoverPath);
-		pnlPreviewPane.gameCoverChanged(i);
+		pnlPreviewPane.gameCoverChanged(game, i);
 	}
 
 	public int getDetailsPaneNotificationTab() {
@@ -1725,5 +1711,18 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 
 	public void showFilterPanel(boolean b) {
 		popupView.showFilterPanel(b);
+	}
+
+	public int getCurrentView() {
+		if (viewManager.getCurrentViewPanel() == pnlBlankView) {
+			return ViewPanel.BLANK_VIEW;
+		}
+		if (viewManager.getCurrentViewPanel() == pnlListView) {
+			return viewManager.getViewStyle();
+		}
+		if (viewManager.getCurrentViewPanel() == pnlTableView) {
+			return ViewPanel.TABLE_VIEW;
+		}
+		return ViewPanel.BLANK_VIEW;
 	}
 }

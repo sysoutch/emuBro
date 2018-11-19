@@ -1,0 +1,1 @@
+ALTER TABLE game ADD COLUMN game_gameCode VARCHAR(255);

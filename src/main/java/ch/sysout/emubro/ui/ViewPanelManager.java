@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.Action;
-import javax.swing.ImageIcon;
 import javax.swing.JPanel;
 
 import ch.sysout.emubro.api.TagListener;
@@ -31,7 +30,7 @@ import ch.sysout.emubro.impl.model.BroTag;
 import ch.sysout.emubro.impl.model.GameConstants;
 import ch.sysout.util.ScreenSizeUtil;
 
-public class ViewPanelManager implements GameCoverListener {
+public class ViewPanelManager {
 	List<ViewPanel> panels = new ArrayList<>();
 	private IconStore iconStore;
 	private List<Platform> platforms;
@@ -79,7 +78,6 @@ public class ViewPanelManager implements GameCoverListener {
 
 	public ViewPanelManager(IconStore iconStore) {
 		this.iconStore = iconStore;
-		iconStore.addGameCoverListener(this);
 		panels.add(pnlBlankView);
 	}
 
@@ -493,6 +491,10 @@ public class ViewPanelManager implements GameCoverListener {
 		}
 	}
 
+	public int getViewStyle() {
+		return viewStyle;
+	}
+
 	public void setViewStyle(int viewStyle) {
 		this.viewStyle = viewStyle;
 		for (ViewPanel pnl : panels) {
@@ -521,16 +523,6 @@ public class ViewPanelManager implements GameCoverListener {
 
 	public void addGameCoverPath(int gameId, String gameCoverPath) {
 		iconStore.addGameCoverPath(gameId, gameCoverPath);
-	}
-
-	@Override
-	public void gameCoverAdded(int gameId, ImageIcon ico) {
-		ico = iconStore.getScaledGameCover(gameId, currentCoverSize);
-		for (ViewPanel pnl : panels) {
-			if (pnl != null) {
-				pnl.gameCoverAdded(gameId, ico);
-			}
-		}
 	}
 
 	public int getCurrentCoverSize() {

@@ -67,6 +67,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 	private JMenu mnuShowTrailerWeb = new JMenu();
 	private JMenuItem itmDefaultTagSource = new JMenuItem();
 	private JMenuItem itmDefaultImportTagSource = new JMenuItem();
+	private JMenuItem itmDefaultCoverSourceEmuBro = new JMenuItem("emubro.net");
 	private JMenuItem itmDefaultCoverSource = new JMenuItem();
 	private JMenuItem itmDefaultTrailerSource = new JMenuItem();
 	private JMenuItem itmWebSearchSettings = new JMenuItem();
@@ -99,7 +100,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 				new JSeparator(), itmGameProperties);
 		addComponentsToJComponent(mnuRateGame, pnlRatingBar, new JSeparator(), itmComment);
 		addComponentsToJComponent(mnuShowTagsWeb, itmDefaultTagSource);
-		addComponentsToJComponent(mnuShowCoverWeb, itmDefaultCoverSource);
+		addComponentsToJComponent(mnuShowCoverWeb, itmDefaultCoverSourceEmuBro, itmDefaultCoverSource);
 		addComponentsToJComponent(mnuShowTrailerWeb, itmDefaultTrailerSource);
 
 		int size = ScreenSizeUtil.is3k() ? 24 : 16;
@@ -212,7 +213,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 				continue;
 			}
 			String s = "<html><strong>" + emu.getName() + "</strong> <br>(" + emu.getPath() + ")</html>";
-			String path = System.getProperty("user.dir")+"/emubro-resources/images/emulators/" + emu.getIconFilename();
+			String path = System.getProperty("user.dir")+"/emubro-resources/platforms/emulators/" + emu.getIconFilename();
 			Icon icon = ImageUtil.getImageIconFrom(path, true);
 			if (icon == null) {
 				icon = FileSystemView.getFileSystemView().getSystemIcon(new File(emu.getPath()));
@@ -287,6 +288,10 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 
 	public void addAutoSearchTagsListener(ActionListener l) {
 		itmAutoSearchTags.addActionListener(l);
+	}
+
+	public void addCoverFromEmuBroListener(ActionListener l) {
+		itmDefaultCoverSourceEmuBro.addActionListener(l);
 	}
 
 	public void addCoverFromWebListener(ActionListener l) {

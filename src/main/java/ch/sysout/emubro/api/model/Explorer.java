@@ -144,6 +144,10 @@ public interface Explorer {
 
 	void removeTagFromGame(int gameId, int tagId);
 
+	void setGameCode(int id, String gameCode);
+
+	List<Game> getGamesWithoutCovers();
+
 	// void addEmulator(Emulator emulator);
 	//
 	// void removeEmulator(Emulator emulator);
