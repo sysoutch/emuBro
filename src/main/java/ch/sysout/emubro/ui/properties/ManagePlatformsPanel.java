@@ -184,6 +184,10 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 		return pnlEmulators.getSelectedEmulator(getSelectedPlatform().getId());
 	}
 
+	public Emulator getSelectedDownloadEmulator() {
+		return pnlEmulators.getSelectedDownloadEmulator();
+	}
+
 	public void adjustSplitPaneDividerSizes() {
 		int dividerSize = pnlEmulators.spl1.getDividerSize();
 		int value = ScreenSizeUtil.adjustValueToResolution(dividerSize);
@@ -447,6 +451,10 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 			EmulatorTableModel emulatorModel = emulatorModels.get(platformId);
 			int row = tblEmulators.getSelectedRow();
 			return emulatorModel.getEmulator(tblEmulators.convertRowIndexToModel(row));
+		}
+
+		public Emulator getSelectedDownloadEmulator() {
+			return pnlAddEmulator.getSelectedEmulator();
 		}
 
 		private JPanel createEmulatorOverviewPanel() {
@@ -1613,6 +1621,14 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 
 	public void addDefaultEmulatorListener(DefaultEmulatorListener l) {
 		pnlEmulators.addDefaultEmulatorListener(l);
+	}
+
+	public void addDownloadEmulatorListener(ActionListener l) {
+		pnlEmulators.pnlAddEmulator.addDownloadEmulatorListener(l);
+	}
+
+	public void addDownloadEmulatorListener(MouseListener l) {
+		pnlEmulators.pnlAddEmulator.addDownloadEmulatorListener(l);
 	}
 
 	public void addSearchForEmulatorListener(ActionListener l) {

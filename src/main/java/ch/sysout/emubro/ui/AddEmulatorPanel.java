@@ -1,19 +1,14 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
-import java.awt.Desktop;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 
 import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
@@ -147,7 +142,7 @@ public class AddEmulatorPanel extends JPanel {
 		btnBack.addActionListener(l);
 	}
 
-	public class SupportedEmulatorsPanel extends JPanel implements ListSelectionListener, ActionListener {
+	public class SupportedEmulatorsPanel extends JPanel implements ListSelectionListener {
 		private static final long serialVersionUID = 1L;
 
 		private JList<Emulator> lstSupportedEmulators = new JList<>();
@@ -162,29 +157,15 @@ public class AddEmulatorPanel extends JPanel {
 
 		private void initComponents() {
 			lstSupportedEmulators.addListSelectionListener(this);
-			lstSupportedEmulators.addMouseListener(new MouseAdapter() {
-				@Override
-				public void mouseClicked(MouseEvent e) {
-					super.mouseClicked(e);
-					if (e.getClickCount() == 2) {
-						Emulator selectedEmulator = lstSupportedEmulators.getSelectedValue();
-						if (selectedEmulator != null) {
-							openWebsite(selectedEmulator.getWebsite());
-						}
-					}
-				}
-			});
 			btnDownloadEmulator = new JButton("Download emulator");
 			btnDownloadEmulatorAptGet = new JButton("apt-get install");
 			UIUtil.doHover(false, btnDownloadEmulator, btnDownloadEmulatorAptGet);
 			btnDownloadEmulator.setHorizontalAlignment(SwingConstants.LEFT);
 			btnDownloadEmulator.setEnabled(false);
-			btnDownloadEmulator.addActionListener(this);
 			btnDownloadEmulator.addMouseListener(UIUtil.getMouseAdapter());
 
 			btnDownloadEmulatorAptGet.setHorizontalAlignment(SwingConstants.LEFT);
 			btnDownloadEmulatorAptGet.setEnabled(false);
-			btnDownloadEmulatorAptGet.addActionListener(this);
 			btnDownloadEmulatorAptGet.addMouseListener(UIUtil.getMouseAdapter());
 
 			btnDownloadEmulator.addFocusListener(new FocusAdapter() {
@@ -238,6 +219,10 @@ public class AddEmulatorPanel extends JPanel {
 			add(pnl);
 		}
 
+		private Emulator getSelectedEmulator() {
+			return lstSupportedEmulators.getSelectedValue();
+		}
+
 		@Override
 		public void valueChanged(ListSelectionEvent e) {
 			if (!e.getValueIsAdjusting()) {
@@ -254,16 +239,6 @@ public class AddEmulatorPanel extends JPanel {
 				//			for (GameListener l : listeners) {
 				//				l.gameSelected(event);
 				//			}
-			}
-		}
-
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			if (e.getSource() == btnDownloadEmulator) {
-				Emulator selectedEmulator = lstSupportedEmulators.getSelectedValue();
-				if (selectedEmulator != null) {
-					openWebsite(selectedEmulator.getWebsite());
-				}
 			}
 		}
 	}
@@ -320,22 +295,19 @@ public class AddEmulatorPanel extends JPanel {
 		}
 	}
 
-	private void openWebsite(String website) {
-		if (Desktop.isDesktopSupported()) {
-			try {
-				URI uri = new URI(website);
-				Desktop.getDesktop().browse(uri);
-			} catch (IOException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			} catch (URISyntaxException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
-		}
+	public void addDownloadEmulatorListener(ActionListener l) {
+		pnlDownloadEmulators.btnDownloadEmulator.addActionListener(l);
+	}
+
+	public void addDownloadEmulatorListener(MouseListener l) {
+		pnlDownloadEmulators.lstSupportedEmulators.addMouseListener(l);
 	}
 
 	public void addSearchForEmulatorListener(ActionListener l) {
 		pnlReadyToInstallEmulators.btnSearchForEmulator.addActionListener(l);
+	}
+
+	public Emulator getSelectedEmulator() {
+		return pnlDownloadEmulators.getSelectedEmulator();
 	}
 }

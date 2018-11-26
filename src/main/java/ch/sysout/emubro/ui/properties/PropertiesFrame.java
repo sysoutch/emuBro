@@ -149,6 +149,14 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 		pnlManagePlatforms.addDefaultEmulatorListener(l);
 	}
 
+	public void addDownloadEmulatorListener(ActionListener l) {
+		pnlManagePlatforms.addDownloadEmulatorListener(l);
+	}
+
+	public void addDownloadEmulatorListener(MouseListener l) {
+		pnlManagePlatforms.addDownloadEmulatorListener(l);
+	}
+
 	public void addSearchForEmulatorListener(ActionListener l) {
 		pnlManagePlatforms.addSearchForEmulatorListener(l);
 	}
@@ -730,5 +738,9 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 
 	public Emulator getSelectedEmulator() {
 		return pnlManagePlatforms.getSelectedEmulator();
+	}
+
+	public Emulator getSelectedDownloadEmulator() {
+		return pnlManagePlatforms.getSelectedDownloadEmulator();
 	}
 }

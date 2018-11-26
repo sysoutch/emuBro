@@ -1,24 +1,12 @@
 -- other notes --
-2015 - 2018
+add new platform
+platformdetection file changed
+auto detect and handle multiple same .filetypes (for example .elf) in different platforms
 
-	emubro:
-	basic game launcher - 2015
-	give it some sense - 2016
-	bug fixes and basic changes / optis 2017
-	2017/2018 define final features for beta
-
-	view context menu right click ausprogrammieren
-	add new platform
-	platformdetection file changed
-	auto detect and handle multiple same .filetypes (for example .elf) in different platforms
-
-	challenges:
-	add iso / rar wrong platform then change it
+challenges:
+add iso / rar wrong platform then change it
 
 -- helpful links --
-https://www.gametdb.com/Wii/Downloads
-google search: site:https://www.gametdb.com/ "mario kart"
-
 snes9x wiki:
 http://wiki.arcadecontrols.com/wiki/Snes9x#Command_Line_Parameters
 
@@ -28,9 +16,11 @@ https://www.lifewire.com/command-line-commands-for-control-panel-applets-2626060
 +-----------+
 | 	v0.8.0	 |
 +-----------+
-- new feature: auto download covers for games
+- new feature: auto download covers and set real titles for games
+- new feature: auto download emulators
 - added: slider view
 - added: a game can now have an id. e.g. (Mario Kart Wii RMCP01)
+- fixed: annoying row height changes when switching views
 - fixed: startup speed improved a lot by lazy loading game covers
 - changed: emubro-resources folder structure
 - 
@@ -45,7 +35,17 @@ https://www.lifewire.com/command-line-commands-for-control-panel-applets-2626060
 test release
 
 -- to do ---
-TODO download emulator feature
+TODO show response when adding emulators
+TODO drag drop folder does nothing
+TODO dont ask for add covers when only add emus
+TODO search folders as before dont search .folder and hidden etc.
+TODO show filename in choose game name dialog
+FIXME no emulator icons at all
+TODO download emulator wizard
+TODO checksum for emus to check different versions
+FIXME change cover again
+TODO what if game checksum changes - other checksum other version...
+
 TODO download game titles properties at start/add game and ask to update titles db somehow
 	also ask once for multiple games
 TODO settings: add cover settings manager (cover pack download + local store)
@@ -87,7 +87,7 @@ FIXME 4 	my platforms while searching
 TODO 5 	load default settings when frame position out of bounds (multi monitor bug)
 FIXME 8 	catch opacity exception by calling setOpaque(boolean) method (mouselistener not working when rootpane is not opaque)
 TODO 9 	reset emulator id for games to default when emulator has been removed. request user interaction when file has been moved or renamed on start run
-FIXME 15 NiceAlignment = ON # on to line up the =, :, and # in each section of this config file
+FIXME 15 (user property parser) NiceAlignment = ON # on to line up the =, :, and # in each section of this config file
 FIXME 18 preview pane doesnt refresh after change game name via multiple rename games
 TODO 40 	apt-get install feature under linux
 FIXME 70 when choosing name of parent folder when renaming game and then remove brackets wont show rename multiple games dialog when clicking ok
