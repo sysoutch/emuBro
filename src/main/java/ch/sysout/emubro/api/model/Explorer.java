@@ -1,6 +1,6 @@
 package ch.sysout.emubro.api.model;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
@@ -118,7 +118,7 @@ public interface Explorer {
 
 	void setChecksums(Map<Integer, String> checksums);
 
-	boolean isExcludedFileOrDirectory(File file);
+	boolean isExcludedFileOrDirectory(Path file);
 
 	boolean hasTag(String name);
 

@@ -164,7 +164,6 @@ import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.protocol.HTTP;
 import org.codehaus.plexus.util.StringUtils;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
@@ -977,7 +976,7 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	@Override
-	public void searchForPlatform(File file) {
+	public void searchForPlatform(Path file) {
 		//		List<Platform> platforms = explorer.getPlatforms();
 		//		boolean useDefaultPlatforms = defaultPlatforms != null
 		//				&& defaultPlatforms.size() > 0;
@@ -1054,13 +1053,13 @@ GameSelectionListener, BrowseComputerListener {
 	// }
 	// }
 
-	private void searchForGameOrEmulator(File file)
+	private void searchForGameOrEmulator(Path file)
 			throws ZipException, RarException, IOException, BroGameDeletedException {
-		if (file.length() == 0) {
+		if (file.toFile().length() == 0) {
 			return;
 		}
 		try {
-			String filePath = file.getAbsolutePath();
+			String filePath = file.toString();
 			List<Platform> platforms = explorer.getPlatforms();
 			List<Platform> pList = isEmulator(filePath, platforms);
 			boolean noEmulators = pList.isEmpty();
@@ -2446,10 +2445,10 @@ GameSelectionListener, BrowseComputerListener {
 	 * @throws RarException
 	 * @throws IOException
 	 */
-	private void manuallyCheckAddGameOrEmulator(File file, boolean downloadCover) throws ZipException, SQLException, RarException, IOException {
-		String filePath = file.getAbsolutePath();
+	private void manuallyCheckAddGameOrEmulator(Path file, boolean downloadCover) throws ZipException, SQLException, RarException, IOException {
+		String filePath = file.toString();
 		if (ValidationUtil.isPictureFile(file)) {
-			checkPicture(file);
+			checkPicture(file.toFile());
 			return;
 		}
 		if (ValidationUtil.isWindows() && ValidationUtil.isLinkFile(file)) {
@@ -2465,7 +2464,7 @@ GameSelectionListener, BrowseComputerListener {
 			view.getViewManager().selectGame(game.getId());
 			return;
 		}
-		if (file.length() == 0L) {
+		if (file.toFile().length() == 0L) {
 			UIUtil.showErrorMessage(view, "This file seems to be empty (0 bytes).\n\n"
 					+ filePath + "\n\n"
 					+ "Sorry but this is not supported.\n"
@@ -2485,7 +2484,7 @@ GameSelectionListener, BrowseComputerListener {
 					boolean doAddGame = true;
 					for (Platform p : explorer.getPlatforms()) {
 						if (explorer.hasEmulator(p.getName(), filePath)) {
-							String message = "<html><h3>Emulator detected.</h3>" + file.getAbsolutePath() + "<br><br>"
+							String message = "<html><h3>Emulator detected.</h3>" + file.toString() + "<br><br>"
 									+ "This file has been recognized and added as an emulator.</html>";
 							String title = "Emulator detected";
 							JOptionPane.showMessageDialog(view, message, title, JOptionPane.INFORMATION_MESSAGE);
@@ -2581,7 +2580,7 @@ GameSelectionListener, BrowseComputerListener {
 		worker.execute();
 	}
 
-	private void askUserToCategorize(String filePath, File file) throws SQLException {
+	private void askUserToCategorize(String filePath, Path file) throws SQLException {
 		String title = Messages.get(MessageConstants.PLATFORM_NOT_RECOGNIZED_TITLE);
 		List<Platform> platforms = explorer.getPlatforms();
 		Platform[] objectsArr = platforms.toArray(new Platform[platforms.size()]);
@@ -2644,7 +2643,7 @@ GameSelectionListener, BrowseComputerListener {
 		return filePath.toLowerCase().endsWith(".cue");
 	}
 
-	private void checkMetaFile(String filePath, File file, boolean downloadCover) {
+	private void checkMetaFile(String filePath, Path file, boolean downloadCover) {
 		String message = "This is a metadata file. Different platforms may use this file.\n\n"
 				+ "Select a platform from the list below to categorize the game.";
 		String title = "Disc image";
@@ -2659,7 +2658,7 @@ GameSelectionListener, BrowseComputerListener {
 		}
 	}
 
-	private void checkImage(String filePath, File file, boolean downloadCover) {
+	private void checkImage(String filePath, Path file, boolean downloadCover) {
 		String message = "<html><h3>This is an image file.</h3>"
 				+ "Different platforms may use this file.<br><br>"
 				+ "Select a platform from the list below to categorize the game.</html>";
@@ -2682,7 +2681,7 @@ GameSelectionListener, BrowseComputerListener {
 					public void run() {
 						LineIterator it;
 						try {
-							it = FileUtils.lineIterator(file);
+							it = FileUtils.lineIterator(file.toFile());
 							outterLoop:
 								while (it.hasNext()) {
 									String current = it.next();
@@ -2720,7 +2719,7 @@ GameSelectionListener, BrowseComputerListener {
 		}
 	}
 
-	private void checkRar(String filePath, File file, boolean downloadCover) throws RarException, IOException {
+	private void checkRar(String filePath, Path file, boolean downloadCover) throws RarException, IOException {
 		String message = "<html><h3>This is a RAR-Compressed archive.</h3>" + filePath
 				+ "<br><br>" + "Do you want to auto detect the platform for the containing game?<br><br>"
 				+ "When you press \"No\", you have to categorize it for yourself.</html>";
@@ -2758,12 +2757,12 @@ GameSelectionListener, BrowseComputerListener {
 		}
 	}
 
-	private void checkLink(File file, boolean downloadCover) throws IOException, SQLException, RarException {
+	private void checkLink(Path file, boolean downloadCover) throws IOException, SQLException, RarException {
 		LnkParser lnkParser = new LnkParser(file);
-		manuallyCheckAddGameOrEmulator(new File(lnkParser.getRealFilename()), downloadCover);
+		manuallyCheckAddGameOrEmulator(Paths.get(lnkParser.getRealFilename()), downloadCover);
 	}
 
-	private void checkZipForGame(String filePath, File file, boolean downloadCover) throws ZipException, IOException { String message = "<html><h3>This is a ZIP-Compressed archive.</h3>" + filePath
+	private void checkZipForGame(String filePath, Path file, boolean downloadCover) throws ZipException, IOException { String message = "<html><h3>This is a ZIP-Compressed archive.</h3>" + filePath
 			+ "<br><br>" + "Do you want to auto detect the platform for the containing game?<br><br>"
 			+ "When you press \"No\", you have to categorize it for yourself.</html>";
 	String title = "ZIP-Archive";
@@ -2794,7 +2793,7 @@ GameSelectionListener, BrowseComputerListener {
 	}
 	}
 
-	private void check7Zip(String filePath, File file, boolean downloadCover) {
+	private void check7Zip(String filePath, Path file, boolean downloadCover) {
 		String message = "<html><h3>This is a 7-Zip-Compressed archive.</h3>" + filePath
 				+ "<br><br>" + "Currently you must unzip it yourself and then add the game.<br/><br/>"
 				+ "<a href='bla.com'>Download 7-Zip to unzip this archive</a></html>";
@@ -2802,7 +2801,7 @@ GameSelectionListener, BrowseComputerListener {
 		JOptionPane.showMessageDialog(view, message, title, JOptionPane.OK_OPTION);
 	}
 
-	private void checkExe(String filePath, Platform p0, File file, boolean downloadCover) throws BroEmulatorDeletedException {
+	private void checkExe(String filePath, Platform p0, Path file, boolean downloadCover) throws BroEmulatorDeletedException {
 		String title = Messages.get(MessageConstants.PLATFORM_NOT_RECOGNIZED_TITLE);
 		List<Platform> platforms = explorer.getPlatforms();
 		Platform[] objectsArr = platforms.toArray(new Platform[platforms.size()]);
@@ -2864,8 +2863,9 @@ GameSelectionListener, BrowseComputerListener {
 				Platform selectedPlatform = (Platform) cmbPlatforms.getSelectedItem();
 				System.out.println("This should add new emulator for platform "+ selectedPlatform.getName());
 
-				String emulatorName = FilenameUtils.getBaseName(file.getName());
-				String iconFileName = FilenameUtils.getBaseName(file.getName())+".png";
+				String fileName = file.getFileName().toString();
+				String emulatorName = FilenameUtils.getBaseName(fileName);
+				String iconFileName = FilenameUtils.getBaseName(fileName)+".png";
 				BroEmulator emulator = new BroEmulator(EmulatorConstants.NO_EMULATOR, emulatorName, filePath, "",
 						"", "", "%emupath% %gamepath%", new String[] { }, iconFileName, "", true);
 				if (dlgAddEmulator == null) {
@@ -2920,7 +2920,7 @@ GameSelectionListener, BrowseComputerListener {
 				//								}
 			} else {
 				try {
-					manuallyCheckAddGameOrEmulator(file, false);
+					manuallyCheckAddGameOrEmulator(file.toPath(), false);
 					Game game = explorer.getGameForFile(file.getAbsolutePath());
 					games.add(game);
 				} catch (SQLException | RarException | IOException e) {
@@ -3335,7 +3335,7 @@ GameSelectionListener, BrowseComputerListener {
 							if (file.isDirectory()) {
 								manuallyCheckAddGamesOrEmulators(files);
 							} else {
-								manuallyCheckAddGameOrEmulator(file, true);
+								manuallyCheckAddGameOrEmulator(file.toPath(), true);
 							}
 						}
 						if (files.size() > 1) {
@@ -5108,7 +5108,7 @@ GameSelectionListener, BrowseComputerListener {
 				String url = "https://emubro.net/zipCovers.php";
 				HttpPost httppost = new HttpPost(url);
 				try {
-					httppost.setEntity(new UrlEncodedFormEntity(nameValuePairs, HTTP.UTF_8));
+					httppost.setEntity(new UrlEncodedFormEntity(nameValuePairs, "UTF-8"));
 
 					SwingUtilities.invokeLater(new Runnable() {
 
@@ -5768,7 +5768,7 @@ GameSelectionListener, BrowseComputerListener {
 							if (file.isDirectory()) {
 								manuallyCheckAddGamesOrEmulators(data);
 							} else {
-								manuallyCheckAddGameOrEmulator(file, true);
+								manuallyCheckAddGameOrEmulator(file.toPath(), true);
 							}
 						} catch (SQLException e) {
 							// TODO Auto-generated catch block
@@ -7149,11 +7149,11 @@ GameSelectionListener, BrowseComputerListener {
 		});
 	}
 
-	public void addGame(Platform p0, File file, boolean downloadCover) throws BroGameDeletedException {
+	public void addGame(Platform p0, Path file, boolean downloadCover) throws BroGameDeletedException {
 		addGame(p0, file, false, false, false);
 	}
 
-	public void addGame(Platform p0, File file, boolean manuallyAdded, boolean favorite, boolean downloadCover) {
+	public void addGame(Platform p0, Path file, boolean manuallyAdded, boolean favorite, boolean downloadCover) {
 		String checksum = null;
 		if (digest == null) {
 			try {
@@ -7179,7 +7179,7 @@ GameSelectionListener, BrowseComputerListener {
 				return;
 			}
 		}
-		String filePath = file.getAbsolutePath();
+		String filePath = file.toString();
 		String[] arr = filePath.split(getSeparatorBackslashed());
 		String fileName = arr[arr.length - 1];
 		if (explorer.isKnownExtension(FilenameUtils.getExtension(fileName))) {
@@ -7224,7 +7224,7 @@ GameSelectionListener, BrowseComputerListener {
 				}
 			}
 			if (filePath.toLowerCase().endsWith(".exe")) {
-				ImageIcon ii = (ImageIcon) FileSystemView.getFileSystemView().getSystemIcon(file);
+				ImageIcon ii = (ImageIcon) FileSystemView.getFileSystemView().getSystemIcon(file.toFile());
 				int width = ii.getIconWidth();
 				int height = ii.getIconHeight();
 				double size = 32;
@@ -7290,8 +7290,8 @@ GameSelectionListener, BrowseComputerListener {
 		}
 	}
 
-	private String getFileChecksum(MessageDigest digest, File file) throws IOException {
-		FileInputStream fis = new FileInputStream(file);
+	private String getFileChecksum(MessageDigest digest, Path file) throws IOException {
+		FileInputStream fis = new FileInputStream(file.toString());
 		byte[] byteArray = new byte[1024];
 		int bytesCount = 0;
 		while ((bytesCount = fis.read(byteArray)) != -1) {
@@ -7521,8 +7521,12 @@ GameSelectionListener, BrowseComputerListener {
 				System.out.println("matched strings: "+keySet);
 
 				Object[] arr = keySet.toArray();
-				String n = (String) JOptionPane.showInputDialog(view, "Select the correct name for your game "+gameName,
-						"Select game name", JOptionPane.QUESTION_MESSAGE, null, arr, arr[0]);
+				String n = (String) JOptionPane.showInputDialog(view,
+						"<html><strong>"+gameName +"</strong></html>\n"
+								+ explorer.getPlatform(game.getPlatformId()).getName()
+								+ "\n\n"
+								+ "Select the correct name for this game:",
+								"Select game name", JOptionPane.QUESTION_MESSAGE, null, arr, arr[0]);
 				if (n != null && !n.trim().isEmpty()) {
 					realName = n;
 					explorer.setGameCode(game.getId(), map.get(n));

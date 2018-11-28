@@ -137,7 +137,7 @@ public class UpdateDialog extends JDialog implements ActionListener {
 
 	public void applicationUpdateAvailable(boolean applicationUpdateAvailable) {
 		Color available = Color.red;
-		Color upToDate = Color.green;
+		Color upToDate = UIManager.getColor("Button.foreground");
 		btnGettingAppVersion.setEnabled(applicationUpdateAvailable);
 		btnGettingAppVersion.setForeground(applicationUpdateAvailable ? available : upToDate);
 	}

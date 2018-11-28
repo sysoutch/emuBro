@@ -1,7 +1,7 @@
 package ch.sysout.util;
 
 import java.awt.Color;
-import java.io.File;
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Map;
 
@@ -149,14 +149,18 @@ public class ValidationUtil {
 		return SUCCESS_HOVER_BACKGROUND;
 	}
 
-	public static boolean isLinkFile(File file) {
-		return file.getAbsolutePath().toLowerCase().endsWith(".lnk");
+	public static boolean isLinkFile(Path file) {
+		return file.toString().toLowerCase().endsWith(".lnk");
 	}
 
-	public static boolean isPictureFile(File file) {
-		return file.getAbsolutePath().toLowerCase().endsWith(".png")
-				|| file.getAbsolutePath().toLowerCase().endsWith(".jpg")
-				|| file.getAbsolutePath().toLowerCase().endsWith(".jpeg")
-				|| file.getAbsolutePath().toLowerCase().endsWith(".gif");
+	public static boolean isPictureFile(Path file) {
+		return file.toString().toLowerCase().endsWith(".png")
+				|| file.toString().toLowerCase().endsWith(".jpg")
+				|| file.toString().toLowerCase().endsWith(".jpeg")
+				|| file.toString().toLowerCase().endsWith(".bmp")
+				|| file.toString().toLowerCase().endsWith(".gif")
+				|| file.toString().toLowerCase().endsWith(".tif")
+				|| file.toString().toLowerCase().endsWith(".tiff")
+				|| file.toString().toLowerCase().endsWith(".ico");
 	}
 }

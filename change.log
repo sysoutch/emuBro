@@ -20,6 +20,7 @@ https://www.lifewire.com/command-line-commands-for-control-panel-applets-2626060
 - new feature: auto download emulators
 - added: slider view
 - added: a game can now have an id. e.g. (Mario Kart Wii RMCP01)
+- fixed: reimproved browsing computer feature
 - fixed: annoying row height changes when switching views
 - fixed: startup speed improved a lot by lazy loading game covers
 - changed: emubro-resources folder structure
@@ -35,21 +36,20 @@ https://www.lifewire.com/command-line-commands-for-control-panel-applets-2626060
 test release
 
 -- to do ---
-TODO show response when adding emulators
-TODO drag drop folder does nothing
-TODO dont ask for add covers when only add emus
+TODO feature to online check the file by checksum to identify emulator/game (when everything other fails)
+TODO own detection for emulator setup files
 TODO search folders as before dont search .folder and hidden etc.
-TODO show filename in choose game name dialog
 FIXME no emulator icons at all
+TODO show response when adding emulators
+TODO dont ask for add covers when only add emus
+TODO drag drop folder does nothing
 TODO download emulator wizard
 TODO checksum for emus to check different versions
 FIXME change cover again
 TODO what if game checksum changes - other checksum other version...
 
 TODO download game titles properties at start/add game and ask to update titles db somehow
-	also ask once for multiple games
 TODO settings: add cover settings manager (cover pack download + local store)
-FIXME last view content or covers not set at next start up
 FIXME sort behaviour
 			- sort ascending after sort by platform does sort by title asc
 TODO ESC key to close aboutdialog, gameproperties dialog, help dialog and update dialog
@@ -72,8 +72,7 @@ TODO 0 file not found help
 			- 	file moved to subfolder or parent folder / or to another folder
 			-	drive letter no longer available
 			- 	file deleted
-TODO 0 	initial start user help
-TODO 0 	drag and drop emulator check everything. also drag and drop dolphin or visualboy advanced for multiple platform selection
+TODO 0 	initial start user help (with fancy arrows and shit)
 TODO 0 	F5 refresh sort
 TODO 0 	initial window sizes
 TODO 0 	linux package and wine support
@@ -87,7 +86,7 @@ FIXME 4 	my platforms while searching
 TODO 5 	load default settings when frame position out of bounds (multi monitor bug)
 FIXME 8 	catch opacity exception by calling setOpaque(boolean) method (mouselistener not working when rootpane is not opaque)
 TODO 9 	reset emulator id for games to default when emulator has been removed. request user interaction when file has been moved or renamed on start run
-FIXME 15 (user property parser) NiceAlignment = ON # on to line up the =, :, and # in each section of this config file
+FIXME 15 (use property parser) NiceAlignment = ON # on to line up the =, :, and # in each section of this config file
 FIXME 18 preview pane doesnt refresh after change game name via multiple rename games
 TODO 40 	apt-get install feature under linux
 FIXME 70 when choosing name of parent folder when renaming game and then remove brackets wont show rename multiple games dialog when clicking ok
@@ -99,13 +98,6 @@ TODO 	rating bar out of bounds (with tab. no error)
 TODO export games (also drag out of emubro) and manage file locations
 TODO export function for emubro to usb stick
 FIXME drag and drop with text in searchfield (focus gained isnt called)
-TODO multilanguage tags.
-(<tags>
-		<tag id="single-player">
-			<de>Einzelspieler</de>
-			<en>Single-player</en>
-		</tag>
-	</tags>)
 TODO 	save search profiles
 TODO 	group tags
 TODO 	better pid handling for stopping emulation. currently it waits 3 seconds for executing getTaskList() again, so the process hopefully is now running.

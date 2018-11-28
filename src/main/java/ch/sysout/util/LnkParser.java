@@ -1,13 +1,13 @@
 package ch.sysout.util;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.file.Path;
 
 public class LnkParser {
-	public LnkParser(File f) throws IOException {
-		parse(f);
+	public LnkParser(Path path) throws IOException {
+		parse(path);
 	}
 
 	private boolean isDirectory;
@@ -23,9 +23,9 @@ public class LnkParser {
 		return real_file;
 	}
 
-	private void parse(File f) throws IOException {
+	private void parse(Path f) throws IOException {
 		// read the entire file into a byte buffer
-		FileInputStream fin = new FileInputStream(f);
+		FileInputStream fin = new FileInputStream(f.toString());
 		ByteArrayOutputStream bout = new ByteArrayOutputStream();
 		byte[] buff = new byte[256];
 		while (true) {

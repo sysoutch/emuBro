@@ -1,7 +1,6 @@
 package ch.sysout.emubro.impl.model;
 
-import java.io.File;
-import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -11,7 +10,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 
 import ch.sysout.emubro.api.model.Emulator;
@@ -20,7 +18,6 @@ import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.api.model.Tag;
 import ch.sysout.util.FileUtil;
-import ch.sysout.util.ValidationUtil;
 
 public class BroExplorer implements Explorer {
 	private Map<Integer, Game> games = new HashMap<>();
@@ -536,38 +533,26 @@ public class BroExplorer implements Explorer {
 	}
 
 	@Override
-	public boolean isExcludedFileOrDirectory(File f) {
-		if (f.isHidden()) {
-			return true;
-		}
-		boolean symlink = false;
-		try {
-			symlink = FileUtils.isSymlink(f);
-		} catch (IOException e) {
-			symlink = true;
-		}
-		if (symlink) {
-			return true;
-		}
-		String path = f.getAbsolutePath().toLowerCase();
-		String folder = f.getName();
-		if (ValidationUtil.isUnix()) {
-			return isOnBlackList(path, folder);
-		} else if (ValidationUtil.isWindows()) {
-			String winDir = System.getenv("WINDIR").toLowerCase();
-			return folder.startsWith(".") || folder.startsWith("~") || folder.startsWith("$") || path.startsWith(winDir)
-					|| folder.endsWith(".lnk")
-					|| (path.matches("^(.+)\\\\AppData\\\\Local(.*)|"
-							+ "^(.+)\\\\AppData\\\\LocalRow(.*)$|"
-							+ "^(.+)\\\\AppData\\\\Roaming(.*)|"
-							+ "^(.+)\\\\steam\\\\bin\\\\shaders$|"
-							+ "^(.+)\\\\lenovo\\\\lenovo photo master\\\\shadercode$|"
-							+ "^(.+)\\\\origin\\\\production.wad$"));
-		} else if (ValidationUtil.isMac()) {
-
-		} else if (ValidationUtil.isSolaris()) {
-
-		}
+	public boolean isExcludedFileOrDirectory(Path f) {
+		//		String path = f.getAbsolutePath().toLowerCase();
+		//		String folder = f.getName();
+		//		if (ValidationUtil.isUnix()) {
+		//			return isOnBlackList(path, folder);
+		//		} else if (ValidationUtil.isWindows()) {
+		//			String winDir = System.getenv("WINDIR").toLowerCase();
+		//			return folder.startsWith(".") || folder.startsWith("~") || folder.startsWith("$") || path.startsWith(winDir)
+		//					|| folder.endsWith(".lnk")
+		//					|| (path.matches("^(.+)\\\\AppData\\\\Local(.*)|"
+		//							+ "^(.+)\\\\AppData\\\\LocalRow(.*)$|"
+		//							+ "^(.+)\\\\AppData\\\\Roaming(.*)|"
+		//							+ "^(.+)\\\\steam\\\\bin\\\\shaders$|"
+		//							+ "^(.+)\\\\lenovo\\\\lenovo photo master\\\\shadercode$|"
+		//							+ "^(.+)\\\\origin\\\\production.wad$"));
+		//		} else if (ValidationUtil.isMac()) {
+		//
+		//		} else if (ValidationUtil.isSolaris()) {
+		//
+		//		}
 		return false;
 	}
 

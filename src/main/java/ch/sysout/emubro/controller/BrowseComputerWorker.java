@@ -13,6 +13,7 @@ import javax.swing.SwingWorker;
 import ch.sysout.emubro.api.dao.ExplorerDAO;
 import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.ui.MainFrame;
+import ch.sysout.emubro.util.MyFileVisitor;
 
 class BrowseComputerWorker extends SwingWorker<Void, File> {
 	long searchProcessEnded;
@@ -56,7 +57,7 @@ class BrowseComputerWorker extends SwingWorker<Void, File> {
 	private void searchRoots(List<File> files) {
 		for (File currentRoot : files) {
 			if (currentRoot.canRead()) {
-				String extensionsString = explorer.getExtensionsRegexString();
+				//				String extensionsString = explorer.getExtensionsRegexString();
 
 				//				//		String filename = extensionsString;
 				//				//		File baseDir = root;
@@ -131,14 +132,17 @@ class BrowseComputerWorker extends SwingWorker<Void, File> {
 
 				//				FileSystemView fsv = FileSystemView.getFileSystemView();
 				String str = currentRoot.toString();
-				String slash = "\\";
-				String s = new StringBuilder(str).append(slash).toString();
+				String s = new StringBuilder(str).append(File.separator).toString();
 				Path startingDir = Paths.get(s);
+				MyFileVisitor fileVisitor = new MyFileVisitor();
+
 				finder = new Finder(explorer, this);
 				finder.addDirectorySearchedListener(view);
 				finder.addBrowseComputerListener(browseComputerListeners);
 				try {
 					Files.walkFileTree(startingDir, finder);
+					System.out.print("found: " + fileVisitor.getFileCount() + " files in ");
+					System.out.println(fileVisitor.getDirCount()+ " directories");
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
@@ -165,13 +169,13 @@ class BrowseComputerWorker extends SwingWorker<Void, File> {
 				} else if (type.endsWith(".iso")) {
 					fireIsoFileDetectedEvent(filePath);
 				} else {
-					fireSearchForPlatformEvent(file);
+					//					fireSearchForPlatformEvent(file);
 				}
 			}
 		}
 	}
 
-	private void fireSearchForPlatformEvent(File file) {
+	private void fireSearchForPlatformEvent(Path file) {
 		for (BrowseComputerListener l : browseComputerListeners) {
 			l.searchForPlatform(file);
 		}
