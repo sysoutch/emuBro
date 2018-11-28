@@ -1,3 +1,3 @@
 [submodule "emubro-resources"]
 	path = emubro-resources
-	url = https://github.com/sysoutch/emubro-resources.git
+	url = git@github.com:sysoutch/emubro-resources.git
