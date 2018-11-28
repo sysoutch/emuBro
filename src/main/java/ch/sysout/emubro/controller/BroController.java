@@ -366,6 +366,7 @@ GameSelectionListener, BrowseComputerListener {
 	private Map<String, Properties> mapProps = new HashMap<>();
 	private JDialog dlgDownloadCovers;
 	private JProgressBar progress;
+	private File lastEmuDownloadDirectory;
 
 	public BroController(ExplorerDAO explorerDAO, Explorer model, MainFrame view) {
 		this.explorerDAO = explorerDAO;
@@ -787,14 +788,8 @@ GameSelectionListener, BrowseComputerListener {
 		for (int i = 0; i < jsonArrayAssets.size(); i++) {
 			JsonObject el = jsonArrayAssets.get(i).getAsJsonObject();
 			System.out.println(el.get("name"));
-			if (ValidationUtil.isWindows()) {
-				if (el.get("name").getAsString().equals("emuBro.exe")) {
-					downloadLink = el.get("browser_download_url").getAsString();
-				}
-			} else {
-				if (el.get("name").getAsString().equals("emuBro.jar")) {
-					downloadLink = el.get("browser_download_url").getAsString();
-				}
+			if (el.get("name").getAsString().equals("emuBro.jar")) {
+				downloadLink = el.get("browser_download_url").getAsString();
 			}
 		}
 
@@ -843,7 +838,7 @@ GameSelectionListener, BrowseComputerListener {
 						con = url.openConnection();
 						con.setReadTimeout(20000);
 						String userTmp = System.getProperty("java.io.tmpdir");
-						String pathname = userTmp + Messages.get(MessageConstants.APPLICATION_TITLE) + ".tmp";
+						String pathname = userTmp + Messages.get(MessageConstants.APPLICATION_TITLE) + ".jar";
 						File applicationFile = new File(pathname);
 						try {
 							FileUtils.copyURLToFile(url, applicationFile);
@@ -2401,8 +2396,8 @@ GameSelectionListener, BrowseComputerListener {
 				String command = "";
 				if (ValidationUtil.isWindows()) {
 					command = "cmd /c ping localhost -n 2 > nul"
-							+ " && move /Y \""+pathname+"\" \""+userDir+"/"+Messages.get(MessageConstants.APPLICATION_TITLE)+".exe\""
-							+ " && start "+Messages.get(MessageConstants.APPLICATION_TITLE)+".exe --changelog";
+							+ " && move /Y \""+pathname+"\" \""+userDir+"/"+Messages.get(MessageConstants.APPLICATION_TITLE)+".jar\""
+							+ " && java -jar "+Messages.get(MessageConstants.APPLICATION_TITLE)+".jar --changelog";
 				} else {
 					command = "sleep 2"
 							+ " && mv -f \""+pathname+"\" \""+userDir+"/"+Messages.get(MessageConstants.APPLICATION_TITLE)+".jar\""
@@ -4916,21 +4911,23 @@ GameSelectionListener, BrowseComputerListener {
 			return;
 		}
 		System.err.println("download emu from: "+downloadLink);
-		String userTmp = System.getProperty("java.io.tmpdir");
-		String pathname = userTmp + FilenameUtils.getName(downloadLink);
-		String withoutExtension = FilenameUtils.removeExtension(FilenameUtils.getName(downloadLink));
-		final String destFile;
 
 		JFileChooser fc = new JFileChooser();
 		fc.setDialogType(JFileChooser.SAVE_DIALOG);
-		fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-		int returnValue = fc.showOpenDialog(view);
-		if (returnValue == JFileChooser.APPROVE_OPTION) {
-			destFile = fc.getSelectedFile().getAbsolutePath() + File.separator + FilenameUtils.getName(downloadLink);
-		} else {
-			destFile = pathname;
+		fc.setFileSelectionMode(JFileChooser.FILES_ONLY);
+		if (lastEmuDownloadDirectory == null) {
+			lastEmuDownloadDirectory = new File(System.getProperty("user.home"));
 		}
-		final String destDir = FilenameUtils.removeExtension(destFile);
+		fc.setCurrentDirectory(lastEmuDownloadDirectory);
+		fc.setSelectedFile(new File(FilenameUtils.getName(downloadLink)));
+		int returnValue = fc.showSaveDialog(view);
+		final File destFile;
+		if (returnValue == JFileChooser.APPROVE_OPTION) {
+			destFile = fc.getSelectedFile();
+			lastEmuDownloadDirectory = fc.getCurrentDirectory();
+		} else {
+			return;
+		}
 		URL url2 = null;
 		try {
 			url2 = new URL(downloadLink);
@@ -4953,16 +4950,14 @@ GameSelectionListener, BrowseComputerListener {
 					}
 					if (con != null) {
 						con.setReadTimeout(20000);
-						File zipOrExeFile = new File(destFile);
 						try {
-							FileUtils.copyURLToFile(urlFinal, zipOrExeFile);
+							FileUtils.copyURLToFile(urlFinal, destFile);
 						} catch (IOException e1) {
 							e1.printStackTrace();
 							SwingUtilities.invokeLater(new Runnable() {
 
 								@Override
 								public void run() {
-									UIUtil.showErrorMessage(view, "invalid url "+downloadLink, "error downloading emulator");
 									try {
 										UIUtil.openWebsite(selectedEmulator.getWebsite());
 									} catch (IOException | URISyntaxException e) {
@@ -4976,20 +4971,27 @@ GameSelectionListener, BrowseComputerListener {
 						// move the file first
 						List<Platform> p = null;
 						try {
-							p = isEmulator(destFile, platforms);
-							if (p != null) {
+							p = isEmulator(destFile.getAbsolutePath(), platforms);
+							if (!p.isEmpty()) {
+								UIUtil.showInformationMessage(view, "emulator added", "Emulator added");
 
 							} else {
-								if (isZipFile(pathname)) {
+								if (isZipFile(destFile.getAbsolutePath())) {
 									System.err.println("move it somewhere else and unzip");
+									String destDir = FilenameUtils.removeExtension(destFile.getAbsolutePath());
 									File destDirFile = new File(destDir);
 									if (!destDirFile.exists()) {
-										destDirFile.mkdir();
+										destDirFile.mkdirs();
 									}
 									unzipArchive(destFile, destDir);
 									for (File f : destDirFile.listFiles()) {
 										try {
 											p = isEmulator(f.getAbsolutePath(), platforms);
+											if (p != null) {
+												UIUtil.showInformationMessage(view, "emulator added", "Emulator added");
+											} else {
+												UIUtil.showWarningMessage(view, "emulator not detected", "Emulator not detected");
+											}
 										} catch (SQLException e) {
 											// TODO Auto-generated catch block
 											e.printStackTrace();
@@ -5001,10 +5003,22 @@ GameSelectionListener, BrowseComputerListener {
 											e.printStackTrace();
 										}
 									}
-								} else if (isRarFile(destFile)) {
+								} else if (isRarFile(destFile.getAbsolutePath())) {
 									System.err.println("move it somewhere else and unzip");
-								} else if (is7ZipFile(destFile)) {
+									UIUtil.showWarningMessage(view, "emulator is in a rar archive.", "Archive detected");
+
+								} else if (is7ZipFile(destFile.getAbsolutePath())) {
 									System.err.println("move it somewhere else and unzip");
+									UIUtil.showWarningMessage(view, "emulator is in a 7zip archive.", "Archive detected");
+
+								} else {
+									String filePath = destFile.getAbsolutePath();
+									// check if it is an .exe then maybe it's a setup
+									if (filePath.toLowerCase().endsWith(".exe")
+											|| filePath.toLowerCase().endsWith(".msi")) {
+										UIUtil.showWarningMessage(view, "it's maybe a setup file.", "Possible setup file");
+									}
+									UIUtil.showWarningMessage(view, "Emulator not detected. Add it yourself.", "Emulator not detected");
 								}
 							}
 						} catch (SQLException | RarException | IOException | BroEmulatorDeletedException e1) {
@@ -5018,7 +5032,7 @@ GameSelectionListener, BrowseComputerListener {
 		}
 	}
 
-	private void unzipArchive(String zipFilePath, String destDir) {
+	private void unzipArchive(File zipFilePath, String destDir) {
 		FileInputStream fis;
 		//buffer for read and write data to file
 		//		byte[] buffer = new byte[1024];

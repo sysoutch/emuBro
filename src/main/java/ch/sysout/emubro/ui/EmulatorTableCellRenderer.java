@@ -46,9 +46,8 @@ public class EmulatorTableCellRenderer extends DefaultTableCellRenderer {
 				if (iconFilename.trim().isEmpty() || iconFilename.equalsIgnoreCase("blank.png")) {
 					File file = new File(emu.getPath());
 					ico = (ImageIcon) FileSystemView.getFileSystemView().getSystemIcon(file);
-				}
-				if (ico == null) {
-					ico = ImageUtil.getImageIconFrom(System.getProperty("user.dir") + "/emubro-resources/platformss/emulators/" + emu.getIconFilename(), true);
+				} else {
+					ico = ImageUtil.getImageIconFrom(System.getProperty("user.dir") + "/emubro-resources/platforms/emulators/" + emu.getIconFilename(), true);
 				}
 				ico = ImageUtil.scaleCover(ico, ScreenSizeUtil.adjustValueToResolution(24), CoverConstants.SCALE_BOTH_OPTION);
 				icons.put(emu.getId(), ico);

@@ -102,7 +102,6 @@ public class IconStore {
 		return icon;
 	}
 
-
 	public void addPlatformIcon(int platformId, String iconFileName) {
 		if (!platformIcons.containsKey(platformId)) {
 			int size = ScreenSizeUtil.adjustValueToResolution(16);

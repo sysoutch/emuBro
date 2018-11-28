@@ -13,7 +13,6 @@ import javax.swing.SwingWorker;
 import ch.sysout.emubro.api.dao.ExplorerDAO;
 import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.ui.MainFrame;
-import ch.sysout.emubro.util.MyFileVisitor;
 
 class BrowseComputerWorker extends SwingWorker<Void, File> {
 	long searchProcessEnded;
@@ -134,15 +133,11 @@ class BrowseComputerWorker extends SwingWorker<Void, File> {
 				String str = currentRoot.toString();
 				String s = new StringBuilder(str).append(File.separator).toString();
 				Path startingDir = Paths.get(s);
-				MyFileVisitor fileVisitor = new MyFileVisitor();
-
 				finder = new Finder(explorer, this);
 				finder.addDirectorySearchedListener(view);
 				finder.addBrowseComputerListener(browseComputerListeners);
 				try {
 					Files.walkFileTree(startingDir, finder);
-					System.out.print("found: " + fileVisitor.getFileCount() + " files in ");
-					System.out.println(fileVisitor.getDirCount()+ " directories");
 				} catch (IOException e) {
 					e.printStackTrace();
 				}

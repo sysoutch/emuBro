@@ -18,6 +18,7 @@ https://www.lifewire.com/command-line-commands-for-control-panel-applets-2626060
 +-----------+
 - new feature: auto download covers and set real titles for games
 - new feature: auto download emulators
+- unplanned feature: not able to update to this emuBro version. full package must be downloaded, sorry. at least database should update fine...
 - added: slider view
 - added: a game can now have an id. e.g. (Mario Kart Wii RMCP01)
 - fixed: reimproved browsing computer feature
@@ -37,9 +38,9 @@ test release
 
 -- to do ---
 TODO feature to online check the file by checksum to identify emulator/game (when everything other fails)
+TODO refresh tags from folder
+TODO maybe store key value pair for emu download links + filename (e.g. when url is .../download.html)
 TODO own detection for emulator setup files
-TODO search folders as before dont search .folder and hidden etc.
-FIXME no emulator icons at all
 TODO show response when adding emulators
 TODO dont ask for add covers when only add emus
 TODO drag drop folder does nothing

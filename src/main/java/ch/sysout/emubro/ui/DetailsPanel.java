@@ -209,12 +209,14 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		pnlTpInformationBar = new JPanel(new BorderLayout());
 		tpDetailsPane = new JTabbedPane(SwingConstants.BOTTOM);
 		tpDetailsPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
-
+		tpDetailsPane.setTabPlacement(JTabbedPane.TOP);
 		JScrollPane sp2 = new JScrollPane(pnlBrowseComputer);
 		sp2.setBorder(BorderFactory.createEmptyBorder());
 		sp2.getVerticalScrollBar().setUnitIncrement(16);
-		tpDetailsPane.addTab(Messages.get(MessageConstants.NOTIFICATIONS), createNotificationPanel());
-		tpDetailsPane.addTab(Messages.get(MessageConstants.BROWSE_COMPUTER), sp2);
+		tpDetailsPane.addTab(Messages.get(MessageConstants.NOTIFICATIONS),
+				ImageUtil.getImageIconFrom(Icons.get("info", 16, 16), false), createNotificationPanel());
+		tpDetailsPane.addTab(Messages.get(MessageConstants.BROWSE_COMPUTER),
+				ImageUtil.getImageIconFrom(Icons.get("search", 16, 16), false), sp2);
 		FindCoversPanel pnlFindCovers = new FindCoversPanel();
 		pnlFindCovers.setBorder(Paddings.TABBED_DIALOG);
 		JScrollPane spFindCovers = new JScrollPane(pnlFindCovers);
@@ -391,7 +393,6 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		tpDetailsPane.setTitleAt(1, Messages.get(MessageConstants.BROWSE_COMPUTER));
 		tpDetailsPane.setTitleAt(2, Messages.get(MessageConstants.BROWSE_COVERS));
 		tpDetailsPane.setTitleAt(3, Messages.get(MessageConstants.BROWSE_TAGS));
-
 		//		String style = (b) ? "underline" : "none";
 		String style = "none";
 		int elementCountInformations = pnlInformations.getElementCount();
