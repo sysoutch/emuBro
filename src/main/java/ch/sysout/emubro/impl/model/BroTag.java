@@ -1,21 +1,31 @@
 package ch.sysout.emubro.impl.model;
 
+import java.util.List;
+import java.util.Map;
+
 import ch.sysout.emubro.api.model.Tag;
 import ch.sysout.util.ValidationUtil;
 
 public class BroTag implements Tag {
 	private int id = -1;
 	private String name;
+	private String checksum;
 	private String hexColor;
 
 	public BroTag() {
-		this(-1, "", "");
+		this(-1, "", "", "");
 	}
 
-	public BroTag(int id, String name, String hexColor) {
+	public BroTag(int id, Map<String, List<String>> obj, String checksum, String hexColor) {
+		this(id, obj.get("en").get(0), checksum, hexColor);
+	}
+
+	public BroTag(int id, String name, String checksum, String hexColor) {
 		ValidationUtil.checkNull(name, "name");
+		ValidationUtil.checkNull(checksum, "checksum");
 		this.id = id;
 		this.name = name;
+		this.checksum = checksum;
 		this.hexColor = (hexColor == null) ? "" : hexColor;
 	}
 
@@ -37,6 +47,16 @@ public class BroTag implements Tag {
 	@Override
 	public void setName(String name) {
 		this.name = name;
+	}
+
+	@Override
+	public String getChecksum() {
+		return checksum;
+	}
+
+	@Override
+	public void setChecksum(String checksum) {
+		this.checksum = checksum;
 	}
 
 	@Override

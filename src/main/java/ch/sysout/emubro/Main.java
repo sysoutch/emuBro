@@ -8,25 +8,31 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import javax.swing.JOptionPane;
 import javax.swing.LookAndFeel;
 import javax.swing.UIManager;
 
 import org.apache.commons.io.FileUtils;
+import org.yaml.snakeyaml.Yaml;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.jgoodies.looks.windows.WindowsLookAndFeel;
 
 import ch.sysout.emubro.api.dao.ExplorerDAO;
-import ch.sysout.emubro.api.model.Explorer;
+import ch.sysout.emubro.api.model.Emulator;
+import ch.sysout.emubro.api.model.Game;
+import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.api.model.Tag;
 import ch.sysout.emubro.controller.BroController;
 import ch.sysout.emubro.controller.HSQLDBConnection;
@@ -54,7 +60,7 @@ public class Main {
 
 	private static int explorerId = 0;
 	private static LookAndFeel defaultLookAndFeel;
-	BroController controller = null;
+	private static BroExplorer explorer;
 
 	public static void main(String[] args) {
 		System.setProperty("java.util.Arrays.useLegacyMergeSort", "true");
@@ -85,7 +91,14 @@ public class Main {
 				if (explorerDAO != null) {
 					dlgSplashScreen.setText(Messages.get(MessageConstants.ALMOST_READY));
 					try {
-						Explorer explorer = new BroExplorer();
+						explorer = new BroExplorer();
+
+						List<Platform> platforms = explorerDAO.getPlatforms();
+						explorer.setPlatforms(platforms);
+
+						List<Tag> tags = explorerDAO.getTags();
+						explorer.setTags(tags);
+
 						String defaultPlatformsFilePath = System.getProperty("user.dir") + "/emubro-resources/platforms";
 						List<BroPlatform> defaultPlatforms = null;
 						try {
@@ -95,18 +108,25 @@ public class Main {
 							JOptionPane.showConfirmDialog(dlgSplashScreen, "oops. platforms resources not found");
 						}
 
-						List<BroTag> defaultTags = null;
+						List<BroTag> updatedTags = null;
 						try {
-							defaultTags = initDefaultTags(System.getProperty("user.dir") + "/emubro-resources/tags");
+							updatedTags = getUpdatedTags(System.getProperty("user.dir") + "/emubro-resources/tags");
 						} catch (FileNotFoundException eFNF) {
-							defaultTags = new ArrayList<>();
+							updatedTags = new ArrayList<>();
 							JOptionPane.showConfirmDialog(dlgSplashScreen, "oops. tags resources not found");
 						}
 
 						//					explorer.setDefaultPlatforms(defaultPlatforms);
-						explorer.setDefaultTags(defaultTags);
+						explorer.setUpdatedTags(updatedTags);
 						mainFrame = new MainFrame(defaultLookAndFeel, explorer);
+						mainFrame.initPlatforms(platforms);
+						mainFrame.initTags(tags);
+
 						final BroController controller = new BroController(explorerDAO, explorer, mainFrame);
+
+						controller.addOrGetPlatformsAndEmulators(defaultPlatforms);
+						controller.addOrChangeTags(explorer.getUpdatedTags());
+
 						boolean applyData = controller.loadAppDataFromLastSession();
 						try {
 							controller.createView();
@@ -147,12 +167,22 @@ public class Main {
 						}
 
 						dlgSplashScreen.setText(Messages.get(MessageConstants.LOAD_GAME_LIST, Messages.get(MessageConstants.APPLICATION_TITLE)));
-						controller.initGameList();
-						List<Tag> tags = explorerDAO.getTags();
-						explorer.setTags(tags);
-						controller.setDefaultPlatforms(defaultPlatforms);
-						controller.setDefaultTags(defaultTags);
+						List<Game> games = explorerDAO.getGames();
+						boolean gamesFound = games.size() > 0;
+						controller.initGameList(games);
 						controller.showView(applyData);
+						boolean emulatorsFound = false;
+						for (Platform p : platforms) {
+							for (Emulator emu : p.getEmulators()) {
+								if (emu.isInstalled()) {
+									emulatorsFound = true;
+									break;
+								}
+							}
+						}
+						mainFrame.activateQuickSearchButton(gamesFound || emulatorsFound);
+						hideSplashScreen();
+
 						if (args.length > 0 && args[0].equals("--changelog")) {
 							JOptionPane.showMessageDialog(mainFrame, "--- emuBro v"+BroController.currentApplicationVersion+" ---\n"
 									+ "\nUpdate successful!");
@@ -346,20 +376,37 @@ public class Main {
 		return platforms;
 	}
 
-	public static List<BroTag> initDefaultTags(String defaultTagsFilePath) throws FileNotFoundException {
+	public static List<BroTag> getUpdatedTags(String defaultTagsFilePath) throws FileNotFoundException {
 		List<BroTag> tags = new ArrayList<>();
-		File dir = new File(defaultTagsFilePath);
-		for (File f : FileUtils.listFiles(dir, new String[] { "json" }, false)) {
-			InputStream is = new FileInputStream(f);
-			BufferedReader br = new BufferedReader(new InputStreamReader(is));
-			java.lang.reflect.Type collectionType = new TypeToken<BroTag>() {
-			}.getType();
-			Gson gson = new Gson();
-			tags.add((BroTag) gson.fromJson(br, collectionType));
+		Path path = Paths.get(defaultTagsFilePath);
+
+		Yaml yaml = new Yaml();
+		for (File f : FileUtils.listFiles(path.toFile(), new String[] { "yaml" }, false)) {
+			String checksum;
 			try {
-				br.close();
-			} catch (IOException e) {
-				e.printStackTrace();
+				checksum = ValidationUtil.getChecksumOfFile(f);
+				System.err.println("checksum of file "+f.getName()+": "+checksum);
+			} catch (IOException e1) {
+				checksum = "";
+				e1.printStackTrace();
+			}
+
+			Tag tag = explorer.getTagByChecksum(checksum);
+			if (tag == null) {
+				InputStream is = new FileInputStream(f);
+
+				Map<String, List<String>> obj = yaml.load(is);
+				System.out.println(obj);
+				try {
+					is.close();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				List<String> asdf = obj.get("en");
+				System.err.println("asddf: "+asdf);
+				BroTag tagToAdd = new BroTag(-1, obj, checksum, "#b27f5d");
+				tags.add(tagToAdd);
 			}
 		}
 		return tags;

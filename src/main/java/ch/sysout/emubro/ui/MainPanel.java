@@ -58,10 +58,10 @@ import ch.sysout.emubro.api.event.TagEvent;
 import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.PlatformComparator;
+import ch.sysout.emubro.api.model.Tag;
 import ch.sysout.emubro.controller.GameSelectionListener;
 import ch.sysout.emubro.impl.event.BroGameSelectionEvent;
 import ch.sysout.emubro.impl.event.NavigationEvent;
-import ch.sysout.emubro.impl.model.BroTag;
 import ch.sysout.emubro.impl.model.GameConstants;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.ImageUtil;
@@ -168,7 +168,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 		};
 	}
 
-	public void initDefaultTags(List<BroTag> tags) {
+	public void initDefaultTags(List<Tag> tags) {
 		popupGame.initDefaultTags(tags);
 	}
 
@@ -509,7 +509,6 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 		}
 		changeViewPanelTo(viewManager.getCurrentViewPanel());
 		viewManager.getCurrentViewPanel().requestFocusInWindow();
-		splCurrentViewAndPreviewPane.setDividerLocation(splCurrentViewAndPreviewPane.getDividerLocation()-1);
 		SwingUtilities.invokeLater(new Runnable() {
 
 			@Override
@@ -519,7 +518,6 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				} else {
 					viewManager.selectGame(GameConstants.NO_GAME);
 				}
-				splCurrentViewAndPreviewPane.setDividerLocation(splCurrentViewAndPreviewPane.getDividerLocation()+1);
 			}
 		});
 	}

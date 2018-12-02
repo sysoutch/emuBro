@@ -122,7 +122,6 @@ import ch.sysout.emubro.controller.ViewConstants;
 import ch.sysout.emubro.impl.event.BroFilterEvent;
 import ch.sysout.emubro.impl.event.NavigationEvent;
 import ch.sysout.emubro.impl.model.BroEmulator;
-import ch.sysout.emubro.impl.model.BroTag;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.ImageUtil;
 import ch.sysout.util.Icons;
@@ -2526,7 +2525,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		viewManager.initPlatforms(platforms);
 	}
 
-	public void initTags(List<BroTag> tags) {
+	public void initTags(List<Tag> tags) {
 		viewManager.initTags(tags);
 		pnlMain.initDefaultTags(tags);
 	}

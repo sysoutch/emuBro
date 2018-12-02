@@ -22,11 +22,11 @@ import ch.sysout.emubro.api.model.Emulator;
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.api.model.PlatformComparator;
+import ch.sysout.emubro.api.model.Tag;
 import ch.sysout.emubro.controller.GameSelectionListener;
 import ch.sysout.emubro.impl.event.BroFilterEvent;
 import ch.sysout.emubro.impl.event.NavigationEvent;
 import ch.sysout.emubro.impl.model.BroEmulator;
-import ch.sysout.emubro.impl.model.BroTag;
 import ch.sysout.emubro.impl.model.GameConstants;
 import ch.sysout.util.ScreenSizeUtil;
 
@@ -593,7 +593,7 @@ public class ViewPanelManager {
 		}
 	}
 
-	public void initTags(List<BroTag> tags) {
+	public void initTags(List<Tag> tags) {
 
 	}
 

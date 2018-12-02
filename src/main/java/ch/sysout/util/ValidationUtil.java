@@ -1,7 +1,12 @@
 package ch.sysout.util;
 
 import java.awt.Color;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Collection;
 import java.util.Map;
 
@@ -23,6 +28,8 @@ public class ValidationUtil {
 
 	private static final Color SUCCESS_BACKGROUND = new Color(215, 255, 215);
 	private static final Color SUCCESS_HOVER_BACKGROUND = new Color(255, 244, 216);
+
+	private static MessageDigest digest;
 
 	/**
 	 * @param o
@@ -162,5 +169,42 @@ public class ValidationUtil {
 				|| file.toString().toLowerCase().endsWith(".tif")
 				|| file.toString().toLowerCase().endsWith(".tiff")
 				|| file.toString().toLowerCase().endsWith(".ico");
+	}
+
+	public static boolean isChecksumDifferent(String checksum1, String checksum2) {
+		return !checksum1.equalsIgnoreCase(checksum2);
+	}
+
+	public static String getChecksumOfFile(File file) throws IOException {
+		if (digest == null) {
+			try {
+				digest = MessageDigest.getInstance("MD5");
+			} catch (NoSuchAlgorithmException e1) {
+				e1.printStackTrace();
+			}
+		}
+		return getChecksumOfFile(digest, file);
+	}
+
+	public static String getChecksumOfFile(String filePath) throws IOException {
+		return getChecksumOfFile(digest, new File(filePath));
+	}
+
+	public static String getChecksumOfFile(MessageDigest digest, File file) throws IOException {
+		FileInputStream fis = new FileInputStream(file);
+		byte[] byteArray = new byte[1024];
+		int bytesCount = 0;
+		while ((bytesCount = fis.read(byteArray)) != -1) {
+			digest.update(byteArray, 0, bytesCount);
+		};
+		if (fis != null) {
+			fis.close();
+		}
+		byte[] bytes = digest.digest();
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < bytes.length; i++) {
+			sb.append(Integer.toString((bytes[i] & 0xff) + 0x100, 16).substring(1));
+		}
+		return sb.toString();
 	}
 }

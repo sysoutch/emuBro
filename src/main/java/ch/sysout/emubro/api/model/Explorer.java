@@ -66,9 +66,9 @@ public interface Explorer {
 	//
 	//	void setDefaultPlatforms(List<BroPlatform> platforms);
 
-	List<BroTag> getDefaultTags();
+	List<Tag> getUpdatedTags();
 
-	void setDefaultTags(List<BroTag> tags);
+	void setUpdatedTags(List<BroTag> tags);
 
 	boolean hasEmulator(String platformName, String emulatorPath);
 
@@ -112,7 +112,7 @@ public interface Explorer {
 
 	void addFile(int gameId, String filePath);
 
-	String getChecksum(int checksumId);
+	String getChecksumById(int checksumId);
 
 	void addChecksum(int checksumId, String checksum);
 

@@ -38,7 +38,6 @@ import ch.sysout.emubro.controller.GameSelectionListener;
 import ch.sysout.emubro.impl.event.BroTagAddedEvent;
 import ch.sysout.emubro.impl.event.BroTagRemovedEvent;
 import ch.sysout.emubro.impl.model.BroEmulator;
-import ch.sysout.emubro.impl.model.BroTag;
 import ch.sysout.emubro.impl.model.EmulatorConstants;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.ImageUtil;
@@ -118,7 +117,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		});
 	}
 
-	public void initDefaultTags(List<BroTag> tags) {
+	public void initDefaultTags(List<Tag> tags) {
 		for (Tag tag : tags) {
 			addNewTag(tag);
 		}

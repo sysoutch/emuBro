@@ -71,8 +71,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -83,7 +81,6 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -168,7 +165,6 @@ import org.codehaus.plexus.util.StringUtils;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
@@ -185,7 +181,6 @@ import com.jgoodies.forms.layout.FormLayout;
 import com.jgoodies.validation.view.ValidationComponentUtils;
 
 import au.com.bytecode.opencsv.CSVWriter;
-import ch.sysout.emubro.Main;
 import ch.sysout.emubro.api.EmulatorListener;
 import ch.sysout.emubro.api.FilterListener;
 import ch.sysout.emubro.api.PlatformListener;
@@ -218,7 +213,6 @@ import ch.sysout.emubro.impl.event.NavigationEvent;
 import ch.sysout.emubro.impl.model.BroEmulator;
 import ch.sysout.emubro.impl.model.BroGame;
 import ch.sysout.emubro.impl.model.BroPlatform;
-import ch.sysout.emubro.impl.model.BroTag;
 import ch.sysout.emubro.impl.model.EmulatorConstants;
 import ch.sysout.emubro.impl.model.FileStructure;
 import ch.sysout.emubro.impl.model.GameConstants;
@@ -277,7 +271,7 @@ GameSelectionListener, BrowseComputerListener {
 	private String applicationVersion = "";
 	private String platformDetectionVersion = "";
 	private String latestRelease = "https://api.github.com/repos/sysoutch/emuBro/releases";
-	public static final String currentApplicationVersion = "0.8.0";
+	public static final String currentApplicationVersion = "0.7.0";
 	private final String currentPlatformDetectionVersion = "20180827.0";
 
 	private int navigationPaneDividerLocation;
@@ -355,7 +349,6 @@ GameSelectionListener, BrowseComputerListener {
 	private int lastDetailsPreferredHeight;
 	private SplashScreenWindow dlgSplashScreen;
 	private int preferredWidthAtFirstStart;
-	private MessageDigest digest;
 	private Platform lastSelectedPlatformFromGameChooser;
 	private GamePropertiesDialog dlgGameProperties;
 	private Map<Platform, NodeList> gameTagListFiles = new HashMap<>();
@@ -1099,15 +1092,19 @@ GameSelectionListener, BrowseComputerListener {
 		tagListeners.add(l);
 	}
 
-	public void setDefaultTags(List<BroTag> tmpTags) {
-		List<BroTag> tags = new ArrayList<>();
-		for (BroTag t : tmpTags) {
-			tags.add((BroTag) addOrGetTag(t));
+	public void addOrChangeTags(List<Tag> tmpTags) {
+		if (tmpTags == null || tmpTags.isEmpty()) {
+			return;
+		}
+		List<Tag> tags = new ArrayList<>();
+		for (Tag t : tmpTags) {
+			Tag tag = addOrChangeTag(t);
+			tags.add(tag);
 		}
 		view.initTags(tags);
 	}
 
-	public void setDefaultPlatforms(List<BroPlatform> platforms) {
+	public void addOrGetPlatformsAndEmulators(List<BroPlatform> platforms) {
 		for (Platform p : platforms) {
 			p.setDefaultEmulatorId(EmulatorConstants.NO_EMULATOR);
 			Platform p2 = addOrGetPlatform(p);
@@ -1385,8 +1382,7 @@ GameSelectionListener, BrowseComputerListener {
 		//			});
 	}
 
-	public void initGameList() throws SQLException {
-		List<Game> games = explorerDAO.getGames();
+	public void initGameList(List<Game> games) throws SQLException {
 		explorer.setGames(games);
 		Map<Integer, String> checksums = explorerDAO.getChecksums();
 		explorer.setChecksums(checksums);
@@ -1399,25 +1395,10 @@ GameSelectionListener, BrowseComputerListener {
 				g.addTag(t);
 			}
 		}
-		List<Platform> platforms = explorerDAO.getPlatforms();
-		explorer.setPlatforms(platforms);
 		if (games != null && !games.isEmpty()) {
 			view.updateGameCount(games.size());
 			view.initGames(games);
 		}
-		view.initPlatforms(platforms);
-		boolean emulatorsFound = false;
-		for (Platform p : platforms) {
-			for (Emulator emu : p.getEmulators()) {
-				if (emu.isInstalled()) {
-					emulatorsFound = true;
-					break;
-				}
-			}
-		}
-		boolean gamesOrPlatformsFound = games.size() > 0 || emulatorsFound;
-		view.activateQuickSearchButton(gamesOrPlatformsFound);
-		Main.hideSplashScreen();
 	}
 
 	private void saveWindowInformations() {
@@ -3049,7 +3030,7 @@ GameSelectionListener, BrowseComputerListener {
 	private void setCoverForGameUsingOriginalFile(Game game, InputStream is) throws IOException {
 		String emuBroCoverHome = System.getProperty("user.dir") + File.separator + "emubro-resources"
 				+ File.separator + "games" + File.separator + "covers";
-		String gameCoverDir = emuBroCoverHome + File.separator + explorer.getChecksum(game.getChecksumId());
+		String gameCoverDir = emuBroCoverHome + File.separator + explorer.getChecksumById(game.getChecksumId());
 		String coverPath = gameCoverDir + File.separator + System.currentTimeMillis() + ".png";
 
 		new File(gameCoverDir).mkdirs();
@@ -3083,7 +3064,7 @@ GameSelectionListener, BrowseComputerListener {
 	protected void setCoverForGame(Game game, Image resized) {
 		String emuBroCoverHome = System.getProperty("user.dir") + File.separator + "emubro-resources"
 				+ File.separator + "games" + File.separator + "covers";
-		String coverPath = emuBroCoverHome + File.separator + explorer.getChecksum(game.getChecksumId())
+		String coverPath = emuBroCoverHome + File.separator + explorer.getChecksumById(game.getChecksumId())
 		+ File.separator + System.currentTimeMillis() + ".png";
 		File coverHomeFile = new File(coverPath);
 		if (!coverHomeFile.exists()) {
@@ -4869,6 +4850,7 @@ GameSelectionListener, BrowseComputerListener {
 					JsonArray arr = obj.get("x64").getAsJsonArray();
 					if (arr.size() > 0) {
 						for (int i = 0; i < arr.size(); i++) {
+							// FIXME Exception in thread "AWT-EventQueue-0" java.lang.UnsupportedOperationException: JsonNull
 							links.add(arr.get(i).getAsString());
 						}
 					} else {
@@ -4987,7 +4969,7 @@ GameSelectionListener, BrowseComputerListener {
 									for (File f : destDirFile.listFiles()) {
 										try {
 											p = isEmulator(f.getAbsolutePath(), platforms);
-											if (p != null) {
+											if (!p.isEmpty()) {
 												UIUtil.showInformationMessage(view, "emulator added", "Emulator added");
 											} else {
 												UIUtil.showWarningMessage(view, "emulator not detected", "Emulator not detected");
@@ -5218,6 +5200,17 @@ GameSelectionListener, BrowseComputerListener {
 
 								@Override
 								public void run() {
+									if (explorer.hasCurrentGame()) {
+										List<Game> currentGames = explorer.getCurrentGames();
+										if (currentGames.size() == 1) {
+											int selectedGameId = currentGames.get(0).getId();
+											view.getViewManager().selectGame(GameConstants.NO_GAME);
+											view.getViewManager().selectGame(selectedGameId);
+										}
+									} else {
+										view.getViewManager().selectGame(GameConstants.NO_GAME);
+									}
+
 									progress.setIndeterminate(false);
 									progress.setString("covers added");
 
@@ -5307,91 +5300,94 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	public void autoSearchTags(List<Game> games, boolean showFeedback) {
-		for (Game game : games) {
-			Platform platform = explorer.getPlatform(game.getPlatformId());
-			String gameName = game.getName();
-
-			NodeList nList = getNodeList(platform, false);
-			if (nList == null) {
-				if (showFeedback) {
-					UIUtil.showErrorMessage(view, "You have currently no taglist installed for platform: "+ platform.getName(), "no tags found");
-				}
-				continue;
-			}
-			Map<String, List<String>> mapTagsToAdd = new HashMap<>();
-			for (int temp = 0; temp < nList.getLength(); temp++) {
-				Node nNode = nList.item(temp);
-				if (nNode.getNodeType() == Node.ELEMENT_NODE) {
-					Element eElement = (Element) nNode;
-					String gameNameToCheck = eElement.getAttribute("name");
-					if (gameName.trim().toLowerCase().contains(gameNameToCheck.trim().toLowerCase())) {
-						NodeList node = eElement.getElementsByTagName("tag");
-						List<String> tagsToAdd = new ArrayList<>();
-						for (int i = 0; i < node.getLength(); i++) {
-							Node nodeItem = node.item(i);
-							tagsToAdd.add(nodeItem.getTextContent());
-						}
-						if (!tagsToAdd.isEmpty()) {
-							mapTagsToAdd.put(gameNameToCheck, tagsToAdd);
-						}
-					}
-				}
-			}
-			if (mapTagsToAdd.isEmpty()) {
-				if (showFeedback) {
-					UIUtil.showErrorMessage(view, "No tags found to add for this game", "no tags found");
-				}
-			} else {
-				List<String> tagsAdded = new ArrayList<>();
-				Set<String> keySet = mapTagsToAdd.keySet();
-				String longestString = "";
-				Iterator<String> it = keySet.iterator();
-				while (it.hasNext()) {
-					String tagName = it.next();
-					if (tagName.length() > longestString.length()) {
-						longestString = tagName;
-					}
-				}
-				for (String tagName : mapTagsToAdd.get(longestString)) {
-					Tag tag = addOrGetTag(new BroTag(-1, tagName, "#4286f4"));
-					if (!game.hasTag(tag.getId())) {
-						tagsAdded.add(tag.getName());
-						explorer.addTagForGame(game.getId(), tag);
-						game.addTag(tag);
-						if (explorer.getCurrentGames().contains(game)) {
-							TagEvent tagTagAddedEvent = new BroTagAddedEvent(tag);
-							view.tagAdded(tagTagAddedEvent);
-						}
-						try {
-							explorerDAO.addTag(game.getId(), tag);
-						} catch (SQLException e1) {
-							// TODO Auto-generated catch block
-							e1.printStackTrace();
-						}
-					}
-				}
-				if (!tagsAdded.isEmpty()) {
-					String tagsString = "";
-					for (String s : tagsAdded) {
-						tagsString += "\n- "+s;
-					}
-					if (showFeedback) {
-						Object[] message = {
-								"The following tags have been added from game " + longestString + ":"+ tagsString
-						};
-						JOptionPane.showMessageDialog(view, message, "Tags added", JOptionPane.INFORMATION_MESSAGE);
-					}
-				} else {
-					if (showFeedback) {
-						UIUtil.showInformationMessage(view, "You already have set all the tags from this source to the game", "no tags added");
-					}
-				}
-			}
-		}
-		gameTagListFiles.clear();
-		view.updateFilter();
+		UIUtil.showErrorMessage(view, "this must be updated.", "oops");
+		return;
+		//		for (Game game : games) {
+		//			Platform platform = explorer.getPlatform(game.getPlatformId());
+		//			String gameName = game.getName();
+		//
+		//			NodeList nList = getNodeList(platform, false);
+		//			if (nList == null) {
+		//				if (showFeedback) {
+		//					UIUtil.showErrorMessage(view, "You have currently no taglist installed for platform: "+ platform.getName(), "no tags found");
+		//				}
+		//				continue;
+		//			}
+		//			Map<String, List<String>> mapTagsToAdd = new HashMap<>();
+		//			for (int temp = 0; temp < nList.getLength(); temp++) {
+		//				Node nNode = nList.item(temp);
+		//				if (nNode.getNodeType() == Node.ELEMENT_NODE) {
+		//					Element eElement = (Element) nNode;
+		//					String gameNameToCheck = eElement.getAttribute("name");
+		//					if (gameName.trim().toLowerCase().contains(gameNameToCheck.trim().toLowerCase())) {
+		//						NodeList node = eElement.getElementsByTagName("tag");
+		//						List<String> tagsToAdd = new ArrayList<>();
+		//						for (int i = 0; i < node.getLength(); i++) {
+		//							Node nodeItem = node.item(i);
+		//							tagsToAdd.add(nodeItem.getTextContent());
+		//						}
+		//						if (!tagsToAdd.isEmpty()) {
+		//							mapTagsToAdd.put(gameNameToCheck, tagsToAdd);
+		//						}
+		//					}
+		//				}
+		//			}
+		//			if (mapTagsToAdd.isEmpty()) {
+		//				if (showFeedback) {
+		//					UIUtil.showErrorMessage(view, "No tags found to add for this game", "no tags found");
+		//				}
+		//			} else {
+		//				List<String> tagsAdded = new ArrayList<>();
+		//				Set<String> keySet = mapTagsToAdd.keySet();
+		//				String longestString = "";
+		//				Iterator<String> it = keySet.iterator();
+		//				while (it.hasNext()) {
+		//					String tagName = it.next();
+		//					if (tagName.length() > longestString.length()) {
+		//						longestString = tagName;
+		//					}
+		//				}
+		//				for (String tagName : mapTagsToAdd.get(longestString)) {
+		//					Tag tag = addOrGetTag(new BroTag(-1, tagName, tagChecksum, "#4286f4"));
+		//					if (!game.hasTag(tag.getId())) {
+		//						tagsAdded.add(tag.getName());
+		//						explorer.addTagForGame(game.getId(), tag);
+		//						game.addTag(tag);
+		//						if (explorer.getCurrentGames().contains(game)) {
+		//							TagEvent tagTagAddedEvent = new BroTagAddedEvent(tag);
+		//							view.tagAdded(tagTagAddedEvent);
+		//						}
+		//						try {
+		//							explorerDAO.addTag(game.getId(), tag);
+		//						} catch (SQLException e1) {
+		//							// TODO Auto-generated catch block
+		//							e1.printStackTrace();
+		//						}
+		//					}
+		//				}
+		//				if (!tagsAdded.isEmpty()) {
+		//					String tagsString = "";
+		//					for (String s : tagsAdded) {
+		//						tagsString += "\n- "+s;
+		//					}
+		//					if (showFeedback) {
+		//						Object[] message = {
+		//								"The following tags have been added from game " + longestString + ":"+ tagsString
+		//						};
+		//						JOptionPane.showMessageDialog(view, message, "Tags added", JOptionPane.INFORMATION_MESSAGE);
+		//					}
+		//				} else {
+		//					if (showFeedback) {
+		//						UIUtil.showInformationMessage(view, "You already have set all the tags from this source to the game", "no tags added");
+		//					}
+		//				}
+		//			}
+		//		}
+		//		gameTagListFiles.clear();
+		//		view.updateFilter();
 	}
 
+	// TODO this must be updated
 	private NodeList getNodeList(Platform platform, boolean updateFromFile) {
 		if (!updateFromFile) {
 			if (gameTagListFiles.containsKey(platform)) {
@@ -5562,7 +5558,7 @@ GameSelectionListener, BrowseComputerListener {
 		return p2;
 	}
 
-	public Tag addOrGetTag(Tag tag) {
+	public Tag addOrChangeTag(Tag tag) {
 		Tag tag2 = null;
 		if (tag != null) {
 			if (!explorer.hasTag(tag.getName())) {
@@ -5578,6 +5574,7 @@ GameSelectionListener, BrowseComputerListener {
 				}
 			} else {
 				tag2 = explorer.getTag(tag.getName());
+				tag2.setChecksum(tag.getChecksum());
 			}
 		}
 		return tag2;
@@ -7169,29 +7166,20 @@ GameSelectionListener, BrowseComputerListener {
 
 	public void addGame(Platform p0, Path file, boolean manuallyAdded, boolean favorite, boolean downloadCover) {
 		String checksum = null;
-		if (digest == null) {
+		try {
+			checksum = ValidationUtil.getChecksumOfFile(file.toFile());
 			try {
-				digest = MessageDigest.getInstance("MD5");
-			} catch (NoSuchAlgorithmException e1) {
-				e1.printStackTrace();
+				explorerDAO.addChecksum(checksum);
+				explorer.addChecksum(explorerDAO.getLastAddedChecksumId(), checksum);
+			} catch (SQLException e) {
+				e.printStackTrace();
 			}
-		}
-		if (digest != null) {
-			try {
-				checksum = getFileChecksum(digest, file);
-				try {
-					explorerDAO.addChecksum(checksum);
-					explorer.addChecksum(explorerDAO.getLastAddedChecksumId(), checksum);
-				} catch (SQLException e) {
-					e.printStackTrace();
-				}
-			} catch (IOException e1) {
-				e1.printStackTrace();
-				if (manuallyAdded) {
-					UIUtil.showErrorMessage(view, "Couldn't get the checksum for this file.", "Error adding file");
-				}
-				return;
+		} catch (IOException e1) {
+			e1.printStackTrace();
+			if (manuallyAdded) {
+				UIUtil.showErrorMessage(view, "Couldn't get the checksum for this file.", "Error adding file");
 			}
+			return;
 		}
 		String filePath = file.toString();
 		String[] arr = filePath.split(getSeparatorBackslashed());
@@ -7217,6 +7205,9 @@ GameSelectionListener, BrowseComputerListener {
 				element.setId(gameId);
 			} catch (BroGameDeletedException e) {
 				if (manuallyAdded) {
+					//					List<Platform> matchedPlatforms = getPlatformMatches(FilenameUtils.getExtension(filePath));
+					//					boolean multiplePlatforms = matchedPlatforms.size() > 1;
+
 					String gameName = "<html><strong>"+e.getGame().getName()+"</strong></html>";
 					String platformName = explorer.getPlatform(e.getGame().getPlatformId()).getName();
 					int request = JOptionPane.showConfirmDialog(view, Messages.get(MessageConstants.GAME_DELETED, gameName, platformName),
@@ -7302,22 +7293,6 @@ GameSelectionListener, BrowseComputerListener {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-	}
-
-	private String getFileChecksum(MessageDigest digest, Path file) throws IOException {
-		FileInputStream fis = new FileInputStream(file.toString());
-		byte[] byteArray = new byte[1024];
-		int bytesCount = 0;
-		while ((bytesCount = fis.read(byteArray)) != -1) {
-			digest.update(byteArray, 0, bytesCount);
-		};
-		fis.close();
-		byte[] bytes = digest.digest();
-		StringBuilder sb = new StringBuilder();
-		for (int i = 0; i < bytes.length; i++) {
-			sb.append(Integer.toString((bytes[i] & 0xff) + 0x100, 16).substring(1));
-		}
-		return sb.toString();
 	}
 
 	@Override

@@ -46,6 +46,7 @@ create table if not exists platform (
 create table if not exists tag (
 	tag_id int identity,
 	tag_name varchar(255) unique,
+	tag_checksum varchar(32) unique,
 	tag_hexColor varchar(7)
 )
 

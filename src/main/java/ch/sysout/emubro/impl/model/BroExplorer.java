@@ -26,14 +26,13 @@ public class BroExplorer implements Explorer {
 	private Map<Integer, Platform> platforms = new HashMap<>();
 	private Map<String, Integer> platforms2 = new HashMap<>();
 
-	private Map<Integer, Tag> tags = new HashMap<>();
-	private Map<String, Integer> tags2 = new HashMap<>();
+	private Map<Map<String, String>, Tag> tags = new HashMap<>();
 
 	private Map<Tag, Integer> tagsForGames = new HashMap<>();
 
 	private List<Integer> currentGameIds = new ArrayList<>();
 	//	private List<BroPlatform> defaultPlatforms;
-	private List<BroTag> defaultTags;
+	private List<Tag> defaultTags;
 	private boolean searchProcessComplete;
 	private boolean showConfigWizardAtStartup;
 	private String extensionsString = "";
@@ -68,12 +67,12 @@ public class BroExplorer implements Explorer {
 	//	}
 
 	@Override
-	public List<BroTag> getDefaultTags() {
+	public List<Tag> getUpdatedTags() {
 		return defaultTags;
 	}
 
 	@Override
-	public void setDefaultTags(List<BroTag> tags) {
+	public void setUpdatedTags(List<BroTag> tags) {
 		defaultTags = new ArrayList<>(tags);
 	}
 
@@ -523,7 +522,7 @@ public class BroExplorer implements Explorer {
 	}
 
 	@Override
-	public String getChecksum(int checksumId) {
+	public String getChecksumById(int checksumId) {
 		return checksums.get(checksumId);
 	}
 
@@ -586,70 +585,105 @@ public class BroExplorer implements Explorer {
 	@Override
 	public void setTags(List<Tag> tags) {
 		this.tags.clear();
-		tags2.clear();
 		for (Tag t : tags) {
-			this.tags.put(t.getId(), t);
-			tags2.put(t.getName(), t.getId());
+			Map<String, String> map = new HashMap<>();
+			map.put("id", ""+t.getId());
+			map.put("name", ""+t.getName());
+			map.put("checksum", ""+t.getChecksum());
+			this.tags.put(map, t);
 		}
 	}
 
 	@Override
 	public void setTagsForGame(int gameId, List<Tag> tags) {
-		for (Tag tag : tags) {
-			addTagForGame(gameId, tag);
-		}
+		//		for (Tag tag : tags) {
+		//			addTagForGame(gameId, tag);
+		//		}
 	}
 
 	@Override
 	public void addTagForGame(int gameId, Tag tag) {
-		tagsForGames.put(tag, gameId);
+		//		tagsForGames.put(tag, gameId);
 	}
 
 	@Override
 	public void removeTagFromGame(int gameId, int tagId) {
-		if (tagsForGames.containsValue(tagId)) {
-			Set<Tag> tmpTags = tagsForGames.keySet();
-			Iterator<Tag> it = tmpTags.iterator();
-			while (it.hasNext()) {
-				Tag t = it.next();
-				if (t.getId() == tagId) {
-					tags.remove(t);
-					break;
-				}
-			}
-		}
+		//		if (tagsForGames.containsValue(tagId)) {
+		//			Set<Tag> tmpTags = tagsForGames.keySet();
+		//			Iterator<Tag> it = tmpTags.iterator();
+		//			while (it.hasNext()) {
+		//				Tag t = it.next();
+		//				if (t.getId() == tagId) {
+		//					tags.remove(t);
+		//					break;
+		//				}
+		//			}
+		//		}
 	}
 
 	@Override
 	public void addTag(Tag tag) {
-		tags.put(tag.getId(), tag);
-		tags2.put(tag.getName(), tag.getId());
+		Map<String, String> tagKeyValues = new HashMap<>();
+		tagKeyValues.put("id", ""+tag.getId());
+		tagKeyValues.put("name", ""+tag.getName());
+		tagKeyValues.put("checksum", ""+tag.getChecksum());
+		tags.put(tagKeyValues, tag);
 	}
 
 	@Override
 	public void removeTag(Tag tag) {
-		tags.remove(tag.getId());
-		tags2.remove(tag.getName());
+		Map<String, String> removalKey = null;
+		for (Entry<Map<String, String>, Tag> entry : tags.entrySet()) {
+			if (tag.equals(entry.getValue())) {
+				removalKey = entry.getKey();
+				break;
+			}
+		}
+		if (removalKey != null) {
+			tags.remove(removalKey);
+		}
 	}
 
 	@Override
 	public Tag getTag(int tagId) {
-		Tag t = tags.get(tagId);
-		return t;
+		Set<Map<String, String>> tag = tags.keySet();
+		Iterator<Map<String, String>> it = tag.iterator();
+		while (it.hasNext()) {
+			Map<String, String> map = it.next();
+			String currentId = map.get("id");
+			if (currentId.equals(""+tagId)) {
+				return tags.get(map);
+			}
+		}
+		return null;
 	}
 
 	@Override
 	public Tag getTag(String name) {
-		if (tags2.containsKey(name)) {
-			int tagId = tags2.get(name);
-			return tags.get(tagId);
+		Set<Map<String, String>> tag = tags.keySet();
+		Iterator<Map<String, String>> it = tag.iterator();
+		while (it.hasNext()) {
+			Map<String, String> map = it.next();
+			String currentName = map.get("name");
+			if (currentName.equalsIgnoreCase(name)) {
+				return tags.get(map);
+			}
 		}
 		return null;
 	}
 
 	@Override
 	public boolean hasTag(String name) {
-		return tags2.containsKey(name);
+		Set<Map<String, String>> tag = tags.keySet();
+		Iterator<Map<String, String>> it = tag.iterator();
+		while (it.hasNext()) {
+			Map<String, String> map = it.next();
+			String currentChecksum = map.get("name");
+			if (currentChecksum.equalsIgnoreCase(name)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	@Override
@@ -682,6 +716,19 @@ public class BroExplorer implements Explorer {
 	// emulators2.put(e.getPath(), e.getId());
 	// }
 	// }
+
+	public Tag getTagByChecksum(String checksum) {
+		Set<Map<String, String>> tag = tags.keySet();
+		Iterator<Map<String, String>> it = tag.iterator();
+		while (it.hasNext()) {
+			Map<String, String> map = it.next();
+			String currentChecksum = map.get("checksum");
+			if (currentChecksum.equalsIgnoreCase(checksum)) {
+				return tags.get(map);
+			}
+		}
+		return null;
+	}
 
 	// @Override
 	// public void addEmulator(Emulator emulator) {

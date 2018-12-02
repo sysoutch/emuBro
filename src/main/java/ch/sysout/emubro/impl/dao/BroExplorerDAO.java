@@ -34,7 +34,6 @@ import ch.sysout.emubro.impl.model.BroTag;
 import ch.sysout.emubro.impl.model.FileStructure;
 import ch.sysout.emubro.impl.model.GameConstants;
 import ch.sysout.emubro.impl.model.PlatformConstants;
-import ch.sysout.util.BroTagDAO;
 import ch.sysout.util.SqlUtil;
 import ch.sysout.util.ValidationUtil;
 
@@ -745,8 +744,9 @@ public class BroExplorerDAO implements ExplorerDAO {
 		while (rset.next()) {
 			int id = rset.getInt("tag_id");
 			String name = rset.getString("tag_name");
+			String checksum = rset.getString("tag_checksum");
 			String hexColor = rset.getString("tag_hexColor");
-			Tag tag = new BroTag(id, name, hexColor);
+			Tag tag = new BroTag(id, name, checksum, hexColor);
 			tags.add(tag);
 		}
 		conn.commit();

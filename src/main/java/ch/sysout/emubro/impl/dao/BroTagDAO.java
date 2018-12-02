@@ -1,4 +1,4 @@
-package ch.sysout.util;
+package ch.sysout.emubro.impl.dao;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -8,6 +8,8 @@ import java.sql.Statement;
 import ch.sysout.emubro.api.dao.TagDAO;
 import ch.sysout.emubro.api.model.Tag;
 import ch.sysout.emubro.impl.model.BroTag;
+import ch.sysout.util.SqlUtil;
+import ch.sysout.util.ValidationUtil;
 
 public class BroTagDAO implements TagDAO {
 	private Connection conn;
@@ -21,7 +23,7 @@ public class BroTagDAO implements TagDAO {
 		ValidationUtil.checkNull(tag, "tag");
 		Statement stmt = conn.createStatement();
 		String sql = SqlUtil.insertIntoWithColumnsString("tag",
-				"tag_name", "tag_hexColor", SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(tag.getName())), SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(tag.getHexColor())));
+				"tag_name", "tag_checksum", "tag_hexColor", SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(tag.getName())), SqlUtil.getQuotedString(tag.getChecksum()), SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(tag.getHexColor())));
 		stmt.executeQuery(sql);
 		conn.commit();
 		stmt.close();
@@ -47,8 +49,9 @@ public class BroTagDAO implements TagDAO {
 		if (rset.next()) {
 			int id = rset.getInt("tag_id");
 			String name = rset.getString("tag_name");
+			String checksum = rset.getString("tag_checksum");
 			String hexColor = rset.getString("tag_hexColor");
-			tag = new BroTag(id, name, hexColor);
+			tag = new BroTag(id, name, checksum, hexColor);
 		}
 		stmt.close();
 		return tag;

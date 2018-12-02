@@ -12,4 +12,8 @@ public interface Tag extends Comparable<Tag> {
 	String getHexColor();
 
 	void setHexColor(String hexColor);
+
+	String getChecksum();
+
+	void setChecksum(String checksum);
 }
