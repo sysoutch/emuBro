@@ -212,7 +212,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 				continue;
 			}
 			String s = "<html><strong>" + emu.getName() + "</strong> <br>(" + emu.getPath() + ")</html>";
-			String path = System.getProperty("user.dir")+"/emubro-resources/platforms/emulators/" + emu.getIconFilename();
+			String path = System.getProperty("user.dir")+"/emubro-resources/platforms/images/emulators/" + emu.getIconFilename();
 			Icon icon = ImageUtil.getImageIconFrom(path, true);
 			if (icon == null) {
 				icon = FileSystemView.getFileSystemView().getSystemIcon(new File(emu.getPath()));

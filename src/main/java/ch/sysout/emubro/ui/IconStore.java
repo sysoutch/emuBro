@@ -29,8 +29,8 @@ public class IconStore {
 
 	private List<GameCoverListener> gameCoverListeners = new ArrayList<>();
 
-	private String currentPlatformLogosDirectory = System.getProperty("user.dir")+"/emubro-resources/platforms/logos";
-	private String currentPlatformCoversDirectory = System.getProperty("user.dir")+"/emubro-resources/platforms/covers";
+	private String currentPlatformLogosDirectory = System.getProperty("user.dir")+"/emubro-resources/platforms/images/logos";
+	private String currentPlatformCoversDirectory = System.getProperty("user.dir")+"/emubro-resources/platforms/images/covers";
 
 	public void addPlatformCover(int platformId, String coverFileName) {
 		String coverFilePath = currentPlatformCoversDirectory + "/" + coverFileName;

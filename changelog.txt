@@ -1,0 +1,22 @@
++-----------+
+| 	v0.8.0	 |
++-----------+
+- new feature: auto download covers and set real titles for games
+- new feature: auto download emulators
+- unplanned feature: not able to update to this emuBro version. full package must be downloaded, sorry. at least database should update fine...
+- added: slider view
+- added: a game can now have an id. e.g. (Mario Kart Wii RMCP01)
+- fixed: reimproved browsing computer feature
+- fixed: annoying row height changes when switching views
+- fixed: startup speed improved a lot by lazy loading game covers
+- changed: emubro-resources folder structure
+- 
++-----------+
+| 	v0.7.1	 |
++-----------+
+- initial beta release
+
++-----------+
+| 	v0.7.0	 |
++-----------+
+test release

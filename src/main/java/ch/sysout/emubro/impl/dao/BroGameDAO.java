@@ -413,7 +413,8 @@ public class BroGameDAO implements GameDAO {
 
 	@Override
 	public void updateLastPlayed(Game game) throws SQLException {
-		ZonedDateTime lastPlayed = game.getLastPlayed();
+		ZonedDateTime tmpLastPlayed = game.getLastPlayed();
+		Timestamp lastPlayed = Timestamp.from(tmpLastPlayed.toInstant());
 		Statement stmt = conn.createStatement();
 		String sql = "update game set game_lastPlayed='" + lastPlayed + "' where game_id = " + game.getId();
 		stmt.executeQuery(sql);

@@ -41,7 +41,11 @@ import java.net.URLConnection;
 import java.net.URLEncoder;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -142,6 +146,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	private JMenu mnuFile;
 	private JMenu mnuView;
 	private JMenu mnuGames;
+	private JMenu mnuPlugins;
+	private JMenuItem itmRefreshPlugins;
 	private JMenu mnuFriends;
 	private JMenu mnuNotifications;
 	private JMenu mnuLookAndFeel;
@@ -301,7 +307,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	public void showConfigWizardDialog() {
 		if (dlgConfigWizard == null) {
-			dlgConfigWizard = new ConfigWizardDialog();
+			dlgConfigWizard = new ConfigWizardDialog(explorer);
 			dlgConfigWizard.addWindowListener(new WindowAdapter() {
 				@Override
 				public void windowClosing(WindowEvent e) {
@@ -441,6 +447,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		mnuFile = new JMenu(Messages.get(MessageConstants.MNU_FILE));
 		mnuView = new JMenu(Messages.get(MessageConstants.MNU_VIEW));
 		mnuGames = new JMenu(Messages.get(MessageConstants.MNU_GAMES));
+		mnuPlugins = new JMenu(Messages.get(MessageConstants.MNU_PLUGINS));
+		itmRefreshPlugins = new JMenuItem(Messages.get(MessageConstants.ITM_REFRESH_PLUGINS));
 		mnuFriends = new JMenu(Messages.get(MessageConstants.MNU_FRIENDS));
 		mnuNotifications = new JMenu("Notifications");
 		mnuGames.setEnabled(false);
@@ -692,7 +700,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmAbout.setAccelerator(KeyStroke.getKeyStroke("F12"));
 		itmRefresh.setAccelerator(KeyStroke.getKeyStroke("F5"));
 		itmFullScreen.setAccelerator(KeyStroke.getKeyStroke("F11"));
-		itmConfigWizard.setAccelerator(KeyStroke.getKeyStroke("F8"));
+		itmConfigWizard.setAccelerator(KeyStroke.getKeyStroke("F7"));
 
 		// rootPane.registerKeyboardAction((ActionListener) controller,
 		// KeyStroke.getKeyStroke("control W"),
@@ -1531,6 +1539,10 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		pnlMain.getPopupGame().addTagFromWebListener(l);
 	}
 
+	public void addAllTagsFromWebListener(ActionListener l) {
+		itmTagSearch.addActionListener(l);
+	}
+
 	public void addAutoSearchTagsAllListener(ActionListener l) {
 		itmAutoSearchTags.addActionListener(l);
 	}
@@ -1680,7 +1692,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		mnuUpdateAvailable.setVisible(false);
 		itmApplicationUpdateAvailable.setVisible(false);
 		itmSignatureUpdateAvailable.setVisible(false);
-		addComponentsToJComponent(mnb, mnuFile, mnuView, mnuGames, mnuFriends, /*mnuLookAndFeel, */Box.createHorizontalGlue(), mnuUpdateAvailable, mnuNotifications, mnuLanguage, mnuHelp);
+		addComponentsToJComponent(mnb, mnuFile, mnuView, mnuGames, /*mnuPlugins,*/ mnuFriends, /*mnuLookAndFeel, */Box.createHorizontalGlue(), mnuUpdateAvailable, mnuNotifications, mnuLanguage, mnuHelp);
 		setJMenuBar(mnb);
 	}
 
@@ -1715,6 +1727,9 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		addComponentsToJComponent(mnuGames, mnuManageTags, mnuManageCovers,
 				new JSeparator(), itmTagSearch, itmCoverSearch, itmTrailerSearch/*, itmWebSearchSettings*/,
 				new JSeparator(), itmRenameGames);
+
+		addComponentsToJComponent(mnuPlugins, itmRefreshPlugins,
+				new JSeparator());
 
 		addComponentsToJComponent(mnuFriends, itmPMs,
 				new JSeparator(), itmShowFriendList, itmAddFriend,
@@ -2521,7 +2536,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	}
 
 	public void initPlatforms(List<Platform> platforms) {
-		initPlatformsFilter(platforms);
 		viewManager.initPlatforms(platforms);
 	}
 
@@ -2776,11 +2790,47 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	}
 
 	public void initGames(List<Game> games) {
+		Map<Integer, Platform> passedMap = new HashMap<>();
+
+		List<Integer> mapKeys = new ArrayList<>(passedMap.keySet());
+		List<Platform> mapValues = new ArrayList<>(passedMap.values());
+		Collections.sort(mapValues);
+		Collections.sort(mapKeys);
+
+		LinkedHashMap<Integer, Platform> sortedMap = new LinkedHashMap<>();
+
+		Iterator<Platform> valueIt = mapValues.iterator();
+		while (valueIt.hasNext()) {
+			Platform val = valueIt.next();
+			Iterator<Integer> keyIt = mapKeys.iterator();
+
+			while (keyIt.hasNext()) {
+				Integer key = keyIt.next();
+				Platform comp1 = passedMap.get(key);
+				Platform comp2 = val;
+
+				if (comp1.equals(comp2)) {
+					keyIt.remove();
+					sortedMap.put(key, val);
+					break;
+				}
+			}
+		}
+
 		for (Game game : games) {
+			int platformId = game.getPlatformId();
+			if (!sortedMap.containsKey(platformId) && !pnlGameFilter.hasPlatform(platformId)) {
+				sortedMap.put(platformId, explorer.getPlatform(platformId));
+			}
 			for (Tag tag : game.getTags()) {
 				pnlGameFilter.addNewTag(tag);
 			}
 		}
+
+		Collection<Platform> tmpPlatformsWithGames = sortedMap.values();
+		pnlGameFilter.initPlatforms(tmpPlatformsWithGames);
+		sortedMap.clear();
+		tmpPlatformsWithGames.clear();
 		mnuGames.setEnabled(true);
 		viewManager.initGames(games);
 	}
@@ -3085,5 +3135,9 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	public int getCurrentView() {
 		return pnlMain.getCurrentView();
+	}
+
+	public IconStore getIconStore() {
+		return iconStore;
 	}
 }

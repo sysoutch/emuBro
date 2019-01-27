@@ -76,13 +76,17 @@ public class GamePropertiesDialog extends JDialog {
 	private JButton btnApply;
 	private JTextArea txtGameName;
 	private Explorer explorer;
+	private IconStore iconStore;
 	private JToggleButton btnModify;
 	private JComponent pnlSpEmulators;
 	private JLabel lblDateAdded = new JLabel();
 
-	public GamePropertiesDialog(Explorer explorer) {
+	private JLabel lblIcon;
+
+	public GamePropertiesDialog(Explorer explorer, IconStore iconStore) {
 		super();
 		this.explorer = explorer;
+		this.iconStore = iconStore;
 
 		setLayout(new BorderLayout());
 		setIconImage(ImageUtil.getImageIconFrom(Icons.get("gameProperties", 24, 24)).getImage());
@@ -110,6 +114,8 @@ public class GamePropertiesDialog extends JDialog {
 		txtGameName.setText(game.toString());
 		txtGameFilename.setText(FilenameUtils.getName(explorer.getFiles(explorer.getCurrentGames().get(0)).get(0)));
 		lblDateAdded.setText(UIUtil.format(game.get(0).getDateAdded()));
+		int platformId = game.get(0).getPlatformId();
+		lblIcon.setIcon(iconStore.getPlatformIcon(platformId));
 	}
 
 	private void addListeners() {
@@ -180,8 +186,8 @@ public class GamePropertiesDialog extends JDialog {
 		pnlMain.setLayout(layout);
 		pnlMain.setBorder(Paddings.TABBED_DIALOG);
 		CellConstraints cc = new CellConstraints();
-		JLabel lblIcon;
-		pnlMain.add(lblIcon = new JLabel(), cc.xy(1, 1));
+		Platform platform = explorer.getPlatform(explorer.getCurrentGames().get(0).getPlatformId());
+		pnlMain.add(lblIcon = new JLabel(iconStore.getPlatformIcon(platform.getId())), cc.xy(1, 1));
 		lblIcon.setHorizontalAlignment(SwingConstants.LEFT);
 		txtGameName = new JTextArea();
 		JScrollPane spGameName = new JScrollPane(txtGameName);
@@ -192,7 +198,6 @@ public class GamePropertiesDialog extends JDialog {
 		txtGameName.setMinimumSize(new Dimension(0, 0));
 		pnlMain.add(new JSeparator(), cc.xyw(1, 4, layout.getColumnCount()));
 		pnlMain.add(new JLabel(Messages.get(MessageConstants.COLUMN_PLATFORM) + ":"), cc.xy(1, 6));
-		Platform platform = explorer.getPlatform(explorer.getCurrentGames().get(0).getPlatformId());
 		pnlMain.add(new JLabel(platform.getName()), cc.xyw(3, 6, layout.getColumnCount() - 2));
 		pnlMain.add(new JLabel(Messages.get(MessageConstants.RUN_WITH) + ":"), cc.xy(1, 8));
 		Emulator emulator = explorer.getEmulatorFromPlatform(platform.getId());

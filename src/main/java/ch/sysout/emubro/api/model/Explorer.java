@@ -148,6 +148,10 @@ public interface Explorer {
 
 	List<Game> getGamesWithoutCovers();
 
+	String getCurrentApplicationVersion();
+
+	void setCurrentApplicationVersion(String currentApplicationVersion);
+
 	// void addEmulator(Emulator emulator);
 	//
 	// void removeEmulator(Emulator emulator);

@@ -1042,7 +1042,6 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 				pnlInputConfiguration.add(createRightPanel(), BorderLayout.EAST);
 				pnlInputConfiguration.add(createBottomPanel(), BorderLayout.SOUTH);
 				pnlInputConfiguration.add(createCenterPanel(), BorderLayout.CENTER);
-
 				return pnlInputConfiguration;
 			}
 

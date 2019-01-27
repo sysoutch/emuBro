@@ -29,6 +29,8 @@ public class MessageConstants {
 	public static final String MNU_FILE = "mnuFile";
 	public static final String MNU_VIEW = "mnuView";
 	public static final String MNU_GAMES = "mnuGames";
+	public static final String MNU_PLUGINS = "mnuPlugins";
+	public static final String ITM_REFRESH_PLUGINS = "itmRefreshPlugins";
 	public static final String MNU_FRIENDS = "mnuFriends";
 	public static final String MNU_LOOK_AND_FEEL = "mnuLookAndFeel";
 	public static final String MNU_LANGUAGE = "mnuLanguage";
@@ -353,4 +355,6 @@ public class MessageConstants {
 	public static final String CROP_IMAGE = "cropImage";
 	public static final String SET_AS_COVER = "setAsCover";
 	public static final String NO_EMULATORS_AVAILABLE_FOR_GAME = "noEmulatorsAvailableForGame";
+	public static final String WELCOME = "welcome";
+	public static final String FINISH = "finish";
 }

@@ -13,41 +13,19 @@ http://wiki.arcadecontrols.com/wiki/Snes9x#Command_Line_Parameters
 Covers, Descriptions und Tags: http://www.nintendolife.com/
 https://www.lifewire.com/command-line-commands-for-control-panel-applets-2626060
 
-+-----------+
-| 	v0.8.0	 |
-+-----------+
-- new feature: auto download covers and set real titles for games
-- new feature: auto download emulators
-- unplanned feature: not able to update to this emuBro version. full package must be downloaded, sorry. at least database should update fine...
-- added: slider view
-- added: a game can now have an id. e.g. (Mario Kart Wii RMCP01)
-- fixed: reimproved browsing computer feature
-- fixed: annoying row height changes when switching views
-- fixed: startup speed improved a lot by lazy loading game covers
-- changed: emubro-resources folder structure
-- 
-+-----------+
-| 	v0.7.1	 |
-+-----------+
-- initial beta release
-
-+-----------+
-| 	v0.7.0	 |
-+-----------+
-test release
-
 -- to do ---
-TODO default search for updates, able to deactivate
-FIXME emulator detected as game
+TODO ask once to set names for multiple games
+TODO default search for updates able to deactivate
+TODO config wizard platforms / emulators
+TODO check if game is runnable out of an archive. if not show option to extract
+TODO show response when adding emulators
 FIXME not able to set unknown emulators for multiple platforms. also ask user to add emulator for other platforms too, when emulator already added for other platform(s)
 TODO feature to online check the file by checksum to identify emulator/game (when everything other fails)
 TODO refresh tags from folder at runtime
 TODO maybe store key value pair for emu download links + filename (e.g. when url is .../download.html)
 TODO own detection for emulator setup files
-TODO show response when adding emulators
 TODO dont ask for add covers when only add emus
 TODO drag drop folder does nothing
-TODO download emulator wizard
 TODO checksum for emus to check different versions
 FIXME change cover again
 TODO what if game checksum changes - other checksum other version...
@@ -98,6 +76,7 @@ FIXME 70 when choosing name of parent folder when renaming game and then remove 
 -- Nice to have --
 TODO use faster checksum library
 TODO help with files like ecm,
+TODO feature to optimize quick search searching time by moving files, etc...
 TODO 	rating bar out of bounds (with tab. no error)
 TODO export games (also drag out of emubro) and manage file locations
 TODO export function for emubro to usb stick

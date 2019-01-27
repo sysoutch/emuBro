@@ -38,6 +38,11 @@ public class BroExplorer implements Explorer {
 	private String extensionsString = "";
 	private List<String> extensions;
 	private Map<Integer, String> checksums = new HashMap<>();
+	private String currentApplicationVersion;
+
+	public BroExplorer(String currentApplicationVersion) {
+		this.currentApplicationVersion = currentApplicationVersion;
+	}
 
 	@Override
 	public void addGame(Game game, String filePath) {
@@ -707,15 +712,6 @@ public class BroExplorer implements Explorer {
 	public void setGameCode(int id, String gameCode) {
 		games.get(id).setGameCode(gameCode);
 	}
-	// @Override
-	// public void setEmulators(List<Emulator> emulators) {
-	// this.emulators.clear();
-	// emulators2.clear();
-	// for (Emulator e : emulators) {
-	// this.emulators.put(e.getId(), e);
-	// emulators2.put(e.getPath(), e.getId());
-	// }
-	// }
 
 	public Tag getTagByChecksum(String checksum) {
 		Set<Map<String, String>> tag = tags.keySet();
@@ -730,43 +726,13 @@ public class BroExplorer implements Explorer {
 		return null;
 	}
 
-	// @Override
-	// public void addEmulator(Emulator emulator) {
-	// emulators.put(emulator.getId(), emulator);
-	// emulators2.put(emulator.getPath(), emulator.getId());
-	// }
-	//
-	// @Override
-	// public void removeEmulator(Emulator emulator) {
-	// emulators.remove(emulator.getId());
-	// emulators2.remove(emulator.getPath());
-	// }
-	//
-	// @Override
-	// public List<BroEmulator> getEmulators(int platformId) {
-	// List<BroEmulator> emus = new ArrayList<BroEmulator>();
-	// for (Emulator e : platforms.get(platformId).getEmulators()) {
-	// emus.add((BroEmulator) e);
-	// }
-	// return emus;
-	// }
-	//
-	// @Override
-	// public Emulator getEmulator(int emulatorId) {
-	// return emulators.get(emulatorId);
-	// }
-	//
-	// @Override
-	// public Emulator getEmulator(String path) {
-	// return getEmulator2(path);
-	// }
-	//
-	// private Emulator getEmulator2(String path) {
-	// return emulators.get(emulators2.get(path));
-	// }
-	//
-	// @Override
-	// public int getEmulatorCount() {
-	// return emulators.size();
-	// }
+	@Override
+	public String getCurrentApplicationVersion() {
+		return currentApplicationVersion;
+	}
+
+	@Override
+	public void setCurrentApplicationVersion(String currentApplicationVersion) {
+		this.currentApplicationVersion = currentApplicationVersion;
+	}
 }

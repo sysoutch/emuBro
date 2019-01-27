@@ -49,17 +49,16 @@ public class AboutDialog extends JDialog implements ActionListener {
 	private JLinkButton lnkWebsite = new JLinkButton();
 
 	int size = ScreenSizeUtil.is3k() ? 32 : 24;
-	private JButton btnDiscord = new JButton(ImageUtil.getImageIconFrom(Icons.get("discord", size, size)));
 	private JButton btnFacebook = new JButton(ImageUtil.getImageIconFrom(Icons.get("facebook", size, size)));
 	private JButton btnTwitter = new JButton(ImageUtil.getImageIconFrom(Icons.get("twitter", size, size)));
 	private JButton btnYoutube = new JButton(ImageUtil.getImageIconFrom(Icons.get("youtube", size, size)));
+	private JButton btnDiscord = new JButton(ImageUtil.getImageIconFrom(Icons.get("discord", size, size)));
+	private JButton btnReddit = new JButton(ImageUtil.getImageIconFrom(Icons.get("reddit", size, size)));
 	private JButton btnGitHub = new JButton(ImageUtil.getImageIconFrom(Icons.get("github", size, size)));
 
-	private AbstractButton[] socialMediaButtons = new JButton[] { btnDiscord, btnFacebook, btnTwitter, btnYoutube, btnGitHub };
+	private AbstractButton[] socialMediaButtons = new JButton[] { btnFacebook, btnTwitter, btnYoutube, btnDiscord, btnReddit, btnGitHub };
 
 	private JButton btnClose = new JButton(Messages.get(MessageConstants.CLOSE));
-
-	private int fancyButtonClickCounter;
 
 	private String applicationVersion;
 
@@ -159,6 +158,7 @@ public class AboutDialog extends JDialog implements ActionListener {
 	}
 
 	private void setActionCommands() {
+		btnReddit.setActionCommand("https://reddit.com/r/emuBro");
 		btnDiscord.setActionCommand("https://discordapp.com/invite/KFYCgqY");
 		btnFacebook.setActionCommand("https://www.facebook.com/emubr0");
 		btnTwitter.setActionCommand("https://twitter.com/sysoutch");
@@ -169,6 +169,7 @@ public class AboutDialog extends JDialog implements ActionListener {
 	private void setToolTipTexts() {
 		lblIcon.setToolTipText("Don't click this button! (Yes this is a button)");
 		lnkWebsite.setToolTipText("Visit our fancy website, yayy!");
+		btnReddit.setToolTipText("Become a Subscribro on Reddit");
 		btnDiscord.setToolTipText("Chat with us in our Discord");
 		btnFacebook.setToolTipText("Hate us on Facebook");
 		btnTwitter.setToolTipText("Follow us on Twitter");
@@ -202,7 +203,7 @@ public class AboutDialog extends JDialog implements ActionListener {
 		add(pnlWebsite, cc.xyw(1, 7, layout.getColumnCount()));
 
 		FormLayout layout2 = new FormLayout(
-				"default, $lcgap, default, $lcgap, default, $lcgap, default, $lcgap, default", "fill:pref");
+				"default, $lcgap, default, $lcgap, default, $lcgap, default, $lcgap, default, $lcgap, default", "fill:pref");
 		// layout2.setColumnGroup(1, 3, 5, 7, 9);
 		JPanel pnlSocialButtons = new JPanel(layout2);
 		CellConstraints cc2 = new CellConstraints();

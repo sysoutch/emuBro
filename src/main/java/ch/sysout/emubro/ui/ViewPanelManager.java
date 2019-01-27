@@ -112,7 +112,7 @@ public class ViewPanelManager {
 	}
 
 	private void initEmulatorIcons(List<BroEmulator> list) {
-		String emuBroCoverHome =  System.getProperty("user.dir")+"/emubro-resources/platforms/emulators";
+		String emuBroCoverHome =  System.getProperty("user.dir")+"/emubro-resources/platforms/images/emulators";
 		for (Emulator e : list) {
 			String coverPath = emuBroCoverHome + File.separator + e.getIconFilename();
 			iconStore.addEmulatorIconPath(e.getId(), coverPath);

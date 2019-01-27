@@ -13,6 +13,7 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.font.TextAttribute;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -286,12 +287,19 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 		return new BroCriteria((isSearchFieldEmpty() ? "" : txtSearchGame.getText()), selectedTags);
 	}
 
-	public void initPlatforms(List<Platform> platforms) {
-		for (Platform p : platforms) {
-			if (explorer.getGameCountFromPlatform(p.getId()) > 0) {
-				cmbPlatforms.addItem(p);
+	public void initPlatforms(Collection<Platform> tmpPlatformsWithGames) {
+		for (Platform p : tmpPlatformsWithGames) {
+			cmbPlatforms.addItem(p);
+		}
+	}
+
+	public boolean hasPlatform(int platformId) {
+		for (int i = 0; i < cmbPlatforms.getItemCount(); i++) {
+			if (cmbPlatforms.getItemAt(i).getId() == platformId) {
+				return true;
 			}
 		}
+		return false;
 	}
 
 	class MyComboRenderer implements ListCellRenderer<Object> {
@@ -339,7 +347,7 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 	public void gameAdded(final GameAddedEvent e) {
 		int platformId = e.getGame().getPlatformId();
 		Platform platform = explorer.getPlatform(platformId);
-		if (!hasPlatform(platform)) {
+		if (!hasPlatform(platform.getId())) {
 			cmbPlatforms.addItem(platform);
 		}
 		for (Tag tag : e.getGame().getTags()) {
@@ -368,15 +376,6 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 			}
 		}
 		return null;
-	}
-
-	private boolean hasPlatform(Platform platform) {
-		for (int i = 0; i < cmbPlatforms.getItemCount(); i++) {
-			if (cmbPlatforms.getItemAt(i).equals(platform)) {
-				return true;
-			}
-		}
-		return false;
 	}
 
 	private boolean hasTag(String tagName) {

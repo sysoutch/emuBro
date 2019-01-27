@@ -8,6 +8,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URL;
+import java.net.URLConnection;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.Connection;
@@ -45,6 +47,7 @@ import ch.sysout.emubro.impl.model.BroTag;
 import ch.sysout.emubro.ui.MainFrame;
 import ch.sysout.emubro.ui.SplashScreenWindow;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.util.FileUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ValidationUtil;
 
@@ -61,6 +64,7 @@ public class Main {
 	private static int explorerId = 0;
 	private static LookAndFeel defaultLookAndFeel;
 	private static BroExplorer explorer;
+	private static final String currentApplicationVersion = "0.8.0";
 
 	public static void main(String[] args) {
 		System.setProperty("java.util.Arrays.useLegacyMergeSort", "true");
@@ -91,7 +95,7 @@ public class Main {
 				if (explorerDAO != null) {
 					dlgSplashScreen.setText(Messages.get(MessageConstants.ALMOST_READY));
 					try {
-						explorer = new BroExplorer();
+						explorer = new BroExplorer(currentApplicationVersion);
 
 						List<Platform> platforms = explorerDAO.getPlatforms();
 						explorer.setPlatforms(platforms);
@@ -99,21 +103,40 @@ public class Main {
 						List<Tag> tags = explorerDAO.getTags();
 						explorer.setTags(tags);
 
-						String defaultPlatformsFilePath = System.getProperty("user.dir") + "/emubro-resources/platforms";
+						String defaultResourcesDir = System.getProperty("user.dir") + "/emubro-resources";
+						File file = new File(defaultResourcesDir);
+						if (!file.exists()) {
+							int request = JOptionPane.showConfirmDialog(dlgSplashScreen, "The resources folder does not exists. It's the brain of the application.\n\n"
+									+ "It is needed to show default tags, platforms and emulators as well as default covers and icons.\n"
+									+ "Do you want to download it?\n\n"
+									+ "If you decide to not download it, an empty folder will be created.", "resources not found", JOptionPane.YES_NO_OPTION);
+							if (request == JOptionPane.YES_OPTION) {
+								downloadResourceFolder(currentApplicationVersion);
+							} else {
+								file.mkdir();
+							}
+						}
+						String os = "win";
+						if (ValidationUtil.isWindows()) {
+							os = "win";
+						} else if (ValidationUtil.isUnix()) {
+							os = "linux";
+						} else if (ValidationUtil.isMac()) {
+							os = "mac";
+						}
+						String defaultPlatformsFilePath = defaultResourcesDir+"/platforms/config/"+os;
+						String defaultTagsDir = defaultResourcesDir+"/tags";
 						List<BroPlatform> defaultPlatforms = null;
+						List<BroTag> updatedTags = null;
 						try {
 							defaultPlatforms = initDefaultPlatforms(defaultPlatformsFilePath);
 						} catch (FileNotFoundException eFNF) {
 							defaultPlatforms = new ArrayList<>();
-							JOptionPane.showConfirmDialog(dlgSplashScreen, "oops. platforms resources not found");
 						}
-
-						List<BroTag> updatedTags = null;
 						try {
-							updatedTags = getUpdatedTags(System.getProperty("user.dir") + "/emubro-resources/tags");
+							updatedTags = getUpdatedTags(defaultTagsDir);
 						} catch (FileNotFoundException eFNF) {
 							updatedTags = new ArrayList<>();
-							JOptionPane.showConfirmDialog(dlgSplashScreen, "oops. tags resources not found");
 						}
 
 						//					explorer.setDefaultPlatforms(defaultPlatforms);
@@ -123,7 +146,6 @@ public class Main {
 						mainFrame.initTags(tags);
 
 						final BroController controller = new BroController(explorerDAO, explorer, mainFrame);
-
 						controller.addOrGetPlatformsAndEmulators(defaultPlatforms);
 						controller.addOrChangeTags(explorer.getUpdatedTags());
 
@@ -184,8 +206,18 @@ public class Main {
 						hideSplashScreen();
 
 						if (args.length > 0 && args[0].equals("--changelog")) {
-							JOptionPane.showMessageDialog(mainFrame, "--- emuBro v"+BroController.currentApplicationVersion+" ---\n"
+							JOptionPane.showMessageDialog(mainFrame, "--- emuBro v"+currentApplicationVersion+" ---\n"
 									+ "\nUpdate successful!");
+						}
+						if (controller.shouldCheckForUpdates()) {
+							Thread t = new Thread(new Runnable() {
+
+								@Override
+								public void run() {
+									controller.checkForUpdates();
+								}
+							});
+							t.start();
 						}
 						if (applyData) {
 							//						controller.setDividerLocations();
@@ -255,9 +287,22 @@ public class Main {
 				}
 			}
 		} catch (SQLException e3) {
-			// TODO Auto-generated catch block
 			e3.printStackTrace();
 		}
+	}
+
+	private static void downloadResourceFolder(String version) throws IOException {
+		String zipFileName = "emubro-resources.zip";
+		String urlPath = "https://github.com/sysoutch/emuBro/releases/download/v"+version+"/"+zipFileName;
+		URL url = new URL(urlPath);
+		URLConnection con;
+		con = url.openConnection();
+		con.setReadTimeout(20000);
+		String workingDir = System.getProperty("user.dir");
+		File resourcesFile = new File(workingDir + "/" + zipFileName);
+		FileUtils.copyURLToFile(url, resourcesFile);
+		FileUtil.unzipArchive(resourcesFile, workingDir, true);
+		System.err.println("resources folder has been downloaded");
 	}
 
 	private static void updateDatabaseVersion(Connection conn, String expectedDbVersion) {
@@ -358,19 +403,27 @@ public class Main {
 	public static List<BroPlatform> initDefaultPlatforms(String defaultPlatformsFilePath) throws FileNotFoundException {
 		List<BroPlatform> platforms = new ArrayList<>();
 		File dir = new File(defaultPlatformsFilePath);
+		if (!dir.exists()) {
+			throw new FileNotFoundException("directory does not exist: "+defaultPlatformsFilePath);
+		}
 		for (File f : FileUtils.listFiles(dir, new String[] { "json" }, false)) {
-			InputStream is = new FileInputStream(f);
-			BufferedReader br = new BufferedReader(new InputStreamReader(is));
-			java.lang.reflect.Type collectionType = new TypeToken<BroPlatform>() {
-			}.getType();
-			Gson gson = new Gson();
-
-			platforms.add((BroPlatform) gson.fromJson(br, collectionType));
 			try {
-				br.close();
-			} catch (IOException e) {
+				InputStream is = new FileInputStream(f);
+				BufferedReader br = new BufferedReader(new InputStreamReader(is));
+				java.lang.reflect.Type collectionType = new TypeToken<BroPlatform>() {
+				}.getType();
+				Gson gson = new Gson();
+
+				platforms.add((BroPlatform) gson.fromJson(br, collectionType));
+				try {
+					br.close();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} catch (FileNotFoundException e1) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				e1.printStackTrace();
 			}
 		}
 		return platforms;
@@ -379,9 +432,12 @@ public class Main {
 	public static List<BroTag> getUpdatedTags(String defaultTagsFilePath) throws FileNotFoundException {
 		List<BroTag> tags = new ArrayList<>();
 		Path path = Paths.get(defaultTagsFilePath);
-
+		File pathDir = path.toFile();
+		if (!pathDir.exists()) {
+			throw new FileNotFoundException("directory does not exist: "+defaultTagsFilePath);
+		}
 		Yaml yaml = new Yaml();
-		for (File f : FileUtils.listFiles(path.toFile(), new String[] { "yaml" }, false)) {
+		for (File f : FileUtils.listFiles(pathDir, new String[] { "yaml" }, false)) {
 			String checksum;
 			try {
 				checksum = ValidationUtil.getChecksumOfFile(f);
@@ -393,20 +449,33 @@ public class Main {
 
 			Tag tag = explorer.getTagByChecksum(checksum);
 			if (tag == null) {
-				InputStream is = new FileInputStream(f);
-
-				Map<String, List<String>> obj = yaml.load(is);
-				System.out.println(obj);
 				try {
-					is.close();
-				} catch (IOException e) {
+					InputStream is = new FileInputStream(f);
+					Map<String, List<String>> obj = null;
+					try {
+						obj = yaml.load(is);
+					} catch (Exception ex) {
+						System.err.println("failed to load tag file: "+f.getAbsolutePath());
+						break;
+					}
+					if (obj == null) {
+						break;
+					}
+					try {
+						is.close();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					System.out.println(obj);
+					List<String> asdf = obj.get("en");
+					System.err.println("asddf: "+asdf);
+					BroTag tagToAdd = new BroTag(-1, obj, checksum, "#b27f5d");
+					tags.add(tagToAdd);
+				} catch (FileNotFoundException e1) {
 					// TODO Auto-generated catch block
-					e.printStackTrace();
+					e1.printStackTrace();
 				}
-				List<String> asdf = obj.get("en");
-				System.err.println("asddf: "+asdf);
-				BroTag tagToAdd = new BroTag(-1, obj, checksum, "#b27f5d");
-				tags.add(tagToAdd);
 			}
 		}
 		return tags;

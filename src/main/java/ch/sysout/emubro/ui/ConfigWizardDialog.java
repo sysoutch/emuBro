@@ -22,7 +22,9 @@ import com.jgoodies.forms.factories.Paddings;
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 
+import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.impl.BroConfigWizardListener;
+import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.ImageUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
@@ -38,10 +40,10 @@ public class ConfigWizardDialog extends JDialog implements ActionListener {
 	private JPanel pnlContent = new JPanel();
 	private JPanel pnlFooter = new JPanel();
 
-	private JLabel lblStep1 = new JLabel2("Willkommen");
-	private JLinkButton lnkStep2 = new JLinkButton("Emulatoren und Spiele");
-	private JLinkButton lnkStep3 = new JLinkButton("Covers hinzufügen");
-	private JLinkButton lnkStep4 = new JLinkButton("Fertigstellen");
+	private JLabel lblStep1 = new JLabel2(Messages.get(MessageConstants.WELCOME));
+	private JLinkButton lnkStep2 = new JLinkButton(Messages.get(MessageConstants.PLATFORMS));
+	private JLinkButton lnkStep3 = new JLinkButton(Messages.get(MessageConstants.EMULATORS));
+	private JLinkButton lnkStep4 = new JLinkButton(Messages.get(MessageConstants.FINISH));
 
 	private JCheckBox chkShowOnStart = new JCheckBox("Assistenten beim Start anzeigen");
 
@@ -51,14 +53,17 @@ public class ConfigWizardDialog extends JDialog implements ActionListener {
 
 	private JPanel[] contentPanels = {
 			// new ManageEmulatorsPanel(new GameExplorer()),
-			new GeneralConfigPanel(), new CoverConfigPanel(), new FinishConfigPanel() };
+			new GeneralConfigPanel(), new PlatformConfigPanel(), new EmulatorConfigPanel(), new FinishConfigPanel() };
 
 	private JPanel currentContentPanel = contentPanels[0];
 
 	private List<BroConfigWizardListener> listeners = new ArrayList<>();
 
-	public ConfigWizardDialog() {
+	private Explorer explorer;
+
+	public ConfigWizardDialog(Explorer explorer) {
 		super();
+		this.explorer = explorer;
 		setTitle(Messages.get("configureWizard", Messages.get("applicationTitle")));
 		setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
 		setModalityType(ModalityType.APPLICATION_MODAL);
@@ -216,6 +221,17 @@ public class ConfigWizardDialog extends JDialog implements ActionListener {
 		}
 	}
 
+	class PlatformConfigPanel extends JPanel {
+		private static final long serialVersionUID = 1L;
+
+		private String message = "" + "<html>" + "<h3>Plattformen hinzufügen</h3>" + "<p>" + "</html>";
+
+		public PlatformConfigPanel() {
+			super();
+			add(new JLabel2(message));
+		}
+	}
+
 	class EmulatorConfigPanel extends JPanel {
 
 		private static final long serialVersionUID = 1L;
@@ -225,17 +241,6 @@ public class ConfigWizardDialog extends JDialog implements ActionListener {
 		public EmulatorConfigPanel() {
 			super();
 			add(new JLabel(message));
-		}
-	}
-
-	class PlatformConfigPanel extends JPanel {
-		private static final long serialVersionUID = 1L;
-
-		private String message = "" + "<html>" + "<h3>Plattformen hinzufügen</h3>" + "<p>" + "</html>";
-
-		public PlatformConfigPanel() {
-			super();
-			add(new JLabel2(message));
 		}
 	}
 
