@@ -96,7 +96,7 @@ public class ButtonBarPanel extends JPanel {
 				checkMinimizeButtons();
 			}
 		} else {
-			boolean moreWidthThanBefore = currentPanelWidth > lastPanelWidth;
+			boolean moreWidthThanBefore = currentPanelWidth >= lastPanelWidth;
 			if (moreWidthThanBefore) {
 				checkMaximizeButtons();
 				setVisible(true);

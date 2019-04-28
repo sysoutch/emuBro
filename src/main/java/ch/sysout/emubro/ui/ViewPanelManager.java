@@ -76,8 +76,8 @@ public class ViewPanelManager {
 	private List<TagsFromGamesListener> tagsFromGamesListeners = new ArrayList<>();
 	private FilterEvent currentFilterEvent;
 
-	public ViewPanelManager(IconStore iconStore) {
-		this.iconStore = iconStore;
+	public ViewPanelManager() {
+		iconStore = IconStore.current();
 		panels.add(pnlBlankView);
 	}
 
@@ -94,10 +94,10 @@ public class ViewPanelManager {
 		}
 	}
 
-	public void initPlatforms(List<Platform> platforms) {
+	public void initPlatforms(String emuBroCoverHome, List<Platform> platforms) {
 		this.platforms = platforms;
 		for (Platform p : platforms) {
-			initEmulatorIcons(p.getEmulators());
+			initEmulatorIcons(emuBroCoverHome, p.getEmulators());
 			iconStore.addPlatformIcon(p.getId(), p.getIconFileName());
 		}
 		initPlatformCovers(platforms);
@@ -111,8 +111,7 @@ public class ViewPanelManager {
 		}
 	}
 
-	private void initEmulatorIcons(List<BroEmulator> list) {
-		String emuBroCoverHome =  System.getProperty("user.dir")+"/emubro-resources/platforms/images/emulators";
+	private void initEmulatorIcons(String emuBroCoverHome, List<BroEmulator> list) {
 		for (Emulator e : list) {
 			String coverPath = emuBroCoverHome + File.separator + e.getIconFilename();
 			iconStore.addEmulatorIconPath(e.getId(), coverPath);

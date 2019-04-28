@@ -12,8 +12,8 @@ import javax.swing.JSlider;
 import javax.swing.event.ChangeListener;
 
 import ch.sysout.emubro.util.MessageConstants;
-import ch.sysout.ui.ImageUtil;
 import ch.sysout.util.Icons;
+import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 

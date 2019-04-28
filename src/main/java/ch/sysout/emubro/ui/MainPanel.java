@@ -64,8 +64,8 @@ import ch.sysout.emubro.impl.event.BroGameSelectionEvent;
 import ch.sysout.emubro.impl.event.NavigationEvent;
 import ch.sysout.emubro.impl.model.GameConstants;
 import ch.sysout.emubro.util.MessageConstants;
-import ch.sysout.ui.ImageUtil;
 import ch.sysout.util.Icons;
+import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 import ch.sysout.util.UIUtil;
@@ -938,6 +938,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 		for (Game game : games) {
 			if (game != null) {
 				String gameCoverPath = game.getCoverPath();
+				System.err.println("game cover path: " + gameCoverPath);
 				ImageIcon img;
 				if (gameCoverPath != null && !gameCoverPath.trim().isEmpty()) {
 					IconStore iconStore = viewManager.getIconStore();
@@ -1722,5 +1723,13 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 			return ViewPanel.TABLE_VIEW;
 		}
 		return ViewPanel.BLANK_VIEW;
+	}
+
+	public void addOpenGameFolderListener(ActionListener l) {
+		popupGame.addOpenGameFolderListener(l);
+	}
+
+	public void addCopyGamePathListener(ActionListener l) {
+		popupGame.addCopyGamePathListener(l);
 	}
 }

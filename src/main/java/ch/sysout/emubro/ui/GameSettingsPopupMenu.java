@@ -16,8 +16,8 @@ import javax.swing.filechooser.FileSystemView;
 import ch.sysout.emubro.api.model.Emulator;
 import ch.sysout.emubro.impl.model.BroEmulator;
 import ch.sysout.emubro.impl.model.EmulatorConstants;
-import ch.sysout.ui.ImageUtil;
 import ch.sysout.util.Icons;
+import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 
@@ -50,8 +50,8 @@ class GameSettingsPopupMenu extends JPopupMenu {
 				continue;
 			}
 			String s = "<html><strong>" + emu.getName() + "</strong> <br>(" + emu.getPath() + ")</html>";
-			String path = "/platforms/emulators/" + emu.getIconFilename();
-			Icon icon = ImageUtil.getImageIconFrom(path);
+			//			String path = "/platforms/emulators/" + emu.getIconFilename();
+			Icon icon = IconStore.current().getEmulatorIcon(emu.getId());;
 			if (icon == null) {
 				icon = FileSystemView.getFileSystemView().getSystemIcon(new File(emu.getPath()));
 			}

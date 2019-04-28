@@ -7,10 +7,12 @@ import java.util.Map;
 
 import javax.swing.ImageIcon;
 
-import ch.sysout.ui.ImageUtil;
+import ch.sysout.util.ImageUtil;
 import ch.sysout.util.ScreenSizeUtil;
 
 public class IconStore {
+	private static IconStore instance;
+
 	private Map<Integer, ImageIcon> platformIcons = new HashMap<>();
 
 	private Map<Integer, String> emulatorIconPaths = new HashMap<>();
@@ -31,6 +33,14 @@ public class IconStore {
 
 	private String currentPlatformLogosDirectory = System.getProperty("user.dir")+"/emubro-resources/platforms/images/logos";
 	private String currentPlatformCoversDirectory = System.getProperty("user.dir")+"/emubro-resources/platforms/images/covers";
+
+	private IconStore() {
+		// prevent instantiation of this class
+	}
+
+	public static final IconStore current() {
+		return instance == null ? instance = new IconStore() : instance;
+	}
 
 	public void addPlatformCover(int platformId, String coverFileName) {
 		String coverFilePath = currentPlatformCoversDirectory + "/" + coverFileName;

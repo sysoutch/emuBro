@@ -12,7 +12,7 @@ import javax.swing.table.DefaultTableCellRenderer;
 
 import ch.sysout.emubro.api.model.Emulator;
 import ch.sysout.emubro.api.model.Platform;
-import ch.sysout.ui.ImageUtil;
+import ch.sysout.util.ImageUtil;
 import ch.sysout.util.ScreenSizeUtil;
 
 public class EmulatorTableCellRenderer extends DefaultTableCellRenderer {
@@ -47,7 +47,7 @@ public class EmulatorTableCellRenderer extends DefaultTableCellRenderer {
 					File file = new File(emu.getPath());
 					ico = (ImageIcon) FileSystemView.getFileSystemView().getSystemIcon(file);
 				} else {
-					ico = ImageUtil.getImageIconFrom(System.getProperty("user.dir") + "/emubro-resources/platforms/images/emulators/" + emu.getIconFilename(), true);
+					ico = IconStore.current().getEmulatorIcon(emu.getId());
 				}
 				ico = ImageUtil.scaleCover(ico, ScreenSizeUtil.adjustValueToResolution(24), CoverConstants.SCALE_BOTH_OPTION);
 				icons.put(emu.getId(), ico);

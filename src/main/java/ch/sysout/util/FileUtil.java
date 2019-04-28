@@ -5,10 +5,14 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 public class FileUtil {
+
+	private static MessageDigest digest;
 
 	public static String getParentDirPath(String fileOrDirPath) {
 		boolean endsWithSlash = fileOrDirPath.endsWith(File.separator);
@@ -67,4 +71,36 @@ public class FileUtil {
 		bos.close();
 	}
 
+	public static String getChecksumOfFile(File file) throws IOException {
+		if (digest == null) {
+			try {
+				digest = MessageDigest.getInstance("MD5");
+			} catch (NoSuchAlgorithmException e1) {
+				e1.printStackTrace();
+			}
+		}
+		return getChecksumOfFile(digest, file);
+	}
+
+	public static String getChecksumOfFile(String filePath) throws IOException {
+		return getChecksumOfFile(digest, new File(filePath));
+	}
+
+	public static String getChecksumOfFile(MessageDigest digest, File file) throws IOException {
+		FileInputStream fis = new FileInputStream(file);
+		byte[] byteArray = new byte[1024];
+		int bytesCount = 0;
+		while ((bytesCount = fis.read(byteArray)) != -1) {
+			digest.update(byteArray, 0, bytesCount);
+		};
+		if (fis != null) {
+			fis.close();
+		}
+		byte[] bytes = digest.digest();
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < bytes.length; i++) {
+			sb.append(Integer.toString((bytes[i] & 0xff) + 0x100, 16).substring(1));
+		}
+		return sb.toString();
+	}
 }

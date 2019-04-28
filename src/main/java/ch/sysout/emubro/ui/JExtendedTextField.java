@@ -62,9 +62,9 @@ public class JExtendedTextField extends JTextField implements ActionListener {
 		boolean empty = text.isEmpty() || isSearchFieldEmpty();
 		boolean clipboardEmpty = UIUtil.getClipboardText() == null || UIUtil.getClipboardText().isEmpty();
 		boolean textSelected = getSelectedText() != null && !getSelectedText().isEmpty();
-		itmCut.setEnabled(textSelected);
-		itmCopy.setEnabled(textSelected);
-		itmDelete.setEnabled(textSelected);
+		itmCut.setEnabled(!empty && textSelected);
+		itmCopy.setEnabled(!empty && textSelected);
+		itmDelete.setEnabled(!empty && textSelected);
 		itmSelectAll.setEnabled(!empty);
 		itmPaste.setEnabled(!clipboardEmpty);
 	}

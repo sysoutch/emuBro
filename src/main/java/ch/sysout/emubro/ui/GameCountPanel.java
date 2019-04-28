@@ -1,6 +1,7 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.Cursor;
+import java.awt.Dimension;
 import java.awt.Insets;
 import java.awt.Point;
 import java.awt.event.ActionListener;
@@ -14,6 +15,7 @@ import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JSeparator;
 import javax.swing.SwingUtilities;
 
 import com.jgoodies.forms.layout.CellConstraints;
@@ -23,8 +25,8 @@ import ch.sysout.emubro.api.GameListener;
 import ch.sysout.emubro.api.event.GameAddedEvent;
 import ch.sysout.emubro.api.event.GameRemovedEvent;
 import ch.sysout.emubro.util.MessageConstants;
-import ch.sysout.ui.ImageUtil;
 import ch.sysout.util.Icons;
+import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 import ch.sysout.util.UIUtil;
@@ -32,6 +34,7 @@ import ch.sysout.util.UIUtil;
 public class GameCountPanel extends JPanel implements GameListener, DetailsPaneListener, LanguageListener {
 	private static final long serialVersionUID = 1L;
 	private JLabel lblGameCount = new JLabel();
+	private JLabel lblSystemInformations = new JLabel();
 	private ProgressPanel pnlProgress;
 	JButton btnShowDetailsPane = new JButton();
 	JLabel btnResize = new JLabel();
@@ -122,11 +125,15 @@ public class GameCountPanel extends JPanel implements GameListener, DetailsPaneL
 		btnResize.setFocusable(false);
 		// JPanel pnl = new JPanel(new BorderLayout());
 		// pnl.add(pnlProgress);
-		FormLayout layout = new FormLayout("min, $ugap:grow, default", "default:grow");
+		FormLayout layout = new FormLayout("min, $rgap, min:grow, $ugap, default",
+				"default:grow");
 		setLayout(layout);
 		CellConstraints cc = new CellConstraints();
+		lblSystemInformations.setMinimumSize(new Dimension(0, 0));
 		add(lblGameCount, cc.xy(1, 1));
-		add(pnlProgress, cc.xy(3, 1));
+		add(new JSeparator(JSeparator.VERTICAL), cc.xy(2, 1));
+		add(lblSystemInformations, cc.xy(3, 1));
+		add(pnlProgress, cc.xy(5, 1));
 		// add(lblResize, cc.xywh(5, 2, 1, 1));
 	}
 
@@ -184,5 +191,11 @@ public class GameCountPanel extends JPanel implements GameListener, DetailsPaneL
 
 	public int getGameCount() {
 		return gameCount;
+	}
+
+	public void showSystemInformations(String[] informations) {
+		for (String s : informations) {
+			lblSystemInformations.setText(lblSystemInformations.getText() + " " + s);
+		}
 	}
 }

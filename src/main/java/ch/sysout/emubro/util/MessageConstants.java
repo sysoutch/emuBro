@@ -153,6 +153,7 @@ public class MessageConstants {
 	public static final String BROWSE_COMPUTER_FOR_GAMES_AND_EMULATORS = "browseComputerForGamesAndEmulators";
 	public static final String APPLICATION_DESCRIPTION = "applicationDescription";
 	public static final String OPEN_GAME_PATH = "openGamePath";
+	public static final String COPY_GAME_PATH = "copyGamePath";
 	public static final String OPEN_FOLDER_IN_EXPLORER = "openFolderInExplorer";
 	public static final String REMOVE = "remove";
 	public static final String GAME_PROPERTIES = "gameProperties";
@@ -357,4 +358,6 @@ public class MessageConstants {
 	public static final String NO_EMULATORS_AVAILABLE_FOR_GAME = "noEmulatorsAvailableForGame";
 	public static final String WELCOME = "welcome";
 	public static final String FINISH = "finish";
+	public static final String EMUBRO_DISCORD = "emuBroDiscord";
+
 }

@@ -1,4 +1,4 @@
-package ch.sysout.ui;
+package ch.sysout.util;
 
 import java.awt.Graphics2D;
 import java.awt.Image;

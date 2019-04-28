@@ -15,8 +15,8 @@ import ch.sysout.emubro.api.model.Emulator;
 import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.impl.model.BroEmulator;
 import ch.sysout.emubro.impl.model.EmulatorConstants;
-import ch.sysout.ui.ImageUtil;
 import ch.sysout.util.Icons;
+import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 
@@ -128,7 +128,7 @@ public class EmulatorTableModel extends DefaultTableModel {
 					//					g2d.drawImage(ico.getImage(), 0, 0, width, height, null);
 				}
 				if (ico == null) {
-					ico = ImageUtil.getImageIconFrom(System.getProperty("user.dir") + "/emubro-resources/platforms/images/emulators/"+emulator.getIconFilename(), true);
+					ico = IconStore.current().getEmulatorIcon(emulator.getId());
 				}
 				if (ico != null) {
 					ico = ImageUtil.scaleCover(ico, size, CoverConstants.SCALE_BOTH_OPTION);

@@ -1,5 +1,6 @@
 package ch.sysout.emubro.impl.model;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -39,6 +40,7 @@ public class BroExplorer implements Explorer {
 	private List<String> extensions;
 	private Map<Integer, String> checksums = new HashMap<>();
 	private String currentApplicationVersion;
+	private boolean discordFeatureDisabled = false; // this is intended to be false per default until user decides to disable it
 
 	public BroExplorer(String currentApplicationVersion) {
 		this.currentApplicationVersion = currentApplicationVersion;
@@ -734,5 +736,27 @@ public class BroExplorer implements Explorer {
 	@Override
 	public void setCurrentApplicationVersion(String currentApplicationVersion) {
 		this.currentApplicationVersion = currentApplicationVersion;
+	}
+
+	public boolean isDiscordFeatureInstalled() {
+		return false;
+	}
+
+	public boolean isDiscordFeatureDisabled() {
+		return isDiscordFeatureInstalled() && discordFeatureDisabled;
+	}
+
+	public void setDiscordFeatureDisabled(boolean discordFeatureDisabled) {
+		this.discordFeatureDisabled = discordFeatureDisabled;
+	}
+
+	@Override
+	public String getResourcesPath() {
+		return System.getProperty("user.dir") + File.separator + "emubro-resources";
+	}
+
+	@Override
+	public String getGameCoversPath() {
+		return getResourcesPath() + File.separator + "games" + File.separator + "covers";
 	}
 }

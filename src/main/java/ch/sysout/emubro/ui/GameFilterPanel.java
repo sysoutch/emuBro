@@ -58,8 +58,8 @@ import ch.sysout.emubro.impl.event.BroFilterEvent;
 import ch.sysout.emubro.impl.filter.BroCriteria;
 import ch.sysout.emubro.impl.model.BroTag;
 import ch.sysout.emubro.util.MessageConstants;
-import ch.sysout.ui.ImageUtil;
 import ch.sysout.util.Icons;
+import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 import ch.sysout.util.UIUtil;
@@ -433,28 +433,48 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 
 		mnuTags.add(itmTag);
 		UIUtil.validateAndRepaint(mnuTags);
-		itmTag.addActionListener(new ActionListener() {
+		itmTag.addActionListener(getTagItemListener(itmTag));
+	}
+
+	private ActionListener getTagItemListener(AbstractButton itmTag) {
+		return new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				int platformId = getSelectedPlatformId();
-				fireEvent(new BroFilterEvent(platformId, getCriteria()));
+				addTagToFilter(itmTag.isSelected(), itmTag.getText());
+			}
+		};
+	}
 
-				mnuTags.setVisible(true);
-				MenuSelectionManager.defaultManager().setSelectedPath(new MenuElement[] { mnuTags });
-				if (itmTag.isSelected()) {
+	public void addTagToFilter(boolean selected, Tag tag) {
+		//		showAdvancedSearchSettingsPopupMenu(btnTags);
+		for (int i = 0; i < mnuTags.getComponentCount(); i++) {
+			JMenuItem itm = (JMenuItem) mnuTags.getComponent(i);
+			if (itm.getText().equals(tag.getName())) {
+				itm.setSelected(true);
+				break;
+			}
+		}
+		addTagToFilter(selected, tag.getName());
+	}
+
+	private void addTagToFilter(boolean selected, String tagName) {
+		int platformId = getSelectedPlatformId();
+		fireEvent(new BroFilterEvent(platformId, getCriteria()));
+
+		mnuTags.setVisible(true);
+		MenuSelectionManager.defaultManager().setSelectedPath(new MenuElement[] { mnuTags });
+		if (selected) {
+			btnTags.setText("<html><strong>Tags</strong></html>");
+		} else {
+			for (Component itm : mnuTags.getComponents()) {
+				if (((AbstractButton) itm).isSelected()) {
 					btnTags.setText("<html><strong>Tags</strong></html>");
-				} else {
-					for (Component itm : mnuTags.getComponents()) {
-						if (((AbstractButton) itm).isSelected()) {
-							btnTags.setText("<html><strong>Tags</strong></html>");
-							return;
-						}
-					}
-					btnTags.setText("Tags");
+					return;
 				}
 			}
-		});
+			btnTags.setText("Tags");
+		}
 	}
 
 	protected List<BroTag> getSelectedTags() {

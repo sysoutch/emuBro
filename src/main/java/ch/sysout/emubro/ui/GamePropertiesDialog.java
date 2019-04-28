@@ -54,8 +54,8 @@ import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.util.MessageConstants;
-import ch.sysout.ui.ImageUtil;
 import ch.sysout.util.Icons;
+import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 import ch.sysout.util.UIUtil;
@@ -83,11 +83,10 @@ public class GamePropertiesDialog extends JDialog {
 
 	private JLabel lblIcon;
 
-	public GamePropertiesDialog(Explorer explorer, IconStore iconStore) {
+	public GamePropertiesDialog(Explorer explorer) {
 		super();
 		this.explorer = explorer;
-		this.iconStore = iconStore;
-
+		iconStore = IconStore.current();
 		setLayout(new BorderLayout());
 		setIconImage(ImageUtil.getImageIconFrom(Icons.get("gameProperties", 24, 24)).getImage());
 		setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
@@ -148,6 +147,7 @@ public class GamePropertiesDialog extends JDialog {
 		// spMain.getVerticalScrollBar().setUnitIncrement(16);
 		tpMain.addTab(Messages.get(MessageConstants.GENERAL), sp);
 
+		txtGameName.setEditable(false);
 		int oldPreferredHeight = txtGameName.getPreferredSize().height;
 		SwingUtilities.invokeLater(new Runnable() {
 

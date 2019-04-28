@@ -40,8 +40,9 @@ import ch.sysout.emubro.impl.event.BroTagRemovedEvent;
 import ch.sysout.emubro.impl.model.BroEmulator;
 import ch.sysout.emubro.impl.model.EmulatorConstants;
 import ch.sysout.emubro.util.MessageConstants;
-import ch.sysout.ui.ImageUtil;
 import ch.sysout.util.Icons;
+import ch.sysout.util.ImageUtil;
+import ch.sysout.util.MenuScroller;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 import ch.sysout.util.UIUtil;
@@ -73,6 +74,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 	private JMenuItem itmRenameGame = new JMenuItem();
 	private JMenuItem itmRemoveGame = new JMenuItem();
 	private JMenuItem itmOpenGameFolder = new JMenuItem();
+	private JMenuItem itmCopyGamePath = new JMenuItem();
 	private JMenuItem itmGameProperties = new JMenuItem();
 	private RatingBarPanel pnlRatingBar = new RatingBarPanel(null, false);
 	private JMenuItem itmComment = new JMenuItem();
@@ -89,13 +91,15 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 	private List<RunGameWithListener> runGameWithListeners = new ArrayList<>();
 
 	public GameContextMenu() {
+		MenuScroller.setScrollerFor(mnuAvailableTags, 8, 125, 3, 1);
+
 		setIcons();
 		addComponentsToJComponent(this, itmRunGame, mnuRunWith,
 				new JSeparator(), itmChangePlatform, itmConfigureEmulator,
 				new JSeparator(), mnuRateGame, mnuAddTags, itmAddCoverComputer,
 				new JSeparator(), mnuShowTagsWeb, mnuShowCoverWeb, mnuShowTrailerWeb/*, itmWebSearchSettings*/,
 				new JSeparator(), itmRemoveGame, itmRenameGame,
-				new JSeparator(), itmOpenGameFolder,
+				new JSeparator(), itmOpenGameFolder, itmCopyGamePath,
 				new JSeparator(), itmGameProperties);
 		addComponentsToJComponent(mnuRateGame, pnlRatingBar, new JSeparator(), itmComment);
 		addComponentsToJComponent(mnuShowTagsWeb, itmDefaultTagSource);
@@ -212,8 +216,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 				continue;
 			}
 			String s = "<html><strong>" + emu.getName() + "</strong> <br>(" + emu.getPath() + ")</html>";
-			String path = System.getProperty("user.dir")+"/emubro-resources/platforms/images/emulators/" + emu.getIconFilename();
-			Icon icon = ImageUtil.getImageIconFrom(path, true);
+			Icon icon = IconStore.current().getEmulatorIcon(emu.getId());
 			if (icon == null) {
 				icon = FileSystemView.getFileSystemView().getSystemIcon(new File(emu.getPath()));
 			}
@@ -258,9 +261,14 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		itmConfigureEmulator.setIcon(ImageUtil.getImageIconFrom(Icons.get("settings", size, size)));
 		itmComment.setIcon(ImageUtil.getImageIconFrom(Icons.get("gameComment", size, size)));
 		itmOpenGameFolder.setIcon(ImageUtil.getImageIconFrom(Icons.get("openFolder", size, size)));
+		itmCopyGamePath.setIcon(ImageUtil.getImageIconFrom(Icons.get("copy", size, size)));
 		itmRemoveGame.setIcon(ImageUtil.getImageIconFrom(Icons.get("remove", size, size)));
 		itmRenameGame.setIcon(ImageUtil.getImageIconFrom(Icons.get("rename", size, size)));
 		itmGameProperties.setIcon(ImageUtil.getImageIconFrom(Icons.get("gameProperties", size, size)));
+		itmDefaultTagSource.setIcon(ImageUtil.getImageIconFrom(Icons.get("applicationIcon", size, size)));
+		itmDefaultCoverSourceEmuBro.setIcon(ImageUtil.getImageIconFrom(Icons.get("applicationIcon", size, size)));
+		itmDefaultCoverSource.setIcon(ImageUtil.getImageIconFrom(Icons.get("google", size, size)));
+		itmDefaultTrailerSource.setIcon(ImageUtil.getImageIconFrom(Icons.get("youtube", size, size)));
 	}
 
 	private void addComponentsToJComponent(JComponent component, Component... components) {
@@ -340,11 +348,16 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		itmRenameGame.setText(Messages.get(MessageConstants.RENAME));
 		itmRemoveGame.setText(Messages.get(MessageConstants.REMOVE));
 		itmOpenGameFolder.setText(Messages.get(MessageConstants.OPEN_GAME_PATH));
+		itmCopyGamePath.setText(Messages.get(MessageConstants.COPY_GAME_PATH));
 		itmGameProperties.setText(Messages.get(MessageConstants.GAME_PROPERTIES));
 	}
 
-	public void addOpenGameFolder(ActionListener l) {
+	public void addOpenGameFolderListener(ActionListener l) {
 		itmOpenGameFolder.addActionListener(l);
+	}
+
+	public void addCopyGamePathListener(ActionListener l) {
+		itmCopyGamePath.addActionListener(l);
 	}
 
 	public void addRateListener(RateListener l) {

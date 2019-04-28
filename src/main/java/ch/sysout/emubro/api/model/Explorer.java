@@ -152,6 +152,10 @@ public interface Explorer {
 
 	void setCurrentApplicationVersion(String currentApplicationVersion);
 
+	String getResourcesPath();
+
+	String getGameCoversPath();
+
 	// void addEmulator(Emulator emulator);
 	//
 	// void removeEmulator(Emulator emulator);

@@ -20,7 +20,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 import javax.swing.LookAndFeel;
 import javax.swing.UIManager;
 
@@ -29,6 +31,8 @@ import org.yaml.snakeyaml.Yaml;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.jgoodies.forms.layout.CellConstraints;
+import com.jgoodies.forms.layout.FormLayout;
 import com.jgoodies.looks.windows.WindowsLookAndFeel;
 
 import ch.sysout.emubro.api.dao.ExplorerDAO;
@@ -48,6 +52,7 @@ import ch.sysout.emubro.ui.MainFrame;
 import ch.sysout.emubro.ui.SplashScreenWindow;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.util.FileUtil;
+import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ValidationUtil;
 
@@ -64,7 +69,7 @@ public class Main {
 	private static int explorerId = 0;
 	private static LookAndFeel defaultLookAndFeel;
 	private static BroExplorer explorer;
-	private static final String currentApplicationVersion = "0.8.0";
+	private static final String currentApplicationVersion = "0.7.1";
 
 	public static void main(String[] args) {
 		System.setProperty("java.util.Arrays.useLegacyMergeSort", "true");
@@ -87,207 +92,250 @@ public class Main {
 		String databasePath = applicationHome += applicationHome.endsWith(File.separator) ? ""
 				: File.separator + "db";
 		String databaseName = Messages.get(MessageConstants.APPLICATION_TITLE).toLowerCase();
+		HSQLDBConnection hsqldbConnection = null;
 		try {
-			HSQLDBConnection hsqldbConnection = new HSQLDBConnection(databasePath, databaseName);
-			Connection conn = hsqldbConnection.getConnection();
-			try {
-				explorerDAO = new BroExplorerDAO(explorerId, conn);
-				if (explorerDAO != null) {
-					dlgSplashScreen.setText(Messages.get(MessageConstants.ALMOST_READY));
-					try {
-						explorer = new BroExplorer(currentApplicationVersion);
+			hsqldbConnection = new HSQLDBConnection(databasePath, databaseName);
+		} catch (SQLException e4) {
+			e4.printStackTrace();
+			dlgSplashScreen.showError(Messages.get(MessageConstants.CANNOT_OPEN_DATABASE));
+			int request = JOptionPane.showConfirmDialog(dlgSplashScreen, Messages.get(MessageConstants.CANNOT_OPEN_DATABASE) + "\n"
+					+ "Maybe emuBro is already running?\n\n"
+					+ "Do you want to try again?", Messages.get(MessageConstants.INITIALIZING_FAILURE), JOptionPane.YES_NO_OPTION, JOptionPane.ERROR_MESSAGE);
+			if (request == JOptionPane.YES_OPTION) {
+				dlgSplashScreen.restartApplication(Messages.get(MessageConstants.INIT_APPLICATION, Messages.get(MessageConstants.APPLICATION_TITLE)));
+				initializeApplication();
+				return;
+			} else if (request == JOptionPane.NO_OPTION) {
+				System.exit(0);
+			}
+		}
+		Connection conn = hsqldbConnection.getConnection();
+		try {
+			explorerDAO = new BroExplorerDAO(explorerId, conn);
+			if (explorerDAO != null) {
+				dlgSplashScreen.setText(Messages.get(MessageConstants.ALMOST_READY));
+				try {
+					explorer = new BroExplorer(currentApplicationVersion);
 
-						List<Platform> platforms = explorerDAO.getPlatforms();
-						explorer.setPlatforms(platforms);
+					List<Platform> platforms = explorerDAO.getPlatforms();
+					explorer.setPlatforms(platforms);
 
-						List<Tag> tags = explorerDAO.getTags();
-						explorer.setTags(tags);
+					List<Tag> tags = explorerDAO.getTags();
+					explorer.setTags(tags);
 
-						String defaultResourcesDir = System.getProperty("user.dir") + "/emubro-resources";
-						File file = new File(defaultResourcesDir);
-						if (!file.exists()) {
-							int request = JOptionPane.showConfirmDialog(dlgSplashScreen, "The resources folder does not exists. It's the brain of the application.\n\n"
-									+ "It is needed to show default tags, platforms and emulators as well as default covers and icons.\n"
-									+ "Do you want to download it?\n\n"
-									+ "If you decide to not download it, an empty folder will be created.", "resources not found", JOptionPane.YES_NO_OPTION);
-							if (request == JOptionPane.YES_OPTION) {
-								downloadResourceFolder(currentApplicationVersion);
-							} else {
-								file.mkdir();
-							}
-						}
-						String os = "win";
-						if (ValidationUtil.isWindows()) {
-							os = "win";
-						} else if (ValidationUtil.isUnix()) {
-							os = "linux";
-						} else if (ValidationUtil.isMac()) {
-							os = "mac";
-						}
-						String defaultPlatformsFilePath = defaultResourcesDir+"/platforms/config/"+os;
-						String defaultTagsDir = defaultResourcesDir+"/tags";
-						List<BroPlatform> defaultPlatforms = null;
-						List<BroTag> updatedTags = null;
-						try {
-							defaultPlatforms = initDefaultPlatforms(defaultPlatformsFilePath);
-						} catch (FileNotFoundException eFNF) {
-							defaultPlatforms = new ArrayList<>();
-						}
-						try {
-							updatedTags = getUpdatedTags(defaultTagsDir);
-						} catch (FileNotFoundException eFNF) {
-							updatedTags = new ArrayList<>();
-						}
-
-						//					explorer.setDefaultPlatforms(defaultPlatforms);
-						explorer.setUpdatedTags(updatedTags);
-						mainFrame = new MainFrame(defaultLookAndFeel, explorer);
-						mainFrame.initPlatforms(platforms);
-						mainFrame.initTags(tags);
-
-						final BroController controller = new BroController(explorerDAO, explorer, mainFrame);
-						controller.addOrGetPlatformsAndEmulators(defaultPlatforms);
-						controller.addOrChangeTags(explorer.getUpdatedTags());
-
-						boolean applyData = controller.loadAppDataFromLastSession();
-						try {
-							controller.createView();
-						} catch (Exception e) {
-							e.printStackTrace();
-							JOptionPane.showMessageDialog(null, "Unexpected Exception occured while creating view: \n"+e.getMessage()
-							+ "\n\nMaybe you have an outdated or invalid platforms.json file in your users home directory",
-							"error starting application", JOptionPane.ERROR_MESSAGE);
-						}
-						if (applyData) {
-							try {
-								controller.applyAppDataFromLastSession();
-							} catch (Exception e) {
-								applyData = false;
-								controller.changeLanguage(Locale.getDefault());
-								setInitialWindowsSize();
-								System.err.println("unexpected exception occurred - using default settings instead. "
-										+ e.getMessage());
-								e.printStackTrace();
-							}
+					String defaultResourcesDir = explorer.getResourcesPath();
+					File file = new File(defaultResourcesDir);
+					if (!file.exists()) {
+						int request = JOptionPane.showConfirmDialog(dlgSplashScreen, "The resources folder does not exists. It's the brain of the application.\n\n"
+								+ "It is needed to show default tags, platforms and emulators as well as default covers and icons.\n"
+								+ "Do you want to download it?\n\n"
+								+ "If you decide to not download it, an empty folder will be created.", "resources not found", JOptionPane.YES_NO_OPTION);
+						if (request == JOptionPane.YES_OPTION) {
+							downloadResourceFolder(currentApplicationVersion);
 						} else {
+							file.mkdir();
+						}
+					}
+					String defaultPlatformsFilePath = defaultResourcesDir+"/platforms/config";
+					String defaultTagsDir = defaultResourcesDir+"/tags";
+					List<BroPlatform> defaultPlatforms = null;
+					List<BroTag> updatedTags = null;
+					try {
+						defaultPlatforms = initDefaultPlatforms(defaultPlatformsFilePath);
+					} catch (FileNotFoundException eFNF) {
+						defaultPlatforms = new ArrayList<>();
+					}
+					try {
+						updatedTags = getUpdatedTags(defaultTagsDir);
+					} catch (FileNotFoundException eFNF) {
+						updatedTags = new ArrayList<>();
+					}
+
+					//					explorer.setDefaultPlatforms(defaultPlatforms);
+					explorer.setUpdatedTags(updatedTags);
+					mainFrame = new MainFrame(defaultLookAndFeel, explorer);
+					String emuBroCoverHome =  explorer.getResourcesPath() + "/platforms/images/emulators";
+					mainFrame.initPlatforms(emuBroCoverHome, platforms);
+					mainFrame.initTags(tags);
+
+					final BroController controller = new BroController(explorerDAO, explorer, mainFrame);
+					controller.addOrGetPlatformsAndEmulators(defaultPlatforms);
+					controller.addOrChangeTags(explorer.getUpdatedTags());
+					File dir1 = new File(defaultTagsDir);
+					if (dir1.isDirectory()) {
+						File destDir = new File(defaultTagsDir+"/installed");
+						File[] content = dir1.listFiles();
+						for (int i = 0; i < content.length; i++) {
+							File f = content[i];
+							if (!f.isDirectory()) {
+								File destFile = new File(destDir, f.getName());
+								if (destFile.exists()) {
+									destFile.delete();
+								}
+								FileUtils.moveFileToDirectory(f, destDir, true);
+							}
+						}
+					}
+					boolean applyData = controller.loadAppDataFromLastSession();
+					try {
+						controller.createView();
+					} catch (Exception e) {
+						e.printStackTrace();
+						JOptionPane.showMessageDialog(null, "Unexpected Exception occured while creating view: \n"+e.getMessage()
+						+ "\n\nMaybe you have an outdated or invalid platforms.json file in your users home directory",
+						"error starting application", JOptionPane.ERROR_MESSAGE);
+					}
+					if (applyData) {
+						try {
+							controller.applyAppDataFromLastSession();
+						} catch (Exception e) {
+							applyData = false;
 							controller.changeLanguage(Locale.getDefault());
 							setInitialWindowsSize();
+							System.err.println("unexpected exception occurred - using default settings instead. "
+									+ e.getMessage());
+							e.printStackTrace();
 						}
-						int x = mainFrame.getX() + mainFrame.getWidth() / 2 - dlgSplashScreen.getWidth() / 2;
-						int y = mainFrame.getY() + mainFrame.getHeight() / 2 - dlgSplashScreen.getHeight() / 2;
+					} else {
+						controller.changeLanguage(Locale.getDefault());
+						setInitialWindowsSize();
+					}
+					int x = mainFrame.getX() + mainFrame.getWidth() / 2 - dlgSplashScreen.getWidth() / 2;
+					int y = mainFrame.getY() + mainFrame.getHeight() / 2 - dlgSplashScreen.getHeight() / 2;
 
-						// TODO change condition. listen to mousedragged event to
-						// prevent false init location
-						if (dlgSplashScreen.getLocation().x != defaultDlgSplashScreenLocation.x
-								|| dlgSplashScreen.getLocation().y != defaultDlgSplashScreenLocation.y) {
-							mainFrame.setLocation(
-									dlgSplashScreen.getX() + (dlgSplashScreen.getWidth() / 2) - (mainFrame.getWidth() / 2),
-									dlgSplashScreen.getY() + (dlgSplashScreen.getHeight() / 2)
-									- (mainFrame.getHeight() / 2));
-						} else {
-							dlgSplashScreen.setLocation(x, y);
-						}
+					// TODO change condition. listen to mousedragged event to
+					// prevent false init location
+					if (dlgSplashScreen.getLocation().x != defaultDlgSplashScreenLocation.x
+							|| dlgSplashScreen.getLocation().y != defaultDlgSplashScreenLocation.y) {
+						mainFrame.setLocation(
+								dlgSplashScreen.getX() + (dlgSplashScreen.getWidth() / 2) - (mainFrame.getWidth() / 2),
+								dlgSplashScreen.getY() + (dlgSplashScreen.getHeight() / 2)
+								- (mainFrame.getHeight() / 2));
+					} else {
+						dlgSplashScreen.setLocation(x, y);
+					}
 
-						dlgSplashScreen.setText(Messages.get(MessageConstants.LOAD_GAME_LIST, Messages.get(MessageConstants.APPLICATION_TITLE)));
-						List<Game> games = explorerDAO.getGames();
-						boolean gamesFound = games.size() > 0;
-						controller.initGameList(games);
-						controller.showView(applyData);
-						boolean emulatorsFound = false;
-						for (Platform p : platforms) {
-							for (Emulator emu : p.getEmulators()) {
-								if (emu.isInstalled()) {
-									emulatorsFound = true;
-									break;
-								}
+					dlgSplashScreen.setText(Messages.get(MessageConstants.LOAD_GAME_LIST, Messages.get(MessageConstants.APPLICATION_TITLE)));
+					List<Game> games = explorerDAO.getGames();
+					boolean gamesFound = games.size() > 0;
+					controller.initGameList(games);
+					controller.showView(applyData);
+
+					boolean emulatorsFound = false;
+					for (Platform p : platforms) {
+						for (Emulator emu : p.getEmulators()) {
+							if (emu.isInstalled()) {
+								emulatorsFound = true;
+								break;
 							}
 						}
-						mainFrame.activateQuickSearchButton(gamesFound || emulatorsFound);
-						hideSplashScreen();
-
-						if (args.length > 0 && args[0].equals("--changelog")) {
-							JOptionPane.showMessageDialog(mainFrame, "--- emuBro v"+currentApplicationVersion+" ---\n"
-									+ "\nUpdate successful!");
-						}
-						if (controller.shouldCheckForUpdates()) {
-							Thread t = new Thread(new Runnable() {
-
-								@Override
-								public void run() {
-									controller.checkForUpdates();
-								}
-							});
-							t.start();
-						}
-						if (applyData) {
-							//						controller.setDividerLocations();
-							//						// dont remove invokelater here. otherwise locations may
-							//						// not set
-							//						// correctly when opening frame in maximized state
-							//						SwingUtilities.invokeLater(new Runnable() {
-							//
-							//							@Override
-							//							public void run() {
-							//								if (mainFrame.getExtendedState() == Frame.MAXIMIZED_BOTH) {
-							//									controller.setDividerLocations();
-							//								}
-							//							}
-							//						});
+					}
+					mainFrame.activateQuickSearchButton(gamesFound || emulatorsFound);
+					hideSplashScreen();
+					if (args.length > 0 && args[0].equals("--changelog")) {
+						JOptionPane.showMessageDialog(mainFrame, "--- emuBro v"+currentApplicationVersion+" ---\n"
+								+ "\nUpdate successful!");
+					}
+					// TODO check from database if a decision has already been made
+					if (!explorer.isDiscordFeatureInstalled() && !explorer.isDiscordFeatureDisabled()) {
+						if (controller.isDiscordRunning()) {
+							String discordMessage = "<html><strong>Oh you are running Discord, nice!</strong><br/><br/>"
+									+ "<p>Do you want to install the feature to show what you're playing with emuBro?</html>";
+							Object[] options1 = { "Yes, install this feature!", "No thanks", "Maybe later, okay?" };
+							FormLayout layout = new FormLayout("left:default:grow", "fill:pref, $rgap, fill:pref");
+							JPanel panel = new JPanel(layout);
+							CellConstraints cc = new CellConstraints();
+							panel.add(new JLabel(discordMessage), cc.xy(1, 1));
+							panel.add(new JLabel(ImageUtil.getImageIconFrom("/images/other/discord_rich_presence.png")), cc.xy(1, 3));
+							int result = JOptionPane.showOptionDialog(mainFrame, panel, "Discord Feature",
+									JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.INFORMATION_MESSAGE,
+									null, options1, null);
+							if (result == JOptionPane.YES_OPTION) {
+								// TODO install discord feature
+							} if (result == JOptionPane.NO_OPTION) {
+								explorer.setDiscordFeatureDisabled(true);
+							}
 						} else {
-							//						controller.adjustSplitPaneLocations(mainFrame.getWidth(), mainFrame.getHeight());
+
 						}
-					} catch (Exception e1) {
-						hideSplashScreen();
-						e1.printStackTrace();
-						String message = "An unhandled Exception occured during " + Messages.get(MessageConstants.APPLICATION_TITLE)
-						+ " startup.\n" + "Maybe a re-installation may help to fix the problem.\n\n"
-						+ "Exception:\n" + "" + e1.getMessage();
-						JOptionPane.showMessageDialog(dlgSplashScreen, message, "Initializing failure", JOptionPane.ERROR_MESSAGE);
-						System.exit(-1);
 					}
-				}
-			} catch (BroDatabaseVersionMismatchException e2) {
-				e2.printStackTrace();
-				int expectedVersion = Integer.valueOf(e2.getExpectedVersion().replace(".", ""));
-				int currentVersion = Integer.valueOf(e2.getCurrentVersion().replace(".", ""));
 
-				if (expectedVersion > currentVersion) {
-					// update current db
-					System.out.println("update current db");
-					dlgSplashScreen.setText(Messages.get(MessageConstants.UPDATING_DATABASE));
+					if (controller.shouldCheckForUpdates()) {
+						Thread t = new Thread(new Runnable() {
 
-					try {
-						UpdateDatabaseBro updateBro = new UpdateDatabaseBro(conn);
-						updateBro.updateDatabaseFrom(e2.getCurrentVersion());
-						updateDatabaseVersion(conn, e2.getExpectedVersion());
-						initializeApplication();
-					} catch (SQLException e) {
-						dlgSplashScreen.showError("failure in update script");
-						e.printStackTrace();
-					} catch (IllegalArgumentException e) {
-						dlgSplashScreen.showError("cannot access update file");
-						e.printStackTrace();
+							@Override
+							public void run() {
+								controller.checkForUpdates();
+							}
+						});
+						t.start();
 					}
-				} else {
-					dlgSplashScreen.showWarning(Messages.get(MessageConstants.DATABASE_VERSION_MISMATCH));
-					JOptionPane.showMessageDialog(dlgSplashScreen, "You are using an older version of "+Messages.get(MessageConstants.APPLICATION_TITLE)+".",
-							Messages.get(MessageConstants.INITIALIZING_FAILURE), JOptionPane.WARNING_MESSAGE);
-				}
-			} catch (SQLException | IOException e1) {
-				e1.printStackTrace();
-				dlgSplashScreen.showError(Messages.get(MessageConstants.CANNOT_OPEN_DATABASE));
-				int request = JOptionPane.showConfirmDialog(dlgSplashScreen, Messages.get(MessageConstants.CANNOT_OPEN_DATABASE) + "\n"
-						+ "Maybe emuBro is already running?\n\n"
-						+ "Do you want to try again?", Messages.get(MessageConstants.INITIALIZING_FAILURE), JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.ERROR_MESSAGE);
-				if (request == JOptionPane.YES_OPTION) {
-					dlgSplashScreen.restartApplication(Messages.get(MessageConstants.INIT_APPLICATION, Messages.get(MessageConstants.APPLICATION_TITLE)));
-					initializeApplication();
-				} else if (request == JOptionPane.NO_OPTION) {
-					System.exit(0);
+					if (applyData) {
+						//						controller.setDividerLocations();
+						//						// dont remove invokelater here. otherwise locations may
+						//						// not set
+						//						// correctly when opening frame in maximized state
+						//						SwingUtilities.invokeLater(new Runnable() {
+						//
+						//							@Override
+						//							public void run() {
+						//								if (mainFrame.getExtendedState() == Frame.MAXIMIZED_BOTH) {
+						//									controller.setDividerLocations();
+						//								}
+						//							}
+						//						});
+					} else {
+						//						controller.adjustSplitPaneLocations(mainFrame.getWidth(), mainFrame.getHeight());
+					}
+				} catch (Exception e1) {
+					hideSplashScreen();
+					e1.printStackTrace();
+					String message = "An unhandled Exception occured during " + Messages.get(MessageConstants.APPLICATION_TITLE)
+					+ " startup.\n" + "Maybe a re-installation may help to fix the problem.\n\n"
+					+ "Exception:\n" + "" + e1.getMessage();
+					JOptionPane.showMessageDialog(dlgSplashScreen, message, "Initializing failure", JOptionPane.ERROR_MESSAGE);
+					System.exit(-1);
 				}
 			}
-		} catch (SQLException e3) {
-			e3.printStackTrace();
+		} catch (BroDatabaseVersionMismatchException e2) {
+			e2.printStackTrace();
+			int expectedVersion = Integer.valueOf(e2.getExpectedVersion().replace(".", ""));
+			int currentVersion = Integer.valueOf(e2.getCurrentVersion().replace(".", ""));
+
+			if (expectedVersion > currentVersion) {
+				// update current db
+				System.out.println("update current db");
+				dlgSplashScreen.setText(Messages.get(MessageConstants.UPDATING_DATABASE));
+
+				try {
+					UpdateDatabaseBro updateBro = new UpdateDatabaseBro(conn);
+					updateBro.updateDatabaseFrom(e2.getCurrentVersion());
+					updateDatabaseVersion(conn, e2.getExpectedVersion());
+					initializeApplication();
+				} catch (SQLException e) {
+					dlgSplashScreen.showError("failure in update script");
+					e.printStackTrace();
+				} catch (IllegalArgumentException e) {
+					dlgSplashScreen.showError("cannot access update file");
+					e.printStackTrace();
+				}
+			} else {
+				dlgSplashScreen.showWarning(Messages.get(MessageConstants.DATABASE_VERSION_MISMATCH));
+				JOptionPane.showMessageDialog(dlgSplashScreen, "You are using an older version of "+Messages.get(MessageConstants.APPLICATION_TITLE)+".",
+						Messages.get(MessageConstants.INITIALIZING_FAILURE), JOptionPane.WARNING_MESSAGE);
+			}
+		} catch (SQLException | IOException e1) {
+			e1.printStackTrace();
+			dlgSplashScreen.showError(Messages.get(MessageConstants.CANNOT_OPEN_DATABASE));
+			int request = JOptionPane.showConfirmDialog(dlgSplashScreen, Messages.get(MessageConstants.CANNOT_OPEN_DATABASE) + "\n"
+					+ "Maybe emuBro is already running?\n\n"
+					+ "Do you want to try again?", Messages.get(MessageConstants.INITIALIZING_FAILURE), JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.ERROR_MESSAGE);
+			if (request == JOptionPane.YES_OPTION) {
+				dlgSplashScreen.restartApplication(Messages.get(MessageConstants.INIT_APPLICATION, Messages.get(MessageConstants.APPLICATION_TITLE)));
+				initializeApplication();
+			} else if (request == JOptionPane.NO_OPTION) {
+				System.exit(0);
+			}
 		}
 	}
 
@@ -440,7 +488,7 @@ public class Main {
 		for (File f : FileUtils.listFiles(pathDir, new String[] { "yaml" }, false)) {
 			String checksum;
 			try {
-				checksum = ValidationUtil.getChecksumOfFile(f);
+				checksum = FileUtil.getChecksumOfFile(f);
 				System.err.println("checksum of file "+f.getName()+": "+checksum);
 			} catch (IOException e1) {
 				checksum = "";
@@ -467,9 +515,6 @@ public class Main {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
-					System.out.println(obj);
-					List<String> asdf = obj.get("en");
-					System.err.println("asddf: "+asdf);
 					BroTag tagToAdd = new BroTag(-1, obj, checksum, "#b27f5d");
 					tags.add(tagToAdd);
 				} catch (FileNotFoundException e1) {

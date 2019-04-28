@@ -41,11 +41,8 @@ import java.net.URLConnection;
 import java.net.URLEncoder;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -127,8 +124,8 @@ import ch.sysout.emubro.impl.event.BroFilterEvent;
 import ch.sysout.emubro.impl.event.NavigationEvent;
 import ch.sysout.emubro.impl.model.BroEmulator;
 import ch.sysout.emubro.util.MessageConstants;
-import ch.sysout.ui.ImageUtil;
 import ch.sysout.util.Icons;
+import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 import ch.sysout.util.UIUtil;
@@ -197,6 +194,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	private JRadioButtonMenuItem itmLanguageEn;
 	private JRadioButtonMenuItem itmLanguageFr;
 	private JMenuItem itmHelp;
+	private JMenuItem itmDiscord;
 	private JMenuItem itmConfigWizard;
 	private JMenuItem itmCheckForUpdates;
 	private JMenuItem itmAbout;
@@ -270,7 +268,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	private GameSettingsPopupMenu mnuGameSettings = new GameSettingsPopupMenu();
 
-	private IconStore iconStore;
 	private ViewPanelManager viewManager;
 	protected JDialog dlgLogin;
 	private List<String> cookies;
@@ -377,11 +374,11 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 		initializeButtonBar();
 		createButtonBar();
-		iconStore = new IconStore();
-		viewManager = new ViewPanelManager(iconStore);
+		viewManager = new ViewPanelManager();
 		pnlMain = new MainPanel(explorer, viewManager, mnuGameSettings);
 		initializeGameFilter();
 
+		pnlMain.getPreviewPane().addTagToGameFilterListener(pnlGameFilter);
 		// try {
 		// loadAppDataFromLastSession();
 		// pnlMain = new MainPanel(this,
@@ -410,9 +407,13 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 			@Override
 			public void mousePressed(MouseEvent e) {
 				switchDetailsTabTo(1);
+				if (isDetailsPaneUnpinned()) {
+					pnlMain.frameDetailsPane.toFront();
+				} else if (!isDetailsPaneVisible()) {
+					pnlMain.showDetailsPane(true);
+				}
 			}
 		});
-
 		initMenuBar();
 		setMnemonics();
 		setAccelerators();
@@ -486,6 +487,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmLanguageEn = new JRadioButtonMenuItem();
 		itmLanguageFr = new JRadioButtonMenuItem();
 		itmHelp = new JMenuItem();
+		itmDiscord = new JMenuItem();
 		itmConfigWizard = new JMenuItem();
 		itmCheckForUpdates = new JMenuItem();
 		itmAbout = new JMenuItem();
@@ -621,6 +623,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		int mnemonicItmSettings = KeyEvent.VK_S;
 		int mnemonicItmExit = KeyEvent.VK_E;
 		int mnemonicItmHelp = KeyEvent.VK_H;
+		int mnemonicItmDiscord = KeyEvent.VK_D;
 		int mnemonicItmAbout = KeyEvent.VK_A;
 		int mnemonicItmConfigWizard = KeyEvent.VK_S;
 
@@ -637,6 +640,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 			mnemonicItmSettings = KeyEvent.VK_S;
 			mnemonicItmExit = KeyEvent.VK_E;
 			mnemonicItmHelp = KeyEvent.VK_H;
+			mnemonicItmDiscord = KeyEvent.VK_D;
 			mnemonicItmAbout = KeyEvent.VK_A;
 			mnemonicItmConfigWizard = KeyEvent.VK_S;
 		}
@@ -653,6 +657,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 			mnemonicItmSettings = KeyEvent.VK_E;
 			mnemonicItmExit = KeyEvent.VK_B;
 			mnemonicItmHelp = KeyEvent.VK_H;
+			mnemonicItmDiscord = KeyEvent.VK_D;
 			mnemonicItmAbout = KeyEvent.VK_I;
 			mnemonicItmConfigWizard = KeyEvent.VK_K;
 		}
@@ -669,6 +674,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 			mnemonicItmSettings = KeyEvent.VK_C;
 			mnemonicItmExit = KeyEvent.VK_Q;
 			mnemonicItmHelp = KeyEvent.VK_I;
+			mnemonicItmDiscord = KeyEvent.VK_D;
 			mnemonicItmAbout = KeyEvent.VK_S;
 			mnemonicItmConfigWizard = KeyEvent.VK_C;
 		}
@@ -685,6 +691,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmSettings.setMnemonic(mnemonicItmSettings);
 		itmExit.setMnemonic(mnemonicItmExit);
 		itmHelp.setMnemonic(mnemonicItmHelp);
+		itmDiscord.setMnemonic(mnemonicItmDiscord);
 		itmAbout.setMnemonic(mnemonicItmAbout);
 		itmConfigWizard.setMnemonic(mnemonicItmConfigWizard);
 	}
@@ -766,6 +773,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmLanguageFr.setIcon(iconLanguageFr);
 		mnuHelp.setIcon(ImageUtil.getImageIconFrom(Icons.get("help", size, size)));
 		itmHelp.setIcon(ImageUtil.getImageIconFrom(Icons.get("help", size, size)));
+		itmDiscord.setIcon(ImageUtil.getImageIconFrom(Icons.get("discord", size, size)));
 		itmAbout.setIcon(ImageUtil.getImageIconFrom(Icons.get("about", size, size)));
 		itmConfigWizard.setIcon(ImageUtil.getImageIconFrom(Icons.get("configWizard", size, size)));
 		itmAddFriend.setIcon(ImageUtil.getImageIconFrom(Icons.get("addFriend", size, size)));
@@ -1426,6 +1434,10 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		viewManager.getBlankViewPanel().addOpenHelpListener(l);
 	}
 
+	public void addDiscordInviteLinkListener(ActionListener l) {
+		itmDiscord.addActionListener(l);
+	}
+
 	public void addOpenAboutListener(ActionListener l) {
 		itmAbout.addActionListener(l);
 		viewManager.getBlankViewPanel().addOpenAboutListener(l);
@@ -1557,10 +1569,12 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	public void addCoverFromWebListener(ActionListener l) {
 		pnlMain.getPopupGame().addCoverFromWebListener(l);
+		pnlMain.getPreviewPane().addCoverFromWebListener(l);
 	}
 
 	public void addTrailerFromWebListener(ActionListener l) {
 		pnlMain.getPopupGame().addTrailerFromWebListener(l);
+		pnlMain.getPreviewPane().addTrailerFromWebListener(l);
 	}
 
 	public void addAddFilesListener(ActionListener l) {
@@ -1777,25 +1791,17 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 					}
 				}
 			});
-
 		}
 		addComponentsToJComponent(mnuLookAndFeel, items);
-
 		addComponentsToJComponent(mnuLanguage, itmLanguageDe, itmLanguageEn, itmLanguageFr);
-
 		// addComponentsToJComponent(mnuSetColumnWidth, sliderColumnWidth);
 		// addComponentsToJComponent(mnuSetRowHeight, sliderRowHeight);
-
-		addComponentsToJComponent(mnuHelp, itmHelp, itmConfigWizard, new JSeparator(), itmCheckForUpdates, itmAbout);
-
+		addComponentsToJComponent(mnuHelp, itmHelp, itmDiscord, new JSeparator(), itmConfigWizard, new JSeparator(), itmCheckForUpdates, itmAbout);
 		addComponentsToJComponent(mnuUpdateAvailable, itmApplicationUpdateAvailable, itmSignatureUpdateAvailable);
-
 		addComponentsToJComponent(mnuSort, itmSortTitle, itmSortPlatform, new JSeparator(), itmSortAscending,
 				itmSortDescending);
-
 		addComponentsToJComponent(mnuGroup, itmGroupBlank, itmGroupTitle, itmGroupPlatform, new JSeparator(),
 				itmGroupAscending, itmGroupDescending);
-
 		addComponentsToJComponent(mnuChangeTo, itmChangeToAll, itmChangeToFavorites, itmChangeToRecentlyPlayed);
 	}
 
@@ -2535,17 +2541,13 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		});
 	}
 
-	public void initPlatforms(List<Platform> platforms) {
-		viewManager.initPlatforms(platforms);
+	public void initPlatforms(String emuBroCoverHome, List<Platform> platforms) {
+		viewManager.initPlatforms(emuBroCoverHome, platforms);
 	}
 
 	public void initTags(List<Tag> tags) {
 		viewManager.initTags(tags);
 		pnlMain.initDefaultTags(tags);
-	}
-
-	public void initPlatformsFilter(List<Platform> platforms) {
-		pnlGameFilter.initPlatforms(platforms);
 	}
 
 	public int getRowHeight() {
@@ -2732,6 +2734,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmLanguageEn.setText(Messages.get(MessageConstants.LANGUAGE_EN));
 		itmLanguageFr.setText(Messages.get(MessageConstants.LANGUAGE_FR));
 		itmHelp.setText(Messages.get(MessageConstants.HELP));
+		itmDiscord.setText(Messages.get(MessageConstants.EMUBRO_DISCORD));
 		itmConfigWizard.setText(Messages.get(MessageConstants.CONFIGURE_WIZARD, Messages.get(MessageConstants.APPLICATION_TITLE)));
 		itmCheckForUpdates.setText(Messages.get(MessageConstants.SEARCH_FOR_UPDATES));
 		itmAbout.setText(Messages.get(MessageConstants.ABOUT, Messages.get(MessageConstants.APPLICATION_TITLE)));
@@ -2790,47 +2793,26 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	}
 
 	public void initGames(List<Game> games) {
-		Map<Integer, Platform> passedMap = new HashMap<>();
-
-		List<Integer> mapKeys = new ArrayList<>(passedMap.keySet());
-		List<Platform> mapValues = new ArrayList<>(passedMap.values());
-		Collections.sort(mapValues);
-		Collections.sort(mapKeys);
-
-		LinkedHashMap<Integer, Platform> sortedMap = new LinkedHashMap<>();
-
-		Iterator<Platform> valueIt = mapValues.iterator();
-		while (valueIt.hasNext()) {
-			Platform val = valueIt.next();
-			Iterator<Integer> keyIt = mapKeys.iterator();
-
-			while (keyIt.hasNext()) {
-				Integer key = keyIt.next();
-				Platform comp1 = passedMap.get(key);
-				Platform comp2 = val;
-
-				if (comp1.equals(comp2)) {
-					keyIt.remove();
-					sortedMap.put(key, val);
+		List<Platform> sortedPlatforms = new ArrayList<>();
+		for (Game game : games) {
+			int platformId = game.getPlatformId();
+			boolean addPlatform = true;
+			for (Platform p : sortedPlatforms) {
+				if (p.getId() == platformId) {
+					addPlatform = false;
 					break;
 				}
 			}
-		}
-
-		for (Game game : games) {
-			int platformId = game.getPlatformId();
-			if (!sortedMap.containsKey(platformId) && !pnlGameFilter.hasPlatform(platformId)) {
-				sortedMap.put(platformId, explorer.getPlatform(platformId));
+			if (addPlatform) {
+				sortedPlatforms.add(explorer.getPlatform(platformId));
 			}
 			for (Tag tag : game.getTags()) {
 				pnlGameFilter.addNewTag(tag);
 			}
 		}
-
-		Collection<Platform> tmpPlatformsWithGames = sortedMap.values();
-		pnlGameFilter.initPlatforms(tmpPlatformsWithGames);
-		sortedMap.clear();
-		tmpPlatformsWithGames.clear();
+		Collections.sort(sortedPlatforms);
+		pnlGameFilter.initPlatforms(sortedPlatforms);
+		sortedPlatforms.clear();
 		mnuGames.setEnabled(true);
 		viewManager.initGames(games);
 	}
@@ -3082,7 +3064,11 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	}
 
 	public void addOpenGameFolderListener(ActionListener l) {
-		pnlMain.getPopupGame().addOpenGameFolder(l);
+		pnlMain.addOpenGameFolderListener(l);
+	}
+
+	public void addCopyGamePathListener(ActionListener l) {
+		pnlMain.addCopyGamePathListener(l);
 	}
 
 	public void activateQuickSearchButton(boolean gamesOrPlatformsFound) {
@@ -3137,7 +3123,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		return pnlMain.getCurrentView();
 	}
 
-	public IconStore getIconStore() {
-		return iconStore;
+	public void showSystemInformations(String... informations) {
+		pnlGameCount.showSystemInformations(informations);
 	}
 }

@@ -40,8 +40,8 @@ import com.jgoodies.forms.layout.FormLayout;
 import ch.sysout.emubro.api.dao.ExplorerDAO;
 import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.util.MessageConstants;
-import ch.sysout.ui.ImageUtil;
 import ch.sysout.util.Icons;
+import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.UIUtil;
 
@@ -65,7 +65,7 @@ public class CoverBroFrame extends JFrame {
 	private AbstractButton[] toolButtons = { btnRotate, btnCrop };
 
 	public CoverBroFrame(Explorer explorer, ExplorerDAO explorerDAO) {
-		super("CoverBro");
+		super("Brotoshop - CoverBro");
 		this.explorer = explorer;
 		setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 		setIconImages(getIcons());
@@ -461,9 +461,9 @@ public class CoverBroFrame extends JFrame {
 			this.cutBorder = cutBorder;
 		}
 
-		public BufferedImage getCuttedImage(int width, int height) {
+		public BufferedImage getCuttedImage(int width, int height) throws Exception {
 			if (currentRect == null) {
-				throw new NullPointerException("no selection");
+				throw new Exception("No selection");
 			}
 			Image bi2 = bi.getScaledInstance(width, height, Image.SCALE_SMOOTH);
 			/*
@@ -482,7 +482,11 @@ public class CoverBroFrame extends JFrame {
 		setImage(i);
 	}
 
-	public Image getResizedImage() {
+	public Dimension getCurrentCoverSize() {
+		return new Dimension(pnlImageEdit.getCurrentCoverWidth(), pnlImageEdit.getCurrentCoverHeight());
+	}
+
+	public Image getResizedImage() throws Exception {
 		Image resized = pnlImageEdit.getCuttedImage(pnlImageEdit.getCurrentCoverWidth(),
 				pnlImageEdit.getCurrentCoverHeight());
 		return resized;
