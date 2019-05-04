@@ -394,10 +394,6 @@ public class ViewPanelManager {
 		}
 	}
 
-	public IconStore getIconStore() {
-		return iconStore;
-	}
-
 	public void addOpenGamePropertiesListener(Action l) {
 		openGamePropertiesListeners.add(l);
 		for (ViewPanel pnl : panels) {

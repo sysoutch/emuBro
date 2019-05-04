@@ -336,7 +336,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 
 	private void initializeCurrentViewAndPreviewPane() {
 		if (pnlPreviewPane == null) {
-			pnlPreviewPane = new PreviewPanePanel(explorer, popupGame, popupView, viewManager.getIconStore());
+			pnlPreviewPane = new PreviewPanePanel(explorer, popupGame, popupView);
 		}
 		pnlPreviewPane.setMinimumSize(new Dimension(0, 0));
 		splCurrentViewAndPreviewPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, true,
@@ -475,7 +475,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 			break;
 		case ViewPanel.TABLE_VIEW:
 			if (pnlTableView == null) {
-				pnlTableView = new TableViewPanel(explorer, viewManager.getIconStore(), popupGame, popupView);
+				pnlTableView = new TableViewPanel(explorer, IconStore.current(), popupGame, popupView);
 				viewManager.initializeViewPanel(pnlTableView, games);
 			}
 			viewManager.setCurrentViewPanel(pnlTableView);
@@ -941,13 +941,12 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				System.err.println("game cover path: " + gameCoverPath);
 				ImageIcon img;
 				if (gameCoverPath != null && !gameCoverPath.trim().isEmpty()) {
-					IconStore iconStore = viewManager.getIconStore();
 					int gameId = game.getId();
 					viewManager.addGameCoverPath(gameId, gameCoverPath);
-					img = iconStore.getGameCover(gameId);
+					img = IconStore.current().getGameCover(gameId);
 				} else {
 					int platformId = game.getPlatformId();
-					img = viewManager.getIconStore().getPlatformCover(platformId);
+					img = IconStore.current().getPlatformCover(platformId);
 				}
 				pnlPreviewPane.gameCoverChanged(game, (img != null) ? img.getImage() : null);
 			}

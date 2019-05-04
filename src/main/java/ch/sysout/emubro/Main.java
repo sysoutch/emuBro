@@ -136,12 +136,11 @@ public class Main {
 							file.mkdir();
 						}
 					}
-					String defaultPlatformsFilePath = defaultResourcesDir+"/platforms/config";
-					String defaultTagsDir = defaultResourcesDir+"/tags";
+					String defaultTagsDir = defaultResourcesDir+"/tags/update";
 					List<BroPlatform> defaultPlatforms = null;
 					List<BroTag> updatedTags = null;
 					try {
-						defaultPlatforms = initDefaultPlatforms(defaultPlatformsFilePath);
+						defaultPlatforms = initDefaultPlatforms();
 					} catch (FileNotFoundException eFNF) {
 						defaultPlatforms = new ArrayList<>();
 					}
@@ -163,7 +162,7 @@ public class Main {
 					controller.addOrChangeTags(explorer.getUpdatedTags());
 					File dir1 = new File(defaultTagsDir);
 					if (dir1.isDirectory()) {
-						File destDir = new File(defaultTagsDir+"/installed");
+						File destDir = dir1.getParentFile();
 						File[] content = dir1.listFiles();
 						for (int i = 0; i < content.length; i++) {
 							File f = content[i];
@@ -448,8 +447,9 @@ public class Main {
 		}
 	}
 
-	public static List<BroPlatform> initDefaultPlatforms(String defaultPlatformsFilePath) throws FileNotFoundException {
+	public static List<BroPlatform> initDefaultPlatforms() throws FileNotFoundException {
 		List<BroPlatform> platforms = new ArrayList<>();
+		String defaultPlatformsFilePath = explorer.getResourcesPath() + "/platforms/config";
 		File dir = new File(defaultPlatformsFilePath);
 		if (!dir.exists()) {
 			throw new FileNotFoundException("directory does not exist: "+defaultPlatformsFilePath);

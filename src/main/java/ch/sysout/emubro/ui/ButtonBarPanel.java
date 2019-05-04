@@ -303,10 +303,6 @@ public class ButtonBarPanel extends JPanel {
 		} else {
 			if (components.get(0).getText().isEmpty()) {
 				if (difference > (components.get(6).getWidth() + components.get(6).getWidth())) {
-					if (!components.get(2).isVisible() || !components.get(3).isVisible() || !components.get(4).isVisible()
-							|| !components.get(5).isVisible() || !components.get(6).isVisible()) {
-						return;
-					}
 					components.get(1).setText(Messages.get(MessageConstants.SETTINGS));
 					if (components.get(0).getText().isEmpty()) {
 						components.get(0).setText(Messages.get(MessageConstants.ORGANIZE));

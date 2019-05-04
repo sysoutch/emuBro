@@ -492,15 +492,15 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				int borderHeight = ScreenSizeUtil.adjustValueToResolution(16);
 				Icon gameIcon = null;
 				if (viewStyle == ViewPanel.LIST_VIEW) {
-					gameIcon = viewManager.getIconStore().getGameIcon(game.getId());
+					gameIcon = IconStore.current().getGameIcon(game.getId());
 				} else if (viewStyle == ViewPanel.ELEMENT_VIEW) {
-					gameIcon = viewManager.getIconStore().getGameIcon(game.getId());
+					gameIcon = IconStore.current().getGameIcon(game.getId());
 				} else if (viewStyle == ViewPanel.CONTENT_VIEW) {
-					gameIcon = viewManager.getIconStore().getScaledGameCover(game.getId(), currentCoverSize);
+					gameIcon = IconStore.current().getScaledGameCover(game.getId(), currentCoverSize);
 				} else if (viewStyle == ViewPanel.SLIDER_VIEW) {
-					gameIcon = viewManager.getIconStore().getScaledGameCover(game.getId(), currentCoverSize);
+					gameIcon = IconStore.current().getScaledGameCover(game.getId(), currentCoverSize);
 				} else if (viewStyle == ViewPanel.COVER_VIEW) {
-					gameIcon = viewManager.getIconStore().getScaledGameCover(game.getId(), currentCoverSize);
+					gameIcon = IconStore.current().getScaledGameCover(game.getId(), currentCoverSize);
 				}
 				if (gameIcon != null) {
 					label.setIcon(gameIcon);
@@ -512,8 +512,11 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 						// somewhere else
 					} else {
 						Icon platformIcon = (viewStyle == ViewPanel.LIST_VIEW || viewStyle == ViewPanel.ELEMENT_VIEW) ?
-								viewManager.getIconStore().getPlatformIcon(platformId)
-								: viewManager.getIconStore().getScaledPlatformCover(platformId, currentCoverSize);
+								IconStore.current().getPlatformIcon(platformId)
+								: IconStore.current().getScaledPlatformCover(platformId, currentCoverSize);
+								if (platformIcon == null) {
+
+								}
 								label.setIcon(platformIcon);
 								label.setDisabledIcon(platformIcon);
 					}
@@ -1023,7 +1026,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				// btn.setBorder(titledBorder);
 				//				btn.setContentAreaFilled(false);
 				btn.setHorizontalAlignment(SwingConstants.LEFT);
-				ImageIcon platformIcon = viewManager.getIconStore().getPlatformIcon(p.getId());
+				ImageIcon platformIcon = IconStore.current().getPlatformIcon(p.getId());
 				btn.setIcon(platformIcon);
 				btn.setDisabledIcon(platformIcon);
 				btn.setComponentPopupMenu(popupGroup);

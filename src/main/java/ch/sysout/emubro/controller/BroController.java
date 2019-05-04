@@ -229,6 +229,7 @@ import ch.sysout.emubro.ui.FileTypeConstants;
 import ch.sysout.emubro.ui.GamePropertiesDialog;
 import ch.sysout.emubro.ui.GameViewConstants;
 import ch.sysout.emubro.ui.HelpFrame;
+import ch.sysout.emubro.ui.IconStore;
 import ch.sysout.emubro.ui.JExtendedComboBox;
 import ch.sysout.emubro.ui.JExtendedTextField;
 import ch.sysout.emubro.ui.JLinkButton;
@@ -4319,131 +4320,135 @@ GameSelectionListener, BrowseComputerListener {
 				}
 				if (resp == JOptionPane.OK_OPTION) {
 					String newName = cmbParentFolders.getEditor().getItem().toString();
-					if (!oldName.equals(newName)) {
-						explorer.renameGame(game.getId(), newName);
-						try {
-							explorerDAO.renameGame(game.getId(), newName);
-						} catch (SQLException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
-						view.gameRenamed(new BroGameRenamedEvent(game, newName));
-						// it makes no sense make use of the advanced renaming feature
-						// when there are no other games in the list
-						if (explorer.getGameCount() > 1) {
-							final String oldNameDef = oldName;
-							final String newNameDef = newName;
-							SwingUtilities.invokeLater(new Runnable() {
+					renameGameNow(game, oldName, newName);
+				}
+			}
+		}
 
-								@Override
-								public void run() {
-									boolean brackets1 = false;
-									boolean brackets2 = false;
-									boolean dots = false;
-									boolean underlines = false;
-									String regexBracket1 = "^(.*)\\(.*\\)(.*)$";
-									String regexBracket2 = "^(.*)\\[.*\\](.*)$";
-									String regexDots = "^.*(\\.+).*$";
-									String regexUnderlines = "^.*(\\_+).*$";
-									String tempOldName = oldNameDef;
-									String source;
-									List<String> bracketsList1 = new ArrayList<>();
-									List<String> bracketsList2 = new ArrayList<>();
+		private void renameGameNow(Game game, String oldName, String newName) {
+			if (!oldName.equals(newName)) {
+				explorer.renameGame(game.getId(), newName);
+				try {
+					explorerDAO.renameGame(game.getId(), newName);
+				} catch (SQLException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				view.gameRenamed(new BroGameRenamedEvent(game, newName));
+				// it makes no sense make use of the advanced renaming feature
+				// when there are no other games in the list
+				if (explorer.getGameCount() > 1) {
+					final String oldNameDef = oldName;
+					final String newNameDef = newName;
+					SwingUtilities.invokeLater(new Runnable() {
 
-									do {
-										source = getBrackets(tempOldName, '(', ')');
-										if (source != null && !source.isEmpty()) {
-											tempOldName = tempOldName.replace(source, "").trim();
-											bracketsList1.add(source);
-										}
-									} while (source != null && !source.isEmpty());
+						@Override
+						public void run() {
+							boolean brackets1 = false;
+							boolean brackets2 = false;
+							boolean dots = false;
+							boolean underlines = false;
+							String regexBracket1 = "^(.*)\\(.*\\)(.*)$";
+							String regexBracket2 = "^(.*)\\[.*\\](.*)$";
+							String regexDots = "^.*(\\.+).*$";
+							String regexUnderlines = "^.*(\\_+).*$";
+							String tempOldName = oldNameDef;
+							String source;
+							List<String> bracketsList1 = new ArrayList<>();
+							List<String> bracketsList2 = new ArrayList<>();
 
-									do {
-										source = getBrackets(tempOldName, '[', ']');
-										if (source != null && !source.isEmpty()) {
-											tempOldName = tempOldName.replace(source, "").trim();
-											bracketsList2.add(source);
-										}
-									} while (source != null && !source.isEmpty());
+							do {
+								source = getBrackets(tempOldName, '(', ')');
+								if (source != null && !source.isEmpty()) {
+									tempOldName = tempOldName.replace(source, "").trim();
+									bracketsList1.add(source);
+								}
+							} while (source != null && !source.isEmpty());
 
-									if (oldNameDef.matches(regexBracket1)) {
-										if (!newNameDef.matches(regexBracket1)) {
-											brackets1 = true;
-										} else {
-											int countOld = StringUtils.countMatches(oldNameDef, "(");
-											int countNew = StringUtils.countMatches(newNameDef, "(");
-											if (countOld > countNew) {
-												brackets1 = true;
-											}
-										}
-									}
-									if (oldNameDef.matches(regexBracket2)) {
-										if (!newNameDef.matches(regexBracket2)) {
-											brackets2 = true;
-										} else {
-											int countOld = StringUtils.countMatches(oldNameDef, "[");
-											int countNew = StringUtils.countMatches(newNameDef, "[");
-											if (countOld > countNew) {
-												brackets2 = true;
-											}
-										}
-									}
-									if (oldNameDef.matches(regexDots) && !newNameDef.matches(regexDots)) {
-										dots = true;
-									}
-									if (oldNameDef.matches(regexUnderlines) && !newNameDef.matches(regexUnderlines)) {
-										underlines = true;
-									}
-									if (brackets1 || brackets2 || dots || underlines) {
-										chkDots.setVisible(dots);
-										chkUnderlines.setVisible(underlines);
-										chkDots.setSelected(dots);
-										chkUnderlines.setSelected(underlines);
-										JCheckBox chkNeverShowThisAgain = new JCheckBox(Messages.get(MessageConstants.RENAME_WITHOUT_ASK));
-										String msg = Messages.get(MessageConstants.RENAME_OTHER_GAMES)+"\n";
-										List<Object> messageList = new ArrayList<>();
-										messageList.add(msg);
-										List<JCheckBox> dynamicCheckBoxes = new ArrayList<>();
-										JCheckBox chkBrackets = new JCheckBox(Messages.get(MessageConstants.REMOVE_BRACKETS));
-										chkBrackets.setSelected(true);
-										messageList.add(chkBrackets);
-										for (String brack : bracketsList1) {
-											JCheckBox chk = new JCheckBox(brack);
-											dynamicCheckBoxes.add(chk);
-											chk.setSelected(true);
-											messageList.add(chk);
-										}
-										for (String brack : bracketsList2) {
-											JCheckBox chk = new JCheckBox(brack);
-											dynamicCheckBoxes.add(chk);
-											chk.setSelected(true);
-											messageList.add(chk);
-										}
-										// this has been done for putting a line wrap only when the brackets checkboxes were added
-										//									if (messageList.size() > 1) {
-										//										if (dots || underlines) {
-										//											JLabel lineWrap = new JLabel(" ");
-										//											messageList.add(lineWrap);
-										//										}
-										//									}
-										messageList.add(chkDots);
-										messageList.add(chkUnderlines);
-										messageList.add(new JLabel(" "));
-										messageList.add(chkNeverShowThisAgain);
-										Object[] stockArr = new Object[messageList.size()];
-										stockArr = messageList.toArray(stockArr);
-										String title = Messages.get(MessageConstants.SHOW_RENAME_GAMES_DIALOG);
-										int request = JOptionPane.showConfirmDialog(view, stockArr, title, JOptionPane.YES_NO_OPTION);
-										if (request == JOptionPane.YES_OPTION) {
-											dots = chkDots.isSelected();
-											underlines = chkUnderlines.isSelected();
-											showRenameGamesDialog(dynamicCheckBoxes, dots, underlines);
-										}
+							do {
+								source = getBrackets(tempOldName, '[', ']');
+								if (source != null && !source.isEmpty()) {
+									tempOldName = tempOldName.replace(source, "").trim();
+									bracketsList2.add(source);
+								}
+							} while (source != null && !source.isEmpty());
+
+							if (oldNameDef.matches(regexBracket1)) {
+								if (!newNameDef.matches(regexBracket1)) {
+									brackets1 = true;
+								} else {
+									int countOld = StringUtils.countMatches(oldNameDef, "(");
+									int countNew = StringUtils.countMatches(newNameDef, "(");
+									if (countOld > countNew) {
+										brackets1 = true;
 									}
 								}
-							});
+							}
+							if (oldNameDef.matches(regexBracket2)) {
+								if (!newNameDef.matches(regexBracket2)) {
+									brackets2 = true;
+								} else {
+									int countOld = StringUtils.countMatches(oldNameDef, "[");
+									int countNew = StringUtils.countMatches(newNameDef, "[");
+									if (countOld > countNew) {
+										brackets2 = true;
+									}
+								}
+							}
+							if (oldNameDef.matches(regexDots) && !newNameDef.matches(regexDots)) {
+								dots = true;
+							}
+							if (oldNameDef.matches(regexUnderlines) && !newNameDef.matches(regexUnderlines)) {
+								underlines = true;
+							}
+							if (brackets1 || brackets2 || dots || underlines) {
+								chkDots.setVisible(dots);
+								chkUnderlines.setVisible(underlines);
+								chkDots.setSelected(dots);
+								chkUnderlines.setSelected(underlines);
+								JCheckBox chkNeverShowThisAgain = new JCheckBox(Messages.get(MessageConstants.RENAME_WITHOUT_ASK));
+								String msg = Messages.get(MessageConstants.RENAME_OTHER_GAMES)+"\n";
+								List<Object> messageList = new ArrayList<>();
+								messageList.add(msg);
+								List<JCheckBox> dynamicCheckBoxes = new ArrayList<>();
+								JCheckBox chkBrackets = new JCheckBox(Messages.get(MessageConstants.REMOVE_BRACKETS));
+								chkBrackets.setSelected(true);
+								messageList.add(chkBrackets);
+								for (String brack : bracketsList1) {
+									JCheckBox chk = new JCheckBox(brack);
+									dynamicCheckBoxes.add(chk);
+									chk.setSelected(true);
+									messageList.add(chk);
+								}
+								for (String brack : bracketsList2) {
+									JCheckBox chk = new JCheckBox(brack);
+									dynamicCheckBoxes.add(chk);
+									chk.setSelected(true);
+									messageList.add(chk);
+								}
+								// this has been done for putting a line wrap only when the brackets checkboxes were added
+								//									if (messageList.size() > 1) {
+								//										if (dots || underlines) {
+								//											JLabel lineWrap = new JLabel(" ");
+								//											messageList.add(lineWrap);
+								//										}
+								//									}
+								messageList.add(chkDots);
+								messageList.add(chkUnderlines);
+								messageList.add(new JLabel(" "));
+								messageList.add(chkNeverShowThisAgain);
+								Object[] stockArr = new Object[messageList.size()];
+								stockArr = messageList.toArray(stockArr);
+								String title = Messages.get(MessageConstants.SHOW_RENAME_GAMES_DIALOG);
+								int request = JOptionPane.showConfirmDialog(view, stockArr, title, JOptionPane.YES_NO_OPTION);
+								if (request == JOptionPane.YES_OPTION) {
+									dots = chkDots.isSelected();
+									underlines = chkUnderlines.isSelected();
+									showRenameGamesDialog(dynamicCheckBoxes, dots, underlines);
+								}
+							}
 						}
-					}
+					});
 				}
 			}
 		}
@@ -7009,7 +7014,7 @@ GameSelectionListener, BrowseComputerListener {
 	@Override
 	public void platformAdded(PlatformEvent e) {
 		Platform p = e.getPlatform();
-		view.getViewManager().getIconStore().addPlatformIcon(p.getId(), p.getIconFileName());
+		IconStore.current().addPlatformIcon(p.getId(), p.getIconFileName());
 	}
 
 	@Override
@@ -7327,7 +7332,7 @@ GameSelectionListener, BrowseComputerListener {
 		Game element = new BroGame(GameConstants.NO_GAME, fileName, "", defaultFileId, explorerDAO.getChecksumId(checksum), null, null, 0, dateAdded, null, 0,
 				EmulatorConstants.NO_EMULATOR, platformId, platformIconFileName);
 		String defaultGameCover = p0.getDefaultGameCover();
-		view.getViewManager().getIconStore().addPlatformCover(platformId, defaultGameCover);
+		IconStore.current().addPlatformCover(platformId, defaultGameCover);
 		if (favorite) {
 			element.setRate(RatingBarPanel.MAXIMUM_RATE);
 		}

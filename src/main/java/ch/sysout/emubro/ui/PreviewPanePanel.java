@@ -41,6 +41,7 @@ import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
+import javax.swing.JTextField;
 import javax.swing.JTextPane;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingConstants;
@@ -88,16 +89,13 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 	public ViewContextMenu popupView;
 	private GameContextMenu popupGame;
 
-	private IconStore iconStore;
-
 	private GameFilterPanel pnlGameFilter;
 
-	public PreviewPanePanel(Explorer explorer, GameContextMenu popupGame, ViewContextMenu popupView, IconStore iconStore) {
+	public PreviewPanePanel(Explorer explorer, GameContextMenu popupGame, ViewContextMenu popupView) {
 		super();
 		this.explorer = explorer;
 		this.popupGame = popupGame;
 		this.popupView = popupView;
-		this.iconStore = iconStore;
 		initComponents();
 		createUI();
 	}
@@ -159,7 +157,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 				Game firstGame = currentGames.get(0);
 				pnlSelection.initPlatformTitle();
 				int platformId = firstGame.getPlatformId();
-				Icon icon = iconStore.getPlatformIcon(platformId);
+				Icon icon = IconStore.current().getPlatformIcon(platformId);
 				pnlSelection.setGameTitle(firstGame.getName(), null);
 				pnlSelection.setPlatformTitle(explorer.getPlatform(platformId).getName(), icon);
 				pnlSelection.setDateAdded(firstGame.getDateAdded());
@@ -263,7 +261,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 	class SelectionPanel extends ScrollablePanel {
 		private static final long serialVersionUID = 1L;
 		private JLabel lblGameTitle = new JLabel("Game Title");
-		private JTextArea txtGameTitle = new JTextArea();
+		private JTextField txtGameTitle = new JTextField();
 		private JLabel lblPlatformTitle = new JLabel2("Platform Title");
 		private GameDataPanel pnlGameData = new GameDataPanel();
 		private AutoScaleImagePanel pnlAutoScaleImage = new AutoScaleImagePanel();
@@ -377,8 +375,6 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 					}
 				}
 			});
-			txtGameTitle.setLineWrap(true);
-			txtGameTitle.setWrapStyleWord(true);
 			txtGameTitle.addFocusListener(new FocusAdapter() {
 				@Override
 				public void focusLost(FocusEvent e) {

@@ -21,7 +21,6 @@ TODO check if game is runnable out of an archive. if not show option to extract
 TODO show response when adding emulators
 FIXME not able to set unknown emulators for multiple platforms. also ask user to add emulator for other platforms too, when emulator already added for other platform(s)
 TODO feature to online check the file by checksum to identify emulator/game (when everything other fails)
-TODO refresh tags from folder at runtime
 TODO maybe store key value pair for emu download links + filename (e.g. when url is .../download.html)
 TODO own detection for emulator setup files
 TODO dont ask for add covers when only add emus
@@ -34,7 +33,7 @@ TODO download game titles properties at start/add game and ask to update titles 
 TODO settings: add cover settings manager (cover pack download + local store)
 FIXME sort behaviour
 			- sort ascending after sort by platform does sort by title asc
-TODO ESC key to close aboutdialog, gameproperties dialog, help dialog and update dialog
+TODO ESC key to close aboutdialog, gameproperties dialog, update dialog
 TODO drag drop xml files into tags tab in details pane
 TODO .smc snes and nes
 FIXME language in context menu listviewpanel doesnt set on start up
