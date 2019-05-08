@@ -939,7 +939,6 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 		for (Game game : games) {
 			if (game != null) {
 				String gameCoverPath = game.getCoverPath();
-				System.err.println("game cover path: " + gameCoverPath);
 				ImageIcon img;
 				if (gameCoverPath != null && !gameCoverPath.trim().isEmpty()) {
 					int gameId = game.getId();

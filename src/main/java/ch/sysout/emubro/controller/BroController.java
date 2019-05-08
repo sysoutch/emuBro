@@ -167,7 +167,6 @@ import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
-import org.codehaus.plexus.util.StringUtils;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -1225,9 +1224,9 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	private String rarFileContainsGame(String filePath, List<String> list) throws RarException, IOException {
-		File file = new File(filePath);
 		try {
-			Archive myRAR = new Archive(file); // TODO catch ioexception
+			FileInputStream is = new FileInputStream(filePath);
+			Archive myRAR = new Archive(is); // TODO catch ioexception
 			if (!myRAR.isEncrypted()) {
 				encryptedFiles.add(filePath);
 			}
@@ -4403,22 +4402,24 @@ GameSelectionListener, BrowseComputerListener {
 								if (!newNameDef.matches(regexBracket1)) {
 									brackets1 = true;
 								} else {
-									int countOld = StringUtils.countMatches(oldNameDef, "(");
-									int countNew = StringUtils.countMatches(newNameDef, "(");
-									if (countOld > countNew) {
-										brackets1 = true;
-									}
+									// FIXME change implementation
+									//									int countOld = StringUtils.countMatches(oldNameDef, "(");
+									//									int countNew = StringUtils.countMatches(newNameDef, "(");
+									//									if (countOld > countNew) {
+									//										brackets1 = true;
+									//									}
 								}
 							}
 							if (oldNameDef.matches(regexBracket2)) {
 								if (!newNameDef.matches(regexBracket2)) {
 									brackets2 = true;
 								} else {
-									int countOld = StringUtils.countMatches(oldNameDef, "[");
-									int countNew = StringUtils.countMatches(newNameDef, "[");
-									if (countOld > countNew) {
-										brackets2 = true;
-									}
+									// FIXME change implementation
+									//									int countOld = StringUtils.countMatches(oldNameDef, "[");
+									//									int countNew = StringUtils.countMatches(newNameDef, "[");
+									//									if (countOld > countNew) {
+									//										brackets2 = true;
+									//									}
 								}
 							}
 							if (oldNameDef.matches(regexDots) && !newNameDef.matches(regexDots)) {
