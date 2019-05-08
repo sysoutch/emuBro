@@ -2,3 +2,7 @@ target/
 .classpath
 .project
 .settings
+gamelist.csv
+gamelist.json
+gamelist.txt
+gamelist.xml

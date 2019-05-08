@@ -184,20 +184,18 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 		int platformId = currentGame.get(0).getPlatformId();
 		Platform platform = explorer.getPlatform(platformId);
 		List<BroEmulator> emulators = platform.getEmulators();
-		int defaultEmulatorIndex = EmulatorConstants.NO_EMULATOR;
-		int notInstalledEmulatorsSkipped = 0;
+		int defaultEmulatorId = EmulatorConstants.NO_EMULATOR;
 		for (int i = 0; i < emulators.size(); i++) {
 			Emulator emulator = emulators.get(i);
 			if (!emulator.isInstalled()) {
-				notInstalledEmulatorsSkipped++;
 				continue;
 			}
 			if (emulator.getId() == platform.getDefaultEmulatorId()) {
-				defaultEmulatorIndex = i - notInstalledEmulatorsSkipped;
+				defaultEmulatorId = emulator.getId();
 				break;
 			}
 		}
-		popupGame.initEmulators(emulators, defaultEmulatorIndex);
+		popupGame.initEmulators(emulators, defaultEmulatorId);
 	}
 
 	protected void showViewPopupMenu(Component relativeTo, int x, int y) {

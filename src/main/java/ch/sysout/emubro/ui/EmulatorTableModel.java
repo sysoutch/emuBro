@@ -29,9 +29,16 @@ public class EmulatorTableModel extends DefaultTableModel {
 	private Map<Integer, ImageIcon> icons = new HashMap<>();
 	private ImageIcon iconDefault;
 
-	private int defaultEmulator = EmulatorConstants.NO_EMULATOR;
+	private int defaultEmulatorId = EmulatorConstants.NO_EMULATOR;
 
-	public EmulatorTableModel(List<BroEmulator> emulators) {
+	/**
+	 * @param emulators
+	 * @param defaultEmulatorId when set it overrides the defaultEmulator from platform
+	 */
+	public EmulatorTableModel(List<BroEmulator> emulators, int defaultEmulatorId) {
+		if (defaultEmulatorId != EmulatorConstants.NO_EMULATOR) {
+			setDefaultEmulatorId(defaultEmulatorId);
+		}
 		int size = (ScreenSizeUtil.is3k()) ? 24 : 16;
 		iconDefault = ImageUtil.getImageIconFrom(Icons.get("default", size, size));
 
@@ -42,6 +49,10 @@ public class EmulatorTableModel extends DefaultTableModel {
 				addRow(emu);
 			}
 		}
+	}
+
+	public EmulatorTableModel(List<BroEmulator> emulators) {
+		this(emulators, EmulatorConstants.NO_EMULATOR);
 	}
 
 	@Override
@@ -65,7 +76,7 @@ public class EmulatorTableModel extends DefaultTableModel {
 		String emulatorPath = emulator.getPath();
 		switch (columnIndex) {
 		case 0:
-			return rowIndex == defaultEmulator ? iconDefault : null;
+			return rowIndex == defaultEmulatorId ? iconDefault : null;
 		case 1:
 			return "<html><strong>"+emulatorName+"</strong></html>";
 		case 2:
@@ -182,14 +193,14 @@ public class EmulatorTableModel extends DefaultTableModel {
 		}
 	}
 
-	public int getDefaultEmulator() {
-		return defaultEmulator;
+	public int getDefaultEmulatorId() {
+		return defaultEmulatorId;
 	}
 
-	public void setDefault(int row) {
-		defaultEmulator = row;
+	void setDefaultEmulatorId(int emulatorId) {
+		defaultEmulatorId = emulatorId;
 		for (int i = 0; i < getRowCount(); i++) {
-			setValueAt(i == row ? iconDefault : null, i, 0);
+			setValueAt(i == emulatorId ? iconDefault : null, i, 0);
 		}
 	}
 }

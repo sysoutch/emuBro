@@ -91,6 +91,8 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 
 	private GameFilterPanel pnlGameFilter;
 
+	private List<Tag> defaultTags;
+
 	public PreviewPanePanel(Explorer explorer, GameContextMenu popupGame, ViewContextMenu popupView) {
 		super();
 		this.explorer = explorer;
@@ -111,6 +113,10 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 
 	private void initNoSelectionText() {
 		pnlNoSelection.initNoSelectionText();
+	}
+
+	public void initDefaultTags(List<Tag> tags) {
+		defaultTags = tags;
 	}
 
 	public void addCoverDragDropListener(DropTargetListener l) {
@@ -921,8 +927,16 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 
 				@Override
 				public void actionPerformed(ActionEvent e) {
-					UIUtil.showErrorMessage(PreviewPanePanel.this, "Actually the \"add tag\"-feature only works from the context menu lol :)",
-							"Button does nothing");
+					Map<Integer, Tag> tags = new HashMap<>();
+					for (Game game : currentGames) {
+						for (Tag tag : game.getTags()) {
+							if (!tags.containsKey(tag.getId())) {
+								tags.put(tag.getId(), tag);
+							}
+						}
+					}
+					System.out.println(tags);
+					System.out.println(defaultTags);
 				}
 			});
 		}
@@ -1019,5 +1033,4 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 	public void addTagToGameFilterListener(GameFilterPanel pnlGameFilter) {
 		this.pnlGameFilter = pnlGameFilter;
 	}
-
 }

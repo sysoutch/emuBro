@@ -178,6 +178,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	private JMenuItem itmSearchNetwork;
 	private JMenuItem itmExportGameListToTxt;
 	private JMenuItem itmExportGameListToCsv;
+	private JMenuItem itmExportGameListToJson;
 	private JMenuItem itmExportGameListToXml;
 	private JMenuItem itmExportGameListOptions;
 	private JMenuItem itmExportApplicationData;
@@ -408,6 +409,13 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 			public void mousePressed(MouseEvent e) {
 				switchDetailsTabTo(1);
 				if (isDetailsPaneUnpinned()) {
+					System.err.println("current state: " + pnlMain.frameDetailsPane.getExtendedState());
+					int state = pnlMain.frameDetailsPane.getExtendedState();
+					if (state == Frame.ICONIFIED) {
+						pnlMain.frameDetailsPane.setExtendedState(Frame.NORMAL);
+					} else if (state == (Frame.ICONIFIED | Frame.MAXIMIZED_BOTH)) {
+						pnlMain.frameDetailsPane.setExtendedState(Frame.MAXIMIZED_BOTH);
+					}
 					pnlMain.frameDetailsPane.toFront();
 				} else if (!isDetailsPaneVisible()) {
 					pnlMain.showDetailsPane(true);
@@ -475,6 +483,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmExit = new JMenuItem();
 		itmExportGameListToTxt = new JMenuItem();
 		itmExportGameListToCsv = new JMenuItem();
+		itmExportGameListToJson = new JMenuItem();
 		itmExportGameListToXml = new JMenuItem();
 		itmExportGameListOptions = new JMenuItem();
 		itmSetFilter = new JRadioButtonMenuItem();
@@ -744,6 +753,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmCheckForUpdates.setIcon(ImageUtil.getImageIconFrom(Icons.get("checkForUpdates", size, size)));
 		itmExportGameListToTxt.setIcon(ImageUtil.getImageIconFrom(Icons.get("textPlain", size, size)));
 		itmExportGameListToCsv.setIcon(ImageUtil.getImageIconFrom(Icons.get("textCsv", size, size)));
+		itmExportGameListToJson.setIcon(ImageUtil.getImageIconFrom(Icons.get("textJson", size, size)));
 		itmExportGameListToXml.setIcon(ImageUtil.getImageIconFrom(Icons.get("textXml", size, size)));
 		itmExportGameListOptions.setIcon(ImageUtil.getImageIconFrom(Icons.get("exportSettings", size, size)));
 		itmWelcomeView.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewWelcome", size, size)));
@@ -1305,6 +1315,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	}
 
 	public void addRunGameWithListener(RunGameWithListener l) {
+		mnuGameSettings.addRunGameWithListener(l);
 		pnlMain.addRunGameWithListener(l);
 	}
 
@@ -1373,6 +1384,9 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	public void addExportGameListToCsvListener(ActionListener l) {
 		itmExportGameListToCsv.addActionListener(l);
+	}
+	public void addExportGameListToJsonListener(ActionListener l) {
+		itmExportGameListToJson.addActionListener(l);
 	}
 
 	public void addExportGameListToXmlListener(ActionListener l) {
@@ -1722,7 +1736,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		addComponentsToJComponent(mnuAdd, itmAddFiles, itmAddFolders, new JSeparator(), itmAddFilesFromClipboard);
 
 		addComponentsToJComponent(mnuExportGameList, itmExportGameListToTxt, itmExportGameListToCsv,
-				itmExportGameListToXml, new JSeparator(), itmExportGameListOptions);
+				itmExportGameListToJson, itmExportGameListToXml, new JSeparator(), itmExportGameListOptions);
 
 		addComponentsToJComponent(mnuSetCoverSize, sliderCoverSize);
 
@@ -2334,8 +2348,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		pnlMain.showOrganizePopupMenu(e);
 	}
 
-	public void showGameSettingsPopupMenu(List<BroEmulator> emulators, int defaultEmulatorIndex) {
-		mnuGameSettings.initEmulators(emulators, defaultEmulatorIndex);
+	public void showGameSettingsPopupMenu(List<BroEmulator> emulators, int defaultEmulatorId) {
+		mnuGameSettings.initEmulators(emulators, defaultEmulatorId);
 		mnuGameSettings.show(btnRunGame, 0, btnRunGame.getHeight());
 	}
 
@@ -2707,6 +2721,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmExit.setText(Messages.get(MessageConstants.EXIT));
 		itmExportGameListToTxt.setText(Messages.get(MessageConstants.EXPORT_TO_TXT));
 		itmExportGameListToCsv.setText(Messages.get(MessageConstants.EXPORT_TO_CSV));
+		itmExportGameListToJson.setText(Messages.get(MessageConstants.EXPORT_TO_JSON));
 		itmExportGameListToXml.setText(Messages.get(MessageConstants.EXPORT_TO_XML));
 		itmExportGameListOptions.setText(Messages.get(MessageConstants.EXPORT_SETTINGS));
 		itmSetFilter.setText(Messages.get(MessageConstants.SET_FILTER));

@@ -200,13 +200,17 @@ public class GamePropertiesDialog extends JDialog {
 		pnlMain.add(new JLabel(Messages.get(MessageConstants.COLUMN_PLATFORM) + ":"), cc.xy(1, 6));
 		pnlMain.add(new JLabel(platform.getName()), cc.xyw(3, 6, layout.getColumnCount() - 2));
 		pnlMain.add(new JLabel(Messages.get(MessageConstants.RUN_WITH) + ":"), cc.xy(1, 8));
-		Emulator emulator = explorer.getEmulatorFromPlatform(platform.getId());
+
+		Game game = explorer.getCurrentGames().get(0);
+		boolean emulatorFromGame = game.hasEmulator();
+		Emulator emulator = (emulatorFromGame) ? explorer.getEmulatorFromGame(game.getId())
+				: explorer.getEmulatorFromPlatform(platform.getId());
 		String emulatorName = (emulator != null) ? emulator.getName() : "-";
 		pnlMain.add(new JLabel(emulatorName), cc.xy(3, 8));
 		pnlMain.add(btnModify = new JToggleButton(Messages.get(MessageConstants.MODIFY)), cc.xy(5, 8));
 
 		int rowHeight = ScreenSizeUtil.adjustValueToResolution(32);
-		EmulatorTableModel model = new EmulatorTableModel(platform.getEmulators());
+		EmulatorTableModel model = new EmulatorTableModel(platform.getEmulators(), emulator.getId());
 		JTable tblEmulators = new JTableDoubleClickOnHeaderFix();
 		tblEmulators.setPreferredScrollableViewportSize(tblEmulators.getPreferredSize());
 		tblEmulators.setRowHeight(rowHeight);
@@ -241,10 +245,19 @@ public class GamePropertiesDialog extends JDialog {
 						}
 					}
 					UIUtil.revalidateAndRepaint(pnlMain);
+					Game game = explorer.getCurrentGames().get(0);
+					boolean emulatorFromGame = game.hasEmulator();
 					for (int i = 0; i < model.getRowCount(); i++) {
-						if (platform.getDefaultEmulator() == model.getEmulator(i)) {
-							tblEmulators.setRowSelectionInterval(i, i);
-							break;
+						if (emulatorFromGame) {
+							if (game.getDefaultEmulatorId() == model.getEmulator(i).getId()) {
+								tblEmulators.setRowSelectionInterval(i, i);
+								break;
+							}
+						} else {
+							if (platform.getDefaultEmulator() == model.getEmulator(i)) {
+								tblEmulators.setRowSelectionInterval(i, i);
+								break;
+							}
 						}
 					}
 					tblEmulators.scrollRectToVisible(tblEmulators.getCellRect(tblEmulators.getSelectedRow(), 0, true));

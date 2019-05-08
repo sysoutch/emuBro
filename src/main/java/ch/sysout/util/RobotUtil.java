@@ -22,4 +22,11 @@ public class RobotUtil {
 			}
 		}
 	}
+
+	//	public static void copyImageToClipboard(Rectangle screen) {
+	//		BufferedImage i = robot.createScreenCapture(screen);
+	//		TransferableImage trans = new TransferableImage(i);
+	//		Clipboard c = Toolkit.getDefaultToolkit().getSystemClipboard();
+	//		c.setContents(trans, this);
+	//	}
 }

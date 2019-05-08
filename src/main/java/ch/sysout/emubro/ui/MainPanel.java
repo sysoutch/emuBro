@@ -169,6 +169,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 	}
 
 	public void initDefaultTags(List<Tag> tags) {
+		pnlPreviewPane.initDefaultTags(tags);
 		popupGame.initDefaultTags(tags);
 	}
 

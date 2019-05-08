@@ -486,8 +486,8 @@ public class CoverBroFrame extends JFrame {
 		return new Dimension(pnlImageEdit.getCurrentCoverWidth(), pnlImageEdit.getCurrentCoverHeight());
 	}
 
-	public Image getResizedImage() throws Exception {
-		Image resized = pnlImageEdit.getCuttedImage(pnlImageEdit.getCurrentCoverWidth(),
+	public BufferedImage getResizedImage() throws Exception {
+		BufferedImage resized = pnlImageEdit.getCuttedImage(pnlImageEdit.getCurrentCoverWidth(),
 				pnlImageEdit.getCurrentCoverHeight());
 		return resized;
 	}

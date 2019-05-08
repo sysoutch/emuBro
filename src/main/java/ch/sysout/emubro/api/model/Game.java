@@ -131,4 +131,6 @@ public interface Game extends Comparable<Game> {
 	String getGameCode();
 
 	void setGameCode(String gameCode);
+
+	void setChecksumId(int defaultChecksumId);
 }

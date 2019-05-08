@@ -263,6 +263,7 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 	}
 
 	protected void showAdvancedSearchSettingsPopupMenu(JComponent comp) {
+		setVisible(true);
 		Component[] comps = mnuTags.getComponents();
 		if (comps != null && comps.length != 0) {
 			if (comps.length > 1) {
@@ -271,7 +272,11 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 		} else {
 			mnuTags.add(itmNoTagsAvailable);
 		}
-		mnuTags.show(comp, 0, comp.getHeight());
+		int height = 0;
+		if (comp != null) {
+			height = comp.getHeight();
+		}
+		mnuTags.show(comp, 0, height);
 	}
 
 	protected void fireRequestFocusInWindowEvent() {
@@ -459,6 +464,8 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 	}
 
 	private void addTagToFilter(boolean selected, String tagName) {
+		showAdvancedSearchSettingsPopupMenu(btnTags);
+
 		int platformId = getSelectedPlatformId();
 		fireEvent(new BroFilterEvent(platformId, getCriteria()));
 

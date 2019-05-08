@@ -25,14 +25,14 @@ public class BroGame implements Game {
 	private String platformIconFileName;
 	private List<Tag> tags = new ArrayList<>();
 
-	public BroGame(int id, String name, String gameCode, int defaultFileId, int checksumId, String iconPath, String coverPath, int rate, ZonedDateTime dateAdded,
+	public BroGame(int id, String name, String gameCode, int defaultFileId, int defaultChecksumId, String iconPath, String coverPath, int rate, ZonedDateTime dateAdded,
 			ZonedDateTime lastPlayed, int playCount, int emulatorId, int platformId, String platformIconFileName) {
 		ValidationUtil.checkNullOrEmpty(name, "name");
 		this.id = id;
 		this.name = name;
 		setGameCode(gameCode);
 		this.defaultFileId = defaultFileId;
-		this.checksumId = checksumId;
+		checksumId = defaultChecksumId;
 		this.iconPath = (iconPath == null) ? "" : iconPath;
 		this.coverPath = (coverPath == null) ? "" : coverPath;
 		this.rate = rate;
@@ -68,6 +68,11 @@ public class BroGame implements Game {
 	@Override
 	public int getChecksumId() {
 		return checksumId;
+	}
+
+	@Override
+	public void setChecksumId(int checksumId) {
+		this.checksumId = checksumId;
 	}
 
 	@Override

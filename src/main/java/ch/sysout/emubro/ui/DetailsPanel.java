@@ -131,8 +131,8 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				UIUtil.doHover(false, btnWarnings, btnErrors);
-				spNotifications.setVisible(!spNotifications.isVisible());
 				if (btnInformations.isSelected()) {
+					spNotifications.setVisible(true);
 					spWarnings.setVisible(false);
 					spErrors.setVisible(false);
 					doHover(btnWarnings, false);
@@ -148,8 +148,8 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				UIUtil.doHover(false, btnInformations, btnErrors);
-				spWarnings.setVisible(!spWarnings.isVisible());
 				if (btnWarnings.isSelected()) {
+					spWarnings.setVisible(true);
 					spNotifications.setVisible(false);
 					spErrors.setVisible(false);
 					doHover(btnInformations, false);
@@ -166,8 +166,8 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				UIUtil.doHover(false, btnInformations, btnWarnings);
-				spErrors.setVisible(!spErrors.isVisible());
 				if (btnErrors.isSelected()) {
+					spErrors.setVisible(true);
 					spNotifications.setVisible(false);
 					spWarnings.setVisible(false);
 					doHover(btnInformations, false);

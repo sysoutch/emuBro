@@ -34,8 +34,8 @@ public class EmulatorTableCellRenderer extends DefaultTableCellRenderer {
 		if (plat.hasDefaultEmulator()) {
 			Emulator defaultEmulator = plat.getDefaultEmulator();
 			if (defaultEmulator != null && defaultEmulator.equals(emu)) {
-				if (model.getDefaultEmulator() != row) {
-					model.setDefault(row);
+				if (model.getDefaultEmulatorId() != row) {
+					model.setDefaultEmulatorId(row);
 				}
 			}
 		}

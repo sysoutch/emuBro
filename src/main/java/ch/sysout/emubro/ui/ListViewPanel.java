@@ -206,28 +206,26 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 			int platformId = currentGames.get(0).getPlatformId();
 			Platform platform = explorer.getPlatform(platformId);
 			List<BroEmulator> emulators = platform.getEmulators();
-			int defaultEmulatorIndex = EmulatorConstants.NO_EMULATOR;
-			int notInstalledEmulatorsSkipped = 0;
+			int defaultEmulatorId = EmulatorConstants.NO_EMULATOR;
 			for (int i = 0; i < emulators.size(); i++) {
 				Emulator emulator = emulators.get(i);
 				if (!emulator.isInstalled()) {
-					notInstalledEmulatorsSkipped++;
 					continue;
 				}
 				int defaultGameEmulatorId = currentGames.get(0).getDefaultEmulatorId();
 				if (defaultGameEmulatorId == EmulatorConstants.NO_EMULATOR) {
 					if (emulator.getId() == platform.getDefaultEmulatorId()) {
-						defaultEmulatorIndex = i - notInstalledEmulatorsSkipped;
+						defaultEmulatorId = emulator.getId();
 						break;
 					}
 				} else {
 					if (emulator.getId() == defaultGameEmulatorId) {
-						defaultEmulatorIndex = i - notInstalledEmulatorsSkipped;
+						defaultEmulatorId = emulator.getId();
 						break;
 					}
 				}
 			}
-			popupGame.initEmulators(emulators, defaultEmulatorIndex);
+			popupGame.initEmulators(emulators, defaultEmulatorId);
 		}
 	}
 
@@ -1627,7 +1625,6 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 
 	@Override
 	public void gameSelected(GameSelectionEvent e) {
-		System.out.println("ListViewPanel game selected");
 	}
 
 	@Override

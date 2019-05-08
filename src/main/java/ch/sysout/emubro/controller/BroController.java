@@ -58,6 +58,8 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
+import java.io.Writer;
+import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -129,6 +131,7 @@ import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JSlider;
 import javax.swing.JTable;
+import javax.swing.JTextArea;
 import javax.swing.JToggleButton;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
@@ -172,10 +175,13 @@ import org.w3c.dom.Element;
 import com.github.junrar.Archive;
 import com.github.junrar.exception.RarException;
 import com.github.junrar.rarfile.FileHeader;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.reflect.TypeToken;
 import com.jgoodies.forms.factories.Paddings;
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
@@ -386,7 +392,9 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	private void commentGames(List<Game> list) {
-		JOptionPane.showInputDialog("");
+		JPanel pnlComment = new JPanel(new BorderLayout());
+		pnlComment.add(new JScrollPane(new JTextArea()));
+		JOptionPane.showMessageDialog(view, pnlComment, "Comment games", JOptionPane.PLAIN_MESSAGE);
 	}
 
 	public void createView() throws Exception {
@@ -604,6 +612,7 @@ GameSelectionListener, BrowseComputerListener {
 		view.addOpenPropertiesListener(new OpenPropertiesListener());
 		view.addExportGameListToTxtListener(new ExportGameListToTxtListener());
 		view.addExportGameListToCsvListener(new ExportGameListToCsvListener());
+		view.addExportGameListToJsonListener(new ExportGameListToJsonListener());
 		view.addExportGameListToXmlListener(new ExportGameListToXmlListener());
 		view.addChangeToWelcomeViewListener(new ChangeToWelcomeViewListener());
 		view.addCoverSizeListener(new ChangeCoverSizeListener());
@@ -1659,6 +1668,9 @@ GameSelectionListener, BrowseComputerListener {
 		} else if (fileType == FileTypeConstants.CSV_FILE) {
 			List<Game> games = (request == JOptionPane.YES_OPTION) ? view.getGamesFromCurrentView() : explorer.getGames();
 			return exportGameListToCsvFile(games);
+		} else if (fileType == FileTypeConstants.JSON_FILE) {
+			List<Game> games = (request == JOptionPane.YES_OPTION) ? view.getGamesFromCurrentView() : explorer.getGames();
+			return exportGameListToJsonFile(games);
 		} else if (fileType == FileTypeConstants.XML_FILE) {
 			List<Game> games = (request == JOptionPane.YES_OPTION) ? view.getGamesFromCurrentView() : explorer.getGames();
 			return exportGameListToXmlFile(games);
@@ -1698,7 +1710,7 @@ GameSelectionListener, BrowseComputerListener {
 	private File exportGameListToCsvFile(List<Game> games) throws IOException, SQLException {
 		List<String[]> allLines = new ArrayList<>();
 		for (Game g : games) {
-			String[] data = { g.getName(), g.getPlatformId() + "", g.getDefaultEmulatorId() + "", g.getRate() + "",
+			String[] data = { g.getName(), g.getPlatformId() + "", g.getGameCode(), g.getDefaultEmulatorId() + "", g.getRate() + "",
 					explorer.getFiles(g).get(0), g.getCoverPath(), g.getLastPlayed() + "", g.getPlayCount() + "" };
 			allLines.add(data);
 		}
@@ -1709,6 +1721,17 @@ GameSelectionListener, BrowseComputerListener {
 		CSVWriter writer = new CSVWriter(bw, CSVWriter.DEFAULT_SEPARATOR, CSVWriter.NO_QUOTE_CHARACTER);
 		writer.writeAll(allLines);
 		writer.close();
+		return file;
+	}
+
+	private File exportGameListToJsonFile(List<Game> games) throws IOException, SQLException {
+		File file = null;
+		try (Writer writer = new FileWriter("gamelist.json")) {
+			Gson gson = new GsonBuilder().setPrettyPrinting().create();
+			Type listType = new TypeToken<List<Game>>() {}.getType();
+			gson.toJson(games, listType, writer);
+			file = new File("gamelist.json");
+		}
 		return file;
 	}
 
@@ -1740,6 +1763,7 @@ GameSelectionListener, BrowseComputerListener {
 
 				el.appendChild(game);
 
+				Element gameCode = doc.createElement("gameCode");
 				Element rate = doc.createElement("rate");
 				Element tags = doc.createElement("tags");
 				Element path = doc.createElement("path");
@@ -1749,6 +1773,7 @@ GameSelectionListener, BrowseComputerListener {
 
 				//				title.appendChild(doc.createTextNode(g.getName()));
 				//				platform.appendChild(doc.createTextNode("" + explorer.getPlatform(g.getPlatformId()).getName()));
+				gameCode.appendChild(doc.createTextNode("" + g.getGameCode()));
 				rate.appendChild(doc.createTextNode("" + g.getRate()));
 
 				for (Tag t : g.getTags()) {
@@ -1764,6 +1789,7 @@ GameSelectionListener, BrowseComputerListener {
 				game.setAttribute("name", g.getName());
 				game.setAttribute("platform", explorer.getPlatform(g.getPlatformId()).getName());
 
+				game.appendChild(gameCode);
 				game.appendChild(rate);
 				game.appendChild(tags);
 				game.appendChild(path);
@@ -6145,25 +6171,31 @@ GameSelectionListener, BrowseComputerListener {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			List<BroEmulator> emulators = null;
 			List<Game> currentGame = explorer.getCurrentGames();
 			int platformId = currentGame.get(0).getPlatformId();
+
 			Platform platform = explorer.getPlatform(platformId);
-			emulators = platform.getEmulators();
-			int defaultEmulatorIndex = EmulatorConstants.NO_EMULATOR;
-			int notInstalledEmulatorsSkipped = 0;
+			List<BroEmulator> emulators = platform.getEmulators();
+			int defaultEmulatorId = EmulatorConstants.NO_EMULATOR;
 			for (int i = 0; i < emulators.size(); i++) {
 				Emulator emulator = emulators.get(i);
 				if (!emulator.isInstalled()) {
-					notInstalledEmulatorsSkipped++;
 					continue;
 				}
-				if (emulator.getId() == platform.getDefaultEmulatorId()) {
-					defaultEmulatorIndex = i - notInstalledEmulatorsSkipped;
-					break;
+				int defaultGameEmulatorId = currentGame.get(0).getDefaultEmulatorId();
+				if (defaultGameEmulatorId == EmulatorConstants.NO_EMULATOR) {
+					if (emulator.getId() == platform.getDefaultEmulatorId()) {
+						defaultEmulatorId = emulator.getId();
+						break;
+					}
+				} else {
+					if (emulator.getId() == defaultGameEmulatorId) {
+						defaultEmulatorId = emulator.getId();
+						break;
+					}
 				}
 			}
-			view.showGameSettingsPopupMenu(emulators, defaultEmulatorIndex);
+			view.showGameSettingsPopupMenu(emulators, defaultEmulatorId);
 		}
 	}
 
@@ -6363,6 +6395,22 @@ GameSelectionListener, BrowseComputerListener {
 		public void actionPerformed(ActionEvent arg0) {
 			try {
 				File file = exportGameListTo(FileTypeConstants.CSV_FILE);
+				if (file != null) {
+					Desktop.getDesktop().open(file);
+				}
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	class ExportGameListToJsonListener implements ActionListener {
+		@Override
+		public void actionPerformed(ActionEvent arg0) {
+			try {
+				File file = exportGameListTo(FileTypeConstants.JSON_FILE);
 				if (file != null) {
 					Desktop.getDesktop().open(file);
 				}
@@ -6827,13 +6875,6 @@ GameSelectionListener, BrowseComputerListener {
 			}
 			dlgUpdates.setLocationRelativeTo(view);
 			dlgUpdates.setVisible(true);
-			SwingUtilities.invokeLater(new Runnable() {
-
-				@Override
-				public void run() {
-					checkForUpdates();
-				}
-			});
 		}
 	}
 
@@ -7706,7 +7747,7 @@ GameSelectionListener, BrowseComputerListener {
 	public boolean shouldCheckForUpdates() {
 		//		Timestamp lastCheckedForUpdates = uo.getSearchedAt();
 		//		Timestamp now = new Timestamp(System.currentTimeMillis());
-		return true;
+		return false; // TODO implement this
 	}
 
 	private void startPluginManager() throws IOException {

@@ -21,6 +21,7 @@ import javax.swing.WindowConstants;
 import com.jgoodies.forms.factories.Paddings;
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
+import com.jgoodies.forms.layout.RowSpec;
 
 import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.impl.BroConfigWizardListener;
@@ -28,6 +29,7 @@ import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
+import ch.sysout.util.UIUtil;
 
 public class ConfigWizardDialog extends JDialog implements ActionListener {
 	private static final long serialVersionUID = 1L;
@@ -60,6 +62,13 @@ public class ConfigWizardDialog extends JDialog implements ActionListener {
 	private List<BroConfigWizardListener> listeners = new ArrayList<>();
 
 	private Explorer explorer;
+
+	private AbstractButton btnDiscord = new JButton(ImageUtil.getImageIconFrom(Icons.get("discordBanner")));
+	private AbstractButton btnReddit = new JButton(ImageUtil.getImageIconFrom(Icons.get("redditBanner")));
+
+	private JPanel pnlSocialWrapper;
+
+	private FormLayout layout;
 
 	public ConfigWizardDialog(Explorer explorer) {
 		super();
@@ -101,17 +110,26 @@ public class ConfigWizardDialog extends JDialog implements ActionListener {
 	}
 
 	private void createUI() {
-		FormLayout layout = new FormLayout("pref, min, pref:grow", "pref, min, fill:pref:grow, min, pref");
+		layout = new FormLayout("pref, min, min:grow",
+				"pref, min, fill:pref, min, top:pref:grow, min, pref");
 		setLayout(layout);
 
 		CellConstraints cc = new CellConstraints();
 		add(pnlHeader, cc.xyw(1, 1, layout.getColumnCount()));
 		add(new JSeparator(), cc.xyw(1, 2, layout.getColumnCount()));
 		add(pnlNavigation, cc.xy(1, 3));
-		add(new JSeparator(SwingConstants.VERTICAL), cc.xy(2, 3));
+		add(new JSeparator(SwingConstants.VERTICAL), cc.xywh(2, 3, 1, layout.getRowCount()-4));
 		add(pnlContent, cc.xy(3, 3));
-		add(new JSeparator(), cc.xyw(1, 4, layout.getColumnCount()));
-		add(pnlFooter, cc.xyw(1, 5, layout.getColumnCount()));
+
+		pnlSocialWrapper = new JPanel(new BorderLayout());
+		JPanel pnlSocial = new JPanel();
+		pnlSocial.add(btnDiscord);
+		pnlSocial.add(btnReddit);
+		pnlSocialWrapper.add(pnlSocial, BorderLayout.WEST);
+
+		add(pnlSocialWrapper, cc.xy(3, 5));
+		add(new JSeparator(), cc.xyw(1, 6, layout.getColumnCount()));
+		add(pnlFooter, cc.xyw(1, 7, layout.getColumnCount()));
 
 		createHeaderUI();
 		createNavigationUI();
@@ -183,10 +201,10 @@ public class ConfigWizardDialog extends JDialog implements ActionListener {
 				}
 			}
 			pnlContent.add(currentContentPanel);
-			validate();
-			repaint();
-
-			btnBack.setVisible(currentContentPanel != contentPanels[0]);
+			UIUtil.revalidateAndRepaint(this);
+			boolean notFirstPanel = currentContentPanel != contentPanels[0];
+			adjustLayout(notFirstPanel);
+			btnBack.setVisible(notFirstPanel);
 			btnForward.setText("Weiter >");
 		} else if (source == btnForward) {
 			for (int i = 0; i < contentPanels.length - 1; i++) {
@@ -197,27 +215,38 @@ public class ConfigWizardDialog extends JDialog implements ActionListener {
 				}
 			}
 			pnlContent.add(currentContentPanel);
-			validate();
-			repaint();
-
-			btnBack.setVisible(currentContentPanel != contentPanels[0]);
-
+			UIUtil.revalidateAndRepaint(this);
+			boolean notFirstPanel = currentContentPanel != contentPanels[0];
+			adjustLayout(notFirstPanel);
+			btnBack.setVisible(notFirstPanel);
 			btnForward.setText(
 					(currentContentPanel != contentPanels[contentPanels.length - 1]) ? "Weiter >" : "Fertigstellen");
 		}
 	}
 
+	private void adjustLayout(boolean notFirstPanel) {
+		String rowSpecContentString = "fill:pref:grow";
+		String rowSpecContentString2 = "fill:pref";
+		String rowSpecSocialString = "pref";
+		String rowSpecSocialString2 = "top:pref:grow";
+		RowSpec rowSpecContent = notFirstPanel ? RowSpec.decode(rowSpecContentString) : RowSpec.decode(rowSpecContentString2);
+		RowSpec rowSpecSocial = notFirstPanel ? RowSpec.decode(rowSpecSocialString) : RowSpec.decode(rowSpecSocialString2);
+		layout.setRowSpec(3, rowSpecContent);
+		layout.setRowSpec(5, rowSpecSocial);
+	}
+
 	class GeneralConfigPanel extends JPanel {
 		private static final long serialVersionUID = 1L;
 		private String message = "<html>" + "<h3>Willkommen im " + Messages.get("applicationTitle")
-		+ " Konfigurations-Assistenten</h3>" + "<p>"
-		+ "Dieser Assistent führt dich durch die Konfiguration von " + Messages.get("applicationTitle")
-		+ ".<p><p>" + "Klicke auf \"Weiter\" um fortzufahren oder \"Abbrechen\" um den Assistenten zu beenden."
+		+ " Konfigurations-Assistenten</h3><p>"
+		+ "Dieser Assistent führt dich durch die Konfiguration von " + Messages.get("applicationTitle")+"<p>"
+		+ "<p><p>Wenn du Fragen, Probleme oder sonst was hast was du uns mitteilen willst, joine unseren <strong>Discord Server</strong> oder schau auf <strong>Reddit</strong> vorbei."
 		+ "</html>";
 
 		public GeneralConfigPanel() {
-			super();
-			add(new JLabel2(message));
+			super(new BorderLayout());
+			JLabel textPane = new JLabel(message);
+			add(textPane, BorderLayout.NORTH);
 		}
 	}
 

@@ -80,24 +80,14 @@ public class BroGameDAO implements GameDAO {
 	@Override
 	public void addGame(Game game, String filePath) throws SQLException, BroGameAlreadyExistsException, BroGameDeletedException {
 		ValidationUtil.checkNull(game, "game");
-		Statement stmt = conn.createStatement();
-
 		if (!hasFile(filePath)) {
-			String sql2 = SqlUtil.insertIntoWithColumnsString("file", "file_path",
-					SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(filePath)));
-			stmt.executeQuery(sql2);
-			conn.commit();
+			addFile(filePath);
 		}
 		int gameId = GameConstants.NO_GAME;
 		if ((gameId = hasGame(game)) != GameConstants.NO_GAME) {
 			if (!hasGameFile(gameId, getFileId(filePath))) {
-				String sql3 = SqlUtil.insertIntoWithColumnsString("game_file", "game_id", "file_id",
-						gameId, getFileId(filePath));
-				stmt = conn.createStatement();
-				stmt.executeQuery(sql3);
-				conn.commit();
+				addGameFile(gameId, filePath);
 			}
-			stmt.close();
 			BroGameAlreadyExistsException ex = new BroGameAlreadyExistsException("game or copy of game does already exist: " + filePath);
 			ex.setGameId(gameId);
 			throw ex;
@@ -144,6 +134,7 @@ public class BroGameDAO implements GameDAO {
 				game.getPlatformId(),
 				SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(platformIconFileName)),
 				false);
+		Statement stmt = conn.createStatement();
 		stmt.executeQuery(sql);
 		conn.commit();
 
@@ -153,6 +144,23 @@ public class BroGameDAO implements GameDAO {
 		conn.commit();
 
 		stmt.close();
+	}
+
+	public void addGameFile(int gameId, String filePath) throws SQLException {
+		String sql3 = SqlUtil.insertIntoWithColumnsString("game_file", "game_id", "file_id",
+				gameId, getFileId(filePath));
+		Statement stmt = conn.createStatement();
+		stmt.executeQuery(sql3);
+		conn.commit();
+		stmt.close();
+	}
+
+	public void addFile(String filePath) throws SQLException {
+		Statement stmt = conn.createStatement();
+		String sql2 = SqlUtil.insertIntoWithColumnsString("file", "file_path",
+				SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(filePath)));
+		stmt.executeQuery(sql2);
+		conn.commit();
 	}
 
 	@Override

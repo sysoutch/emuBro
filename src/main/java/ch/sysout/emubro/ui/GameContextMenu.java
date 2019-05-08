@@ -38,7 +38,6 @@ import ch.sysout.emubro.controller.GameSelectionListener;
 import ch.sysout.emubro.impl.event.BroTagAddedEvent;
 import ch.sysout.emubro.impl.event.BroTagRemovedEvent;
 import ch.sysout.emubro.impl.model.BroEmulator;
-import ch.sysout.emubro.impl.model.EmulatorConstants;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
@@ -206,7 +205,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 	public void addPutTagListener(ActionListener l) {
 	}
 
-	public void initEmulators(List<BroEmulator> emulators, int defaultEmulatorIndex) {
+	public void initEmulators(List<BroEmulator> emulators, int defaultEmulatorId) {
 		mnuRunWith.removeAll();
 		ScreenSizeUtil.adjustValueToResolution(32);
 		ButtonGroup group = new ButtonGroup();
@@ -221,6 +220,9 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 				icon = FileSystemView.getFileSystemView().getSystemIcon(new File(emu.getPath()));
 			}
 			JRadioButtonMenuItem rdb = new JRadioButtonMenuItem(s, icon);
+			if (defaultEmulatorId == emu.getId()) {
+				rdb.setSelected(true);
+			}
 			group.add(rdb);
 			radios.add(rdb);
 			mnuRunWith.add(rdb);
@@ -231,9 +233,6 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 					fireRunGameWithEvent(emu.getId());
 				}
 			});
-		}
-		if (defaultEmulatorIndex != EmulatorConstants.NO_EMULATOR) {
-			radios.get(defaultEmulatorIndex).setSelected(true);
 		}
 		if (emulators.size() > 0) {
 			mnuRunWith.add(new JSeparator());
