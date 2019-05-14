@@ -482,6 +482,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 			viewManager.setCurrentViewPanel(pnlTableView);
 			setViewStyle(ViewPanel.TABLE_VIEW);
 			pnlTableView.adjustColumns();
+			pnlTableView.setCustomCellRenderer(); // we need to do that cause otherwise the defaultrenderer would be set
 			break;
 		case ViewPanel.CONTENT_VIEW:
 			if (pnlListView == null) {
@@ -927,6 +928,16 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 
 	public void navigationChanged(NavigationEvent e) {
 		pnlNavigation.navigationChanged(e);
+		if (pnlTableView != null) {
+			SwingUtilities.invokeLater(new Runnable() {
+
+				@Override
+				public void run() {
+					pnlTableView.adjustColumns();
+					pnlTableView.setCustomCellRenderer(); // we need to do that cause otherwise the defaultrenderer would be set
+				}
+			});
+		}
 	}
 
 	@Override

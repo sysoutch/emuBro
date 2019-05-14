@@ -3,6 +3,7 @@ package ch.sysout.emubro.ui;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Point;
@@ -18,6 +19,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionAdapter;
 import java.awt.event.MouseWheelListener;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -69,6 +71,8 @@ import ch.sysout.emubro.impl.model.BroGame;
 import ch.sysout.emubro.impl.model.BroTag;
 import ch.sysout.emubro.impl.model.EmulatorConstants;
 import ch.sysout.emubro.impl.model.GameConstants;
+import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 import ch.sysout.util.UIUtil;
 
@@ -120,6 +124,18 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 
 	private List<TagsFromGamesListener> tagsFromGamesListeners = new ArrayList<>();
 
+	private CustomRenderer customRenderer;
+
+	protected int mouseOver = -1;
+	protected boolean dragging;
+	private Cursor cursorDrag = Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR);
+	protected int lastVerticalScrollBarValue;
+	protected int lastMouseX;
+	protected int lastMouseY;
+	protected int scrollDistanceX;
+	protected int scrollDistanceY;
+	protected int currentValue;
+
 	public TableViewPanel(Explorer explorer, IconStore iconStore, GameContextMenu popupGame, ViewContextMenu popupView) {
 		super(new BorderLayout());
 		mdlTblAllGames = new GameTableModel(explorer, iconStore);
@@ -131,51 +147,6 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 		this.popupView = popupView;
 		initComponents();
 		createUI();
-
-		tblGames.addKeyListener(new KeyAdapter() {
-			@Override
-			public void keyPressed(KeyEvent e) {
-				super.keyPressed(e);
-				if (e.getKeyCode() == KeyEvent.VK_CONTEXT_MENU) {
-					boolean showFileTreePopup = tblGames.getSelectedRow() != GameConstants.NO_GAME;
-					if (showFileTreePopup) {
-						showGamePopupMenu(e.getComponent(), mouseX, mouseY);
-					}
-				}
-			}
-		});
-
-		tblGames.addMouseMotionListener(new MouseMotionAdapter() {
-
-			@Override
-			public void mouseMoved(MouseEvent e) {
-				mouseX = e.getX();
-				mouseY = e.getY();
-			}
-		});
-
-		tblGames.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseReleased(MouseEvent e) {
-				//				dragging = false;
-				tblGames.setEnabled(true);
-				tblGames.requestFocusInWindow();
-				if (SwingUtilities.isRightMouseButton(e)) {
-					int index = tblGames.rowAtPoint(e.getPoint());
-					if (index != GameConstants.NO_GAME) {
-						tblGames.setRowSelectionInterval(index, index);
-						showGamePopupMenu(e.getComponent(), e.getX(), e.getY());
-					} else {
-						tblGames.clearSelection();
-						showViewPopupMenu(e.getComponent(), e.getX(), e.getY());
-					}
-				}
-				//	if (sp.getCursor() == cursorDrag) {
-				//		sp.setCursor(null);
-				//	}
-				//	smoothScrollOut(sp, lst);
-			}
-		});
 	}
 
 	protected void showGamePopupMenu(Component relativeTo, int x, int y) {
@@ -228,6 +199,132 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 		tblGames.setPreferredScrollableViewportSize(new Dimension(0, 0));
 		tblGames.setAutoCreateRowSorter(true);
 		tblGames.getSelectionModel().addListSelectionListener(this);
+		tblGames.addKeyListener(new KeyAdapter() {
+			@Override
+			public void keyPressed(KeyEvent e) {
+				super.keyPressed(e);
+				if (e.getKeyCode() == KeyEvent.VK_CONTEXT_MENU) {
+					boolean showFileTreePopup = tblGames.getSelectedRow() != GameConstants.NO_GAME;
+					if (showFileTreePopup) {
+						showGamePopupMenu(e.getComponent(), mouseX, mouseY);
+					}
+				}
+			}
+		});
+
+		tblGames.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseReleased(MouseEvent e) {
+				dragging = false;
+				tblGames.setEnabled(true);
+				tblGames.requestFocusInWindow();
+				if (SwingUtilities.isRightMouseButton(e)) {
+					int index = tblGames.rowAtPoint(e.getPoint());
+					if (index != GameConstants.NO_GAME) {
+						tblGames.setRowSelectionInterval(index, index);
+						showGamePopupMenu(e.getComponent(), e.getX(), e.getY());
+					} else {
+						tblGames.clearSelection();
+						showViewPopupMenu(e.getComponent(), e.getX(), e.getY());
+					}
+				}
+				if (spTblGames.getCursor() == cursorDrag) {
+					spTblGames.setCursor(null);
+				}
+				//				smoothScrollOut(spTblGames, lst);
+			}
+		});
+		tblGames.addMouseMotionListener(new MouseMotionAdapter() {
+
+			@Override
+			public void mouseMoved(MouseEvent e) {
+				mouseX = e.getX();
+				mouseY = e.getY();
+				TableModel model = tblGames.getModel();
+				Point p = e.getPoint();
+				/*
+				 * Exception in thread "AWT-EventQueue-0"
+				 * java.lang.StringIndexOutOfBoundsException: String index out
+				 * of range: 47 at java.lang.String.substring(Unknown Source) at
+				 * ch.sysout.gameexplorer.ui.NewNewListViewPanel$1.
+				 * getListCellRendererComponent(NewNewListViewPanel.java:176) at
+				 * javax.swing.plaf.basic.BasicListUI.updateLayoutState(Unknown
+				 * Source) at
+				 * javax.swing.plaf.basic.BasicListUI.maybeUpdateLayoutState(
+				 * Unknown Source) at
+				 * javax.swing.plaf.basic.BasicListUI.locationToIndex(Unknown
+				 * Source) at javax.swing.JList.locationToIndex(Unknown Source)
+				 * at
+				 * ch.sysout.gameexplorer.ui.NewNewListViewPanel$2.mouseMoved(
+				 * NewNewListViewPanel.java:208)
+				 */
+				tblGames.setToolTipText("");
+				int index = tblGames.rowAtPoint(p);
+				if (index > -1) {
+					Game text = (Game) model.getValueAt(index, -1);
+					ZonedDateTime lastPlayed = text.getLastPlayed();
+					tblGames.setToolTipText("<html><strong>" + Messages.get(MessageConstants.COLUMN_TITLE) + ": </strong>" + text.getName()
+					+ "<br><strong>"+Messages.get(MessageConstants.COLUMN_PLATFORM) + ": </strong>"+explorer.getPlatform(text.getPlatformId())
+					+ "<br><strong>"+Messages.get(MessageConstants.LAST_PLAYED)+": </strong>"+(lastPlayed != null ? lastPlayed : Messages.get(MessageConstants.NEVER_PLAYED_SHORT))
+					+ "<br><strong>" + Messages.get(MessageConstants.DATE_ADDED) + ": </strong>" + text.getDateAdded()
+					+ "</html>");
+					mouseOver = index;
+				} else {
+					index = GameConstants.NO_GAME;
+				}
+				tblGames.repaint();
+			}
+
+			@Override
+			public void mouseDragged(MouseEvent e) {
+				boolean noScrollBarsVisible = !spTblGames.getHorizontalScrollBar().isVisible() && !spTblGames.getVerticalScrollBar().isVisible();
+				if (!isTouchScreenScrollEnabled()) {
+					dragging = false;
+					return;
+				}
+				dragging = true;
+				tblGames.setEnabled(false);
+				int treshold = 4;
+				if (SwingUtilities.isRightMouseButton(e)) {
+					return;
+				}
+				//				bla(e.getPoint());
+				if (spTblGames.getVerticalScrollBar().isVisible()) {
+					if (spTblGames.getCursor() != cursorDrag) {
+						spTblGames.setCursor(cursorDrag);
+					}
+					if (spTblGames.getCursor() == cursorDrag
+							|| scrollDistanceY < -treshold || scrollDistanceY > treshold) {
+						// FIXME supress gameSelected event
+						//							lst.setSelectedIndex(lastSelectedIndex);
+						//							mouseOver = lastSelectedIndex;
+						spTblGames.getVerticalScrollBar().setValue(spTblGames.getVerticalScrollBar().getValue() - scrollDistanceY);
+					}
+					scrollDistanceY = e.getYOnScreen() - lastMouseY;
+					lastMouseY = e.getYOnScreen();
+					lastVerticalScrollBarValue = spTblGames.getVerticalScrollBar().getValue();
+				}
+				//				} else if (viewStyle == ViewPanel.LIST_VIEW || viewStyle == ViewPanel.SLIDER_VIEW) {
+				//					if (spTblGames.getHorizontalScrollBar().isVisible()) {
+				//						if (spTblGames.getCursor() != cursorDrag) {
+				//							spTblGames.setCursor(cursorDrag);
+				//						}
+				//						if (spTblGames.getCursor() == cursorDrag
+				//								|| scrollDistanceX < -treshold || scrollDistanceX > treshold) {
+				//							// FIXME supress gameSelected event
+				//							//							lst.setSelectedIndex(lastSelectedIndex);
+				//							//							mouseOver = lastSelectedIndex;
+				//							currentValue = spTblGames.getHorizontalScrollBar().getValue();
+				//							int value = currentValue - scrollDistanceX;
+				//							spTblGames.getHorizontalScrollBar().setValue(value);
+				//						}
+				//						scrollDistanceX = e.getXOnScreen() - lastMouseX;
+				//						lastMouseX = e.getXOnScreen();
+				//						lastHorizontalScrollBarValue = spTblGames.getHorizontalScrollBar().getValue();
+				//					}
+				//				}
+			}
+		});
 	}
 
 	public static void scrollToVisible(JTable table, int rowIndex, int vColIndex) {
@@ -256,7 +353,6 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 
 	public void adjustColumns() {
 		columnAdjuster.adjustColumns();
-		// columnModel.getColumn(0).setWidth(FIRST_COLUMN_WIDTH);
 	}
 
 	private void createUI() {
@@ -569,11 +665,24 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 				tblGames.setModel(mdlTblAllGames);
 				break;
 			}
-			TableCellRenderer customRenderer = new CustomRenderer();
-			columnModel.getColumn(1).setCellRenderer(customRenderer);
-			columnModel.getColumn(2).setCellRenderer(customRenderer);
-			columnModel.getColumn(3).setCellRenderer(customRenderer);
-			columnModel.getColumn(4).setCellRenderer(customRenderer);
+			initAndSetCustomCellRenderer();
+		}
+	}
+
+	public void setCustomCellRenderer() {
+		initAndSetCustomCellRenderer();
+	}
+
+	private void initAndSetCustomCellRenderer() {
+		if (customRenderer == null) {
+			customRenderer = new CustomRenderer();
+		}
+		setCustomCellRenderer(customRenderer);
+	}
+
+	private void setCustomCellRenderer(CustomRenderer customRenderer) {
+		for (int i = 1; i < columnModel.getColumnCount(); i++) {
+			columnModel.getColumn(i).setCellRenderer(customRenderer);
 		}
 	}
 
@@ -788,9 +897,8 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 					cellComponent.setForeground(UIManager.getColor("Table.selectionForeground"));
 				} else {
 					if (game.isFavorite()) {
-						cellComponent.setForeground(colorFavorite);
 						cellComponent.setFont(cellComponent.getFont().deriveFont(Font.BOLD));
-
+						cellComponent.setForeground(colorFavorite);
 					} else {
 						cellComponent.setForeground(null);
 						cellComponent.setFont(cellComponent.getFont().deriveFont(Font.PLAIN));

@@ -2653,7 +2653,7 @@ GameSelectionListener, BrowseComputerListener {
 				} else {
 					if (isZipFile(filePath)) {
 						checkZipForGame(filePath, file, downloadCover);
-					}else if (is7ZipFile(filePath)) {
+					} else if (is7ZipFile(filePath)) {
 						check7Zip(filePath, file, downloadCover);
 					} else if (isRarFile(filePath)) {
 						checkRar(filePath, file, downloadCover);
@@ -2794,8 +2794,10 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	private void checkMetaFile(String filePath, Path file, boolean downloadCover) {
-		String message = "This is a metadata file. Different platforms may use this file.\n\n"
-				+ "Select a platform from the list below to categorize the game.";
+		String message = "<html><h3>This is a metadata file.</h3>"
+				+ filePath + "<br><br>"
+				+ "Different platforms may use this file.<br><br>"
+				+ "Select a platform from the list below to categorize the game.</html>";
 		String title = "Disc image";
 		Platform[] objectsArr = getObjectsForPlatformChooserDialog(filePath);
 		Platform defaultt = getDefaultPlatformFromChooser(filePath, objectsArr);
@@ -2810,6 +2812,7 @@ GameSelectionListener, BrowseComputerListener {
 
 	private void checkImage(String filePath, Path file, boolean downloadCover) {
 		String message = "<html><h3>This is an image file.</h3>"
+				+ filePath + "<br><br>"
 				+ "Different platforms may use this file.<br><br>"
 				+ "Select a platform from the list below to categorize the game.</html>";
 		String title = "Disc image";
@@ -3520,7 +3523,8 @@ GameSelectionListener, BrowseComputerListener {
 						if (files.size() == 1) {
 							File file = files.get(0);
 							if (file.isDirectory()) {
-								manuallyCheckAddGamesOrEmulators(files);
+								searchForPlatforms(files);
+								//								manuallyCheckAddGamesOrEmulators(files);
 							} else {
 								manuallyCheckAddGameOrEmulator(file.toPath(), true);
 							}

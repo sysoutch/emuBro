@@ -27,8 +27,7 @@ public class GameTableModel extends DefaultTableModel {
 			Messages.get(MessageConstants.COLUMN_PLATFORM),
 			Messages.get(MessageConstants.COLUMN_RATING),
 			Messages.get(MessageConstants.COLUMN_DATE_ADDED),
-			Messages.get(MessageConstants.COLUMN_LAST_PLAYED),
-			Messages.get(MessageConstants.COLUMN_FILE_PATH)
+			Messages.get(MessageConstants.COLUMN_LAST_PLAYED)
 	};
 	private List<Game> games = new ArrayList<>();
 	private Map<Integer, ImageIcon> gameIcons = new HashMap<>();
@@ -91,9 +90,6 @@ public class GameTableModel extends DefaultTableModel {
 				case 5:
 					value = lastPlayed;
 					break;
-				case 6:
-					value = "";
-					break;
 				}
 				return value;
 			}
@@ -127,9 +123,6 @@ public class GameTableModel extends DefaultTableModel {
 			return String.class;
 		}
 		if (columnIndex == 5) {
-			return String.class;
-		}
-		if (columnIndex == 6) {
 			return String.class;
 		}
 		return String.class;
@@ -226,9 +219,6 @@ public class GameTableModel extends DefaultTableModel {
 				break;
 			case 5:
 				columnNames[i] = Messages.get(MessageConstants.COLUMN_LAST_PLAYED);
-				break;
-			case 6:
-				columnNames[i] = Messages.get(MessageConstants.COLUMN_FILE_PATH);
 				break;
 			}
 		}

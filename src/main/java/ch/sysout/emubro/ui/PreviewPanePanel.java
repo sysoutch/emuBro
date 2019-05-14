@@ -53,7 +53,6 @@ import javax.swing.text.StyledDocument;
 
 import org.apache.commons.io.FilenameUtils;
 
-import com.jgoodies.forms.factories.CC;
 import com.jgoodies.forms.factories.Paddings;
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
@@ -173,7 +172,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 				pnlSelection.pnlAutoScaleImage.setVisible(true);
 				pnlSelection.pnlPlayCount.setVisible(true);
 				pnlSelection.pnlDateAdded.setVisible(true);
-				pnlSelection.pnlPath.setVisible(true);
+				//				pnlSelection.pnlPath.setVisible(true);
 			} else {
 				pnlSelection.setGameTitle(Messages.get(MessageConstants.MULTIPLE_GAMES_SELECTED), null);
 				pnlSelection.setPlatformTitle("", null);
@@ -185,7 +184,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 				pnlSelection.pnlAutoScaleImage.setVisible(false);
 				pnlSelection.pnlPlayCount.setVisible(false);
 				pnlSelection.pnlDateAdded.setVisible(false);
-				pnlSelection.pnlPath.setVisible(false);
+				//				pnlSelection.pnlPath.setVisible(false);
 			}
 			restoreLastScrollBarValues();
 		} else {
@@ -249,7 +248,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 	}
 
 	public void addOpenGameFolderListener(MouseListener l) {
-		pnlSelection.pnlPath.addOpenGameFolderListener(l);
+		//		pnlSelection.pnlPath.addOpenGameFolderListener(l);
 	}
 
 	public void setPreviewPaneSize(int width, int height) {
@@ -275,7 +274,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		private DateAddedPanel pnlDateAdded = new DateAddedPanel();
 		private PlayCountPanel pnlPlayCount = new PlayCountPanel();
 		private LastPlayedPanel pnlLastPlayed = new LastPlayedPanel();
-		private PathPanel pnlPath = new PathPanel();
+		//		private PathPanel pnlPath = new PathPanel();
 		private TagsPanel pnlTags = new TagsPanel();
 
 		private JMenu mnuAddCover = new JMenu(Messages.get(MessageConstants.ADD_COVER));
@@ -333,7 +332,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			lblPlatformTitle.setMinimumSize(new Dimension(0, 0));
 			FormLayout layoutTop = new FormLayout("min:grow",
 					"default, $rgap, default, $ugap, default, $ugap, default, $ugap, default, $lgap, default, $ugap,"
-							+ " fill:pref, $lgap, fill:pref, fill:$ugap, fill:pref, fill:$ugap, fill:default, fill:$ugap, fill:default");
+							+ " fill:pref, $lgap, fill:pref, fill:$ugap, fill:pref, fill:$ugap, fill:default"/*, fill:$ugap, fill:default */);
 			pnl = new JPanel(layoutTop);
 			int columnCount = layoutTop.getColumnCount();
 			CellConstraints ccSelection = new CellConstraints();
@@ -363,32 +362,32 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			pnl.add(pnlPlayCount, ccSelection.xyw(1, 15, columnCount));
 			pnl.add(pnlLastPlayed, ccSelection.xyw(1, 17, columnCount));
 			pnl.add(pnlDateAdded, ccSelection.xyw(1, 19, columnCount));
-			pnl.add(pnlPath, ccSelection.xyw(1, 21, columnCount));
+			//			pnl.add(pnlPath, ccSelection.xyw(1, 21, columnCount));
 			add(pnl);
 		}
 
 		private void initGameTitle() {
 			lblGameTitle.setOpaque(false);
-			lblGameTitle.addMouseListener(new MouseAdapter() {
-				@Override
-				public void mousePressed(MouseEvent e) {
-					if (currentGames.size() == 1) {
-						pnl.remove(lblGameTitle);
-						pnl.add(txtGameTitle, CC.xy(1, 1));
-						txtGameTitle.setText(currentGames.get(0).getName());
-						txtGameTitle.requestFocusInWindow();
-						UIUtil.revalidateAndRepaint(pnl);
-					}
-				}
-			});
-			txtGameTitle.addFocusListener(new FocusAdapter() {
-				@Override
-				public void focusLost(FocusEvent e) {
-					pnl.remove(txtGameTitle);
-					pnl.add(lblGameTitle, CC.xy(1, 1));
-					UIUtil.revalidateAndRepaint(pnl);
-				}
-			});
+			//			lblGameTitle.addMouseListener(new MouseAdapter() {
+			//				@Override
+			//				public void mousePressed(MouseEvent e) {
+			//					if (currentGames.size() == 1) {
+			//						pnl.remove(lblGameTitle);
+			//						pnl.add(txtGameTitle, CC.xy(1, 1));
+			//						txtGameTitle.setText(currentGames.get(0).getName());
+			//						txtGameTitle.requestFocusInWindow();
+			//						UIUtil.revalidateAndRepaint(pnl);
+			//					}
+			//				}
+			//			});
+			//			txtGameTitle.addFocusListener(new FocusAdapter() {
+			//				@Override
+			//				public void focusLost(FocusEvent e) {
+			//					pnl.remove(txtGameTitle);
+			//					pnl.add(lblGameTitle, CC.xy(1, 1));
+			//					UIUtil.revalidateAndRepaint(pnl);
+			//				}
+			//			});
 		}
 
 		private void initPlatformTitle() {
@@ -420,7 +419,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		}
 
 		protected void setGamePath(String s) {
-			pnlPath.setGamePath(s);
+			//			pnlPath.setGamePath(s);
 		}
 
 		protected void setTags(List<Tag> list) {
@@ -754,7 +753,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			pnlRatingBar.languageChanged();
 			pnlPlayCount.languageChanged();
 			pnlLastPlayed.languageChanged();
-			pnlPath.languageChanged();
+			//			pnlPath.languageChanged();
 			pnlTags.languageChanged();
 			pnlGameData.setToolTipTexts();
 		}

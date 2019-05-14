@@ -49,13 +49,14 @@ public class EmulatorTableCellRenderer extends DefaultTableCellRenderer {
 				} else {
 					ico = IconStore.current().getEmulatorIcon(emu.getId());
 				}
-				if (ico == null) {
-					throw new NullPointerException("ico should not be null in general.");
+				if (ico != null) {
+					ico = ImageUtil.scaleCover(ico, ScreenSizeUtil.adjustValueToResolution(24), CoverConstants.SCALE_BOTH_OPTION);
+					icons.put(emu.getId(), ico);
 				}
-				ico = ImageUtil.scaleCover(ico, ScreenSizeUtil.adjustValueToResolution(24), CoverConstants.SCALE_BOTH_OPTION);
-				icons.put(emu.getId(), ico);
 			}
-			setIcon(icons.get(emu.getId()));
+			if (ico != null) {
+				setIcon(icons.get(emu.getId()));
+			}
 		}
 		return this;
 	}

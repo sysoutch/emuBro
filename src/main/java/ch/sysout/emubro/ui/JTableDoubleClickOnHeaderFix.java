@@ -145,7 +145,7 @@ public class JTableDoubleClickOnHeaderFix extends JTable {
 			c.setForeground(getSelectionBackground());
 			c.setBackground(getBackground());
 		} else {
-			c.setForeground(getForeground());
+			//			c.setForeground(getForeground());
 			c.setBackground(getBackground());
 		}
 		return c;
