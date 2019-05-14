@@ -304,4 +304,12 @@ public class ConfigWizardDialog extends JDialog implements ActionListener {
 	public void addExitConfigWizardListener(ActionListener l) {
 		btnCancel.addActionListener(l);
 	}
+
+	public void addDiscordListener(ActionListener l) {
+		btnDiscord.addActionListener(l);
+	}
+
+	public void addRedditListener(ActionListener l) {
+		btnReddit.addActionListener(l);
+	}
 }

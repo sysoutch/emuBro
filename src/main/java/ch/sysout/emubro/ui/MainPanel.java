@@ -1344,6 +1344,10 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 		mnuViewSettings.addChangeToContentViewListener(l);
 	}
 
+	public void addChangeToSliderViewListener(ActionListener l) {
+		mnuViewSettings.addChangeToSliderViewListener(l);
+	}
+
 	public void addChangeToCoverViewListener(ActionListener l) {
 		mnuViewSettings.addChangeToCoverViewListener(l);
 	}

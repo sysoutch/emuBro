@@ -59,6 +59,9 @@ public class BlankViewPanel extends ViewPanel {
 	private JButton lnkCoverView = new JLinkButton(Messages.get(MessageConstants.VIEW_COVERS));
 
 	private JButton lnkHelp = new JLinkButton(Messages.get(MessageConstants.HELP));
+	private JButton lnkDiscord = new JLinkButton(Messages.get(MessageConstants.EMUBRO_DISCORD));
+	private JButton lnkConfigWizard = new JLinkButton(Messages.get(MessageConstants.CONFIGURE_WIZARD, Messages.get(MessageConstants.APPLICATION_TITLE)));
+
 	private JButton lnkUpdateEmubro = new JLinkButton(Messages.get(MessageConstants.SEARCH_FOR_UPDATES));
 	private JButton lnkAbout = new JLinkButton(Messages.get(MessageConstants.ABOUT, Messages.get(MessageConstants.APPLICATION_TITLE)));
 
@@ -84,7 +87,7 @@ public class BlankViewPanel extends ViewPanel {
 		pnlAction.add(lnkConfigure, cc2.xy(1, 7));
 
 		JPanel pnlView = new JPanel(new FormLayout("default",
-				"min, $ugap, default, $ugap, default, $ugap, default, $ugap, default"));
+				"min, $ugap, default, $ugap, default, $ugap, default, $ugap, default, $ugap, default"));
 		pnlView.setMinimumSize(new Dimension(0, 0));
 		pnlView.setBorder(new CompoundBorder(titledBorderView, boarder));
 		pnlView.setBackground(Color.WHITE);
@@ -93,17 +96,20 @@ public class BlankViewPanel extends ViewPanel {
 		pnlView.add(lnkElementView, cc.xy(1, 3));
 		pnlView.add(lnkTableView, cc.xy(1, 5));
 		pnlView.add(lnkContentView, cc.xy(1, 7));
-		pnlView.add(lnkCoverView, cc.xy(1, 9));
+		pnlView.add(lnkSliderView, cc.xy(1, 9));
+		pnlView.add(lnkCoverView, cc.xy(1, 11));
 
 		JPanel pnlHelp = new JPanel(new FormLayout("default",
-				"min, $ugap, default, $ugap, default"));
+				"min, $ugap, default, $ugap, default, $ugap, default, $ugap, default"));
 		pnlHelp.setMinimumSize(new Dimension(0, 0));
 		pnlHelp.setBorder(new CompoundBorder(titledBorderHelp, boarder));
 		pnlHelp.setBackground(Color.WHITE);
 		CellConstraints cc4 = new CellConstraints();
 		pnlHelp.add(lnkHelp, cc4.xy(1, 1));
-		pnlHelp.add(lnkUpdateEmubro, cc2.xy(1, 3));
-		pnlHelp.add(lnkAbout, cc4.xy(1, 5));
+		pnlHelp.add(lnkDiscord, cc4.xy(1, 3));
+		pnlHelp.add(lnkConfigWizard, cc4.xy(1, 5));
+		pnlHelp.add(lnkUpdateEmubro, cc2.xy(1, 7));
+		pnlHelp.add(lnkAbout, cc4.xy(1, 9));
 
 		//		JPanel pnl = new JPanel(new FormLayout("default, $rgap, default, $rgap, default",
 		//				"top:default"));
@@ -140,6 +146,8 @@ public class BlankViewPanel extends ViewPanel {
 		lnkCoverView.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewCovers", size, size)));
 
 		lnkHelp.setIcon(ImageUtil.getImageIconFrom(Icons.get("help", size, size)));
+		lnkDiscord.setIcon(ImageUtil.getImageIconFrom(Icons.get("discord", size, size)));
+		lnkConfigWizard.setIcon(ImageUtil.getImageIconFrom(Icons.get("configWizard", size, size)));
 		lnkUpdateEmubro.setIcon(ImageUtil.getImageIconFrom(Icons.get("checkForUpdates", size, size)));
 		lnkAbout.setIcon(ImageUtil.getImageIconFrom(Icons.get("about", size, size)));
 	}
@@ -180,6 +188,8 @@ public class BlankViewPanel extends ViewPanel {
 		lnkSliderView.setText(Messages.get(MessageConstants.VIEW_SLIDER));
 		lnkCoverView.setText(Messages.get(MessageConstants.VIEW_COVERS));
 		lnkHelp.setText(Messages.get(MessageConstants.HELP));
+		lnkDiscord.setText(Messages.get(MessageConstants.EMUBRO_DISCORD));
+		lnkConfigWizard.setText(Messages.get(MessageConstants.CONFIGURE_WIZARD, Messages.get(MessageConstants.APPLICATION_TITLE)));
 		lnkUpdateEmubro.setText(Messages.get(MessageConstants.SEARCH_FOR_UPDATES));
 		lnkAbout.setText(Messages.get(MessageConstants.ABOUT, Messages.get(MessageConstants.APPLICATION_TITLE)));
 	}
@@ -447,12 +457,24 @@ public class BlankViewPanel extends ViewPanel {
 		lnkContentView.addActionListener(l);
 	}
 
+	public void addChangeToSliderViewListener(ActionListener l) {
+		lnkSliderView.addActionListener(l);
+	}
+
 	public void addChangeToCoverViewListener(ActionListener l) {
 		lnkCoverView.addActionListener(l);
 	}
 
 	public void addOpenHelpListener(ActionListener l) {
 		lnkHelp.addActionListener(l);
+	}
+
+	public void addDiscordInviteLinkListener(ActionListener l) {
+		lnkDiscord.addActionListener(l);
+	}
+
+	public void addOpenConfigWizardListener(ActionListener l) {
+		lnkConfigWizard.addActionListener(l);
 	}
 
 	public void addOpenAboutListener(ActionListener l) {

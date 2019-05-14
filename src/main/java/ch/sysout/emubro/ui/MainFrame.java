@@ -3,7 +3,6 @@ package ch.sysout.emubro.ui;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Cursor;
-import java.awt.Dialog.ModalityType;
 import java.awt.Dimension;
 import java.awt.Frame;
 import java.awt.Image;
@@ -21,24 +20,10 @@ import java.awt.event.MouseMotionAdapter;
 import java.awt.event.MouseMotionListener;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
-import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowFocusListener;
 import java.beans.PropertyChangeListener;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.DataOutputStream;
 import java.io.File;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.UnsupportedEncodingException;
-import java.net.CookieHandler;
-import java.net.CookieManager;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLConnection;
-import java.net.URLEncoder;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -47,7 +32,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import javax.net.ssl.HttpsURLConnection;
 import javax.swing.AbstractAction;
 import javax.swing.AbstractButton;
 import javax.swing.Action;
@@ -60,23 +44,15 @@ import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
-import javax.swing.JEditorPane;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JPasswordField;
 import javax.swing.JRadioButtonMenuItem;
-import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JSlider;
 import javax.swing.JSplitPane;
-import javax.swing.JTabbedPane;
-import javax.swing.JTextArea;
-import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 import javax.swing.LookAndFeel;
 import javax.swing.SwingConstants;
@@ -84,13 +60,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.WindowConstants;
-import javax.swing.border.CompoundBorder;
 import javax.swing.event.ChangeListener;
-
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
 
 import com.jgoodies.forms.factories.CC;
 import com.jgoodies.forms.factories.Paddings;
@@ -145,8 +115,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	private JMenu mnuGames;
 	private JMenu mnuPlugins;
 	private JMenuItem itmRefreshPlugins;
-	private JMenu mnuFriends;
-	private JMenu mnuNotifications;
 	private JMenu mnuLookAndFeel;
 	private JMenu mnuLanguage;
 	private JMenu mnuHelp;
@@ -159,10 +127,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	// private JMenu mnuSetRowHeight;
 	private JMenu mnuAdd;
 	private JMenu mnuManageTags;
-	private JMenu mnuMyAccount;
-	private JMenuItem itmLogIn;
-	private JMenuItem itmMyProfile;
-	private JMenuItem itmLogOut;
 	private JMenuItem itmAutoSearchTags;
 	private JMenuItem itmManuallyAddTag;
 	private JMenuItem mnuManageCovers;
@@ -183,6 +147,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	private JMenuItem itmExportGameListOptions;
 	private JMenuItem itmExportApplicationData;
 	private JMenuItem itmSettings;
+	private JMenuItem itmBigPictureMode;
 	private JMenuItem itmExit;
 	private JMenuItem itmSetColumnWidth;
 	private JMenuItem itmSetRowHeight;
@@ -223,7 +188,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	private JRadioButtonMenuItem itmChangeToRecentlyPlayed;
 	private JMenu mnuSetCoverSize = new JMenu(Messages.get(MessageConstants.SET_COVER_SIZE));
 	private JSlider sliderCoverSize = new JSlider(JSlider.HORIZONTAL);
-	private ConfigWizardDialog dlgConfigWizard;
 	private DetailChooserDialog dlgDetailChooser;
 	private ButtonBarPanel pnlButtonBar;
 	private GameFilterPanel pnlGameFilter;
@@ -264,33 +228,11 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	private ButtonBarButton btnMoreOptionsChangeView;
 	private ButtonBarButton btnPreviewPane;
 	private ButtonBarButton btnSetFilter;
-	private ButtonBarButton btnMyAccount;
 	private JComponent[] buttonBarComponents;
 
 	private GameSettingsPopupMenu mnuGameSettings = new GameSettingsPopupMenu();
 
 	private ViewPanelManager viewManager;
-	protected JDialog dlgLogin;
-	private List<String> cookies;
-	private HttpsURLConnection conn;
-	private final String USER_AGENT = "Mozilla/5.0";
-	protected JEditorPane edit1;
-	protected JDialog dlgMyProfile;
-	protected JDialog dlgPMs;
-	protected JLabel lblMe;
-	protected JLabel lblStatus;
-	protected JTextArea txtarea;
-	protected JTextField txtEmail;
-	protected JPasswordField txtPassword;
-	private JMenuItem itmPMs;
-	private JMenuItem itmShowFriendList;
-	private JMenuItem itmAddFriend;
-	private JRadioButtonMenuItem itmOnline;
-	private JRadioButtonMenuItem itmAway;
-	private JRadioButtonMenuItem itmBusy;
-	private JRadioButtonMenuItem itmOffline;
-	private JMenuItem itmNewMessages = new JMenuItem("0 new messages");
-	private JMenuItem itmNewRequests = new JMenuItem("0 new requests");
 
 	public MainFrame(LookAndFeel defaultLookAndFeel, Explorer explorer) {
 		super(TITLE);
@@ -301,53 +243,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		initComponents();
 		createUI();
 		pnlMain.addDetailsFrameListener(this);
-	}
-
-	public void showConfigWizardDialog() {
-		if (dlgConfigWizard == null) {
-			dlgConfigWizard = new ConfigWizardDialog(explorer);
-			dlgConfigWizard.addWindowListener(new WindowAdapter() {
-				@Override
-				public void windowClosing(WindowEvent e) {
-					requestExit(dlgConfigWizard.isShowOnStartSelected());
-				}
-			});
-
-			dlgConfigWizard.addExitConfigWizardListener(new ActionListener() {
-
-				@Override
-				public void actionPerformed(ActionEvent e) {
-					requestExit(dlgConfigWizard.isShowOnStartSelected());
-				}
-			});
-		}
-		dlgConfigWizard.setLocationRelativeTo(this);
-		dlgConfigWizard.setVisible(true);
-	}
-
-	private void requestExit(boolean showOnStart) {
-		if (dlgConfigWizard != null) {
-			if (showOnStart) {
-				int request = JOptionPane.showConfirmDialog(dlgConfigWizard,
-						"<html><h3>Close configuration wizard?</h3>"
-								+ Messages.get(MessageConstants.APPLICATION_TITLE)
-								+ " is configurable in various ways. Head on and find out which suits best for you.<br><br>"
-								+ "Do you want to close the configuration wizard now?</html>",
-								"Bye bye config wizard...", JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE);
-				explorer.setConfigWizardHiddenAtStartup(false);
-				if (request == JOptionPane.YES_OPTION) {
-					dlgConfigWizard.dispose();
-				}
-			} else {
-				JOptionPane.showMessageDialog(dlgConfigWizard,
-						"<html><h3>Got it. You don't need the config wizard..</h3>" + "That's okay!<br><br>"
-								+ Messages.get(MessageConstants.APPLICATION_TITLE)
-								+ " is configurable in various ways. Head on and find out which suits best for you.</html>",
-								"Bye bye config wizard...", JOptionPane.INFORMATION_MESSAGE);
-				explorer.setConfigWizardHiddenAtStartup(true);
-				dlgConfigWizard.dispose();
-			}
-		}
 	}
 
 	private List<Image> getIcons() {
@@ -458,11 +353,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		mnuGames = new JMenu(Messages.get(MessageConstants.MNU_GAMES));
 		mnuPlugins = new JMenu(Messages.get(MessageConstants.MNU_PLUGINS));
 		itmRefreshPlugins = new JMenuItem(Messages.get(MessageConstants.ITM_REFRESH_PLUGINS));
-		mnuFriends = new JMenu(Messages.get(MessageConstants.MNU_FRIENDS));
-		mnuNotifications = new JMenu("Notifications");
 		mnuGames.setEnabled(false);
-		mnuFriends.setVisible(false);
-		mnuNotifications.setVisible(false);
 		mnuLookAndFeel = new JMenu();
 		mnuLanguage = new JMenu();
 		mnuHelp = new JMenu();
@@ -480,6 +371,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmAddFolders = new JMenuItem();
 		itmAddFilesFromClipboard = new JMenuItem();
 		itmSearchNetwork = new JMenuItem();
+		itmBigPictureMode = new JMenuItem();
 		itmExit = new JMenuItem();
 		itmExportGameListToTxt = new JMenuItem();
 		itmExportGameListToCsv = new JMenuItem();
@@ -523,10 +415,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmChangeToRecentlyPlayed = new JRadioButtonMenuItem();
 		itmChangeToFavorites = new JRadioButtonMenuItem();
 		mnuManageTags = new JMenu(Messages.get("manageTags"));
-		itmLogIn = new JMenuItem(Messages.get(MessageConstants.LOG_IN) + "...");
-		itmMyProfile = new JMenuItem(Messages.get(MessageConstants.MY_PROFILE));
-		itmLogOut = new JMenuItem(Messages.get(MessageConstants.LOG_OUT));
-		mnuMyAccount = new JMenu(Messages.get(MessageConstants.MY_ACCOUNT));
 		mnuManageCovers = new JMenuItem(Messages.get(MessageConstants.MANAGE_COVERS) + "...");
 		itmAutoSearchTags = new JMenuItem(Messages.get(MessageConstants.AUTO_SEARCH_TAG));
 		itmManuallyAddTag = new JMenuItem(Messages.get(MessageConstants.ADD_TAGS_MANUALLY) + "...");
@@ -535,15 +423,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmTrailerSearch = new JMenuItem(Messages.get("trailerSearch") + "...");
 		itmRenameGames = new JMenuItem(Messages.get("renameGames") + "...");
 		itmWebSearchSettings = new JMenuItem(Messages.get(MessageConstants.WEB_SEARCH_SETTINGS) + "...");
-		itmPMs = new JMenuItem(Messages.get(MessageConstants.PMS));
-		itmShowFriendList = new JMenuItem(Messages.get(MessageConstants.SHOW_FRIEND_LIST));
-		itmAddFriend = new JMenuItem(Messages.get(MessageConstants.ADD_FRIEND));
-		itmOnline = new JRadioButtonMenuItem(Messages.get(MessageConstants.ONLINE));
-		itmAway = new JRadioButtonMenuItem(Messages.get(MessageConstants.AWAY));
-		itmBusy = new JRadioButtonMenuItem(Messages.get(MessageConstants.BUSY));
-		itmOffline = new JRadioButtonMenuItem(Messages.get(MessageConstants.OFFLINE));
-		ButtonGroup grp = new ButtonGroup();
-		addToButtonGroup(grp, itmOnline, itmAway, itmBusy, itmOffline);
 	}
 
 	private void initializeButtonBar() {
@@ -622,14 +501,13 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		int mnemonicMnuFile = KeyEvent.VK_E;
 		int mnemonicMnuView = KeyEvent.VK_V;
 		int mnemonicMnuGames = KeyEvent.VK_G;
-		int mnemonicMnuFriends = KeyEvent.VK_F;
-		int mnemonicMnuNotifications = KeyEvent.VK_N;
 		int mnemonicMnuLookAndFeel = KeyEvent.VK_D;
 		int mnemonicMnuLanguage = KeyEvent.VK_L;
 		int mnemonicMnuHelp = KeyEvent.VK_H;
 		int mnemonicItmLoadDisc = KeyEvent.VK_L;
 		int mnemonicMnuExportGameList = KeyEvent.VK_G;
 		int mnemonicItmSettings = KeyEvent.VK_S;
+		int mnemonicItmBigPictureMode = KeyEvent.VK_M;
 		int mnemonicItmExit = KeyEvent.VK_E;
 		int mnemonicItmHelp = KeyEvent.VK_H;
 		int mnemonicItmDiscord = KeyEvent.VK_D;
@@ -640,13 +518,13 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 			mnemonicMnuFile = KeyEvent.VK_E;
 			mnemonicMnuView = KeyEvent.VK_V;
 			mnemonicMnuGames = KeyEvent.VK_G;
-			mnemonicMnuFriends = KeyEvent.VK_F;
 			mnemonicMnuLookAndFeel = KeyEvent.VK_O;
 			mnemonicMnuLanguage = KeyEvent.VK_L;
 			mnemonicMnuHelp = KeyEvent.VK_H;
 			mnemonicItmLoadDisc = KeyEvent.VK_L;
 			mnemonicMnuExportGameList = KeyEvent.VK_G;
 			mnemonicItmSettings = KeyEvent.VK_S;
+			mnemonicItmBigPictureMode = KeyEvent.VK_M;
 			mnemonicItmExit = KeyEvent.VK_E;
 			mnemonicItmHelp = KeyEvent.VK_H;
 			mnemonicItmDiscord = KeyEvent.VK_D;
@@ -657,13 +535,13 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 			mnemonicMnuFile = KeyEvent.VK_E;
 			mnemonicMnuView = KeyEvent.VK_A;
 			mnemonicMnuGames = KeyEvent.VK_S;
-			mnemonicMnuFriends = KeyEvent.VK_F;
 			mnemonicMnuLookAndFeel = KeyEvent.VK_O;
 			mnemonicMnuLanguage = KeyEvent.VK_P;
 			mnemonicMnuHelp = KeyEvent.VK_H;
 			mnemonicItmLoadDisc = KeyEvent.VK_L;
 			mnemonicMnuExportGameList = KeyEvent.VK_S;
 			mnemonicItmSettings = KeyEvent.VK_E;
+			mnemonicItmBigPictureMode = KeyEvent.VK_M;
 			mnemonicItmExit = KeyEvent.VK_B;
 			mnemonicItmHelp = KeyEvent.VK_H;
 			mnemonicItmDiscord = KeyEvent.VK_D;
@@ -674,13 +552,13 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 			mnemonicMnuFile = KeyEvent.VK_E;
 			mnemonicMnuView = KeyEvent.VK_A;
 			mnemonicMnuGames = KeyEvent.VK_J;
-			mnemonicMnuFriends = KeyEvent.VK_P;
 			mnemonicMnuLookAndFeel = KeyEvent.VK_O;
 			mnemonicMnuLanguage = KeyEvent.VK_L;
 			mnemonicMnuHelp = KeyEvent.VK_I;
 			mnemonicItmLoadDisc = KeyEvent.VK_L;
 			mnemonicMnuExportGameList = KeyEvent.VK_E;
 			mnemonicItmSettings = KeyEvent.VK_C;
+			mnemonicItmBigPictureMode = KeyEvent.VK_M;
 			mnemonicItmExit = KeyEvent.VK_Q;
 			mnemonicItmHelp = KeyEvent.VK_I;
 			mnemonicItmDiscord = KeyEvent.VK_D;
@@ -690,14 +568,13 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		mnuFile.setMnemonic(mnemonicMnuFile);
 		mnuView.setMnemonic(mnemonicMnuView);
 		mnuGames.setMnemonic(mnemonicMnuGames);
-		mnuFriends.setMnemonic(mnemonicMnuFriends);
-		mnuNotifications.setMnemonic(mnemonicMnuNotifications);
 		mnuLookAndFeel.setMnemonic(mnemonicMnuLookAndFeel);
 		mnuLanguage.setMnemonic(mnemonicMnuLanguage);
 		mnuHelp.setMnemonic(mnemonicMnuHelp);
 		itmLoadDisc.setMnemonic(mnemonicItmLoadDisc);
 		mnuExportGameList.setMnemonic(mnemonicMnuExportGameList);
 		itmSettings.setMnemonic(mnemonicItmSettings);
+		itmBigPictureMode.setMnemonic(mnemonicItmBigPictureMode);
 		itmExit.setMnemonic(mnemonicItmExit);
 		itmHelp.setMnemonic(mnemonicItmHelp);
 		itmDiscord.setMnemonic(mnemonicItmDiscord);
@@ -707,6 +584,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	private void setAccelerators() {
 		itmSettings.setAccelerator(KeyStroke.getKeyStroke("control F2"));
+		itmBigPictureMode.setAccelerator(KeyStroke.getKeyStroke("F10"));
 		itmExit.setAccelerator(KeyStroke.getKeyStroke("alt F4"));
 		itmChangeToAll.setAccelerator(KeyStroke.getKeyStroke("control 1"));
 		itmChangeToFavorites.setAccelerator(KeyStroke.getKeyStroke("control 2"));
@@ -736,13 +614,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	private void setIcons() {
 		int size = ScreenSizeUtil.is3k() ? 24 : 16;
-		itmLogIn.setIcon(ImageUtil.getImageIconFrom(Icons.get("logIn", size, size)));
 		//		itmLogOut.setIcon(ImageUtil.getImageIconFrom(Icons.get("myAccount", size, size)));
-		mnuMyAccount.setIcon(ImageUtil.getImageIconFrom(Icons.get("myAccount", size, size)));
-		mnuNotifications.setIcon(ImageUtil.getImageIconFrom(Icons.get("notificationsNoNew", size, size)));
-		itmPMs.setIcon(ImageUtil.getImageIconFrom(Icons.get("pms", size, size)));
-		itmNewMessages.setIcon(ImageUtil.getImageIconFrom(Icons.get("pms", size, size)));
-		itmNewRequests.setIcon(ImageUtil.getImageIconFrom(Icons.get("addFriend", size, size)));
 		itmAddFiles.setIcon(ImageUtil.getImageIconFrom(Icons.get("addFile", size, size)));
 		itmAddFolders.setIcon(ImageUtil.getImageIconFrom(Icons.get("addFolder", size, size)));
 		itmAddFilesFromClipboard.setIcon(ImageUtil.getImageIconFrom(Icons.get("filesFromClipboard", size, size)));
@@ -786,11 +658,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmDiscord.setIcon(ImageUtil.getImageIconFrom(Icons.get("discord", size, size)));
 		itmAbout.setIcon(ImageUtil.getImageIconFrom(Icons.get("about", size, size)));
 		itmConfigWizard.setIcon(ImageUtil.getImageIconFrom(Icons.get("configWizard", size, size)));
-		itmAddFriend.setIcon(ImageUtil.getImageIconFrom(Icons.get("addFriend", size, size)));
-		itmOnline.setIcon(ImageUtil.getImageIconFrom(Icons.get("online", size, size)));
-		itmAway.setIcon(ImageUtil.getImageIconFrom(Icons.get("away", size, size)));
-		itmBusy.setIcon(ImageUtil.getImageIconFrom(Icons.get("busy", size, size)));
-		itmOffline.setIcon(ImageUtil.getImageIconFrom(Icons.get("offline", size, size)));
 		Locale locale = Locale.getDefault();
 		String language = locale.getLanguage();
 		if (language.equals(Locale.GERMAN.getLanguage())) {
@@ -825,217 +692,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	}
 
 	public void addListeners() {
-		itmLogOut.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				logOut();
-			}
-		});
-
-		itmPMs.addActionListener(new ActionListener() {
-
-			private JTextArea txtPMFrom;
-			private JTextArea txtPMTo;
-			private JTextArea txtPMNew;
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				if (dlgPMs == null) {
-					dlgPMs = new JDialog();
-					dlgPMs.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-					dlgPMs.setLayout(new BorderLayout(0, 10));
-					dlgPMs.getRootPane().setBorder(new CompoundBorder(BorderFactory.createRaisedBevelBorder(), Paddings.DIALOG));
-					JTabbedPane tp = new JTabbedPane();
-					dlgPMs.add(tp);
-					txtPMFrom = new JTextArea();
-					txtPMTo = new JTextArea();
-					txtPMNew = new JTextArea();
-					txtPMFrom.setLineWrap(true);
-					txtPMFrom.setWrapStyleWord(true);
-					txtPMTo.setLineWrap(true);
-					txtPMTo.setWrapStyleWord(true);
-					txtPMNew.setLineWrap(true);
-					txtPMNew.setWrapStyleWord(true);
-					JScrollPane sp = new JScrollPane(txtPMFrom);
-					JScrollPane sp2 = new JScrollPane(txtPMTo);
-					JScrollPane sp3 = new JScrollPane(txtPMNew);
-					sp.getVerticalScrollBar().setUnitIncrement(16);
-					tp.addTab("Recieved", sp);
-					tp.addTab("Sent", sp2);
-					JPanel pnlNewPm = new JPanel(new BorderLayout());
-					pnlNewPm.add(new JTextField(), BorderLayout.NORTH);
-					pnlNewPm.add(sp3);
-					tp.addTab("New PM", pnlNewPm);
-					int size = ScreenSizeUtil.is3k() ? 24 : 16;
-					dlgPMs.add(tp, BorderLayout.CENTER);
-					dlgPMs.pack();
-				}
-				getPMContent();
-				dlgPMs.setLocationRelativeTo(MainFrame.this);
-				dlgPMs.setVisible(true);
-			}
-
-			private void getPMContent() {
-				txtPMFrom.setText("");
-				txtPMTo.setText("");
-				try {
-					String internal = "https://emubro.net/list_pm.php";
-					Document result = getPageContent(internal, false);
-					Element elNotLoggedIn = result.getElementById("notLoggedIn");
-					if (elNotLoggedIn != null) {
-						JOptionPane.showMessageDialog(dlgLogin, "Your no longer logged in",
-								"Not logged in", JOptionPane.ERROR_MESSAGE);
-						logOut();
-						return;
-					}
-					updateNewNotifications(result);
-
-					Elements el = result.getElementsByClass("pmFromUsername");
-					Elements el2 = result.getElementsByClass("pmFromMessage");
-					Elements el3 = result.getElementsByClass("pmFromTimestamp");
-					for (int i = 0; i < el.size(); i++) {
-						String username = el.get(i).getAllElements().text();
-						String message = el2.get(i).getAllElements().text();
-						String timestamp = el3.get(i).getAllElements().text();
-						String prevText = (!txtPMFrom.getText().isEmpty()) ? txtPMFrom.getText()+"\n\n" : "";
-						txtPMFrom.setText(prevText+username+" ("+timestamp+")\n"+message);
-					}
-					Elements elSent = result.getElementsByClass("pmToUsername");
-					Elements elSent2 = result.getElementsByClass("pmToMessage");
-					Elements elSent3 = result.getElementsByClass("pmToTimestamp");
-					for (int i = 0; i < elSent.size(); i++) {
-						String username = elSent.get(i).getAllElements().text();
-						String message = elSent2.get(i).getAllElements().text();
-						String timestamp = elSent3.get(i).getAllElements().text();
-						String prevText = (!txtPMTo.getText().isEmpty()) ? txtPMTo.getText()+"\n\n" : "";
-						txtPMTo.setText(prevText+username+" ("+timestamp+")\n"+message);
-					}
-				} catch (Exception e1) {
-					JOptionPane.showMessageDialog(dlgLogin, "check your connection.\n\n"+e1.getMessage(),
-							"PM failure", JOptionPane.ERROR_MESSAGE);
-				}
-			}
-		});
-
-		itmMyProfile.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				if (dlgMyProfile == null) {
-					dlgMyProfile = new JDialog();
-					dlgMyProfile.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-					dlgMyProfile.setLayout(new BorderLayout(0, 10));
-					dlgMyProfile.getRootPane().setBorder(new CompoundBorder(BorderFactory.createRaisedBevelBorder(), Paddings.DIALOG));
-					dlgMyProfile.setUndecorated(true);
-					txtarea = new JTextArea();
-					txtarea.setEditable(false);
-					txtarea.setBackground(UIManager.getColor("List.background"));
-					txtarea.setLineWrap(true);
-					txtarea.setWrapStyleWord(true);
-					JScrollPane sp = new JScrollPane(txtarea);
-					sp.getVerticalScrollBar().setUnitIncrement(16);
-					lblMe = new JLabel("???");
-					lblStatus = new JLabel("Online");
-					lblMe.setIcon(ImageUtil.getImageIconFrom(Icons.get("applicationIcon", 96, 96)));
-					int size = ScreenSizeUtil.is3k() ? 24 : 16;
-					lblStatus.setIcon(ImageUtil.getImageIconFrom(Icons.get("online", size, size)));
-					dlgMyProfile.add(lblMe, BorderLayout.NORTH);
-					dlgMyProfile.add(sp, BorderLayout.CENTER);
-					dlgMyProfile.add(lblStatus, BorderLayout.SOUTH);
-					dlgMyProfile.pack();
-					dlgMyProfile.setSize(400, 500);
-					dlgMyProfile.addWindowFocusListener(new WindowAdapter() {
-
-						@Override
-						public void windowLostFocus(WindowEvent e) {
-							dlgMyProfile.dispose();
-						}
-					});
-				}
-				try {
-					Document doc = getMyProfileContent();
-					if (doc != null) {
-						Element el = doc.getElementById("username");
-						Element el2 = doc.getElementById("email");
-						Element el3 = doc.getElementById("signature");
-
-						String username = (el != null) ? el.text() : "???";
-						String email = (el2 != null) ? el2.text() : "???";
-						String signature = (el3 != null) ? el3.text() : "???";
-						lblMe.setText("<html><strong>"+username+"</strong><br>"+email+"</html>");
-						txtarea.setText(signature);
-						dlgMyProfile.setLocationRelativeTo(MainFrame.this);
-						dlgMyProfile.setVisible(true);
-					} else {
-						JOptionPane.showMessageDialog(dlgLogin, "Your no longer logged in",
-								"Not logged in", JOptionPane.ERROR_MESSAGE);
-						logOut();
-					}
-				} catch (Exception e1) {
-					JOptionPane.showMessageDialog(dlgLogin, "check your connection\n\n"+e1.getMessage(),
-							"Profile failure", JOptionPane.ERROR_MESSAGE);
-					e1.printStackTrace();
-				}
-			}
-
-			private Document getMyProfileContent() throws Exception {
-				String internal = "https://emubro.net/profile.php";
-				Document result = getPageContent(internal, false);
-				Element elNotLoggedIn = result.getElementById("notLoggedIn");
-				if (elNotLoggedIn != null) {
-					return null;
-				}
-				updateNewNotifications(result);
-				return result;
-			}
-		});
-
-		itmLogIn.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				if (dlgLogin == null) {
-					FormLayout layout = new FormLayout("min, $lcgap, $button:grow, min, $button, min, $button",
-							"fill:pref, $lgap, fill:pref, $rgap, fill:pref");
-					dlgLogin = new JDialog();
-					dlgLogin.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-					dlgLogin.setModalityType(ModalityType.APPLICATION_MODAL);
-					dlgLogin.setResizable(false);
-					dlgLogin.setTitle("emuBro account");
-					JPanel pnl = new JPanel(layout);
-					pnl.setBorder(Paddings.DIALOG);
-					CellConstraints cc = new CellConstraints();
-					pnl.add(new JLabel("Email: "), cc.xy(1, 1));
-					pnl.add(txtEmail = new JTextField(), cc.xyw(3, 1, 5));
-					pnl.add(new JLabel("Password: "), cc.xy(1, 3));
-					pnl.add(txtPassword = new JPasswordField(), cc.xyw(3, 3, 5));
-					JButton btn;
-					pnl.add(btn = new JButton("Login"), cc.xy(7, 5));
-					dlgLogin.add(pnl, BorderLayout.CENTER);
-					dlgLogin.pack();
-					btn.addActionListener(new ActionListener() {
-
-						@Override
-						public void actionPerformed(ActionEvent e) {
-							String username = txtEmail.getText();
-							char[] password = txtPassword.getPassword();
-							login2(username, password);
-						}
-					});
-				}
-				dlgLogin.setLocationRelativeTo(MainFrame.this);
-				dlgLogin.setVisible(true);
-			}
-		});
-
-		itmConfigWizard.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				showConfigWizardDialog();
-			}
-		});
 		addShowMenubarListener(new ShowMenuBarListener());
 		addSetFilterListener(new ActionListener() {
 
@@ -1056,262 +712,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 		pnlMain.addNavigationSplitPaneListener();
 		viewManager.addUpdateGameCountListener(this);
-	}
-
-	/**
-	 * i am a private method used to log the user in.
-	 *
-	 * i take two arguments that may not be null.
-	 * a String which holds the username
-	 * and a char array which stores password
-	 *
-	 * @param username the username to login
-	 * @param password the password for the given username
-	 */
-	private void login2(String username, char[] password) {
-		if (username == null || username.trim().isEmpty()) {
-			JOptionPane.showMessageDialog(dlgLogin, "Enter your email");
-			return;
-		} else if (password == null || password.length == 0) {
-			JOptionPane.showMessageDialog(dlgLogin, "Enter your password");
-			return;
-		}
-
-		// make sure cookies is turn on
-		CookieHandler.setDefault(new CookieManager());
-		String urlLogin = "https://www.bromunity.emubro.net/";
-		String urlLogin2 = "https://www.bromunity.emubro.net/";
-		try {
-			Document page = getPageContent(urlLogin, true);
-			String passwordString = new String(password);
-			boolean rememberMe = false;
-			for (char c : password) {
-				c = 0;
-			}
-			String postParams = getFormParams(page, username, passwordString, rememberMe);
-			Document resultPost = sendPost(urlLogin2, postParams);
-			username = "";
-			passwordString = "";
-			postParams = "";
-			Elements string = resultPost.getElementsByTag("h1");
-			if (string != null && string.size() > 0) {
-				if (string.get(0).text().equals("Herzlich Willkommen!")) {
-					txtPassword.setText("");
-					dlgLogin.dispose();
-					mnuMyAccount.remove(itmLogIn);
-					mnuMyAccount.add(itmMyProfile);
-					mnuMyAccount.add(itmLogOut);
-					mnuFriends.setVisible(true);
-					updateNewNotifications(resultPost);
-					mnuNotifications.setVisible(true);
-					JOptionPane.showMessageDialog(dlgLogin, "You are now logged in",
-							"Login successful", JOptionPane.INFORMATION_MESSAGE);
-					return;
-				}
-			}
-			JOptionPane.showMessageDialog(dlgLogin, "wrong email or password",
-					"Login failure", JOptionPane.ERROR_MESSAGE);
-		} catch (Exception e) {
-			e.printStackTrace();
-			JOptionPane.showMessageDialog(dlgLogin, "check your connection\n\n"+e.getMessage(),
-					"Login failure", JOptionPane.ERROR_MESSAGE);
-		}
-		setCookies(null);
-	}
-
-	private void updateNewNotifications(Document resultPost) {
-		Element elPmCount = resultPost.getElementById("pmCount");
-		Element elRequestCount = resultPost.getElementById("requestCount");
-		int pmCount = Integer.valueOf(elPmCount.text().split(" ")[0]);
-		int requestCount = Integer.valueOf(elRequestCount.text().split(" ")[0]);
-		boolean newNotifications = (pmCount+requestCount) > 0;
-		if (newNotifications) {
-			int size = ScreenSizeUtil.is3k() ? 24 : 16;
-			mnuNotifications.setIcon(ImageUtil.getImageIconFrom(Icons.get("notificationsNew", size, size)));
-			itmNewMessages.setText(pmCount + " new messages");
-			itmNewRequests.setText(requestCount + " new requests");
-		}
-	}
-
-	public void logOut() {
-		if (cookies != null) {
-			// make sure cookies is turn on
-			CookieHandler.setDefault(new CookieManager());
-			String url = "https://www.emubro.net/logout.php";
-			try {
-				mnuMyAccount.remove(itmMyProfile);
-				mnuMyAccount.remove(itmLogOut);
-				mnuMyAccount.add(itmLogIn);
-				mnuFriends.setVisible(false);
-				mnuNotifications.setVisible(false);
-				Document result = getPageContent(url, false);
-				Element elNotLoggedIn = result.getElementById("notLoggedIn");
-				if (elNotLoggedIn != null) {
-					JOptionPane.showMessageDialog(dlgLogin, "Your no longer logged in",
-							"Not logged in", JOptionPane.ERROR_MESSAGE);
-				} else {
-					JOptionPane.showMessageDialog(dlgLogin, "You are now logged out",
-							"Logout successful", JOptionPane.INFORMATION_MESSAGE);
-				}
-				setCookies(null);
-			} catch (Exception e) {
-				JOptionPane.showMessageDialog(dlgLogin, "check your connection\n\n"+e.getMessage(),
-						"Logout failure", JOptionPane.ERROR_MESSAGE);
-			}
-		}
-		if (dlgMyProfile != null && dlgMyProfile.isVisible()) {
-			dlgMyProfile.dispose();
-		}
-	}
-
-	private Document sendPost(String url, String postParams) throws Exception {
-		URL obj = new URL(url);
-		conn = (HttpsURLConnection) obj.openConnection();
-
-		// Acts like a browser
-		conn.setUseCaches(false);
-		conn.setRequestMethod("POST");
-		conn.setRequestProperty("Host", "accounts.google.com");
-		conn.setRequestProperty("User-Agent", USER_AGENT);
-		conn.setRequestProperty("Accept",
-				"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
-		conn.setRequestProperty("Accept-Language", "en-US,en;q=0.5");
-		if (cookies != null) {
-			for (String cookie : cookies) {
-				conn.addRequestProperty("Cookie", cookie.split(";", 1)[0]);
-			}
-		}
-		conn.setRequestProperty("Connection", "keep-alive");
-		conn.setRequestProperty("Referer", "https://accounts.google.com/ServiceLoginAuth");
-		conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-
-		conn.setRequestProperty("Content-Length", Integer.toString(postParams.length()));
-		conn.setDoOutput(true);
-		conn.setDoInput(true);
-
-		// Send post request
-		DataOutputStream wr = new DataOutputStream(conn.getOutputStream());
-		wr.writeBytes(postParams);
-		wr.flush();
-		wr.close();
-
-		InputStream is = conn.getInputStream();
-		Document document = Jsoup.parse(is, null, "https://emubro.net/internal.php");
-		is.close();
-		return document;
-	}
-
-	private Document getPageContent(String url, boolean setCookies) throws Exception {
-		URL obj = new URL(url);
-		conn = (HttpsURLConnection) obj.openConnection();
-		// default is GET
-		conn.setRequestMethod("GET");
-		conn.setUseCaches(false);
-
-		// act like a browser
-		conn.setRequestProperty("User-Agent", USER_AGENT);
-		conn.setRequestProperty("Accept",
-				"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
-		conn.setRequestProperty("Accept-Language", "en-US,en;q=0.5");
-		if (cookies != null) {
-			for (String cookie : cookies) {
-				conn.addRequestProperty("Cookie", cookie.split(";", 1)[0]);
-			}
-		}
-		if (setCookies) {
-			setCookies(conn.getHeaderFields().get("Set-Cookie"));
-		}
-		InputStream is;
-		is = conn.getInputStream();
-		Document document = Jsoup.parse(is, null, url);
-		is.close();
-		return document;
-	}
-
-	public String getFormParams(Document doc, String username, String password, boolean rememberMe)
-			throws UnsupportedEncodingException {
-		Element loginform = doc.getElementById("loginForm");
-		Elements inputElements = loginform.getElementsByTag("input");
-		List<String> paramList = new ArrayList<String>();
-		for (Element inputElement : inputElements) {
-			String key = inputElement.attr("name");
-			String value = inputElement.attr("value");
-
-			if (key.equals("email")) {
-				value = username;
-				paramList.add(key + "=" + URLEncoder.encode(value, "UTF-8"));
-			} else if (key.equals("passwort")) {
-				value = password;
-				paramList.add(key + "=" + URLEncoder.encode(value, "UTF-8"));
-			} else if (key.equals("angemeldet_bleiben")) {
-				paramList.add(key + "=" + rememberMe);
-			}
-		}
-
-		// build parameters list
-		StringBuilder result = new StringBuilder();
-		for (String param : paramList) {
-			if (result.length() == 0) {
-				result.append(param);
-			} else {
-				result.append("&" + param);
-			}
-		}
-		return result.toString();
-	}
-
-	public List<String> getCookies() {
-		return cookies;
-	}
-
-	public void setCookies(List<String> cookies) {
-		this.cookies = cookies;
-	}
-
-	private void login(String username, String password) {
-		URL URLObj;
-		URLConnection connect = null;
-
-		try {
-			// Establish a URL and open a connection to it. Set it to output mode.
-			URLObj = new URL("http://www.emubro.net/login.php");
-			connect = URLObj.openConnection();
-			connect.setDoOutput(true);
-		}
-		catch (MalformedURLException ex) {
-			System.out.println("The URL specified was unable to be parsed or uses an invalid protocol. Please try again.");
-			System.exit(1);
-		}
-		catch (Exception ex) {
-			System.out.println("An exception occurred. " + ex.getMessage());
-			System.exit(1);
-		}
-		try {
-			// Create a buffered writer to the URLConnection's output stream and write our forms parameters.
-			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(connect.getOutputStream()));
-			writer.write("email="+username+"&passwort="+password);
-			writer.close();
-			// Now establish a buffered reader to read the URLConnection's input stream.
-			BufferedReader reader = new BufferedReader(new InputStreamReader(connect.getInputStream()));
-			String lineRead = "";
-			// Read all available lines of data from the URL and print them to screen.
-			boolean loggedIn = true;
-			while ((lineRead = reader.readLine()) != null) {
-				if (lineRead.contains("E-Mail oder Passwort war ungültig")) {
-					loggedIn = false;
-					break;
-				}
-			}
-			if (loggedIn) {
-				System.out.println("you are logged in");
-			} else {
-				System.err.println("wrong username or password");
-			}
-			reader.close();
-		}
-		catch (Exception ex) {
-			System.out.println("There was an error reading or writing to the URL: " + ex.getMessage());
-		}
 	}
 
 	public void addRunGameWithListener(RunGameWithListener l) {
@@ -1397,6 +797,10 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmExportGameListOptions.addActionListener(l);
 	}
 
+	public void addBigPictureModeListener(ActionListener l) {
+		itmBigPictureMode.addActionListener(l);
+	}
+
 	public void addExitListener(ActionListener l) {
 		itmExit.addActionListener(l);
 		pnlMain.addExitListener(l);
@@ -1450,6 +854,12 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	public void addDiscordInviteLinkListener(ActionListener l) {
 		itmDiscord.addActionListener(l);
+		viewManager.getBlankViewPanel().addDiscordInviteLinkListener(l);
+	}
+
+	public void addOpenConfigWizardListener(ActionListener l) {
+		itmConfigWizard.addActionListener(l);
+		viewManager.getBlankViewPanel().addOpenConfigWizardListener(l);
 	}
 
 	public void addOpenAboutListener(ActionListener l) {
@@ -1518,8 +928,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	public void addChangeToSliderViewListener(ActionListener l) {
 		itmSliderView.addActionListener(l);
-		//		pnlMain.addChangeToCoverViewListener(l);
-		//		viewManager.getBlankViewPanel().addChangeToCoverViewListener(l);
+		pnlMain.addChangeToSliderViewListener(l);
+		viewManager.getBlankViewPanel().addChangeToSliderViewListener(l);
 	}
 
 	public void addChangeToCoverViewListener(ActionListener l) {
@@ -1720,18 +1130,16 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		mnuUpdateAvailable.setVisible(false);
 		itmApplicationUpdateAvailable.setVisible(false);
 		itmSignatureUpdateAvailable.setVisible(false);
-		addComponentsToJComponent(mnb, mnuFile, mnuView, mnuGames, /*mnuPlugins,*/ mnuFriends, /*mnuLookAndFeel, */Box.createHorizontalGlue(), mnuUpdateAvailable, mnuNotifications, mnuLanguage, mnuHelp);
+		addComponentsToJComponent(mnb, mnuFile, mnuView, mnuGames, /*mnuPlugins,*/ /*mnuLookAndFeel, */Box.createHorizontalGlue(), mnuUpdateAvailable, mnuLanguage, mnuHelp);
 		setJMenuBar(mnb);
 	}
 
 	private void addMenuItems() {
-		addComponentsToJComponent(mnuMyAccount, itmLogIn);
-		addComponentsToJComponent(mnuFile, /*mnuMyAccount,
-				new JSeparator(), */mnuAdd,
+		addComponentsToJComponent(mnuFile, mnuAdd,
 				//				new JSeparator(), itmLoadDisc, itmSearchNetwork,
 				new JSeparator(), mnuExportGameList, itmExportApplicationData,
 				new JSeparator(), itmSettings,
-				new JSeparator(), itmExit);
+				new JSeparator(), /*itmBigPictureMode, */itmExit);
 
 		addComponentsToJComponent(mnuAdd, itmAddFiles, itmAddFolders, new JSeparator(), itmAddFilesFromClipboard);
 
@@ -1758,13 +1166,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 		addComponentsToJComponent(mnuPlugins, itmRefreshPlugins,
 				new JSeparator());
-
-		addComponentsToJComponent(mnuFriends, itmPMs,
-				new JSeparator(), itmShowFriendList, itmAddFriend,
-				new JSeparator(), itmOnline, itmAway, itmBusy, itmOffline);
-		addComponentsToJComponent(mnuNotifications, itmNewMessages, itmNewRequests);
-
-		itmOnline.setSelected(true);
 
 		List<Component> items = new ArrayList<>();
 		ButtonGroup grp = new ButtonGroup();
@@ -2698,7 +2099,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		mnuFile.setText(Messages.get(MessageConstants.MNU_FILE));
 		mnuView.setText(Messages.get(MessageConstants.MNU_VIEW));
 		mnuGames.setText(Messages.get(MessageConstants.MNU_GAMES));
-		mnuFriends.setText(Messages.get(MessageConstants.MNU_FRIENDS));
 		mnuLookAndFeel.setText(Messages.get(MessageConstants.MNU_LOOK_AND_FEEL));
 		mnuLanguage.setText(Messages.get(MessageConstants.MNU_LANGUAGE));
 		mnuHelp.setText(Messages.get(MessageConstants.HELP));
@@ -2718,6 +2118,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmAddFilesFromClipboard.setText(Messages.get(MessageConstants.FILES_FROM_CLIPBOARD));
 		itmLoadDisc.setText(Messages.get(MessageConstants.LOAD_DISC));
 		itmSearchNetwork.setText(Messages.get(MessageConstants.SEARCH_NETWORK) + "...");
+		itmBigPictureMode.setText(Messages.get(MessageConstants.BIG_PICTURE_MODE));
 		itmExit.setText(Messages.get(MessageConstants.EXIT));
 		itmExportGameListToTxt.setText(Messages.get(MessageConstants.EXPORT_TO_TXT));
 		itmExportGameListToCsv.setText(Messages.get(MessageConstants.EXPORT_TO_CSV));
@@ -2729,10 +2130,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		mnuManageTags.setText(Messages.get(MessageConstants.MANAGE_TAGS) + "...");
 		itmAutoSearchTags.setText(Messages.get(MessageConstants.AUTO_SEARCH_TAG));
 		itmManuallyAddTag.setText(Messages.get(MessageConstants.ADD_TAGS_MANUALLY) + "...");
-		itmLogIn.setText(Messages.get(MessageConstants.LOG_IN) + "...");
-		itmMyProfile.setText(Messages.get(MessageConstants.MY_PROFILE));
-		itmLogOut = new JMenuItem(Messages.get(MessageConstants.LOG_OUT));
-		mnuMyAccount.setText(Messages.get(MessageConstants.MY_ACCOUNT));
 		mnuManageCovers.setText(Messages.get(MessageConstants.MANAGE_COVERS) + "...");
 		itmTagSearch.setText(Messages.get(MessageConstants.TAG_FROM_WEB) + "...");
 		itmCoverSearch.setText(Messages.get(MessageConstants.COVER_FROM_WEB) + "...");
@@ -2774,13 +2171,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmChangeToAll.setText(Messages.get(MessageConstants.ALL_GAMES));
 		itmChangeToRecentlyPlayed.setText(Messages.get(MessageConstants.RECENTLY_PLAYED));
 		itmChangeToFavorites.setText(Messages.get(MessageConstants.FAVORITES));
-		itmPMs.setText(Messages.get(MessageConstants.PMS));
-		itmShowFriendList.setText(Messages.get(MessageConstants.SHOW_FRIEND_LIST));
-		itmAddFriend.setText(Messages.get(MessageConstants.ADD_FRIEND));
-		itmOnline.setText(Messages.get(MessageConstants.ONLINE));
-		itmAway.setText(Messages.get(MessageConstants.AWAY));
-		itmBusy.setText(Messages.get(MessageConstants.BUSY));
-		itmOffline.setText(Messages.get(MessageConstants.OFFLINE));
 		if (!btnOrganize.getText().isEmpty()) {
 			btnOrganize.setText(Messages.get(MessageConstants.ORGANIZE));
 		}

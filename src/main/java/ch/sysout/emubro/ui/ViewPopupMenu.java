@@ -48,6 +48,7 @@ class ViewPopupMenu extends JPopupMenu implements ActionListener {
 		grp.add(itmElements);
 		grp.add(itmDetails);
 		grp.add(itmContent);
+		grp.add(itmSlider);
 		grp.add(itmCovers);
 
 		add(itmWelcome);
@@ -56,6 +57,7 @@ class ViewPopupMenu extends JPopupMenu implements ActionListener {
 		add(itmElements);
 		add(itmDetails);
 		add(itmContent);
+		add(itmSlider);
 		add(itmCovers);
 		add(new JSeparator());
 
@@ -133,6 +135,10 @@ class ViewPopupMenu extends JPopupMenu implements ActionListener {
 
 	public void addChangeToContentViewListener(ActionListener l) {
 		itmContent.addActionListener(l);
+	}
+
+	public void addChangeToSliderViewListener(ActionListener l) {
+		itmSlider.addActionListener(l);
 	}
 
 	public void addChangeToCoverViewListener(ActionListener l) {

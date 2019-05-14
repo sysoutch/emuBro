@@ -227,6 +227,7 @@ import ch.sysout.emubro.plugin.api.PluginInterface;
 import ch.sysout.emubro.plugin.api.PluginManager;
 import ch.sysout.emubro.ui.AboutDialog;
 import ch.sysout.emubro.ui.AddEmulatorDialog;
+import ch.sysout.emubro.ui.ConfigWizardDialog;
 import ch.sysout.emubro.ui.CoverBroFrame;
 import ch.sysout.emubro.ui.CoverConstants;
 import ch.sysout.emubro.ui.EmulationOverlayFrame;
@@ -369,6 +370,9 @@ GameSelectionListener, BrowseComputerListener {
 	private File lastEmuDownloadDirectory;
 	//	private PrintScreenDetector printScreenBro;
 	private PluginManagerImpl manager;
+	private ActionListener actionOpenDiscordLink;
+	private ActionListener actionOpenRedditLink;
+	private ConfigWizardDialog dlgConfigWizard;
 
 	public BroController(ExplorerDAO explorerDAO, Explorer model, MainFrame view) {
 		this.explorerDAO = explorerDAO;
@@ -722,7 +726,7 @@ GameSelectionListener, BrowseComputerListener {
 		view.addHideExtensionsListener(new HideExtensionsListener());
 		view.addTouchScreenOptimizedScrollListener(new TouchScreenOptimizedScrollListener());
 		view.addOpenHelpListener(new OpenHelpListener());
-		view.addDiscordInviteLinkListener(new ActionListener() {
+		actionOpenDiscordLink = new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -733,7 +737,21 @@ GameSelectionListener, BrowseComputerListener {
 					e1.printStackTrace();
 				}
 			}
-		});
+		};
+		actionOpenRedditLink = new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					UIUtil.openWebsite("https://www.reddit.com/r/emuBro");
+				} catch (IOException | URISyntaxException e1) {
+					UIUtil.showErrorMessage(view, "Something went wrong..", "Oops");
+					e1.printStackTrace();
+				}
+			}
+		};
+		view.addDiscordInviteLinkListener(actionOpenDiscordLink);
+		view.addOpenConfigWizardListener(new OpenConfigWizardListener());
 		view.addOpenAboutListener(new OpenAboutListener());
 		view.addOpenUpdateListener(new OpenCheckForUpdatesListener());
 		view.addInterruptSearchProcessListener(new InterruptSearchProcessListener());
@@ -1432,7 +1450,7 @@ GameSelectionListener, BrowseComputerListener {
 
 					@Override
 					public void run() {
-						view.showConfigWizardDialog();
+						showConfigWizardDialog();
 					}
 				});
 			}
@@ -2431,7 +2449,6 @@ GameSelectionListener, BrowseComputerListener {
 		// e.printStackTrace();
 		// }
 		saveWindowInformations();
-		view.logOut();
 		view.setVisible(false);
 		for (Entry<Game, Map<Process, Integer>> entry : processes.entrySet()) {
 			Map<Process, Integer> pc2 = entry.getValue();
@@ -4629,7 +4646,7 @@ GameSelectionListener, BrowseComputerListener {
 					dlg.dispose();
 				}
 			});
-			pnl.add(pnlOptions, cc.xyw(1, 1, layout.getColumnCount()));
+			//			pnl.add(pnlOptions, cc.xyw(1, 1, layout.getColumnCount()));
 			pnl.add(spMatches, cc.xy(1, 3));
 			pnl.add(spPreview, cc.xy(3, 3));
 			pnl.add(btnRenameGames, cc.xyw(1, 5, layout.getColumnCount()));
@@ -6837,6 +6854,63 @@ GameSelectionListener, BrowseComputerListener {
 		}
 	}
 
+	class OpenConfigWizardListener implements ActionListener {
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			showConfigWizardDialog();
+		}
+	}
+
+	public void showConfigWizardDialog() {
+		if (dlgConfigWizard == null) {
+			dlgConfigWizard = new ConfigWizardDialog(explorer);
+			dlgConfigWizard.addWindowListener(new WindowAdapter() {
+				@Override
+				public void windowClosing(WindowEvent e) {
+					requestExit(dlgConfigWizard.isShowOnStartSelected());
+				}
+			});
+
+			dlgConfigWizard.addExitConfigWizardListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					requestExit(dlgConfigWizard.isShowOnStartSelected());
+				}
+			});
+
+			dlgConfigWizard.addDiscordListener(actionOpenDiscordLink);
+			dlgConfigWizard.addRedditListener(actionOpenRedditLink);
+		}
+		dlgConfigWizard.setLocationRelativeTo(view);
+		dlgConfigWizard.setVisible(true);
+	}
+
+	private void requestExit(boolean showOnStart) {
+		if (dlgConfigWizard != null) {
+			if (showOnStart) {
+				int request = JOptionPane.showConfirmDialog(dlgConfigWizard,
+						"<html><h3>Close configuration wizard?</h3>"
+								+ Messages.get(MessageConstants.APPLICATION_TITLE)
+								+ " is configurable in various ways. Head on and find out which suits best for you.<br><br>"
+								+ "Do you want to close the configuration wizard now?</html>",
+								"Bye bye config wizard...", JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE);
+				explorer.setConfigWizardHiddenAtStartup(false);
+				if (request == JOptionPane.YES_OPTION) {
+					dlgConfigWizard.dispose();
+				}
+			} else {
+				JOptionPane.showMessageDialog(dlgConfigWizard,
+						"<html><h3>Got it. You don't need the config wizard..</h3>" + "That's okay!<br><br>"
+								+ Messages.get(MessageConstants.APPLICATION_TITLE)
+								+ " is configurable in various ways. Head on and find out which suits best for you.</html>",
+								"Bye bye config wizard...", JOptionPane.INFORMATION_MESSAGE);
+				explorer.setConfigWizardHiddenAtStartup(true);
+				dlgConfigWizard.dispose();
+			}
+		}
+	}
+
 	class OpenAboutListener implements ActionListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
@@ -6876,6 +6950,13 @@ GameSelectionListener, BrowseComputerListener {
 			}
 			dlgUpdates.setLocationRelativeTo(view);
 			dlgUpdates.setVisible(true);
+			SwingUtilities.invokeLater(new Runnable() {
+
+				@Override
+				public void run() {
+					checkForUpdates();
+				}
+			});
 		}
 	}
 

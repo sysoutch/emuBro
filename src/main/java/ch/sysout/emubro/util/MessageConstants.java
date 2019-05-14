@@ -108,6 +108,7 @@ public class MessageConstants {
 	public static final String ADD_COVER_FROM_COMPUTER = "addCoverFromComputer";
 	public static final String COVER_FROM_WEB = "coverFromWeb";
 	public static final String CLOSE = "close";
+	public static final String BIG_PICTURE_MODE = "bigPictureMode";
 	public static final String EXIT = "exit";
 	public static final String GAME_TITLE = "gameTitle";
 	public static final String GAME_TITLE_LARGE = "gameTitleLarge";
