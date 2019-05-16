@@ -119,6 +119,13 @@ public class GamePropertiesDialog extends JDialog {
 
 	private void addListeners() {
 		UIUtil.installEscapeCloseOperation(this);
+		btnOk.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				dispose();
+			}
+		});
 		btnCancel.addActionListener(new ActionListener() {
 
 			@Override

@@ -3,6 +3,7 @@ package ch.sysout.util;
 import java.awt.Component;
 import java.awt.Desktop;
 import java.awt.Toolkit;
+import java.awt.Window;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.StringSelection;
@@ -29,6 +30,7 @@ import javax.swing.ActionMap;
 import javax.swing.InputMap;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
+import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JRootPane;
 import javax.swing.KeyStroke;
@@ -206,15 +208,24 @@ public class UIUtil {
 			"com.spodding.tackline.dispatch:WINDOW_CLOSING";
 
 	public static void installEscapeCloseOperation(JDialog dialog) {
+		JRootPane root = dialog.getRootPane();
+		installEscapeCloseOperation(root, dialog);
+	}
+
+	public static void installEscapeCloseOperation(JFrame frame) {
+		JRootPane root = frame.getRootPane();
+		installEscapeCloseOperation(root, frame);
+	}
+
+	private static void installEscapeCloseOperation(JRootPane root, Window frame) {
 		Action dispatchClosing = new AbstractAction() {
 			private static final long serialVersionUID = 1L;
 
 			@Override
 			public void actionPerformed(ActionEvent event) {
-				dialog.dispatchEvent(new WindowEvent(dialog, WindowEvent.WINDOW_CLOSING));
+				frame.dispatchEvent(new WindowEvent(frame, WindowEvent.WINDOW_CLOSING));
 			}
 		};
-		JRootPane root = dialog.getRootPane();
 		InputMap inputMap = root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
 		ActionMap actionMap = root.getActionMap();
 		inputMap.put(escapeStroke, dispatchWindowClosingActionMapKey);

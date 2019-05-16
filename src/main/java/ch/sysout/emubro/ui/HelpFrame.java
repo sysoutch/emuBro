@@ -151,6 +151,7 @@ public class HelpFrame extends JFrame implements ActionListener {
 	}
 
 	private void initComponents() {
+		UIUtil.installEscapeCloseOperation(this);
 		chkAlwayOnTop.setSelected(isAlwaysOnTop());
 		chkAlwayOnTop.addActionListener(new ActionListener() {
 
