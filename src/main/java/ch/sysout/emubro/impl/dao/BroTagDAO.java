@@ -23,7 +23,7 @@ public class BroTagDAO implements TagDAO {
 		ValidationUtil.checkNull(tag, "tag");
 		Statement stmt = conn.createStatement();
 		String sql = SqlUtil.insertIntoWithColumnsString("tag",
-				"tag_name", "tag_checksum", "tag_hexColor", SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(tag.getName())), SqlUtil.getQuotedString(tag.getChecksum()), SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(tag.getHexColor())));
+				"tag_name", "tag_hexColor", SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(tag.getName())), SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(tag.getHexColor())));
 		stmt.executeQuery(sql);
 		conn.commit();
 		stmt.close();
@@ -49,9 +49,8 @@ public class BroTagDAO implements TagDAO {
 		if (rset.next()) {
 			int id = rset.getInt("tag_id");
 			String name = rset.getString("tag_name");
-			String checksum = rset.getString("tag_checksum");
 			String hexColor = rset.getString("tag_hexColor");
-			tag = new BroTag(id, name, checksum, hexColor);
+			tag = new BroTag(id, name, hexColor);
 		}
 		stmt.close();
 		return tag;

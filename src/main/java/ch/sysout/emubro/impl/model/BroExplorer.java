@@ -596,7 +596,6 @@ public class BroExplorer implements Explorer {
 			Map<String, String> map = new HashMap<>();
 			map.put("id", ""+t.getId());
 			map.put("name", ""+t.getName());
-			map.put("checksum", ""+t.getChecksum());
 			this.tags.put(map, t);
 		}
 	}
@@ -633,7 +632,6 @@ public class BroExplorer implements Explorer {
 		Map<String, String> tagKeyValues = new HashMap<>();
 		tagKeyValues.put("id", ""+tag.getId());
 		tagKeyValues.put("name", ""+tag.getName());
-		tagKeyValues.put("checksum", ""+tag.getChecksum());
 		tags.put(tagKeyValues, tag);
 	}
 
@@ -715,13 +713,13 @@ public class BroExplorer implements Explorer {
 		games.get(id).setGameCode(gameCode);
 	}
 
-	public Tag getTagByChecksum(String checksum) {
+	public Tag getTagByName(String name) {
 		Set<Map<String, String>> tag = tags.keySet();
 		Iterator<Map<String, String>> it = tag.iterator();
 		while (it.hasNext()) {
 			Map<String, String> map = it.next();
-			String currentChecksum = map.get("checksum");
-			if (currentChecksum.equalsIgnoreCase(checksum)) {
+			String currentName = map.get("name");
+			if (currentName.equalsIgnoreCase(name)) {
 				return tags.get(map);
 			}
 		}

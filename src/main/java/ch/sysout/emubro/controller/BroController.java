@@ -5727,7 +5727,6 @@ GameSelectionListener, BrowseComputerListener {
 				}
 			} else {
 				tag2 = explorer.getTag(tag.getName());
-				tag2.setChecksum(tag.getChecksum());
 			}
 		}
 		return tag2;

@@ -744,9 +744,8 @@ public class BroExplorerDAO implements ExplorerDAO {
 		while (rset.next()) {
 			int id = rset.getInt("tag_id");
 			String name = rset.getString("tag_name");
-			String checksum = rset.getString("tag_checksum");
 			String hexColor = rset.getString("tag_hexColor");
-			Tag tag = new BroTag(id, name, checksum, hexColor);
+			Tag tag = new BroTag(id, name, hexColor);
 			tags.add(tag);
 		}
 		conn.commit();

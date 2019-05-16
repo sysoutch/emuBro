@@ -27,6 +27,7 @@ import javax.swing.LookAndFeel;
 import javax.swing.UIManager;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.yaml.snakeyaml.Yaml;
 
 import com.google.gson.Gson;
@@ -486,16 +487,8 @@ public class Main {
 		}
 		Yaml yaml = new Yaml();
 		for (File f : FileUtils.listFiles(pathDir, new String[] { "yaml" }, false)) {
-			String checksum;
-			try {
-				checksum = FileUtil.getChecksumOfFile(f);
-				System.err.println("checksum of file "+f.getName()+": "+checksum);
-			} catch (IOException e1) {
-				checksum = "";
-				e1.printStackTrace();
-			}
-
-			Tag tag = explorer.getTagByChecksum(checksum);
+			String name = FilenameUtils.removeExtension(f.getName());
+			Tag tag = explorer.getTagByName(name);
 			if (tag == null) {
 				try {
 					InputStream is = new FileInputStream(f);
@@ -515,7 +508,7 @@ public class Main {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
-					BroTag tagToAdd = new BroTag(-1, obj, checksum, "#b27f5d");
+					BroTag tagToAdd = new BroTag(-1, obj, "#b27f5d");
 					tags.add(tagToAdd);
 				} catch (FileNotFoundException e1) {
 					// TODO Auto-generated catch block

@@ -258,7 +258,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				lastMouseX = e.getXOnScreen();
 				lastMouseY = e.getYOnScreen();
 				if ((e.getModifiers() & InputEvent.BUTTON3_MASK) == InputEvent.BUTTON3_MASK) {
-					if (mouseOver > -1) {
+					if (mouseOver > -1 && !lst.isSelectedIndex(mouseOver)) {
 						lst.setSelectedIndex(mouseOver);
 					}
 				}
@@ -282,7 +282,9 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				if (SwingUtilities.isRightMouseButton(e)) {
 					int index = lst.locationToIndex(e.getPoint());
 					if (index != GameConstants.NO_GAME) {
-						lst.setSelectedIndex(index);
+						if (!lst.isSelectedIndex(index)) {
+							lst.setSelectedIndex(index);
+						}
 						showGamePopupMenu(e.getComponent(), e.getX(), e.getY());
 					} else {
 						lst.clearSelection();
@@ -355,7 +357,6 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				} else {
 					index = GameConstants.NO_GAME;
 				}
-				lst.repaint();
 			}
 
 			@Override
@@ -571,11 +572,11 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 						label.setForeground(colorFavorite);
 					}
 					if (viewStyle != ViewPanel.CONTENT_VIEW) {	// Cause in content view the game title is bold and the other informations not. It would looks too bold.
-						label.setFont(new Font(labelFont.getName(), Font.BOLD, getFontSize()));
+						//						label.setFont(new Font(labelFont.getName(), Font.BOLD, getFontSize()));
 					}
 				} else {
 					if (viewStyle != ViewPanel.CONTENT_VIEW) {	// Cause in content view the game title is bold. This would set game title also plain.
-						label.setFont(new Font(labelFont.getName(), Font.PLAIN, getFontSize()));
+						//						label.setFont(new Font(labelFont.getName(), Font.PLAIN, getFontSize()));
 					}
 				}
 			}
@@ -593,10 +594,9 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 			private void checkIsGameSelected(JList<?> list, int index, JLabel label) {
 				int[] selectedIndices = getGameList().getSelectedIndices();
 				boolean contains = IntStream.of(selectedIndices).anyMatch(x -> x == index);
-				// index != getGameList().getSelectedIndex()
-				if (index > -1 && index == getMouseOver() && !contains) {
+				if (index > -1 && index == mouseOver && !contains) {
 					label.setForeground(getGameList().getSelectionBackground());
-					label.setBorder(borderHover);
+					//					label.setBorder(borderHover);
 				}
 				if (index == getGameList().getSelectedIndex()) {
 					label.setForeground(UIManager.getColor("List.selectionForeground"));
@@ -1530,10 +1530,6 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 
 	public boolean isDragging() {
 		return dragging;
-	}
-
-	public int getMouseOver() {
-		return mouseOver;
 	}
 
 	@Override

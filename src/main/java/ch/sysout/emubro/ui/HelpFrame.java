@@ -124,7 +124,6 @@ public class HelpFrame extends JFrame implements ActionListener {
 	public HelpFrame() {
 		setTitle("Help");
 		setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-		setAlwaysOnTop(true);
 		// setModalityType(ModalityType.APPLICATION_MODAL);
 		setIconImages(getIcons());
 		// setResizable(false);

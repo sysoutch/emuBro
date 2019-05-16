@@ -214,6 +214,17 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 
 		tblGames.addMouseListener(new MouseAdapter() {
 			@Override
+			public void mousePressed(MouseEvent e) {
+				lastMouseX = e.getXOnScreen();
+				lastMouseY = e.getYOnScreen();
+				//				if ((e.getModifiers() & InputEvent.BUTTON3_MASK) == InputEvent.BUTTON3_MASK) {
+				//					if (mouseOver > -1 && !tblGames.isSelectedIndex(mouseOver)) {
+				//						tblGames.setSelectedIndex(mouseOver);
+				//					}
+				//				}
+			}
+
+			@Override
 			public void mouseReleased(MouseEvent e) {
 				dragging = false;
 				tblGames.setEnabled(true);
@@ -258,7 +269,7 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 				 * ch.sysout.gameexplorer.ui.NewNewListViewPanel$2.mouseMoved(
 				 * NewNewListViewPanel.java:208)
 				 */
-				tblGames.setToolTipText("");
+				//				tblGames.setToolTipText("");
 				int index = tblGames.rowAtPoint(p);
 				if (index > -1) {
 					Game text = (Game) model.getValueAt(index, -1);
@@ -272,7 +283,6 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 				} else {
 					index = GameConstants.NO_GAME;
 				}
-				tblGames.repaint();
 			}
 
 			@Override
@@ -893,15 +903,36 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 					column);
 			Game game = (Game) mdlTblAllGames.getValueAt(table.convertRowIndexToModel(row), -1);
 			if (game != null) {
+				//				Font font = cellComponent.getFont();
+				Color selectedBackgroundColor = tblGames.getSelectionBackground();
 				if (isSelected) {
-					cellComponent.setForeground(UIManager.getColor("Table.selectionForeground"));
-				} else {
+					Color selectedForegroundColor = UIManager.getColor("Table.selectionForeground");
+					cellComponent.setForeground(selectedForegroundColor);
+					cellComponent.setBackground(selectedBackgroundColor);
 					if (game.isFavorite()) {
-						cellComponent.setFont(cellComponent.getFont().deriveFont(Font.BOLD));
-						cellComponent.setForeground(colorFavorite);
+						//						Font fontBold = (font.isBold()) ? font : font.deriveFont(
+						//								Collections.singletonMap(TextAttribute.WEIGHT, TextAttribute.WEIGHT_BOLD));
+						//						cellComponent.setFont(fontBold);
+					}
+				} else {
+					cellComponent.setBackground(null);
+					if (row == mouseOver) {
+						cellComponent.setForeground(selectedBackgroundColor);
+						if (game.isFavorite()) {
+							//							Font fontBold = (font.isBold()) ? font : font.deriveFont(
+							//									Collections.singletonMap(TextAttribute.WEIGHT, TextAttribute.WEIGHT_BOLD));
+							//							cellComponent.setFont(fontBold);
+						}
 					} else {
-						cellComponent.setForeground(null);
-						cellComponent.setFont(cellComponent.getFont().deriveFont(Font.PLAIN));
+						if (game.isFavorite()) {
+							//							Font fontBold = (font.isBold()) ? font : font.deriveFont(Font.BOLD);
+							//							cellComponent.setFont(fontBold);
+							cellComponent.setForeground(colorFavorite);
+						} else {
+							//							Font fontPlain = cellComponent.getFont().deriveFont(Font.PLAIN);
+							cellComponent.setForeground(null);
+							//							cellComponent.setFont(fontPlain);
+						}
 					}
 				}
 			}

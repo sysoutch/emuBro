@@ -1,7 +1,6 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.AWTException;
-import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Point;
 import java.awt.Rectangle;
@@ -15,7 +14,6 @@ import javax.swing.JViewport;
 import javax.swing.RowSorter;
 import javax.swing.event.MouseInputAdapter;
 import javax.swing.table.JTableHeader;
-import javax.swing.table.TableCellRenderer;
 
 public class JTableDoubleClickOnHeaderFix extends JTable {
 	private static final long serialVersionUID = 1L;
@@ -134,23 +132,6 @@ public class JTableDoubleClickOnHeaderFix extends JTable {
 	public boolean isCellEditable(int row, int column) {
 		return false;
 	}
-
-	@Override
-	public Component prepareRenderer(TableCellRenderer renderer, int row, int column) {
-		Component c = super.prepareRenderer(renderer, row, column);
-		if (isRowSelected(row)) {
-			c.setForeground(getSelectionForeground());
-			c.setBackground(getSelectionBackground());
-		} else if (row == rollOverRowIndex) {
-			c.setForeground(getSelectionBackground());
-			c.setBackground(getBackground());
-		} else {
-			//			c.setForeground(getForeground());
-			c.setBackground(getBackground());
-		}
-		return c;
-	}
-
 
 	private class RollOverListener extends MouseInputAdapter {
 
