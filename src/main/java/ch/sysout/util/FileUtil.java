@@ -1,5 +1,7 @@
 package ch.sysout.util;
 
+import java.awt.Toolkit;
+import java.awt.datatransfer.DataFlavor;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -11,7 +13,6 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 public class FileUtil {
-
 	private static MessageDigest digest;
 
 	public static String getParentDirPath(String fileOrDirPath) {
@@ -102,5 +103,10 @@ public class FileUtil {
 			sb.append(Integer.toString((bytes[i] & 0xff) + 0x100, 16).substring(1));
 		}
 		return sb.toString();
+	}
+
+	public static boolean hasFileInClipboard() {
+		return Toolkit.getDefaultToolkit().getSystemClipboard()
+				.isDataFlavorAvailable(DataFlavor.javaFileListFlavor);
 	}
 }

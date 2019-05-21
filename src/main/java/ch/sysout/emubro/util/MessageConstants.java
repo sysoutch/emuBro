@@ -306,7 +306,7 @@ public class MessageConstants {
 	public static final String REMOVE_GAME_FROM_FAVORITES = "removeGameFromFavorites";
 	public static final String REMOVE_GAMES_FROM_FAVORITES = "removeGamesFromFavorites";
 	public static final String REMOVE_EMULATOR = "removeEmulator";
-	public static final String ERR_CLIPBOARD = "errClipboard";
+	public static final String EMPTY_CLIPBOARD = "emptyClipboard";
 	public static final String CLIPBOARD_ADD_MULTIPLE_FILES = "clipboardAddMultipleFiles";
 	public static final String STAR = "star";
 	public static final String STARS = "stars";

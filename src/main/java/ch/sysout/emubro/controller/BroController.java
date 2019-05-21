@@ -373,6 +373,7 @@ GameSelectionListener, BrowseComputerListener {
 	private ActionListener actionOpenDiscordLink;
 	private ActionListener actionOpenRedditLink;
 	private ConfigWizardDialog dlgConfigWizard;
+	private File lastDirFromFileChooser;
 
 	public BroController(ExplorerDAO explorerDAO, Explorer model, MainFrame view) {
 		this.explorerDAO = explorerDAO;
@@ -2863,6 +2864,7 @@ GameSelectionListener, BrowseComputerListener {
 													// TODO Auto-generated catch block
 													e.printStackTrace();
 												}
+												break;
 											}
 											break outterLoop;
 										}
@@ -3043,46 +3045,36 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	private void manuallyCheckAddGamesOrEmulators(List<File> files) {
-		//		List<File> gamesToCheck = new ArrayList<>();
-		//		JDialog dlgCheckFolder = new JDialog();
-		//		dlgCheckFolder.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-		//		JList<String> lstFolderFiles = new JList<>();
-		//		DefaultListModel<String> mdlLstFolderFiles = new DefaultListModel<>();
-		//		lstFolderFiles.setModel(mdlLstFolderFiles);
-		List<Game> games = new ArrayList<>();
+		List<File> gamesToCheck = new ArrayList<>();
+		JDialog dlgCheckFolder = new JDialog();
+		dlgCheckFolder.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+		JList<String> lstFolderFiles = new JList<>();
+		DefaultListModel<String> mdlLstFolderFiles = new DefaultListModel<>();
+		lstFolderFiles.setModel(mdlLstFolderFiles);
+		boolean subfoldersFound = false;
 		for (File file : files) {
 			if (file.isDirectory()) {
-				//				mdlLstFolderFiles.addElement(file.getAbsolutePath());
-				//				gamesToCheck.add(file);
-				//								File[] subFolderFiles = file.listFiles();
-				//								for (File f : subFolderFiles) {
-				//									if (f.isFile()) {
-				//										gamesToCheck.add(f);
-				//									}
-				//								}
-			} else {
-				try {
-					manuallyCheckAddGameOrEmulator(file.toPath(), false);
-					Game game = explorer.getGameForFile(file.getAbsolutePath());
-					games.add(game);
-				} catch (SQLException | RarException | IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+
+				File[] subFolderFiles = file.listFiles();
+				for (File f : subFolderFiles) {
+					if (f.isFile()) {
+						gamesToCheck.add(f);
+						mdlLstFolderFiles.addElement(file.getAbsolutePath());
+						gamesToCheck.add(file);
+					}
+					subfoldersFound = true; // don't count only one folder as subfolder
 				}
-				//				mdlLstFolderFiles.addElement(file.getAbsolutePath());
-				//				gamesToCheck.add(file);
+			} else {
+				mdlLstFolderFiles.addElement(file.getAbsolutePath());
+				gamesToCheck.add(file);
 			}
 		}
-		//		SwingUtilities.invokeLater(new Runnable() {
-		//
-		//			@Override
-		//			public void run() {
-		//				askUserDownloadGameCovers(games);
-		//			}
-		//		});
-		//		dlgCheckFolder.add(lstFolderFiles);
-		//		dlgCheckFolder.pack();
-		//		dlgCheckFolder.setVisible(true);
+		if (subfoldersFound) {
+			// aight
+		}
+		dlgCheckFolder.add(lstFolderFiles);
+		dlgCheckFolder.pack();
+		dlgCheckFolder.setVisible(true);
 	}
 
 	private Platform[] getObjectsForPlatformChooserDialog(String filePath) {
@@ -3524,7 +3516,6 @@ GameSelectionListener, BrowseComputerListener {
 							File file = files.get(0);
 							if (file.isDirectory()) {
 								searchForPlatforms(files);
-								//								manuallyCheckAddGamesOrEmulators(files);
 							} else {
 								manuallyCheckAddGameOrEmulator(file.toPath(), true);
 							}
@@ -5794,7 +5785,6 @@ GameSelectionListener, BrowseComputerListener {
 	}
 	class AddFilesListener implements ActionListener {
 		private JFileChooser fc = new JFileChooser();
-		private File lastDirFromFileChooser;
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
@@ -5831,43 +5821,71 @@ GameSelectionListener, BrowseComputerListener {
 						showFileChooser(filesAndDirectories, potentialGame);
 						return;
 					}
+					try {
+						manuallyCheckAddGameOrEmulator(potentialGame.toPath(), false);
+					} catch (ZipException e) {
+						// TODO Auto-generated catch block
+					} catch (SQLException e) {
+						// TODO Auto-generated catch block
+					} catch (RarException e) {
+						// TODO Auto-generated catch block
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+					}
+				} else {
+					lastDirFromFileChooser = fc.getCurrentDirectory();
+					try {
+						explorerDAO.setLastDirFromFileChooser(lastDirFromFileChooser.getAbsolutePath());
+					} catch (SQLException e) {}
+					List<File> potentialGamesList = new ArrayList<>(Arrays.asList(potentialGames));
+					manuallyCheckAddGamesOrEmulators(potentialGamesList);
 				}
-				lastDirFromFileChooser = fc.getCurrentDirectory();
-				try {
-					explorerDAO.setLastDirFromFileChooser(lastDirFromFileChooser.getAbsolutePath());
-				} catch (SQLException e) {}
-				List<File> potentialGamesList = new ArrayList<>(Arrays.asList(potentialGames));
-				manuallyCheckAddGamesOrEmulators(potentialGamesList);
 			}
 		}
 	}
 
 	class AddFoldersListener implements ActionListener {
-
-		private File lastDirFromFolderChooser;
+		private File lastDirFromFileChooser;
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
+			showFileChooser(JFileChooser.DIRECTORIES_ONLY);
+		}
+
+		private void showFileChooser(int filesAndDirectories) {
+			if (lastDirFromFileChooser == null) {
+				String tmp = null;
+				try {
+					tmp = explorerDAO.getLastDirFromFileChooser();
+				} catch (SQLException e) {}
+				lastDirFromFileChooser = new File(tmp != null ? tmp : System.getProperty("user.dir"));
+			}
+			showFileChooser(filesAndDirectories, lastDirFromFileChooser);
+		}
+
+		private void showFileChooser(int directoriesOnly, File currentDirectory) {
 			JFileChooser fc = new JFileChooser();
 			fc.setDialogType(JFileChooser.OPEN_DIALOG);
-			fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+			fc.setFileSelectionMode(directoriesOnly);
 			fc.setMultiSelectionEnabled(true);
-
-			if (lastDirFromFolderChooser == null) {
+			if (lastDirFromFileChooser == null) {
 				String tmp = null;
 				try {
 					tmp = explorerDAO.getLastDirFromFolderChooser();
 				} catch (SQLException e1) {}
-				lastDirFromFolderChooser = new File(tmp != null ? tmp : System.getProperty("user.dir"));
+				lastDirFromFileChooser = new File(tmp != null ? tmp : System.getProperty("user.dir"));
 			}
-			fc.setCurrentDirectory(lastDirFromFolderChooser);
-
+			fc.setCurrentDirectory(lastDirFromFileChooser);
 			int returnVal = fc.showOpenDialog(view);
 			if (returnVal == JFileChooser.APPROVE_OPTION) {
 				File potentialGameFolder = fc.getSelectedFile();
-				lastDirFromFolderChooser = fc.getCurrentDirectory();
+				if (!potentialGameFolder.exists()) {
+					showFileChooser(JFileChooser.DIRECTORIES_ONLY, fc.getCurrentDirectory());
+					return;
+				}
+				lastDirFromFileChooser = fc.getCurrentDirectory();
 				try {
-					explorerDAO.setLastDirFromFolderChooser(lastDirFromFolderChooser.getAbsolutePath());
+					explorerDAO.setLastDirFromFolderChooser(lastDirFromFileChooser.getAbsolutePath());
 				} catch (SQLException e1) {}
 				List<File> tmpList = new ArrayList<>();
 				tmpList.add(potentialGameFolder);
@@ -5929,7 +5947,7 @@ GameSelectionListener, BrowseComputerListener {
 						try {
 							File file = data.get(0);
 							if (file.isDirectory()) {
-								manuallyCheckAddGamesOrEmulators(data);
+								searchForPlatforms(data);
 							} else {
 								manuallyCheckAddGameOrEmulator(file.toPath(), true);
 							}
@@ -5944,7 +5962,7 @@ GameSelectionListener, BrowseComputerListener {
 				} catch (HeadlessException e1) {
 					e1.printStackTrace();
 				} catch (UnsupportedFlavorException e1) {
-					JOptionPane.showMessageDialog(view, Messages.get(MessageConstants.ERR_CLIPBOARD,
+					JOptionPane.showMessageDialog(view, Messages.get(MessageConstants.EMPTY_CLIPBOARD,
 							Messages.get(MessageConstants.APPLICATION_TITLE)));
 				} catch (IOException e1) {
 					e1.printStackTrace();

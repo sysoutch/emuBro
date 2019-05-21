@@ -15,9 +15,12 @@ import javax.swing.JPopupMenu;
 import javax.swing.JRadioButtonMenuItem;
 import javax.swing.JSeparator;
 import javax.swing.KeyStroke;
+import javax.swing.event.MenuEvent;
+import javax.swing.event.MenuListener;
 
 import ch.sysout.emubro.controller.ViewConstants;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.util.FileUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
@@ -134,6 +137,22 @@ public class ViewContextMenu extends JPopupMenu implements ActionListener {
 		itmChangeToRecentlyPlayed = new JRadioButtonMenuItem(Messages.get("recentlyPlayed"));
 		itmHideExtensions = new JCheckBoxMenuItem(Messages.get("hideExtensions"));
 		itmTouchScreenOptimizedScroll = new JCheckBoxMenuItem(Messages.get(MessageConstants.TOUCH_SCREEN_SCROLL));
+		mnuAdd.addMenuListener(new MenuListener() {
+
+			@Override
+			public void menuSelected(MenuEvent e) {
+				boolean fileInClipboard = FileUtil.hasFileInClipboard();
+				itmFilesFromClipboard.setEnabled(fileInClipboard);
+			}
+
+			@Override
+			public void menuDeselected(MenuEvent e) {
+			}
+
+			@Override
+			public void menuCanceled(MenuEvent e) {
+			}
+		});
 	}
 
 	private void setAccelerators() {

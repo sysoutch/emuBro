@@ -61,6 +61,8 @@ import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.WindowConstants;
 import javax.swing.event.ChangeListener;
+import javax.swing.event.MenuEvent;
+import javax.swing.event.MenuListener;
 
 import com.jgoodies.forms.factories.CC;
 import com.jgoodies.forms.factories.Paddings;
@@ -94,6 +96,7 @@ import ch.sysout.emubro.impl.event.BroFilterEvent;
 import ch.sysout.emubro.impl.event.NavigationEvent;
 import ch.sysout.emubro.impl.model.BroEmulator;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.util.FileUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
@@ -698,6 +701,22 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				showFilterPanel(!isGameFilterPanelVisible());
+			}
+		});
+		mnuAdd.addMenuListener(new MenuListener() {
+
+			@Override
+			public void menuSelected(MenuEvent e) {
+				boolean fileInClipboard = FileUtil.hasFileInClipboard();
+				itmAddFilesFromClipboard.setEnabled(fileInClipboard);
+			}
+
+			@Override
+			public void menuDeselected(MenuEvent e) {
+			}
+
+			@Override
+			public void menuCanceled(MenuEvent e) {
 			}
 		});
 		addActionListeners(this, itmChooseDetails, itmSetColumnWidth, itmSetRowHeight, itmLanguageDe, itmLanguageEn,
