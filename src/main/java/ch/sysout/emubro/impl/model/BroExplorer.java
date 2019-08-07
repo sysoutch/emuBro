@@ -159,7 +159,8 @@ public class BroExplorer implements Explorer {
 		return count;
 	}
 
-	private List<Game> getGamesFromPlatform(int platformId) {
+	@Override
+	public List<Game> getGamesFromPlatform(int platformId) {
 		List<Game> gameList = new ArrayList<>();
 		for (Entry<Integer, Game> entry : games.entrySet()) {
 			Game game = entry.getValue();
@@ -692,9 +693,17 @@ public class BroExplorer implements Explorer {
 	}
 
 	@Override
-	public Game getGamesForTags(Tag... tag) {
-		return null;
-		//		return games.get(files.get(path));
+	public List<Game> getGamesForTags(Tag... tags) {
+		List<Game> gameList = new ArrayList<>();
+		for (Entry<Integer, Game> entry : games.entrySet()) {
+			Game game = entry.getValue();
+			for (Tag tag : tags) {
+				if (game.hasTag(tag.getId())) {
+					gameList.add(game);
+				}
+			}
+		}
+		return gameList;
 	}
 
 	@Override

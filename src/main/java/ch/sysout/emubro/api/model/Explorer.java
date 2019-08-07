@@ -62,6 +62,8 @@ public interface Explorer {
 
 	List<Game> getGames();
 
+	List<Game> getGamesFromPlatform(int platformId);
+
 	//	List<BroPlatform> getDefaultPlatforms();
 	//
 	//	void setDefaultPlatforms(List<BroPlatform> platforms);
@@ -140,7 +142,7 @@ public interface Explorer {
 
 	void addTagForGame(int gameId, Tag tag);
 
-	Game getGamesForTags(Tag... tag);
+	List<Game> getGamesForTags(Tag... tag);
 
 	void removeTagFromGame(int gameId, int tagId);
 

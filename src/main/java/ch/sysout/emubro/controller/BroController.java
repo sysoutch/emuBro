@@ -262,6 +262,8 @@ import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 import ch.sysout.util.UIUtil;
 import ch.sysout.util.ValidationUtil;
+import net.arikia.dev.drpc.DiscordRPC;
+import net.arikia.dev.drpc.DiscordRichPresence.Builder;
 
 public class BroController implements ActionListener, PlatformListener, EmulatorListener, TagListener,
 GameSelectionListener, BrowseComputerListener {
@@ -374,11 +376,13 @@ GameSelectionListener, BrowseComputerListener {
 	private ActionListener actionOpenRedditLink;
 	private ConfigWizardDialog dlgConfigWizard;
 	private File lastDirFromFileChooser;
+	private Builder discordRpc;
 
-	public BroController(ExplorerDAO explorerDAO, Explorer model, MainFrame view) {
+	public BroController(ExplorerDAO explorerDAO, Explorer model, MainFrame view, Builder discordRpc) {
 		this.explorerDAO = explorerDAO;
 		explorer = model;
 		this.view = view;
+		this.discordRpc = discordRpc;
 		explorer.setSearchProcessComplete(explorerDAO.isSearchProcessComplete());
 		platformComparator = new PlatformComparator(explorer);
 		// pnlMain.initializeViewPanel();
@@ -2186,6 +2190,11 @@ GameSelectionListener, BrowseComputerListener {
 		ProcessBuilder builder = new ProcessBuilder(startParametersList);
 		Process p = builder.redirectErrorStream(true).start();
 		frameEmulationOverlay.setProcess(p);
+
+		discordRpc.setDetails(game.getName() + " - " + explorer.getPlatform(platformId).getName());
+		discordRpc.setStartTimestamps(System.currentTimeMillis());
+		DiscordRPC.discordUpdatePresence(discordRpc.build());
+
 		if (p != null) {
 			TimerTask taskRunGame = new TimerTask() {
 
@@ -2199,6 +2208,11 @@ GameSelectionListener, BrowseComputerListener {
 							@Override
 							public void run() {
 								System.err.println("emulation stopped");
+
+								discordRpc.setDetails("");
+								discordRpc.setStartTimestamps(0);
+								DiscordRPC.discordUpdatePresence(discordRpc.build());
+
 								frameEmulationOverlay.dispose();
 								view.setState(Frame.NORMAL);
 								view.toFront();
@@ -7985,4 +7999,59 @@ GameSelectionListener, BrowseComputerListener {
 
 		}
 	}
+
+	//	@Override
+	//	public void messageReceived(IoSession session, Object message) throws Exception {
+	//		String str = message.toString();
+	//		if (str.trim().equalsIgnoreCase("quit")) {
+	//			session.closeNow();
+	//			checkAndExit();
+	//			return;
+	//		}
+	//		session.write("command executed: " + str);
+	//		System.out.println("Message written... " + str);
+	//		switch (str) {
+	//		case "selected":
+	//			List<Game> currentGames = explorer.getCurrentGames();
+	//			StringBuilder sb = new StringBuilder();
+	//			for (Game g : currentGames) {
+	//				sb.append(g.getName()).append("(ID: ").append(g.getId()).append(")\n");
+	//			}
+	//			session.write(sb.toString());
+	//			break;
+	//		case "listgames":
+	//			List<Game> allGames = explorer.getGames();
+	//			StringBuilder sb2 = new StringBuilder();
+	//			for (Game g : allGames) {
+	//				sb2.append(g.getName()).append("(ID: ").append(g.getId()).append(")\n");
+	//			}
+	//			session.write(sb2.toString());
+	//			break;
+	//		case "rungame":
+	//			session.write("started selected games: " + explorer.getCurrentGames());
+	//			runGame();
+	//			break;
+	//		case "settings":
+	//			showPropertiesFrame();
+	//			session.write("properties frame visible");
+	//			break;
+	//		case "version":
+	//			session.write("emuBro version: " + explorer.getCurrentApplicationVersion());
+	//			break;
+	//		}
+	//		if (str.startsWith("select ")) {
+	//			int gameId = Integer.valueOf(str.split(" ")[1]);
+	//			session.write("game selected: " + gameId);
+	//			view.getViewManager().selectGame(gameId);
+	//		}
+	//		if (str.startsWith("rate ")) {
+	//			int gameId = Integer.valueOf(str.split(" ")[1]);
+	//			session.write("game rated: " + gameId);
+	//			List<Game> currentGames = explorer.getCurrentGames();
+	//			for (Game game : currentGames) {
+	//				game.setRate(gameId);
+	//				rateGame(game);
+	//			}
+	//		}
+	//	}
 }

@@ -3,7 +3,7 @@ v0.8.0
 - new feature: auto download emulators
 - unplanned feature: not able to update to this emuBro version. full package must be downloaded, sorry. at least database should update fine...
 - added: slider view
-- added: Discord Rich Presence on demand
+- added: Discord Rich Presence
 - added: a game can now have an id. e.g. (Mario Kart Wii RMCP01)
 * added: new item "copy game path" to game context menu
 - fixed: reimproved browsing computer feature

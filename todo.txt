@@ -14,6 +14,7 @@ Covers, Descriptions und Tags: http://www.nintendolife.com/
 https://www.lifewire.com/command-line-commands-for-control-panel-applets-2626060
 
 -- to do ---
+TODO revert discord presence details to last game when started multiple games
 TODO ask once to set names for multiple games
 TODO default search for updates able to deactivate
 TODO config wizard platforms / emulators

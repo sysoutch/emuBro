@@ -47,7 +47,7 @@
 		<dependency>
 			<groupId>com.github.junrar</groupId>
 			<artifactId>junrar</artifactId>
-		    <version>4.0.0</version>
+			<version>4.0.0</version>
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/net.sf.opencsv/opencsv -->
 		<dependency>
@@ -82,6 +82,11 @@
 			<version>2.6.0</version>
 		</dependency>
 		<dependency>
+			<groupId>discord-rpc</groupId>
+			<artifactId>discord-rpc</artifactId>
+			<version>1.6.2</version>
+		</dependency>
+		<dependency>
 			<groupId>xfiledialog</groupId>
 			<artifactId>xfiledialog</artifactId>
 			<version>1.0</version>
@@ -96,6 +101,12 @@
 			<groupId>org.jsoup</groupId>
 			<artifactId>jsoup</artifactId>
 			<version>1.11.3</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/io.netty/netty-all -->
+		<dependency>
+			<groupId>io.netty</groupId>
+			<artifactId>netty-all</artifactId>
+			<version>4.1.38.Final</version>
 		</dependency>
 	</dependencies>
 	<build>
