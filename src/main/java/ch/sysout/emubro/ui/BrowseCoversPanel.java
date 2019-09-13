@@ -68,7 +68,6 @@ public class BrowseCoversPanel extends JPanel {
 		pnlCovers.setBackground(Color.WHITE);
 		pnlCovers.setBorder(BorderFactory.createEmptyBorder());
 		pnlCovers.add(lblDragDropCover);
-
 		spCovers.getVerticalScrollBar().setUnitIncrement(16);
 		spCovers.setBorder(BorderFactory.createEmptyBorder());
 		add(spCovers, cc.xy(1, 1));
@@ -80,13 +79,13 @@ public class BrowseCoversPanel extends JPanel {
 	private JComponent createOptionPanel() {
 		pnlOptions = new JPanel();
 		pnlOptions.setBorder(Paddings.TABBED_DIALOG);
-		FormLayout layout = new FormLayout("pref",
-				"fill:pref, $rgap, fill:pref, $lgap, fill:pref, $rgap, fill:pref, fill:min:grow");
+		FormLayout layout = new FormLayout("pref, pref, pref",
+				"fill:pref, $rgap, fill:pref, fill:min:grow");
 		pnlOptions.setLayout(layout);
 		CellConstraints cc = new CellConstraints();
 		btnSetCoverForGame = new JButton(Messages.get("setCover"));
-		btnNextGame = new JButton(Messages.get("nextGame"));
-		btnPreviousGame = new JButton(Messages.get("previousGame"));
+		btnNextGame = new JButton(">");
+		btnPreviousGame = new JButton("<");
 		btnClearList = new JButton(Messages.get("clearList"));
 
 		btnSetCoverForGame.setEnabled(false);
@@ -94,10 +93,10 @@ public class BrowseCoversPanel extends JPanel {
 		btnPreviousGame.setEnabled(false);
 		btnClearList.setEnabled(false);
 
-		pnlOptions.add(btnSetCoverForGame, cc.xy(1, 1));
-		pnlOptions.add(btnNextGame, cc.xy(1, 3));
-		pnlOptions.add(btnPreviousGame, cc.xy(1, 5));
-		pnlOptions.add(btnClearList, cc.xy(1, 7));
+		pnlOptions.add(btnPreviousGame, cc.xy(1, 1));
+		pnlOptions.add(btnSetCoverForGame, cc.xy(2, 1));
+		pnlOptions.add(btnNextGame, cc.xy(3, 1));
+		pnlOptions.add(btnClearList, cc.xyw(1, 3, layout.getColumnCount()));
 
 		final JScrollPane sp = new JScrollPane(pnlOptions, ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS,
 				ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
@@ -168,8 +167,6 @@ public class BrowseCoversPanel extends JPanel {
 	public void languageChanged() {
 		lblDragDropCover.setText(Messages.get(MessageConstants.DRAG_AND_DROP_FILES_OR_FOLDERS_HERE));
 		btnSetCoverForGame.setText(Messages.get(MessageConstants.SET_COVER));
-		btnNextGame.setText(Messages.get(MessageConstants.NEXT_GAME));
-		btnPreviousGame.setText(Messages.get(MessageConstants.PREVIOUS_GAME));
 		btnClearList.setText(Messages.get(MessageConstants.CLEAR_LIST));
 	}
 

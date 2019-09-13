@@ -7,8 +7,9 @@ import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Image;
-import java.awt.Insets;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetListener;
 import java.awt.event.ActionEvent;
@@ -18,7 +19,9 @@ import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
 import java.awt.font.TextAttribute;
+import java.awt.image.BufferedImage;
 import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -41,12 +44,10 @@ import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
-import javax.swing.JTextField;
 import javax.swing.JTextPane;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
-import javax.swing.border.EmptyBorder;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
@@ -57,15 +58,19 @@ import com.jgoodies.forms.factories.Paddings;
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 
+import ch.sysout.emubro.api.PlatformFromGameListener;
+import ch.sysout.emubro.api.RunGameWithListener;
 import ch.sysout.emubro.api.TagListener;
 import ch.sysout.emubro.api.event.GameSelectionEvent;
 import ch.sysout.emubro.api.event.TagEvent;
 import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.api.model.Game;
+import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.api.model.Tag;
 import ch.sysout.emubro.controller.GameSelectionListener;
 import ch.sysout.emubro.impl.event.BroTagAddedEvent;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.util.FontUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
@@ -73,7 +78,6 @@ import ch.sysout.util.ScreenSizeUtil;
 import ch.sysout.util.UIUtil;
 
 public class PreviewPanePanel extends JPanel implements GameSelectionListener {
-
 	private static final long serialVersionUID = 1L;
 
 	private SelectionPanel pnlSelection = new SelectionPanel();
@@ -92,22 +96,49 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 
 	private List<Tag> defaultTags;
 
+	private List<PlatformFromGameListener> platformFromGameListeners = new ArrayList<>();
+
+	private List<RunGameWithListener> runGameWithListeners = new ArrayList<>();
+
+	private AbstractButton btnResizePreviewPane = new JButton();
+
 	public PreviewPanePanel(Explorer explorer, GameContextMenu popupGame, ViewContextMenu popupView) {
 		super();
 		this.explorer = explorer;
 		this.popupGame = popupGame;
 		this.popupView = popupView;
 		initComponents();
+		setIcons();
 		createUI();
 	}
 
+	private void setIcons() {
+		int size = ScreenSizeUtil.is3k() ? 16 : 12;
+		btnResizePreviewPane.setIcon(ImageUtil.getImageIconFrom(Icons.get("barsWhiteVertical", size, size)));
+	}
+
 	private void initComponents() {
+		btnResizePreviewPane.setContentAreaFilled(false);
+		btnResizePreviewPane.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseEntered(MouseEvent e) {
+				super.mouseEntered(e);
+				btnResizePreviewPane.setCursor(Cursor.getPredefinedCursor(Cursor.E_RESIZE_CURSOR | Cursor.W_RESIZE_CURSOR));
+			}
+
+			@Override
+			public void mouseExited(MouseEvent e) {
+				super.mouseExited(e);
+				btnResizePreviewPane.setCursor(null);
+			}
+		});
 		pnlNoSelection = new NoSelectionPanel();
-		spSelection = new JScrollPane(pnlSelection, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+		spSelection = new ModernScrollPane(pnlSelection, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
 				ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 		pnlNoSelection.setMinimumSize(new Dimension(0, 0));
 		spSelection.setVisible(false);
 		initNoSelectionText();
+		setTextColors();
 	}
 
 	private void initNoSelectionText() {
@@ -116,6 +147,10 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 
 	public void initDefaultTags(List<Tag> tags) {
 		defaultTags = tags;
+	}
+
+	public void addResizePreviewPaneListener(MouseMotionListener l) {
+		btnResizePreviewPane.addMouseMotionListener(l);
 	}
 
 	public void addCoverDragDropListener(DropTargetListener l) {
@@ -132,22 +167,29 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 
 	private void createUI() {
 		// FIXME do it now
-		int border = ScreenSizeUtil.is3k() ? 15 : 5;
 		spSelection.setMinimumSize(new Dimension(0, 0));
 		pnlSelection.setMinimumSize(new Dimension(0, 0));
 		pnlNoSelection.setMinimumSize(new Dimension(0, 0));
 
-		spSelection.setBorder(BorderFactory.createEmptyBorder());
-		pnlSelection.setBorder(new EmptyBorder(new Insets(0, border, 0, border)));
-		pnlNoSelection.setBorder(new EmptyBorder(new Insets(border, border, border, border)));
+		//		pnlSelection.setBorder(new EmptyBorder(new Insets(0, borderSize, 0, borderSize)));
+		//		pnlNoSelection.setBorder(new EmptyBorder(new Insets(borderSize, borderSize, borderSize, borderSize)));
 		//		pnlNoSelection.setBorder(BorderFactory.createLoweredSoftBevelBorder());
 
-		BoxLayout layout = new BoxLayout(this, BoxLayout.PAGE_AXIS);
+		//		BoxLayout layout = new BoxLayout(this, BoxLayout.PAGE_AXIS);
+		BorderLayout layout = new BorderLayout();
 		setLayout(layout);
-		add(spSelection);
+		setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
+		//		add(spSelection, BorderLayout.NORTH);
+		btnResizePreviewPane.setOpaque(false);
+		UIUtil.doHover(false, btnResizePreviewPane);
+		btnResizePreviewPane.setFocusable(false);
+		add(btnResizePreviewPane, BorderLayout.WEST);
 		add(pnlNoSelection);
-		pnlSelection.lblGameTitle.setOpaque(true);
-		pnlSelection.lblPlatformTitle.setOpaque(true);
+		setOpaque(false);
+		spSelection.setOpaque(false);
+		spSelection.getViewport().setOpaque(false);
+		//		pnlSelection.lblGameTitle.setOpaque(true);
+		//		pnlSelection.lnkPlatformTitle.setOpaque(true);
 	}
 
 	@Override
@@ -155,16 +197,21 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		pnlSelection.pnlRatingBar.gameSelected(e);
 		lastVerticalScrollBarValue = spSelection.getVerticalScrollBar().getValue();
 		currentGames = e.getGames();
+		boolean revalidateAndRepaint = false;
 		if (currentGames != null && currentGames.size() > 0) {
-			spSelection.setVisible(true);
-			pnlNoSelection.setVisible(false);
+			if (!spSelection.isVisible()) {
+				remove(pnlNoSelection);
+				add(spSelection);
+				revalidateAndRepaint = true;
+				spSelection.setVisible(true);
+				pnlNoSelection.setVisible(false);
+			}
 			if (currentGames.size() == 1) {
 				Game firstGame = currentGames.get(0);
-				pnlSelection.initPlatformTitle();
 				int platformId = firstGame.getPlatformId();
 				Icon icon = IconStore.current().getPlatformIcon(platformId);
 				pnlSelection.setGameTitle(firstGame.getName(), null);
-				pnlSelection.setPlatformTitle(explorer.getPlatform(platformId).getName(), icon);
+				pnlSelection.setCurrentPlatform(explorer.getPlatform(platformId), icon);
 				pnlSelection.setDateAdded(firstGame.getDateAdded());
 				pnlSelection.setPlayCount(firstGame.getPlayCount());
 				pnlSelection.setLastPlayed(firstGame.getLastPlayed());
@@ -174,8 +221,8 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 				pnlSelection.pnlDateAdded.setVisible(true);
 				//				pnlSelection.pnlPath.setVisible(true);
 			} else {
-				pnlSelection.setGameTitle(Messages.get(MessageConstants.MULTIPLE_GAMES_SELECTED), null);
-				pnlSelection.setPlatformTitle("", null);
+				pnlSelection.setGameTitle(Messages.get(MessageConstants.MULTIPLE_GAMES_SELECTED, currentGames.size()), null);
+				pnlSelection.setCurrentPlatform(null, null);
 				pnlSelection.setDateAdded(null);
 				pnlSelection.setPlayCount(-1);
 				pnlSelection.setLastPlayed(null);
@@ -188,8 +235,16 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			}
 			restoreLastScrollBarValues();
 		} else {
-			spSelection.setVisible(false);
-			pnlNoSelection.setVisible(true);
+			if (!pnlNoSelection.isVisible()) {
+				remove(spSelection);
+				add(pnlNoSelection);
+				spSelection.setVisible(false);
+				pnlNoSelection.setVisible(true);
+				revalidateAndRepaint = true;
+			}
+		}
+		if (revalidateAndRepaint) {
+			UIUtil.revalidateAndRepaint(this);
 		}
 	}
 
@@ -263,11 +318,42 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		pnlSelection.pnlTags.removeTag(e.getTag().getId());
 	}
 
+	public void addCoverFromWebListener(ActionListener l) {
+		pnlSelection.pnlGameData.addCoverFromWebListener(l);
+	}
+
+	public void addTrailerFromWebListener(ActionListener l) {
+		pnlSelection.pnlGameData.addTrailerFromWebListener(l);
+
+	}
+
+	public void addTagToGameFilterListener(GameFilterPanel pnlGameFilter) {
+		this.pnlGameFilter = pnlGameFilter;
+	}
+
+	public void addPlatformToFilterListener(PlatformFromGameListener l) {
+		platformFromGameListeners.add(l);
+	}
+
+	@Override
+	protected void paintComponent(Graphics g) {
+		super.paintComponent(g);
+		BufferedImage imagePreviewPaneBackground = IconStore.current().getPreviewPaneBackgroundImage();
+		if (imagePreviewPaneBackground != null) {
+			Graphics2D g2d = (Graphics2D) g.create();
+			int x = 0;
+			int y = 0;
+			int w = getWidth();
+			int h = getHeight();
+			g2d.drawImage(imagePreviewPaneBackground, 0, 0, w, h, this);
+			g2d.dispose();
+		}
+	}
+
 	class SelectionPanel extends ScrollablePanel {
 		private static final long serialVersionUID = 1L;
-		private JLabel lblGameTitle = new JLabel("Game Title");
-		private JTextField txtGameTitle = new JTextField();
-		private JLabel lblPlatformTitle = new JLabel2("Platform Title");
+		private JLabel lblGameTitle = new JLabel2("Game Title");
+		private JLinkButton lnkPlatformTitle = new JLinkButton("Platform Title");
 		private GameDataPanel pnlGameData = new GameDataPanel();
 		private AutoScaleImagePanel pnlAutoScaleImage = new AutoScaleImagePanel();
 		private RatingBarPanel pnlRatingBar = new RatingBarPanel(Messages.get(MessageConstants.RATE_GAME), false);
@@ -283,6 +369,8 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		private JMenuItem itmRemoveCover = new JMenuItem(Messages.get(MessageConstants.REMOVE_COVER));
 		private JPanel pnl;
 		private JButton btnComment;
+		private Platform platform;
+		public Color colorDefaultForeground = Color.WHITE;
 
 		public SelectionPanel() {
 			setLayout(new BorderLayout());
@@ -326,24 +414,28 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		}
 
 		private void createUI() {
-			setBorder(Paddings.TABBED_DIALOG);
+			setOpaque(false);
+			pnlRatingBar.setOpaque(false);
+			pnlAutoScaleImage.setOpaque(false);
 			lblGameTitle.setMinimumSize(new Dimension(0, 0));
-			txtGameTitle.setMinimumSize(new Dimension(0, 0));
-			lblPlatformTitle.setMinimumSize(new Dimension(0, 0));
+			lnkPlatformTitle.setMinimumSize(new Dimension(0, 0));
 			FormLayout layoutTop = new FormLayout("min:grow",
 					"default, $rgap, default, $ugap, default, $ugap, default, $ugap, default, $lgap, default, $ugap,"
 							+ " fill:pref, $lgap, fill:pref, fill:$ugap, fill:pref, fill:$ugap, fill:default"/*, fill:$ugap, fill:default */);
 			pnl = new JPanel(layoutTop);
+			pnl.setOpaque(false);
 			int columnCount = layoutTop.getColumnCount();
 			CellConstraints ccSelection = new CellConstraints();
 			pnl.setLayout(layoutTop);
 			pnl.add(lblGameTitle, ccSelection.xyw(1, 1, columnCount));
-			pnl.add(lblPlatformTitle, ccSelection.xyw(1, 3, columnCount));
+			pnl.add(lnkPlatformTitle, ccSelection.xyw(1, 3, columnCount));
 			pnl.add(pnlGameData, ccSelection.xyw(1, 5, columnCount));
 			pnl.add(pnlAutoScaleImage, ccSelection.xyw(1, 7, columnCount));
 			pnl.add(pnlRatingBar, ccSelection.xyw(1, 9, columnCount));
 
 			btnComment = new JButton(Messages.get(MessageConstants.GAME_COMMENT));
+			UIUtil.doHover(false, btnComment);
+			btnComment.addMouseListener(UIUtil.getMouseAdapter());
 			btnComment.addActionListener(new ActionListener() {
 
 				@Override
@@ -356,6 +448,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			btnComment.setHorizontalAlignment(SwingConstants.LEFT);
 			btnComment.setIcon(ImageUtil.getImageIconFrom(Icons.get("gameComment", 16, 16)));
 			JPanel pnlCommentWrapper = new JPanel(new BorderLayout());
+			pnlCommentWrapper.setOpaque(false);
 			pnlCommentWrapper.add(btnComment, BorderLayout.WEST);
 			pnl.add(pnlCommentWrapper, ccSelection.xyw(1, 11, columnCount));
 			pnl.add(pnlTags, ccSelection.xyw(1, 13, columnCount));
@@ -391,8 +484,22 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		}
 
 		private void initPlatformTitle() {
-			lblPlatformTitle.setBorder(Paddings.EMPTY);
-			lblPlatformTitle.setBackground(getBackground());
+			lnkPlatformTitle.setFont(FontUtil.getCustomFont());
+			lnkPlatformTitle.setBorder(Paddings.EMPTY);
+			lnkPlatformTitle.setBackground(getBackground());
+			lnkPlatformTitle.addActionListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					fireAddPlatformToFilterEvent(platform);
+				}
+			});
+		}
+
+		private void fireAddPlatformToFilterEvent(Platform platform) {
+			for (PlatformFromGameListener l : platformFromGameListeners) {
+				l.platformFromGameAddedToFilter(platform);
+			}
 		}
 
 		protected void setGameTitle(String s, Icon icon) {
@@ -401,9 +508,11 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			lblGameTitle.setIcon(icon);
 		}
 
-		protected void setPlatformTitle(String s, Icon icon) {
-			lblPlatformTitle.setText(s);
-			lblPlatformTitle.setIcon(icon);
+		protected void setCurrentPlatform(Platform platform, Icon icon) {
+			this.platform = platform;
+			String name = (platform == null) ? "" : platform.getName();
+			lnkPlatformTitle.setText(name);
+			lnkPlatformTitle.setIcon(icon);
 		}
 
 		protected void setDateAdded(ZonedDateTime localDateTime) {
@@ -426,11 +535,48 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			pnlTags.setTags(list);
 		}
 
+		public void gameCoverChanged(Game game, Image image) {
+			if (currentGames != null && currentGames.size() == 1
+					&& currentGames.get(0) == game) {
+				pnlSelection.setGameTitle(game.getName(), null);
+				if (image == null) {
+					pnlSelection.pnlAutoScaleImage.setGameCover(null);
+				} else {
+					pnlSelection.pnlAutoScaleImage.setGameCover(image);
+				}
+			} else {
+				pnlSelection.pnlAutoScaleImage.setGameCover(null);
+			}
+		}
+
+		public void languageChanged() {
+			btnComment.setText(Messages.get(MessageConstants.GAME_COMMENT));
+			pnlDateAdded.lblDateAdded.setText(("<html><strong>" + Messages.get(MessageConstants.DATE_ADDED) + "</strong></html>"));
+			if (currentGames != null) {
+				if (currentGames.size() == 1) {
+					String formattedDate = "";
+					ZonedDateTime dateAdded = currentGames.get(0).getDateAdded();
+					if (dateAdded != null) {
+						formattedDate = UIUtil.format(dateAdded);
+					}
+					pnlDateAdded.lblDateAdded2.setText(formattedDate);
+				} else if (currentGames.size() > 1) {
+					setGameTitle(Messages.get(MessageConstants.MULTIPLE_GAMES_SELECTED), null);
+				}
+			}
+			pnlRatingBar.languageChanged();
+			pnlPlayCount.languageChanged();
+			pnlLastPlayed.languageChanged();
+			//			pnlPath.languageChanged();
+			pnlTags.languageChanged();
+			pnlGameData.setToolTipTexts();
+		}
+
 		class DateAddedPanel extends JPanel {
 			private static final long serialVersionUID = 1L;
 			private JLabel lblDateAdded = new JLabel2(
 					"<html><strong>" + Messages.get(MessageConstants.DATE_ADDED) + "</strong></html>");
-			private JTextArea txtDateAdded2 = new JTextArea("MM d, yyy HH:mm:ss");
+			private JLabel lblDateAdded2 = new JLabel2("MM d, yyy HH:mm:ss");
 
 			public DateAddedPanel() {
 				initLastPlayedTextArea();
@@ -438,18 +584,19 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			}
 
 			private void initLastPlayedTextArea() {
-				txtDateAdded2.setOpaque(false);
-				txtDateAdded2.setEditable(false);
-				txtDateAdded2.setFocusable(false);
-				txtDateAdded2.setLineWrap(true);
-				txtDateAdded2.setWrapStyleWord(true);
+				lblDateAdded2.setOpaque(false);
+				//				txtDateAdded2.setEditable(false);
+				//				txtDateAdded2.setFocusable(false);
+				//				txtDateAdded2.setLineWrap(true);
+				//				txtDateAdded2.setWrapStyleWord(true);
 			}
 
 			private void createUI() {
-				txtDateAdded2.setMinimumSize(new Dimension(0, 0));
+				lblDateAdded2.setMinimumSize(new Dimension(0, 0));
+				setOpaque(false);
 				setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
 				add(lblDateAdded);
-				add(txtDateAdded2);
+				add(lblDateAdded2);
 			}
 
 			protected void setDateAdded(ZonedDateTime localDateTime) {
@@ -457,7 +604,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 				if (localDateTime != null) {
 					formattedDate = UIUtil.format(localDateTime);
 				}
-				txtDateAdded2.setText(formattedDate);
+				lblDateAdded2.setText("<html>"+formattedDate+"</html>");
 			}
 		}
 
@@ -465,7 +612,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			private static final long serialVersionUID = 1L;
 			private JLabel lblPlayCount = new JLabel2(
 					"<html><strong>" + Messages.get(MessageConstants.PLAY_COUNT) + "</strong></html>");
-			private JTextArea txtPlayCount2 = new JTextArea();
+			private JLabel lblPlayCount2 = new JLabel2("");
 
 			public PlayCountPanel() {
 				initPlayCountTextArea();
@@ -473,18 +620,16 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			}
 
 			private void initPlayCountTextArea() {
-				txtPlayCount2.setOpaque(false);
-				txtPlayCount2.setEditable(false);
-				txtPlayCount2.setFocusable(false);
-				txtPlayCount2.setLineWrap(true);
-				txtPlayCount2.setWrapStyleWord(true);
+				lblPlayCount2.setOpaque(false);
+				lblPlayCount2.setFocusable(false);
 			}
 
 			private void createUI() {
-				txtPlayCount2.setMinimumSize(new Dimension(0, 0));
+				setOpaque(false);
+				lblPlayCount2.setMinimumSize(new Dimension(0, 0));
 				setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
 				add(lblPlayCount);
-				add(txtPlayCount2);
+				add(lblPlayCount2);
 			}
 
 			protected void setPlayCount(int playCount) {
@@ -499,7 +644,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 				default:
 					s = Messages.get(MessageConstants.PLAY_COUNT2, playCount);
 				}
-				txtPlayCount2.setText(s);
+				lblPlayCount2.setText("<html>"+s+"</html>");
 			}
 
 			public void languageChanged() {
@@ -517,14 +662,14 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 					default:
 						s = Messages.get(MessageConstants.PLAY_COUNT2, playCount);
 					}
-					txtPlayCount2.setText(s);
+					lblPlayCount2.setText("<html>"+s+"</html>");
 				}
 			}
 		}
 
 		class LastPlayedPanel extends JPanel {
 			private static final long serialVersionUID = 1L;
-			private JTextArea txtLastPlayed2 = new JTextArea();
+			private JLabel lblLastPlayed = new JLabel2("");
 
 			public LastPlayedPanel() {
 				initLastPlayedTextArea();
@@ -532,17 +677,18 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			}
 
 			private void initLastPlayedTextArea() {
-				txtLastPlayed2.setOpaque(false);
-				txtLastPlayed2.setEditable(false);
-				txtLastPlayed2.setFocusable(false);
-				txtLastPlayed2.setLineWrap(true);
-				txtLastPlayed2.setWrapStyleWord(true);
+				lblLastPlayed.setOpaque(false);
+				//				txtLastPlayed2.setEditable(false);
+				lblLastPlayed.setFocusable(false);
+				//				txtLastPlayed2.setLineWrap(true);
+				//				txtLastPlayed2.setWrapStyleWord(true);
 			}
 
 			private void createUI() {
-				txtLastPlayed2.setMinimumSize(new Dimension(0, 0));
+				lblLastPlayed.setMinimumSize(new Dimension(0, 0));
+				setOpaque(false);
 				setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
-				add(txtLastPlayed2);
+				add(lblLastPlayed);
 			}
 
 			protected void setLastPlayed(ZonedDateTime localDateTime) {
@@ -577,7 +723,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 					}
 					s = Messages.get(MessageConstants.LAST_PLAYED_SHORT) + ": " + ago;
 				}
-				txtLastPlayed2.setText(s);
+				lblLastPlayed.setText("<html>"+s+"</html>");
 			}
 
 			public void languageChanged() {
@@ -614,7 +760,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 						}
 						s = Messages.get(MessageConstants.LAST_PLAYED_SHORT) + ": " + ago;
 					}
-					txtLastPlayed2.setText(s);
+					lblLastPlayed.setText(s);
 				}
 			}
 		}
@@ -680,6 +826,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 				txtFilename.setMinimumSize(new Dimension(0, 0));
 				txtPath.setMinimumSize(new Dimension(0, 0));
 				lblFileInformations.setMinimumSize(new Dimension(0, 0));
+				setOpaque(false);
 				setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
 				add(new JLabel(" "));
 				add(lblFileInformations);
@@ -692,7 +839,6 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 				String filename = FilenameUtils.getName(s);
 				txtPath.setText(filePathNoEndSeparator);
 				txtFilename.setText(filename);
-				txtPath.setForeground(new Color(0, 0, 224));
 			}
 
 			private void setGamePathUnderlined(boolean underlined) {
@@ -721,46 +867,25 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			}
 		}
 
-		public void gameCoverChanged(Game game, Image image) {
-			if (currentGames != null && currentGames.size() == 1
-					&& currentGames.get(0) == game) {
-				pnlSelection.setGameTitle(game.getName(), null);
-				if (image == null) {
-					pnlSelection.pnlAutoScaleImage.setGameCover(null);
-				} else {
-					pnlSelection.pnlAutoScaleImage.setGameCover(image);
-				}
-			} else {
-				pnlSelection.pnlAutoScaleImage.setGameCover(null);
-			}
-		}
-
-		public void languageChanged() {
-			btnComment.setText(Messages.get(MessageConstants.GAME_COMMENT));
-			pnlDateAdded.lblDateAdded.setText(("<html><strong>" + Messages.get(MessageConstants.DATE_ADDED) + "</strong></html>"));
-			if (currentGames != null) {
-				if (currentGames.size() == 1) {
-					String formattedDate = "";
-					ZonedDateTime dateAdded = currentGames.get(0).getDateAdded();
-					if (dateAdded != null) {
-						formattedDate = UIUtil.format(dateAdded);
-					}
-					pnlDateAdded.txtDateAdded2.setText(formattedDate);
-				} else if (currentGames.size() > 1) {
-					setGameTitle(Messages.get(MessageConstants.MULTIPLE_GAMES_SELECTED), null);
-				}
-			}
-			pnlRatingBar.languageChanged();
-			pnlPlayCount.languageChanged();
-			pnlLastPlayed.languageChanged();
-			//			pnlPath.languageChanged();
-			pnlTags.languageChanged();
-			pnlGameData.setToolTipTexts();
+		public void setTextColors(BufferedImage imgPreviewPaneBackground) {
+			UIUtil.setForegroundDependOnBackground(imgPreviewPaneBackground, 0, 0,
+					lblGameTitle,
+					pnlRatingBar.lblRate,
+					pnlPlayCount.lblPlayCount, pnlPlayCount.lblPlayCount2,
+					pnlTags.lblTags,
+					pnlLastPlayed.lblLastPlayed,
+					pnlLastPlayed.lblLastPlayed,
+					pnlDateAdded.lblDateAdded,
+					pnlDateAdded.lblDateAdded2);
 		}
 	}
 
 	public class GameDataPanel extends ScrollablePanel implements MouseListener {
 		private static final long serialVersionUID = 1L;
+
+		int size = ScreenSizeUtil.is3k() ? 32 : 24;
+		private JButton btnRunGame = new JButton(Messages.get(MessageConstants.RUN_GAME), ImageUtil.getImageIconFrom(Icons.get("runGame", size, size)));
+		private JButton btnMoreOptionsRunGame = new JButton("", ImageUtil.getImageIconFrom(Icons.get("arrowDownOtherWhite", 1)));
 
 		private JButton btnSearchCover = new JButton();
 		private JButton btnSearchTrailer = new JButton();
@@ -788,15 +913,26 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		}
 
 		private void addListeners() {
+			btnRunGame.addMouseListener(this);
+			btnMoreOptionsRunGame.addMouseListener(this);
 			btnSearchCover.addMouseListener(this);
 			btnSearchTrailer.addMouseListener(this);
+			btnRunGame.addMouseListener(UIUtil.getMouseAdapter());
+			btnMoreOptionsRunGame.addMouseListener(UIUtil.getMouseAdapter());
+			btnSearchCover.addMouseListener(UIUtil.getMouseAdapter());
+			btnSearchTrailer.addMouseListener(UIUtil.getMouseAdapter());
 		}
 
 		private void createUI() {
-			setLayout(new FormLayout("min, min, min", "fill:min"));
+			setOpaque(false);
+			setLayout(new FormLayout("min, min, min, min:grow, min",
+					"fill:min, $rgap, fill:min"));
 			CellConstraints cc = new CellConstraints();
-			add(btnSearchCover, cc.xy(1, 1));
-			add(btnSearchTrailer, cc.xy(3, 1));
+			UIUtil.doHover(false, btnRunGame, btnMoreOptionsRunGame, btnSearchCover, btnSearchTrailer);
+			add(btnRunGame, cc.xyw(1, 1, 4));
+			add(btnMoreOptionsRunGame, cc.xy(5, 1));
+			add(btnSearchCover, cc.xy(1, 3));
+			add(btnSearchTrailer, cc.xy(3, 3));
 			//			int size = ScreenSizeUtil.is3k() ? 24 : 16;
 			//			btnAddTag.setIcon(ImageUtil.getImageIconFrom(Icons.get("add", size, size)));
 			//			btnAddTag.setBorderPainted(false);
@@ -824,7 +960,11 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		@Override
 		public void mouseEntered(MouseEvent e) {
 			AbstractButton source = ((AbstractButton) e.getSource());
-			if (source == btnSearchCover) {
+			if (source == btnRunGame) {
+				UIUtil.doHover(true, btnMoreOptionsRunGame);
+			} else if (source == btnMoreOptionsRunGame) {
+				UIUtil.doHover(true, btnRunGame);
+			} else if (source == btnSearchCover) {
 				source.setText("Google");
 			} else if (source == btnSearchTrailer) {
 				source.setText("YouTube");
@@ -834,7 +974,11 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		@Override
 		public void mouseExited(MouseEvent e) {
 			AbstractButton source = ((AbstractButton) e.getSource());
-			if (source == btnSearchCover || source == btnSearchTrailer) {
+			if (source == btnRunGame) {
+				UIUtil.doHover(false, btnMoreOptionsRunGame);
+			} else if (source == btnMoreOptionsRunGame) {
+				UIUtil.doHover(false, btnRunGame);
+			} else if (source == btnSearchCover || source == btnSearchTrailer) {
 				source.setText("");
 			}
 		}
@@ -911,7 +1055,9 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		}
 
 		private void createUI() {
+			setOpaque(false);
 			setLayout(new BorderLayout());
+			pnlTagList.setOpaque(false);
 			pnlTagList.setLayout(new WrapLayout(FlowLayout.LEFT));
 			lblTags.setMinimumSize(new Dimension(0, 0));
 			add(lblTags, BorderLayout.NORTH);
@@ -919,8 +1065,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 
 			int size = ScreenSizeUtil.is3k() ? 24 : 16;
 			btnAddTag.setIcon(ImageUtil.getImageIconFrom(Icons.get("add", size, size)));
-			btnAddTag.setBorderPainted(false);
-			btnAddTag.setContentAreaFilled(false);
+			UIUtil.doHover(false, btnAddTag);
 			btnAddTag.addMouseListener(UIUtil.getMouseAdapter());
 			btnAddTag.addActionListener(new ActionListener() {
 
@@ -994,7 +1139,6 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		}
 
 		public void initNoSelectionText() {
-			popupView = new ViewContextMenu();
 			setComponentPopupMenu(popupView);
 			txtNoSelection.setComponentPopupMenu(popupView);
 			txtNoSelection.setText(Messages.get(MessageConstants.NO_SELECTION));
@@ -1011,6 +1155,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		private void createUI() {
 			FormLayout layoutNoSelection = new FormLayout("min:grow", "min:grow");
 			setLayout(layoutNoSelection);
+			setOpaque(false);
 			CellConstraints ccNoSelection = new CellConstraints();
 			add(txtNoSelection, ccNoSelection.xy(1, 1));
 		}
@@ -1020,16 +1165,28 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		}
 	}
 
-	public void addCoverFromWebListener(ActionListener l) {
-		pnlSelection.pnlGameData.addCoverFromWebListener(l);
+	public void addRunGameListener(ActionListener l) {
+		pnlSelection.pnlGameData.btnRunGame.addActionListener(l);
 	}
 
-	public void addTrailerFromWebListener(ActionListener l) {
-		pnlSelection.pnlGameData.addTrailerFromWebListener(l);
-
+	public void setTextColors() {
+		BufferedImage imgPreviewPaneBackground = IconStore.current().getPreviewPaneBackgroundImage();
+		if (imgPreviewPaneBackground != null) {
+			pnlSelection.setTextColors(imgPreviewPaneBackground);
+		}
 	}
 
-	public void addTagToGameFilterListener(GameFilterPanel pnlGameFilter) {
-		this.pnlGameFilter = pnlGameFilter;
+	public void addRunGameWithListener(RunGameWithListener l) {
+		runGameWithListeners.add(l);
+	}
+
+	protected void fireRunGameWithEvent(int emulatorId) {
+		for (RunGameWithListener l : runGameWithListeners) {
+			l.runGameWith(emulatorId);
+		}
+	}
+
+	public int getCustomDividerSize() {
+		return btnResizePreviewPane.getWidth();
 	}
 }

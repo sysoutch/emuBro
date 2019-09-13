@@ -32,16 +32,19 @@ public class BroPlatformDAO implements PlatformDAO {
 		String gameSearchModesString = "";
 		String supportedArchiveTypesString = "";
 		String supportedImageTypesString = "";
+		String gameCodeRegexesString = "";
 		for (String searchMode : platform.getGameSearchModes()) {
 			gameSearchModesString += searchMode + " ";
 		}
-		for (String type : platform.getSupportedArchiveTypes()) {
-			supportedArchiveTypesString += type + " ";
+		for (String archiveType : platform.getSupportedArchiveTypes()) {
+			supportedArchiveTypesString += archiveType + " ";
 		}
-		for (String type : platform.getSupportedImageTypes()) {
-			supportedImageTypesString += type + " ";
+		for (String imageType : platform.getSupportedImageTypes()) {
+			supportedImageTypesString += imageType + " ";
 		}
-
+		for (String gameCodeRegex : platform.getGameCodeRegexes()) {
+			gameCodeRegexesString += gameCodeRegex + " ";
+		}
 		Statement stmt = conn.createStatement();
 		int structureId = (!platform.getFileStructure().isEmpty()) ? platform.getFileStructure().get(0).getId() : -2;
 		String sql = SqlUtil.insertIntoWithColumnsString(
@@ -57,6 +60,7 @@ public class BroPlatformDAO implements PlatformDAO {
 				"platform_supportedImageTypes",
 				"platform_defaultEmulatorId",
 				"platform_autoSearchEnabled",
+				"platform_gameCodeRegexes",
 				"platform_deleted",
 				SqlUtil.getQuotedString(platform.getName()),
 				SqlUtil.getQuotedString(platform.getShortName()),
@@ -69,6 +73,7 @@ public class BroPlatformDAO implements PlatformDAO {
 				SqlUtil.getQuotedString(supportedImageTypesString),
 				platform.getDefaultEmulatorId(),
 				platform.isAutoSearchEnabled(),
+				SqlUtil.getQuotedString(gameCodeRegexesString),
 				false);
 		stmt.executeQuery(sql);
 		conn.commit();
@@ -138,9 +143,10 @@ public class BroPlatformDAO implements PlatformDAO {
 			Collections.sort(emulators);
 			int defaultEmulatorId = rset.getInt("platform_defaultEmulatorId");
 			boolean autoSearchEnabled = rset.getBoolean("platform_autoSearchEnabled");
+			String[] gameCodeRegexes = rset.getString("platform_gameCodeRegexes").split(" ");
 			platform = new BroPlatform(id, name, shortName, iconFilename, defaultGameCover, gameSearchModes, searchFor,
 					fileStructure, supportedArchiveTypes, supportedImageTypes, emulators, defaultEmulatorId,
-					autoSearchEnabled);
+					autoSearchEnabled, gameCodeRegexes);
 		}
 		stmt.close();
 		return platform;
@@ -185,6 +191,7 @@ public class BroPlatformDAO implements PlatformDAO {
 			try {
 				int id = rset.getInt("emulator_id");
 				String name = rset.getString("emulator_name");
+				String shortName = rset.getString("emulator_shortName");
 				String path = rset.getString("emulator_path");
 				String iconFilename = rset.getString("emulator_iconFilename");
 				String configFilePath = rset.getString("emulator_configFilePath");
@@ -194,7 +201,7 @@ public class BroPlatformDAO implements PlatformDAO {
 				String setupFileMatch = rset.getString("emulator_setupFileMatch");
 				String[] supportedFileTypes = rset.getString("emulator_supportedFileTypes").split(" ");
 				boolean autoSearchEnabled = rset.getBoolean("emulator_autoSearchEnabled");
-				emulator = new BroEmulator(id, name, path, iconFilename, configFilePath, website, startParameter,
+				emulator = new BroEmulator(id, name, shortName, path, iconFilename, configFilePath, website, startParameter,
 						supportedFileTypes, searchString, setupFileMatch, autoSearchEnabled);
 			} catch (SQLException e) {
 				e.printStackTrace();
@@ -227,23 +234,26 @@ public class BroPlatformDAO implements PlatformDAO {
 		String gameSearchModesString = "";
 		String supportedArchiveTypesString = "";
 		String supportedImageTypesString = "";
+		String gameCodeRegexesString = "";
 		for (String searchMode : p.getGameSearchModes()) {
 			gameSearchModesString += searchMode + " ";
 		}
-		for (String type : p.getSupportedArchiveTypes()) {
-			supportedArchiveTypesString += type + " ";
+		for (String archiveType : p.getSupportedArchiveTypes()) {
+			supportedArchiveTypesString += archiveType + " ";
 		}
-		for (String type : p.getSupportedImageTypes()) {
-			supportedImageTypesString += type + " ";
+		for (String imageType : p.getSupportedImageTypes()) {
+			supportedImageTypesString += imageType + " ";
 		}
-
+		for (String gameCodeRegex : p.getGameCodeRegexes()) {
+			gameCodeRegexesString += gameCodeRegex + " ";
+		}
 		Statement stmt = conn.createStatement();
 		String sql2 = "update platform set platform_name='" + p.getName() + "'," + "platform_iconFilename='"
 				+ p.getIconFileName() + "'," + "platform_defaultGameCover='" + p.getDefaultGameCover() + "',"
 				+ "platform_gameSearchModes='" + gameSearchModesString + "'," + "platform_searchFor='"
 				+ p.getSearchFor() + "'," + "platform_supportedArchiveTypes='" + supportedArchiveTypesString + "',"
 				+ "platform_supportedImageTypes='" + supportedImageTypesString + "'," + "platform_defaultEmulatorId="
-				+ p.getDefaultEmulatorId() + "," + "platform_autoSearchEnabled=" + p.isAutoSearchEnabled() + ""
+				+ p.getDefaultEmulatorId() + "," + "platform_autoSearchEnabled=" + p.isAutoSearchEnabled() + "platform_gameCodeRegexes='" + gameCodeRegexesString + "'"
 				+ " where platform_id=" + p.getId();
 		stmt.executeQuery(sql2);
 		conn.commit();

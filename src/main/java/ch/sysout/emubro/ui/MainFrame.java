@@ -1,11 +1,16 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Frame;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Image;
+import java.awt.Insets;
 import java.awt.Point;
 import java.awt.dnd.DropTargetListener;
 import java.awt.event.ActionEvent;
@@ -22,15 +27,14 @@ import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowFocusListener;
+import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 import javax.swing.AbstractAction;
 import javax.swing.AbstractButton;
@@ -60,9 +64,11 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.WindowConstants;
+import javax.swing.border.EmptyBorder;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.MenuEvent;
 import javax.swing.event.MenuListener;
+import javax.swing.plaf.basic.BasicMenuBarUI;
 
 import com.jgoodies.forms.factories.CC;
 import com.jgoodies.forms.factories.Paddings;
@@ -73,6 +79,7 @@ import ch.sysout.emubro.api.EmulatorListener;
 import ch.sysout.emubro.api.FilterListener;
 import ch.sysout.emubro.api.GameListener;
 import ch.sysout.emubro.api.GameViewListener;
+import ch.sysout.emubro.api.PlatformFromGameListener;
 import ch.sysout.emubro.api.PlatformListener;
 import ch.sysout.emubro.api.RunGameWithListener;
 import ch.sysout.emubro.api.TagListener;
@@ -84,6 +91,7 @@ import ch.sysout.emubro.api.event.GameRenamedEvent;
 import ch.sysout.emubro.api.event.GameSelectionEvent;
 import ch.sysout.emubro.api.event.PlatformEvent;
 import ch.sysout.emubro.api.event.TagEvent;
+import ch.sysout.emubro.api.filter.FilterGroup;
 import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.Platform;
@@ -97,6 +105,7 @@ import ch.sysout.emubro.impl.event.NavigationEvent;
 import ch.sysout.emubro.impl.model.BroEmulator;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.util.FileUtil;
+import ch.sysout.util.FontUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
@@ -112,7 +121,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	private static final long serialVersionUID = 1L;
 	private static final String TITLE = Messages.get(MessageConstants.APPLICATION_TITLE);
 	private JMenuBar mnb;
-	private Map<JMenu, AbstractButton[]> menuComponents;
 	private JMenu mnuFile;
 	private JMenu mnuView;
 	private JMenu mnuGames;
@@ -189,11 +197,11 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	private JRadioButtonMenuItem itmChangeToAll;
 	private JRadioButtonMenuItem itmChangeToFavorites;
 	private JRadioButtonMenuItem itmChangeToRecentlyPlayed;
-	private JMenu mnuSetCoverSize = new JMenu(Messages.get(MessageConstants.SET_COVER_SIZE));
+	private JMenu mnuSetCoverSize;
 	private JSlider sliderCoverSize = new JSlider(JSlider.HORIZONTAL);
 	private DetailChooserDialog dlgDetailChooser;
 	private ButtonBarPanel pnlButtonBar;
-	private GameFilterPanel pnlGameFilter;
+	public GameFilterPanel pnlGameFilter;
 	private MainPanel pnlMain;
 	private GameCountPanel pnlGameCount;
 	private JDialog dlgColumnWidth;
@@ -220,6 +228,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	private Icon iconSearchGameGreen;
 	private Icon iconSearchGameRed;
 
+	private ButtonBarButton btnShowHideNavigationPanel;
 	private ButtonBarButton btnOrganize;
 	private ButtonBarButton btnSettings;
 	private ButtonBarButton btnRunGame;
@@ -236,6 +245,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	private GameSettingsPopupMenu mnuGameSettings = new GameSettingsPopupMenu();
 
 	private ViewPanelManager viewManager;
+	private Color colorMenuBar;
 
 	public MainFrame(LookAndFeel defaultLookAndFeel, Explorer explorer) {
 		super(TITLE);
@@ -243,6 +253,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		this.explorer = explorer;
 		setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
 		setIconImages(getIcons());
+		//		setUndecorated(true);
 		initComponents();
 		createUI();
 		pnlMain.addDetailsFrameListener(this);
@@ -349,8 +360,34 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	}
 
 	private void initMenuBar() {
+		//		UIManager.put("MenuBar.background", Color.RED);
+		//		UIManager.put("Menu.background", colorMenuBar);
+		//		UIManager.put("MenuItem.background", colorMenuBar);
+		// change default selection colors
+		//		UIManager.put("Menu.selectionBackground", colorMenuBar);
+		//		UIManager.put("MenuItem.selectionBackground", colorMenuBar);
+
+		UIManager.put("MenuItem.acceleratorForeground", Color.WHITE);
+		UIManager.put("MenuItem.acceleratorSelectionForeground", Color.WHITE);
+
+		UIManager.put("Menu.arrowIcon", ImageUtil.getImageIconFrom(Icons.get("arrowRightOtherWhite", 1)));
+
+		UIManager.put("CheckBoxMenuItem.acceleratorForeground", Color.WHITE);
+		UIManager.put("CheckBoxMenuItem.acceleratorSelectionForeground", Color.WHITE);
+
 		mnb = new JMenuBar();
-		menuComponents = new HashMap<>();
+		colorMenuBar = new Color(IconStore.current().getButtonBarBackgroundImage().getRGB(0, 0));
+		mnb.setUI(new BasicMenuBarUI() {
+
+			@Override
+			public void paint(Graphics g, JComponent c) {
+				g.setColor(colorMenuBar);
+				g.fillRect(0, 0, c.getWidth(), c.getHeight());
+			}
+		});
+		mnb.setOpaque(false);
+
+		mnb.setBorder(BorderFactory.createEmptyBorder());
 		mnuFile = new JMenu(Messages.get(MessageConstants.MNU_FILE));
 		mnuView = new JMenu(Messages.get(MessageConstants.MNU_VIEW));
 		mnuGames = new JMenu(Messages.get(MessageConstants.MNU_GAMES));
@@ -417,6 +454,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmChangeToAll = new JRadioButtonMenuItem();
 		itmChangeToRecentlyPlayed = new JRadioButtonMenuItem();
 		itmChangeToFavorites = new JRadioButtonMenuItem();
+		mnuSetCoverSize = new JMenu(Messages.get(MessageConstants.SET_COVER_SIZE));
 		mnuManageTags = new JMenu(Messages.get("manageTags"));
 		mnuManageCovers = new JMenuItem(Messages.get(MessageConstants.MANAGE_COVERS) + "...");
 		itmAutoSearchTags = new JMenuItem(Messages.get(MessageConstants.AUTO_SEARCH_TAG));
@@ -426,24 +464,35 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmTrailerSearch = new JMenuItem(Messages.get("trailerSearch") + "...");
 		itmRenameGames = new JMenuItem(Messages.get("renameGames") + "...");
 		itmWebSearchSettings = new JMenuItem(Messages.get(MessageConstants.WEB_SEARCH_SETTINGS) + "...");
+
+		UIUtil.setForegroundDependOnBackground(colorMenuBar,
+				mnuFile, mnuView, mnuGames, mnuLanguage, mnuHelp);
 	}
 
 	private void initializeButtonBar() {
 		int size = ScreenSizeUtil.is3k() ? 32 : 24;
 		pnlButtonBar = new ButtonBarPanel();
+
+		//		int size2 = ScreenSizeUtil.is3k() ? 10 : 5;
+		//		Insets insets = new Insets(size2, size2, size2, size2);
+		btnShowHideNavigationPanel = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("barsWhite", size, size)));
+		btnShowHideNavigationPanel.setHorizontalTextPosition(SwingConstants.CENTER);
+		Font customFont = FontUtil.getCustomFont();
+		btnShowHideNavigationPanel.setFont(customFont);
+
 		btnOrganize = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("organize", size, size)), Messages.get(MessageConstants.ORGANIZE));
 		btnSettings = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("settings", size, size)), Messages.get(MessageConstants.SETTINGS));
 		btnRunGame = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("runGame", size, size)), Messages.get(MessageConstants.RUN_GAME));
-		btnMoreOptionsRunGame = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("arrowDownOther", 1)), "");
+		btnMoreOptionsRunGame = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("arrowDownOtherWhite", 1)), "");
 		btnRemoveGame = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("remove", size, size)), Messages.get(MessageConstants.REMOVE));
 		btnRenameGame = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("rename", size, size)), Messages.get(MessageConstants.RENAME));
 		btnGameProperties = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("gameProperties", size, size)), Messages.get(MessageConstants.GAME_PROPERTIES));
 		btnChangeView = new ButtonBarButton("", iconChangeView, null);
-		btnMoreOptionsChangeView = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("arrowDownOther", 1)), Messages.get(MessageConstants.MORE_OPTIONS));
+		btnMoreOptionsChangeView = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("arrowDownOtherWhite", 1)), Messages.get(MessageConstants.MORE_OPTIONS));
 		btnPreviewPane = new ButtonBarButton("", iconPreviewPaneHide, null);
 		btnPreviewPane.setActionCommand(GameViewConstants.HIDE_PREVIEW_PANE);
 		btnSetFilter = new ButtonBarButton("", iconSearchGame, Messages.get(MessageConstants.SET_FILTER));
-		buttonBarComponents = new JComponent[] { btnOrganize, btnSettings, btnRunGame, btnMoreOptionsRunGame,
+		buttonBarComponents = new JComponent[] { btnShowHideNavigationPanel, btnOrganize, btnSettings, btnRunGame, btnMoreOptionsRunGame,
 				btnRemoveGame, btnRenameGame,
 				btnGameProperties, btnChangeView, btnMoreOptionsChangeView, btnPreviewPane, btnSetFilter };
 		//		btnRunGame.setComponentPopupMenu(mnuGameSettings);
@@ -452,8 +501,11 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	}
 
 	private void initializeGameFilter() {
+		int size = ScreenSizeUtil.is3k() ? 10 : 5;
+		Insets insets = new Insets(size, size*2, size, size*2);
+		btnShowHideNavigationPanel.setBorder(new EmptyBorder(insets));
 		pnlGameFilter = new GameFilterPanel(explorer);
-		pnlGameFilter.setBorder(BorderFactory.createTitledBorder(""));
+		//		pnlGameFilter.setBorder(BorderFactory.createTitledBorder(""));
 		pnlGameFilter.setVisible(false);
 		Action focusSearchFieldAction = new AbstractAction("focusAction") {
 			private static final long serialVersionUID = 1L;
@@ -486,12 +538,12 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	private void createButtonBar() {
 		FormLayout layout = new FormLayout(
-				"pref, min, pref, min, pref, pref, min, pref, min, pref, "
+				"pref, min, pref, min, pref, min, pref, pref, min, pref, min, pref, "
 						+ "min, pref, min:grow, pref, pref, min, pref, min, pref",
 				"fill:default");
 		pnlButtonBar.setLayout(layout);
-		pnlButtonBar.setBorder(Paddings.DLU2);
-		int x[] = { 1, 3, 5, 6, 8, 10, 12, 14, 15, 17, 19 };
+		//		pnlButtonBar.setBorder(Paddings.DLU2);
+		int x[] = { 1, 3, 5, 7, 8, 10, 12, 14, 16, 17, 19, 21 };
 		int y = 1;
 		for (int i = 0; i < buttonBarComponents.length; i++) {
 			pnlButtonBar.add(buttonBarComponents[i], CC.xy(x[i], y));
@@ -723,12 +775,9 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 				itmLanguageFr);
 		for (Component buttonBarButton : buttonBarComponents) {
 			buttonBarButton.addMouseListener(this);
+			addMouseListeners(buttonBarButton);
 		}
-		addMouseListeners(btnOrganize, btnSettings, btnRunGame, btnMoreOptionsRunGame,
-				btnRemoveGame, btnRenameGame, btnGameProperties, btnSetFilter,
-				btnPreviewPane, btnChangeView, btnMoreOptionsChangeView);
 		addActionListeners(btnOrganize, btnChangeView, btnMoreOptionsChangeView, btnSetFilter);
-
 		pnlMain.addNavigationSplitPaneListener();
 		viewManager.addUpdateGameCountListener(this);
 	}
@@ -971,6 +1020,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	public void addRunGameListener(ActionListener l) {
 		btnRunGame.addActionListener(l);
+		pnlMain.getPreviewPane().addRunGameListener(l);
 		pnlMain.getPopupGame().addRunGameListener(l);
 	}
 
@@ -1130,14 +1180,31 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		add(pnlMain);
 		pnlGameCount.setMinimumSize(new Dimension(0, 0));
 
-		JPanel pnlGameCountWrapper = new JPanel(new BorderLayout());
-		pnlGameCountWrapper.setBorder(Paddings.DLU2);
-		pnlGameCountWrapper.add(pnlGameCount);
-
 		JPanel pnlGameCountSpecial = new JPanel(new BorderLayout());
+		pnlGameCountSpecial.setOpaque(false);
 		pnlGameCountSpecial.add(pnlGameCount.lblBlank, BorderLayout.WEST);
 		pnlGameCountSpecial.add(pnlGameCount.btnShowDetailsPane);
 		pnlGameCountSpecial.add(pnlGameCount.btnResize, BorderLayout.EAST);
+
+		JPanel pnlGameCountWrapper = new JPanel(new BorderLayout()) {
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			protected void paintComponent(Graphics g) {
+				super.paintComponent(g);
+				BufferedImage background = IconStore.current().getButtonBarBackgroundImage();
+				if (background != null) {
+					Graphics2D g2d = (Graphics2D) g.create();
+					int w = getWidth();
+					int h = getHeight();
+					g2d.drawImage(background, 0, 0, w, h, this);
+					g2d.dispose();
+				}
+			}
+		};
+		pnlGameCountWrapper.setOpaque(false);
+		pnlGameCountWrapper.setBorder(Paddings.DLU2);
+		pnlGameCountWrapper.add(pnlGameCount);
 		pnlGameCountWrapper.add(pnlGameCountSpecial, BorderLayout.EAST);
 
 		add(pnlGameCountWrapper, BorderLayout.SOUTH);
@@ -1149,7 +1216,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		mnuUpdateAvailable.setVisible(false);
 		itmApplicationUpdateAvailable.setVisible(false);
 		itmSignatureUpdateAvailable.setVisible(false);
-		addComponentsToJComponent(mnb, mnuFile, mnuView, mnuGames, /*mnuPlugins,*/ /*mnuLookAndFeel, */Box.createHorizontalGlue(), mnuUpdateAvailable, mnuLanguage, mnuHelp);
+		addComponentsToJComponent(mnb, mnuFile, mnuView, mnuGames, /*mnuPlugins, mnuLookAndFeel,*/ Box.createHorizontalGlue(), mnuUpdateAvailable, mnuLanguage, mnuHelp);
 		setJMenuBar(mnb);
 	}
 
@@ -1190,7 +1257,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		ButtonGroup grp = new ButtonGroup();
 
 		JRadioButtonMenuItem rdb;
-		items.add(rdb = new JRadioButtonMenuItem(defaultLookAndFeel.getName()));
+		String lookAndFeelName = (defaultLookAndFeel == null) ? "" : defaultLookAndFeel.getName();
+		items.add(rdb = new JRadioButtonMenuItem(lookAndFeelName));
 		rdb.setSelected(true);
 		grp.add(rdb);
 		rdb.addActionListener(new ActionListener() {
@@ -1241,12 +1309,22 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	private void addComponentsToJComponent(JComponent parentComponent, Component... components) {
 		for (Component c : components) {
+			if (c instanceof JComponent) {
+				((JComponent) c).setOpaque(true);
+				UIUtil.setForegroundDependOnBackground(colorMenuBar, c);
+				c.setBackground(colorMenuBar);
+			}
 			parentComponent.add(c);
 		}
 	}
 
 	private void addComponentsToJComponent(JComponent parentComponent, List<Component> components) {
 		for (Component c : components) {
+			if (c instanceof JComponent) {
+				((JComponent) c).setOpaque(true);
+				UIUtil.setForegroundDependOnBackground(colorMenuBar, c);
+				c.setBackground(colorMenuBar);
+			}
 			parentComponent.add(c);
 		}
 	}
@@ -1660,19 +1738,15 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		return viewManager.isPlatformFilterSet();
 	}
 
-	public boolean isTagFilterSet() {
-		return viewManager.isTagFilterSet();
-	}
-
 	@Override
 	public void gameSelected(GameSelectionEvent e) {
 		boolean b = !e.getGames().isEmpty();
 		pnlButtonBar.gameSelected(e);
-		btnRunGame.setVisible(b);
-		btnMoreOptionsRunGame.setVisible(b);
-		btnGameProperties.setVisible(b);
-		btnRemoveGame.setVisible(b);
-		btnRenameGame.setVisible(b);
+		btnRunGame.setEnabled(b);
+		btnMoreOptionsRunGame.setEnabled(b);
+		btnGameProperties.setEnabled(b);
+		btnRemoveGame.setEnabled(b);
+		btnRenameGame.setEnabled(b);
 		pnlMain.gameSelected(e);
 	}
 
@@ -1876,10 +1950,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		return pnlMain.getSplNavigationPane();
 	}
 
-	public JSplitPane getSplPreviewPane() {
-		return pnlMain.getSplPreviewPane();
-	}
-
 	public JSplitPane getSplGameDetailsPane() {
 		return pnlMain.getSplGameDetailsPane();
 	}
@@ -1892,6 +1962,10 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	public void addFilterListener(FilterListener l) {
 		pnlGameFilter.addFilterListener(l);
+	}
+
+	public void addSaveCurrentFiltersListener(ActionListener l) {
+		pnlGameFilter.addSaveCurrentFiltersListener(l);
 	}
 
 	public void addSortGameAscendingListListener(ActionListener l) {
@@ -1975,13 +2049,17 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		});
 	}
 
-	public void initPlatforms(String emuBroCoverHome, List<Platform> platforms) {
-		viewManager.initPlatforms(emuBroCoverHome, platforms);
+	public void initPlatforms(List<Platform> platforms, String platformsDirectory) {
+		viewManager.initPlatforms(platforms, platformsDirectory);
 	}
 
 	public void initTags(List<Tag> tags) {
 		viewManager.initTags(tags);
 		pnlMain.initDefaultTags(tags);
+	}
+
+	public void initFilterGroups(List<FilterGroup> filterGroups) {
+		pnlGameFilter.initFilterGroups(filterGroups);
 	}
 
 	public int getRowHeight() {
@@ -2218,6 +2296,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	public void initGames(List<Game> games) {
 		List<Platform> sortedPlatforms = new ArrayList<>();
+		pnlGameFilter.initTags(null);
 		for (Game game : games) {
 			int platformId = game.getPlatformId();
 			boolean addPlatform = true;
@@ -2379,7 +2458,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	}
 
 	public int getSplPreviewPaneWidth() {
-		return pnlMain.getWidth() - pnlMain.getSplPreviewPane().getDividerLocation();
+		return pnlMain.getWidth() - pnlMain.getSplPreviewPaneDividerLocation();
 	}
 
 	public int getSplDetailsPaneHeight() {
@@ -2528,10 +2607,12 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	public void tagAdded(TagEvent e) {
 		pnlMain.tagAdded(e);
+		pnlGameFilter.tagAddedToGame(e);
 	}
 
 	public void tagRemoved(TagEvent e) {
 		pnlMain.tagRemoved(e);
+		pnlGameFilter.tagRemovedFromGame(e);
 		updateFilter();
 	}
 
@@ -2549,5 +2630,17 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	public void showSystemInformations(String... informations) {
 		pnlGameCount.showSystemInformations(informations);
+	}
+
+	public void addPlatformToFilterListener(PlatformFromGameListener l) {
+		pnlMain.getPreviewPane().addPlatformToFilterListener(l);
+	}
+
+	public int getSplPreviewPaneDividerLocation() {
+		return pnlMain.getSplPreviewPaneDividerLocation();
+	}
+
+	public void setSplPreviewPaneDividerLocation(int divLocation) {
+		pnlMain.setSplPreviewPaneDividerLocation(divLocation);
 	}
 }

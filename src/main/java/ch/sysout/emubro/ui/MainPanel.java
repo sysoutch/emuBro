@@ -1,6 +1,7 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -15,6 +16,7 @@ import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
+import java.awt.event.MouseMotionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
@@ -38,8 +40,10 @@ import javax.swing.JSplitPane;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.WindowConstants;
+import javax.swing.border.TitledBorder;
 import javax.swing.event.ChangeListener;
 import javax.swing.plaf.SplitPaneUI;
+import javax.swing.plaf.basic.BasicSplitPaneDivider;
 import javax.swing.plaf.basic.BasicSplitPaneUI;
 
 import com.jgoodies.forms.factories.Paddings;
@@ -133,6 +137,8 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 
 	protected int minimumPreviewPaneWidth = 96;
 
+	protected BasicSplitPaneDivider basicSplitPaneDivider;
+
 	public MainPanel(Explorer explorer, ViewPanelManager viewManager, GameSettingsPopupMenu mnuGameSettings) {
 		super(new BorderLayout());
 		this.explorer = explorer;
@@ -166,6 +172,19 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				//								lastHeight = frameDetailsPane.getHeight();
 			};
 		};
+		pnlPreviewPane.addResizePreviewPaneListener(new MouseMotionListener() {
+
+			@Override
+			public void mouseMoved(MouseEvent e) {
+				// TODO Auto-generated method stub
+
+			}
+
+			@Override
+			public void mouseDragged(MouseEvent e) {
+				splCurrentViewAndPreviewPane.setDividerLocation(e.getXOnScreen());
+			}
+		});
 	}
 
 	public void initDefaultTags(List<Tag> tags) {
@@ -180,6 +199,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 	}
 
 	public void addRunGameWithListener(RunGameWithListener l) {
+		pnlPreviewPane.addRunGameWithListener(l);
 		popupGame.addRunGameWithListener(l);
 	}
 
@@ -269,6 +289,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				frameDetailsPane.addWindowListener(frameDetailsWindowAdapter);
 
 				JPanel pnlRemember = new JPanel(new GridLayout(1, 1));
+				pnlRemember.setOpaque(false);
 				pnlRemember.setBorder(Paddings.DLU2);
 				chkRememberDetailsFrameSizeAndLocation = new JCheckBox(Messages.get(MessageConstants.REMEMBER_WINDOW_SIZE_AND_POSITION));
 				pnlRemember.add(chkRememberDetailsFrameSizeAndLocation);
@@ -339,16 +360,24 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 		if (pnlPreviewPane == null) {
 			pnlPreviewPane = new PreviewPanePanel(explorer, popupGame, popupView);
 		}
-		pnlPreviewPane.setMinimumSize(new Dimension(0, 0));
+		//		pnlPreviewPane.setMinimumSize(new Dimension(0, 0));
 		splCurrentViewAndPreviewPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, true,
 				viewManager.getCurrentViewPanel(), pnlPreviewPane) {
 			private static final long serialVersionUID = 1L;
 
-			@Override
-			public int getMinimumDividerLocation() {
-				return ScreenSizeUtil.adjustValueToResolution(384) - splNavigationAndCurrentViewAndPreviewPane.getDividerLocation();
-			}
+			//			@Override
+			//			public int getMinimumDividerLocation() {
+			//				//				return ScreenSizeUtil.adjustValueToResolution(384) - splNavigationAndCurrentViewAndPreviewPane.getDividerLocation();
+			//				return getWidth() - pnlPreviewPane.getCustomDividerSize();
+			//			}
 		};
+		BasicSplitPaneDivider divider = ((BasicSplitPaneUI) splCurrentViewAndPreviewPane.getUI()).getDivider();
+		TitledBorder titled = BorderFactory.createTitledBorder("\u2630");
+		titled.setTitleJustification(TitledBorder.CENTER);
+		titled.setTitlePosition(TitledBorder.TOP);
+		titled.setTitleFont(new Font(Font.DIALOG, Font.PLAIN, 12));
+		titled.setTitleColor(Color.BLACK);
+		divider.setBorder(titled);
 		splCurrentViewAndPreviewPane.getRightComponent().setVisible(false);
 		splCurrentViewAndPreviewPane.setBorder(BorderFactory.createEmptyBorder());
 		splCurrentViewAndPreviewPane.setResizeWeight(1);
@@ -368,13 +397,32 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 					scrollBarWidth = ((Integer)UIManager.get("ScrollBar.width")).intValue();
 				}
 				int dividerSize = splNavigationAndCurrentViewAndPreviewPane.getDividerSize();
-				int border = pnlNavigation.getButtonInsets() + scrollBarWidth + dividerSize;
+				int border = pnlNavigation.getButtonBorderSize() + scrollBarWidth + dividerSize;
 				return ScreenSizeUtil.adjustValueToResolution(ScreenSizeUtil.adjustValueToResolution(32) + border);
 			}
 		};
 		splNavigationAndCurrentViewAndPreviewPane.getLeftComponent().setVisible(false);
 		splNavigationAndCurrentViewAndPreviewPane.setBorder(BorderFactory.createEmptyBorder());
 		splNavigationAndCurrentViewAndPreviewPane.setResizeWeight(0);
+
+		BasicSplitPaneDivider divider = (BasicSplitPaneDivider) splNavigationAndCurrentViewAndPreviewPane.getComponent(2);
+		divider.setBorder(BorderFactory.createEmptyBorder());
+
+		//		JScrollPane sp = pnlNavigation.getSpNavigationButtons();
+		//		sp.addMouseMotionListener(new MouseAdapter() {
+		//			@Override
+		//			public void mouseMoved(MouseEvent e) {
+		//				System.err.println(e.getPoint().x + "<=" + (pnlNavigation.getWidth()));
+		//				int pointX = e.getPoint().x;
+		//				if (pointX >= (pnlNavigation.getWidth()-20)
+		//						&& pointX <= (pnlNavigation.getWidth())) {
+		//					Cursor cursor = Cursor.getPredefinedCursor(Cursor.E_RESIZE_CURSOR);
+		//					setCursor(cursor);
+		//				} else {
+		//					setCursor(null);
+		//				}
+		//			}
+		//		});
 	}
 
 	public void addNavigationSplitPaneListener() {
@@ -401,7 +449,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 						scrollBarWidth = ((Integer)UIManager.get("ScrollBar.width")).intValue();
 					}
 					int dividerSize = splNavigationAndCurrentViewAndPreviewPane.getDividerSize();
-					int border = pnlNavigation.getButtonInsets() + scrollBarWidth + dividerSize;
+					int border = pnlNavigation.getButtonBorderSize() + scrollBarWidth + dividerSize;
 					int widthWithTextOnOneLine = textWidth + iconWidth + border + button.getIconTextGap();
 					int widthWithTextBottom = ((textWidth >= iconWidth) ? textWidth : iconWidth) + border;
 					if (newValue < iconWidth + border) {
@@ -476,7 +524,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 			break;
 		case ViewPanel.TABLE_VIEW:
 			if (pnlTableView == null) {
-				pnlTableView = new TableViewPanel(explorer, IconStore.current(), popupGame, popupView);
+				pnlTableView = new TableViewPanel(explorer, viewManager, popupGame, popupView);
 				viewManager.initializeViewPanel(pnlTableView, games);
 			}
 			viewManager.setCurrentViewPanel(pnlTableView);
@@ -525,7 +573,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 	}
 
 	private void createUI() {
-		setBorder(BorderFactory.createLoweredSoftBevelBorder());
+		//		setBorder(BorderFactory.createLoweredSoftBevelBorder());
 		FormLayout layout = new FormLayout("min:grow",
 				"fill:min:grow");
 		setLayout(layout);
@@ -539,6 +587,27 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				return ScreenSizeUtil.adjustValueToResolution(128);
 			}
 		};
+		//		splDetailsPane.setUI(new BasicSplitPaneUI() {
+		//			@Override
+		//			public BasicSplitPaneDivider createDefaultDivider() {
+		//				return basicSplitPaneDivider = new BasicSplitPaneDivider(this) {
+		//					private static final long serialVersionUID = 1L;
+		//
+		//					@Override
+		//					public void setBorder(Border b) {
+		//						super.setBorder(b);
+		//					}
+		//				};
+		//			}
+		//		});
+		BasicSplitPaneDivider divider = ((BasicSplitPaneUI) splDetailsPane.getUI()).getDivider();
+		TitledBorder titled = BorderFactory.createTitledBorder("\u2630");
+		titled.setTitleJustification(TitledBorder.CENTER);
+		titled.setTitlePosition(TitledBorder.TOP);
+		titled.setTitleFont(new Font(Font.DIALOG, Font.PLAIN, 12));
+		titled.setTitleColor(Color.BLACK);
+		divider.setBorder(titled);
+
 		addDividerDraggedListeners();
 		splDetailsPane.setBorder(BorderFactory.createEmptyBorder());
 		splDetailsPane.getBottomComponent().setVisible(false);
@@ -626,9 +695,10 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 	}
 
 	public void adjustSplitPaneDividerSizes() {
-		int dividerSize = splDetailsPane.getDividerSize();
-		int value = ScreenSizeUtil.adjustValueToResolution(dividerSize);
-		splDetailsPane.setDividerSize(value);
+		//				int dividerSize = splDetailsPane.getDividerSize();
+		//				int value = ScreenSizeUtil.adjustValueToResolution(dividerSize);
+		int value = 0;
+		splDetailsPane.setDividerSize(16);
 		splCurrentViewAndPreviewPane.setDividerSize(value);
 		splNavigationAndCurrentViewAndPreviewPane.setDividerSize(value);
 	}
@@ -1239,10 +1309,6 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 		return splNavigationAndCurrentViewAndPreviewPane;
 	}
 
-	public JSplitPane getSplPreviewPane() {
-		return splCurrentViewAndPreviewPane;
-	}
-
 	public JSplitPane getSplGameDetailsPane() {
 		return splDetailsPane;
 	}
@@ -1745,5 +1811,13 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 
 	public void addCopyGamePathListener(ActionListener l) {
 		popupGame.addCopyGamePathListener(l);
+	}
+
+	public int getSplPreviewPaneDividerLocation() {
+		return splCurrentViewAndPreviewPane.getDividerLocation();
+	}
+
+	public void setSplPreviewPaneDividerLocation(int divLocation) {
+		splCurrentViewAndPreviewPane.setDividerLocation(divLocation);
 	}
 }

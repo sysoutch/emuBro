@@ -3,6 +3,7 @@ package ch.sysout.emubro;
 import java.awt.Point;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -12,7 +13,6 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.cert.CertificateException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import javax.net.ssl.SSLException;
 import javax.swing.JOptionPane;
 import javax.swing.LookAndFeel;
 import javax.swing.UIManager;
@@ -35,6 +34,7 @@ import com.google.gson.reflect.TypeToken;
 import com.jgoodies.looks.windows.WindowsLookAndFeel;
 
 import ch.sysout.emubro.api.dao.ExplorerDAO;
+import ch.sysout.emubro.api.filter.FilterGroup;
 import ch.sysout.emubro.api.model.Emulator;
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.Platform;
@@ -45,6 +45,9 @@ import ch.sysout.emubro.controller.UpdateDatabaseBro;
 import ch.sysout.emubro.discord.ReadyEvent;
 import ch.sysout.emubro.impl.BroDatabaseVersionMismatchException;
 import ch.sysout.emubro.impl.dao.BroExplorerDAO;
+import ch.sysout.emubro.impl.event.BroFilterEvent;
+import ch.sysout.emubro.impl.filter.BroCriteria;
+import ch.sysout.emubro.impl.filter.BroFilterGroup;
 import ch.sysout.emubro.impl.model.BroExplorer;
 import ch.sysout.emubro.impl.model.BroPlatform;
 import ch.sysout.emubro.impl.model.BroTag;
@@ -54,17 +57,6 @@ import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.util.FileUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ValidationUtil;
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
 import net.arikia.dev.drpc.DiscordEventHandlers;
 import net.arikia.dev.drpc.DiscordEventHandlers.Builder;
 import net.arikia.dev.drpc.DiscordRPC;
@@ -90,15 +82,17 @@ public class Main {
 		System.setProperty("java.util.Arrays.useLegacyMergeSort", "true");
 		System.setProperty("apple.laf.useScreenMenuBar", "true");
 		setLookAndFeel();
+
 		dlgSplashScreen = new SplashScreenWindow(
 				Messages.get(MessageConstants.INIT_APPLICATION, Messages.get(MessageConstants.APPLICATION_TITLE)));
 		dlgSplashScreen.setLocationRelativeTo(null);
 		dlgSplashScreen.setVisible(true);
-		initDiscord();
+		String clientId = "560036334744371200";
+		initDiscord(clientId);
 		initializeApplication(args);
 	}
 
-	private static void initDiscord() {
+	private static void initDiscord(String clientId) {
 		DiscordEventHandlers handlers = new Builder().setReadyEventHandler(new ReadyEvent()).build();
 		DiscordRPC.discordInitialize(clientId, handlers, true);
 		presence = new DiscordRichPresence.Builder("");
@@ -149,6 +143,21 @@ public class Main {
 					List<Tag> tags = explorerDAO.getTags();
 					explorer.setTags(tags);
 
+					List<FilterGroup> filterGroups = explorerDAO.getFilterGroups();
+					List<Tag> tagList = new ArrayList<>();
+					List<Tag> tagListFull = new ArrayList<>();
+					for (Tag t : tags) {
+						if (t.getId() == 2) {
+							tagListFull.add(t);
+						}
+					}
+					filterGroups.add(new BroFilterGroup("mario is cool", new BroFilterEvent(0, new BroCriteria("mario", tagList))));
+					filterGroups.add(new BroFilterGroup("donkey kong is cool", new BroFilterEvent(0, new BroCriteria("donkey", tagList))));
+					filterGroups.add(new BroFilterGroup("snes is cool", new BroFilterEvent(21, new BroCriteria("", tagList))));
+					filterGroups.add(new BroFilterGroup("tags are cool", new BroFilterEvent(0, new BroCriteria("", tagListFull))));
+
+					explorer.setFilterGroups(filterGroups);
+
 					String defaultResourcesDir = explorer.getResourcesPath();
 					File file = new File(defaultResourcesDir);
 					if (!file.exists()) {
@@ -181,9 +190,10 @@ public class Main {
 					// explorer.setDefaultPlatforms(defaultPlatforms);
 					explorer.setUpdatedTags(updatedTags);
 					mainFrame = new MainFrame(defaultLookAndFeel, explorer);
-					String emuBroCoverHome = explorer.getResourcesPath() + "/platforms/images/emulators";
-					mainFrame.initPlatforms(emuBroCoverHome, platforms);
+					String platformsDirectory = explorer.getPlatformsDirectory();
+					mainFrame.initPlatforms(platforms, platformsDirectory);
 					mainFrame.initTags(tags);
+					mainFrame.initFilterGroups(filterGroups);
 
 					final BroController controller = new BroController(explorerDAO, explorer, mainFrame, presence);
 					controller.addOrGetPlatformsAndEmulators(defaultPlatforms);
@@ -252,10 +262,11 @@ public class Main {
 
 					boolean emulatorsFound = false;
 					for (Platform p : platforms) {
-						for (Emulator emu : p.getEmulators()) {
-							if (emu.isInstalled()) {
-								emulatorsFound = true;
-								break;
+						if (!emulatorsFound) {
+							for (Emulator emu : p.getEmulators()) {
+								if (emu.isInstalled()) {
+									emulatorsFound = true;
+								}
 							}
 						}
 					}
@@ -326,13 +337,12 @@ public class Main {
 						// controller.adjustSplitPaneLocations(mainFrame.getWidth(),
 						// mainFrame.getHeight());
 					}
-					initializeNetty();
 				} catch (Exception e1) {
 					hideSplashScreen();
 					e1.printStackTrace();
 					String message = "An unhandled Exception occured during "
 							+ Messages.get(MessageConstants.APPLICATION_TITLE) + " startup.\n"
-							+ "Maybe a re-installation may help to fix the problem.\n\n" + "Exception:\n" + ""
+							+ "Maybe there are more informations in the message below.\n\n" + "Exception:\n" + ""
 							+ e1.getMessage();
 					JOptionPane.showMessageDialog(dlgSplashScreen, message, "Initializing failure",
 							JOptionPane.ERROR_MESSAGE);
@@ -383,65 +393,6 @@ public class Main {
 				System.exit(0);
 			}
 		}
-	}
-
-	static final boolean SSL = System.getProperty("ssl") != null;
-	static final int PORT = Integer.parseInt(System.getProperty("port", SSL? "8443" : "8088"));
-
-	private static void initializeNetty() {
-		//		try {
-		//			new DiscardServer(port).run();
-		//
-		//		} catch (Exception e) {
-		//			e.printStackTrace();
-		//		}
-
-		// Configure SSL.
-		SslContext sslCtx = null;
-		if (SSL) {
-			SelfSignedCertificate ssc;
-			try {
-				ssc = new SelfSignedCertificate();
-				try {
-					sslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
-				} catch (SSLException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			} catch (CertificateException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
-		} else {
-			sslCtx = null;
-		}
-		// Configure the server.
-		EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-		EventLoopGroup workerGroup = new NioEventLoopGroup();
-		try {
-			ServerBootstrap b = new ServerBootstrap();
-			b.option(ChannelOption.SO_BACKLOG, 1024);
-			b.group(bossGroup, workerGroup)
-			.channel(NioServerSocketChannel.class)
-			.handler(new LoggingHandler(LogLevel.INFO))
-			.childHandler(new HttpHelloWorldServerInitializer(sslCtx, explorer));
-
-			try {
-				Channel ch = b.bind(PORT).sync().channel();
-				System.err.println("Open your web browser and navigate to " +
-						(SSL? "https" : "http") + "://127.0.0.1:" + PORT + '/');
-				ch.closeFuture().sync();
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		} finally {
-			bossGroup.shutdownGracefully();
-			workerGroup.shutdownGracefully();
-		}
-
-		//		ExecutorService executor = Executors.newFixedThreadPool(10);
-		//		executor.execute(new FileServer(8088, executor));
 	}
 
 	private static void downloadResourceFolder(String version) throws IOException {
@@ -554,29 +505,40 @@ public class Main {
 
 	public static List<BroPlatform> initDefaultPlatforms() throws FileNotFoundException {
 		List<BroPlatform> platforms = new ArrayList<>();
-		String defaultPlatformsFilePath = explorer.getResourcesPath() + "/platforms/config";
+		String defaultPlatformsFilePath = explorer.getResourcesPath() + "/platforms";
 		File dir = new File(defaultPlatformsFilePath);
 		if (!dir.exists()) {
 			throw new FileNotFoundException("directory does not exist: " + defaultPlatformsFilePath);
 		}
-		for (File f : FileUtils.listFiles(dir, new String[] { "json" }, false)) {
-			try {
-				InputStream is = new FileInputStream(f);
-				BufferedReader br = new BufferedReader(new InputStreamReader(is));
-				java.lang.reflect.Type collectionType = new TypeToken<BroPlatform>() {
-				}.getType();
-				Gson gson = new Gson();
+		FileFilter fileFilter = new FileFilter() {
 
-				platforms.add((BroPlatform) gson.fromJson(br, collectionType));
+			@Override
+			public boolean accept(File pathname) {
+				return pathname.isDirectory();
+			}
+		};
+		for (File fDir : dir.listFiles(fileFilter)) {
+			File file = new File(fDir.getAbsolutePath() + File.separator + "config.json");
+			if (!file.exists()) {
+				// TODO handle file config.json doesn't exist
+			} else {
 				try {
-					br.close();
-				} catch (IOException e) {
+					InputStream is = new FileInputStream(file);
+					BufferedReader br = new BufferedReader(new InputStreamReader(is));
+					java.lang.reflect.Type collectionType = new TypeToken<BroPlatform>() {
+					}.getType();
+					Gson gson = new Gson();
+					platforms.add((BroPlatform) gson.fromJson(br, collectionType));
+					try {
+						br.close();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				} catch (FileNotFoundException e1) {
 					// TODO Auto-generated catch block
-					e.printStackTrace();
+					e1.printStackTrace();
 				}
-			} catch (FileNotFoundException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
 			}
 		}
 		return platforms;
@@ -622,7 +584,4 @@ public class Main {
 		}
 		return tags;
 	}
-
-	private static final String clientId = "560036334744371200";
-	private static String botName = "emuBro";
 }

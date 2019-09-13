@@ -7,5 +7,5 @@ public interface FilterEvent {
 	int getPlatformId();
 	boolean isPlatformFilterSet();
 	boolean isGameFilterSet();
-	boolean isTagFilterSet();
+	boolean hasTags();
 }

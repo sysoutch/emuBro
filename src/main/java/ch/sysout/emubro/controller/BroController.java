@@ -7,6 +7,7 @@ import java.awt.Dialog.ModalityType;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Frame;
+import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.HeadlessException;
 import java.awt.Image;
@@ -55,6 +56,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
@@ -67,12 +69,18 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.net.URLConnection;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileChannel.MapMode;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CodingErrorAction;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.sql.SQLException;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -88,13 +96,13 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
-import java.util.Scanner;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -103,12 +111,17 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 
 import javax.imageio.ImageIO;
+import javax.servlet.MultipartConfigElement;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.Part;
 import javax.swing.AbstractButton;
 import javax.swing.Action;
 import javax.swing.BorderFactory;
@@ -132,6 +145,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSlider;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
+import javax.swing.JTextField;
 import javax.swing.JToggleButton;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
@@ -157,7 +171,6 @@ import javax.xml.transform.stream.StreamResult;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.io.LineIterator;
 import org.apache.commons.io.filefilter.IOFileFilter;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -198,6 +211,7 @@ import ch.sysout.emubro.api.event.FilterEvent;
 import ch.sysout.emubro.api.event.GameSelectionEvent;
 import ch.sysout.emubro.api.event.PlatformEvent;
 import ch.sysout.emubro.api.event.TagEvent;
+import ch.sysout.emubro.api.filter.FilterGroup;
 import ch.sysout.emubro.api.model.Emulator;
 import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.api.model.Game;
@@ -209,6 +223,7 @@ import ch.sysout.emubro.impl.BroGameAlreadyExistsException;
 import ch.sysout.emubro.impl.BroGameDeletedException;
 import ch.sysout.emubro.impl.event.BroEmulatorAddedEvent;
 import ch.sysout.emubro.impl.event.BroEmulatorRemovedEvent;
+import ch.sysout.emubro.impl.event.BroFilterEvent;
 import ch.sysout.emubro.impl.event.BroGameAddedEvent;
 import ch.sysout.emubro.impl.event.BroGameRemovedEvent;
 import ch.sysout.emubro.impl.event.BroGameRenamedEvent;
@@ -216,6 +231,7 @@ import ch.sysout.emubro.impl.event.BroGameSelectionEvent;
 import ch.sysout.emubro.impl.event.BroPlatformAddedEvent;
 import ch.sysout.emubro.impl.event.BroTagAddedEvent;
 import ch.sysout.emubro.impl.event.NavigationEvent;
+import ch.sysout.emubro.impl.filter.BroFilterGroup;
 import ch.sysout.emubro.impl.model.BroEmulator;
 import ch.sysout.emubro.impl.model.BroGame;
 import ch.sysout.emubro.impl.model.BroPlatform;
@@ -264,6 +280,8 @@ import ch.sysout.util.UIUtil;
 import ch.sysout.util.ValidationUtil;
 import net.arikia.dev.drpc.DiscordRPC;
 import net.arikia.dev.drpc.DiscordRichPresence.Builder;
+import spark.Request;
+import spark.Spark;
 
 public class BroController implements ActionListener, PlatformListener, EmulatorListener, TagListener,
 GameSelectionListener, BrowseComputerListener {
@@ -331,7 +349,8 @@ GameSelectionListener, BrowseComputerListener {
 			"lastFrameDetailsPaneY",					// 30
 			"lastPnlDetailsPreferredWidth",
 			"lastPnlDetailsPreferredHeight",
-			"navigationPaneState"
+			"navigationPaneState",
+			"undecorated"
 	};
 
 	private SortedListModel<Platform> mdlPropertiesLstPlatforms = new SortedListModel<>();
@@ -377,6 +396,14 @@ GameSelectionListener, BrowseComputerListener {
 	private ConfigWizardDialog dlgConfigWizard;
 	private File lastDirFromFileChooser;
 	private Builder discordRpc;
+	private String storageDirectory;
+	private List<Integer> alreadyCheckedPlatformIds = new ArrayList<>();
+	private ExecutorService executor = Executors.newCachedThreadPool();
+	Charset defaultCharset = Charset.defaultCharset();
+	Charset iso88591Charset = Charset.forName("ISO-8859-1");
+	private CharsetDecoder decoder = iso88591Charset.newDecoder()
+			.onMalformedInput(CodingErrorAction.REPLACE).onUnmappableCharacter(CodingErrorAction.REPLACE)
+			.replaceWith(".");
 
 	public BroController(ExplorerDAO explorerDAO, Explorer model, MainFrame view, Builder discordRpc) {
 		this.explorerDAO = explorerDAO;
@@ -385,8 +412,175 @@ GameSelectionListener, BrowseComputerListener {
 		this.discordRpc = discordRpc;
 		explorer.setSearchProcessComplete(explorerDAO.isSearchProcessComplete());
 		platformComparator = new PlatformComparator(explorer);
+		initSpark();
 		// pnlMain.initializeViewPanel();
 		// pnlMain.retrieveNewestAppVersion();
+	}
+
+	private void initSpark() {
+		storageDirectory = System.getProperty("user.dir") + File.separator + "emuBro-resources";
+		Spark.staticFileLocation("/webapp");
+		//		Spark.staticFiles.expireTime(600); // ten minutes
+
+		File storageDir = new File(storageDirectory);
+		if (!storageDir.isDirectory()) {
+			return;
+		}
+		Spark.post("/upload", (req, res) -> uploadFile(req));
+		Spark.post("/game/:id/run", (req, res) -> runGame(req.params(":id")));
+		Spark.post("/game/:id/select", (req, res) -> selectGame(req.params(":id")));
+		Spark.get("/download/:file", (req, res) -> downloadFile(req.params(":file")));
+		Spark.get("/gameCover/:gameId", (req, res) -> {
+			int gameId = Integer.valueOf(req.params(":gameId"));
+
+			HttpServletResponse raw = res.raw();
+			raw.setHeader("Content-Disposition", "attachment; filename=gamecover.png");
+
+			ImageIcon icon = IconStore.current().getGameCover(gameId);
+			BufferedImage bi = new BufferedImage(icon.getIconWidth(), icon.getIconHeight(),
+					BufferedImage.TYPE_INT_ARGB);
+			Graphics g = bi.createGraphics();
+			icon.paintIcon(null, g, 0, 0);
+			g.dispose();
+			try (OutputStream out = res.raw().getOutputStream()) {
+				ImageIO.write(bi, "png", out);
+				bi.flush();
+				out.close();
+				return raw;
+			}
+		});
+		Spark.get("/platformIcon/:platformId", (req, res) -> {
+			int platformId = Integer.valueOf(req.params(":platformId"));
+
+			HttpServletResponse raw = res.raw();
+			raw.setHeader("Content-Disposition", "attachment; filename="+explorer.getPlatform(platformId).getName()+".png");
+
+			ImageIcon icon = IconStore.current().getPlatformIcon(platformId);
+			BufferedImage bi = new BufferedImage(icon.getIconWidth(), icon.getIconHeight(),
+					BufferedImage.TYPE_INT_ARGB);
+			Graphics g = bi.createGraphics();
+			icon.paintIcon(null, g, 0, 0);
+			g.dispose();
+			try (OutputStream out = res.raw().getOutputStream()) {
+				ImageIO.write(bi, "png", out);
+				bi.flush();
+				out.close();
+				return raw;
+			}
+		});
+		Spark.get("/games", (req, res) -> listGames());
+		Spark.get("/current_games", (req, res) -> listGames(true));
+		Spark.get("/platforms", (req, res) -> listPlatforms());
+		Spark.get("/platforms/:id", (req, res) -> listPlatform(req.params(":id")));
+		Spark.get("/currentGames", (req, res) -> listGames(true));
+
+		Spark.delete("/delete/:file", (req, res) -> deleteFile(req.params(":file")));
+	}
+
+	private Object getPlatformIcon(String params) {
+		return null;
+	}
+
+	private String runGame(String id) {
+		int gameId = Integer.valueOf(id);
+		explorer.setCurrentGames(explorer.getGame(gameId));
+		SwingUtilities.invokeLater(new Runnable() {
+
+			@Override
+			public void run() {
+				view.getViewManager().selectGame(gameId);
+				runGame();
+			}
+		});
+		return "game with id " + id + " has been started";
+	}
+
+	private String selectGame(String id) {
+		int gameId = Integer.valueOf(id);
+		explorer.setCurrentGames(explorer.getGame(gameId));
+		SwingUtilities.invokeLater(new Runnable() {
+
+			@Override
+			public void run() {
+				view.getViewManager().selectGame(gameId);
+			}
+		});
+		return "game with id " + id + " has been selected";
+	}
+
+	private String uploadFile(Request request) {
+		// TO allow for multipart file uploads
+		request.attribute("org.eclipse.jetty.multipartConfig", new MultipartConfigElement(""));
+
+		try {
+			// "file" is the key of the form data with the file itself being the value
+			Part filePart = request.raw().getPart("file");
+			// The name of the file user uploaded
+			String uploadedFileName = filePart.getSubmittedFileName();
+			InputStream stream = filePart.getInputStream();
+
+			// Write stream to file under storage folder
+			Files.copy(stream, Paths.get(storageDirectory).resolve(uploadedFileName),
+					StandardCopyOption.REPLACE_EXISTING);
+		} catch (IOException | ServletException e) {
+			return "Exception occurred while uploading file" + e.getMessage();
+		}
+
+		return "File successfully uploaded";
+	}
+
+	private String downloadFile(String fileName) {
+		Path filePath = Paths.get(storageDirectory).resolve(fileName);
+		File file = filePath.toFile();
+		if (file.exists()) {
+			try {
+				// Read from file and join all the lines into a string
+				return Files.readAllLines(filePath).stream().collect(Collectors.joining());
+			} catch (IOException e) {
+				return "Exception occurred while reading file" + e.getMessage();
+			}
+
+		}
+		return "File doesn't exist. Cannot download";
+	}
+
+	private String listGames() {
+		return listGames(false);
+	}
+
+	private String listGames(boolean currentGamesOnly) {
+		Gson gson = new GsonBuilder().setPrettyPrinting().create();
+		Type listType = new TypeToken<List<Game>>() {}.getType();
+		List<Game> games = (currentGamesOnly) ? explorer.getCurrentGames() : explorer.getGames();
+		String json = gson.toJson(games, listType);
+		return json;
+	}
+
+	private String listPlatforms() {
+		Gson gson = new GsonBuilder().setPrettyPrinting().create();
+		Type listType = new TypeToken<List<Platform>>() {}.getType();
+		List<Platform> platforms = explorer.getPlatforms();
+		String json = gson.toJson(platforms, listType);
+		return json;
+	}
+
+	private String listPlatform(String id) {
+		int platformId = Integer.valueOf(id);
+		Gson gson = new GsonBuilder().setPrettyPrinting().create();
+		Platform platform = explorer.getPlatform(platformId);
+		String json = gson.toJson(platform);
+		return json;
+	}
+
+	private String deleteFile(String fileName) {
+		Path filePath = Paths.get(storageDirectory).resolve(fileName);
+		File file = filePath.toFile();
+		if (file.exists()) {
+			file.delete();
+			return "File deleted";
+		} else {
+			return "File " + fileName + " doesn't exist";
+		}
 	}
 
 	public void rateGame(Game game) {
@@ -597,7 +791,7 @@ GameSelectionListener, BrowseComputerListener {
 	private void setLastViewState() {
 		String propertyView = properties.getProperty(propertyKeys[16]);
 		int viewPanel = (propertyView != null && !propertyView.isEmpty()) ? Integer.parseInt(propertyView)
-				: ViewPanel.LIST_VIEW;
+				: ViewPanel.ELEMENT_VIEW;
 		int viewType = Integer.valueOf(properties.getProperty(propertyKeys[10]));
 		view.changeToViewPanel(viewPanel, explorer.getGames());
 		view.navigationChanged(new NavigationEvent(viewType));
@@ -646,6 +840,32 @@ GameSelectionListener, BrowseComputerListener {
 		view.addGroupByPlatformListener(new GroupByPlatformListener());
 		view.addGroupByTitleListener(new GroupByTitleListener());
 		view.addFilterListener(new BroFilterListener());
+		view.addPlatformToFilterListener(view.pnlGameFilter);
+		view.addSaveCurrentFiltersListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				String name = "";
+				do {
+					name = JOptionPane.showInputDialog(view, "set a name for the new filter group:", "My Filter Group");
+				} while (name != null && name.isEmpty());
+
+				if (name == null) {
+					return;
+				}
+
+				FilterEvent filterEvent = new BroFilterEvent(view.pnlGameFilter.getSelectedPlatformId(), view.pnlGameFilter.getCriteria());
+				FilterGroup filterGroup = new BroFilterGroup(name, filterEvent);
+				explorer.addFilterGroup(filterGroup);
+				try {
+					explorerDAO.addFilterGroup(filterGroup);
+				} catch (SQLException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+				view.pnlGameFilter.filterGroupAdded(filterGroup);
+			}
+		});
 		viewManager.addSelectGameListener(this);
 		viewManager.addSelectGameListener(view);
 		RunGameListener runGameListener = new RunGameListener();
@@ -736,7 +956,7 @@ GameSelectionListener, BrowseComputerListener {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				try {
-					UIUtil.openWebsite("https://discord.gg/KFYCgqY");
+					UIUtil.openWebsite("https://discord.gg/EtKvZ2F");
 				} catch (IOException | URISyntaxException e1) {
 					UIUtil.showErrorMessage(view, "Something went wrong..", "Oops");
 					e1.printStackTrace();
@@ -848,7 +1068,6 @@ GameSelectionListener, BrowseComputerListener {
 		String downloadLink = "";
 		for (int i = 0; i < jsonArrayAssets.size(); i++) {
 			JsonObject el = jsonArrayAssets.get(i).getAsJsonObject();
-			System.out.println(el.get("name"));
 			if (el.get("name").getAsString().equals("emuBro.jar")) {
 				downloadLink = el.get("browser_download_url").getAsString();
 			}
@@ -1259,7 +1478,6 @@ GameSelectionListener, BrowseComputerListener {
 			for (FileHeader hd : files) {
 				for (String s : list) {
 					if (hd.getFileNameW().toLowerCase().matches(s)) {
-						System.err.println(hd.getFileNameW());
 						// ins = myRAR.getInputStream(hd);
 						myRAR.close();
 						return hd.getFileNameW();
@@ -1332,7 +1550,6 @@ GameSelectionListener, BrowseComputerListener {
 					view.showGameDetailsPane(true);
 					view.showNavigationPane(true);
 					view.navigationChanged(new NavigationEvent(NavigationPanel.ALL_GAMES));
-					//			view.changeToViewPanel(GameViewConstants.LIST_VIEW, explorer.getGames());
 				}
 
 				SwingUtilities.invokeLater(new Runnable() {
@@ -1492,6 +1709,7 @@ GameSelectionListener, BrowseComputerListener {
 		explorer.setGames(games);
 		Map<Integer, String> checksums = explorerDAO.getChecksums();
 		explorer.setChecksums(checksums);
+		List<Integer> alreadyCheckedPlatformIds = new ArrayList<>();
 		for (Game g : games) {
 			List<String> files = explorerDAO.getFilesForGame(g.getId());
 			List<Tag> tags = explorerDAO.getTagsForGame(g.getId());
@@ -1499,6 +1717,14 @@ GameSelectionListener, BrowseComputerListener {
 			explorer.setTagsForGame(g.getId(), tags);
 			for (Tag t : tags) {
 				g.addTag(t);
+			}
+			int platformId = g.getPlatformId();
+			if (!alreadyCheckedPlatformIds.contains(platformId)) {
+				alreadyCheckedPlatformIds.add(platformId);
+				Platform platform = explorer.getPlatform(g.getPlatformId());
+				if (explorer.getGameTitlesFromPlatform(platform) == null) {
+					setGameTitlesForPlatform(explorer.getPlatform(g.getPlatformId()));
+				}
 			}
 		}
 		if (games != null && !games.isEmpty()) {
@@ -1570,6 +1796,7 @@ GameSelectionListener, BrowseComputerListener {
 			fw.append(propertyKeys[31] + "=" + lastDetailsWidth + "\r\n"); // last details preferred wiidth
 			fw.append(propertyKeys[32] + "=" + lastDetailsHeight + "\r\n"); // last details preferred height
 			fw.append(propertyKeys[33] + "=" + view.getNavigationPaneState() + "\r\n"); // group by
+			fw.append(propertyKeys[34] + "=" + view.isUndecorated() + "\r\n"); // undecorated
 			fw.close();
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -1584,6 +1811,7 @@ GameSelectionListener, BrowseComputerListener {
 				int width = Integer.parseInt(properties.getProperty(propertyKeys[2]));
 				int height = Integer.parseInt(properties.getProperty(propertyKeys[3]));
 				boolean maximized = Boolean.parseBoolean(properties.getProperty(propertyKeys[4]));
+				boolean undecorated = Boolean.parseBoolean(properties.getProperty(propertyKeys[34]));
 				navigationPaneDividerLocation = Integer.parseInt(properties.getProperty(propertyKeys[13]));
 				navigationPaneState = properties.getProperty(propertyKeys[33]);
 				previewPanelWidth = Integer.parseInt(properties.getProperty(propertyKeys[14]));
@@ -1615,6 +1843,12 @@ GameSelectionListener, BrowseComputerListener {
 					y = 0;
 				}
 				preferredWidthAtFirstStart = view.getWidth();
+
+				if (undecorated) {
+					view.dispose();
+					view.setUndecorated(undecorated);
+					view.pack();
+				}
 				if (maximized) {
 					/**
 					 * setSize has been done here to set initial window size to "nice".
@@ -1671,7 +1905,7 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	private File exportGameListTo(int fileType) throws IOException, SQLException {
-		boolean filterSet = view.isFilterFavoriteActive() || view.isFilterRecentlyPlayedActive() || view.isGameFilterSet() || view.isPlatformFilterSet() || view.isTagFilterSet();
+		boolean filterSet = view.isFilterFavoriteActive() || view.isFilterRecentlyPlayedActive() || view.isGameFilterSet() || view.isPlatformFilterSet();
 		int request = JOptionPane.NO_OPTION;
 		if (filterSet) {
 			String[] options = { "Nur aktuelle Ansicht exportieren", "Gesamte Spielebibliothek exportieren" };
@@ -2056,7 +2290,7 @@ GameSelectionListener, BrowseComputerListener {
 					frameEmulationOverlay.setLocation(ScreenSizeUtil.getWidth() - frameEmulationOverlay.getWidth(), 0);
 					frameEmulationOverlay.setVisible(true);
 					dlgSplashScreen.dispose();
-					runGame2(game, startParametersList);
+					runGame2(game, startParametersList, emulatorFile.getParentFile());
 				} catch (IOException e) {
 					SwingUtilities.invokeLater(new Runnable() {
 
@@ -2174,7 +2408,7 @@ GameSelectionListener, BrowseComputerListener {
 		return true;
 	}
 
-	private void runGame2(Game game, List<String> startParametersList) throws IOException {
+	private void runGame2(Game game, List<String> startParametersList, File workingDirectory) throws IOException {
 		int emulatorId = game.getDefaultEmulatorId();
 		int platformId = game.getPlatformId();
 		Emulator emulator;
@@ -2534,6 +2768,7 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	private void exitNow(boolean installUpdate) {
+		DiscordRPC.discordShutdown();
 		if (installUpdate) {
 			try {
 				String userTmp = System.getProperty("java.io.tmpdir");
@@ -2714,12 +2949,10 @@ GameSelectionListener, BrowseComputerListener {
 								if (fileExtension == null || fileExtension.trim().isEmpty()) {
 									System.out.println("This should add new game "+ filePath + " to platform " + selectedPlatform.getName());
 								} else {
-									System.out.println("This should add new game extension " + fileExtension + " to platform " + selectedPlatform.getName());
 									String newSearchFor = "^(.+)\\."+fileExtension+"$";
 									selectedPlatform.addSearchFor(newSearchFor);
 									explorerDAO.addSearchFor(selectedPlatform.getId(), newSearchFor);
 									addGame(selectedPlatform, file, true, view.getViewManager().isFilterFavoriteActive(), downloadCover);
-									System.out.println(selectedPlatform.getSearchFor());
 								}
 							}
 						}
@@ -2777,12 +3010,10 @@ GameSelectionListener, BrowseComputerListener {
 			if (fileExtension == null || fileExtension.trim().isEmpty()) {
 				System.out.println("This should add new game "+ filePath + " to platform " + selectedPlatform.getName());
 			} else {
-				System.out.println("This should add new game extension " + fileExtension + " to platform " + selectedPlatform.getName());
 				String newSearchFor = "^(.+)\\."+fileExtension+"$";
 				selectedPlatform.addSearchFor(newSearchFor);
 				explorerDAO.addSearchFor(selectedPlatform.getId(), newSearchFor);
 				addGame(selectedPlatform, file, true, view.getViewManager().isFilterFavoriteActive(), true);
-				System.out.println(selectedPlatform.getSearchFor());
 			}
 		}
 	}
@@ -2839,59 +3070,6 @@ GameSelectionListener, BrowseComputerListener {
 		Platform p2 = addOrGetPlatform(selected);
 		if (p2 != null) {
 			addGame(p2, file, true, view.getViewManager().isFilterFavoriteActive(), downloadCover);
-			//					if (p2.getUseGameRegionCodes()) {
-			if (filePath.toLowerCase().endsWith(".bin")
-					|| filePath.toLowerCase().endsWith(".img")
-					|| filePath.toLowerCase().endsWith(".iso")) {
-				SwingUtilities.invokeLater(new Runnable() {
-
-					@Override
-					public void run() {
-						LineIterator it;
-						try {
-							it = FileUtils.lineIterator(file.toFile());
-							outterLoop:
-								while (it.hasNext()) {
-									String current = it.next();
-									String arr[] = {
-											"scus-",
-											"slus-",
-											"sces-",
-											"sles-",
-											"scps-",
-											"scpm-",
-											"slps-",
-											"slpm-"
-									};
-									for (String s : arr) {
-										if (current.toLowerCase().contains(s)) {
-											Pattern MY_PATTERN = Pattern.compile("(?i)("+s+"\\d\\d\\d\\d\\d)");
-											Matcher m = MY_PATTERN.matcher(current);
-											while (m.find()) {
-												String gameCode = m.group(1);
-												System.err.println(gameCode);
-												int gameId = explorer.getGameForFile(file.toAbsolutePath().toString()).getId();
-												explorer.setGameCode(gameId, gameCode);
-												try {
-													explorerDAO.setGameCode(gameId, gameCode);
-												} catch (SQLException e) {
-													// TODO Auto-generated catch block
-													e.printStackTrace();
-												}
-												break;
-											}
-											break outterLoop;
-										}
-									}
-								}
-						} catch (IOException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
-					}
-				});
-			}
-			//					}
 		}
 	}
 
@@ -2968,6 +3146,7 @@ GameSelectionListener, BrowseComputerListener {
 		JLabel lbl = new JLabel("Choose a platform from the list below to categorize the file:");
 		JRadioButton rdbGame = new JRadioButton("Game");
 		JRadioButton rdbEmulator = new JRadioButton("Emulator");
+		JTextField txtEmulatorShortName = new JTextField();
 		JLinkButton lnk = new JLinkButton("Your platform doesn't show up? Create a new platform instead.");
 		lbl.setEnabled(false);
 		rdbGame.setSelected(true);
@@ -2977,12 +3156,17 @@ GameSelectionListener, BrowseComputerListener {
 		grp.add(rdbGame);
 		grp.add(rdbEmulator);
 
+		String fileName = file.getFileName().toString();
+		txtEmulatorShortName.setText(FilenameUtils.getBaseName(fileName.toLowerCase()));
+
 		Object[] messageEnlarged = {
 				filePath,
 				"\n",
 				"Is it a game or an emulator?",
 				rdbGame,
 				rdbEmulator,
+				"\n",
+				txtEmulatorShortName,
 				"\n",
 				lbl,
 				cmbPlatforms,
@@ -3015,17 +3199,14 @@ GameSelectionListener, BrowseComputerListener {
 		} while (!isGame && request == JOptionPane.OK_OPTION && cmbPlatforms.getSelectedItem() == null);
 		if (request == JOptionPane.OK_OPTION) {
 			if (isGame) {
-				System.out.println("This should add new game "+ p0.getName());
 				addGame(p0, file, true, view.getViewManager().isFilterFavoriteActive(), downloadCover);
 			} else {
 				Platform selectedPlatform = (Platform) cmbPlatforms.getSelectedItem();
-				System.out.println("This should add new emulator for platform "+ selectedPlatform.getName());
 
-				String fileName = file.getFileName().toString();
 				String emulatorName = FilenameUtils.getBaseName(fileName);
-				String iconFileName = FilenameUtils.getBaseName(fileName)+".png";
-				BroEmulator emulator = new BroEmulator(EmulatorConstants.NO_EMULATOR, emulatorName, filePath, "",
-						"", "", "%emupath% %gamepath%", new String[] { }, iconFileName, "", true);
+				String emulatorShortName = txtEmulatorShortName.getText();
+				BroEmulator emulator = new BroEmulator(EmulatorConstants.NO_EMULATOR, emulatorName, emulatorShortName, filePath,
+						"", "", "", "%emupath% %gamepath%", new String[] { }, "", "", true);
 				if (dlgAddEmulator == null) {
 					dlgAddEmulator = new AddEmulatorDialog();
 				}
@@ -3101,6 +3282,17 @@ GameSelectionListener, BrowseComputerListener {
 
 	private Platform getDefaultPlatformFromChooser(String filePath, Platform[] objectsArr) {
 		Platform defaultt = null;
+		String regex = filePath.startsWith("\\\\") ? "\\\\"
+				: (File.separator.equals("\\") ? "\\\\" : File.separator);
+		String[] folders = filePath.split(regex);
+		for (int i = folders.length-1; i >= 0; i--) {
+			for (Platform p20 : objectsArr) {
+				if (folders[i].equalsIgnoreCase(p20.getShortName())) {
+					defaultt = p20;
+					return defaultt;
+				}
+			}
+		}
 		List<Platform> matchedPlatforms = explorer.getPlatformsFromCommonDirectory(filePath);
 		if (!matchedPlatforms.isEmpty()) {
 			for (Platform mp : matchedPlatforms) {
@@ -3129,6 +3321,8 @@ GameSelectionListener, BrowseComputerListener {
 					break;
 				}
 			}
+		} else {
+			System.err.println("no platform matched");
 		}
 		return defaultt;
 	}
@@ -3198,12 +3392,24 @@ GameSelectionListener, BrowseComputerListener {
 		return p;
 	}
 
-	public String readStringFromURL(String requestURL) throws IOException {
-		InputStream stream = new URL(requestURL).openStream();
-		try (Scanner scanner = new Scanner(stream, StandardCharsets.UTF_8.toString())) {
-			scanner.useDelimiter("\\A");
-			return scanner.hasNext() ? scanner.next() : "";
+	public String readStringFromURL(String requestURL) throws UnsupportedEncodingException, FileNotFoundException {
+		BufferedReader br = new BufferedReader(
+				new InputStreamReader(new FileInputStream(requestURL), "UTF-8"));
+		StringBuffer sb = new StringBuffer();
+		try {
+			while ((sb.append(br.readLine()) != null)) {
+				// do nothing, just append
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				if (br != null) {
+					br.close();
+				}
+			} catch (Exception e) { }
 		}
+		return sb.toString();
 	}
 
 	public Set<Object> getAllKeys(Properties prop){
@@ -3882,7 +4088,6 @@ GameSelectionListener, BrowseComputerListener {
 					if (fsv.isDrive(roots[i])) {
 						if (fsv.getSystemTypeDescription(roots[i]).indexOf("CD") != -1) {
 							foundDrives.add(roots[i]);
-							System.out.println(roots[i]);
 						}
 					}
 				}
@@ -3898,7 +4103,6 @@ GameSelectionListener, BrowseComputerListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			showPropertiesFrame(explorer.getCurrentGames().get(0));
-			System.err.println("open properties for current game: "+explorer.getCurrentGames());
 		}
 	}
 
@@ -4965,7 +5169,6 @@ GameSelectionListener, BrowseComputerListener {
 							""),
 					Messages.get(MessageConstants.REMOVE_EMULATOR), JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 			if (request == JOptionPane.YES_OPTION) {
-				System.out.println("remove emulator with id: "+emulator.getId());
 				try {
 					explorerDAO.removeEmulator(emulator.getId());
 				} catch (SQLException e) {
@@ -5120,11 +5323,7 @@ GameSelectionListener, BrowseComputerListener {
 		boolean multipleLinks = links.size() > 1;
 		final String downloadLink;
 		if (multipleLinks) {
-			System.err.println("choose a link: ");
 			Collections.sort(links, Collections.reverseOrder());
-			for (String str : links) {
-				System.err.println(str);
-			}
 			String[] linksArr = new String[links.size()];
 			linksArr = links.toArray(linksArr);
 			String input = (String) JOptionPane.showInputDialog(null, "Choose now...",  "The Choice of a Lifetime",
@@ -5139,8 +5338,6 @@ GameSelectionListener, BrowseComputerListener {
 		if (downloadLink == null || downloadLink.trim().isEmpty()) {
 			return;
 		}
-		System.err.println("download emu from: "+downloadLink);
-
 		JFileChooser fc = new JFileChooser();
 		fc.setDialogType(JFileChooser.SAVE_DIALOG);
 		fc.setFileSelectionMode(JFileChooser.FILES_ONLY);
@@ -5196,7 +5393,6 @@ GameSelectionListener, BrowseComputerListener {
 								}
 							});
 						}
-						System.err.println("download finished. file saved to " + destFile);
 						// move the file first
 						List<Platform> p = null;
 						try {
@@ -5206,7 +5402,6 @@ GameSelectionListener, BrowseComputerListener {
 
 							} else {
 								if (isZipFile(destFile.getAbsolutePath())) {
-									System.err.println("move it somewhere else and unzip");
 									String destDir = FilenameUtils.removeExtension(destFile.getAbsolutePath());
 									File destDirFile = new File(destDir);
 									if (!destDirFile.exists()) {
@@ -5233,11 +5428,9 @@ GameSelectionListener, BrowseComputerListener {
 										}
 									}
 								} else if (isRarFile(destFile.getAbsolutePath())) {
-									System.err.println("move it somewhere else and unzip");
 									UIUtil.showWarningMessage(view, "emulator is in a rar archive.", "Archive detected");
 
 								} else if (is7ZipFile(destFile.getAbsolutePath())) {
-									System.err.println("move it somewhere else and unzip");
 									UIUtil.showWarningMessage(view, "emulator is in a 7zip archive.", "Archive detected");
 
 								} else {
@@ -5589,7 +5782,6 @@ GameSelectionListener, BrowseComputerListener {
 		test3(allCommonDirectories);
 		Collections.sort(allCommonDirectories);
 		Collections.reverse(allCommonDirectories);
-		System.out.println(allCommonDirectories);
 		searchForPlatformsString(allCommonDirectories);
 	}
 
@@ -5618,8 +5810,7 @@ GameSelectionListener, BrowseComputerListener {
 
 	private void test3(List<String> allCommonDirectories) {
 		for (Platform p : explorer.getPlatforms()) {
-			List<String> commonDirs;
-			System.out.println(p.getName() + " " + (commonDirs = getCommonDirectories(p.getId())));
+			List<String> commonDirs = getCommonDirectories(p.getId());
 			for (String dir : commonDirs) {
 				if (!allCommonDirectories.contains(dir)) {
 					allCommonDirectories.add(dir);
@@ -5630,7 +5821,6 @@ GameSelectionListener, BrowseComputerListener {
 
 	private List<String> getCommonDirectories(int platformId) {
 		List<String> directories = explorer.getGameDirectoriesFromPlatform(platformId);
-		System.err.println(explorer.getPlatform(platformId).getName() + " " + directories);
 		List<String> commonDirectories = new ArrayList<>();
 		for (String dir : directories) {
 			if (commonDirectories.isEmpty()) {
@@ -5695,46 +5885,47 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	public Platform addOrGetPlatform(Platform platform) {
-		Platform p2 = null;
+		Platform p = null;
 		if (platform != null) {
 			if (!explorer.hasPlatform(platform.getName())) {
 				try {
 					platform.setDefaultEmulatorId(EmulatorConstants.NO_EMULATOR);
 					explorerDAO.addPlatform(platform);
-					p2 = explorerDAO.getPlatform(explorerDAO.getLastAddedPlatformId());
-					p2.setId(explorerDAO.getLastAddedPlatformId());
-					explorer.addPlatform(p2);
-					firePlatformAddedEvent(p2);
+					p = explorerDAO.getPlatform(explorerDAO.getLastAddedPlatformId());
+					p.setId(explorerDAO.getLastAddedPlatformId());
+					explorer.addPlatform(p);
+					firePlatformAddedEvent(p);
 				} catch (SQLException e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
 			} else {
-				p2 = explorer.getPlatform(platform.getName());
+				p = explorer.getPlatform(platform.getName());
 			}
 		}
-		return p2;
+		return p;
 	}
 
 	public Tag addOrChangeTag(Tag tag) {
-		Tag tag2 = null;
+		Tag t = null;
 		if (tag != null) {
-			if (!explorer.hasTag(tag.getName())) {
+			String tagName = tag.getName();
+			if (!explorer.hasTag(tagName)) {
 				try {
 					explorerDAO.addTag(tag);
-					tag2 = explorerDAO.getTag(explorerDAO.getLastAddedTagId());
-					tag2.setId(explorerDAO.getLastAddedTagId());
-					explorer.addTag(tag2);
-					fireTagAddedEvent(tag2);
+					t = explorerDAO.getTag(explorerDAO.getLastAddedTagId());
+					t.setId(explorerDAO.getLastAddedTagId());
+					explorer.addTag(t);
+					fireTagAddedEvent(t);
 				} catch (SQLException e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
 			} else {
-				tag2 = explorer.getTag(tag.getName());
+				t = explorer.getTag(tagName);
 			}
 		}
-		return tag2;
+		return t;
 	}
 
 	private void fireTagAddedEvent(Tag tag) {
@@ -5949,7 +6140,6 @@ GameSelectionListener, BrowseComputerListener {
 				try {
 					List<File> data = (List<File>) Toolkit.getDefaultToolkit()
 							.getSystemClipboard().getData(DataFlavor.javaFileListFlavor);
-					System.err.println("clipboard data: " + data);
 					int request = JOptionPane.YES_OPTION;
 					if (data.size() > 1) {
 						request = JOptionPane.showConfirmDialog(view, Messages.get(MessageConstants.CLIPBOARD_ADD_MULTIPLE_FILES, Messages.get(MessageConstants.APPLICATION_TITLE), data.size()),
@@ -6048,10 +6238,9 @@ GameSelectionListener, BrowseComputerListener {
 
 		@Override
 		public void keyPressed(KeyEvent e) {
-			int keyCode = e.getKeyCode();
-			if (keyCode == KeyEvent.VK_CONTROL) {
-				System.err.println("control pressed");
-			}
+			//			int keyCode = e.getKeyCode();
+			//			if (keyCode == KeyEvent.VK_CONTROL) {
+			//			}
 		}
 
 		@Override
@@ -6156,7 +6345,6 @@ GameSelectionListener, BrowseComputerListener {
 					path = gamePaths.get(0);
 				}
 
-				System.err.println(path);
 				path = path.replace("\\", "\\\\");
 				String[] path2 = path.split(
 						File.separator.equals("\\") ? "\\\\": "/"); // FIXME Exception in thread "AWT-EventQueue-0" java.util.regex.PatternSyntaxException: Unexpected internal error			near index 1
@@ -6274,18 +6462,18 @@ GameSelectionListener, BrowseComputerListener {
 		}
 	}
 
-	public void initPlatforms(List<Platform> list) {
+	public void initPropertiesPlatforms(List<Platform> list) {
 		for (Platform p : list) {
 			mdlPropertiesLstPlatforms.add(p);
-			if (!platformIcons.containsKey(p.getIconFileName())) {
-				String iconFilename = p.getIconFileName();
+			if (!platformIcons.containsKey(p.getShortName())) {
+				String iconFilename = p.getShortName();
 				if (iconFilename != null && !iconFilename.trim().isEmpty()) {
-					ImageIcon icon = ImageUtil.getImageIconFrom(explorer.getResourcesPath() + "/platforms/images/logos/" + iconFilename, true);
+					ImageIcon icon = ImageUtil.getImageIconFrom(explorer.getResourcesPath() + "/platforms/images/logo/" + iconFilename, true);
 					if (icon != null) {
 						int size = ScreenSizeUtil.adjustValueToResolution(24);
 						icon = ImageUtil.scaleCover(icon, size, CoverConstants.SCALE_WIDTH_OPTION);
 					}
-					platformIcons.put(p.getIconFileName(), icon);
+					platformIcons.put(p.getShortName(), icon);
 				}
 			}
 			for (Emulator emu : p.getEmulators()) {
@@ -6323,7 +6511,7 @@ GameSelectionListener, BrowseComputerListener {
 			addPlatformListener(frameProperties);
 			addEmulatorListener(frameProperties);
 			addTagListener(frameProperties);
-			initPlatforms(explorer.getPlatforms());
+			initPropertiesPlatforms(explorer.getPlatforms());
 			frameProperties.setPlatformListCellRenderer(new PlatformListCellRenderer());
 			frameProperties.setEmulatorListCellRenderer(new EmulatorListCellRenderer());
 			frameProperties.addDefaultEmulatorListener(new DefaultEmulatorListener() {
@@ -6502,9 +6690,9 @@ GameSelectionListener, BrowseComputerListener {
 	class ChangeToWelcomeViewListener implements ActionListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			int divLocation = view.getSplPreviewPane().getDividerLocation();
+			int divLocation = view.getSplPreviewPaneDividerLocation();
 			view.changeToViewPanel(GameViewConstants.BLANK_VIEW, null);
-			view.getSplPreviewPane().setDividerLocation(divLocation); // this
+			view.setSplPreviewPaneDividerLocation(divLocation); // this
 			// has
 			// been
 			// done,
@@ -6572,9 +6760,9 @@ GameSelectionListener, BrowseComputerListener {
 	class ChangeToListViewListener implements ActionListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			int divLocation = view.getSplPreviewPane().getDividerLocation();
+			int divLocation = view.getSplPreviewPaneDividerLocation();
 			view.changeToViewPanel(GameViewConstants.LIST_VIEW, explorer.getGames());
-			view.getSplPreviewPane().setDividerLocation(divLocation); // this
+			view.setSplPreviewPaneDividerLocation(divLocation); // this
 			// has
 			// been
 			// done,
@@ -6598,9 +6786,9 @@ GameSelectionListener, BrowseComputerListener {
 	class ChangeToElementViewListener implements ActionListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			int divLocation = view.getSplPreviewPane().getDividerLocation();
+			int divLocation = view.getSplPreviewPaneDividerLocation();
 			view.changeToViewPanel(GameViewConstants.ELEMENT_VIEW, explorer.getGames());
-			view.getSplPreviewPane().setDividerLocation(divLocation); // this
+			view.setSplPreviewPaneDividerLocation(divLocation); // this
 			// has
 			// been
 			// done,
@@ -6624,9 +6812,9 @@ GameSelectionListener, BrowseComputerListener {
 	class ChangeToTableViewListener implements ActionListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			int divLocation = view.getSplPreviewPane().getDividerLocation();
+			int divLocation = view.getSplPreviewPaneDividerLocation();
 			view.changeToViewPanel(GameViewConstants.TABLE_VIEW, explorer.getGames());
-			view.getSplPreviewPane().setDividerLocation(divLocation); // this
+			view.setSplPreviewPaneDividerLocation(divLocation); // this
 			// has
 			// been
 			// done,
@@ -6650,9 +6838,9 @@ GameSelectionListener, BrowseComputerListener {
 	class ChangeToContentViewListener implements ActionListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			int divLocation = view.getSplPreviewPane().getDividerLocation();
+			int divLocation = view.getSplPreviewPaneDividerLocation();
 			view.changeToViewPanel(GameViewConstants.CONTENT_VIEW, explorer.getGames());
-			view.getSplPreviewPane().setDividerLocation(divLocation); // this
+			view.setSplPreviewPaneDividerLocation(divLocation); // this
 			// has
 			// been
 			// done,
@@ -6676,9 +6864,9 @@ GameSelectionListener, BrowseComputerListener {
 	class ChangeToSliderViewListener implements ActionListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			int divLocation = view.getSplPreviewPane().getDividerLocation();
+			int divLocation = view.getSplPreviewPaneDividerLocation();
 			view.changeToViewPanel(GameViewConstants.SLIDER_VIEW, explorer.getGames());
-			view.getSplPreviewPane().setDividerLocation(divLocation); // this
+			view.setSplPreviewPaneDividerLocation(divLocation); // this
 			// has
 			// been
 			// done,
@@ -6702,14 +6890,14 @@ GameSelectionListener, BrowseComputerListener {
 	class ChangeToCoverViewListener implements ActionListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			int divLocation = view.getSplPreviewPane().getDividerLocation();
+			int divLocation = view.getSplPreviewPaneDividerLocation();
 			if (view.isViewPanelInitialized(GameViewConstants.COVER_VIEW)) {
 				view.changeToViewPanel(GameViewConstants.COVER_VIEW, null);
 			} else {
 				view.changeToViewPanel(GameViewConstants.COVER_VIEW, explorer.getGames());
 			}
 			//			view.getSplGameDetailsPane().setDividerLocation(divLocationDetailsPane);
-			view.getSplPreviewPane().setDividerLocation(divLocation); // this
+			view.setSplPreviewPaneDividerLocation(divLocation); // this
 			// has
 			// been
 			// done,
@@ -7166,13 +7354,40 @@ GameSelectionListener, BrowseComputerListener {
 
 	@Override
 	public void gameSelected(GameSelectionEvent e) {
-		explorer.setCurrentGame(e.getGames());
+		explorer.setCurrentGames(e.getGames());
 	}
 
 	@Override
 	public void platformAdded(PlatformEvent e) {
 		Platform p = e.getPlatform();
-		IconStore.current().addPlatformIcon(p.getId(), p.getIconFileName());
+		IconStore.current().addPlatformIcon(p.getId(), explorer.getPlatformsDirectory());
+	}
+
+	private void setGameTitlesForPlatform(Platform p) {
+		String dir = explorer.getPlatformsDirectory() + File.separator + p.getShortName()
+		+ File.separator + "games" + File.separator + "titles.txt";
+		File f = new File(dir);
+		if (f.exists()) {
+			Properties prop = new Properties();
+			FileInputStream fis = null;
+			try {
+				fis = new FileInputStream(f);
+				prop.load(fis);
+				explorer.setGameTitlesForPlatform(p, prop);
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			} finally {
+				try {
+					if (fis != null) {
+						fis.close();
+					}
+				} catch (Exception e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			}
+		}
 	}
 
 	@Override
@@ -7297,6 +7512,7 @@ GameSelectionListener, BrowseComputerListener {
 				String searchString = e.getSearchString();
 				if (fileName2.matches(searchString.toLowerCase())) {
 					String name = e.getName();
+					String shortName = e.getShortName();
 					String filePath2 = filePath;
 					String iconFilename = e.getIconFilename();
 					String configFilePath = e.getConfigFilePath();
@@ -7309,7 +7525,7 @@ GameSelectionListener, BrowseComputerListener {
 					if (explorer.hasEmulator(pTmp.getName(), filePath2)) {
 						continue;
 					}
-					emulator = new BroEmulator(EmulatorConstants.NO_EMULATOR, name, filePath2, iconFilename,
+					emulator = new BroEmulator(EmulatorConstants.NO_EMULATOR, name, shortName, filePath2, iconFilename,
 							configFilePath, website, startParameters, supportedFileTypes, e.getSearchString(),
 							e.getSetupFileMatch(), autoSearchEnabled);
 					pTmp.addEmulator((BroEmulator) emulator);
@@ -7456,14 +7672,22 @@ GameSelectionListener, BrowseComputerListener {
 		});
 	}
 
-	public void addGame(Platform p0, Path file, boolean downloadCover) throws BroGameDeletedException {
-		addGame(p0, file, false, false, false);
+	public void addGame(Platform p0, Path path, boolean downloadCover) throws BroGameDeletedException {
+		addGame(p0, path, false, false, false);
 	}
 
-	public void addGame(Platform p0, Path file, boolean manuallyAdded, boolean favorite, boolean downloadCover) {
+	public void addGame(Platform p0, Path path, boolean manuallyAdded, boolean favorite, boolean downloadCover) {
+		int platformId = p0.getId();
+		if (!alreadyCheckedPlatformIds.contains(platformId)) {
+			alreadyCheckedPlatformIds.add(platformId);
+			if (explorer.getGameTitlesFromPlatform(p0) == null) {
+				setGameTitlesForPlatform(p0);
+			}
+		}
 		String checksum = null;
+		File file = path.toFile();
 		try {
-			checksum = FileUtil.getChecksumOfFile(file.toFile());
+			checksum = FileUtil.getChecksumOfFile(file);
 			try {
 				explorerDAO.addChecksum(checksum);
 				explorer.addChecksum(explorerDAO.getLastAddedChecksumId(), checksum);
@@ -7477,27 +7701,27 @@ GameSelectionListener, BrowseComputerListener {
 			}
 			return;
 		}
-		String filePath = file.toString();
+		String filePath = path.toString();
 		String[] arr = filePath.split(getSeparatorBackslashed());
 		String fileName = arr[arr.length - 1];
 		if (explorer.isKnownExtension(FilenameUtils.getExtension(fileName))) {
 			fileName = FilenameUtils.removeExtension(fileName);
 		}
 		ZonedDateTime dateAdded = ZonedDateTime.now();
-		int platformId = p0.getId();
 		String platformIconFileName = p0.getIconFileName();
-		int defaultFileId = -1;
+		int defaultFileId = 0;
 		Game element = new BroGame(GameConstants.NO_GAME, fileName, "", defaultFileId, explorerDAO.getChecksumId(checksum), null, null, 0, dateAdded, null, 0,
 				EmulatorConstants.NO_EMULATOR, platformId, platformIconFileName);
 		String defaultGameCover = p0.getDefaultGameCover();
-		IconStore.current().addPlatformCover(platformId, defaultGameCover);
+		IconStore.current().addPlatformCover(platformId, explorer.getPlatformsDirectory(), defaultGameCover);
 		if (favorite) {
 			element.setRate(RatingBarPanel.MAXIMUM_RATE);
 		}
 		try {
+			int gameId = GameConstants.NO_GAME;
 			try {
 				explorerDAO.addGame(element, filePath);
-				int gameId = explorerDAO.getLastAddedGameId();
+				gameId = explorerDAO.getLastAddedGameId();
 				element.setId(gameId);
 			} catch (BroGameDeletedException e) {
 				if (manuallyAdded) {
@@ -7524,8 +7748,48 @@ GameSelectionListener, BrowseComputerListener {
 					return;
 				}
 			}
+			FileChannel fileChannel = null;
+			String gameCode = null;
+			if (p0.hasGameCodeRegexes()) {
+				fileChannel = FileChannel.open(path, StandardOpenOption.READ);
+				gameCode = retrieveGameCode(p0, path, fileChannel);
+			}
+			Properties gameTitles = explorer.getGameTitlesFromPlatform(p0);
+			if (gameCode == null || gameCode.isEmpty()) {
+				gameCode = getGameCodeFromGameTitles(gameTitles, fileChannel, path);
+			}
+			if (fileChannel != null) {
+				try {
+					fileChannel.close();
+				} catch (Exception e) { }
+			}
+			if (gameCode != null && !gameCode.isEmpty()) {
+				String gameName = null;
+				if (gameTitles != null) {
+					gameName = gameTitles.getProperty(gameCode);
+				}
+				if (gameName != null) {
+					element.setName(gameName);
+					//						explorer.renameGame(gameId, gameName);
+					try {
+						explorerDAO.renameGame(gameId, gameName);
+					} catch (SQLException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+				element.setGameCode(gameCode);
+				//					explorer.setGameCode(gameId, gameCode);
+				try {
+					explorerDAO.setGameCode(gameId, gameCode);
+				} catch (SQLException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+
 			if (filePath.toLowerCase().endsWith(".exe")) {
-				ImageIcon ii = (ImageIcon) FileSystemView.getFileSystemView().getSystemIcon(file.toFile());
+				ImageIcon ii = (ImageIcon) FileSystemView.getFileSystemView().getSystemIcon(file);
 				int width = ii.getIconWidth();
 				int height = ii.getIconHeight();
 				double size = 32;
@@ -7550,12 +7814,14 @@ GameSelectionListener, BrowseComputerListener {
 				explorerDAO.setGameIconPath(element.getId(), iconPathString);
 			}
 			explorer.addGame(element, filePath);
+
 			final Game gameFinal = element;
 			SwingUtilities.invokeLater(new Runnable() {
 
 				@Override
 				public void run() {
 					view.gameAdded(new BroGameAddedEvent(gameFinal, p0, explorer.getGameCount(), manuallyAdded));
+					IconStore.current().addPlatformIcon(p0.getId(), explorer.getPlatformsDirectory() + File.separator + p0.getShortName() + File.separator + "logo", p0.getIconFileName());
 					if (manuallyAdded) {
 						SwingUtilities.invokeLater(new Runnable() {
 
@@ -7588,6 +7854,102 @@ GameSelectionListener, BrowseComputerListener {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+
+	private String getGameCodeFromGameTitles(Properties gameTitles, FileChannel fileChannel, Path path) {
+		String gameCode = null;
+		if (gameTitles != null) {
+			Set<Object> keys = gameTitles.keySet();
+			if (keys.size() == 0) {
+				System.err.println("no ids found in titles file");
+			} else {
+				try {
+					long fileChannelSize = 0;
+					if (fileChannel == null) {
+						fileChannel = FileChannel.open(path, StandardOpenOption.READ);
+						fileChannelSize = fileChannel.size();
+					}
+					long position = 0;
+					long dimension = 4096;
+					if (fileChannelSize < dimension) {
+						dimension = fileChannelSize;
+					}
+					outerLoop: do {
+						//						if (position >= (10240/dimension)) {
+						//							break;
+						//						}
+						ByteBuffer mappedByteBuffer = fileChannel.map(MapMode.READ_ONLY, position, dimension);
+						CharBuffer cb = decoder.decode(mappedByteBuffer);
+						for (Object obj : keys) {
+							String objString = obj.toString();
+							if (objString.equals("titles")) {
+								continue;
+							}
+							if (cb.toString().contains(objString)) {
+								gameCode = objString;
+								System.out.println("game code " + gameCode + " found at: "+ position);
+								break outerLoop;
+							}
+						}
+						position += dimension;
+						if ((position + dimension) == 512000000 || (position + dimension) == 128000000
+								|| (position + dimension) == 64000000) {
+							int request = JOptionPane.showConfirmDialog(view,
+									"no game id found in file after reading " + (position / 1024 / 1024)
+									+ "MB. do you want to abort?",
+									"no game id found yet", JOptionPane.YES_NO_OPTION);
+							if (request == JOptionPane.YES_OPTION) {
+								break outerLoop;
+							}
+						}
+					} while (fileChannel.isOpen() && (position + dimension) <= fileChannelSize);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		return gameCode;
+	}
+
+	private String retrieveGameCode(Platform platform, Path path, FileChannel fileChannel) throws IOException {
+		//			RandomAccessFile raf = new RandomAccessFile(file, "r");
+		String gameCode = null;
+		long fileChannelSize = fileChannel.size();
+		long position = 0;
+		long dimension = 4096;
+		if (fileChannelSize < dimension) {
+			dimension = fileChannelSize;
+		}
+		List<String> arr2 = platform.getGameCodeRegexes();
+		outerLoop: do {
+			//			if (position >= (10240/dimension)) {
+			//				break;
+			//			}
+			ByteBuffer mappedByteBuffer = fileChannel.map(MapMode.READ_ONLY, position, dimension);
+			CharBuffer cb = decoder.decode(mappedByteBuffer);
+			for (String s : arr2) {
+				Pattern MY_PATTERN = Pattern.compile("(?i)(" + s + ")");
+				Matcher m = MY_PATTERN.matcher(cb.toString());
+				while (m.find()) {
+					gameCode = m.group(1);
+					System.out.println("game code " + gameCode + " found at: "+ position);
+					break outerLoop;
+				}
+			}
+
+			position += dimension;
+			if ((position + dimension) == 512000000 || (position + dimension) == 128000000
+					|| (position + dimension) == 64000000) {
+				int request = JOptionPane.showConfirmDialog(view,
+						"no game id found in file after reading " + (position / 1024 / 1024)
+						+ "MB. do you want to abort?",
+						"no game id found yet", JOptionPane.YES_NO_OPTION);
+				if (request == JOptionPane.YES_OPTION) {
+					break outerLoop;
+				}
+			}
+		} while (fileChannel.isOpen() && (position + dimension) <= fileChannelSize);
+		return gameCode;
 	}
 
 	@Override
@@ -7744,7 +8106,7 @@ GameSelectionListener, BrowseComputerListener {
 			//			label.setForeground((hasDefaultEmulator) ? Color.BLUE : UIManager.getColor("Label.foregroundColor"));
 			label.setText((hasDefaultEmulator) ? "<html><strong>"+platform.getName()+"</strong></html>" : platform.getName());
 			label.setForeground((hasNoEmulators) ? UIManager.getColor("Label.disabledForeground") : UIManager.getColor("Label.foreground"));
-			ImageIcon icon = platformIcons.get(platform.getIconFileName());
+			ImageIcon icon = platformIcons.get(platform.getShortName());
 			label.setIcon(icon);
 			label.setDisabledIcon(icon);
 			return label;
@@ -7801,8 +8163,6 @@ GameSelectionListener, BrowseComputerListener {
 			realName = gameName;
 			if (map.size() > 1) {
 				SortedSet<String> keySet = new TreeSet<>(map.keySet());
-				System.out.println("matched strings: "+keySet);
-
 				Object[] arr = keySet.toArray();
 				String n = (String) JOptionPane.showInputDialog(view,
 						"<html><strong>"+gameName +"</strong></html>\n"

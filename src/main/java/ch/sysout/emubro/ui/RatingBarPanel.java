@@ -37,7 +37,7 @@ public class RatingBarPanel extends JPanel implements ActionListener, FocusListe
 	private ImageIcon icoRatingRemove;
 	private ImageIcon icoRatingBlank;
 	private List<Game> currentGames;
-	private JLabel lblRate;
+	JLabel lblRate;
 	private List<RateListener> rateListeners = new ArrayList<>();
 	private boolean focusable = true;
 
@@ -45,9 +45,9 @@ public class RatingBarPanel extends JPanel implements ActionListener, FocusListe
 		super();
 		this.focusable = focusable;
 		if (label == null || label.trim().isEmpty()) {
-			lblRate = new JLabel();
+			lblRate = new JLabel2("");
 		} else {
-			lblRate = new JLabel("<html><strong>" + label + "</strong></html>");
+			lblRate = new JLabel2(label);
 		}
 		initComponents();
 		createUI();

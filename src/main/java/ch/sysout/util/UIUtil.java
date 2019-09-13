@@ -1,5 +1,6 @@
 package ch.sysout.util;
 
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Desktop;
 import java.awt.Toolkit;
@@ -17,6 +18,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.WindowEvent;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -34,6 +36,7 @@ import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JRootPane;
 import javax.swing.KeyStroke;
+import javax.swing.UIManager;
 import javax.swing.text.JTextComponent;
 
 import ch.sysout.emubro.ui.AboutDialog;
@@ -45,10 +48,21 @@ public class UIUtil {
 	private static FocusAdapter focusAdapterKeepHoverWhenSelected;
 	private static DateTimeFormatter dateFormat;
 
+	private static Color colorBlack = Color.BLACK;
+	private static Color colorWhite = Color.WHITE;
+	private static Color colorButtonForeground = colorWhite;
+	private static Color colorButtonForegroundHover = UIManager.getColor("Button.foreground");
+
 	public static void doHover(boolean b, AbstractButton... btns) {
+		Color color = b ? colorButtonForegroundHover : colorButtonForeground;
+		doHover(b, color, btns);
+	}
+
+	public static void doHover(boolean b, Color colorButtonForeground, AbstractButton... btns) {
 		for (AbstractButton btn : btns) {
 			btn.setContentAreaFilled(b);
 			btn.setBorderPainted(b);
+			btn.setForeground(colorButtonForeground);
 		}
 	}
 
@@ -234,5 +248,23 @@ public class UIUtil {
 
 	public static void openWebsite(String url) throws IOException, URISyntaxException {
 		Desktop.getDesktop().browse(new URI(url));
+	}
+
+	public static void setForegroundDependOnBackground(BufferedImage bg, int x, int y, Component... components) {
+		setForegroundDependOnBackground(new Color(bg.getRGB(x, y)), components);
+	}
+
+	public static void setForegroundDependOnBackground(Color bg, Component... components) {
+		int r = bg.getRed();
+		int g = bg.getGreen();
+		int b = bg.getBlue();
+		//				if ((red + green + blue) <= 384) {
+		for (Component c : components) {
+			if (((r * 0.299) + (g * 0.587) + (b * 0.114)) > 186) {
+				c.setForeground(colorBlack);
+			} else {
+				c.setForeground(colorWhite);
+			}
+		}
 	}
 }

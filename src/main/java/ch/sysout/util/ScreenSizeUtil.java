@@ -1,10 +1,7 @@
 package ch.sysout.util;
 
 import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.Toolkit;
-
-import javax.swing.UIManager;
 
 /**
  * this is a helper class which holds static methods.
@@ -36,10 +33,6 @@ public class ScreenSizeUtil {
 	public static boolean is4k() {
 		return (screenSize().width >= 4096 && screenSize().height >= 2304)
 				|| (screenSize().width >= 2304 && screenSize().height >= 4096);
-	}
-
-	public static Font defaultFont() {
-		return (Font) UIManager.get("MenuItem.font");
 	}
 
 	public static int adjustValueToResolution(int i) {

@@ -29,7 +29,6 @@ import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 
 import ch.sysout.util.Messages;
-import ch.sysout.util.ScreenSizeUtil;
 
 public class DetailChooserDialog extends JDialog {
 
@@ -79,11 +78,6 @@ public class DetailChooserDialog extends JDialog {
 		createUI();
 		setMinimumSize(getSize());
 		lblDescription.setText("<html><body style='maxwidth: " + pnl.getWidth() + "px'>" + description + "</html>");
-
-		btnMoveUP.setFont(ScreenSizeUtil.defaultFont());
-		btnMoveDown.setFont(ScreenSizeUtil.defaultFont());
-		btnSelect.setFont(ScreenSizeUtil.defaultFont());
-		btnDeselect.setFont(ScreenSizeUtil.defaultFont());
 	}
 
 	private void setIconImage() {

@@ -1,13 +1,17 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.List;
 
@@ -200,28 +204,43 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 			type = Messages.get(MessageConstants.ERRORS);
 			elementCount = pnlErrors.getElementCount();
 		}
-		String messageCount = (elementCount == 1) ? Messages.get(MessageConstants.MESSAGES1) : Messages.get(MessageConstants.MESSAGES, elementCount);
-		btn.setText("<html><a href='' style='text-decoration: " + style + "'>" + type + "</a>" + "<br>"
-				+ messageCount +"</html>");
 	}
 
 	private void createUI() {
 		pnlTpInformationBar = new JPanel(new BorderLayout());
-		tpDetailsPane = new JTabbedPane(SwingConstants.BOTTOM);
+		pnlTpInformationBar.setOpaque(false);
+		tpDetailsPane = new JTabbedPane(SwingConstants.BOTTOM) {
+			@Override
+			protected void paintComponent(Graphics g) {
+				super.paintComponent(g);
+				BufferedImage background = IconStore.current().getNavigationBackgroundImage();
+				if (background != null) {
+					Graphics2D g2d = (Graphics2D) g.create();
+					int panelWidth = getWidth();
+					int panelHeight = getHeight();
+					g2d.drawImage(background, 0, 0, panelWidth, panelHeight, this);
+					g2d.dispose();
+				}
+			}
+		};
+		Color colorTabBackGround = new Color(IconStore.current().getNavigationBackgroundImage().getRGB(0, 0));
+		BufferedImage previewPaneBgImage = IconStore.current().getBackgroundImage();
+		Color colorTabSelectedBackGround = new Color(previewPaneBgImage.getRGB(previewPaneBgImage.getWidth()-1, 0));
+		tpDetailsPane.setUI(new CustomTabbedPaneUI(colorTabSelectedBackGround, colorTabBackGround));
+		//		tpDetailsPane.setAlpha(0.5f);
+		tpDetailsPane.setBorder(BorderFactory.createEmptyBorder());
 		tpDetailsPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
 		tpDetailsPane.setTabPlacement(JTabbedPane.TOP);
-		JScrollPane sp2 = new JScrollPane(pnlBrowseComputer);
+		pnlBrowseComputer.setOpaque(false);
+		JScrollPane sp2 = new ModernScrollPane(pnlBrowseComputer);
+		sp2.getViewport().setOpaque(false);
+		sp2.setOpaque(false);
 		sp2.setBorder(BorderFactory.createEmptyBorder());
 		sp2.getVerticalScrollBar().setUnitIncrement(16);
 		tpDetailsPane.addTab(Messages.get(MessageConstants.NOTIFICATIONS),
 				ImageUtil.getImageIconFrom(Icons.get("info", 16, 16), false), createNotificationPanel());
 		tpDetailsPane.addTab(Messages.get(MessageConstants.BROWSE_COMPUTER),
 				ImageUtil.getImageIconFrom(Icons.get("search", 16, 16), false), sp2);
-		FindCoversPanel pnlFindCovers = new FindCoversPanel();
-		pnlFindCovers.setBorder(Paddings.TABBED_DIALOG);
-		JScrollPane spFindCovers = new JScrollPane(pnlFindCovers);
-		spFindCovers.setBorder(BorderFactory.createEmptyBorder());
-		spFindCovers.getVerticalScrollBar().setUnitIncrement(16);
 
 		ImageUtil.getImageIconFrom(Icons.get("fromComputer", 16, 16));
 		ImageUtil.getImageIconFrom(Icons.get("fromWeb", 16, 16));
@@ -230,8 +249,10 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		tpDetailsPane.addTab(Messages.get(MessageConstants.BROWSE_TAGS), pnlBrowseTags);
 
 		pnlTpInformationBar.add(tpDetailsPane);
+		pnlTpInformationBar.setOpaque(false);
 		JPanel pnl = new JPanel(new BorderLayout());
 		pnl.add(pnlHideDetailsPanePanel = createHideDetailsPanePanel(), BorderLayout.CENTER);
+		pnl.setOpaque(false);
 		add(pnl, BorderLayout.EAST);
 		pnlBrowseComputer.setBorder(Paddings.TABBED_DIALOG);
 		add(pnlTpInformationBar);
@@ -239,6 +260,7 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 
 	private Component createHideDetailsPanePanel() {
 		JPanel pnl = new JPanel(new BorderLayout());
+		pnl.setOpaque(false);
 		btnHideDetailsPane = new JButton();
 		UIUtil.doHover(false, btnHideDetailsPane);
 		btnHideDetailsPane.setIcon(ImageUtil.getImageIconFrom(Icons.get("hideDetailsPane", 24, 24)));
@@ -263,6 +285,7 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		btnPinUnpinDetailsPane.setToolTipText("Informationsbereich in eigenem Fenster öffnen");
 		btnPinUnpinDetailsPane.addMouseListener(UIUtil.getMouseAdapter());
 		JPanel pnl2 = new JPanel(new BorderLayout());
+		pnl2.setOpaque(false);
 		pnl2.add(btnPinUnpinDetailsPane, BorderLayout.NORTH);
 		pnl2.add(btnHideDetailsPane, BorderLayout.SOUTH);
 		pnl.add(pnl2, BorderLayout.NORTH);
@@ -275,6 +298,7 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 
 	private JPanel createNotificationPanel() {
 		pnlNotification = new JPanel();
+		pnlNotification.setOpaque(false);
 		pnlNotification.setBorder(Paddings.TABBED_DIALOG);
 		notificationLayout = new FormLayout(
 				"fill:pref:grow, min, fill:pref:grow, min, fill:pref:grow",
@@ -282,9 +306,9 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		pnlNotification.setLayout(notificationLayout);
 		cc2 = new CellConstraints();
 		pnlNotification.add(btnInformations, cc2.xy(1, 1));
-		spNotifications = new JScrollPane(pnlInformations);
-		spWarnings = new JScrollPane(pnlWarnings);
-		spErrors = new JScrollPane(pnlErrors);
+		spNotifications = new ModernScrollPane(pnlInformations);
+		spWarnings = new ModernScrollPane(pnlWarnings);
+		spErrors = new ModernScrollPane(pnlErrors);
 		spNotifications.getVerticalScrollBar().setUnitIncrement(16);
 		spWarnings.getVerticalScrollBar().setUnitIncrement(16);
 		spErrors.getVerticalScrollBar().setUnitIncrement(16);
@@ -298,6 +322,10 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		pnlNotification.add(btnWarnings, cc2.xy(3, 1));
 		pnlNotification.add(btnErrors, cc2.xy(5, 1));
 		pnlNotification.add(spNotifications, cc2.xyw(1, 3, notificationLayout.getColumnCount()));
+
+		spNotifications.setOpaque(false);
+		spWarnings.setOpaque(false);
+		spErrors.setOpaque(false);
 
 		spWarnings.setVisible(false);
 		spErrors.setVisible(false);
@@ -343,24 +371,24 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		int elementCount = pnlInformations.getElementCount();
 		String messageCount = (elementCount == 1) ? Messages.get(MessageConstants.MESSAGES1)
 				: Messages.get(MessageConstants.MESSAGES, elementCount);
-		btnInformations.setText("<html><a href='' style='text-decoration: none'>"+Messages.get(MessageConstants.INFORMATIONS)+"</a>"
-				+ "<br>"+messageCount+"</html>");
+		btnInformations.setText("<html>"+Messages.get(MessageConstants.INFORMATIONS)
+		+ "<br>"+messageCount+"</html>");
 	}
 
 	private void updateWarningElementsCount() {
 		int elementCount = pnlWarnings.getElementCount();
 		String messageCount = (elementCount == 1) ? Messages.get(MessageConstants.MESSAGES1)
 				: Messages.get(MessageConstants.MESSAGES, elementCount);
-		btnWarnings.setText("<html><a href='' style='text-decoration: none'>"+Messages.get(MessageConstants.WARNINGS)+"</a>"
-				+ "<br>"+messageCount+"</html>");
+		btnWarnings.setText("<html>"+Messages.get(MessageConstants.WARNINGS)
+		+ "<br>"+messageCount+"</html>");
 	}
 
 	private void updateErrorElementsCount() {
 		int elementCount = pnlErrors.getElementCount();
 		String messageCount = (elementCount == 1) ? Messages.get(MessageConstants.MESSAGES1)
 				: Messages.get(MessageConstants.MESSAGES, elementCount);
-		btnErrors.setText("<html><a href='' style='text-decoration: none'>"+Messages.get(MessageConstants.ERRORS)+"</a>"
-				+ "<br>"+messageCount+"</html>");
+		btnErrors.setText("<html>"+Messages.get(MessageConstants.ERRORS)
+		+ "<br>"+messageCount+"</html>");
 	}
 	public int getNotificationsPanelWidth() {
 		return pnlInformations.getWidth();
@@ -405,11 +433,11 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		String messageCountErrors = (elementCountErrors == 1) ? Messages.get(MessageConstants.MESSAGES1)
 				: Messages.get(MessageConstants.MESSAGES, elementCountErrors);
 
-		btnInformations.setText("<html><a href='' style='text-decoration: " + style + "'>" + Messages.get(MessageConstants.INFORMATIONS) + "</a>" + "<br>"
+		btnInformations.setText("<html>"+Messages.get(MessageConstants.INFORMATIONS) + "<br>"
 				+ messageCountInformations+"</html>");
-		btnWarnings.setText("<html><a href='' style='text-decoration: " + style + "'>" + Messages.get(MessageConstants.WARNINGS) + "</a>" + "<br>"
+		btnWarnings.setText("<html>" + Messages.get(MessageConstants.WARNINGS) + "<br>"
 				+ messageCountWarnings +"</html>");
-		btnErrors.setText("<html><a href='' style='text-decoration: " + style + "'>" + Messages.get(MessageConstants.ERRORS) + "</a>" + "<br>"
+		btnErrors.setText("<html>" + Messages.get(MessageConstants.ERRORS) + "<br>"
 				+ messageCountErrors +"</html>");
 
 		pnlInformations.languageChanged();
@@ -458,5 +486,18 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 
 	public void addSelectPreviousGameListener(ActionListener l) {
 		pnlBrowseCovers.addSelectPreviousGameListener(l);
+	}
+
+	@Override
+	protected void paintComponent(Graphics g) {
+		super.paintComponent(g);
+		BufferedImage background = IconStore.current().getNavigationBackgroundImage();
+		if (background != null) {
+			Graphics2D g2d = (Graphics2D) g.create();
+			int panelWidth = getWidth();
+			int panelHeight = getHeight();
+			g2d.drawImage(background, 0, 0, panelWidth, panelHeight, this);
+			g2d.dispose();
+		}
 	}
 }

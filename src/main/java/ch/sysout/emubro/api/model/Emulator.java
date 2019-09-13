@@ -9,6 +9,8 @@ public interface Emulator extends Comparable<Emulator> {
 
 	String getName();
 
+	String getShortName();
+
 	String getStartParameters();
 
 	String getPath();

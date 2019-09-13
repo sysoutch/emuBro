@@ -84,8 +84,9 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 		setBorder(Paddings.TABBED_DIALOG);
 
 		pnlOutter = new JPanel(new BorderLayout());
+		pnlOutter.setOpaque(false);
 		pnlOutter.add(createBrowseOptionsPanel());
-		spBrowseComputer = new JScrollPane() {
+		spBrowseComputer = new ModernScrollPane(pnlOutter) {
 			private static final long serialVersionUID = 1L;
 			private Dimension lastDimension;
 
@@ -101,7 +102,8 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 				return d;
 			}
 		};
-		spBrowseComputer.setViewportView(pnlOutter);
+		spBrowseComputer.setOpaque(false);
+		spBrowseComputer.getViewport().setOpaque(false);
 		spBrowseComputer.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 		spBrowseComputer.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
 		spBrowseComputer.getVerticalScrollBar().setUnitIncrement(16);
@@ -125,6 +127,7 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 		FormLayout layout = new FormLayout("default, $ugap:grow, $lcgap, min:grow, $rgap, $lcgap, min:grow",
 				"$ugap, fill:pref, $rgap, fill:pref");
 		pnlLinks = new JPanel(layout);
+		pnlLinks.setOpaque(false);
 		CellConstraints cc = new CellConstraints();
 		pnlLinks.add(new JSeparator(), cc.xyw(1, 1, layout.getColumnCount()));
 		pnlLinks.add(lnkSearchResults, cc.xy(1, 2));
@@ -176,6 +179,8 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 				return d;
 			}
 		};
+		pnlBrowseOptionsPanel.setOpaque(false);
+
 		layoutNormal = new FormLayout("default:grow, min, default:grow, $rgap, min, min",
 				"fill:default, min, fill:default, $rgap, fill:default:grow, min");
 
@@ -318,7 +323,7 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 		txtBrowseComputer.setLineWrap(true);
 		txtBrowseComputer.setWrapStyleWord(false);
 		txtBrowseComputer.setPreferredSize(new Dimension(0, 0));
-		spBrowse = new JScrollPane(txtBrowseComputer);
+		spBrowse = new ModernScrollPane(txtBrowseComputer);
 		spBrowse.setBorder(BorderFactory.createEmptyBorder());
 		spBrowse.getVerticalScrollBar().setUnitIncrement(16);
 	}

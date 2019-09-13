@@ -1,8 +1,7 @@
 package ch.sysout.emubro.ui;
 
+import java.awt.Color;
 import java.awt.Cursor;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.MouseEvent;
@@ -50,6 +49,7 @@ public class JLinkButton extends JButton implements MouseListener, FocusListener
 		setBorder(BorderFactory.createEmptyBorder());
 		setContentAreaFilled(false);
 		setFocusPainted(false);
+		setForeground(Color.GREEN);
 		doHover(false);
 	}
 
@@ -57,8 +57,9 @@ public class JLinkButton extends JButton implements MouseListener, FocusListener
 	void doHover(boolean b) {
 		Cursor cursor = (b) ? Cursor.getPredefinedCursor(Cursor.HAND_CURSOR) : null;
 		setCursor(cursor);
-		String style = (b) ? "underline" : "none";
-		super.setText("<html><a href='' style='text-decoration: " + style + "'>" + text + "</a></html>");
+		//		String style = (b) ? "underline" : "none";
+		// uncommented because text will wrap this way instead of making large text then...(points)
+		//		super.setText("<html><a href='' style='text-decoration: " + style + "'>" + text + "</a></html>");
 	}
 
 	@Override

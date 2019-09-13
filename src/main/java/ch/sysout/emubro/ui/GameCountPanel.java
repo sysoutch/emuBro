@@ -4,11 +4,13 @@ import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Insets;
 import java.awt.Point;
+import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionAdapter;
+import java.awt.image.BufferedImage;
 
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
@@ -33,8 +35,8 @@ import ch.sysout.util.UIUtil;
 
 public class GameCountPanel extends JPanel implements GameListener, DetailsPaneListener, LanguageListener {
 	private static final long serialVersionUID = 1L;
-	private JLabel lblGameCount = new JLabel();
-	private JLabel lblSystemInformations = new JLabel();
+	private JLabel lblGameCount = new JLabel2("");
+	private JLinkButton lnkSystemInformations = new JLinkButton("System informations");
 	private ProgressPanel pnlProgress;
 	JButton btnShowDetailsPane = new JButton();
 	JLabel btnResize = new JLabel();
@@ -45,6 +47,7 @@ public class GameCountPanel extends JPanel implements GameListener, DetailsPaneL
 	private ImageIcon iconBlank;
 	private int gameCount;
 	protected Point spaceToBorder;
+	private String[] systemInformations;
 
 	public GameCountPanel() {
 		super();
@@ -53,6 +56,14 @@ public class GameCountPanel extends JPanel implements GameListener, DetailsPaneL
 	}
 
 	private void initComponents() {
+		setTextColors(IconStore.current().getButtonBarBackgroundImage());
+		lnkSystemInformations.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				UIUtil.copyTextToClipboard(lnkSystemInformations.getText());
+			}
+		});
 		initializeProgressPanel();
 		int size = ScreenSizeUtil.is3k() ? 24 : 16;
 		iconResize = ImageUtil.getImageIconFrom(Icons.get("resize", size, size));
@@ -112,8 +123,13 @@ public class GameCountPanel extends JPanel implements GameListener, DetailsPaneL
 		});
 	}
 
+	private void setTextColors(BufferedImage imgButtonBarBackground) {
+		UIUtil.setForegroundDependOnBackground(imgButtonBarBackground, 0, 0, lblGameCount);
+	}
+
 	private void initializeProgressPanel() {
 		pnlProgress = new ProgressPanel();
+		pnlProgress.setOpaque(false);
 	}
 
 	public void addBrowseComputerProgressBarListener(MouseListener l) {
@@ -121,20 +137,21 @@ public class GameCountPanel extends JPanel implements GameListener, DetailsPaneL
 	}
 
 	private void createUI() {
+		setOpaque(false);
 		pnlProgress.setVisible(false);
 		btnResize.setFocusable(false);
 		// JPanel pnl = new JPanel(new BorderLayout());
 		// pnl.add(pnlProgress);
-		FormLayout layout = new FormLayout("min, $rgap, min:grow, $ugap, default",
-				"default:grow");
+		FormLayout layout = new FormLayout("min, $rgap, min, $rgap, min:grow, $ugap, default",
+				"fill:min");
 		setLayout(layout);
 		CellConstraints cc = new CellConstraints();
-		lblSystemInformations.setMinimumSize(new Dimension(0, 0));
+		lnkSystemInformations.setMinimumSize(new Dimension(0, 0));
 		add(lblGameCount, cc.xy(1, 1));
-		add(new JSeparator(JSeparator.VERTICAL), cc.xy(2, 1));
-		add(lblSystemInformations, cc.xy(3, 1));
-		add(pnlProgress, cc.xy(5, 1));
-		// add(lblResize, cc.xywh(5, 2, 1, 1));
+		add(new JSeparator(JSeparator.VERTICAL), cc.xy(3, 1));
+		add(lnkSystemInformations, cc.xy(5, 1));
+		add(pnlProgress, cc.xy(7, 1));
+		// add(lblResize, cc.xywh(7, 2, 1, 1));
 	}
 
 	public void updateGameCount(int gameCount) {
@@ -194,8 +211,11 @@ public class GameCountPanel extends JPanel implements GameListener, DetailsPaneL
 	}
 
 	public void showSystemInformations(String[] informations) {
+		systemInformations = informations;
+		String string = "";
 		for (String s : informations) {
-			lblSystemInformations.setText(lblSystemInformations.getText() + " " + s);
+			string += s;
 		}
+		lnkSystemInformations.setText(string);
 	}
 }

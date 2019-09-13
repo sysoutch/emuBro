@@ -3,12 +3,15 @@ package ch.sysout.emubro.api.model;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
+import ch.sysout.emubro.api.filter.FilterGroup;
+import ch.sysout.emubro.impl.model.BroEmulator;
 import ch.sysout.emubro.impl.model.BroGame;
 import ch.sysout.emubro.impl.model.BroTag;
 
 public interface Explorer {
-	void addGame(Game game, String filePath);
+	void addGame(Game game, String path);
 
 	void removeGame(Game game);
 
@@ -18,7 +21,9 @@ public interface Explorer {
 
 	List<Game> getCurrentGames();
 
-	void setCurrentGame(List<Game> list);
+	void setCurrentGames(List<Game> games);
+
+	void setCurrentGames(Game... games);
 
 	boolean hasCurrentGame();
 
@@ -157,6 +162,20 @@ public interface Explorer {
 	String getResourcesPath();
 
 	String getGameCoversPath();
+
+	List<BroEmulator> getEmulatorsFromPlatform(int platformId);
+
+	void setFilterGroups(List<FilterGroup> filterGroups);
+
+	void addFilterGroup(FilterGroup filterGroup);
+
+	Properties getGameTitlesFromPlatform(Platform platform);
+
+	void setGameTitlesForPlatform(Platform p, Properties prop);
+
+	String getPlatformsDirectory();
+
+	boolean hasGamesOrEmulators(int platformId);
 
 	// void addEmulator(Emulator emulator);
 	//

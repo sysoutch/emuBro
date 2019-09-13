@@ -63,4 +63,8 @@ public interface Platform extends Comparable<Platform> {
 	boolean isAutoSearchEnabled();
 
 	void setAutoSearchEnabled(boolean autoSearchEnabled);
+
+	boolean hasGameCodeRegexes();
+
+	List<String> getGameCodeRegexes();
 }

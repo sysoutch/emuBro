@@ -9,7 +9,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +29,7 @@ public class FindCoversPanel extends JPanel {
 
 	private List<JComponent> pictures = new ArrayList<>();
 
-	private JButton btnSearchCovers = new JButton("Ergebnisse der Google Bildersuche");
+	private JButton btnSearchCovers = new JButton("Results of image search");
 
 	private JPanel pnlCovers = new JPanel();
 
@@ -67,76 +66,12 @@ public class FindCoversPanel extends JPanel {
 
 	public void fetchCovers() {
 		btnSearchCovers.setEnabled(false);
-		URL url;
 		URL[] urls = null;
-		try {
-			url = new URL(
-					"http://domustation.altervista.org/wp-content/uploads/spyro-2-gateway-to-glimmer-SCES-02104-Front.jpg");
-			URL url2 = new URL("http://s.emuparadise.org/fup/up/52799-Spyro_2_-_Gateway_to_Glimmer_(E)-1.jpg");
-			URL url3 = new URL("http://www.thecoverproject.net/images/covers/gbc_nba3on3featuringkobebryant_2.jpg");
-			URL url4 = new URL("http://www.thecoverproject.net/images/covers/gc_legendofzeldathewindwaker_9_thumb.jpg");
-			URL url5 = new URL("http://www.thecoverproject.net/images/covers/n64_rayman2_3_thumb.jpg");
-			URL url6 = new URL("https://www.mediafire.com/convkey/481b/d81orbfaib231z05g.jpg");
-			URL url7 = new URL("https://www.mediafire.com/convkey/b312/2qj62p46z5rx1j35g.jpg");
-			URL url8 = new URL("https://www.mediafire.com/convkey/d10c/52ui7lza86eseks5g.jpg");
-
-			urls = new URL[] { url, url2, url3, url4, url5, url6, url7, url8 };
-		} catch (MalformedURLException e) {
-			e.printStackTrace();
-		}
 		if (urls != null) {
 			PictureWorker t = new PictureWorker(urls);
 			t.execute();
 			btnSearchCovers.setVisible(false);
 		}
-
-		// try {
-		// URL googleImagesUrl = new
-		// URL("https://www.google.com/search?tbm=isch&q=Spyro+The+Dragon+Cover");
-		// URLConnection connection = googleImagesUrl.openConnection();
-		// BufferedReader in = new BufferedReader(new
-		// InputStreamReader(connection.getInputStream()));
-		//
-		// StringBuilder response = new StringBuilder();
-		// String inputLine;
-		// while ((inputLine = in.readLine()) != null) {
-		// response.append(inputLine);
-		// }
-		// in.close();
-		// System.err.println(response.toString());
-		// } catch (IOException e1) {
-		// // TODO Auto-generated catch block
-		// e1.printStackTrace();
-		// }
-
-		// try {
-		// URL url = new
-		// URL("https://ajax.googleapis.com/ajax/services/search/images?v=1.0&q=Godfather");
-		// URLConnection connection = url.openConnection();
-		//
-		// String line;
-		// StringBuilder builder = new StringBuilder();
-		// BufferedReader reader = new BufferedReader(new
-		// InputStreamReader(connection.getInputStream()));
-		// while((line = reader.readLine()) != null) {
-		// builder.append(line);
-		// }
-		// reader.close();
-		//
-		// JsonReader reader1 = Json.createReader(connection.getInputStream());
-		// JsonObject json = reader1.readObject();
-		// String imageUrl =
-		// json.getJsonObject("responseData").getJsonArray("results").getJsonObject(0).getString("url");
-		// reader1.close();
-		//
-		// BufferedImage image = ImageIO.read(new URL(imageUrl));
-		// JOptionPane.showMessageDialog(null, "", "",
-		// JOptionPane.INFORMATION_MESSAGE, new ImageIcon(image));
-		// } catch(Exception e) {
-		// JOptionPane.showMessageDialog(null, e.getMessage(), "Failure",
-		// JOptionPane.ERROR_MESSAGE);
-		// e.printStackTrace();
-		// }
 	}
 
 	class PictureWorker extends SwingWorker<Integer, Image> {
@@ -199,7 +134,6 @@ public class FindCoversPanel extends JPanel {
 
 		@Override
 		protected void done() {
-			System.out.println("done");
 			final JToggleButton lbl = new JToggleButton("Show more pictures...");
 			lbl.setBorderPainted(false);
 			lbl.setContentAreaFilled(false);

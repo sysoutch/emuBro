@@ -94,26 +94,29 @@ public class ViewPanelManager {
 		}
 	}
 
-	public void initPlatforms(String emuBroCoverHome, List<Platform> platforms) {
+	public void initPlatforms(List<Platform> platforms, String platformsDirectory) {
 		this.platforms = platforms;
 		for (Platform p : platforms) {
-			initEmulatorIcons(emuBroCoverHome, p.getEmulators());
-			iconStore.addPlatformIcon(p.getId(), p.getIconFileName());
-		}
-		initPlatformCovers(platforms);
-	}
-
-	private void initPlatformCovers(List<Platform> platforms) {
-		for (Platform p : platforms) {
-			String defaultGameCover = p.getDefaultGameCover();
-			int platformId = p.getId();
-			iconStore.addPlatformCover(platformId, defaultGameCover);
+			String emulatorsDirectory = platformsDirectory + File.separator + p.getShortName() + File.separator + "emulators";
+			initEmulatorIcons(emulatorsDirectory, p.getEmulators());
+			iconStore.addPlatformIcon(p.getId(), platformsDirectory + File.separator + p.getShortName() + File.separator + "logo", p.getIconFileName());
+			initPlatformCover(p, platformsDirectory);
 		}
 	}
 
-	private void initEmulatorIcons(String emuBroCoverHome, List<BroEmulator> list) {
+	private void initPlatformCover(Platform p, String currentPlatformCoversDirectory) {
+		String defaultGameCover = p.getDefaultGameCover();
+		int platformId = p.getId();
+		iconStore.addPlatformCover(platformId, currentPlatformCoversDirectory + File.separator + p.getShortName() + File.separator + "covers", defaultGameCover);
+	}
+
+	private void initEmulatorIcons(String emulatorIconDirectory, List<BroEmulator> list) {
 		for (Emulator e : list) {
-			String coverPath = emuBroCoverHome + File.separator + e.getIconFilename();
+			String shortName = e.getShortName();
+			if (shortName == null) {
+				shortName = e.getName().toLowerCase().replaceAll("\\s+","");
+			}
+			String coverPath = emulatorIconDirectory + File.separator + shortName + File.separator + "default.png";
 			iconStore.addEmulatorIconPath(e.getId(), coverPath);
 		}
 	}
@@ -434,7 +437,6 @@ public class ViewPanelManager {
 		iconStore.addGameIconPath(e.getGame().getId(), e.getGame().getIconPath());
 		iconStore.addGameCoverPath(e.getGame().getId(), e.getGame().getCoverPath());
 		Platform p = e.getPlatform();
-		iconStore.addPlatformIcon(p.getId(), p.getIconFileName());
 		for (ViewPanel pnl : panels) {
 			if (pnl != null) {
 				pnl.gameAdded(e, filterEvent);
@@ -556,10 +558,6 @@ public class ViewPanelManager {
 
 	public boolean isPlatformFilterSet() {
 		return currentFilterEvent != null && currentFilterEvent.isPlatformFilterSet();
-	}
-
-	public boolean isTagFilterSet() {
-		return currentFilterEvent != null && currentFilterEvent.isTagFilterSet();
 	}
 
 	public void gameRenamed(GameRenamedEvent event) {

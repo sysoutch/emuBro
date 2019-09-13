@@ -34,11 +34,9 @@ public class GameTableModel extends DefaultTableModel {
 	private Map<Integer, ImageIcon> emulatorIcons = new HashMap<>();
 
 	private Explorer explorer;
-	private IconStore iconStore;
 
-	public GameTableModel(Explorer explorer, IconStore iconStore) {
+	public GameTableModel(Explorer explorer) {
 		this.explorer = explorer;
-		this.iconStore = iconStore;
 	}
 
 	@Override
@@ -71,7 +69,7 @@ public class GameTableModel extends DefaultTableModel {
 				String dateAdded = UIUtil.format(game.getDateAdded());
 				switch (columnIndex) {
 				case 0:
-					ImageIcon icon = iconStore.getPlatformIcon(game.getPlatformId());
+					ImageIcon icon = IconStore.current().getPlatformIcon(game.getPlatformId());
 					value = icon;
 					break;
 				case 1:

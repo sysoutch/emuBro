@@ -337,6 +337,7 @@ public class MessageConstants {
 	public static final String PLATFORM_NOT_RECOGNIZED = "platformNotRecognized";
 	public static final String PLATFORM_NOT_RECOGNIZED_TITLE = "platformNotRecognizedTitle";
 	public static final String NO_TAGS_AVAILABLE = "noTagsAvailable";
+	public static final String NO_FILTERGROUPS_AVAILABLE = "noFilterGroupsAvailable";
 	public static final String REMOVE_OR_UNFAVORITE_GAMES = "removeOrUnfavoriteGames";
 	public static final String MULTIPLE_GAMES_SELECTED = "multipleGamesSelected";
 	public static final String MY_ACCOUNT = "myAccount";

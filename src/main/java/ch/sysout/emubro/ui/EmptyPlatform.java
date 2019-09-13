@@ -162,4 +162,16 @@ public class EmptyPlatform implements Platform {
 	public String toString() {
 		return "<html><strong>" + Messages.get("emptyPlatform") + "</strong></html>";
 	}
+
+	@Override
+	public boolean hasGameCodeRegexes() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public List<String> getGameCodeRegexes() {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }

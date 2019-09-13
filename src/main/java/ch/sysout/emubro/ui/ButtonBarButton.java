@@ -15,10 +15,11 @@ public class ButtonBarButton extends JButton {
 	private String toolTipText;
 
 	public ButtonBarButton(String label, Icon icon, String toolTipText) {
-		this(label, icon);
 		setFocusable(false);
 		UIUtil.doHover(false, this);
 		setToolTipText(toolTipText);
+		setModel(new DefaultButtonModel());
+		init(label, icon);
 	}
 
 	/**
@@ -70,8 +71,7 @@ public class ButtonBarButton extends JButton {
 	 *            the icon of the <code>ButtonBarButton</code>
 	 */
 	public ButtonBarButton(String text, Icon icon) {
-		setModel(new DefaultButtonModel());
-		init(text, icon);
+		this(text, icon, "");
 	}
 
 	/**

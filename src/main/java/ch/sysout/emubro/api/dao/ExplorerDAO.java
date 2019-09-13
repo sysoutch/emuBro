@@ -5,6 +5,7 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 
+import ch.sysout.emubro.api.filter.FilterGroup;
 import ch.sysout.emubro.api.model.Emulator;
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.Platform;
@@ -155,4 +156,8 @@ public interface ExplorerDAO {
 	void setLastDirFromFolderChooser(String absolutePath) throws SQLException;
 
 	void setGameCode(int id, String realName) throws SQLException;
+
+	List<FilterGroup> getFilterGroups() throws SQLException;
+
+	void addFilterGroup(FilterGroup filterGroup) throws SQLException;
 }

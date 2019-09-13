@@ -27,10 +27,11 @@ public class BroPlatform implements Platform {
 	private List<BroEmulator> emulators;
 	private int defaultEmulatorId = EmulatorConstants.NO_EMULATOR;
 	private boolean autoSearchEnabled = true;
+	private List<String> gameCodeRegexes;
 
 	public BroPlatform(int id, String name, String shortName, String iconFilename, String defaultGameCover, String[] gameSearchModes,
 			String searchFor, FileStructure fileStructure[], String supportedArchiveTypes[],
-			String supportedImageTypes[], BroEmulator[] emulators, int defaultEmulatorId, boolean autoSearchEnabled) {
+			String supportedImageTypes[], BroEmulator[] emulators, int defaultEmulatorId, boolean autoSearchEnabled, String[] gameCodeRegexes) {
 		ValidationUtil.checkNullOrEmpty(name, "name");
 		this.id = id;
 		this.name = name;
@@ -45,12 +46,13 @@ public class BroPlatform implements Platform {
 		this.emulators = new ArrayList<>(Arrays.asList(emulators));
 		this.defaultEmulatorId = defaultEmulatorId;
 		this.autoSearchEnabled = autoSearchEnabled;
+		this.gameCodeRegexes = new ArrayList<>(Arrays.asList(gameCodeRegexes));
 	}
 
 	public BroPlatform(int id, String name, String shortName, String iconFilename, String defaultGameCover, String[] gameSearchModes,
 			String searchFor, FileStructure fileStructure[], String supportedArchiveTypes[],
 			String supportedImageTypes[], List<BroEmulator> emulators, int defaultEmulatorId,
-			boolean autoSearchEnabled) {
+			boolean autoSearchEnabled, String[] gameCodeRegexes) {
 		ValidationUtil.checkNullOrEmpty(name, "name");
 		this.id = id;
 		this.name = name;
@@ -65,6 +67,7 @@ public class BroPlatform implements Platform {
 		this.emulators = new ArrayList<>(emulators);
 		this.defaultEmulatorId = defaultEmulatorId;
 		this.autoSearchEnabled = autoSearchEnabled;
+		this.gameCodeRegexes = new ArrayList<>(Arrays.asList(gameCodeRegexes));
 	}
 
 	// public BroPlatform(int id, String name, String iconFilename,
@@ -285,6 +288,16 @@ public class BroPlatform implements Platform {
 	@Override
 	public void setAutoSearchEnabled(boolean autoSearchEnabled) {
 		this.autoSearchEnabled = autoSearchEnabled;
+	}
+
+	@Override
+	public boolean hasGameCodeRegexes() {
+		return !gameCodeRegexes.isEmpty() && gameCodeRegexes.get(0) != null && !gameCodeRegexes.get(0).isEmpty();
+	}
+
+	@Override
+	public List<String> getGameCodeRegexes() {
+		return gameCodeRegexes;
 	}
 
 	@Override

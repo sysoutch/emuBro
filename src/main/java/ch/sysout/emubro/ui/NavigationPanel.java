@@ -4,12 +4,16 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Insets;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,6 +39,7 @@ import com.jgoodies.forms.layout.FormLayout;
 import ch.sysout.emubro.api.GameViewListener;
 import ch.sysout.emubro.impl.event.NavigationEvent;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.util.FontUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
@@ -68,41 +73,45 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 	private AbstractButton btnSelectInvert = new JButton(Messages.get(MessageConstants.SELECT_INVERT));
 	private JPanel pnlPopup;
 	private int currentNavView = ALL_GAMES;
+	private Color colorButtonForeground = Color.WHITE;
+	private Color colorButtonForegroundHover = Color.BLACK;
 
 	public NavigationPanel() {
 		super(new BorderLayout());
 		initComponents();
 		createUI();
-		System.out.println(getInsets().left);
 	}
 
 	private void initComponents() {
-		spNavigationButtons = new JScrollPane();
 		int size = ScreenSizeUtil.is3k() ? 10 : 5;
 		Insets insets = new Insets(size, size, size, size);
-		btnAllGames.setFont(ScreenSizeUtil.defaultFont());
-		btnRecentlyPlayed.setFont(ScreenSizeUtil.defaultFont());
-		btnFavorites.setFont(ScreenSizeUtil.defaultFont());
+		Font customFont = FontUtil.getCustomFont();
+		btnAllGames.setFont(customFont);
+		btnRecentlyPlayed.setFont(customFont);
+		btnFavorites.setFont(customFont);
 
 		btnAllGames.setHorizontalAlignment(SwingConstants.LEFT);
 		btnAllGames.setHorizontalTextPosition(SwingConstants.RIGHT);
 		btnAllGames.setVerticalTextPosition(SwingConstants.CENTER);
 		btnAllGames.setFocusable(false);
 		btnAllGames.setBorder(new EmptyBorder(insets));
+		btnAllGames.setForeground(colorButtonForeground);
 
 		btnRecentlyPlayed.setHorizontalAlignment(SwingConstants.LEFT);
 		btnRecentlyPlayed.setHorizontalTextPosition(SwingConstants.RIGHT);
 		btnRecentlyPlayed.setVerticalTextPosition(SwingConstants.CENTER);
 		btnRecentlyPlayed.setFocusable(false);
 		btnRecentlyPlayed.setBorder(new EmptyBorder(insets));
+		btnRecentlyPlayed.setForeground(colorButtonForeground);
 
 		btnFavorites.setHorizontalAlignment(SwingConstants.LEFT);
 		btnFavorites.setHorizontalTextPosition(SwingConstants.RIGHT);
 		btnFavorites.setVerticalTextPosition(SwingConstants.CENTER);
 		btnFavorites.setFocusable(false);
 		btnFavorites.setBorder(new EmptyBorder(insets));
+		btnFavorites.setForeground(colorButtonForeground);
 
-		UIUtil.doHover(false, btnAllGames, btnRecentlyPlayed, btnFavorites);
+		UIUtil.doHover(false, colorButtonForeground, btnAllGames, btnRecentlyPlayed, btnFavorites);
 		dlgPopup.setLayout(new BorderLayout());
 		dlgPopup.setUndecorated(true);
 		layoutPopup = new FormLayout("min:grow");
@@ -125,7 +134,26 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 	private void createUI() {
 		//		setBorder(BorderFactory.createEtchedBorder());
 		FormLayout layout = new FormLayout("default:grow", "fill:default, min, fill:default, min, fill:default, min");
-		JPanel pnl = new JPanel(layout);
+		JPanel pnl = new JPanel(layout) {
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			protected void paintComponent(Graphics g) {
+				super.paintComponent(g);
+				BufferedImage background = IconStore.current().getNavigationBackgroundImage();
+				if (background != null) {
+					Graphics2D g2d = (Graphics2D) g.create();
+					int x = 0;
+					int y = 0;
+					int w = getWidth();
+					int h = getHeight();
+					g2d.drawImage(background, 0, 0, w, h, this);
+					g2d.dispose();
+				}
+			}
+		};
+		spNavigationButtons = new ModernScrollPane(pnl);
+
 		CellConstraints cc = new CellConstraints();
 		pnl.add(btnAllGames, cc.xy(1, 1));
 		pnl.add(btnFavorites, cc.xy(1, 3));
@@ -135,7 +163,7 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 		FormLayout layout2 = new FormLayout("default:grow", "");
 		pnlPlatforms.setLayout(layout2);
 		new CellConstraints();
-		spNavigationButtons.setViewportView(pnl);
+		//		spNavigationButtons.setViewportView(pnl);
 		spNavigationButtons.validate();
 		spNavigationButtons.repaint();
 		spNavigationButtons.setBorder(BorderFactory.createEmptyBorder());
@@ -439,7 +467,7 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 			}
 			btnFavorites.setSelected(true);
 			UIUtil.doHover(false, btnAllGames, btnRecentlyPlayed);
-			UIUtil.doHover(true, btnFavorites);
+			UIUtil.doHover(true, colorButtonForegroundHover, btnFavorites);
 			spNavigationButtons.getVerticalScrollBar().setValue(spNavigationButtons.getVerticalScrollBar()
 					.getMaximum());
 			break;
@@ -536,7 +564,11 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 		return UIUtil.getLongestLabel(buttonText, buttonText1, buttonText2, buttonText3);
 	}
 
-	public int getButtonInsets() {
+	public int getButtonBorderSize() {
 		return btnAllGames.getInsets().left + btnAllGames.getInsets().right;
+	}
+
+	public Insets getButtonInsets() {
+		return btnAllGames.getInsets();
 	}
 }

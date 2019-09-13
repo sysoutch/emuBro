@@ -159,7 +159,7 @@ public class AboutDialog extends JDialog implements ActionListener {
 
 	private void setActionCommands() {
 		btnReddit.setActionCommand("https://reddit.com/r/emuBro");
-		btnDiscord.setActionCommand("https://discordapp.com/invite/VGs9BGd");
+		btnDiscord.setActionCommand("https://discord.gg/EtKvZ2F");
 		btnFacebook.setActionCommand("https://www.facebook.com/emubr0");
 		btnTwitter.setActionCommand("https://twitter.com/emuBro");
 		btnYoutube.setActionCommand("https://www.youtube.com/channel/UC9zQuEiPjnRv2LXVqR57K1Q");

@@ -53,6 +53,7 @@ import ch.sysout.emubro.api.model.Emulator;
 import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.Platform;
+import ch.sysout.emubro.impl.model.EmulatorConstants;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
@@ -212,12 +213,20 @@ public class GamePropertiesDialog extends JDialog {
 		boolean emulatorFromGame = game.hasEmulator();
 		Emulator emulator = (emulatorFromGame) ? explorer.getEmulatorFromGame(game.getId())
 				: explorer.getEmulatorFromPlatform(platform.getId());
-		String emulatorName = (emulator != null) ? emulator.getName() : "-";
+		String emulatorName = null;
+		int emulatorId;
+		if (emulator != null) {
+			emulatorName = emulator.getName();
+			emulatorId = emulator.getId();
+		} else {
+			emulatorName = "";
+			emulatorId = EmulatorConstants.NO_EMULATOR;
+		}
 		pnlMain.add(new JLabel(emulatorName), cc.xy(3, 8));
 		pnlMain.add(btnModify = new JToggleButton(Messages.get(MessageConstants.MODIFY)), cc.xy(5, 8));
 
 		int rowHeight = ScreenSizeUtil.adjustValueToResolution(32);
-		EmulatorTableModel model = new EmulatorTableModel(platform.getEmulators(), emulator.getId());
+		EmulatorTableModel model = new EmulatorTableModel(platform.getEmulators(), emulatorId);
 		JTable tblEmulators = new JTableDoubleClickOnHeaderFix();
 		tblEmulators.setPreferredScrollableViewportSize(tblEmulators.getPreferredSize());
 		tblEmulators.setRowHeight(rowHeight);

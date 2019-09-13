@@ -304,6 +304,7 @@ public class NotificationsPanel extends JPanel {
 		layoutMain = new FormLayout("min:grow", "");
 		ccMain = new CellConstraints();
 		pnlGrid = new JPanel(layoutMain);
+		pnlGrid.setOpaque(false);
 		lblGameCover.setVisible(false);
 		lblGameCover.setFocusable(false);
 		setToolTipTexts();
@@ -314,6 +315,7 @@ public class NotificationsPanel extends JPanel {
 	}
 
 	private void createUI() {
+		setOpaque(false);
 		add(pnlGrid, BorderLayout.NORTH);
 	}
 

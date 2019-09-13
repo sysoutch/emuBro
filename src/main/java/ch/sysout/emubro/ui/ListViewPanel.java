@@ -5,6 +5,8 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.KeyboardFocusManager;
 import java.awt.Point;
 import java.awt.Rectangle;
@@ -27,16 +29,17 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionAdapter;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
+import java.awt.image.BufferedImage;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.IntStream;
 
 import javax.swing.AbstractButton;
 import javax.swing.Action;
+import javax.swing.ActionMap;
 import javax.swing.BorderFactory;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListSelectionModel;
@@ -47,6 +50,7 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
+import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.KeyStroke;
 import javax.swing.ListCellRenderer;
@@ -87,11 +91,11 @@ import ch.sysout.emubro.impl.event.BroGameSelectionEvent;
 import ch.sysout.emubro.impl.event.NavigationEvent;
 import ch.sysout.emubro.impl.model.BroEmulator;
 import ch.sysout.emubro.impl.model.BroGame;
-import ch.sysout.emubro.impl.model.BroTag;
 import ch.sysout.emubro.impl.model.EmulatorConstants;
 import ch.sysout.emubro.impl.model.GameConstants;
 import ch.sysout.emubro.impl.model.PlatformConstants;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.util.FontUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 import ch.sysout.util.UIUtil;
@@ -182,6 +186,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		this.viewManager = viewManager;
 		this.popupGame = popupGame;
 		this.popupView = popupView;
+
 		initPopupGroup();
 		add(createScrollPane(lstGames));
 		setGameListRenderer();
@@ -190,7 +195,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 			public void keyPressed(KeyEvent e) {
 				super.keyPressed(e);
 				if (e.getKeyCode() == KeyEvent.VK_CONTEXT_MENU) {
-					boolean showFileTreePopup = lstGames.getSelectedIndex() != GameConstants.NO_GAME;
+					boolean showFileTreePopup = lstGames.getSelectedIndex() != -1;
 					if (showFileTreePopup) {
 						showGamePopupMenu(e.getComponent(), mouseX, mouseY);
 					}
@@ -238,20 +243,54 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	}
 
 	private JScrollPane createScrollPane(JList<Game> lst) {
-		JScrollPane sp = new JScrollPane();
+		JScrollPane sp = new ModernScrollPane(lst);
+		sp.getHorizontalScrollBar().setOpaque(false);
+		sp.getVerticalScrollBar().setOpaque(false);
+		sp.getHorizontalScrollBar().setUnitIncrement(16);
+		sp.getVerticalScrollBar().setUnitIncrement(16);
+		sp.getViewport().setOpaque(false);
+		sp.setOpaque(false);
+		lst.setOpaque(false);
+		// done cause ModernScrollPane class breaks horizontal mouse wheel scrolling
+		sp.addMouseWheelListener(new MouseWheelListener() {
+
+			@Override
+			public void mouseWheelMoved(MouseWheelEvent e) {
+				// Ignore events generated with a rotation of 0
+				// (not sure why these events are generated)
+				int rotation = e.getWheelRotation();
+				if (rotation == 0) {
+					return;
+				}
+				// Get the appropriate Action key for the given rotation
+				// (unit/block scroll is system dependent)
+				String key = null;
+				if (e.getScrollType() == MouseWheelEvent.WHEEL_UNIT_SCROLL) {
+					key = (rotation < 0) ? "negativeUnitIncrement" : "positiveUnitIncrement";
+				} else {
+					key = (rotation < 0) ? "negativeBlockIncrement" : "positiveBlockIncrement";
+				}
+				// Get the Action from the scrollbar ActionMap for the given key
+				JScrollPane scrollPane = (JScrollPane) e.getComponent();
+				JScrollBar horizontal = scrollPane.getHorizontalScrollBar();
+				ActionMap map = horizontal.getActionMap();
+				Action action = map.get(key);
+				ActionEvent event = new ActionEvent(horizontal, ActionEvent.ACTION_PERFORMED, "");
+				// Invoke the Action the appropriate number of times to simulate
+				// default mouse wheel scrolling
+				int unitsToScroll = Math.abs(e.getUnitsToScroll());
+				for (int i = 0; i < unitsToScroll; i++) {
+					action.actionPerformed(event);
+				}
+			}
+		});
+
 		sp.addComponentListener(new ComponentAdapter() {
 			@Override
 			public void componentResized(ComponentEvent e) {
 				fixRowCountForVisibleColumns(lst);
 			}
 		});
-
-		sp.getHorizontalScrollBar().setUnitIncrement(16);
-		sp.getVerticalScrollBar().setUnitIncrement(16);
-
-		// sp.setOpaque(false);
-		// sp.getViewport().setOpaque(false);
-		// lst.setOpaque(false);
 		lst.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mousePressed(MouseEvent e) {
@@ -269,7 +308,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				lastSelectedIndex = mouseOver;
 				if (lst.locationToIndex(e.getPoint()) == -1 && !e.isShiftDown()
 						&& !isMenuShortcutKeyDown(e)) {
-					mouseOver = GameConstants.NO_GAME;
+					mouseOver = -1;
 					lst.clearSelection();
 				}
 			}
@@ -281,7 +320,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				lst.requestFocusInWindow();
 				if (SwingUtilities.isRightMouseButton(e)) {
 					int index = lst.locationToIndex(e.getPoint());
-					if (index != GameConstants.NO_GAME) {
+					if (index != -1) {
 						if (!lst.isSelectedIndex(index)) {
 							lst.setSelectedIndex(index);
 						}
@@ -304,7 +343,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 			}
 		});
 
-		sp.setViewportView(lst);
+		//		sp.setViewportView(lst);
 		sp.setBorder(BorderFactory.createEmptyBorder());
 		sps.put(lst, sp);
 
@@ -355,7 +394,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 					+ "</html>");
 					mouseOver = index;
 				} else {
-					index = GameConstants.NO_GAME;
+					index = -1;
 				}
 			}
 
@@ -441,18 +480,21 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	public void setGameListRenderer() {
 		setGameListRenderer(new DefaultListCellRenderer() {
 			private static final long serialVersionUID = 1L;
+			private Color colorBackground = Color.WHITE; //UIManager.getColor("List.foreground");
 			Color colorFavorite = new Color(250, 176, 42);
 			//			final Color colorFavorite = Color.BLUE;
 			//			final Color colorError = ValidationComponentUtils.getErrorBackground();
 			private Border borderHover = BorderFactory.createLineBorder(getGameList().getSelectionBackground(), 1, false);
 			private Border borderEmpty = BorderFactory.createEmptyBorder(0, ScreenSizeUtil.adjustValueToResolution(8), 0, 0);
 			private Map<Integer, Border> borders = new HashMap<>();
+			private Color colorItemBackground = new Color(0f, 0f, 0f, 0.25f);
 
 			@Override
 			public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected,
 					boolean cellHasFocus) {
 				JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected,
 						cellHasFocus);
+				label.setOpaque(isSelected);
 				if (viewStyle == ViewPanel.CONTENT_VIEW) {
 					label.setHorizontalAlignment(SwingConstants.LEFT);
 					label.setHorizontalTextPosition(SwingConstants.RIGHT);
@@ -510,14 +552,14 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 						// should not happen in general. there is a bug
 						// somewhere else
 					} else {
-						Icon platformIcon = (viewStyle == ViewPanel.LIST_VIEW || viewStyle == ViewPanel.ELEMENT_VIEW) ?
-								IconStore.current().getPlatformIcon(platformId)
-								: IconStore.current().getScaledPlatformCover(platformId, currentCoverSize);
-								if (platformIcon == null) {
-
-								}
-								label.setIcon(platformIcon);
-								label.setDisabledIcon(platformIcon);
+						ImageIcon icon;
+						if (viewStyle == ViewPanel.LIST_VIEW || viewStyle == ViewPanel.ELEMENT_VIEW) {
+							icon = IconStore.current().getPlatformIcon(platformId);
+						} else {
+							icon = IconStore.current().getScaledPlatformCover(platformId, currentCoverSize);
+						}
+						label.setIcon(icon);
+						label.setDisabledIcon(icon);
 					}
 					label.setIconTextGap(ScreenSizeUtil.adjustValueToResolution(8));
 					label.setBorder(borderEmpty);
@@ -563,20 +605,30 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 			}
 
 			private void checkFontAndFontSize(JList<?> list, BroGame game, JLabel label, boolean isSelected) {
-				Font labelFont = label.getFont();
+				Font font = FontUtil.getCustomFont();
+				label.setFont(font);
 				if (viewManager.getFontSize() <= 0) {
 					viewManager.setFontSize(label.getFont().getSize());
 				}
 				if (game.isFavorite()) {
 					if (!isSelected) {
 						label.setForeground(colorFavorite);
-					}
-					if (viewStyle != ViewPanel.CONTENT_VIEW) {	// Cause in content view the game title is bold and the other informations not. It would looks too bold.
-						//						label.setFont(new Font(labelFont.getName(), Font.BOLD, getFontSize()));
+						if (viewStyle != ViewPanel.CONTENT_VIEW) {	// Cause in content view the game title is bold and the other informations not. It would looks too bold.
+							//						label.setFont(new Font(labelFont.getName(), Font.BOLD, getFontSize()));
+						}
+					} else {
+						label.setOpaque(true);
+						label.setBackground(colorItemBackground);
+						if (viewStyle != ViewPanel.CONTENT_VIEW) {	// Cause in content view the game title is bold. This would set game title also plain.
+							//						label.setFont(new Font(labelFont.getName(), Font.PLAIN, getFontSize()));
+						}
 					}
 				} else {
-					if (viewStyle != ViewPanel.CONTENT_VIEW) {	// Cause in content view the game title is bold. This would set game title also plain.
-						//						label.setFont(new Font(labelFont.getName(), Font.PLAIN, getFontSize()));
+					if (isSelected) {
+						label.setOpaque(true);
+						label.setBackground(colorItemBackground);
+					} else {
+						label.setForeground(colorBackground);
 					}
 				}
 			}
@@ -592,15 +644,15 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 			}
 
 			private void checkIsGameSelected(JList<?> list, int index, JLabel label) {
-				int[] selectedIndices = getGameList().getSelectedIndices();
-				boolean contains = IntStream.of(selectedIndices).anyMatch(x -> x == index);
-				if (index > -1 && index == mouseOver && !contains) {
-					label.setForeground(getGameList().getSelectionBackground());
-					//					label.setBorder(borderHover);
-				}
-				if (index == getGameList().getSelectedIndex()) {
-					label.setForeground(UIManager.getColor("List.selectionForeground"));
-				}
+				//				int[] selectedIndices = getGameList().getSelectedIndices();
+				//				boolean contains = IntStream.of(selectedIndices).anyMatch(x -> x == index);
+				//				if (index > -1 && index == mouseOver && !contains) {
+				//					label.setForeground(getGameList().getSelectionBackground());
+				//					//					label.setBorder(borderHover);
+				//				}
+				//				if (index == getGameList().getSelectedIndex()) {
+				//					label.setForeground(UIManager.getColor("List.selectionForeground"));
+				//				}
 			}
 		});
 	}
@@ -632,16 +684,16 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 			layoutOrientation = JList.HORIZONTAL_WRAP;
 			break;
 		}
-		for (Map.Entry<JList<Game>, JScrollPane> entry : sps.entrySet()) {
-			entry.getKey().setLayoutOrientation(layoutOrientation);
-			if (viewStyle == ViewPanel.SLIDER_VIEW) {
-				entry.getKey().setVisibleRowCount(1);
-				entry.getKey().setFixedCellHeight(entry.getValue().getViewport().getHeight());
-			} else {
-				SwingUtilities.invokeLater(new Runnable() {
+		SwingUtilities.invokeLater(new Runnable() {
 
-					@Override
-					public void run() {
+			@Override
+			public void run() {
+				for (Map.Entry<JList<Game>, JScrollPane> entry : sps.entrySet()) {
+					entry.getKey().setLayoutOrientation(layoutOrientation);
+					if (viewStyle == ViewPanel.SLIDER_VIEW) {
+						entry.getKey().setVisibleRowCount(1);
+						entry.getKey().setFixedCellHeight(entry.getValue().getViewport().getHeight());
+					} else {
 						if (viewStyle == ViewPanel.COVER_VIEW) {
 							entry.getKey().setFixedCellHeight(cellHeight);
 						} else if (viewStyle == ViewPanel.CONTENT_VIEW) {
@@ -652,9 +704,9 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 						fixRowCountForVisibleColumns(entry.getKey());
 						entry.getKey().ensureIndexIsVisible(entry.getKey().getSelectedIndex());
 					}
-				});
+				}
 			}
-		}
+		});
 	}
 
 	private void fixRowCountForVisibleColumns(JList<?> list) {
@@ -696,7 +748,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		if (cellBounds != null) {
 			int cellWidth = cellBounds.width;
 			int width = list.getVisibleRect().width;
-			return width / cellWidth;
+			return (cellWidth == 0) ? 0 : width / cellWidth;
 		}
 		return 1;
 	}
@@ -904,7 +956,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	}
 
 	private void setRowHeight(JList<?> lst, int value, boolean fixRowCountForVisibleColumns, boolean ensureIndexIsVisible) {
-		int lastSelected = GameConstants.NO_GAME;
+		int lastSelected = -1;
 		if (ensureIndexIsVisible) {
 			Rectangle visibleRect = lst.getVisibleRect();
 			if (visibleRect != null) {
@@ -919,7 +971,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 			fixRowCountForVisibleColumns(lst);
 		}
 		if (ensureIndexIsVisible) {
-			if (lastSelected != GameConstants.NO_GAME) {
+			if (lastSelected != -1) {
 				lst.ensureIndexIsVisible(lastSelected);
 			}
 		}
@@ -927,10 +979,10 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 
 	@Override
 	public void selectGame(int gameId) {
-		int selectedIndex = GameConstants.NO_GAME;
 		if (gameId == GameConstants.NO_GAME) {
 			lstGames.clearSelection();
 		} else {
+			int selectedIndex = -1;
 			for (int i = 0; i < lstGames.getModel().getSize(); i++) {
 				Game game = lstGames.getModel().getElementAt(i);
 				if (game.getId() == gameId) {
@@ -1425,7 +1477,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 			setViewStyle(lstGames, viewStyle);
 			break;
 		}
-		if (filterEvent.isPlatformFilterSet() || filterEvent.isGameFilterSet() || filterEvent.isTagFilterSet()) {
+		if (filterEvent.isPlatformFilterSet() || filterEvent.isGameFilterSet()) {
 			mdlLstFilteredGames.removeAllElements();
 			filterSet(filterEvent);
 			gameCount = mdlLstFilteredGames.getSize();
@@ -1556,11 +1608,13 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 			mdlLstAllGames.sortByPlatform(platformComparator);
 			mdlLstRecentlyPlayed.sortByPlatform(platformComparator);
 			mdlLstFavorites.sortByPlatform(platformComparator);
+			mdlLstFilteredGames.sortByPlatform(platformComparator);
 			break;
 		case ViewConstants.SORT_BY_TITLE:
 			mdlLstAllGames.sort();
 			mdlLstRecentlyPlayed.sort();
 			mdlLstFavorites.sort();
+			mdlLstFilteredGames.sort();
 			break;
 		}
 		if (selectedGame != null) {
@@ -1579,11 +1633,13 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 			mdlLstAllGames.sort();
 			mdlLstRecentlyPlayed.sort();
 			mdlLstFavorites.sort();
+			mdlLstFilteredGames.sort();
 			break;
 		case ViewConstants.SORT_DESCENDING:
 			mdlLstAllGames.sortReverseOrder();
 			mdlLstRecentlyPlayed.sortReverseOrder();
 			mdlLstFavorites.sortReverseOrder();
+			mdlLstFilteredGames.sortReverseOrder();
 			break;
 		}
 		if (selectedGame != null) {
@@ -1679,18 +1735,21 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		Game selectedGame = lstGames.getSelectedValue();
 		int selectedGameId = (selectedGame != null) ? selectedGame.getId() : GameConstants.NO_GAME;
 		doNotFireSelectGameEvent = true;
-		doTheShit(event);
-		if (selectedGameId != GameConstants.NO_GAME) {
-			selectGame(selectedGameId);
-			if (lstGames.getSelectedIndex() == GameConstants.NO_GAME) {
-				doNotFireSelectGameEvent = false;
-				fireSelectGameEvent();
-			}
-		}
+		doTheFilterNew(event);
+		// this invokelater is required because of a weird bug when a filter is set and a
+		// game is selected all games in filtered view will be selected (probably gui
+		// bug, preview pane only shows one game) also in tableview panel this bug doesn't occur
 		SwingUtilities.invokeLater(new Runnable() {
 
 			@Override
 			public void run() {
+				if (selectedGameId != GameConstants.NO_GAME) {
+					selectGame(selectedGameId);
+					if (lstGames.getSelectedIndex() == -1) {
+						doNotFireSelectGameEvent = false;
+						fireSelectGameEvent();
+					}
+				}
 				fixRowCountForVisibleColumns(lstGames);
 				fireUpdateGameCountEvent(lstGames.getModel().getSize());
 				UIUtil.revalidateAndRepaint(lstGames);
@@ -1699,17 +1758,102 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		});
 	}
 
-	private void doTheShit(FilterEvent event) {
+	private void doTheFilterNew(FilterEvent event) {
+		mdlLstFilteredGames.removeAllElements();
+
+		int platformId = event.getPlatformId();
+		Criteria criteria = event.getCriteria();
+		List<Game> allGames = getGamesFromCurrentView();
+		mdlLstFilteredGames.addElements(allGames);
+		if (event.isPlatformFilterSet()) {
+			for (int i = mdlLstFilteredGames.size()-1; i >= 0; i--) {
+				Game game = mdlLstFilteredGames.getElementAt(i);
+				if (game.getPlatformId() != platformId) {
+					mdlLstFilteredGames.removeElementAt(i);
+					continue;
+				}
+			}
+		}
+		if (event.isGameFilterSet()) {
+			String text = event.getCriteria().getText();
+			boolean hasSearchString = text != null && !text.isEmpty();
+			boolean hasTags = event.hasTags();
+			for (int i = mdlLstFilteredGames.size()-1; i >= 0; i--) {
+				Game game = mdlLstFilteredGames.getElementAt(i);
+				if (hasSearchString) {
+					if (!game.getName().toLowerCase().contains(text.toLowerCase())) {
+						mdlLstFilteredGames.removeElementAt(i);
+						continue;
+					}
+				}
+				if (hasTags) {
+					//					if (Collections.disjoint(game.getTags(), criteria.getTags())) {
+					for (Tag t : criteria.getTags()) {
+						if (!game.hasTag(t.getId())) {
+							mdlLstFilteredGames.removeElementAt(i);
+							break;
+						}
+					}
+				}
+			}
+		}
+
+		GameListModel mdl = (!event.isPlatformFilterSet() && !event.isGameFilterSet()) ? getModelFromCurrentView()
+				: mdlLstFilteredGames;
+		List<Tag> tagsFromGames = new ArrayList<>();
+		for (Game game : mdlLstFilteredGames.getAllElements()) {
+			tagsFromGames.addAll(game.getTags());
+		}
+		lstGames.setModel(mdl);
+		fireTagFilterEvent(tagsFromGames, false);
+
+		SwingUtilities.invokeLater(new Runnable() {
+
+			@Override
+			public void run() {
+				fixRowCountForVisibleColumns(lstGames);
+				UIUtil.revalidateAndRepaint(lstGames);
+			}
+		});
+	}
+
+	private GameListModel getModelFromCurrentView() {
+		GameListModel tmpMdl;
+		if (getCurrentView() == NavigationPanel.ALL_GAMES) {
+			tmpMdl = mdlLstAllGames;
+		} else if (getCurrentView() == NavigationPanel.RECENTLY_PLAYED) {
+			tmpMdl = mdlLstRecentlyPlayed;
+		} else if (getCurrentView() == NavigationPanel.FAVORITES) {
+			tmpMdl = mdlLstFavorites;
+		} else {
+			tmpMdl = new GameListModel();
+		}
+		return tmpMdl;
+	}
+
+	private List<Game> getGamesFromCurrentView() {
+		List<Game> tmpGames;
+		if (getCurrentView() == NavigationPanel.ALL_GAMES) {
+			tmpGames = mdlLstAllGames.getAllElements();
+		} else if (getCurrentView() == NavigationPanel.RECENTLY_PLAYED) {
+			tmpGames = mdlLstRecentlyPlayed.getAllElements();
+		} else if (getCurrentView() == NavigationPanel.FAVORITES) {
+			tmpGames = mdlLstFavorites.getAllElements();
+		} else {
+			tmpGames = new ArrayList<>();
+		}
+		return tmpGames;
+	}
+
+	private void doTheFilter(FilterEvent event) {
 		// game filter set
 		if (event.isGameFilterSet()) {
 			List<Game> tmpGames = null;
 			if (getCurrentView() == NavigationPanel.ALL_GAMES) {
 				tmpGames = mdlLstAllGames.getAllElements();
-			}
-			if (getCurrentView() == NavigationPanel.RECENTLY_PLAYED) {
+			} else if (getCurrentView() == NavigationPanel.RECENTLY_PLAYED) {
 				tmpGames = mdlLstRecentlyPlayed.getAllElements();
-			}
-			if (getCurrentView() == NavigationPanel.FAVORITES) {
+			} else if (getCurrentView() == NavigationPanel.FAVORITES) {
 				tmpGames = mdlLstFavorites.getAllElements();
 			}
 			int platformId = event.getPlatformId();
@@ -1722,7 +1866,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 						} else {
 							// no platform filter set
 							if (!event.isPlatformFilterSet()) {
-								if (!event.isTagFilterSet()) {
+								if (!event.hasTags()) {
 									mdlLstFilteredGames.addElement(game);
 								} else {
 									if (!Collections.disjoint(game.getTags(), criteria.getTags())) {
@@ -1732,7 +1876,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 								// platform filter set
 							} else {
 								if (game.getPlatformId() == platformId) {
-									if (!event.isTagFilterSet()) {
+									if (!event.hasTags()) {
 										mdlLstFilteredGames.addElement(game);
 									} else {
 										if (!Collections.disjoint(game.getTags(), criteria.getTags())) {
@@ -1774,7 +1918,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 			if (!event.isPlatformFilterSet()) {
 
 				// no tag filter set
-				if (!event.isTagFilterSet()) {
+				if (!event.hasTags()) {
 					if (getCurrentView() == NavigationPanel.ALL_GAMES) {
 						lstGames.setModel(mdlLstAllGames);
 
@@ -1836,7 +1980,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		List<Game> games = mdlLstGames.getAllElements();
 		for (Game game : games) {
 			if (game.getPlatformId() == platformId) {
-				if (event.isTagFilterSet()) {
+				if (event.hasTags()) {
 					if (!Collections.disjoint(game.getTags(), event.getCriteria().getTags())) {
 						mdlLstFilteredGames.addElement(game);
 					}
@@ -1855,12 +1999,12 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	}
 
 	private void checkTagFilter(FilterEvent event, GameListModel mdlLstGames) {
-		List<BroTag> tags = event.getCriteria().getTags();
+		List<Tag> tags = event.getCriteria().getTags();
 		List<Tag> tagsFromGames = new ArrayList<>();
 		List<Game> games = new ArrayList<>(mdlLstGames.getAllElements());
 		outerloop:
 			for (Game game : games) {
-				for (BroTag tag : tags) {
+				for (Tag tag : tags) {
 					int tagId = tag.getId();
 					if (!game.hasTag(tagId)) {
 						continue outerloop;
@@ -1923,6 +2067,36 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	public void coverSizeChanged(int currentCoverSize) {
 		for (JList<Game> lst : sps.keySet()) {
 			lst.repaint();
+		}
+	}
+
+	@Override
+	protected void paintComponent(Graphics g) {
+		super.paintComponent(g);
+		BufferedImage background = IconStore.current().getBackgroundImage();
+		if (background != null) {
+			Graphics2D g2d = (Graphics2D) g.create();
+			int panelWidth = getWidth();
+			int panelHeight = getHeight();
+			g2d.drawImage(background, 0, 0, panelWidth, panelHeight, this);
+
+			BufferedImage imgTransparentOverlay = IconStore.current().getTransparentBackgroundOverlayImage();
+			if (imgTransparentOverlay != null) {
+				int width = imgTransparentOverlay.getWidth();
+				int height = imgTransparentOverlay.getHeight();
+
+				double factor = background.getWidth() / panelWidth;
+				if (factor != 0) {
+					int scaledWidth = (int) (width/factor);
+					int scaledHeight = (int) (height/factor);
+					width = scaledWidth;
+					height = scaledHeight;
+				}
+				int x = panelWidth-width;
+				int y = panelHeight-height;
+				g2d.drawImage(imgTransparentOverlay, x, y, width, height, this);
+			}
+			g2d.dispose();
 		}
 	}
 }

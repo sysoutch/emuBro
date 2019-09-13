@@ -6,6 +6,8 @@ import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.dnd.DropTarget;
@@ -19,6 +21,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionAdapter;
 import java.awt.event.MouseWheelListener;
+import java.awt.image.BufferedImage;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -68,7 +71,6 @@ import ch.sysout.emubro.impl.event.BroGameSelectionEvent;
 import ch.sysout.emubro.impl.event.NavigationEvent;
 import ch.sysout.emubro.impl.model.BroEmulator;
 import ch.sysout.emubro.impl.model.BroGame;
-import ch.sysout.emubro.impl.model.BroTag;
 import ch.sysout.emubro.impl.model.EmulatorConstants;
 import ch.sysout.emubro.impl.model.GameConstants;
 import ch.sysout.emubro.util.MessageConstants;
@@ -136,12 +138,12 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 	protected int scrollDistanceY;
 	protected int currentValue;
 
-	public TableViewPanel(Explorer explorer, IconStore iconStore, GameContextMenu popupGame, ViewContextMenu popupView) {
+	public TableViewPanel(Explorer explorer, ViewPanelManager viewManager, GameContextMenu popupGame, ViewContextMenu popupView) {
 		super(new BorderLayout());
-		mdlTblAllGames = new GameTableModel(explorer, iconStore);
-		mdlTblRecentlyPlayed = new GameTableModel(explorer, iconStore);
-		mdlTblFavorites = new GameTableModel(explorer, iconStore);
-		mdlTblFiltered = new GameTableModel(explorer, iconStore);
+		mdlTblAllGames = new GameTableModel(explorer);
+		mdlTblRecentlyPlayed = new GameTableModel(explorer);
+		mdlTblFavorites = new GameTableModel(explorer);
+		mdlTblFiltered = new GameTableModel(explorer);
 		this.explorer = explorer;
 		this.popupGame = popupGame;
 		this.popupView = popupView;
@@ -184,6 +186,10 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 		Color color = UIManager.getColor("Table.background");
 		spTblGames.getViewport().setBackground(color);
 
+		setOpaque(false);
+		spTblGames.getViewport().setOpaque(false);
+		tblGames.setOpaque(false);
+
 		TableCellRenderer renderer = tblGames.getTableHeader().getDefaultRenderer();
 		((JLabel) renderer).setHorizontalAlignment(SwingConstants.LEFT);
 		tblGames.getTableHeader().setDefaultRenderer(renderer);
@@ -204,7 +210,7 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 			public void keyPressed(KeyEvent e) {
 				super.keyPressed(e);
 				if (e.getKeyCode() == KeyEvent.VK_CONTEXT_MENU) {
-					boolean showFileTreePopup = tblGames.getSelectedRow() != GameConstants.NO_GAME;
+					boolean showFileTreePopup = tblGames.getSelectedRow() != -1;
 					if (showFileTreePopup) {
 						showGamePopupMenu(e.getComponent(), mouseX, mouseY);
 					}
@@ -231,7 +237,7 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 				tblGames.requestFocusInWindow();
 				if (SwingUtilities.isRightMouseButton(e)) {
 					int index = tblGames.rowAtPoint(e.getPoint());
-					if (index != GameConstants.NO_GAME) {
+					if (index != -1) {
 						tblGames.setRowSelectionInterval(index, index);
 						showGamePopupMenu(e.getComponent(), e.getX(), e.getY());
 					} else {
@@ -281,7 +287,7 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 					+ "</html>");
 					mouseOver = index;
 				} else {
-					index = GameConstants.NO_GAME;
+					index = -1;
 				}
 			}
 
@@ -433,7 +439,7 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 		if (gameId == GameConstants.NO_GAME) {
 			tblGames.clearSelection();
 		} else {
-			int selectedIndex = GameConstants.NO_GAME;
+			int selectedIndex = -1;
 			for (int i = 0; i < tblGames.getModel().getRowCount(); i++) {
 				Game game = (Game) tblGames.getModel().getValueAt(i, -1);
 				if (game.getId() == gameId) {
@@ -698,7 +704,7 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 
 	@Override
 	public void sortOrder(int sortOrder) {
-
+		tblGames.getRowSorter().toggleSortOrder(1);
 	}
 
 	@Override
@@ -948,12 +954,107 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 		doNotFireSelectGameEvent = true;
 		//		rememberColumnWidths(tblGames);
 		tblGames.setAutoCreateColumnsFromModel(false);
+
+		doTheFilterNew(event);
+
+		if (selectedGameId != GameConstants.NO_GAME) {
+			selectGame(selectedGameId);
+			if (tblGames.getSelectedRow() == -1) {
+				doNotFireSelectGameEvent = false;
+				fireGameSelectedEvent(new BroGameSelectionEvent());
+			}
+		}
+		doNotFireSelectGameEvent = false;
+		//		fireUpdateGameCountEvent(((GameTableModel) tblGames.getModel()).getRowCount());
+		UIUtil.revalidateAndRepaint(tblGames);
+		//				setRememberedColumnWidths(tblGames);
+	}
+
+	private void doTheFilterNew(FilterEvent event) {
+		((GameTableModel) mdlTblFiltered).removeAllElements();
+
+		int platformId = event.getPlatformId();
+		Criteria criteria = event.getCriteria();
+		List<Game> allGames = getGamesFromCurrentView();
+		for (Game g : allGames) {
+			((GameTableModel) mdlTblFiltered).addRow(g);
+		}
+		if (event.isPlatformFilterSet()) {
+			for (int i = mdlTblFiltered.getRowCount()-1; i >= 0; i--) {
+				Game game = (Game) mdlTblFiltered.getValueAt(i, -1);
+				if (game.getPlatformId() != platformId) {
+					((GameTableModel) mdlTblFiltered).removeGame(game);
+					continue;
+				}
+			}
+		}
+		if (event.isGameFilterSet()) {
+			String text = event.getCriteria().getText();
+			boolean hasSearchString = text != null && !text.isEmpty();
+			boolean hasTags = event.hasTags();
+			for (int i = mdlTblFiltered.getRowCount()-1; i >= 0; i--) {
+				Game game = (Game) mdlTblFiltered.getValueAt(i, -1);
+				if (hasSearchString) {
+					if (!game.getName().toLowerCase().contains(text.toLowerCase())) {
+						((GameTableModel) mdlTblFiltered).removeGame(game);
+						continue;
+					}
+				}
+				if (hasTags) {
+					//					if (Collections.disjoint(game.getTags(), criteria.getTags())) {
+					for (Tag t : criteria.getTags()) {
+						if (!game.hasTag(t.getId())) {
+							((GameTableModel) mdlTblFiltered).removeGame(game);
+						}
+					}
+				}
+			}
+		}
+		GameTableModel mdl = (!event.isPlatformFilterSet() && !event.isGameFilterSet()) ? getModelFromCurrentView()
+				: (GameTableModel) mdlTblFiltered;
+		List<Tag> tagsFromGames = new ArrayList<>();
+		for (Game game : ((GameTableModel) mdlTblFiltered).getAllElements()) {
+			tagsFromGames.addAll(game.getTags());
+		}
+		tblGames.setModel(mdl);
+		fireTagFilterEvent(tagsFromGames, false);
+	}
+
+	private GameTableModel getModelFromCurrentView() {
+		GameTableModel tmpMdl;
+		if (getCurrentView() == NavigationPanel.ALL_GAMES) {
+			tmpMdl = ((GameTableModel) mdlTblAllGames);
+		} else if (getCurrentView() == NavigationPanel.RECENTLY_PLAYED) {
+			tmpMdl = ((GameTableModel) mdlTblRecentlyPlayed);
+		} else if (getCurrentView() == NavigationPanel.FAVORITES) {
+			tmpMdl = ((GameTableModel) mdlTblFavorites);
+		} else {
+			tmpMdl = new GameTableModel(explorer);
+		}
+		return tmpMdl;
+	}
+
+	private List<Game> getGamesFromCurrentView() {
+		List<Game> tmpGames;
+		if (getCurrentView() == NavigationPanel.ALL_GAMES) {
+			tmpGames = ((GameTableModel) mdlTblAllGames).getAllElements();
+		} else if (getCurrentView() == NavigationPanel.RECENTLY_PLAYED) {
+			tmpGames = ((GameTableModel) mdlTblRecentlyPlayed).getAllElements();
+		} else if (getCurrentView() == NavigationPanel.FAVORITES) {
+			tmpGames = ((GameTableModel) mdlTblFavorites).getAllElements();
+		} else {
+			tmpGames = new ArrayList<>();
+		}
+		return tmpGames;
+	}
+
+	private void doTheFilter(FilterEvent event) {
 		if (!event.isGameFilterSet()) {
 			((GameTableModel) mdlTblFiltered).removeAllElements();
 			if (!event.isPlatformFilterSet()) {
 
 				// no tag filter set
-				if (!event.isTagFilterSet()) {
+				if (!event.hasTags()) {
 					if (getCurrentView() == NavigationPanel.ALL_GAMES) {
 						tblGames.setModel(mdlTblAllGames);
 
@@ -1056,17 +1157,6 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 			}
 			fireTagFilterEvent(tagsFromGames, true);
 		}
-		if (selectedGameId != GameConstants.NO_GAME) {
-			selectGame(selectedGameId);
-			if (tblGames.getSelectedRow() == GameConstants.NO_GAME) {
-				doNotFireSelectGameEvent = false;
-				fireGameSelectedEvent(new BroGameSelectionEvent());
-			}
-		}
-		doNotFireSelectGameEvent = false;
-		//		fireUpdateGameCountEvent(((GameTableModel) tblGames.getModel()).getRowCount());
-		UIUtil.revalidateAndRepaint(tblGames);
-		//				setRememberedColumnWidths(tblGames);
 	}
 
 	private void setRememberedColumnWidths(JTable tbl) {
@@ -1104,12 +1194,11 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 	}
 
 	private void checkTagFilter(FilterEvent event, GameTableModel mdlTblAllGames2) {
-		List<BroTag> tags = event.getCriteria().getTags();
-		List<Tag> tagsFromGames = new ArrayList<>();
+		List<Tag> tags = event.getCriteria().getTags();
 		List<Game> games = new ArrayList<>(mdlTblAllGames2.getAllElements());
 		outerloop:
 			for (Game game : games) {
-				for (BroTag tag : tags) {
+				for (Tag tag : tags) {
 					int tagId = tag.getId();
 					if (!game.hasTag(tagId)) {
 						continue outerloop;
@@ -1120,16 +1209,12 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 				}
 			}
 		GameTableModel mdl = (GameTableModel) mdlTblFiltered;
-		boolean removeUnusedTags = false;
-		if (mdl.getAllElements().isEmpty()) {
-			mdl = (GameTableModel) mdlTblAllGames;
-			removeUnusedTags = true;
-		}
-		tblGames.setModel(mdl);
-		for (Game game : mdl.getAllElements()) {
+		List<Tag> tagsFromGames = new ArrayList<>();
+		for (Game game : ((GameTableModel) mdlTblFiltered).getAllElements()) {
 			tagsFromGames.addAll(game.getTags());
 		}
-		fireTagFilterEvent(tagsFromGames, removeUnusedTags);
+		tblGames.setModel(mdl);
+		fireTagFilterEvent(tagsFromGames, false);
 	}
 
 	private void fireTagFilterEvent(List<Tag> tags, boolean removeUnusedTags) {
@@ -1167,5 +1252,21 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 
 	@Override
 	public void coverSizeChanged(int currentCoverSize) {
+	}
+
+	@Override
+	protected void paintComponent(Graphics g) {
+		super.paintComponent(g);
+		BufferedImage background = IconStore.current().getBackgroundImage();
+		if (background != null) {
+			Graphics2D g2d = (Graphics2D) g.create();
+			int x = 0;
+			int y = 0;
+			//			g2d.drawImage(background, 0, 0, this);
+			int w = getWidth();
+			int h = getHeight();
+			g2d.drawImage(background, 0, 0, w, h, this);
+			g2d.dispose();
+		}
 	}
 }

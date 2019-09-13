@@ -75,7 +75,7 @@ public class FileUtil {
 	public static String getChecksumOfFile(File file) throws IOException {
 		if (digest == null) {
 			try {
-				digest = MessageDigest.getInstance("MD5");
+				digest = MessageDigest.getInstance("SHA-1");
 			} catch (NoSuchAlgorithmException e1) {
 				e1.printStackTrace();
 			}
@@ -89,11 +89,15 @@ public class FileUtil {
 
 	public static String getChecksumOfFile(MessageDigest digest, File file) throws IOException {
 		FileInputStream fis = new FileInputStream(file);
-		byte[] byteArray = new byte[1024];
+		int dimension = 65536;
+		byte[] byteArray = new byte[dimension];
 		int bytesCount = 0;
 		while ((bytesCount = fis.read(byteArray)) != -1) {
 			digest.update(byteArray, 0, bytesCount);
-		};
+			if (bytesCount == dimension) {
+				break;
+			}
+		}
 		if (fis != null) {
 			fis.close();
 		}

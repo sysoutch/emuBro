@@ -19,6 +19,7 @@ import ch.sysout.emubro.api.dao.ExplorerDAO;
 import ch.sysout.emubro.api.dao.GameDAO;
 import ch.sysout.emubro.api.dao.PlatformDAO;
 import ch.sysout.emubro.api.dao.TagDAO;
+import ch.sysout.emubro.api.filter.FilterGroup;
 import ch.sysout.emubro.api.model.Emulator;
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.Platform;
@@ -45,7 +46,7 @@ public class BroExplorerDAO implements ExplorerDAO {
 	private GameDAO gameDAO;
 	private EmulatorDAO emulatorDAO;
 	private final int explorer_id;
-	private String expectedDbVersion = "0.2.0";
+	private String expectedDbVersion = "0.3.0";
 
 	public BroExplorerDAO(int explorer_id, Connection conn) throws IOException, SQLException, BroDatabaseVersionMismatchException {
 		this.explorer_id = explorer_id;
@@ -319,14 +320,14 @@ public class BroExplorerDAO implements ExplorerDAO {
 			stmt = conn.createStatement();
 			String sql = "select * from checksum where checksum_checksum = " + SqlUtil.getQuotedString(checksum);
 			ResultSet rset = stmt.executeQuery(sql);
-			int id = -1;
+			int id = 0;
 			if (rset.next()) {
 				id = rset.getInt("checksum_id");
 			}
 			stmt.close();
 			return id;
 		} catch (SQLException e) {
-			return -1;
+			return 0;
 		}
 	}
 
@@ -419,7 +420,7 @@ public class BroExplorerDAO implements ExplorerDAO {
 		stmt = conn.createStatement();
 		String sql = "select TOP 1 checksum_id from checksum order by checksum_id desc";
 		ResultSet rset = stmt.executeQuery(sql);
-		int checksumId = -1;
+		int checksumId = 0;
 		if (rset.next()) {
 			checksumId = rset.getInt("checksum_id");
 		}
@@ -524,9 +525,10 @@ public class BroExplorerDAO implements ExplorerDAO {
 			List<BroEmulator> emulators = getEmulatorsFromPlatform(id);
 			int defaultEmulatorId = rset.getInt("platform_defaultEmulatorId");
 			boolean autoSearchEnabled = rset.getBoolean("platform_autoSearchEnabled");
+			String[] gameCodeRegexes = rset.getString("platform_gameCodeRegexes").split(" ");
 			Platform platform = new BroPlatform(id, name, shortName, iconFilename, defaultGameCover, gameSearchModes, searchFor,
 					fileStructure, supportedArchiveTypes, supportedImageTypes, emulators, defaultEmulatorId,
-					autoSearchEnabled);
+					autoSearchEnabled, gameCodeRegexes);
 			platforms.add(platform);
 		}
 		conn.commit();
@@ -856,5 +858,16 @@ public class BroExplorerDAO implements ExplorerDAO {
 	@Override
 	public void setGameCode(int id, String gameCode) throws SQLException {
 		gameDAO.setGameCode(id, gameCode);
+	}
+
+	@Override
+	public List<FilterGroup> getFilterGroups() {
+		List<FilterGroup> filterGroups = new ArrayList<>();
+		return filterGroups;
+	}
+
+	@Override
+	public void addFilterGroup(FilterGroup filterGroup) throws SQLException {
+
 	}
 }

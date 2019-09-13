@@ -87,8 +87,6 @@ import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.controller.BroController.EmulatorListCellRenderer;
 import ch.sysout.emubro.controller.BroController.PlatformListCellRenderer;
 import ch.sysout.emubro.impl.model.BroEmulator;
-import ch.sysout.emubro.impl.model.EmulatorConstants;
-import ch.sysout.emubro.impl.model.GameConstants;
 import ch.sysout.emubro.ui.AddEmulatorPanel;
 import ch.sysout.emubro.ui.AddPlatformDialog;
 import ch.sysout.emubro.ui.EmulatorTableCellRenderer;
@@ -321,25 +319,19 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 				if (chkShowOnlyInstalledPlatforms.isSelected()) {
 					for (int i = model.getSize()-1; i >= 0; i--) {
 						int platformId = model.getElementAt(i).getId();
-						if (!hasGamesOrEmulators(platformId)) {
+						if (!explorer.hasGamesOrEmulators(platformId)) {
 							model.removeElement(model.getElementAt(i));
 						}
 					}
 				} else {
 					for (Platform platform : explorer.getPlatforms()) {
 						int platformId = platform.getId();
-						if (!hasGamesOrEmulators(platformId)) {
+						if (!explorer.hasGamesOrEmulators(platformId)) {
 							model.add(platform);
 						}
 					}
-
 				}
 			}
-		}
-
-		private boolean hasGamesOrEmulators(int platformId) {
-			return explorer.getGameCountFromPlatform(platformId) > 0
-					|| explorer.getPlatform(platformId).hasDefaultEmulator();
 		}
 
 		public void addPlatformSelectedListener(ListSelectionListener l) {
@@ -600,7 +592,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 		}
 
 		protected void showEmulatorPropertiesPanel(boolean b) {
-			if (tblEmulators.getSelectedRow() == GameConstants.NO_GAME) {
+			if (tblEmulators.getSelectedRow() == -1) {
 				showAddEmulatorPanel(pnlPlatforms.lstPlatforms.getSelectedValue());
 				return;
 			}
@@ -1303,7 +1295,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 				return;
 			}
 			int selectedRow = tblEmulators.getSelectedRow();
-			boolean b = selectedRow != EmulatorConstants.NO_EMULATOR;
+			boolean b = selectedRow != -1;
 			btnRemoveEmulator.setEnabled(b);
 			lnkRunEmulator.setVisible(b);
 			lnkWebsite.setVisible(b);
@@ -1392,7 +1384,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 
 		private void doModelShit() {
 			int selectedIndex = pnlPlatforms.lstPlatforms.getSelectedIndex();
-			if (selectedIndex != GameConstants.NO_GAME) {
+			if (selectedIndex != -1) {
 				TableColumnModel tcm = tblEmulators.getColumnModel();
 				ListModel<Platform> model2 = pnlPlatforms.lstPlatforms.getModel();
 				Platform platform = model2.getElementAt(selectedIndex);
@@ -1606,10 +1598,10 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 		if (emulator != null) {
 			index = pnlEmulators.getEmulatorIndex(emulator);
 		} else {
-			index = (defaultEmulator == null) ? EmulatorConstants.NO_EMULATOR
+			index = (defaultEmulator == null) ? -1
 					: pnlEmulators.getEmulatorIndex(defaultEmulator);
 		}
-		if (index < 0 || index > pnlEmulators.tblEmulators.getRowCount() + 1) {
+		if (index < 1 || index > pnlEmulators.tblEmulators.getRowCount() + 1) {
 			pnlEmulators.btnAddEmulator.requestFocusInWindow();
 			pnlEmulators.tblEmulators.clearSelection();
 		} else {

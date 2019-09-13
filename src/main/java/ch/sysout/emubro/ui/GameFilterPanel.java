@@ -5,6 +5,8 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
@@ -12,6 +14,7 @@ import java.awt.event.FocusListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.font.TextAttribute;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -31,6 +34,7 @@ import javax.swing.JList;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
+import javax.swing.JSeparator;
 import javax.swing.JSplitPane;
 import javax.swing.ListCellRenderer;
 import javax.swing.MenuElement;
@@ -46,17 +50,20 @@ import com.jgoodies.forms.layout.FormLayout;
 
 import ch.sysout.emubro.api.FilterListener;
 import ch.sysout.emubro.api.GameListener;
+import ch.sysout.emubro.api.PlatformFromGameListener;
 import ch.sysout.emubro.api.TagsFromGamesListener;
 import ch.sysout.emubro.api.event.FilterEvent;
 import ch.sysout.emubro.api.event.GameAddedEvent;
 import ch.sysout.emubro.api.event.GameRemovedEvent;
+import ch.sysout.emubro.api.event.TagEvent;
 import ch.sysout.emubro.api.filter.Criteria;
+import ch.sysout.emubro.api.filter.FilterGroup;
 import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.api.model.Tag;
 import ch.sysout.emubro.impl.event.BroFilterEvent;
 import ch.sysout.emubro.impl.filter.BroCriteria;
-import ch.sysout.emubro.impl.model.BroTag;
+import ch.sysout.emubro.impl.model.PlatformConstants;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
@@ -64,7 +71,7 @@ import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 import ch.sysout.util.UIUtil;
 
-public class GameFilterPanel extends JPanel implements GameListener, TagsFromGamesListener {
+public class GameFilterPanel extends JPanel implements GameListener, TagsFromGamesListener, PlatformFromGameListener {
 	private static final long serialVersionUID = 1L;
 
 	private Icon iconFilter = ImageUtil.getImageIconFrom(Icons.get("setFilter", 16, 16));
@@ -76,8 +83,13 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 	private ImageIcon icoSearch;
 	private ImageIcon icoClose;
 	private ImageIcon icoAdvancedSearch;
+	private ImageIcon icoFilterGroupsSettings;
+	private ImageIcon icoSaveFilterGroup;
+	private ImageIcon icoFilterGroups;
+	private ImageIcon iconRemove;
 	private JButton btnClose;
 	private JButton btnTags;
+	private JButton btnFilterGroups;
 
 	private int size = ScreenSizeUtil.is3k() ? 24 : 16;
 
@@ -90,16 +102,39 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 	private Component requestFocusInWindowListener;
 
 	private JPopupMenu mnuTags = new JPopupMenu();
+	private JPopupMenu mnuFilterGroups = new JPopupMenu();
 
 	private Map<String, Tag> tags = new HashMap<>();
 
 	private JMenuItem itmNoTagsAvailable = new JMenuItem(Messages.get(MessageConstants.NO_TAGS_AVAILABLE));
+	private JMenuItem itmNoFilterGroupsAvailable = new JMenuItem(Messages.get(MessageConstants.NO_FILTERGROUPS_AVAILABLE));
+
+	protected boolean dontFireEvents;
+
+	private JMenuItem itmSaveCurrentFilters;
+
+	private JMenuItem itmClearTagFilter;
 
 	public GameFilterPanel(Explorer explorer) {
 		super(new BorderLayout());
 		this.explorer = explorer;
 		icoSearch = ImageUtil.getImageIconFrom(Icons.get("search", size, size));
 		icoAdvancedSearch = ImageUtil.getImageIconFrom(Icons.get("tags", size, size));
+		icoFilterGroupsSettings = ImageUtil.getImageIconFrom(Icons.get("filter", size, size));
+		icoSaveFilterGroup = ImageUtil.getImageIconFrom(Icons.get("add", size, size));
+		icoFilterGroups = ImageUtil.getImageIconFrom(Icons.get("setFilter", size, size));
+		iconRemove = ImageUtil.getImageIconFrom(Icons.get("remove", size, size));
+
+		itmSaveCurrentFilters = new JMenuItem("Save current filters...", icoSaveFilterGroup);
+		itmClearTagFilter = new JMenuItem("clear filter", iconRemove);
+		itmClearTagFilter.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				unselectTags();
+				fireEvent(new BroFilterEvent(getSelectedPlatformId(), getCriteria()));
+			}
+		});
 		btnClose = new JButton(icoSearch);
 		btnTags = new JButton("Tags", icoAdvancedSearch);
 		btnTags.addActionListener(new ActionListener() {
@@ -109,9 +144,22 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 				showAdvancedSearchSettingsPopupMenu(btnTags);
 			}
 		});
+		btnFilterGroups = new JButton("", icoFilterGroupsSettings);
+		btnFilterGroups.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				showFilterGroupsSettingsPopupMenu(btnFilterGroups);
+			}
+		});
+
 		icoClose = ImageUtil.getImageIconFrom(Icons.get("remove", size, size));
 		// txtSearchGame.setFont(ScreenSizeUtil.defaultFont());
 
+		createUI();
+	}
+
+	private void createUI() {
 		Border textFieldBorder = txtSearchGame.getBorder();
 		txtSearchGame.setPreferredSize(new Dimension(ScreenSizeUtil.adjustValueToResolution(256), 0));
 		txtSearchGame.setBorder(BorderFactory.createEmptyBorder());
@@ -133,15 +181,23 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (btnClose.getIcon() == icoClose) {
-					txtSearchGame.setText("");
+					txtSearchGame.setText(Messages.get(MessageConstants.SEARCH_GAME) + " (Ctrl+F)");
+					txtSearchGame.setForeground(Color.GRAY);
 					fireRequestFocusInWindowEvent();
 				}
 			}
 		});
+		btnTags.setOpaque(false);
 		btnTags.setBorderPainted(false);
 		btnTags.setContentAreaFilled(false);
-		btnTags.setToolTipText("Erweiterte Suche");
+		btnTags.setToolTipText("Tags");
 		btnTags.addMouseListener(UIUtil.getMouseAdapter());
+
+		btnFilterGroups.setBorderPainted(false);
+		btnFilterGroups.setContentAreaFilled(false);
+		btnFilterGroups.setToolTipText("Filter Groups");
+		btnFilterGroups.addMouseListener(UIUtil.getMouseAdapter());
+
 		pnlSearchField.setBorder(BorderFactory.createEmptyBorder());
 		txtSearchGame.setForeground(Color.GRAY);
 
@@ -149,14 +205,33 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 		pnlSearchFieldInner.add(btnClose, BorderLayout.EAST);
 		// pnlSearchField.add(pnlSearchFieldInner);
 
-		cmbPlatforms = new JComboBox<>();
+		cmbPlatforms = new JComboBox<Platform>() {
+			//			private static final long serialVersionUID = 1L;
+			//
+			//			@Override
+			//			protected void paintComponent(Graphics g) {
+			//				super.paintComponent(g);
+			//				BufferedImage background = IconStore.getButtonBarBackgroundImage();
+			//				if (background != null) {
+			//					Graphics2D g2d = (Graphics2D) g.create();
+			//					int w = getWidth();
+			//					int h = getHeight();
+			//					g2d.drawImage(background, 0, 0, w, h, this);
+			//					g2d.dispose();
+			//				}
+			//			}
+		};
+		cmbPlatforms.setOpaque(false);
+		cmbPlatforms.setBorder(BorderFactory.createEmptyBorder());
 		cmbPlatforms.addItem(new EmptyPlatform());
 		cmbPlatforms.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				int platformId = ((Platform) cmbPlatforms.getSelectedItem()).getId();
-				fireEvent(new BroFilterEvent(platformId, getCriteria()));
+				if (!dontFireEvents) {
+					int platformId = ((Platform) cmbPlatforms.getSelectedItem()).getId();
+					fireEvent(new BroFilterEvent(platformId, getCriteria()));
+				}
 			}
 		});
 
@@ -164,19 +239,22 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 				"fill:pref");
 		CellConstraints cc = new CellConstraints();
 		JPanel pnl = new JPanel(layout);
+		pnl.setOpaque(false);
 		pnl.setBorder(Paddings.DLU2);
+
+		JPanel pnlWrapper = new JPanel(new BorderLayout());
+		pnlWrapper.setOpaque(false);
+		pnlWrapper.add(pnlSearchFieldInner);
+		pnlWrapper.add(btnTags, BorderLayout.EAST);
 
 		JSplitPane splFilterPlatformAndGame = new JSplitPane();
 		splFilterPlatformAndGame.setResizeWeight(0.625);
 		splFilterPlatformAndGame.setBorder(BorderFactory.createEmptyBorder());
 		splFilterPlatformAndGame.setContinuousLayout(true);
+		splFilterPlatformAndGame.setDividerSize(1);
 		splFilterPlatformAndGame.setLeftComponent(cmbPlatforms);
-
-		JPanel pnlWrapper = new JPanel(new BorderLayout());
-		pnlWrapper.add(pnlSearchFieldInner);
-		pnlWrapper.add(btnTags, BorderLayout.EAST);
 		splFilterPlatformAndGame.setRightComponent(pnlWrapper);
-
+		splFilterPlatformAndGame.setOpaque(false);
 		pnl.add(splFilterPlatformAndGame, cc.xy(1, 1));
 		add(pnl);
 
@@ -204,8 +282,10 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 				} else {
 					btnClose.setIcon(icoSearch);
 				}
-				int platformId = getSelectedPlatformId();
-				fireEvent(new BroFilterEvent(platformId, getCriteria()));
+				if (!dontFireEvents) {
+					int platformId = getSelectedPlatformId();
+					fireEvent(new BroFilterEvent(platformId, getCriteria()));
+				}
 			}
 
 			@Override
@@ -220,8 +300,10 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 				} else {
 					btnClose.setIcon(icoSearch);
 				}
-				int platformId = getSelectedPlatformId();
-				fireEvent(new BroFilterEvent(platformId, getCriteria()));
+				if (!dontFireEvents) {
+					int platformId = getSelectedPlatformId();
+					fireEvent(new BroFilterEvent(platformId, getCriteria()));
+				}
 			}
 
 			@Override
@@ -236,8 +318,10 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 				} else {
 					btnClose.setIcon(icoSearch);
 				}
-				int platformId = getSelectedPlatformId();
-				fireEvent(new BroFilterEvent(platformId, getCriteria()));
+				if (!dontFireEvents) {
+					int platformId = getSelectedPlatformId();
+					fireEvent(new BroFilterEvent(platformId, getCriteria()));
+				}
 			}
 		};
 		txtSearchGame.getDocument().addDocumentListener(documentListener);
@@ -266,7 +350,7 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 		setVisible(true);
 		Component[] comps = mnuTags.getComponents();
 		if (comps != null && comps.length != 0) {
-			if (comps.length > 1) {
+			if (comps.length > 2) {
 				mnuTags.remove(itmNoTagsAvailable);
 			}
 		} else {
@@ -279,6 +363,23 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 		mnuTags.show(comp, 0, height);
 	}
 
+	protected void showFilterGroupsSettingsPopupMenu(JComponent comp) {
+		setVisible(true);
+		Component[] comps = mnuFilterGroups.getComponents();
+		if (comps != null && comps.length != 0) {
+			if (comps.length > 1) {
+				mnuFilterGroups.remove(itmNoFilterGroupsAvailable);
+			}
+		} else {
+			mnuFilterGroups.add(itmNoFilterGroupsAvailable);
+		}
+		int height = 0;
+		if (comp != null) {
+			height = comp.getHeight();
+		}
+		mnuFilterGroups.show(comp, 0, height);
+	}
+
 	protected void fireRequestFocusInWindowEvent() {
 		requestFocusInWindowListener.requestFocusInWindow();
 	}
@@ -288,7 +389,7 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 	}
 
 	public Criteria getCriteria() {
-		List<BroTag> selectedTags = getSelectedTags();
+		List<Tag> selectedTags = getSelectedTags();
 		return new BroCriteria((isSearchFieldEmpty() ? "" : txtSearchGame.getText()), selectedTags);
 	}
 
@@ -312,9 +413,17 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 		public Component getListCellRendererComponent(JList<? extends Object> list, Object value, int index,
 				boolean isSelected, boolean cellHasFocus) {
 			JLabel label = new JLabel();
-			Platform platform = cmbPlatforms.getItemAt(index);
-			String platformName = (platform == null) ? Messages.get(MessageConstants.FILTER_PLATFORMS) : platform.getName();
-			label.setText(platformName);
+			if (index != -1) {
+				Platform platform = (Platform) value;
+				if (platform != null) {
+					String platformName = platform.getName();
+					if (index > 0) {
+						label.setText("<html><strong>"+platformName+"</strong></html>");
+					} else {
+						label.setText(platformName);
+					}
+				}
+			}
 			return label;
 		}
 	}
@@ -333,6 +442,10 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 
 	public void addFilterListener(FilterListener l) {
 		filterListeners.add(l);
+	}
+
+	public void addSaveCurrentFiltersListener(ActionListener l) {
+		itmSaveCurrentFilters.addActionListener(l);
 	}
 
 	public void setRequestFocusInWindowListener(Component l) {
@@ -395,24 +508,71 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 	public void initTags(List<Tag> tags) {
 		this.tags.clear();
 		mnuTags.removeAll();
-		for (Tag tag : tags) {
-			addNewTag(tag);
+		mnuTags.add(itmClearTagFilter);
+		mnuTags.add(new JSeparator());
+		if (tags != null) {
+			for (Tag tag : tags) {
+				addNewTag(tag);
+			}
 		}
+	}
+
+	public void initFilterGroups(List<FilterGroup> filterGroups) {
+		mnuFilterGroups.removeAll();
+		//		mnuFilterGroups.add(new JMenuItem("New filter group...", icoSaveFilterGroup));
+		mnuFilterGroups.add(itmSaveCurrentFilters);
+		//		mnuFilterGroups.add(new JMenu("Update filter group"));
+		mnuFilterGroups.add(new JSeparator());
+		for (FilterGroup group : filterGroups) {
+			addFilterGroupItem(group);
+		}
+	}
+
+	private void addFilterGroupItem(FilterGroup group) {
+		JMenuItem itm = new JMenuItem(group.getName(), icoFilterGroups);
+		itm.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				FilterEvent filterEvent = group.getFilterEvent();
+				Criteria criteria = filterEvent.getCriteria();
+				int platformId = filterEvent.getPlatformId();
+				dontFireEvents = true;
+				if (criteria.getText().isEmpty()) {
+					txtSearchGame.setText(Messages.get(MessageConstants.SEARCH_GAME) + " (Ctrl+F)");
+					txtSearchGame.setForeground(Color.GRAY);
+				} else {
+					txtSearchGame.setText(criteria.getText());
+					txtSearchGame.setForeground(UIManager.getColor("Label.foreground"));
+				}
+				if (platformId == PlatformConstants.NO_PLATFORM) {
+					cmbPlatforms.setSelectedIndex(0);
+				} else {
+					cmbPlatforms.setSelectedItem(getPlatform(platformId));
+				}
+				selectTags(criteria.getTags());
+				fireEvent(filterEvent);
+				dontFireEvents = false;
+				mnuTags.setVisible(false);
+			}
+		});
+		mnuFilterGroups.add(itm);
 	}
 
 	public void showTags(List<Tag> tags) {
 		outterLoop:
-			for (Component itm : mnuTags.getComponents()) {
+			for (int i = 2; i < mnuTags.getComponents().length; i++) {
+				AbstractButton itm = (AbstractButton) mnuTags.getComponent(i);
 				itm.setEnabled(false);
 				itm.setForeground(UIManager.getColor("MenuItem.disabledForeground"));
 
 				Font font = itm.getFont();
-				Map  attributes = font.getAttributes();
+				Map<TextAttribute, Boolean> attributes = (Map<TextAttribute, Boolean>) font.getAttributes();
 				attributes.put(TextAttribute.STRIKETHROUGH, TextAttribute.STRIKETHROUGH_ON);
 				Font newFont = new Font(attributes);
 				itm.setFont(newFont);
 
-				int tmpId = this.tags.get(((AbstractButton) itm).getText()).getId();
+				int tmpId = this.tags.get(itm.getText()).getId();
 				for (Tag t : tags) {
 					if (tmpId == t.getId()) {
 						itm.setEnabled(true);
@@ -453,7 +613,7 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 
 	public void addTagToFilter(boolean selected, Tag tag) {
 		//		showAdvancedSearchSettingsPopupMenu(btnTags);
-		for (int i = 0; i < mnuTags.getComponentCount(); i++) {
+		for (int i = 2; i < mnuTags.getComponentCount(); i++) {
 			JMenuItem itm = (JMenuItem) mnuTags.getComponent(i);
 			if (itm.getText().equals(tag.getName())) {
 				itm.setSelected(true);
@@ -466,29 +626,58 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 	private void addTagToFilter(boolean selected, String tagName) {
 		showAdvancedSearchSettingsPopupMenu(btnTags);
 
-		int platformId = getSelectedPlatformId();
-		fireEvent(new BroFilterEvent(platformId, getCriteria()));
-
 		mnuTags.setVisible(true);
 		MenuSelectionManager.defaultManager().setSelectedPath(new MenuElement[] { mnuTags });
 		if (selected) {
 			btnTags.setText("<html><strong>Tags</strong></html>");
 		} else {
-			for (Component itm : mnuTags.getComponents()) {
-				if (((AbstractButton) itm).isSelected()) {
+			btnTags.setText("Tags");
+			for (int i = 2; i < mnuTags.getComponents().length; i++) {
+				AbstractButton itm = (AbstractButton) mnuTags.getComponent(i);
+				if (itm.isSelected()) {
 					btnTags.setText("<html><strong>Tags</strong></html>");
-					return;
+					break;
 				}
 			}
-			btnTags.setText("Tags");
 		}
+		int platformId = getSelectedPlatformId();
+		fireEvent(new BroFilterEvent(platformId, getCriteria()));
 	}
 
-	protected List<BroTag> getSelectedTags() {
-		List<BroTag> selectedTags = new ArrayList<>();
-		for (Component itm : mnuTags.getComponents()) {
-			if (((AbstractButton) itm).isSelected()) {
-				selectedTags.add((BroTag) tags.get(((AbstractButton) itm).getText()));
+	private void selectTags(List<Tag> list) {
+		showAdvancedSearchSettingsPopupMenu(btnTags);
+		mnuTags.setVisible(true);
+		MenuSelectionManager.defaultManager().setSelectedPath(new MenuElement[] { mnuTags });
+		for (int i = 2; i < mnuTags.getComponents().length; i++) {
+			AbstractButton itm = (AbstractButton) mnuTags.getComponent(i);
+			itm.setSelected(false);
+			for (Tag t : list) {
+				if (itm.getText().equals(t.getName())) {
+					itm.setSelected(true);
+					break;
+				}
+			}
+		}
+		btnTags.setText(list.size() > 0 ? "<html><strong>Tags</strong></html>" : "Tags");
+	}
+
+	private void unselectTags() {
+		showAdvancedSearchSettingsPopupMenu(btnTags);
+		mnuTags.setVisible(true);
+		MenuSelectionManager.defaultManager().setSelectedPath(new MenuElement[] { mnuTags });
+		for (int i = 2; i < mnuTags.getComponents().length; i++) {
+			AbstractButton itm = (AbstractButton) mnuTags.getComponent(i);
+			itm.setSelected(false);
+		}
+		btnTags.setText("Tags");
+	}
+
+	protected List<Tag> getSelectedTags() {
+		List<Tag> selectedTags = new ArrayList<>();
+		for (int i = 2; i < mnuTags.getComponents().length; i++) {
+			AbstractButton itm = (AbstractButton) mnuTags.getComponent(i);
+			if (itm.isSelected()) {
+				selectedTags.add(tags.get(itm.getText()));
 			}
 		}
 		return selectedTags;
@@ -500,6 +689,63 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 			initTags(tags);
 		} else {
 			showTags(tags);
+		}
+	}
+
+	public void filterGroupAdded(FilterGroup filterGroup) {
+		addFilterGroupItem(filterGroup);
+	}
+
+
+
+	@Override
+	public void platformFromGameAddedToFilter(Platform platform) {
+		if (platform == null) {
+			cmbPlatforms.setSelectedIndex(0);
+			return;
+		} else {
+			int itemCount = cmbPlatforms.getItemCount();
+			for (int i = 1; i < itemCount; i++) {
+				Platform p = cmbPlatforms.getItemAt(i);
+				if (p.getId() == platform.getId()) {
+					cmbPlatforms.setSelectedIndex(i);
+					break;
+				}
+			}
+		}
+	}
+
+	public void tagAddedToGame(TagEvent e) {
+		Tag tag = e.getTag();
+		if (!tags.containsKey(tag.getName())) {
+			addNewTag(tag);
+		}
+	}
+
+	// TODO implement logic to remove tag when there are no more games which uses this tag
+	public void tagRemovedFromGame(TagEvent e) {
+		//		Tag tag = e.getTag();
+		//		boolean removed = tags.remove(tag.getName()) != null;
+		//		if (removed) {
+		//			for (Component cmp : mnuTags.getComponents()) {
+		//				if (cmp.getName().equals(tag.getName())) {
+		//					mnuTags.remove(cmp);
+		//					break;
+		//				}
+		//			}
+		//		}
+	}
+
+	@Override
+	protected void paintComponent(Graphics g) {
+		super.paintComponent(g);
+		BufferedImage background = IconStore.current().getButtonBarBackgroundImage();
+		if (background != null) {
+			Graphics2D g2d = (Graphics2D) g.create();
+			int w = getWidth();
+			int h = getHeight();
+			g2d.drawImage(background, 0, 0, w, h, this);
+			g2d.dispose();
 		}
 	}
 }

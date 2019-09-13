@@ -42,12 +42,10 @@ public class EmulatorTableCellRenderer extends DefaultTableCellRenderer {
 		if (emu != null) {
 			ImageIcon ico = null;
 			if (!icons.containsKey(emu.getId())) {
-				String iconFilename = emu.getIconFilename();
-				if (iconFilename.trim().isEmpty() || iconFilename.equalsIgnoreCase("blank.png")) {
+				ico = IconStore.current().getEmulatorIcon(emu.getId());
+				if (ico == null) {
 					File file = new File(emu.getPath());
 					ico = (ImageIcon) FileSystemView.getFileSystemView().getSystemIcon(file);
-				} else {
-					ico = IconStore.current().getEmulatorIcon(emu.getId());
 				}
 				if (ico != null) {
 					ico = ImageUtil.scaleCover(ico, ScreenSizeUtil.adjustValueToResolution(24), CoverConstants.SCALE_BOTH_OPTION);

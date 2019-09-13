@@ -3,14 +3,14 @@ package ch.sysout.emubro.impl.filter;
 import java.util.List;
 
 import ch.sysout.emubro.api.filter.Criteria;
-import ch.sysout.emubro.impl.model.BroTag;
+import ch.sysout.emubro.api.model.Tag;
 
 public class BroCriteria implements Criteria {
 
 	private String text;
-	private List<BroTag> tags;
+	private List<Tag> tags;
 
-	public BroCriteria(String text, List<BroTag> list) {
+	public BroCriteria(String text, List<Tag> list) {
 		this.text = text;
 		tags = list;
 	}
@@ -21,7 +21,7 @@ public class BroCriteria implements Criteria {
 	}
 
 	@Override
-	public List<BroTag> getTags() {
+	public List<Tag> getTags() {
 		return tags;
 	}
 

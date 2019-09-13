@@ -177,7 +177,7 @@ public class BroGameDAO implements GameDAO {
 		stmt = conn.createStatement();
 		String sql = "select file_id from file where file_path = " + SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(filePath));
 		ResultSet rset = stmt.executeQuery(sql);
-		int fileId = -1;
+		int fileId = 0;
 		if (rset.next()) {
 			fileId = rset.getInt("file_id");
 		}
@@ -201,7 +201,7 @@ public class BroGameDAO implements GameDAO {
 		stmt = conn.createStatement();
 		String sql = "select TOP 1 file_id from file order by file_id desc";
 		ResultSet rset = stmt.executeQuery(sql);
-		int fileId = -1;
+		int fileId = 0;
 		if (rset.next()) {
 			fileId = rset.getInt("file_id");
 		}
@@ -250,7 +250,7 @@ public class BroGameDAO implements GameDAO {
 		Statement stmt = conn.createStatement();
 		String sql = "select game_id from game where game_checksumId = " + game.getChecksumId() + " and game_platformId = " + game.getPlatformId() + " and game_deleted != "+true;
 		ResultSet rset = stmt.executeQuery(sql);
-		int gameId = -1;
+		int gameId = GameConstants.NO_GAME;
 		if (rset.next()) {
 			gameId = rset.getInt("game_id");
 		}

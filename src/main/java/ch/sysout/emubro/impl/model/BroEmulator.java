@@ -13,6 +13,7 @@ import ch.sysout.util.ValidationUtil;
 public class BroEmulator implements Emulator {
 	private int id;
 	private String name;
+	private String shortName;
 	private String path;
 	private String iconFilename;
 	private String configFilePath;
@@ -23,11 +24,12 @@ public class BroEmulator implements Emulator {
 	private String setupFileMatch;
 	private boolean autoSearchEnabled = true;
 
-	public BroEmulator(int id, String name, String path, String iconFilename, String configFilePath, String website,
+	public BroEmulator(int id, String name, String shortName, String path, String iconFilename, String configFilePath, String website,
 			String startParameters, String[] supportedFileTypes, String searchString, String setupFileMatch, boolean autoSearchEnabled) {
 		ValidationUtil.checkNullOrEmpty(name, "name");
 		this.id = id;
 		this.name = name;
+		this.shortName = shortName;
 		this.path = (path == null) ? "" : path;
 		this.iconFilename = (iconFilename == null) ? "" : iconFilename;
 		this.configFilePath = (configFilePath == null) ? "" : configFilePath;
@@ -39,15 +41,17 @@ public class BroEmulator implements Emulator {
 		this.autoSearchEnabled = autoSearchEnabled;
 	}
 
-	public BroEmulator(int id, String name, String path, String iconFilename, String configFilePath, String website,
+	public BroEmulator(int id, String name, String shortName, String path, String iconFilename, String configFilePath, String website,
 			String startParameters, List<String> supportedFileTypes, String searchString, String setupFileMatch, boolean autoSearchEnabled) {
 		ValidationUtil.checkNullOrEmpty(name, "name");
+		ValidationUtil.checkNullOrEmpty(name, "shortName");
 		ValidationUtil.checkNull(iconFilename, "iconFilename");
 		ValidationUtil.checkNull(configFilePath, "configFilePath");
 		ValidationUtil.checkNull(website, "website");
 		ValidationUtil.checkNull(startParameters, "startParameters");
 		this.id = id;
 		this.name = name;
+		this.shortName = shortName;
 		this.path = (path == null) ? "" : path;
 		this.iconFilename = (iconFilename == null) ? "" : iconFilename;
 		this.configFilePath = (configFilePath == null) ? "" : configFilePath;
@@ -62,6 +66,7 @@ public class BroEmulator implements Emulator {
 	public BroEmulator(BroEmulator e) {
 		id = e.id;
 		name = e.name;
+		shortName = e.shortName;
 		path = e.path;
 		iconFilename = e.getIconFilename();
 		configFilePath = e.getConfigFilePath();
@@ -84,6 +89,11 @@ public class BroEmulator implements Emulator {
 	@Override
 	public String getName() {
 		return name;
+	}
+
+	@Override
+	public String getShortName() {
+		return shortName;
 	}
 
 	public void setName(String name) {

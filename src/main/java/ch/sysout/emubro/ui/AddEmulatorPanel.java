@@ -30,7 +30,6 @@ import com.jgoodies.forms.layout.FormLayout;
 
 import ch.sysout.emubro.api.model.Emulator;
 import ch.sysout.emubro.controller.BroController.EmulatorListCellRenderer;
-import ch.sysout.emubro.impl.model.GameConstants;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.ScreenSizeUtil;
@@ -229,7 +228,7 @@ public class AddEmulatorPanel extends JPanel {
 				e.getSource();
 
 				int index = lstSupportedEmulators.getSelectedIndex();
-				boolean b = index != GameConstants.NO_GAME;
+				boolean b = index != -1;
 				Emulator emulator = null;
 				if (b) {
 					emulator = lstSupportedEmulators.getSelectedValue();

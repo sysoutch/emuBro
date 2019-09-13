@@ -66,7 +66,7 @@ public class EmulatorTableModel extends DefaultTableModel {
 	}
 
 	public Emulator getEmulator(int rowIndex) {
-		return rowIndex == EmulatorConstants.NO_EMULATOR ? null : emulators.get(rowIndex);
+		return rowIndex == -1 ? null : emulators.get(rowIndex);
 	}
 
 	@Override

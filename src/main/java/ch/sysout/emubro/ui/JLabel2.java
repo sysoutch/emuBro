@@ -2,25 +2,23 @@ package ch.sysout.emubro.ui;
 
 import javax.swing.JLabel;
 
-import ch.sysout.util.ScreenSizeUtil;
+import ch.sysout.util.FontUtil;
 
 public class JLabel2 extends JLabel {
 	private static final long serialVersionUID = 1L;
+	//	private static Color colorDefaultForeground = Color.WHITE;
 
 	{
-		setFont(ScreenSizeUtil.defaultFont());
+		setFont(FontUtil.getCustomFont());
 	}
 
 	public JLabel2(String text) {
 		super(text);
-		// super("<html><span style='font-size:150%'>"+text+"</span></html>");
+		//		setForeground(colorDefaultForeground);
 	}
 
 	@Override
 	public void setText(String text) {
 		super.setText(text);
-		// super.setText("<html><span
-		// style='font-size:150%'>"+text+"</span></html>");
 	}
-
 }

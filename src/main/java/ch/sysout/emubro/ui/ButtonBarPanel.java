@@ -1,8 +1,10 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.Component;
-import java.awt.Insets;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.PopupMenu;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -60,7 +62,7 @@ public class ButtonBarPanel extends JPanel {
 
 	private void initComponents() {
 		// btnOrganize.setBorderPainted(false);
-		// btnRunGame.setVisible(false);
+		// btnRunGame.setEnabled(false);
 		// btnOrganize.setContentAreaFilled(false);
 		// btnRunGame.setToolTipText("Spiel starten");
 	}
@@ -99,7 +101,6 @@ public class ButtonBarPanel extends JPanel {
 			boolean moreWidthThanBefore = currentPanelWidth >= lastPanelWidth;
 			if (moreWidthThanBefore) {
 				checkMaximizeButtons();
-				setVisible(true);
 			}
 		}
 		lastPanelWidth = currentPanelWidth;
@@ -109,87 +110,87 @@ public class ButtonBarPanel extends JPanel {
 		int currentWidth = getWidth();
 		int buttonBarContentWidth = getButtonBarContentWidth();
 		int difference = currentWidth - buttonBarContentWidth;
-		if (gameSelected) {
-			if (hasText(0)) {
-				if (difference == 0) {
-					setEmptyTextForComponent(0);
-					setEmptyTextForComponent(1);
-					SwingUtilities.invokeLater(new Runnable() {
-
-						@Override
-						public void run() {
-							checkMinimizeButtons();
-						}
-					});
-				}
-				return;
-			} else if (hasText(6)) {
-				if (difference == 0) {
-					setEmptyTextForComponent(6);
-					SwingUtilities.invokeLater(new Runnable() {
-
-						@Override
-						public void run() {
-							checkMinimizeButtons();
-						}
-					});
-				}
-				return;
-			} else if (hasText(5)) {
-				if (difference == 0) {
-					setEmptyTextForComponent(5);
-					SwingUtilities.invokeLater(new Runnable() {
-
-						@Override
-						public void run() {
-							checkMinimizeButtons();
-						}
-					});
-				}
-				return;
-			} else if (hasText(4)) {
-				if (difference == 0) {
-					setEmptyTextForComponent(4);
-					SwingUtilities.invokeLater(new Runnable() {
-
-						@Override
-						public void run() {
-							checkMinimizeButtons();
-						}
-					});
-				}
-				return;
-			} else if (hasText(2)) {
-				if (difference == 0) {
-					setEmptyTextForComponent(2);
-				}
-				return;
-			} else {
-				//				System.out.println("difffff: " + difference);
-				//				if (components.get(6).isVisible()) {
-				//					components.get(6).setVisible(false);
-				//				} else if (components.get(5).isVisible()) {
-				//					components.get(5).setVisible(false);
-				//				} else if (components.get(4).isVisible()) {
-				//					components.get(4).setVisible(false);
-				//				} else if (components.get(2).isVisible()) {
-				//					components.get(2).setVisible(false);
-				//					components.get(3).setVisible(false);
-				//				} else if (components.get(1).isVisible()) {
-				//					components.get(1).setVisible(false);
-				//				} else if (components.get(0).isVisible()) {
-				//					components.get(0).setVisible(false);
-				//				}
-			}
-		} else {
-			if (hasText(0)) {
-				setEmptyTextForComponent(0);
+		//		if (gameSelected) {
+		if (hasText(1)) {
+			if (difference == 0) {
 				setEmptyTextForComponent(1);
-			} else {
-				//				components.get(1).setVisible(false);
-				//				components.get(0).setVisible(false);
+				setEmptyTextForComponent(2);
+				SwingUtilities.invokeLater(new Runnable() {
+
+					@Override
+					public void run() {
+						checkMinimizeButtons();
+					}
+				});
 			}
+			return;
+		} else if (hasText(7)) {
+			if (difference == 0) {
+				setEmptyTextForComponent(7);
+				SwingUtilities.invokeLater(new Runnable() {
+
+					@Override
+					public void run() {
+						checkMinimizeButtons();
+					}
+				});
+			}
+			return;
+		} else if (hasText(6)) {
+			if (difference == 0) {
+				setEmptyTextForComponent(6);
+				SwingUtilities.invokeLater(new Runnable() {
+
+					@Override
+					public void run() {
+						checkMinimizeButtons();
+					}
+				});
+			}
+			return;
+		} else if (hasText(5)) {
+			if (difference == 0) {
+				setEmptyTextForComponent(5);
+				SwingUtilities.invokeLater(new Runnable() {
+
+					@Override
+					public void run() {
+						checkMinimizeButtons();
+					}
+				});
+			}
+			return;
+		} else if (hasText(3)) {
+			if (difference == 0) {
+				setEmptyTextForComponent(3);
+			}
+			return;
+		} else {
+			//				System.out.println("difffff: " + difference);
+			//				if (components.get(6).isEnabled()) {
+			//					components.get(6).setEnabled(false);
+			//				} else if (components.get(5).isEnabled()) {
+			//					components.get(5).setEnabled(false);
+			//				} else if (components.get(4).isEnabled()) {
+			//					components.get(4).setEnabled(false);
+			//				} else if (components.get(2).isEnabled()) {
+			//					components.get(2).setEnabled(false);
+			//					components.get(3).setEnabled(false);
+			//				} else if (components.get(1).isEnabled()) {
+			//					components.get(1).setEnabled(false);
+			//				} else if (components.get(0).isEnabled()) {
+			//					components.get(0).setEnabled(false);
+			//				}
 		}
+		//		} else {
+		//			if (hasText(0)) {
+		//				setEmptyTextForComponent(0);
+		//				setEmptyTextForComponent(1);
+		//			} else {
+		//				//				components.get(1).setEnabled(false);
+		//				//				components.get(0).setEnabled(false);
+		//			}
+		//		}
 	}
 
 	private void setEmptyTextForComponent(int i) {
@@ -204,120 +205,120 @@ public class ButtonBarPanel extends JPanel {
 		int currentWidth = getWidth();
 		int buttonBarContentWidth = getButtonBarContentWidth();
 		int difference = currentWidth - buttonBarContentWidth;
-		if (gameSelected) {
-			if (!hasText(2)) {
-				if (difference > (components.get(2).getWidth() + components.get(3).getWidth())) {
-					//					if (!components.get(3).isVisible() || !components.get(4).isVisible()
-					//							|| !components.get(5).isVisible() || !components.get(6).isVisible()) {
-					//						return;
-					//					}
-					components.get(2).setText(Messages.get(MessageConstants.RUN_GAME));
-					SwingUtilities.invokeLater(new Runnable() {
+		//		if (gameSelected) {
+		if (!hasText(3)) {
+			if (difference > (components.get(3).getWidth() + components.get(4).getWidth())) {
+				//					if (!components.get(3).isEnabled() || !components.get(4).isEnabled()
+				//							|| !components.get(5).isEnabled() || !components.get(6).isEnabled()) {
+				//						return;
+				//					}
+				components.get(3).setText(Messages.get(MessageConstants.RUN_GAME));
+				SwingUtilities.invokeLater(new Runnable() {
 
-						@Override
-						public void run() {
-							checkMaximizeButtons();
-						}
-					});
-				}
-				return;
-			} else if (!hasText(4)) {
-				if (difference > (components.get(2).getWidth() + components.get(3).getWidth())) {
-					components.get(4).setText(Messages.get(MessageConstants.REMOVE));
-					SwingUtilities.invokeLater(new Runnable() {
-
-						@Override
-						public void run() {
-							checkMaximizeButtons();
-						}
-					});
-				}
-				return;
-			} else if (!hasText(5)) {
-				if (difference > components.get(4).getWidth()) {
-					if (!components.get(6).isVisible()) {
-						return;
+					@Override
+					public void run() {
+						checkMaximizeButtons();
 					}
-					components.get(5).setText(Messages.get(MessageConstants.RENAME));
-					SwingUtilities.invokeLater(new Runnable() {
+				});
+			}
+			return;
+		} else if (!hasText(5)) {
+			if (difference > (components.get(3).getWidth() + components.get(4).getWidth())) {
+				components.get(5).setText(Messages.get(MessageConstants.REMOVE));
+				SwingUtilities.invokeLater(new Runnable() {
 
-						@Override
-						public void run() {
-							checkMaximizeButtons();
-						}
-					});
-				}
-				return;
-			} else if (!hasText(6)) {
-				if (difference > components.get(5).getWidth()) {
-					components.get(6).setText(Messages.get(MessageConstants.GAME_PROPERTIES));
-					SwingUtilities.invokeLater(new Runnable() {
-
-						@Override
-						public void run() {
-							checkMaximizeButtons();
-						}
-					});
-				}
-				return;
-			} else if (!hasText(0)) {
-				if (difference > (components.get(6).getWidth() + components.get(6).getWidth())) {
-					components.get(1).setText(Messages.get(MessageConstants.SETTINGS));
-					components.get(0).setText(Messages.get(MessageConstants.ORGANIZE));
-					SwingUtilities.invokeLater(new Runnable() {
-
-						@Override
-						public void run() {
-							checkMaximizeButtons();
-						}
-					});
-				}
-				return;
-			}
-			if (!components.get(0).isVisible()) {
-				components.get(0).setVisible(true);
-				components.get(0).setText("");
-			}
-			else if (!components.get(1).isVisible()) {
-				components.get(1).setVisible(true);
-				components.get(1).setText("");
-			}
-			else if (!components.get(2).isVisible()) {
-				components.get(2).setVisible(true);
-				components.get(3).setVisible(true);
-				components.get(2).setText("");
-				components.get(3).setText("");
-			}
-			else if (!components.get(4).isVisible()) {
-				components.get(4).setVisible(true);
-				components.get(4).setText("");
-			}
-			else if (!components.get(5).isVisible()) {
-				components.get(5).setVisible(true);
-				components.get(5).setText("");
-			}
-			else if (!components.get(6).isVisible()) {
-				components.get(6).setVisible(true);
-				components.get(6).setText("");
-			}
-		} else {
-			if (components.get(0).getText().isEmpty()) {
-				if (difference > (components.get(6).getWidth() + components.get(6).getWidth())) {
-					components.get(1).setText(Messages.get(MessageConstants.SETTINGS));
-					if (components.get(0).getText().isEmpty()) {
-						components.get(0).setText(Messages.get(MessageConstants.ORGANIZE));
+					@Override
+					public void run() {
+						checkMaximizeButtons();
 					}
-				}
-			} else {
-				if (!components.get(0).isVisible()) {
-					components.get(0).setVisible(true);
-					components.get(0).setText("");
-				} else if (!components.get(1).isVisible()) {
-					components.get(1).setVisible(true);
-					components.get(1).setText("");
-				}
+				});
 			}
+			return;
+		} else if (!hasText(6)) {
+			if (difference > components.get(5).getWidth()) {
+				//				if (!components.get(7).isEnabled()) {
+				//					return;
+				//				}
+				components.get(6).setText(Messages.get(MessageConstants.RENAME));
+				SwingUtilities.invokeLater(new Runnable() {
+
+					@Override
+					public void run() {
+						checkMaximizeButtons();
+					}
+				});
+			}
+			return;
+		} else if (!hasText(7)) {
+			if (difference > components.get(6).getWidth()) {
+				components.get(7).setText(Messages.get(MessageConstants.GAME_PROPERTIES));
+				SwingUtilities.invokeLater(new Runnable() {
+
+					@Override
+					public void run() {
+						checkMaximizeButtons();
+					}
+				});
+			}
+			return;
+		} else if (!hasText(1)) {
+			if (difference > (components.get(7).getWidth() + components.get(7).getWidth())) {
+				components.get(2).setText(Messages.get(MessageConstants.SETTINGS));
+				components.get(1).setText(Messages.get(MessageConstants.ORGANIZE));
+				SwingUtilities.invokeLater(new Runnable() {
+
+					@Override
+					public void run() {
+						checkMaximizeButtons();
+					}
+				});
+			}
+			return;
 		}
+		//			if (!components.get(0).isEnabled()) {
+		//				components.get(0).setEnabled(true);
+		//				components.get(0).setText("");
+		//			}
+		//			else if (!components.get(1).isEnabled()) {
+		//				components.get(1).setEnabled(true);
+		//				components.get(1).setText("");
+		//			}
+		//			else if (!components.get(2).isEnabled()) {
+		//				components.get(2).setEnabled(true);
+		//				components.get(3).setEnabled(true);
+		//				components.get(2).setText("");
+		//				components.get(3).setText("");
+		//			}
+		//			else if (!components.get(4).isEnabled()) {
+		//				components.get(4).setEnabled(true);
+		//				components.get(4).setText("");
+		//			}
+		//			else if (!components.get(5).isEnabled()) {
+		//				components.get(5).setEnabled(true);
+		//				components.get(5).setText("");
+		//			}
+		//			else if (!components.get(6).isEnabled()) {
+		//				components.get(6).setEnabled(true);
+		//				components.get(6).setText("");
+		//			}
+		//		} else {
+		//			if (components.get(0).getText().isEmpty()) {
+		//				if (difference > (components.get(6).getWidth() + components.get(6).getWidth())) {
+		//					components.get(1).setText(Messages.get(MessageConstants.SETTINGS));
+		//					if (components.get(0).getText().isEmpty()) {
+		//						components.get(0).setText(Messages.get(MessageConstants.ORGANIZE));
+		//					}
+		//				}
+		//			} else {
+		//				if (!components.get(0).isEnabled()) {
+		//					components.get(0).setEnabled(true);
+		//					components.get(0).setText("");
+		//				} else if (!components.get(1).isEnabled()) {
+		//					components.get(1).setEnabled(true);
+		//					components.get(1).setText("");
+		//				}
+		//			}
+		//		}
 	}
 
 	private int getButtonBarContentWidth() {
@@ -325,11 +326,26 @@ public class ButtonBarPanel extends JPanel {
 		for (AbstractButton c : components) {
 			width += c.getWidth();
 		}
-		Insets insets = getBorder().getBorderInsets(this);
-		return width + (insets.left + insets.right);
+		//		Insets insets = getBorder().getBorderInsets(this);
+		return width;// + (insets.left + insets.right);
 	}
 
 	public void gameSelected(GameSelectionEvent e) {
 		gameSelected = !e.getGames().isEmpty();
+	}
+
+	@Override
+	protected void paintComponent(Graphics g) {
+		super.paintComponent(g);
+		BufferedImage background = IconStore.current().getButtonBarBackgroundImage();
+		if (background != null) {
+			Graphics2D g2d = (Graphics2D) g.create();
+			int x = 0;
+			int y = 0;
+			int w = getWidth();
+			int h = getHeight();
+			g2d.drawImage(background, 0, 0, w, h, this);
+			g2d.dispose();
+		}
 	}
 }

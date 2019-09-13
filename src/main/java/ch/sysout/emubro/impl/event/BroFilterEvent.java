@@ -30,11 +30,11 @@ public class BroFilterEvent implements FilterEvent {
 
 	@Override
 	public boolean isGameFilterSet() {
-		return criteria != null && !criteria.getText().isEmpty();
+		return criteria != null && (!criteria.getText().isEmpty() || !criteria.getTags().isEmpty());
 	}
 
 	@Override
-	public boolean isTagFilterSet() {
-		return criteria != null && !criteria.getTags().isEmpty();
+	public boolean hasTags() {
+		return criteria.getTags().size() > 0;
 	}
 }

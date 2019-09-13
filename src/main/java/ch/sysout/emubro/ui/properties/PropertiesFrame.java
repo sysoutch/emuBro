@@ -92,7 +92,7 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 	 */
 	public void adjustSizeWhenNeeded() {
 		int width = getWidth();
-		setSize((int) (width * 2.5), (int) (width * 1.75));
+		setSize(width * 3, (int) (width * 1.75));
 	}
 
 	private List<Image> getIcons() {

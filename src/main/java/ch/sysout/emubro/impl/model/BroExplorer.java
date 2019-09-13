@@ -9,10 +9,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Properties;
 import java.util.Set;
 
 import org.apache.commons.io.FilenameUtils;
 
+import ch.sysout.emubro.api.filter.FilterGroup;
 import ch.sysout.emubro.api.model.Emulator;
 import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.api.model.Game;
@@ -41,6 +43,8 @@ public class BroExplorer implements Explorer {
 	private Map<Integer, String> checksums = new HashMap<>();
 	private String currentApplicationVersion;
 	private boolean discordFeatureDisabled = false; // this is intended to be false per default until user decides to disable it
+	private List<FilterGroup> filterGroups;
+	private Map<Integer, Properties> gameTitles;
 
 	public BroExplorer(String currentApplicationVersion) {
 		this.currentApplicationVersion = currentApplicationVersion;
@@ -115,7 +119,15 @@ public class BroExplorer implements Explorer {
 	}
 
 	@Override
-	public void setCurrentGame(List<Game> games) {
+	public void setCurrentGames(List<Game> games) {
+		currentGameIds.clear();
+		for (Game game : games) {
+			currentGameIds.add(game.getId());
+		}
+	}
+
+	@Override
+	public void setCurrentGames(Game... games) {
 		currentGameIds.clear();
 		for (Game game : games) {
 			currentGameIds.add(game.getId());
@@ -372,6 +384,12 @@ public class BroExplorer implements Explorer {
 	}
 
 	@Override
+	public boolean hasGamesOrEmulators(int platformId) {
+		return getGameCountFromPlatform(platformId) > 0
+				|| getPlatform(platformId).hasDefaultEmulator();
+	}
+
+	@Override
 	public boolean hasEmulator(String platformName, String emulatorPath) {
 		Platform p = getPlatform(platformName);
 		return p != null && p.hasEmulator(emulatorPath);
@@ -397,6 +415,15 @@ public class BroExplorer implements Explorer {
 	public void setSearchProcessComplete(boolean searchProcessComplete) {
 		this.searchProcessComplete = searchProcessComplete;
 
+	}
+
+	@Override
+	public List<BroEmulator> getEmulatorsFromPlatform(int platformId) {
+		Platform platform = getPlatform(platformId);
+		if (platform == null) {
+			throw new IllegalArgumentException("no platform found with that id: " + platformId);
+		}
+		return platform.getEmulators();
 	}
 
 	@Override
@@ -765,5 +792,33 @@ public class BroExplorer implements Explorer {
 	@Override
 	public String getGameCoversPath() {
 		return getResourcesPath() + File.separator + "games" + File.separator + "covers";
+	}
+
+	@Override
+	public void setFilterGroups(List<FilterGroup> filterGroups) {
+		this.filterGroups = filterGroups;
+	}
+
+	@Override
+	public void addFilterGroup(FilterGroup filterGroup) {
+		filterGroups.add(filterGroup);
+	}
+
+	@Override
+	public String getPlatformsDirectory() {
+		return getResourcesPath() + File.separator + "platforms";
+	}
+
+	@Override
+	public Properties getGameTitlesFromPlatform(Platform platform) {
+		return gameTitles != null ? gameTitles.get(platform.getId()) : null;
+	}
+
+	@Override
+	public void setGameTitlesForPlatform(Platform p, Properties prop) {
+		if (gameTitles == null) {
+			gameTitles = new HashMap<>();
+		}
+		gameTitles.put(p.getId(), prop);
 	}
 }

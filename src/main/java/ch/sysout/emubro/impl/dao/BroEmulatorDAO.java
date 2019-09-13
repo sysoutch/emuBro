@@ -34,6 +34,7 @@ public class BroEmulatorDAO implements EmulatorDAO {
 			try {
 				int emulatorId = rset.getInt("emulator_id");
 				String name = rset.getString("emulator_name");
+				String shortName = rset.getString("emulator_shortName");
 				String path = rset.getString("emulator_path");
 				String iconFilename = rset.getString("emulator_iconFilename");
 				String configFilePath = rset.getString("emulator_configFilePath");
@@ -43,7 +44,7 @@ public class BroEmulatorDAO implements EmulatorDAO {
 				String setupFileMatch = rset.getString("emulator_setupFileMatch");
 				String[] supportedFileTypes = rset.getString("emulator_supportedFileTypes").split(" ");
 				boolean autoSearchEnabled = rset.getBoolean("emulator_autoSearchEnabled");
-				emulator = new BroEmulator(emulatorId, name, path, iconFilename, configFilePath, website,
+				emulator = new BroEmulator(emulatorId, name, shortName, path, iconFilename, configFilePath, website,
 						startParameter, supportedFileTypes, searchString, setupFileMatch, autoSearchEnabled);
 			} catch (SQLException e) {
 				e.printStackTrace();

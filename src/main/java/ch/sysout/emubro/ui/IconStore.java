@@ -1,5 +1,7 @@
 package ch.sysout.emubro.ui;
 
+import java.awt.image.BufferedImage;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -12,6 +14,15 @@ import ch.sysout.util.ScreenSizeUtil;
 
 public class IconStore {
 	private static IconStore instance;
+
+	private BufferedImage imgButtonBarBackground;
+	private BufferedImage imgTransparentOverlay;
+	private BufferedImage imgNavigationBackground;
+	private BufferedImage imgBackground;
+	private BufferedImage imgPreviewPaneBackground;
+
+	private String lightTheme = "light";
+	private String darkTheme = "dark";
 
 	private Map<Integer, ImageIcon> platformIcons = new HashMap<>();
 
@@ -31,8 +42,8 @@ public class IconStore {
 
 	private List<GameCoverListener> gameCoverListeners = new ArrayList<>();
 
-	private String currentPlatformLogosDirectory = System.getProperty("user.dir")+"/emubro-resources/platforms/images/logos";
-	private String currentPlatformCoversDirectory = System.getProperty("user.dir")+"/emubro-resources/platforms/images/covers";
+	private String coverType2d = "2d";
+
 
 	private IconStore() {
 		// prevent instantiation of this class
@@ -41,9 +52,16 @@ public class IconStore {
 	public static final IconStore current() {
 		return instance == null ? instance = new IconStore() : instance;
 	}
+	public void addPlatformCover(int platformId, String platformCoversDirectory) {
+		addPlatformCover(platformId, platformCoversDirectory, "");
+	}
 
-	public void addPlatformCover(int platformId, String coverFileName) {
-		String coverFilePath = currentPlatformCoversDirectory + "/" + coverFileName;
+	public void addPlatformCover(int platformId, String platformCoversDirectory, String coverFileName) {
+		if (coverFileName == null || coverFileName.isEmpty()) {
+			coverFileName = "front.jpg";
+		}
+		String separator = File.separator;
+		String coverFilePath = platformCoversDirectory + separator + coverType2d + separator + coverFileName;
 		if (!platformCovers.containsKey(platformId)) {
 			int size = ScreenSizeUtil.adjustValueToResolution(200);
 			ImageIcon ii = ImageUtil.getImageIconFrom(coverFilePath, true);
@@ -112,10 +130,17 @@ public class IconStore {
 		return icon;
 	}
 
-	public void addPlatformIcon(int platformId, String iconFileName) {
+	public void addPlatformIcon(int id, String platformsDirectory) {
+		addPlatformIcon(id, platformsDirectory, "");
+	}
+
+	public void addPlatformIcon(int platformId, String currentPlatformLogosDirectory, String iconFileName) {
+		if (iconFileName == null || iconFileName.isEmpty()) {
+			iconFileName = "default.png";
+		}
 		if (!platformIcons.containsKey(platformId)) {
 			int size = ScreenSizeUtil.adjustValueToResolution(16);
-			String iconFilePath = currentPlatformLogosDirectory + "/"+iconFileName;
+			String iconFilePath = currentPlatformLogosDirectory + File.separator + iconFileName;
 			ImageIcon ii = ImageUtil.getImageIconFrom(iconFilePath, true);
 			ImageIcon ico = ImageUtil.scaleCover(ii, size, CoverConstants.SCALE_WIDTH_OPTION);
 			platformIcons.put(platformId, ico);
@@ -227,5 +252,40 @@ public class IconStore {
 
 	public void addGameCoverListener(GameCoverListener l) {
 		gameCoverListeners.add(l);
+	}
+
+	public BufferedImage getButtonBarBackgroundImage() {
+		if (imgButtonBarBackground == null) {
+			imgButtonBarBackground = ImageUtil.getBufferedImageFrom("/images/themes/"+darkTheme+"/buttonbar.jpg");
+		}
+		return imgButtonBarBackground;
+	}
+
+	public BufferedImage getNavigationBackgroundImage() {
+		if (imgNavigationBackground == null) {
+			imgNavigationBackground = ImageUtil.getBufferedImageFrom("/images/themes/"+darkTheme+"/nav.jpg");
+		}
+		return imgNavigationBackground;
+	}
+
+	public BufferedImage getBackgroundImage() {
+		if (imgBackground == null) {
+			imgBackground = ImageUtil.getBufferedImageFrom("/images/themes/"+darkTheme+"/bg-only.jpg");
+		}
+		return imgBackground;
+	}
+
+	public BufferedImage getTransparentBackgroundOverlayImage() {
+		if (imgTransparentOverlay == null) {
+			imgTransparentOverlay = ImageUtil.getBufferedImageFrom("/images/themes/logo-transparent.png");
+		}
+		return imgTransparentOverlay;
+	}
+
+	public BufferedImage getPreviewPaneBackgroundImage() {
+		if (imgPreviewPaneBackground == null) {
+			imgPreviewPaneBackground = ImageUtil.getBufferedImageFrom("/images/themes/"+darkTheme+"/bg-only.jpg");
+		}
+		return imgPreviewPaneBackground;
 	}
 }
