@@ -172,19 +172,6 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				//								lastHeight = frameDetailsPane.getHeight();
 			};
 		};
-		pnlPreviewPane.addResizePreviewPaneListener(new MouseMotionListener() {
-
-			@Override
-			public void mouseMoved(MouseEvent e) {
-				// TODO Auto-generated method stub
-
-			}
-
-			@Override
-			public void mouseDragged(MouseEvent e) {
-				splCurrentViewAndPreviewPane.setDividerLocation(e.getXOnScreen());
-			}
-		});
 	}
 
 	public void initDefaultTags(List<Tag> tags) {
@@ -228,7 +215,6 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				viewManager.setCoverForGame(explorer.getCurrentGames().get(0).getName());
 			}
 		});
-
 		pnlDetails.addSelectNextGameListener(new ActionListener() {
 
 			@Override
@@ -236,12 +222,24 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				viewManager.selectNextGame();
 			}
 		});
-
 		pnlDetails.addSelectPreviousGameListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				viewManager.selectPreviousGame();
+			}
+		});
+		pnlDetails.addResizeDetailsPanelListener(new MouseMotionListener() {
+
+			@Override
+			public void mouseMoved(MouseEvent e) {
+				// TODO Auto-generated method stub
+
+			}
+
+			@Override
+			public void mouseDragged(MouseEvent e) {
+				splDetailsPane.setDividerLocation(e.getYOnScreen());
 			}
 		});
 	}
@@ -366,7 +364,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 			private static final long serialVersionUID = 1L;
 
 			//			@Override
-			//			public int getMinimumDividerLocation() {
+			//			public int getMaximumDividerLocation() {
 			//				//				return ScreenSizeUtil.adjustValueToResolution(384) - splNavigationAndCurrentViewAndPreviewPane.getDividerLocation();
 			//				return getWidth() - pnlPreviewPane.getCustomDividerSize();
 			//			}
@@ -381,6 +379,19 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 		splCurrentViewAndPreviewPane.getRightComponent().setVisible(false);
 		splCurrentViewAndPreviewPane.setBorder(BorderFactory.createEmptyBorder());
 		splCurrentViewAndPreviewPane.setResizeWeight(1);
+		pnlPreviewPane.addResizePreviewPaneListener(new MouseMotionListener() {
+
+			@Override
+			public void mouseMoved(MouseEvent e) {
+				// TODO Auto-generated method stub
+
+			}
+
+			@Override
+			public void mouseDragged(MouseEvent e) {
+				splCurrentViewAndPreviewPane.setDividerLocation(e.getXOnScreen());
+			}
+		});
 	}
 
 	private void initializeNavigationAndCurrentViewAndPreviewPane() {
@@ -600,13 +611,13 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 		//				};
 		//			}
 		//		});
-		BasicSplitPaneDivider divider = ((BasicSplitPaneUI) splDetailsPane.getUI()).getDivider();
-		TitledBorder titled = BorderFactory.createTitledBorder("\u2630");
-		titled.setTitleJustification(TitledBorder.CENTER);
-		titled.setTitlePosition(TitledBorder.TOP);
-		titled.setTitleFont(new Font(Font.DIALOG, Font.PLAIN, 12));
-		titled.setTitleColor(Color.BLACK);
-		divider.setBorder(titled);
+		//		BasicSplitPaneDivider divider = ((BasicSplitPaneUI) splDetailsPane.getUI()).getDivider();
+		//		TitledBorder titled = BorderFactory.createTitledBorder("\u2630");
+		//		titled.setTitleJustification(TitledBorder.CENTER);
+		//		titled.setTitlePosition(TitledBorder.TOP);
+		//		titled.setTitleFont(new Font(Font.DIALOG, Font.PLAIN, 12));
+		//		titled.setTitleColor(Color.BLACK);
+		//		divider.setBorder(titled);
 
 		addDividerDraggedListeners();
 		splDetailsPane.setBorder(BorderFactory.createEmptyBorder());
@@ -698,7 +709,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 		//				int dividerSize = splDetailsPane.getDividerSize();
 		//				int value = ScreenSizeUtil.adjustValueToResolution(dividerSize);
 		int value = 0;
-		splDetailsPane.setDividerSize(16);
+		splDetailsPane.setDividerSize(value);
 		splCurrentViewAndPreviewPane.setDividerSize(value);
 		splNavigationAndCurrentViewAndPreviewPane.setDividerSize(value);
 	}

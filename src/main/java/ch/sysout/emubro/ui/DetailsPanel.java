@@ -11,6 +11,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.List;
@@ -19,7 +20,6 @@ import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
@@ -36,6 +36,7 @@ import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
+import ch.sysout.util.ScreenSizeUtil;
 import ch.sysout.util.UIUtil;
 
 public class DetailsPanel extends JPanel implements NotificationElementListener {
@@ -70,13 +71,32 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 
 	private CellConstraints cc2;
 
+	private AbstractButton btnResizeDetailsPane = new JButton();
+
 	public DetailsPanel() {
 		super(new BorderLayout());
 		initComponents();
+		setIcons();
 		createUI();
 	}
 
+
 	private void initComponents() {
+		btnResizeDetailsPane.setFocusable(false);
+		btnResizeDetailsPane.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseEntered(MouseEvent e) {
+				super.mouseEntered(e);
+				btnResizeDetailsPane.setCursor(Cursor.getPredefinedCursor(Cursor.N_RESIZE_CURSOR | Cursor.S_RESIZE_CURSOR));
+			}
+
+			@Override
+			public void mouseExited(MouseEvent e) {
+				super.mouseExited(e);
+				btnResizeDetailsPane.setCursor(null);
+			}
+		});
+
 		ButtonGroup grp = new ButtonGroup();
 		grp.add(btnInformations);
 		grp.add(btnWarnings);
@@ -125,7 +145,8 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		};
 		pnlBrowseCovers = new BrowseCoversPanel();
 		pnlBrowseTags = new JPanel();
-		pnlBrowseTags.add(new JLabel("Nothing to do here yet. Come back again later."));
+		JLabel2 lbl;
+		pnlBrowseTags.add(lbl = new JLabel2("Nothing to do here yet. Come back again later."));
 		addListeners();
 	}
 
@@ -206,6 +227,11 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		}
 	}
 
+	private void setIcons() {
+		int size = ScreenSizeUtil.is3k() ? 16 : 12;
+		btnResizeDetailsPane.setIcon(ImageUtil.getImageIconFrom(Icons.get("barsWhite", size, size)));
+	}
+
 	private void createUI() {
 		pnlTpInformationBar = new JPanel(new BorderLayout());
 		pnlTpInformationBar.setOpaque(false);
@@ -232,6 +258,7 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		tpDetailsPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
 		tpDetailsPane.setTabPlacement(JTabbedPane.TOP);
 		pnlBrowseComputer.setOpaque(false);
+		pnlBrowseTags.setOpaque(false);
 		JScrollPane sp2 = new ModernScrollPane(pnlBrowseComputer);
 		sp2.getViewport().setOpaque(false);
 		sp2.setOpaque(false);
@@ -253,6 +280,9 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		JPanel pnl = new JPanel(new BorderLayout());
 		pnl.add(pnlHideDetailsPanePanel = createHideDetailsPanePanel(), BorderLayout.CENTER);
 		pnl.setOpaque(false);
+
+		UIUtil.doHover(false, btnResizeDetailsPane);
+		add(btnResizeDetailsPane, BorderLayout.NORTH);
 		add(pnl, BorderLayout.EAST);
 		pnlBrowseComputer.setBorder(Paddings.TABBED_DIALOG);
 		add(pnlTpInformationBar);
@@ -499,5 +529,10 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 			g2d.drawImage(background, 0, 0, panelWidth, panelHeight, this);
 			g2d.dispose();
 		}
+	}
+
+
+	public void addResizeDetailsPanelListener(MouseMotionListener l) {
+		btnResizeDetailsPane.addMouseMotionListener(l);
 	}
 }

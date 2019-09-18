@@ -175,7 +175,6 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	private List<UpdateGameCountListener> gameCountListeners = new ArrayList<>();
 	private Explorer explorer;
 	private ViewPanelManager viewManager;
-	private Color favoritesBackground = new Color(10, 42, 64);
 	protected List<Game> currentGames;
 	private int currentView;
 	private List<TagsFromGamesListener> tagsFromGamesListeners = new ArrayList<>();
@@ -480,8 +479,9 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	public void setGameListRenderer() {
 		setGameListRenderer(new DefaultListCellRenderer() {
 			private static final long serialVersionUID = 1L;
-			private Color colorBackground = Color.WHITE; //UIManager.getColor("List.foreground");
-			Color colorFavorite = new Color(250, 176, 42);
+
+			Color colorFavorite = new Color(250, 250, 128);
+			//			private Color colorBackground = UIManager.getColor("List.foreground");
 			//			final Color colorFavorite = Color.BLUE;
 			//			final Color colorError = ValidationComponentUtils.getErrorBackground();
 			private Border borderHover = BorderFactory.createLineBorder(getGameList().getSelectionBackground(), 1, false);
@@ -628,7 +628,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 						label.setOpaque(true);
 						label.setBackground(colorItemBackground);
 					} else {
-						label.setForeground(colorBackground);
+						//						label.setForeground(colorBackground);
 					}
 				}
 			}
@@ -1459,21 +1459,18 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 			setCurrentView(NavigationPanel.ALL_GAMES);
 			gameCount = mdlLstAllGames.getSize();
 			lstGames.setModel(mdlLstAllGames);
-			lstGames.setBackground(UIManager.getColor("List.background"));
 			setViewStyle(lstGames, viewStyle);
 			break;
 		case NavigationPanel.RECENTLY_PLAYED:
 			setCurrentView(NavigationPanel.RECENTLY_PLAYED);
 			gameCount = mdlLstRecentlyPlayed.getSize();
 			lstGames.setModel(mdlLstRecentlyPlayed);
-			lstGames.setBackground(UIManager.getColor("List.background"));
 			setViewStyle(lstGames, viewStyle);
 			break;
 		case NavigationPanel.FAVORITES:
 			setCurrentView(NavigationPanel.FAVORITES);
 			gameCount = mdlLstFavorites.getSize();
 			lstGames.setModel(mdlLstFavorites);
-			lstGames.setBackground(favoritesBackground);
 			setViewStyle(lstGames, viewStyle);
 			break;
 		}

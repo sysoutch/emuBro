@@ -182,14 +182,44 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 		// columnModel.getColumn(0).setResizable(false);
 
 		// minWidth = col.getWidth();
-		spTblGames = new JScrollPane(tblGames);
+		spTblGames = new JScrollPane(tblGames) {
+
+			@Override
+			protected void paintComponent(Graphics g) {
+				super.paintComponent(g);
+				BufferedImage background = IconStore.current().getBackgroundImage();
+				if (background != null) {
+					Graphics2D g2d = (Graphics2D) g.create();
+					int panelWidth = getWidth();
+					int panelHeight = getHeight();
+					g2d.drawImage(background, 0, 0, panelWidth, panelHeight, this);
+
+					BufferedImage imgTransparentOverlay = IconStore.current().getTransparentBackgroundOverlayImage();
+					if (imgTransparentOverlay != null) {
+						int width = imgTransparentOverlay.getWidth();
+						int height = imgTransparentOverlay.getHeight();
+
+						double factor = background.getWidth() / panelWidth;
+						if (factor != 0) {
+							int scaledWidth = (int) (width/factor);
+							int scaledHeight = (int) (height/factor);
+							width = scaledWidth;
+							height = scaledHeight;
+						}
+						int x = panelWidth-width;
+						int y = panelHeight-height;
+						g2d.drawImage(imgTransparentOverlay, x, y, width, height, this);
+					}
+					g2d.dispose();
+				}
+			}
+		};
 		Color color = UIManager.getColor("Table.background");
 		spTblGames.getViewport().setBackground(color);
 
 		setOpaque(false);
-		spTblGames.getViewport().setOpaque(false);
 		tblGames.setOpaque(false);
-
+		spTblGames.getViewport().setOpaque(false);
 		TableCellRenderer renderer = tblGames.getTableHeader().getDefaultRenderer();
 		((JLabel) renderer).setHorizontalAlignment(SwingConstants.LEFT);
 		tblGames.getTableHeader().setDefaultRenderer(renderer);
@@ -910,7 +940,12 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 			Game game = (Game) mdlTblAllGames.getValueAt(table.convertRowIndexToModel(row), -1);
 			if (game != null) {
 				//				Font font = cellComponent.getFont();
-				Color selectedBackgroundColor = tblGames.getSelectionBackground();
+				//				Color selectedBackgroundColor = tblGames.getSelectionBackground();
+				Color selectedBackgroundColor = new Color(0f, 0f, 0f, 0.25f);
+				Color hoveredBackgroundColor = new Color(0f, 0f, 0f, 0.1f);
+
+				((JComponent) cellComponent).setOpaque(isSelected);
+
 				if (isSelected) {
 					Color selectedForegroundColor = UIManager.getColor("Table.selectionForeground");
 					cellComponent.setForeground(selectedForegroundColor);
@@ -921,9 +956,11 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 						//						cellComponent.setFont(fontBold);
 					}
 				} else {
-					cellComponent.setBackground(null);
+					//					cellComponent.setBackground(null);
 					if (row == mouseOver) {
-						cellComponent.setForeground(selectedBackgroundColor);
+						((JComponent) cellComponent).setOpaque(true);
+						cellComponent.setBackground(hoveredBackgroundColor);
+						//						cellComponent.setForeground(selectedBackgroundColor);
 						if (game.isFavorite()) {
 							//							Font fontBold = (font.isBold()) ? font : font.deriveFont(
 							//									Collections.singletonMap(TextAttribute.WEIGHT, TextAttribute.WEIGHT_BOLD));
@@ -1252,21 +1289,5 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 
 	@Override
 	public void coverSizeChanged(int currentCoverSize) {
-	}
-
-	@Override
-	protected void paintComponent(Graphics g) {
-		super.paintComponent(g);
-		BufferedImage background = IconStore.current().getBackgroundImage();
-		if (background != null) {
-			Graphics2D g2d = (Graphics2D) g.create();
-			int x = 0;
-			int y = 0;
-			//			g2d.drawImage(background, 0, 0, this);
-			int w = getWidth();
-			int h = getHeight();
-			g2d.drawImage(background, 0, 0, w, h, this);
-			g2d.dispose();
-		}
 	}
 }

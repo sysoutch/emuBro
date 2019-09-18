@@ -1,5 +1,6 @@
 package ch.sysout.emubro;
 
+import java.awt.Color;
 import java.awt.Point;
 import java.io.BufferedReader;
 import java.io.File;
@@ -21,9 +22,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import javax.swing.BorderFactory;
 import javax.swing.JOptionPane;
 import javax.swing.LookAndFeel;
 import javax.swing.UIManager;
+import javax.swing.border.EmptyBorder;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -55,6 +58,8 @@ import ch.sysout.emubro.ui.MainFrame;
 import ch.sysout.emubro.ui.SplashScreenWindow;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.util.FileUtil;
+import ch.sysout.util.Icons;
+import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ValidationUtil;
 import net.arikia.dev.drpc.DiscordEventHandlers;
@@ -189,7 +194,13 @@ public class Main {
 
 					// explorer.setDefaultPlatforms(defaultPlatforms);
 					explorer.setUpdatedTags(updatedTags);
+
+					setCustomTheme();
 					mainFrame = new MainFrame(defaultLookAndFeel, explorer);
+
+
+					//					SwingUtilities.updateComponentTreeUI(mainFrame);
+
 					String platformsDirectory = explorer.getPlatformsDirectory();
 					mainFrame.initPlatforms(platforms, platformsDirectory);
 					mainFrame.initTags(tags);
@@ -395,6 +406,31 @@ public class Main {
 		}
 	}
 
+	private static void setCustomTheme() {
+		Color color = Color.WHITE;
+		UIManager.put("Button.opaque", false);
+
+		UIManager.put("Label.foreground", color);
+		UIManager.put("Button.foreground", color);
+		UIManager.put("Button.border", BorderFactory.createEmptyBorder());
+		UIManager.put("List.foreground", color);
+		UIManager.put("Table.foreground", color);
+		UIManager.put("TabbedPane.foreground", color);
+		UIManager.put("PopupMenu.border", new EmptyBorder(0, 0, 0, 0));
+
+		UIManager.put("MenuItem.acceleratorForeground", color);
+		UIManager.put("MenuItem.acceleratorSelectionForeground", color);
+
+		UIManager.put("Menu.arrowIcon", ImageUtil.getImageIconFrom(Icons.get("arrowRightOtherWhite", 1)));
+
+		UIManager.put("CheckBoxMenuItem.acceleratorForeground", color);
+		UIManager.put("CheckBoxMenuItem.acceleratorSelectionForeground", color);
+
+		UIManager.put("RadioButtonMenuItem.acceleratorForeground", color);
+		UIManager.put("RadioButtonMenuItem.acceleratorSelectionForeground", color);
+
+	}
+
 	private static void downloadResourceFolder(String version) throws IOException {
 		String zipFileName = "emubro-resources.zip";
 		String urlPath = "https://github.com/sysoutch/emuBro/releases/download/v" + version + "/" + zipFileName;
@@ -454,6 +490,7 @@ public class Main {
 			setLookAndFeel("");
 		}
 		defaultLookAndFeel = UIManager.getLookAndFeel();
+
 		// get back the smooth horizontal scroll feature when it was disabled by the
 		// look and feel (happens in WindowsLookAndFeel)
 		UIManager.put("List.lockToPositionOnScroll", Boolean.FALSE);

@@ -1,7 +1,9 @@
 package ch.sysout.emubro.controller;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
+import java.awt.Container;
 import java.awt.Desktop;
 import java.awt.Dialog.ModalityType;
 import java.awt.Dimension;
@@ -5339,6 +5341,8 @@ GameSelectionListener, BrowseComputerListener {
 			return;
 		}
 		JFileChooser fc = new JFileChooser();
+		fc.setOpaque(false);
+		fc.setBackground(Color.DARK_GRAY);
 		fc.setDialogType(JFileChooser.SAVE_DIALOG);
 		fc.setFileSelectionMode(JFileChooser.FILES_ONLY);
 		if (lastEmuDownloadDirectory == null) {
@@ -6008,6 +6012,8 @@ GameSelectionListener, BrowseComputerListener {
 		}
 
 		private void showFileChooser(int filesAndDirectories, File dir) {
+			setBG(fc.getComponents(), new Color(130, 165, 100));
+
 			fc.setCurrentDirectory(dir);
 			fc.setDialogType(JFileChooser.OPEN_DIALOG);
 			fc.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
@@ -6045,6 +6051,16 @@ GameSelectionListener, BrowseComputerListener {
 					List<File> potentialGamesList = new ArrayList<>(Arrays.asList(potentialGames));
 					manuallyCheckAddGamesOrEmulators(potentialGamesList);
 				}
+			}
+		}
+
+		private void setBG(Component[] jc, Color bg) {
+			for (int i = 0; i < jc.length; i++) {
+				Component c = jc[i];
+				if (c instanceof Container) {
+					setBG(((Container) c).getComponents(), bg);
+				}
+				c.setBackground(bg);
 			}
 		}
 	}

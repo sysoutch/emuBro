@@ -50,8 +50,8 @@ public class UIUtil {
 
 	private static Color colorBlack = Color.BLACK;
 	private static Color colorWhite = Color.WHITE;
-	private static Color colorButtonForeground = colorWhite;
-	private static Color colorButtonForegroundHover = UIManager.getColor("Button.foreground");
+	private static Color colorButtonForeground = UIManager.getColor("Button.foreground");
+	private static Color colorButtonForegroundHover = UIManager.getColor("Button.select");
 
 	public static void doHover(boolean b, AbstractButton... btns) {
 		Color color = b ? colorButtonForegroundHover : colorButtonForeground;
@@ -60,9 +60,11 @@ public class UIUtil {
 
 	public static void doHover(boolean b, Color colorButtonForeground, AbstractButton... btns) {
 		for (AbstractButton btn : btns) {
-			btn.setContentAreaFilled(b);
-			btn.setBorderPainted(b);
-			btn.setForeground(colorButtonForeground);
+			btn.setContentAreaFilled(false);
+			btn.setBorderPainted(false);
+			//			btn.setContentAreaFilled(b);
+			//			btn.setBorderPainted(b);
+			//			btn.setForeground(colorButtonForeground);
 		}
 	}
 

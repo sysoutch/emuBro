@@ -367,14 +367,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		//		UIManager.put("Menu.selectionBackground", colorMenuBar);
 		//		UIManager.put("MenuItem.selectionBackground", colorMenuBar);
 
-		UIManager.put("MenuItem.acceleratorForeground", Color.WHITE);
-		UIManager.put("MenuItem.acceleratorSelectionForeground", Color.WHITE);
-
-		UIManager.put("Menu.arrowIcon", ImageUtil.getImageIconFrom(Icons.get("arrowRightOtherWhite", 1)));
-
-		UIManager.put("CheckBoxMenuItem.acceleratorForeground", Color.WHITE);
-		UIManager.put("CheckBoxMenuItem.acceleratorSelectionForeground", Color.WHITE);
-
 		mnb = new JMenuBar();
 		colorMenuBar = new Color(IconStore.current().getButtonBarBackgroundImage().getRGB(0, 0));
 		mnb.setUI(new BasicMenuBarUI() {

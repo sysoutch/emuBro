@@ -35,6 +35,7 @@ import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.Icon;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -118,7 +119,6 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 	}
 
 	private void initComponents() {
-		btnResizePreviewPane.setContentAreaFilled(false);
 		btnResizePreviewPane.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseEntered(MouseEvent e) {
@@ -138,7 +138,6 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		pnlNoSelection.setMinimumSize(new Dimension(0, 0));
 		spSelection.setVisible(false);
 		initNoSelectionText();
-		setTextColors();
 	}
 
 	private void initNoSelectionText() {
@@ -178,18 +177,17 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		//		BoxLayout layout = new BoxLayout(this, BoxLayout.PAGE_AXIS);
 		BorderLayout layout = new BorderLayout();
 		setLayout(layout);
-		setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
+
+		pnlSelection.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 16));
+		pnlNoSelection.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 16));
+
 		//		add(spSelection, BorderLayout.NORTH);
-		btnResizePreviewPane.setOpaque(false);
-		UIUtil.doHover(false, btnResizePreviewPane);
 		btnResizePreviewPane.setFocusable(false);
+		UIUtil.doHover(false, btnResizePreviewPane);
 		add(btnResizePreviewPane, BorderLayout.WEST);
 		add(pnlNoSelection);
-		setOpaque(false);
 		spSelection.setOpaque(false);
 		spSelection.getViewport().setOpaque(false);
-		//		pnlSelection.lblGameTitle.setOpaque(true);
-		//		pnlSelection.lnkPlatformTitle.setOpaque(true);
 	}
 
 	@Override
@@ -370,7 +368,6 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		private JPanel pnl;
 		private JButton btnComment;
 		private Platform platform;
-		public Color colorDefaultForeground = Color.WHITE;
 
 		public SelectionPanel() {
 			setLayout(new BorderLayout());
@@ -450,6 +447,12 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			JPanel pnlCommentWrapper = new JPanel(new BorderLayout());
 			pnlCommentWrapper.setOpaque(false);
 			pnlCommentWrapper.add(btnComment, BorderLayout.WEST);
+
+			Color colorUnderlay = new Color(0f, 0f, 0f, 0.25f);
+			pnlPlayCount.setBackground(colorUnderlay);
+			pnlDateAdded.setBackground(colorUnderlay);
+			pnlLastPlayed.setBackground(colorUnderlay);
+
 			pnl.add(pnlCommentWrapper, ccSelection.xyw(1, 11, columnCount));
 			pnl.add(pnlTags, ccSelection.xyw(1, 13, columnCount));
 			pnl.add(pnlPlayCount, ccSelection.xyw(1, 15, columnCount));
@@ -867,266 +870,286 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			}
 		}
 
-		public void setTextColors(BufferedImage imgPreviewPaneBackground) {
-			UIUtil.setForegroundDependOnBackground(imgPreviewPaneBackground, 0, 0,
-					lblGameTitle,
-					pnlRatingBar.lblRate,
-					pnlPlayCount.lblPlayCount, pnlPlayCount.lblPlayCount2,
-					pnlTags.lblTags,
-					pnlLastPlayed.lblLastPlayed,
-					pnlLastPlayed.lblLastPlayed,
-					pnlDateAdded.lblDateAdded,
-					pnlDateAdded.lblDateAdded2);
-		}
-	}
+		public class GameDataPanel extends ScrollablePanel implements MouseListener {
+			private static final long serialVersionUID = 1L;
 
-	public class GameDataPanel extends ScrollablePanel implements MouseListener {
-		private static final long serialVersionUID = 1L;
-
-		int size = ScreenSizeUtil.is3k() ? 32 : 24;
-		private JButton btnRunGame = new JButton(Messages.get(MessageConstants.RUN_GAME), ImageUtil.getImageIconFrom(Icons.get("runGame", size, size)));
-		private JButton btnMoreOptionsRunGame = new JButton("", ImageUtil.getImageIconFrom(Icons.get("arrowDownOtherWhite", 1)));
-
-		private JButton btnSearchCover = new JButton();
-		private JButton btnSearchTrailer = new JButton();
-
-		public GameDataPanel() {
-			initComponents();
-			createUI();
-		}
-
-		private void initComponents() {
-			setToolTipTexts();
-			setIcons();
-			addListeners();
-		}
-
-		private void setToolTipTexts() {
-			btnSearchCover.setToolTipText(Messages.get(MessageConstants.COVER_FROM_WEB));
-			btnSearchTrailer.setToolTipText(Messages.get(MessageConstants.SHOW_TRAILER));
-		}
-
-		private void setIcons() {
 			int size = ScreenSizeUtil.is3k() ? 32 : 24;
-			btnSearchCover.setIcon(ImageUtil.getImageIconFrom(Icons.get("google", size, size)));
-			btnSearchTrailer.setIcon(ImageUtil.getImageIconFrom(Icons.get("youtube", size, size)));
-		}
+			Color colorUnderlay = new Color(0f, 0f, 0f, 0.25f);
 
-		private void addListeners() {
-			btnRunGame.addMouseListener(this);
-			btnMoreOptionsRunGame.addMouseListener(this);
-			btnSearchCover.addMouseListener(this);
-			btnSearchTrailer.addMouseListener(this);
-			btnRunGame.addMouseListener(UIUtil.getMouseAdapter());
-			btnMoreOptionsRunGame.addMouseListener(UIUtil.getMouseAdapter());
-			btnSearchCover.addMouseListener(UIUtil.getMouseAdapter());
-			btnSearchTrailer.addMouseListener(UIUtil.getMouseAdapter());
-		}
+			private ImageIcon icoRunGame = ImageUtil.getImageIconFrom(Icons.get("runGame", size, size));
+			private ImageIcon icoMoreOptionsRunGame = ImageUtil.getImageIconFrom(Icons.get("arrowDownOtherWhite", 1));
+			private JLabel lblRunGame = new JLabel(Messages.get(MessageConstants.RUN_GAME));
+			private JLabel lblMoreOptionsRunGame = new JLabel("");
 
-		private void createUI() {
-			setOpaque(false);
-			setLayout(new FormLayout("min, min, min, min:grow, min",
-					"fill:min, $rgap, fill:min"));
-			CellConstraints cc = new CellConstraints();
-			UIUtil.doHover(false, btnRunGame, btnMoreOptionsRunGame, btnSearchCover, btnSearchTrailer);
-			add(btnRunGame, cc.xyw(1, 1, 4));
-			add(btnMoreOptionsRunGame, cc.xy(5, 1));
-			add(btnSearchCover, cc.xy(1, 3));
-			add(btnSearchTrailer, cc.xy(3, 3));
-			//			int size = ScreenSizeUtil.is3k() ? 24 : 16;
-			//			btnAddTag.setIcon(ImageUtil.getImageIconFrom(Icons.get("add", size, size)));
-			//			btnAddTag.setBorderPainted(false);
-			//			btnAddTag.setContentAreaFilled(false);
-		}
+			private JButton btnRunGame = new JButton(Messages.get(MessageConstants.RUN_GAME));
+			private JButton btnMoreOptionsRunGame = new JButton("");
+			private JButton btnSearchCover = new JButton();
+			private JButton btnSearchTrailer = new JButton();
 
-		@Override
-		public void mouseClicked(MouseEvent e) {
-			// TODO Auto-generated method stub
+			private JPanel pnlRunGameWrapper;
 
-		}
-
-		@Override
-		public void mousePressed(MouseEvent e) {
-			// TODO Auto-generated method stub
-
-		}
-
-		@Override
-		public void mouseReleased(MouseEvent e) {
-			// TODO Auto-generated method stub
-
-		}
-
-		@Override
-		public void mouseEntered(MouseEvent e) {
-			AbstractButton source = ((AbstractButton) e.getSource());
-			if (source == btnRunGame) {
-				UIUtil.doHover(true, btnMoreOptionsRunGame);
-			} else if (source == btnMoreOptionsRunGame) {
-				UIUtil.doHover(true, btnRunGame);
-			} else if (source == btnSearchCover) {
-				source.setText("Google");
-			} else if (source == btnSearchTrailer) {
-				source.setText("YouTube");
+			public GameDataPanel() {
+				initComponents();
+				createUI();
 			}
-		}
 
-		@Override
-		public void mouseExited(MouseEvent e) {
-			AbstractButton source = ((AbstractButton) e.getSource());
-			if (source == btnRunGame) {
-				UIUtil.doHover(false, btnMoreOptionsRunGame);
-			} else if (source == btnMoreOptionsRunGame) {
-				UIUtil.doHover(false, btnRunGame);
-			} else if (source == btnSearchCover || source == btnSearchTrailer) {
-				source.setText("");
+			private void initComponents() {
+				setToolTipTexts();
+				setIcons();
+				addListeners();
 			}
-		}
 
-		public void addCoverFromWebListener(ActionListener l) {
-			btnSearchCover.addActionListener(l);
-		}
+			private void setToolTipTexts() {
+				btnSearchCover.setToolTipText(Messages.get(MessageConstants.COVER_FROM_WEB));
+				btnSearchTrailer.setToolTipText(Messages.get(MessageConstants.SHOW_TRAILER));
+			}
 
-		public void addTrailerFromWebListener(ActionListener l) {
-			btnSearchTrailer.addActionListener(l);
-		}
-	}
+			private void setIcons() {
+				int size = ScreenSizeUtil.is3k() ? 32 : 24;
+				btnSearchCover.setIcon(ImageUtil.getImageIconFrom(Icons.get("google", size, size)));
+				btnSearchTrailer.setIcon(ImageUtil.getImageIconFrom(Icons.get("youtube", size, size)));
 
-	class TagsPanel extends ScrollablePanel {
-		private static final long serialVersionUID = 1L;
+				lblRunGame.setIcon(icoRunGame);
+				lblMoreOptionsRunGame.setIcon(icoMoreOptionsRunGame);
+				btnRunGame.setIcon(icoRunGame);
+				btnMoreOptionsRunGame.setIcon(icoMoreOptionsRunGame);
+			}
 
-		private JLabel lblTags = new JLabel2("<html><strong>" + Messages.get(MessageConstants.MANAGE_TAGS) + "</strong></html>");
-		private JPanel pnlTagList = new JPanel();
-		private JButton btnAddTag = new JButton(Messages.get(MessageConstants.ADD_TAG));
-		private int size = ScreenSizeUtil.is3k() ? 24 : 16;
-		private Icon iconTag = ImageUtil.getImageIconFrom(Icons.get("tags", size, size));
-		private Map<Integer, JComponent> tags = new HashMap<>();
-		protected JPopupMenu popup = new JPopupMenu();
-		private JMenuItem itmAddToFilter;
-		private JMenuItem itmRemoveTagFromCurrentGames;
-		private List<TagListener> tagListeners = new ArrayList<>();
+			private void addListeners() {
+				lblRunGame.addMouseListener(this);
+				lblMoreOptionsRunGame.addMouseListener(this);
+				btnRunGame.addMouseListener(this);
+				btnMoreOptionsRunGame.addMouseListener(this);
+				btnSearchCover.addMouseListener(this);
+				btnSearchTrailer.addMouseListener(this);
+				btnRunGame.addMouseListener(UIUtil.getMouseAdapter());
+				btnMoreOptionsRunGame.addMouseListener(UIUtil.getMouseAdapter());
+				btnSearchCover.addMouseListener(UIUtil.getMouseAdapter());
+				btnSearchTrailer.addMouseListener(UIUtil.getMouseAdapter());
+			}
 
-		protected int currentSelectedTagId = -1;
+			private void createUI() {
+				setOpaque(false);
+				setLayout(new FormLayout("min, min, min, min:grow, min",
+						"fill:min, $rgap, fill:min"));
+				CellConstraints cc = new CellConstraints();
 
-		public TagsPanel() {
-			initComponents();
-			createUI();
-		}
+				Color colorUnderlay = new Color(0f, 0f, 0f, 0.25f);
+				lblRunGame.setOpaque(true);
+				lblMoreOptionsRunGame.setOpaque(true);
+				lblRunGame.setBackground(new Color(0f, 0f, 0f, 0.25f));
+				lblMoreOptionsRunGame.setBackground(new Color(0f, 0f, 0f, 0.25f));
 
-		private void initComponents() {
-			popup.add(itmAddToFilter = new JMenuItem(Messages.get(MessageConstants.ADD_TO_FILTER), ImageUtil.getImageIconFrom(Icons.get("setFilter", size, size))));
-			popup.add(itmRemoveTagFromCurrentGames = new JMenuItem(Messages.get(MessageConstants.REMOVE_TAG), ImageUtil.getImageIconFrom(Icons.get("remove", size, size))));
+				pnlRunGameWrapper = new JPanel(new BorderLayout());
+				pnlRunGameWrapper.setOpaque(false);
+				pnlRunGameWrapper.setBorder(BorderFactory.createLineBorder(colorUnderlay, 15));
+				pnlRunGameWrapper.add(lblRunGame);
+				pnlRunGameWrapper.add(lblMoreOptionsRunGame, BorderLayout.EAST);
+				UIUtil.doHover(false, btnRunGame, btnMoreOptionsRunGame, btnSearchCover, btnSearchTrailer);
+				add(pnlRunGameWrapper, cc.xyw(1, 1, 5));
+				//				add(btnRunGame, cc.xyw(1, 1, 4));
+				//				add(btnMoreOptionsRunGame, cc.xy(5, 1));
+				add(btnSearchCover, cc.xy(1, 3));
+				add(btnSearchTrailer, cc.xy(3, 3));
+				//			int size = ScreenSizeUtil.is3k() ? 24 : 16;
+				//			btnAddTag.setIcon(ImageUtil.getImageIconFrom(Icons.get("add", size, size)));
+				//			btnAddTag.setBorderPainted(false);
+				//			btnAddTag.setContentAreaFilled(false);
+			}
 
-			itmAddToFilter.addActionListener(new ActionListener() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				// TODO Auto-generated method stub
 
-				@Override
-				public void actionPerformed(ActionEvent e) {
-					List<Game> games = currentGames;
-					for (Game game : games) {
-						fireAddTagToFilterEvent(game.getTag(currentSelectedTagId));
-					}
+			}
+
+			@Override
+			public void mousePressed(MouseEvent e) {
+				// TODO Auto-generated method stub
+
+			}
+
+			@Override
+			public void mouseReleased(MouseEvent e) {
+				// TODO Auto-generated method stub
+
+			}
+
+			@Override
+			public void mouseEntered(MouseEvent e) {
+				JComponent source = (JComponent) e.getSource();
+				if (source == lblRunGame || source == lblMoreOptionsRunGame) {
+					pnlRunGameWrapper.remove(lblRunGame);
+					pnlRunGameWrapper.remove(lblMoreOptionsRunGame);
+					pnlRunGameWrapper.add(btnRunGame);
+					pnlRunGameWrapper.add(btnMoreOptionsRunGame, BorderLayout.EAST);
+					UIUtil.doHover(true, btnRunGame, btnMoreOptionsRunGame);
+				} else if (source == btnSearchCover) {
+					((AbstractButton) source).setText("Google");
+				} else if (source == btnSearchTrailer) {
+					((AbstractButton) source).setText("YouTube");
 				}
-			});
+			}
 
-			itmRemoveTagFromCurrentGames.addActionListener(new ActionListener() {
-
-				@Override
-				public void actionPerformed(ActionEvent e) {
-					List<Game> games = currentGames;
-					for (Game game : games) {
-						fireRemoveTagFromGameEvent(game.getTag(currentSelectedTagId));
-					}
+			@Override
+			public void mouseExited(MouseEvent e) {
+				JComponent source = (JComponent) e.getSource();
+				if (source == btnRunGame || source == btnMoreOptionsRunGame) {
+					UIUtil.doHover(false, btnRunGame, btnMoreOptionsRunGame);
+					pnlRunGameWrapper.remove(btnRunGame);
+					pnlRunGameWrapper.remove(btnMoreOptionsRunGame);
+					pnlRunGameWrapper.add(lblRunGame);
+					pnlRunGameWrapper.add(lblMoreOptionsRunGame, BorderLayout.EAST);
+				} else if (source == btnSearchCover || source == btnSearchTrailer) {
+					((AbstractButton) source).setText("");
 				}
-			});
-		}
+			}
 
-		protected void fireAddTagToFilterEvent(Tag tag) {
-			pnlGameFilter.addTagToFilter(true, tag);
-		}
+			public void addCoverFromWebListener(ActionListener l) {
+				btnSearchCover.addActionListener(l);
+			}
 
-		protected void fireRemoveTagFromGameEvent(Tag tag) {
-			for (TagListener l : tagListeners) {
-				l.tagRemoved(new BroTagAddedEvent(tag));
+			public void addTrailerFromWebListener(ActionListener l) {
+				btnSearchTrailer.addActionListener(l);
 			}
 		}
 
-		public void addTagListener(TagListener l) {
-			tagListeners.add(l);
-		}
+		class TagsPanel extends ScrollablePanel {
+			private static final long serialVersionUID = 1L;
 
-		private void createUI() {
-			setOpaque(false);
-			setLayout(new BorderLayout());
-			pnlTagList.setOpaque(false);
-			pnlTagList.setLayout(new WrapLayout(FlowLayout.LEFT));
-			lblTags.setMinimumSize(new Dimension(0, 0));
-			add(lblTags, BorderLayout.NORTH);
-			add(pnlTagList);
+			private JLabel lblTags = new JLabel2("<html><strong>" + Messages.get(MessageConstants.MANAGE_TAGS) + "</strong></html>");
+			private JPanel pnlTagList = new JPanel();
+			private JButton btnAddTag = new JButton(Messages.get(MessageConstants.ADD_TAG));
+			private int size = ScreenSizeUtil.is3k() ? 24 : 16;
+			private Icon iconTag = ImageUtil.getImageIconFrom(Icons.get("tags", size, size));
+			private Map<Integer, JComponent> tags = new HashMap<>();
+			protected JPopupMenu popup = new JPopupMenu();
+			private JMenuItem itmAddToFilter;
+			private JMenuItem itmRemoveTagFromCurrentGames;
+			private List<TagListener> tagListeners = new ArrayList<>();
 
-			int size = ScreenSizeUtil.is3k() ? 24 : 16;
-			btnAddTag.setIcon(ImageUtil.getImageIconFrom(Icons.get("add", size, size)));
-			UIUtil.doHover(false, btnAddTag);
-			btnAddTag.addMouseListener(UIUtil.getMouseAdapter());
-			btnAddTag.addActionListener(new ActionListener() {
+			protected int currentSelectedTagId = -1;
 
-				@Override
-				public void actionPerformed(ActionEvent e) {
-					Map<Integer, Tag> tags = new HashMap<>();
-					for (Game game : currentGames) {
-						for (Tag tag : game.getTags()) {
-							if (!tags.containsKey(tag.getId())) {
-								tags.put(tag.getId(), tag);
-							}
+			public TagsPanel() {
+				initComponents();
+				createUI();
+			}
+
+			private void initComponents() {
+				popup.add(itmAddToFilter = new JMenuItem(Messages.get(MessageConstants.ADD_TO_FILTER), ImageUtil.getImageIconFrom(Icons.get("setFilter", size, size))));
+				popup.add(itmRemoveTagFromCurrentGames = new JMenuItem(Messages.get(MessageConstants.REMOVE_TAG), ImageUtil.getImageIconFrom(Icons.get("remove", size, size))));
+
+				itmAddToFilter.addActionListener(new ActionListener() {
+
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						List<Game> games = currentGames;
+						for (Game game : games) {
+							fireAddTagToFilterEvent(game.getTag(currentSelectedTagId));
 						}
 					}
-					System.out.println(tags);
-					System.out.println(defaultTags);
-				}
-			});
-		}
+				});
 
-		protected void setTags(List<Tag> list) {
-			pnlTagList.removeAll();
-			pnlTagList.add(btnAddTag);
-			if (list != null) {
-				for (Tag tag : list) {
-					addTag(tag);
+				itmRemoveTagFromCurrentGames.addActionListener(new ActionListener() {
+
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						List<Game> games = currentGames;
+						for (Game game : games) {
+							fireRemoveTagFromGameEvent(game.getTag(currentSelectedTagId));
+						}
+					}
+				});
+			}
+
+			protected void fireAddTagToFilterEvent(Tag tag) {
+				pnlGameFilter.addTagToFilter(true, tag);
+			}
+
+			protected void fireRemoveTagFromGameEvent(Tag tag) {
+				for (TagListener l : tagListeners) {
+					l.tagRemoved(new BroTagAddedEvent(tag));
 				}
 			}
-		}
 
-		public void addTag(Tag tag) {
-			JButton btn = new JButton(tag.getName());
-			btn.setIcon(iconTag);
-			Color randomColor = Color.decode(tag.getHexColor());
-			btn.setBackground(randomColor.brighter());
-			btn.setForeground(randomColor);
-			pnlTagList.add(btn);
+			public void addTagListener(TagListener l) {
+				tagListeners.add(l);
+			}
 
-			tags.put(tag.getId(), btn);
-			UIUtil.revalidateAndRepaint(pnlTagList);
+			private void createUI() {
+				setOpaque(false);
+				setLayout(new BorderLayout());
+				pnlTagList.setOpaque(false);
+				pnlTagList.setLayout(new WrapLayout(FlowLayout.LEFT));
+				lblTags.setMinimumSize(new Dimension(0, 0));
+				add(lblTags, BorderLayout.NORTH);
+				add(pnlTagList);
 
-			btn.addActionListener(new ActionListener() {
+				int size = ScreenSizeUtil.is3k() ? 24 : 16;
+				btnAddTag.setIcon(ImageUtil.getImageIconFrom(Icons.get("add", size, size)));
+				UIUtil.doHover(false, btnAddTag);
+				btnAddTag.addMouseListener(UIUtil.getMouseAdapter());
+				btnAddTag.addActionListener(new ActionListener() {
 
-				@Override
-				public void actionPerformed(ActionEvent e) {
-					currentSelectedTagId = tag.getId();
-					popup.show(btn, 0, btn.getHeight());
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						Map<Integer, Tag> tags = new HashMap<>();
+						for (Game game : currentGames) {
+							for (Tag tag : game.getTags()) {
+								if (!tags.containsKey(tag.getId())) {
+									tags.put(tag.getId(), tag);
+								}
+							}
+						}
+						System.out.println(tags);
+						System.out.println(defaultTags);
+					}
+				});
+			}
+
+			protected void setTags(List<Tag> list) {
+				pnlTagList.removeAll();
+				pnlTagList.add(btnAddTag);
+				if (list != null) {
+					for (Tag tag : list) {
+						addTag(tag);
+					}
 				}
-			});
-		}
+			}
 
-		public void removeTag(int tagId) {
-			pnlTagList.remove(tags.get(tagId));
-			tags.remove(tagId);
-			UIUtil.revalidateAndRepaint(pnlTagList);
-		}
+			public void addTag(Tag tag) {
+				JButton btn = new JButton(tag.getName());
+				btn.setIcon(iconTag);
+				Color randomColor = Color.decode(tag.getHexColor());
+				btn.setBackground(randomColor.brighter());
+				btn.setForeground(randomColor);
+				pnlTagList.add(btn);
 
-		public void languageChanged() {
-			lblTags.setText("<html><strong>" + Messages.get(MessageConstants.MANAGE_TAGS) + "</strong></html>");
-			btnAddTag.setText(Messages.get(MessageConstants.ADD_TAG));
-			itmAddToFilter.setText(Messages.get(MessageConstants.ADD_TO_FILTER));
-			itmRemoveTagFromCurrentGames.setText(Messages.get(MessageConstants.REMOVE_TAG));
+				tags.put(tag.getId(), btn);
+				UIUtil.revalidateAndRepaint(pnlTagList);
+
+				btn.addActionListener(new ActionListener() {
+
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						currentSelectedTagId = tag.getId();
+						popup.show(btn, 0, btn.getHeight());
+					}
+				});
+			}
+
+			public void removeTag(int tagId) {
+				pnlTagList.remove(tags.get(tagId));
+				tags.remove(tagId);
+				UIUtil.revalidateAndRepaint(pnlTagList);
+			}
+
+			public void languageChanged() {
+				lblTags.setText("<html><strong>" + Messages.get(MessageConstants.MANAGE_TAGS) + "</strong></html>");
+				btnAddTag.setText(Messages.get(MessageConstants.ADD_TAG));
+				itmAddToFilter.setText(Messages.get(MessageConstants.ADD_TO_FILTER));
+				itmRemoveTagFromCurrentGames.setText(Messages.get(MessageConstants.REMOVE_TAG));
+			}
 		}
 	}
 
@@ -1167,13 +1190,6 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 
 	public void addRunGameListener(ActionListener l) {
 		pnlSelection.pnlGameData.btnRunGame.addActionListener(l);
-	}
-
-	public void setTextColors() {
-		BufferedImage imgPreviewPaneBackground = IconStore.current().getPreviewPaneBackgroundImage();
-		if (imgPreviewPaneBackground != null) {
-			pnlSelection.setTextColors(imgPreviewPaneBackground);
-		}
 	}
 
 	public void addRunGameWithListener(RunGameWithListener l) {
