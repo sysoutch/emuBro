@@ -134,7 +134,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			}
 		});
 		pnlNoSelection = new NoSelectionPanel();
-		spSelection = new ModernScrollPane(pnlSelection, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+		spSelection = new JCustomScrollPane(pnlSelection, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
 				ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 		pnlNoSelection.setMinimumSize(new Dimension(0, 0));
 		spSelection.setVisible(false);

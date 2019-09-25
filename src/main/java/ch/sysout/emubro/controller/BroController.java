@@ -402,7 +402,8 @@ GameSelectionListener, BrowseComputerListener {
 			.onMalformedInput(CodingErrorAction.REPLACE).onUnmappableCharacter(CodingErrorAction.REPLACE)
 			.replaceWith(".");
 
-	public BroController(ExplorerDAO explorerDAO, Explorer model, MainFrame view, Builder discordRpc) {
+	public BroController(SplashScreenWindow dlgSplashScreen, ExplorerDAO explorerDAO, Explorer model, MainFrame view, Builder discordRpc) {
+		this.dlgSplashScreen = dlgSplashScreen;
 		this.explorerDAO = explorerDAO;
 		explorer = model;
 		this.view = view;
@@ -1707,7 +1708,14 @@ GameSelectionListener, BrowseComputerListener {
 		Map<Integer, String> checksums = explorerDAO.getChecksums();
 		explorer.setChecksums(checksums);
 		List<Integer> alreadyCheckedPlatformIds = new ArrayList<>();
+		double hundredPercent = games.size();
+		int count = 1;
+		double currentPercent = dlgSplashScreen.getValue();
 		for (Game g : games) {
+			double dbl = currentPercent / hundredPercent;
+			double percent = dbl * count;
+			dlgSplashScreen.setValue(dlgSplashScreen.getValue() + (int) percent);
+			count++;
 			List<String> files = explorerDAO.getFilesForGame(g.getId());
 			List<Tag> tags = explorerDAO.getTagsForGame(g.getId());
 			explorer.setFilesForGame(g.getId(), files);
@@ -2183,10 +2191,7 @@ GameSelectionListener, BrowseComputerListener {
 		} else {
 			return;
 		}
-
-		if (dlgSplashScreen == null) {
-			dlgSplashScreen = new SplashScreenWindow("Game has been started..");
-		}
+		dlgSplashScreen.setText("Game has been started..");
 		dlgSplashScreen.setLocationRelativeTo(view);
 		dlgSplashScreen.setVisible(true);
 

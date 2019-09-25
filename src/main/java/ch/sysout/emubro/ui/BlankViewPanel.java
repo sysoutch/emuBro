@@ -15,10 +15,11 @@ import java.util.List;
 
 import javax.swing.Action;
 import javax.swing.BorderFactory;
+import javax.swing.Icon;
 import javax.swing.JButton;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
 import javax.swing.border.Border;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.TitledBorder;
@@ -130,12 +131,16 @@ public class BlankViewPanel extends ViewPanel {
 		//		pnl.add(pnlView, cc3.xy(3, 1));
 		//		pnl.add(pnlHelp, cc3.xy(5, 1));
 
-		JTextArea txt = new JTextArea("\"Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.\"");
-		txt.setOpaque(false);
-		txt.setPreferredSize(new Dimension(0, 0));
-		txt.setLineWrap(true);
-		txt.setWrapStyleWord(true);
-		pnl.add(txt, BorderLayout.CENTER);
+		//		JTextArea txt = new JTextArea("\"Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.\"");
+		//		txt.setOpaque(false);
+		//		txt.setPreferredSize(new Dimension(0, 0));
+		//		txt.setLineWrap(true);
+		//		txt.setWrapStyleWord(true);
+		//		pnl.add(txt, BorderLayout.CENTER);
+		Icon icon = ImageUtil.getImageIconFrom("/images/source.gif");
+		JLabel label = new JLabel(icon);
+		pnl.add(label);
+
 		JPanel pnlWrapper = new JPanel(new BorderLayout());
 		pnlWrapper.setOpaque(false);
 		pnlWrapper.add(pnlAction);
@@ -143,7 +148,7 @@ public class BlankViewPanel extends ViewPanel {
 		pnl.add(pnlWrapper, BorderLayout.EAST);
 		pnl.add(pnlHelp, BorderLayout.SOUTH);
 
-		JScrollPane sp = new JScrollPane(pnl);
+		JScrollPane sp = new JCustomScrollPane(pnl);
 		sp.setOpaque(false);
 		sp.getViewport().setOpaque(false);
 		pnl.setOpaque(false);

@@ -61,7 +61,7 @@ public class SplashScreenWindow extends JDialog {
 		getRootPane().setBorder(BorderFactory.createEtchedBorder());
 		prg.setOpaque(false);
 		prg.setStringPainted(true);
-		prg.setIndeterminate(true);
+		//		prg.setIndeterminate(true);
 		btnCancel.addActionListener(new ActionListener() {
 
 			@Override
@@ -121,7 +121,7 @@ public class SplashScreenWindow extends JDialog {
 	public void restartApplication(String string) {
 		lbl.setIcon(applicationIconStartInitialize);
 		setText(string);
-		prg.setIndeterminate(true);
+		//		prg.setIndeterminate(true);
 		btnCancel.setText(Messages.get("cancel"));
 	}
 
@@ -150,5 +150,16 @@ public class SplashScreenWindow extends JDialog {
 	public void showSuccess(final String message) {
 		setText(message);
 		showSuccessIcon();
+	}
+
+	public void setValue(int value) {
+		if (prg.isIndeterminate()) {
+			prg.setIndeterminate(false);
+		}
+		prg.setValue(value);
+	}
+
+	public int getValue() {
+		return prg.getValue();
 	}
 }

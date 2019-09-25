@@ -145,7 +145,7 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 				}
 			}
 		};
-		spNavigationButtons = new ModernScrollPane(pnl);
+		spNavigationButtons = new JCustomScrollPane(pnl);
 
 		CellConstraints cc = new CellConstraints();
 		pnl.add(btnAllGames, cc.xy(1, 1));

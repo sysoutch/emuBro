@@ -17,7 +17,7 @@ import javax.swing.JScrollPane;
 import javax.swing.ScrollPaneLayout;
 import javax.swing.plaf.basic.BasicScrollBarUI;
 
-public class ModernScrollPane extends JScrollPane {
+public class JCustomScrollPane extends JScrollPane {
 	private static final long serialVersionUID = 1L;
 
 	private static final int SCROLL_BAR_ALPHA_ROLLOVER = 100;
@@ -26,13 +26,13 @@ public class ModernScrollPane extends JScrollPane {
 	private static final int SB_SIZE = 10;
 	private static final Color THUMB_COLOR = Color.BLACK;
 
-	public ModernScrollPane(Component view, int verticalScrollBarPolicy, int horizontalScrollBarPolicy) {
+	public JCustomScrollPane(Component view, int verticalScrollBarPolicy, int horizontalScrollBarPolicy) {
 		this(view);
 		this.verticalScrollBarPolicy = verticalScrollBarPolicy;
 		this.horizontalScrollBarPolicy = horizontalScrollBarPolicy;
 	}
 
-	public ModernScrollPane(Component view) {
+	public JCustomScrollPane(Component view) {
 		setBorder(null);
 
 		JScrollBar verticalScrollBar = getVerticalScrollBar();
@@ -108,7 +108,7 @@ public class ModernScrollPane extends JScrollPane {
 	private static class ModernScrollBarUI extends BasicScrollBarUI {
 		private JScrollPane sp;
 
-		public ModernScrollBarUI(ModernScrollPane sp) {
+		public ModernScrollBarUI(JCustomScrollPane sp) {
 			this.sp = sp;
 		}
 

@@ -167,7 +167,7 @@ public class GamePropertiesDialog extends JDialog {
 		pnl.setMinimumSize(new Dimension(0, 0));
 		CellConstraints cc = new CellConstraints();
 		pnl.add(pnlMain, cc.xy(1, 1));
-		JScrollPane sp = new JScrollPane(pnl);
+		JScrollPane sp = new JCustomScrollPane(pnl);
 		sp.setOpaque(false);
 		sp.getViewport().setOpaque(false);
 		sp.setBorder(BorderFactory.createEmptyBorder());
@@ -224,7 +224,7 @@ public class GamePropertiesDialog extends JDialog {
 		pnlMain.add(lblIcon = new JLabel(iconStore.getPlatformIcon(platform.getId())), cc.xy(1, 1));
 		lblIcon.setHorizontalAlignment(SwingConstants.LEFT);
 		txtGameName = new JTextArea();
-		JScrollPane spGameName = new JScrollPane(txtGameName);
+		JScrollPane spGameName = new JCustomScrollPane(txtGameName);
 		spGameName.setOpaque(false);
 		spGameName.getViewport().setOpaque(false);
 		pnlMain.add(spGameName, cc.xywh(3, 1, layout.getColumnCount() - 2, 2));
@@ -266,7 +266,7 @@ public class GamePropertiesDialog extends JDialog {
 		tblEmulators.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 		tblEmulators.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		tblEmulators.setModel(model);
-		JScrollPane spEmulators = new JScrollPane(tblEmulators);
+		JScrollPane spEmulators = new JCustomScrollPane(tblEmulators);
 		pnlSpEmulators = new JPanel(new BorderLayout());
 		pnlSpEmulators.setBorder(Paddings.DLU4);
 		pnlSpEmulators.add(spEmulators);

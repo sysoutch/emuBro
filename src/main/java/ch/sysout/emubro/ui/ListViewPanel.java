@@ -241,7 +241,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	}
 
 	private JScrollPane createScrollPane(JList<Game> lst) {
-		JScrollPane sp = new ModernScrollPane(lst);
+		JScrollPane sp = new JCustomScrollPane(lst);
 		sp.getHorizontalScrollBar().setOpaque(false);
 		sp.getVerticalScrollBar().setOpaque(false);
 		sp.getHorizontalScrollBar().setUnitIncrement(16);

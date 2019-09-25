@@ -262,7 +262,7 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		tpDetailsPane.setTabPlacement(JTabbedPane.TOP);
 		pnlBrowseComputer.setOpaque(false);
 		pnlBrowseTags.setOpaque(false);
-		JScrollPane sp2 = new ModernScrollPane(pnlBrowseComputer);
+		JScrollPane sp2 = new JCustomScrollPane(pnlBrowseComputer);
 		sp2.getViewport().setOpaque(false);
 		sp2.setOpaque(false);
 		sp2.setBorder(BorderFactory.createEmptyBorder());
@@ -339,9 +339,9 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		pnlNotification.setLayout(notificationLayout);
 		cc2 = new CellConstraints();
 		pnlNotification.add(btnInformations, cc2.xy(1, 1));
-		spNotifications = new ModernScrollPane(pnlInformations);
-		spWarnings = new ModernScrollPane(pnlWarnings);
-		spErrors = new ModernScrollPane(pnlErrors);
+		spNotifications = new JCustomScrollPane(pnlInformations);
+		spWarnings = new JCustomScrollPane(pnlWarnings);
+		spErrors = new JCustomScrollPane(pnlErrors);
 		spNotifications.getVerticalScrollBar().setUnitIncrement(16);
 		spWarnings.getVerticalScrollBar().setUnitIncrement(16);
 		spErrors.getVerticalScrollBar().setUnitIncrement(16);

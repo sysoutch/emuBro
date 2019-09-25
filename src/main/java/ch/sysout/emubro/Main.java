@@ -55,9 +55,6 @@ import ch.sysout.emubro.controller.UpdateDatabaseBro;
 import ch.sysout.emubro.discord.ReadyEvent;
 import ch.sysout.emubro.impl.BroDatabaseVersionMismatchException;
 import ch.sysout.emubro.impl.dao.BroExplorerDAO;
-import ch.sysout.emubro.impl.event.BroFilterEvent;
-import ch.sysout.emubro.impl.filter.BroCriteria;
-import ch.sysout.emubro.impl.filter.BroFilterGroup;
 import ch.sysout.emubro.impl.model.BroExplorer;
 import ch.sysout.emubro.impl.model.BroPlatform;
 import ch.sysout.emubro.impl.model.BroTag;
@@ -146,6 +143,7 @@ public class Main {
 		try {
 			explorerDAO = new BroExplorerDAO(explorerId, conn);
 			if (explorerDAO != null) {
+				dlgSplashScreen.setValue(10);
 				dlgSplashScreen.setText(Messages.get(MessageConstants.ALMOST_READY));
 				try {
 					explorer = new BroExplorer(currentApplicationVersion);
@@ -164,11 +162,6 @@ public class Main {
 							tagListFull.add(t);
 						}
 					}
-					filterGroups.add(new BroFilterGroup("mario is cool", new BroFilterEvent(0, new BroCriteria("mario", tagList))));
-					filterGroups.add(new BroFilterGroup("donkey kong is cool", new BroFilterEvent(0, new BroCriteria("donkey", tagList))));
-					filterGroups.add(new BroFilterGroup("snes is cool", new BroFilterEvent(21, new BroCriteria("", tagList))));
-					filterGroups.add(new BroFilterGroup("tags are cool", new BroFilterEvent(0, new BroCriteria("", tagListFull))));
-
 					explorer.setFilterGroups(filterGroups);
 
 					String defaultResourcesDir = explorer.getResourcesPath();
@@ -211,8 +204,9 @@ public class Main {
 					mainFrame.initPlatforms(platforms, platformsDirectory);
 					mainFrame.initTags(tags);
 					mainFrame.initFilterGroups(filterGroups);
+					//					dlgSplashScreen.setText("view initialized");
 
-					final BroController controller = new BroController(explorerDAO, explorer, mainFrame, presence);
+					final BroController controller = new BroController(dlgSplashScreen, explorerDAO, explorer, mainFrame, presence);
 					controller.addOrGetPlatformsAndEmulators(defaultPlatforms);
 					controller.addOrChangeTags(explorer.getUpdatedTags());
 					File dir1 = new File(defaultTagsDir);
@@ -269,14 +263,13 @@ public class Main {
 					} else {
 						dlgSplashScreen.setLocation(x, y);
 					}
-
 					dlgSplashScreen.setText(Messages.get(MessageConstants.LOAD_GAME_LIST,
 							Messages.get(MessageConstants.APPLICATION_TITLE)));
 					List<Game> games = explorerDAO.getGames();
 					boolean gamesFound = games.size() > 0;
 					controller.initGameList(games);
 					controller.showView(applyData);
-
+					//					dlgSplashScreen.setValue(100);
 					boolean emulatorsFound = false;
 					for (Platform p : platforms) {
 						if (!emulatorsFound) {

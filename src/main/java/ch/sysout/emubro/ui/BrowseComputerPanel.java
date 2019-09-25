@@ -88,7 +88,7 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 		pnlOutter = new JPanel(new BorderLayout());
 		pnlOutter.setOpaque(false);
 		pnlOutter.add(createBrowseOptionsPanel());
-		spBrowseComputer = new ModernScrollPane(pnlOutter) {
+		spBrowseComputer = new JCustomScrollPane(pnlOutter) {
 			private static final long serialVersionUID = 1L;
 			private Dimension lastDimension;
 
@@ -327,7 +327,7 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 		txtBrowseComputer.setLineWrap(true);
 		txtBrowseComputer.setWrapStyleWord(false);
 		txtBrowseComputer.setPreferredSize(new Dimension(0, 0));
-		spBrowse = new ModernScrollPane(txtBrowseComputer);
+		spBrowse = new JCustomScrollPane(txtBrowseComputer);
 		spBrowse.setBorder(BorderFactory.createEmptyBorder());
 		spBrowse.getVerticalScrollBar().setUnitIncrement(16);
 	}
