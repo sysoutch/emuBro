@@ -33,6 +33,7 @@ import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.JCustomButton;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
@@ -58,7 +59,7 @@ public class AboutDialog extends JDialog implements ActionListener {
 
 	private AbstractButton[] socialMediaButtons = new JButton[] { btnFacebook, btnTwitter, btnYoutube, btnDiscord, btnReddit, btnGitHub };
 
-	private JButton btnClose = new JButton(Messages.get(MessageConstants.CLOSE));
+	private JButton btnClose = new JCustomButton(Messages.get(MessageConstants.CLOSE));
 
 	private String applicationVersion;
 
@@ -74,8 +75,13 @@ public class AboutDialog extends JDialog implements ActionListener {
 		initComponents();
 		createUI();
 
+		setUndecorated(true); // remove system frame
+		//		AWTUtilities.setWindowOpaque(this, false); // enable opacity
+		setBackground(new Color(0f, 0f, 0f, 0.75f));
+		//		SwingUtils.createDialogBackPanel(this, view.getContentPane());
+
 		pack();
-		// adjustSizeWhenNeeded();
+		setPreferredSize(new Dimension(50,50));
 		txtDescription.setText(Messages.get(MessageConstants.APPLICATION_DESCRIPTION, Messages.get(MessageConstants.APPLICATION_TITLE)));
 		setSize(new Dimension(getWidth(),
 				getHeight()
@@ -199,6 +205,7 @@ public class AboutDialog extends JDialog implements ActionListener {
 		add(txtDescription, cc.xyw(1, 5, layout.getColumnCount()));
 		add(lblCopyright, cc.xyw(1, 9, layout.getColumnCount()));
 		JPanel pnlWebsite = new JPanel();
+		pnlWebsite.setOpaque(false);
 		pnlWebsite.add(lnkWebsite);
 		add(pnlWebsite, cc.xyw(1, 7, layout.getColumnCount()));
 
@@ -206,6 +213,7 @@ public class AboutDialog extends JDialog implements ActionListener {
 				"default, $lcgap, default, $lcgap, default, $lcgap, default, $lcgap, default, $lcgap, default", "fill:pref");
 		// layout2.setColumnGroup(1, 3, 5, 7, 9);
 		JPanel pnlSocialButtons = new JPanel(layout2);
+		pnlSocialButtons.setOpaque(false);
 		CellConstraints cc2 = new CellConstraints();
 
 		int x = 1;

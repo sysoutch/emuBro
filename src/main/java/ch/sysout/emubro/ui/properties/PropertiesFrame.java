@@ -124,7 +124,10 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 	private void createUI() {
 		JScrollPane spTab1 = new JScrollPane(pnlManagePlatforms);
 		JScrollPane spTab2 = new JScrollPane(pnlAdvancedProperties);
-
+		spTab1.setOpaque(false);
+		spTab1.getViewport().setOpaque(false);
+		pnlManagePlatforms.setOpaque(false);
+		tpMain.setOpaque(false);
 		spTab1.setBorder(BorderFactory.createEmptyBorder());
 		spTab2.setBorder(BorderFactory.createEmptyBorder());
 
@@ -137,6 +140,7 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 		add(tpMain);
 
 		JPanel pnl = new JPanel(new BorderLayout());
+		pnl.setOpaque(false);
 		pnl.setBorder(new EmptyBorder(10, 0, 0, 0));
 		pnl.add(btnClose = new JButton(Messages.get(MessageConstants.CLOSE)), BorderLayout.EAST);
 		add(pnl, BorderLayout.SOUTH);

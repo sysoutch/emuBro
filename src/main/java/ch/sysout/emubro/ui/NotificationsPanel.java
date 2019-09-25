@@ -110,11 +110,9 @@ public class NotificationsPanel extends JPanel {
 		JEditorPane editorPane = new JEditorPane("text/html", "");
 		//		label.setLineWrap(true);
 		//		label.setWrapStyleWord(true);
-		Font oldFont = editorPane.getFont();
 		//		label.setContentType("text/html");
 		editorPane.setEditable(false);
 		editorPane.setFocusable(false);
-		editorPane.setFont(oldFont);
 		editorPane.setText("<font face=\"verdana\">"+message+"</font>");
 		labels.put(editorPane, element3);
 

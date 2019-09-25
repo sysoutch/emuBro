@@ -45,9 +45,9 @@ public class RatingBarPanel extends JPanel implements ActionListener, FocusListe
 		super();
 		this.focusable = focusable;
 		if (label == null || label.trim().isEmpty()) {
-			lblRate = new JLabel2("");
+			lblRate = new JLabel("");
 		} else {
-			lblRate = new JLabel2(label);
+			lblRate = new JLabel(label);
 		}
 		initComponents();
 		createUI();
@@ -224,7 +224,7 @@ public class RatingBarPanel extends JPanel implements ActionListener, FocusListe
 
 	public void languageChanged() {
 		if (!lblRate.getText().isEmpty()) {
-			lblRate.setText("<html><strong>" + Messages.get(MessageConstants.RATE_GAME) + "</strong></html>");
+			lblRate.setText(Messages.get(MessageConstants.RATE_GAME));
 		}
 	}
 }

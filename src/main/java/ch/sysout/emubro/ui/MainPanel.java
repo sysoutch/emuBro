@@ -5,6 +5,8 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.Point;
@@ -22,6 +24,7 @@ import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.awt.font.FontRenderContext;
 import java.awt.geom.AffineTransform;
+import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
@@ -172,6 +175,21 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				//								lastHeight = frameDetailsPane.getHeight();
 			};
 		};
+
+		pnlPreviewPane.addResizePreviewPaneListener(new MouseMotionListener() {
+
+			@Override
+			public void mouseMoved(MouseEvent e) {
+				// TODO Auto-generated method stub
+
+			}
+
+			@Override
+			public void mouseDragged(MouseEvent e) {
+				int divLocation = splCurrentViewAndPreviewPane.getDividerLocation();
+				splCurrentViewAndPreviewPane.setDividerLocation(divLocation + e.getX());
+			}
+		});
 	}
 
 	public void initDefaultTags(List<Tag> tags) {
@@ -239,7 +257,8 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 
 			@Override
 			public void mouseDragged(MouseEvent e) {
-				splDetailsPane.setDividerLocation(e.getYOnScreen());
+				int divLocation = splDetailsPane.getDividerLocation();
+				splDetailsPane.setDividerLocation(divLocation + e.getY());
 			}
 		});
 	}
@@ -360,15 +379,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 		}
 		//		pnlPreviewPane.setMinimumSize(new Dimension(0, 0));
 		splCurrentViewAndPreviewPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, true,
-				viewManager.getCurrentViewPanel(), pnlPreviewPane) {
-			private static final long serialVersionUID = 1L;
-
-			//			@Override
-			//			public int getMaximumDividerLocation() {
-			//				//				return ScreenSizeUtil.adjustValueToResolution(384) - splNavigationAndCurrentViewAndPreviewPane.getDividerLocation();
-			//				return getWidth() - pnlPreviewPane.getCustomDividerSize();
-			//			}
-		};
+				viewManager.getCurrentViewPanel(), pnlPreviewPane);
 		BasicSplitPaneDivider divider = ((BasicSplitPaneUI) splCurrentViewAndPreviewPane.getUI()).getDivider();
 		TitledBorder titled = BorderFactory.createTitledBorder("\u2630");
 		titled.setTitleJustification(TitledBorder.CENTER);
@@ -379,19 +390,6 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 		splCurrentViewAndPreviewPane.getRightComponent().setVisible(false);
 		splCurrentViewAndPreviewPane.setBorder(BorderFactory.createEmptyBorder());
 		splCurrentViewAndPreviewPane.setResizeWeight(1);
-		pnlPreviewPane.addResizePreviewPaneListener(new MouseMotionListener() {
-
-			@Override
-			public void mouseMoved(MouseEvent e) {
-				// TODO Auto-generated method stub
-
-			}
-
-			@Override
-			public void mouseDragged(MouseEvent e) {
-				splCurrentViewAndPreviewPane.setDividerLocation(e.getXOnScreen());
-			}
-		});
 	}
 
 	private void initializeNavigationAndCurrentViewAndPreviewPane() {
@@ -1830,5 +1828,25 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 
 	public void setSplPreviewPaneDividerLocation(int divLocation) {
 		splCurrentViewAndPreviewPane.setDividerLocation(divLocation);
+	}
+
+	@Override
+	protected void paintComponent(Graphics g) {
+		super.paintComponent(g);
+		BufferedImage background = IconStore.current().getCurrentTheme().getView().getImage();
+		if (background != null) {
+			Graphics2D g2d = (Graphics2D) g.create();
+			int panelWidth = getWidth();
+			int panelHeight = getHeight();
+			int imgWidth = background.getWidth();
+			int imgHeight = background.getHeight();
+			boolean shouldScale = false;
+			if (shouldScale) {
+				g2d.drawImage(background, 0, 0, panelWidth, panelHeight, this);
+			} else {
+				g2d.drawImage(background, 0, 0, imgWidth, imgHeight, this);
+			}
+			g2d.dispose();
+		}
 	}
 }

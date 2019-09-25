@@ -38,8 +38,8 @@ public class DetailChooserDialog extends JDialog {
 
 	private String description = Messages.get("detailChooserDescription");
 
-	private JLabel2 lblDescription = new JLabel2("");
-	private JLabel2 lblDetails = new JLabel2("Details:");
+	private JLabel lblDescription = new JLabel("");
+	private JLabel lblDetails = new JLabel("Details:");
 
 	private ListModel<Object> mdlLstDetails = new DefaultListModel<>();
 	private JList<?> lstDetails = new JList<>(mdlLstDetails);
@@ -58,7 +58,7 @@ public class DetailChooserDialog extends JDialog {
 	private JButton btnSelect = new JButton("Anzeigen");
 	private JButton btnDeselect = new JButton("Ausblenden");
 
-	private JLabel lblColumnWidth = new JLabel2(Messages.get("detailChooserColumnWidth"));
+	private JLabel lblColumnWidth = new JLabel(Messages.get("detailChooserColumnWidth"));
 	private JTextField txtColumnWidth = new JTextField(0);
 
 	private JButton btnOK = new JButton(Messages.get("ok"));

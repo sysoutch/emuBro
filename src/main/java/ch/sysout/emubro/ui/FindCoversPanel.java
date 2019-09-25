@@ -22,6 +22,8 @@ import javax.swing.JPanel;
 import javax.swing.JToggleButton;
 import javax.swing.SwingWorker;
 
+import ch.sysout.ui.util.JCustomButton;
+import ch.sysout.ui.util.JCustomToggleButton;
 import ch.sysout.util.ImageUtil;
 
 public class FindCoversPanel extends JPanel {
@@ -29,7 +31,7 @@ public class FindCoversPanel extends JPanel {
 
 	private List<JComponent> pictures = new ArrayList<>();
 
-	private JButton btnSearchCovers = new JButton("Results of image search");
+	private JButton btnSearchCovers = new JCustomButton("Results of image search");
 
 	private JPanel pnlCovers = new JPanel();
 
@@ -104,7 +106,7 @@ public class FindCoversPanel extends JPanel {
 				} else {
 					scaledIcon = ImageUtil.scaleCover(icon, 96, CoverConstants.SCALE_WIDTH_OPTION);
 				}
-				final JToggleButton chk = new JToggleButton();
+				final JToggleButton chk = new JCustomToggleButton();
 				chk.setPreferredSize(new Dimension(152, 152));
 				chk.setBorderPainted(false);
 				chk.setContentAreaFilled(false);
@@ -134,7 +136,7 @@ public class FindCoversPanel extends JPanel {
 
 		@Override
 		protected void done() {
-			final JToggleButton lbl = new JToggleButton("Show more pictures...");
+			final JToggleButton lbl = new JCustomToggleButton("Show more pictures...");
 			lbl.setBorderPainted(false);
 			lbl.setContentAreaFilled(false);
 			lbl.addMouseListener(new MouseAdapter() {

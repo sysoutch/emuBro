@@ -337,14 +337,24 @@ public class ButtonBarPanel extends JPanel {
 	@Override
 	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
-		BufferedImage background = IconStore.current().getButtonBarBackgroundImage();
+		BufferedImage background = IconStore.current().getCurrentTheme().getButtonBar().getImage();
 		if (background != null) {
 			Graphics2D g2d = (Graphics2D) g.create();
 			int x = 0;
 			int y = 0;
 			int w = getWidth();
 			int h = getHeight();
-			g2d.drawImage(background, 0, 0, w, h, this);
+			g2d.setColor(IconStore.current().getCurrentTheme().getButtonBar().getColor());
+			g2d.fillRect(x, y, w, h);
+
+			int imgWidth = background.getWidth();
+			int imgHeight = background.getHeight();
+			boolean shouldScale = false;
+			if (shouldScale) {
+				g2d.drawImage(background, 0, 0, w, h, this);
+			} else {
+				g2d.drawImage(background, 0, 0, imgWidth, imgHeight, this);
+			}
 			g2d.dispose();
 		}
 	}

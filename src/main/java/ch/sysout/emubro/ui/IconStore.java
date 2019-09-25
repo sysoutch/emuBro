@@ -1,6 +1,5 @@
 package ch.sysout.emubro.ui;
 
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,14 +14,7 @@ import ch.sysout.util.ScreenSizeUtil;
 public class IconStore {
 	private static IconStore instance;
 
-	private BufferedImage imgButtonBarBackground;
-	private BufferedImage imgTransparentOverlay;
-	private BufferedImage imgNavigationBackground;
-	private BufferedImage imgBackground;
-	private BufferedImage imgPreviewPaneBackground;
-
-	private String lightTheme = "light";
-	private String darkTheme = "dark";
+	private Theme currentTheme = new Theme("dark");
 
 	private Map<Integer, ImageIcon> platformIcons = new HashMap<>();
 
@@ -43,7 +35,6 @@ public class IconStore {
 	private List<GameCoverListener> gameCoverListeners = new ArrayList<>();
 
 	private String coverType2d = "2d";
-
 
 	private IconStore() {
 		// prevent instantiation of this class
@@ -254,38 +245,11 @@ public class IconStore {
 		gameCoverListeners.add(l);
 	}
 
-	public BufferedImage getButtonBarBackgroundImage() {
-		if (imgButtonBarBackground == null) {
-			imgButtonBarBackground = ImageUtil.getBufferedImageFrom("/images/themes/"+darkTheme+"/buttonbar.jpg");
-		}
-		return imgButtonBarBackground;
+	public Theme getCurrentTheme() {
+		return currentTheme;
 	}
 
-	public BufferedImage getNavigationBackgroundImage() {
-		if (imgNavigationBackground == null) {
-			imgNavigationBackground = ImageUtil.getBufferedImageFrom("/images/themes/"+darkTheme+"/nav.jpg");
-		}
-		return imgNavigationBackground;
-	}
-
-	public BufferedImage getBackgroundImage() {
-		if (imgBackground == null) {
-			imgBackground = ImageUtil.getBufferedImageFrom("/images/themes/"+darkTheme+"/bg-only.jpg");
-		}
-		return imgBackground;
-	}
-
-	public BufferedImage getTransparentBackgroundOverlayImage() {
-		if (imgTransparentOverlay == null) {
-			imgTransparentOverlay = ImageUtil.getBufferedImageFrom("/images/themes/logo-transparent.png");
-		}
-		return imgTransparentOverlay;
-	}
-
-	public BufferedImage getPreviewPaneBackgroundImage() {
-		if (imgPreviewPaneBackground == null) {
-			imgPreviewPaneBackground = ImageUtil.getBufferedImageFrom("/images/themes/"+darkTheme+"/bg-only.jpg");
-		}
-		return imgPreviewPaneBackground;
+	public void setCurrentTheme(String theme) {
+		currentTheme = new Theme(theme);
 	}
 }

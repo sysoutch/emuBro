@@ -187,14 +187,24 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 			@Override
 			protected void paintComponent(Graphics g) {
 				super.paintComponent(g);
-				BufferedImage background = IconStore.current().getBackgroundImage();
+				BufferedImage background = IconStore.current().getCurrentTheme().getView().getImage();
 				if (background != null) {
 					Graphics2D g2d = (Graphics2D) g.create();
 					int panelWidth = getWidth();
 					int panelHeight = getHeight();
-					g2d.drawImage(background, 0, 0, panelWidth, panelHeight, this);
+					int imgWidth = background.getWidth();
+					int imgHeight = background.getHeight();
 
-					BufferedImage imgTransparentOverlay = IconStore.current().getTransparentBackgroundOverlayImage();
+					g2d.setColor(IconStore.current().getCurrentTheme().getView().getColor());
+					g2d.fillRect(0, 0, panelWidth, panelHeight);
+
+					boolean shouldScale = false;
+					if (shouldScale) {
+						g2d.drawImage(background, 0, 0, panelWidth, panelHeight, this);
+					} else {
+						g2d.drawImage(background, 0, 0, imgWidth, imgHeight, this);
+					}
+					BufferedImage imgTransparentOverlay = IconStore.current().getCurrentTheme().getTransparentBackgroundOverlayImage();
 					if (imgTransparentOverlay != null) {
 						int width = imgTransparentOverlay.getWidth();
 						int height = imgTransparentOverlay.getHeight();

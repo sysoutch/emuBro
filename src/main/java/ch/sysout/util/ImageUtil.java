@@ -42,8 +42,9 @@ public class ImageUtil {
 	/**
 	 * @param filepath
 	 * @return
+	 * @throws IOException
 	 */
-	public static BufferedImage getBufferedImageFrom(String filepath) {
+	public static BufferedImage getBufferedImageFrom(String filepath) throws Exception {
 		return getBufferedImageFrom(filepath, false);
 	}
 
@@ -51,15 +52,11 @@ public class ImageUtil {
 	 * @param filepath
 	 * @param absolutePath
 	 * @return
+	 * @throws IOException
 	 */
-	public static BufferedImage getBufferedImageFrom(String filepath, boolean absolutePath) {
+	public static BufferedImage getBufferedImageFrom(String filepath, boolean absolutePath) throws Exception {
 		URL url = ImageUtil.class.getResource(filepath);
-		try {
-			return (absolutePath) ? ImageIO.read(new File(filepath)) : ImageIO.read(url);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return null;
+		return (absolutePath) ? ImageIO.read(new File(filepath)) : ImageIO.read(url);
 	}
 
 	/**

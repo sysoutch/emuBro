@@ -20,10 +20,10 @@ import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
-import javax.swing.JToggleButton;
 import javax.swing.SwingConstants;
 
 import com.jgoodies.forms.factories.Paddings;
@@ -33,6 +33,8 @@ import com.jgoodies.forms.layout.FormLayout;
 import ch.sysout.emubro.api.event.GameSelectionEvent;
 import ch.sysout.emubro.controller.NotificationElementListener;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.JCustomButton;
+import ch.sysout.ui.util.JCustomToggleButton;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
@@ -57,9 +59,9 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 
 	Component pnlHideDetailsPanePanel;
 
-	private AbstractButton btnInformations = new JToggleButton("");
-	private AbstractButton btnWarnings = new JToggleButton("");
-	private AbstractButton btnErrors = new JToggleButton("");
+	private AbstractButton btnInformations = new JCustomToggleButton("");
+	private AbstractButton btnWarnings = new JCustomToggleButton("");
+	private AbstractButton btnErrors = new JCustomToggleButton("");
 
 	private FormLayout notificationLayout;
 
@@ -71,7 +73,7 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 
 	private CellConstraints cc2;
 
-	private AbstractButton btnResizeDetailsPane = new JButton();
+	private AbstractButton btnResizeDetailsPane = new JCustomButton();
 
 	public DetailsPanel() {
 		super(new BorderLayout());
@@ -145,8 +147,7 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		};
 		pnlBrowseCovers = new BrowseCoversPanel();
 		pnlBrowseTags = new JPanel();
-		JLabel2 lbl;
-		pnlBrowseTags.add(lbl = new JLabel2("Nothing to do here yet. Come back again later."));
+		pnlBrowseTags.add(new JLabel("Nothing to do here yet. Come back again later."));
 		addListeners();
 	}
 
@@ -239,7 +240,7 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 			@Override
 			protected void paintComponent(Graphics g) {
 				super.paintComponent(g);
-				BufferedImage background = IconStore.current().getNavigationBackgroundImage();
+				BufferedImage background = IconStore.current().getCurrentTheme().getNavigationPane().getImage();
 				if (background != null) {
 					Graphics2D g2d = (Graphics2D) g.create();
 					int panelWidth = getWidth();
@@ -249,10 +250,12 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 				}
 			}
 		};
-		Color colorTabBackGround = new Color(IconStore.current().getNavigationBackgroundImage().getRGB(0, 0));
-		BufferedImage previewPaneBgImage = IconStore.current().getBackgroundImage();
-		Color colorTabSelectedBackGround = new Color(previewPaneBgImage.getRGB(previewPaneBgImage.getWidth()-1, 0));
-		tpDetailsPane.setUI(new CustomTabbedPaneUI(colorTabSelectedBackGround, colorTabBackGround));
+		Color colorTabBackGround = IconStore.current().getCurrentTheme().getTabs().getColor();
+		BufferedImage previewPaneBgImage = IconStore.current().getCurrentTheme().getView().getImage();
+		if (previewPaneBgImage != null) {
+			Color colorTabSelectedBackGround = new Color(previewPaneBgImage.getRGB(previewPaneBgImage.getWidth()-1, 0));
+			tpDetailsPane.setUI(new CustomTabbedPaneUI(colorTabSelectedBackGround, colorTabBackGround));
+		}
 		//		tpDetailsPane.setAlpha(0.5f);
 		tpDetailsPane.setBorder(BorderFactory.createEmptyBorder());
 		tpDetailsPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
@@ -291,7 +294,7 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 	private Component createHideDetailsPanePanel() {
 		JPanel pnl = new JPanel(new BorderLayout());
 		pnl.setOpaque(false);
-		btnHideDetailsPane = new JButton();
+		btnHideDetailsPane = new JCustomButton();
 		UIUtil.doHover(false, btnHideDetailsPane);
 		btnHideDetailsPane.setIcon(ImageUtil.getImageIconFrom(Icons.get("hideDetailsPane", 24, 24)));
 		btnHideDetailsPane.setActionCommand(GameViewConstants.HIDE_DETAILS_PANE);
@@ -308,7 +311,7 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 				UIUtil.doHover(false, btnHideDetailsPane);
 			}
 		});
-		btnPinUnpinDetailsPane = new JButton();
+		btnPinUnpinDetailsPane = new JCustomButton();
 		UIUtil.doHover(true, btnPinUnpinDetailsPane);
 		btnPinUnpinDetailsPane.setIcon(ImageUtil.getImageIconFrom(Icons.get("unpinDetailsPane", 24, 24)));
 		btnPinUnpinDetailsPane.setActionCommand(GameViewConstants.UNPIN_DETAILS_PANE);
@@ -356,6 +359,9 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		spNotifications.setOpaque(false);
 		spWarnings.setOpaque(false);
 		spErrors.setOpaque(false);
+		spNotifications.getViewport().setOpaque(false);
+		spWarnings.getViewport().setOpaque(false);
+		spErrors.getViewport().setOpaque(false);
 
 		spWarnings.setVisible(false);
 		spErrors.setVisible(false);
@@ -521,7 +527,7 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 	@Override
 	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
-		BufferedImage background = IconStore.current().getNavigationBackgroundImage();
+		BufferedImage background = IconStore.current().getCurrentTheme().getNavigationPane().getImage();
 		if (background != null) {
 			Graphics2D g2d = (Graphics2D) g.create();
 			int panelWidth = getWidth();
@@ -530,7 +536,6 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 			g2d.dispose();
 		}
 	}
-
 
 	public void addResizeDetailsPanelListener(MouseMotionListener l) {
 		btnResizeDetailsPane.addMouseMotionListener(l);

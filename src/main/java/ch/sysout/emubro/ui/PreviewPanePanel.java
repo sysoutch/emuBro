@@ -71,7 +71,7 @@ import ch.sysout.emubro.api.model.Tag;
 import ch.sysout.emubro.controller.GameSelectionListener;
 import ch.sysout.emubro.impl.event.BroTagAddedEvent;
 import ch.sysout.emubro.util.MessageConstants;
-import ch.sysout.util.FontUtil;
+import ch.sysout.ui.util.JCustomButton;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
@@ -101,7 +101,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 
 	private List<RunGameWithListener> runGameWithListeners = new ArrayList<>();
 
-	private AbstractButton btnResizePreviewPane = new JButton();
+	private AbstractButton btnResizePreviewPane = new JCustomButton();
 
 	public PreviewPanePanel(Explorer explorer, GameContextMenu popupGame, ViewContextMenu popupView) {
 		super();
@@ -119,6 +119,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 	}
 
 	private void initComponents() {
+		btnResizePreviewPane.setFocusable(false);
 		btnResizePreviewPane.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseEntered(MouseEvent e) {
@@ -182,7 +183,6 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		pnlNoSelection.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 16));
 
 		//		add(spSelection, BorderLayout.NORTH);
-		btnResizePreviewPane.setFocusable(false);
 		UIUtil.doHover(false, btnResizePreviewPane);
 		add(btnResizePreviewPane, BorderLayout.WEST);
 		add(pnlNoSelection);
@@ -336,21 +336,30 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 	@Override
 	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
-		BufferedImage imagePreviewPaneBackground = IconStore.current().getPreviewPaneBackgroundImage();
+		BufferedImage imagePreviewPaneBackground = IconStore.current().getCurrentTheme().getPreviewPane().getImage();
 		if (imagePreviewPaneBackground != null) {
 			Graphics2D g2d = (Graphics2D) g.create();
 			int x = 0;
 			int y = 0;
 			int w = getWidth();
 			int h = getHeight();
-			g2d.drawImage(imagePreviewPaneBackground, 0, 0, w, h, this);
+			g2d.setColor(IconStore.current().getCurrentTheme().getPreviewPane().getColor());
+			g2d.fillRect(x, y, w, h);
+			int imgWidth = imagePreviewPaneBackground.getWidth();
+			int imgHeight = imagePreviewPaneBackground.getHeight();
+			boolean shouldScale = true;
+			if (shouldScale) {
+				g2d.drawImage(imagePreviewPaneBackground, 0, 0, w, h, this);
+			} else {
+				g2d.drawImage(imagePreviewPaneBackground, 0, 0, imgWidth, imgHeight, this);
+			}
 			g2d.dispose();
 		}
 	}
 
 	class SelectionPanel extends ScrollablePanel {
 		private static final long serialVersionUID = 1L;
-		private JLabel lblGameTitle = new JLabel2("Game Title");
+		private JLabel lblGameTitle = new JLabel("Game Title");
 		private JLinkButton lnkPlatformTitle = new JLinkButton("Platform Title");
 		private GameDataPanel pnlGameData = new GameDataPanel();
 		private AutoScaleImagePanel pnlAutoScaleImage = new AutoScaleImagePanel();
@@ -430,7 +439,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			pnl.add(pnlAutoScaleImage, ccSelection.xyw(1, 7, columnCount));
 			pnl.add(pnlRatingBar, ccSelection.xyw(1, 9, columnCount));
 
-			btnComment = new JButton(Messages.get(MessageConstants.GAME_COMMENT));
+			btnComment = new JCustomButton(Messages.get(MessageConstants.GAME_COMMENT));
 			UIUtil.doHover(false, btnComment);
 			btnComment.addMouseListener(UIUtil.getMouseAdapter());
 			btnComment.addActionListener(new ActionListener() {
@@ -487,7 +496,6 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		}
 
 		private void initPlatformTitle() {
-			lnkPlatformTitle.setFont(FontUtil.getCustomFont());
 			lnkPlatformTitle.setBorder(Paddings.EMPTY);
 			lnkPlatformTitle.setBackground(getBackground());
 			lnkPlatformTitle.addActionListener(new ActionListener() {
@@ -507,7 +515,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 
 		protected void setGameTitle(String s, Icon icon) {
 			String gameTitle = s.replace(".", " ").replace("_", " ");
-			lblGameTitle.setText(Messages.get(MessageConstants.GAME_TITLE_LARGE, "<html><strong>" + gameTitle + "</strong></html>"));
+			lblGameTitle.setText(Messages.get(MessageConstants.GAME_TITLE_LARGE, gameTitle));
 			lblGameTitle.setIcon(icon);
 		}
 
@@ -554,7 +562,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 
 		public void languageChanged() {
 			btnComment.setText(Messages.get(MessageConstants.GAME_COMMENT));
-			pnlDateAdded.lblDateAdded.setText(("<html><strong>" + Messages.get(MessageConstants.DATE_ADDED) + "</strong></html>"));
+			pnlDateAdded.lblDateAdded.setText((Messages.get(MessageConstants.DATE_ADDED)));
 			if (currentGames != null) {
 				if (currentGames.size() == 1) {
 					String formattedDate = "";
@@ -577,9 +585,9 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 
 		class DateAddedPanel extends JPanel {
 			private static final long serialVersionUID = 1L;
-			private JLabel lblDateAdded = new JLabel2(
-					"<html><strong>" + Messages.get(MessageConstants.DATE_ADDED) + "</strong></html>");
-			private JLabel lblDateAdded2 = new JLabel2("MM d, yyy HH:mm:ss");
+			private JLabel lblDateAdded = new JLabel(
+					Messages.get(MessageConstants.DATE_ADDED));
+			private JLabel lblDateAdded2 = new JLabel("MM d, yyy HH:mm:ss");
 
 			public DateAddedPanel() {
 				initLastPlayedTextArea();
@@ -613,9 +621,9 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 
 		class PlayCountPanel extends JPanel {
 			private static final long serialVersionUID = 1L;
-			private JLabel lblPlayCount = new JLabel2(
-					"<html><strong>" + Messages.get(MessageConstants.PLAY_COUNT) + "</strong></html>");
-			private JLabel lblPlayCount2 = new JLabel2("");
+			private JLabel lblPlayCount = new JLabel(
+					Messages.get(MessageConstants.PLAY_COUNT));
+			private JLabel lblPlayCount2 = new JLabel("");
 
 			public PlayCountPanel() {
 				initPlayCountTextArea();
@@ -651,7 +659,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			}
 
 			public void languageChanged() {
-				lblPlayCount.setText("<html><strong>" + Messages.get(MessageConstants.PLAY_COUNT) + "</strong></html>");
+				lblPlayCount.setText(Messages.get(MessageConstants.PLAY_COUNT));
 				String s = "";
 				if (currentGames != null && currentGames.size() == 1) {
 					int playCount = currentGames.get(0).getPlayCount();
@@ -672,7 +680,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 
 		class LastPlayedPanel extends JPanel {
 			private static final long serialVersionUID = 1L;
-			private JLabel lblLastPlayed = new JLabel2("");
+			private JLabel lblLastPlayed = new JLabel("");
 
 			public LastPlayedPanel() {
 				initLastPlayedTextArea();
@@ -777,9 +785,9 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			private Font fontNotUnderline;
 			private Map<TextAttribute, Integer> fontAttributesNotUnderlined = new HashMap<>();
 			private Map<TextAttribute, Integer> fontAttributes = new HashMap<>();
-			private JLabel lblFilename = new JLabel2("<html><strong>" + Messages.get(MessageConstants.FILE_NAME) + "</strong></html>");
-			private JLabel lblFileInformations = new JLabel2("<html><strong>" + Messages.get(MessageConstants.FILE_INFORMATIONS) + "</strong></html>");
-			private JLabel lblFileLocation = new JLabel2("<html><strong>" + Messages.get(MessageConstants.FILE_LOCATION) + "</strong></html>");
+			private JLabel lblFilename = new JLabel(Messages.get(MessageConstants.FILE_NAME));
+			private JLabel lblFileInformations = new JLabel(Messages.get(MessageConstants.FILE_INFORMATIONS));
+			private JLabel lblFileLocation = new JLabel(Messages.get(MessageConstants.FILE_LOCATION));
 
 			public PathPanel() {
 				initPathLink();
@@ -862,7 +870,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			}
 
 			public void languageChanged() {
-				lblFileInformations.setText("<html><strong>" + Messages.get(MessageConstants.FILE_INFORMATIONS) + "</strong></html>");
+				lblFileInformations.setText(Messages.get(MessageConstants.FILE_INFORMATIONS));
 			}
 
 			public void addOpenGameFolderListener(MouseListener l) {
@@ -881,10 +889,10 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			private JLabel lblRunGame = new JLabel(Messages.get(MessageConstants.RUN_GAME));
 			private JLabel lblMoreOptionsRunGame = new JLabel("");
 
-			private JButton btnRunGame = new JButton(Messages.get(MessageConstants.RUN_GAME));
-			private JButton btnMoreOptionsRunGame = new JButton("");
-			private JButton btnSearchCover = new JButton();
-			private JButton btnSearchTrailer = new JButton();
+			private JButton btnRunGame = new JCustomButton(Messages.get(MessageConstants.RUN_GAME));
+			private JButton btnMoreOptionsRunGame = new JCustomButton("");
+			private JButton btnSearchCover = new JCustomButton();
+			private JButton btnSearchTrailer = new JCustomButton();
 
 			private JPanel pnlRunGameWrapper;
 
@@ -916,8 +924,8 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			}
 
 			private void addListeners() {
-				lblRunGame.addMouseListener(this);
-				lblMoreOptionsRunGame.addMouseListener(this);
+				//				lblRunGame.addMouseListener(this);
+				//				lblMoreOptionsRunGame.addMouseListener(this);
 				btnRunGame.addMouseListener(this);
 				btnMoreOptionsRunGame.addMouseListener(this);
 				btnSearchCover.addMouseListener(this);
@@ -943,12 +951,14 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 				pnlRunGameWrapper = new JPanel(new BorderLayout());
 				pnlRunGameWrapper.setOpaque(false);
 				pnlRunGameWrapper.setBorder(BorderFactory.createLineBorder(colorUnderlay, 15));
-				pnlRunGameWrapper.add(lblRunGame);
-				pnlRunGameWrapper.add(lblMoreOptionsRunGame, BorderLayout.EAST);
+				//				pnlRunGameWrapper.add(lblRunGame);
+				//				pnlRunGameWrapper.add(lblMoreOptionsRunGame, BorderLayout.EAST);
 				UIUtil.doHover(false, btnRunGame, btnMoreOptionsRunGame, btnSearchCover, btnSearchTrailer);
-				add(pnlRunGameWrapper, cc.xyw(1, 1, 5));
-				//				add(btnRunGame, cc.xyw(1, 1, 4));
-				//				add(btnMoreOptionsRunGame, cc.xy(5, 1));
+				//				add(pnlRunGameWrapper, cc.xyw(1, 1, 5));
+				((JCustomButton) btnRunGame).setKeepBackgroundOnHoverLost(true);
+				((JCustomButton) btnMoreOptionsRunGame).setKeepBackgroundOnHoverLost(true);
+				add(btnRunGame, cc.xyw(1, 1, 4));
+				add(btnMoreOptionsRunGame, cc.xy(5, 1));
 				add(btnSearchCover, cc.xy(1, 3));
 				add(btnSearchTrailer, cc.xy(3, 3));
 				//			int size = ScreenSizeUtil.is3k() ? 24 : 16;
@@ -1017,9 +1027,9 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		class TagsPanel extends ScrollablePanel {
 			private static final long serialVersionUID = 1L;
 
-			private JLabel lblTags = new JLabel2("<html><strong>" + Messages.get(MessageConstants.MANAGE_TAGS) + "</strong></html>");
+			private JLabel lblTags = new JLabel(Messages.get(MessageConstants.MANAGE_TAGS));
 			private JPanel pnlTagList = new JPanel();
-			private JButton btnAddTag = new JButton(Messages.get(MessageConstants.ADD_TAG));
+			private JButton btnAddTag = new JCustomButton(Messages.get(MessageConstants.ADD_TAG));
 			private int size = ScreenSizeUtil.is3k() ? 24 : 16;
 			private Icon iconTag = ImageUtil.getImageIconFrom(Icons.get("tags", size, size));
 			private Map<Integer, JComponent> tags = new HashMap<>();
@@ -1118,7 +1128,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			}
 
 			public void addTag(Tag tag) {
-				JButton btn = new JButton(tag.getName());
+				JButton btn = new JCustomButton(tag.getName());
 				btn.setIcon(iconTag);
 				Color randomColor = Color.decode(tag.getHexColor());
 				btn.setBackground(randomColor.brighter());
@@ -1145,7 +1155,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			}
 
 			public void languageChanged() {
-				lblTags.setText("<html><strong>" + Messages.get(MessageConstants.MANAGE_TAGS) + "</strong></html>");
+				lblTags.setText(Messages.get(MessageConstants.MANAGE_TAGS));
 				btnAddTag.setText(Messages.get(MessageConstants.ADD_TAG));
 				itmAddToFilter.setText(Messages.get(MessageConstants.ADD_TO_FILTER));
 				itmRemoveTagFromCurrentGames.setText(Messages.get(MessageConstants.REMOVE_TAG));

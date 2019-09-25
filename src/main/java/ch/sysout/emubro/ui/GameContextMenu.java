@@ -89,8 +89,6 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 
 	private List<RunGameWithListener> runGameWithListeners = new ArrayList<>();
 
-	private Color colorMenuBar = Color.BLUE;
-
 	public GameContextMenu() {
 		MenuScroller.setScrollerFor(mnuAvailableTags, 8, 125, 3, 1);
 
@@ -276,8 +274,6 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		for (Component c : components) {
 			if (c instanceof JComponent) {
 				((JComponent) c).setOpaque(true);
-				UIUtil.setForegroundDependOnBackground(colorMenuBar, c);
-				c.setBackground(colorMenuBar);
 			}
 			component.add(c);
 		}

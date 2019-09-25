@@ -8,6 +8,8 @@ import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.FileDialog;
 import java.awt.FlowLayout;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
@@ -16,6 +18,7 @@ import java.awt.event.ItemListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -91,11 +94,13 @@ import ch.sysout.emubro.ui.AddEmulatorPanel;
 import ch.sysout.emubro.ui.AddPlatformDialog;
 import ch.sysout.emubro.ui.EmulatorTableCellRenderer;
 import ch.sysout.emubro.ui.EmulatorTableModel;
+import ch.sysout.emubro.ui.IconStore;
 import ch.sysout.emubro.ui.JLinkButton;
 import ch.sysout.emubro.ui.JTableDoubleClickOnHeaderFix;
 import ch.sysout.emubro.ui.SortedListModel;
 import ch.sysout.emubro.ui.TableColumnAdjuster;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.JCustomButton;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
@@ -139,13 +144,17 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 	}
 
 	private void createUI() {
+		pnlPlatforms.setOpaque(false);
+
 		FormLayout layout = new FormLayout("min:grow", "fill:min:grow");
 		setLayout(layout);
 		CellConstraints cc = new CellConstraints();
 		pnlPlatformsEmulatorsComboWrapper = new JPanel(new BorderLayout());
+		pnlPlatformsEmulatorsComboWrapper.setOpaque(false);
 		pnlPlatformsEmulatorsComboWrapper.setBorder(Paddings.TABBED_DIALOG);
 		pnlPlatformsEmulatorsComboWrapper.add(pnlPlatforms, BorderLayout.CENTER);
 		spl00 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, pnlPlatformsEmulatorsComboWrapper, pnlEmulators);
+		spl00.setOpaque(false);
 		spl00.setBorder(BorderFactory.createEmptyBorder());
 		spl00.setContinuousLayout(true);
 		spl00.setOneTouchExpandable(true);
@@ -255,7 +264,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 		private JList<Platform> lstPlatforms = new JList<>();
 		private JLinkButton btnAddPlatform = new JLinkButton("Create new platform");
 		//		private JButton btnRemovePlatform = new JButton();
-		private JButton btnEditPlatform = new JButton(Messages.get(MessageConstants.CONFIGURE));
+		private JButton btnEditPlatform = new JCustomButton(Messages.get(MessageConstants.CONFIGURE));
 		private JCheckBox chkShowOnlyInstalledPlatforms = new JCheckBox(Messages.get(MessageConstants.SHOW_ONLY_INSTALLED_PLATFORMS));
 		private JScrollPane spLstPlatforms;
 
@@ -1624,5 +1633,29 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 
 	public void addSearchForEmulatorListener(ActionListener l) {
 		pnlEmulators.pnlAddEmulator.addSearchForEmulatorListener(l);
+	}
+
+	@Override
+	protected void paintComponent(Graphics g) {
+		super.paintComponent(g);
+		BufferedImage imagePreviewPaneBackground = IconStore.current().getCurrentTheme().getPreviewPane().getImage();
+		if (imagePreviewPaneBackground != null) {
+			Graphics2D g2d = (Graphics2D) g.create();
+			int x = 0;
+			int y = 0;
+			int w = getWidth();
+			int h = getHeight();
+			g2d.setColor(IconStore.current().getCurrentTheme().getPreviewPane().getColor());
+			g2d.fillRect(x, y, w, h);
+			int imgWidth = imagePreviewPaneBackground.getWidth();
+			int imgHeight = imagePreviewPaneBackground.getHeight();
+			boolean shouldScale = true;
+			if (shouldScale) {
+				g2d.drawImage(imagePreviewPaneBackground, 0, 0, w, h, this);
+			} else {
+				g2d.drawImage(imagePreviewPaneBackground, 0, 0, imgWidth, imgHeight, this);
+			}
+			g2d.dispose();
+		}
 	}
 }

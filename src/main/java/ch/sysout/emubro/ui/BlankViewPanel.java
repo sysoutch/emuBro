@@ -4,11 +4,13 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.dnd.DropTargetListener;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseWheelListener;
+import java.awt.image.BufferedImage;
 import java.util.List;
 
 import javax.swing.Action;
@@ -16,6 +18,7 @@ import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 import javax.swing.border.Border;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.TitledBorder;
@@ -37,6 +40,7 @@ import ch.sysout.emubro.controller.GameSelectionListener;
 import ch.sysout.emubro.controller.ViewConstants;
 import ch.sysout.emubro.impl.event.NavigationEvent;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.JCustomButton;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
@@ -46,24 +50,24 @@ import ch.sysout.util.UIUtil;
 public class BlankViewPanel extends ViewPanel {
 	private static final long serialVersionUID = 1L;
 
-	private JButton lnkBrowseComputer = new JLinkButton(Messages.get(MessageConstants.BROWSE_COMPUTER));
-	private JButton lnkAddFiles = new JLinkButton(Messages.get(MessageConstants.ADD_FILES));
-	private JButton lnkAddFolders = new JLinkButton(Messages.get(MessageConstants.ADD_FOLDERS));
-	private JButton lnkConfigure = new JLinkButton(Messages.get(MessageConstants.CONFIGURE));
+	private JButton lnkBrowseComputer = new JCustomButton(Messages.get(MessageConstants.BROWSE_COMPUTER));
+	private JButton lnkAddFiles = new JCustomButton(Messages.get(MessageConstants.ADD_FILES));
+	private JButton lnkAddFolders = new JCustomButton(Messages.get(MessageConstants.ADD_FOLDERS));
+	private JButton lnkConfigure = new JCustomButton(Messages.get(MessageConstants.CONFIGURE));
 
-	private JButton lnkListView = new JLinkButton(Messages.get(MessageConstants.VIEW_LIST));
-	private JButton lnkElementView = new JLinkButton(Messages.get(MessageConstants.VIEW_ELEMENTS));
-	private JButton lnkTableView = new JLinkButton(Messages.get(MessageConstants.VIEW_TABLE));
-	private JButton lnkContentView = new JLinkButton(Messages.get(MessageConstants.VIEW_CONTENT));
-	private JButton lnkSliderView = new JLinkButton(Messages.get(MessageConstants.VIEW_SLIDER));
-	private JButton lnkCoverView = new JLinkButton(Messages.get(MessageConstants.VIEW_COVERS));
+	private JButton lnkListView = new JCustomButton(Messages.get(MessageConstants.VIEW_LIST));
+	private JButton lnkElementView = new JCustomButton(Messages.get(MessageConstants.VIEW_ELEMENTS));
+	private JButton lnkTableView = new JCustomButton(Messages.get(MessageConstants.VIEW_TABLE));
+	private JButton lnkContentView = new JCustomButton(Messages.get(MessageConstants.VIEW_CONTENT));
+	private JButton lnkSliderView = new JCustomButton(Messages.get(MessageConstants.VIEW_SLIDER));
+	private JButton lnkCoverView = new JCustomButton(Messages.get(MessageConstants.VIEW_COVERS));
 
-	private JButton lnkHelp = new JLinkButton(Messages.get(MessageConstants.HELP));
-	private JButton lnkDiscord = new JLinkButton(Messages.get(MessageConstants.EMUBRO_DISCORD));
-	private JButton lnkConfigWizard = new JLinkButton(Messages.get(MessageConstants.CONFIGURE_WIZARD, Messages.get(MessageConstants.APPLICATION_TITLE)));
+	private JButton lnkHelp = new JCustomButton(Messages.get(MessageConstants.HELP));
+	private JButton lnkDiscord = new JCustomButton(Messages.get(MessageConstants.EMUBRO_DISCORD));
+	private JButton lnkConfigWizard = new JCustomButton(Messages.get(MessageConstants.CONFIGURE_WIZARD, Messages.get(MessageConstants.APPLICATION_TITLE)));
 
-	private JButton lnkUpdateEmubro = new JLinkButton(Messages.get(MessageConstants.SEARCH_FOR_UPDATES));
-	private JButton lnkAbout = new JLinkButton(Messages.get(MessageConstants.ABOUT, Messages.get(MessageConstants.APPLICATION_TITLE)));
+	private JButton lnkUpdateEmubro = new JCustomButton(Messages.get(MessageConstants.SEARCH_FOR_UPDATES));
+	private JButton lnkAbout = new JCustomButton(Messages.get(MessageConstants.ABOUT, Messages.get(MessageConstants.APPLICATION_TITLE)));
 
 	private Border titledBorderAction = BorderFactory.createTitledBorder(Messages.get(MessageConstants.RUN_ACTION));
 	private Border titledBorderView = BorderFactory.createTitledBorder(Messages.get(MessageConstants.CHOOSE_VIEW));
@@ -71,12 +75,13 @@ public class BlankViewPanel extends ViewPanel {
 
 	public BlankViewPanel() {
 		super(new BorderLayout());
-		setBackground(Color.WHITE);
 		setIcons();
 
+		setOpaque(false);
 		Border boarder = Paddings.DLU4;
-		JPanel pnlAction = new JPanel(new FormLayout("default",
-				"min, $ugap, default, $ugap, default, $ugap, default"));
+		JPanel pnlAction = new JPanel(new FormLayout("left:default:grow",
+				"fill:pref, min, fill:pref, min, fill:pref, min, fill:pref"));
+		pnlAction.setOpaque(false);
 		pnlAction.setMinimumSize(new Dimension(0, 0));
 		pnlAction.setBorder(new CompoundBorder(titledBorderAction, boarder));
 		pnlAction.setBackground(Color.WHITE);
@@ -86,8 +91,9 @@ public class BlankViewPanel extends ViewPanel {
 		pnlAction.add(lnkAddFolders, cc2.xy(1, 5));
 		pnlAction.add(lnkConfigure, cc2.xy(1, 7));
 
-		JPanel pnlView = new JPanel(new FormLayout("default",
-				"min, $ugap, default, $ugap, default, $ugap, default, $ugap, default, $ugap, default"));
+		JPanel pnlView = new JPanel(new FormLayout("left:default:grow",
+				"fill:pref, min, fill:pref, min, fill:pref, min, fill:pref, min, fill:pref, min, fill:pref"));
+		pnlView.setOpaque(false);
 		pnlView.setMinimumSize(new Dimension(0, 0));
 		pnlView.setBorder(new CompoundBorder(titledBorderView, boarder));
 		pnlView.setBackground(Color.WHITE);
@@ -99,8 +105,9 @@ public class BlankViewPanel extends ViewPanel {
 		pnlView.add(lnkSliderView, cc.xy(1, 9));
 		pnlView.add(lnkCoverView, cc.xy(1, 11));
 
-		JPanel pnlHelp = new JPanel(new FormLayout("default",
-				"min, $ugap, default, $ugap, default, $ugap, default, $ugap, default"));
+		JPanel pnlHelp = new JPanel(new FormLayout("left:default:grow",
+				"fill:pref, min, fill:pref, min, fill:pref, min, fill:pref, min, fill:pref"));
+		pnlHelp.setOpaque(false);
 		pnlHelp.setMinimumSize(new Dimension(0, 0));
 		pnlHelp.setBorder(new CompoundBorder(titledBorderHelp, boarder));
 		pnlHelp.setBackground(Color.WHITE);
@@ -113,19 +120,33 @@ public class BlankViewPanel extends ViewPanel {
 
 		//		JPanel pnl = new JPanel(new FormLayout("default, $rgap, default, $rgap, default",
 		//				"top:default"));
-		WrapLayout wl = new WrapLayout(FlowLayout.LEFT);
-		JPanel pnl = new JPanel(wl);
+		//		WrapLayout wl = new WrapLayout(FlowLayout.LEFT);
+		//		JPanel pnl = new JPanel(wl);
+		JPanel pnl = new JPanel(new BorderLayout());
+
 		pnl.setBackground(Color.WHITE);
 		//		CellConstraints cc3 = new CellConstraints();
 		//		pnl.add(pnlAction, cc3.xy(1, 1));
 		//		pnl.add(pnlView, cc3.xy(3, 1));
 		//		pnl.add(pnlHelp, cc3.xy(5, 1));
 
-		pnl.add(pnlAction);
-		pnl.add(pnlView);
-		pnl.add(pnlHelp);
+		JTextArea txt = new JTextArea("\"Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.\"");
+		txt.setOpaque(false);
+		txt.setPreferredSize(new Dimension(0, 0));
+		txt.setLineWrap(true);
+		txt.setWrapStyleWord(true);
+		pnl.add(txt, BorderLayout.CENTER);
+		JPanel pnlWrapper = new JPanel(new BorderLayout());
+		pnlWrapper.setOpaque(false);
+		pnlWrapper.add(pnlAction);
+		pnlWrapper.add(pnlView, BorderLayout.EAST);
+		pnl.add(pnlWrapper, BorderLayout.EAST);
+		pnl.add(pnlHelp, BorderLayout.SOUTH);
 
 		JScrollPane sp = new JScrollPane(pnl);
+		sp.setOpaque(false);
+		sp.getViewport().setOpaque(false);
+		pnl.setOpaque(false);
 		sp.setBorder(BorderFactory.createEmptyBorder());
 		sp.getHorizontalScrollBar().setUnitIncrement(16);
 		sp.getVerticalScrollBar().setUnitIncrement(16);
@@ -133,7 +154,7 @@ public class BlankViewPanel extends ViewPanel {
 	}
 
 	private void setIcons() {
-		int size = ScreenSizeUtil.is3k() ? 32 : 24;
+		int size = ScreenSizeUtil.is3k() ? 32 : 32;
 		lnkBrowseComputer.setIcon(ImageUtil.getImageIconFrom(Icons.get("search", size, size)));
 		lnkConfigure.setIcon(ImageUtil.getImageIconFrom(Icons.get("settings", size, size)));
 		lnkAddFiles.setIcon(ImageUtil.getImageIconFrom(Icons.get("addFile", size, size)));
@@ -495,5 +516,45 @@ public class BlankViewPanel extends ViewPanel {
 
 	public void addAddFoldersListener(ActionListener l) {
 		lnkAddFolders.addActionListener(l);
+	}
+
+	@Override
+	protected void paintComponent(Graphics g) {
+		super.paintComponent(g);
+		BufferedImage background = IconStore.current().getCurrentTheme().getView().getImage();
+		if (background != null) {
+			Graphics2D g2d = (Graphics2D) g.create();
+			int panelWidth = getWidth();
+			int panelHeight = getHeight();
+			int imgWidth = background.getWidth();
+			int imgHeight = background.getHeight();
+
+			g2d.setColor(IconStore.current().getCurrentTheme().getView().getColor());
+			g2d.fillRect(0, 0, panelWidth, panelHeight);
+
+			boolean shouldScale = false;
+			if (shouldScale) {
+				g2d.drawImage(background, 0, 0, panelWidth, panelHeight, this);
+			} else {
+				g2d.drawImage(background, 0, 0, imgWidth, imgHeight, this);
+			}
+			BufferedImage imgTransparentOverlay = IconStore.current().getCurrentTheme().getTransparentBackgroundOverlayImage();
+			if (imgTransparentOverlay != null) {
+				int width = imgTransparentOverlay.getWidth();
+				int height = imgTransparentOverlay.getHeight();
+
+				double factor = background.getWidth() / panelWidth;
+				if (factor != 0) {
+					int scaledWidth = (int) (width/factor);
+					int scaledHeight = (int) (height/factor);
+					width = scaledWidth;
+					height = scaledHeight;
+				}
+				int x = panelWidth-width;
+				int y = panelHeight-height;
+				g2d.drawImage(imgTransparentOverlay, x, y, width, height, this);
+			}
+			g2d.dispose();
+		}
 	}
 }

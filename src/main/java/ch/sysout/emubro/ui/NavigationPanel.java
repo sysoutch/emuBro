@@ -2,12 +2,9 @@ package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Image;
 import java.awt.Insets;
 import java.awt.Point;
 import java.awt.Rectangle;
@@ -20,17 +17,13 @@ import java.util.List;
 import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
-import javax.swing.GrayFilter;
-import javax.swing.Icon;
 import javax.swing.ImageIcon;
-import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JToggleButton;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingConstants;
-import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 
 import com.jgoodies.forms.layout.CellConstraints;
@@ -39,7 +32,7 @@ import com.jgoodies.forms.layout.FormLayout;
 import ch.sysout.emubro.api.GameViewListener;
 import ch.sysout.emubro.impl.event.NavigationEvent;
 import ch.sysout.emubro.util.MessageConstants;
-import ch.sysout.util.FontUtil;
+import ch.sysout.ui.util.JCustomToggleButton;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
@@ -55,9 +48,9 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 	public static final String CENTERED = "centered";
 	public static final String MAXIMIZED = "maximized";
 
-	private JToggleButton btnAllGames = new JToggleButton(Messages.get(MessageConstants.ALL_GAMES));
-	private JToggleButton btnRecentlyPlayed = new JToggleButton(Messages.get(MessageConstants.RECENTLY_PLAYED));
-	private JToggleButton btnFavorites = new JToggleButton(Messages.get(MessageConstants.FAVORITES));
+	private JToggleButton btnAllGames = new JCustomToggleButton(Messages.get(MessageConstants.ALL_GAMES));
+	private JToggleButton btnRecentlyPlayed = new JCustomToggleButton(Messages.get(MessageConstants.RECENTLY_PLAYED));
+	private JToggleButton btnFavorites = new JCustomToggleButton(Messages.get(MessageConstants.FAVORITES));
 	private List<JToggleButton> platformButtons = new ArrayList<>();
 	private AbstractButton[] buttons = new AbstractButton[] { btnAllGames, btnRecentlyPlayed, btnFavorites };
 
@@ -68,9 +61,6 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 	private FormLayout layoutPopup;
 	private CellConstraints ccPopup;
 	private JDialog dlgPopup = new JDialog();
-	private AbstractButton btnSelectAll = new JButton(Messages.get(MessageConstants.SELECT_ALL));
-	private AbstractButton btnSelectNone = new JButton(Messages.get(MessageConstants.UNSELECT_ALL));
-	private AbstractButton btnSelectInvert = new JButton(Messages.get(MessageConstants.SELECT_INVERT));
 	private JPanel pnlPopup;
 	private int currentNavView = ALL_GAMES;
 	private Color colorButtonForeground = Color.WHITE;
@@ -85,10 +75,6 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 	private void initComponents() {
 		int size = ScreenSizeUtil.is3k() ? 10 : 5;
 		Insets insets = new Insets(size, size, size, size);
-		Font customFont = FontUtil.getCustomFont();
-		btnAllGames.setFont(customFont);
-		btnRecentlyPlayed.setFont(customFont);
-		btnFavorites.setFont(customFont);
 
 		btnAllGames.setHorizontalAlignment(SwingConstants.LEFT);
 		btnAllGames.setHorizontalTextPosition(SwingConstants.RIGHT);
@@ -140,14 +126,21 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 			@Override
 			protected void paintComponent(Graphics g) {
 				super.paintComponent(g);
-				BufferedImage background = IconStore.current().getNavigationBackgroundImage();
+				BufferedImage background = IconStore.current().getCurrentTheme().getNavigationPane().getImage();
 				if (background != null) {
 					Graphics2D g2d = (Graphics2D) g.create();
 					int x = 0;
 					int y = 0;
 					int w = getWidth();
 					int h = getHeight();
-					g2d.drawImage(background, 0, 0, w, h, this);
+					int imgWidth = background.getWidth();
+					int imgHeight = background.getHeight();
+					boolean shouldScale = false;
+					if (shouldScale) {
+						g2d.drawImage(background, 0, 0, w, h, this);
+					} else {
+						g2d.drawImage(background, 0, 0, imgWidth, imgHeight, this);
+					}
 					g2d.dispose();
 				}
 			}
@@ -170,19 +163,7 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 		spNavigationButtons.getVerticalScrollBar().setUnitIncrement(16);
 		spNavigationButtons.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
 		spNavigationButtons.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-		new JPanel(new BorderLayout());
 		add(spNavigationButtons, BorderLayout.CENTER);
-	}
-
-	private void doIt(AbstractButton chk, Icon platformIcon) {
-		if (chk.isSelected()) {
-			chk.setIcon(platformIcon);
-			chk.setForeground(UIManager.getColor("PopupMenu.foreground"));
-		} else {
-			Image grayedImage = GrayFilter.createDisabledImage(((ImageIcon) platformIcon).getImage());
-			chk.setIcon(new ImageIcon(grayedImage));
-			chk.setForeground(Color.GRAY);
-		}
 	}
 
 	private void setIcons() {
@@ -361,31 +342,6 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 		// locationOnScreen.y);
 		// dlgPopup.setVisible(true);
 		// } else
-		if (source == btnSelectAll) {
-			for (Component c : pnlPopup.getComponents()) {
-				if (c instanceof AbstractButton) {
-					AbstractButton btn = ((AbstractButton) c);
-					btn.setSelected(true);
-					doIt(btn, btn.getIcon());
-				}
-			}
-		} else if (source == btnSelectNone) {
-			for (Component c : pnlPopup.getComponents()) {
-				if (c instanceof AbstractButton) {
-					AbstractButton btn = ((AbstractButton) c);
-					btn.setSelected(false);
-					doIt(btn, btn.getIcon());
-				}
-			}
-		} else if (source == btnSelectInvert) {
-			for (Component c : pnlPopup.getComponents()) {
-				if (c instanceof AbstractButton) {
-					AbstractButton btn = ((AbstractButton) c);
-					btn.setSelected(!btn.isSelected());
-					doIt(btn, btn.getIcon());
-				}
-			}
-		}
 	}
 
 	// boolean doIt() {

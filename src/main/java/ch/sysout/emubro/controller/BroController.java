@@ -117,7 +117,6 @@ import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
-import java.util.zip.ZipInputStream;
 
 import javax.imageio.ImageIO;
 import javax.servlet.MultipartConfigElement;
@@ -174,12 +173,8 @@ import javax.xml.transform.stream.StreamResult;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.filefilter.IOFileFilter;
-import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
-import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.w3c.dom.DOMException;
@@ -1849,7 +1844,7 @@ GameSelectionListener, BrowseComputerListener {
 				if (undecorated) {
 					view.dispose();
 					view.setUndecorated(undecorated);
-					view.pack();
+					//					view.pack();
 				}
 				if (maximized) {
 					/**
@@ -5476,197 +5471,38 @@ GameSelectionListener, BrowseComputerListener {
 
 				for (final Game game : games) {
 					String platformShortName = explorer.getPlatform(game.getPlatformId()).getShortName();
-					Properties gameTitlesProperties;
-					try {
-						gameTitlesProperties = getTitlesProperties(platformShortName);
-						checkTitlesAndSetRealGameNames(game, gameTitlesProperties);
-					} catch (IOException e1) {
-						e1.printStackTrace();
-					}
-					JsonObject jsonObject = new JsonObject();
-					jsonObject.addProperty("platform", platformShortName);
-					jsonObject.addProperty("type", "3dcovers");
-					jsonObject.addProperty("lang", "en");
-					jsonObject.addProperty("gamecode", game.getGameCode());
-					mJSONArray.add(jsonObject);
 				}
 				nameValuePairs.add(new BasicNameValuePair("arr", String.valueOf(mJSONArray.toString())));
 
 				HttpClient httpclient = HttpClients.createDefault();
-				String url = "https://emubro.net/zipCovers.php";
-				HttpPost httppost = new HttpPost(url);
-				try {
-					httppost.setEntity(new UrlEncodedFormEntity(nameValuePairs, "UTF-8"));
+				SwingUtilities.invokeLater(new Runnable() {
 
-					SwingUtilities.invokeLater(new Runnable() {
-
-						@Override
-						public void run() {
-							progress.setString("request missing covers");
-						}
-					});
-					//Execute and get the response.
-					HttpResponse response = httpclient.execute(httppost);
-					BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
-					StringBuffer result = new StringBuffer();
-					String line = "";
-					while ((line = rd.readLine()) != null) {
-						result.append(line);
+					@Override
+					public void run() {
+						progress.setString("request missing covers");
 					}
-					rd.close();
+				});
+				//Execute and get the response.
 
-					String coverZip = result.toString();
-					URL urlCoverZip = new URL(coverZip);
-					String userTmp = System.getProperty("java.io.tmpdir");
-					String pathname = userTmp + FilenameUtils.getName(coverZip);
-					File coverFileFile = new File(pathname);
-
-					SwingUtilities.invokeLater(new Runnable() {
-
-						@Override
-						public void run() {
-							progress.setString("downloading cover zip");
-						}
-					});
-					FileUtils.copyURLToFile(urlCoverZip, coverFileFile);
-
-					ZipFile zip = null;
-					try {
-						zip = new ZipFile(pathname);
-					} catch (ZipException e) {
-						SwingUtilities.invokeLater(new Runnable() {
-
-							@Override
-							public void run() {
-								progress.setIndeterminate(false);
-								progress.setString("failed to unzip");
-
-								Timer timer = new Timer();
-								TimerTask task = new TimerTask() {
-
-									@Override
-									public void run() {
-										dlgDownloadCovers.dispose();
-										cancel();
-									}
-								};
-								timer.schedule(task, 1000);
-							}
-						});
-						throw e;
-					}
-					if (zip != null) {
+				for (Game game : games) {
+					String gameCode = game.getGameCode();
+					if (!gameCode.isEmpty()) {
+						Image image = null;
 						try {
-							SwingUtilities.invokeLater(new Runnable() {
-
-								@Override
-								public void run() {
-									progress.setString("setting covers");
-								}
-							});
-
-							//get the zip file content
-							ZipInputStream zis = new ZipInputStream(new FileInputStream(pathname));
-							//get the zipped file list entry
-							ZipEntry ze = zis.getNextEntry();
-
-							while (ze != null) {
-								String fileName = ze.getName();
-								InputStream is = zip.getInputStream(ze);
-								for (Game game : games) {
-									String gameCode = game.getGameCode();
-									if (!gameCode.isEmpty()) {
-										if (gameCode.equalsIgnoreCase(FilenameUtils.removeExtension(FilenameUtils.getName(fileName)))) {
-											setCoverForGameUsingOriginalFile(game, is);
-											break;
-										}
-									}
-								}
-								ze = zis.getNextEntry();
+							URL url = new URL("http://art.gametdb.com/"+explorer.getPlatform(game.getPlatformId()).getShortName()+"/cover3D/EN/"+game.getGameCode()+".png");
+							image = ImageIO.read(url);
+							setCoverForGame(game, image);
+						} catch (IOException e) {
+							try {
+								URL url = new URL("http://art.gametdb.com/"+explorer.getPlatform(game.getPlatformId()).getShortName()+"/cover/EN/"+game.getGameCode()+".png");
+								image = ImageIO.read(url);
+								setCoverForGame(game, image);
+							} catch (IOException e1) {
 							}
-							zis.closeEntry();
-							zis.close();
-							zip.close();
-							coverFileFile.delete();
-							SwingUtilities.invokeLater(new Runnable() {
-
-								@Override
-								public void run() {
-									if (explorer.hasCurrentGame()) {
-										List<Game> currentGames = explorer.getCurrentGames();
-										if (currentGames.size() == 1) {
-											int selectedGameId = currentGames.get(0).getId();
-											view.getViewManager().selectGame(GameConstants.NO_GAME);
-											view.getViewManager().selectGame(selectedGameId);
-										}
-									} else {
-										view.getViewManager().selectGame(GameConstants.NO_GAME);
-									}
-
-									progress.setIndeterminate(false);
-									progress.setString("covers added");
-
-									Timer timer = new Timer();
-									TimerTask task = new TimerTask() {
-
-										@Override
-										public void run() {
-											dlgDownloadCovers.dispose();
-											cancel();
-										}
-									};
-									timer.schedule(task, 1000);
-								}
-							});
-						} catch(IOException ex){
-							ex.printStackTrace();
 						}
 					}
-				} catch (UnsupportedEncodingException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (ClientProtocolException e) {
-					SwingUtilities.invokeLater(new Runnable() {
-
-						@Override
-						public void run() {
-							progress.setIndeterminate(false);
-							progress.setString("check your connection");
-
-							Timer timer = new Timer();
-							TimerTask task = new TimerTask() {
-
-								@Override
-								public void run() {
-									dlgDownloadCovers.dispose();
-									cancel();
-								}
-							};
-							timer.schedule(task, 2000);
-						}
-					});
-				} catch (IOException e) {
-					SwingUtilities.invokeLater(new Runnable() {
-
-						@Override
-						public void run() {
-							progress.setIndeterminate(false);
-							progress.setString("failed to download covers");
-
-							Timer timer = new Timer();
-							TimerTask task = new TimerTask() {
-
-								@Override
-								public void run() {
-									dlgDownloadCovers.dispose();
-									cancel();
-								}
-							};
-							timer.schedule(task, 2000);
-						}
-					});
-					e.printStackTrace();
 				}
+				dlgDownloadCovers.dispose();
 			}
 		});
 		t.start();
@@ -5682,7 +5518,7 @@ GameSelectionListener, BrowseComputerListener {
 			progress = new JProgressBar();
 			progress.setBorder(Paddings.DLU2);
 			progress.setStringPainted(true);
-			progress.setString("Check games and set real titles");
+			progress.setString("Check game covers");
 			progress.setIndeterminate(true);
 			dlgDownloadCovers.add(progress);
 			dlgDownloadCovers.pack();
@@ -7802,6 +7638,7 @@ GameSelectionListener, BrowseComputerListener {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
+
 			}
 
 			if (filePath.toLowerCase().endsWith(".exe")) {
@@ -7850,7 +7687,7 @@ GameSelectionListener, BrowseComputerListener {
 				}
 			});
 			if (downloadCover) {
-				//				askUserDownloadGameCovers(gameFinal);
+				askUserDownloadGameCovers(gameFinal);
 			}
 			//	        BlockingQueue queue = new ArrayBlockingQueue(1024);
 			//			ExecutorService pool = Executors.newFixedThreadPool(5);
@@ -7894,28 +7731,30 @@ GameSelectionListener, BrowseComputerListener {
 						//						if (position >= (10240/dimension)) {
 						//							break;
 						//						}
-						ByteBuffer mappedByteBuffer = fileChannel.map(MapMode.READ_ONLY, position, dimension);
-						CharBuffer cb = decoder.decode(mappedByteBuffer);
-						for (Object obj : keys) {
-							String objString = obj.toString();
-							if (objString.equals("titles")) {
-								continue;
+						if (fileChannel.isOpen()) {
+							ByteBuffer mappedByteBuffer = fileChannel.map(MapMode.READ_ONLY, position, dimension);
+							CharBuffer cb = decoder.decode(mappedByteBuffer);
+							for (Object obj : keys) {
+								String objString = obj.toString();
+								if (objString.equals("titles")) {
+									continue;
+								}
+								if (cb.toString().contains(objString)) {
+									gameCode = objString;
+									System.out.println("game code " + gameCode + " found at: "+ position);
+									break outerLoop;
+								}
 							}
-							if (cb.toString().contains(objString)) {
-								gameCode = objString;
-								System.out.println("game code " + gameCode + " found at: "+ position);
-								break outerLoop;
-							}
-						}
-						position += dimension;
-						if ((position + dimension) == 512000000 || (position + dimension) == 128000000
-								|| (position + dimension) == 64000000) {
-							int request = JOptionPane.showConfirmDialog(view,
-									"no game id found in file after reading " + (position / 1024 / 1024)
-									+ "MB. do you want to abort?",
-									"no game id found yet", JOptionPane.YES_NO_OPTION);
-							if (request == JOptionPane.YES_OPTION) {
-								break outerLoop;
+							position += dimension;
+							if ((position + dimension) == 512000000 || (position + dimension) == 128000000
+									|| (position + dimension) == 64000000) {
+								int request = JOptionPane.showConfirmDialog(view,
+										"no game id found in file after reading " + (position / 1024 / 1024)
+										+ "MB. do you want to abort?",
+										"no game id found yet", JOptionPane.YES_NO_OPTION);
+								if (request == JOptionPane.YES_OPTION) {
+									break outerLoop;
+								}
 							}
 						}
 					} while (fileChannel.isOpen() && (position + dimension) <= fileChannelSize);
@@ -7944,7 +7783,8 @@ GameSelectionListener, BrowseComputerListener {
 			ByteBuffer mappedByteBuffer = fileChannel.map(MapMode.READ_ONLY, position, dimension);
 			CharBuffer cb = decoder.decode(mappedByteBuffer);
 			for (String s : arr2) {
-				Pattern MY_PATTERN = Pattern.compile("(?i)(" + s + ")");
+				//				Pattern MY_PATTERN = Pattern.compile("(?i)(" + s + ")");
+				Pattern MY_PATTERN = Pattern.compile("(" + s + ")");
 				Matcher m = MY_PATTERN.matcher(cb.toString());
 				while (m.find()) {
 					gameCode = m.group(1);
@@ -8206,19 +8046,6 @@ GameSelectionListener, BrowseComputerListener {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-	}
-
-	private Properties getTitlesProperties(String platformShortName) throws IOException {
-		String titles = "https://emubro.net/coverpacks/"+platformShortName+"/titles/en/db.txt";
-		Properties p;
-		if (!mapProps.containsKey(platformShortName)) {
-			String titlesString = readStringFromURL(titles);
-			p = parsePropertiesString(titlesString);
-			mapProps.put(platformShortName, p);
-		} else {
-			p = mapProps.get(platformShortName);
-		}
-		return p;
 	}
 
 	@Override

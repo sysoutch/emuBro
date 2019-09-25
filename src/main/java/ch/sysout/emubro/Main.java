@@ -1,7 +1,14 @@
 package ch.sysout.emubro;
 
+import java.awt.AWTException;
 import java.awt.Color;
+import java.awt.Font;
+import java.awt.Image;
 import java.awt.Point;
+import java.awt.SystemTray;
+import java.awt.Toolkit;
+import java.awt.TrayIcon;
+import java.awt.TrayIcon.MessageType;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileFilter;
@@ -58,6 +65,7 @@ import ch.sysout.emubro.ui.MainFrame;
 import ch.sysout.emubro.ui.SplashScreenWindow;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.util.FileUtil;
+import ch.sysout.util.FontUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
@@ -87,7 +95,7 @@ public class Main {
 		System.setProperty("java.util.Arrays.useLegacyMergeSort", "true");
 		System.setProperty("apple.laf.useScreenMenuBar", "true");
 		setLookAndFeel();
-
+		initializeCustomTheme();
 		dlgSplashScreen = new SplashScreenWindow(
 				Messages.get(MessageConstants.INIT_APPLICATION, Messages.get(MessageConstants.APPLICATION_TITLE)));
 		dlgSplashScreen.setLocationRelativeTo(null);
@@ -195,10 +203,8 @@ public class Main {
 					// explorer.setDefaultPlatforms(defaultPlatforms);
 					explorer.setUpdatedTags(updatedTags);
 
-					setCustomTheme();
 					mainFrame = new MainFrame(defaultLookAndFeel, explorer);
-
-
+					mainFrame.setMinimumSize(mainFrame.getPreferredSize());
 					//					SwingUtilities.updateComponentTreeUI(mainFrame);
 
 					String platformsDirectory = explorer.getPlatformsDirectory();
@@ -285,8 +291,16 @@ public class Main {
 					hideSplashScreen();
 
 					if (args.length > 0 && args[0].equals("--changelog")) {
-						JOptionPane.showMessageDialog(mainFrame,
-								"--- emuBro v" + currentApplicationVersion + " ---\n" + "\nUpdate successful!");
+						SystemTray tray = SystemTray.getSystemTray();
+						Image image = Toolkit.getDefaultToolkit().getImage("tray.gif");
+						TrayIcon trayIcon = new TrayIcon(image, "emuBro tray message");
+						try {
+							tray.add(trayIcon);
+							trayIcon.displayMessage("update installed",
+									"\"--- emuBro v\" + currentApplicationVersion + \" ---\\n\" + \"\\nUpdate successful!\"", MessageType.INFO);
+						} catch (AWTException e) {
+							e.printStackTrace();
+						}
 					}
 					// TODO check from database if a decision has already been made
 					// if (!explorer.isDiscordFeatureInstalled() &&
@@ -406,29 +420,100 @@ public class Main {
 		}
 	}
 
-	private static void setCustomTheme() {
+	private static void initializeCustomTheme() {
+		initializeCustomFonts();
+		initializeCustomColors();
+		initializeCustomMenus();
+		initializeCustomButtons();
+		UIManager.put("TabbedPane.contentOpaque", false);
+		UIManager.put("ToolTip.background", Color.BLACK);
+		UIManager.put("Tree.background", Color.BLACK);
+		UIManager.put("Tree.textBackground", Color.BLACK);
+	}
+
+	private static void initializeCustomFonts() {
+		String[] keys = {
+				"Label.font",
+				"TextPane.font",
+				"TextArea.font",
+				"EditorPane.font",
+				"TextField.font",
+				"Button.font",
+				"ToggleButton.font",
+				"RadioButton.font",
+				"CheckBox.font",
+				"ScrollPane.font",
+				"List.font",
+				"Table.font",
+				"TabbedPane.font",
+				"Tree.font",
+				"Menu.font",
+				"MenuItem.font",
+				"CheckBoxMenuItem.font",
+				"RadioButtonMenuItem.font",
+				"ProgressBar.font",
+				"ComboBox.font",
+				"ToolTip.font",
+				"TitledBorder.font"
+		};
+		putCustomFont(FontUtil.getCustomFont(), keys);
+	}
+
+	private static void initializeCustomColors() {
 		Color color = Color.WHITE;
-		UIManager.put("Button.opaque", false);
+		String[] keys = {
+				"Label.foreground",
+				"TextArea.foreground",
+				"TextPane.foreground",
+				"Button.foreground",
+				"ToggleButton.foreground",
+				"RadioButton.foreground",
+				"CheckBox.foreground",
+				"List.foreground",
+				"Table.foreground",
+				"TabbedPane.foreground",
+				"Tree.textForeground",
+				"Menu.foreground",
+				"MenuItem.foreground",
+				"MenuItem.acceleratorForeground",
+				"MenuItem.acceleratorSelectionForeground",
+				"CheckBoxMenuItem.foreground",
+				"CheckBoxMenuItem.acceleratorForeground",
+				"CheckBoxMenuItem.acceleratorSelectionForeground",
+				"RadioButtonMenuItem.foreground",
+				"RadioButtonMenuItem.acceleratorForeground",
+				"RadioButtonMenuItem.acceleratorSelectionForeground",
+				"ToolTip.foreground",
+				"TitledBorder.titleColor"
+		};
+		putCustomCover(color, keys);
+	}
 
-		UIManager.put("Label.foreground", color);
-		UIManager.put("Button.foreground", color);
-		UIManager.put("Button.border", BorderFactory.createEmptyBorder());
-		UIManager.put("List.foreground", color);
-		UIManager.put("Table.foreground", color);
-		UIManager.put("TabbedPane.foreground", color);
-		UIManager.put("PopupMenu.border", new EmptyBorder(0, 0, 0, 0));
-
-		UIManager.put("MenuItem.acceleratorForeground", color);
-		UIManager.put("MenuItem.acceleratorSelectionForeground", color);
-
+	private static void initializeCustomMenus() {
 		UIManager.put("Menu.arrowIcon", ImageUtil.getImageIconFrom(Icons.get("arrowRightOtherWhite", 1)));
+		UIManager.put("Menu.background", Color.BLACK);
+		UIManager.put("MenuItem.background", Color.BLACK);
+		UIManager.put("CheckBoxMenuItem.background", Color.BLACK);
+		UIManager.put("RadioButtonMenuItem.background", Color.BLACK);
+		UIManager.put("Separator.background", Color.RED);
+		UIManager.put("PopupMenu.border", new EmptyBorder(0, 0, 0, 0));
+	}
 
-		UIManager.put("CheckBoxMenuItem.acceleratorForeground", color);
-		UIManager.put("CheckBoxMenuItem.acceleratorSelectionForeground", color);
+	private static void initializeCustomButtons() {
+		UIManager.put("Button.opaque", false);
+		UIManager.put("Button.border", BorderFactory.createEmptyBorder());
+	}
 
-		UIManager.put("RadioButtonMenuItem.acceleratorForeground", color);
-		UIManager.put("RadioButtonMenuItem.acceleratorSelectionForeground", color);
+	private static void putCustomCover(Color color, String...keys) {
+		for (String key : keys) {
+			UIManager.put(key, color);
+		}
+	}
 
+	private static void putCustomFont(Font customFont, String...keys) {
+		for (String key : keys) {
+			UIManager.put(key, FontUtil.getCustomFont());
+		}
 	}
 
 	private static void downloadResourceFolder(String version) throws IOException {

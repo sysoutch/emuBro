@@ -29,6 +29,9 @@ public class MessageConstants {
 	public static final String MNU_FILE = "mnuFile";
 	public static final String MNU_VIEW = "mnuView";
 	public static final String MNU_GAMES = "mnuGames";
+	public static final String MNU_THEMES = "mnuThemes";
+	public static final String ITM_MANAGE_THEMES = "itmManageThemes";
+	public static final String MNU_CHANGE_THEME = "mnuChangeTheme";
 	public static final String MNU_PLUGINS = "mnuPlugins";
 	public static final String ITM_REFRESH_PLUGINS = "itmRefreshPlugins";
 	public static final String MNU_FRIENDS = "mnuFriends";
@@ -362,5 +365,4 @@ public class MessageConstants {
 	public static final String WELCOME = "welcome";
 	public static final String FINISH = "finish";
 	public static final String EMUBRO_DISCORD = "emuBroDiscord";
-
 }

@@ -3,16 +3,20 @@ package ch.sysout.emubro.ui;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.font.TextAttribute;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
@@ -43,6 +47,7 @@ import javax.swing.UIManager;
 import javax.swing.border.Border;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.plaf.basic.BasicComboBoxUI;
 
 import com.jgoodies.forms.factories.Paddings;
 import com.jgoodies.forms.layout.CellConstraints;
@@ -65,6 +70,7 @@ import ch.sysout.emubro.impl.event.BroFilterEvent;
 import ch.sysout.emubro.impl.filter.BroCriteria;
 import ch.sysout.emubro.impl.model.PlatformConstants;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.JCustomButton;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
@@ -115,6 +121,10 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 
 	private JMenuItem itmClearTagFilter;
 
+	protected Color colorSearchEmpty = Color.LIGHT_GRAY;
+
+	private JButton btnResizeFilter = new JCustomButton();
+
 	public GameFilterPanel(Explorer explorer) {
 		super(new BorderLayout());
 		this.explorer = explorer;
@@ -136,7 +146,7 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 			}
 		});
 		btnClose = new JButton(icoSearch);
-		btnTags = new JButton("Tags", icoAdvancedSearch);
+		btnTags = new JCustomButton("Tags", icoAdvancedSearch);
 		btnTags.addActionListener(new ActionListener() {
 
 			@Override
@@ -155,15 +165,92 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 
 		icoClose = ImageUtil.getImageIconFrom(Icons.get("remove", size, size));
 		// txtSearchGame.setFont(ScreenSizeUtil.defaultFont());
-
+		initComponents();
 		createUI();
 	}
 
+	private void initComponents() {
+		cmbPlatforms = new JComboBox<Platform>();
+		cmbPlatforms.setEditable(true);
+		cmbPlatforms.setRenderer(new CustomComboBoxRenderer());
+		cmbPlatforms.setEditor(new CustomComboBoxEditor());
+		cmbPlatforms.setUI(new BasicComboBoxUI() {
+			@Override
+			protected JButton createArrowButton() {
+				return new JButton() {
+					private static final long serialVersionUID = 1L;
+
+					@Override
+					public int getWidth() {
+						return 0;
+					}
+				};
+			}
+		});
+		cmbPlatforms.remove(cmbPlatforms.getComponent(0));
+		cmbPlatforms.setBorder(BorderFactory.createEmptyBorder());
+		cmbPlatforms.addItem(new EmptyPlatform());
+		cmbPlatforms.getEditor().getEditorComponent().addMouseListener(new MouseAdapter() {
+			@Override
+			public void mousePressed(MouseEvent e) {
+				super.mousePressed(e);
+				if (cmbPlatforms.isPopupVisible()) {
+					cmbPlatforms.hidePopup();
+				} else {
+					cmbPlatforms.showPopup();
+					cmbPlatforms.getEditor().selectAll();
+				}
+			}
+		});
+		cmbPlatforms.addFocusListener(new FocusAdapter() {
+			@Override
+			public void focusGained(FocusEvent e) {
+				super.focusGained(e);
+				cmbPlatforms.showPopup();
+			}
+		});
+		cmbPlatforms.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if (!dontFireEvents) {
+					Object selectedItem = cmbPlatforms.getSelectedItem();
+					if (selectedItem instanceof Platform) {
+						int platformId = ((Platform) selectedItem).getId();
+						fireEvent(new BroFilterEvent(platformId, getCriteria()));
+					}
+				}
+			}
+		});
+
+		btnResizeFilter.setFocusable(false);
+		btnResizeFilter.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseEntered(MouseEvent e) {
+				super.mouseEntered(e);
+				btnResizeFilter.setCursor(Cursor.getPredefinedCursor(Cursor.E_RESIZE_CURSOR | Cursor.W_RESIZE_CURSOR));
+			}
+
+			@Override
+			public void mouseExited(MouseEvent e) {
+				super.mouseExited(e);
+				btnResizeFilter.setCursor(null);
+			}
+		});
+
+		int size = ScreenSizeUtil.is3k() ? 16 : 12;
+		btnResizeFilter.setIcon(ImageUtil.getImageIconFrom(Icons.get("barsWhiteVertical", size, size)));
+	}
+
 	private void createUI() {
+		setOpaque(false);
+
 		Border textFieldBorder = txtSearchGame.getBorder();
 		txtSearchGame.setPreferredSize(new Dimension(ScreenSizeUtil.adjustValueToResolution(256), 0));
 		txtSearchGame.setBorder(BorderFactory.createEmptyBorder());
-		pnlSearchFieldInner.setBorder(textFieldBorder);
+		txtSearchGame.setOpaque(false);
+		pnlSearchField.setOpaque(false);
+		pnlSearchFieldInner.setOpaque(false);
+		//		pnlSearchFieldInner.setBorder(textFieldBorder);
 
 		// pnlSearchFieldInner.setBackground(getBackground());
 		// ConstantSize spaceTopBottom = new ConstantSize(1, Unit.DIALOG_UNITS);
@@ -174,7 +261,7 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 		btnClose.setContentAreaFilled(false);
 		btnClose.setFocusable(false);
 		btnClose.setFocusPainted(false);
-		btnClose.setOpaque(true);
+		btnClose.setOpaque(false);
 		btnClose.setBackground(txtSearchGame.getBackground());
 		btnClose.addActionListener(new ActionListener() {
 
@@ -182,7 +269,7 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 			public void actionPerformed(ActionEvent e) {
 				if (btnClose.getIcon() == icoClose) {
 					txtSearchGame.setText(Messages.get(MessageConstants.SEARCH_GAME) + " (Ctrl+F)");
-					txtSearchGame.setForeground(Color.GRAY);
+					txtSearchGame.setForeground(colorSearchEmpty);
 					fireRequestFocusInWindowEvent();
 				}
 			}
@@ -199,41 +286,11 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 		btnFilterGroups.addMouseListener(UIUtil.getMouseAdapter());
 
 		pnlSearchField.setBorder(BorderFactory.createEmptyBorder());
-		txtSearchGame.setForeground(Color.GRAY);
+		txtSearchGame.setForeground(colorSearchEmpty);
 
 		pnlSearchFieldInner.add(txtSearchGame);
 		pnlSearchFieldInner.add(btnClose, BorderLayout.EAST);
 		// pnlSearchField.add(pnlSearchFieldInner);
-
-		cmbPlatforms = new JComboBox<Platform>() {
-			//			private static final long serialVersionUID = 1L;
-			//
-			//			@Override
-			//			protected void paintComponent(Graphics g) {
-			//				super.paintComponent(g);
-			//				BufferedImage background = IconStore.getButtonBarBackgroundImage();
-			//				if (background != null) {
-			//					Graphics2D g2d = (Graphics2D) g.create();
-			//					int w = getWidth();
-			//					int h = getHeight();
-			//					g2d.drawImage(background, 0, 0, w, h, this);
-			//					g2d.dispose();
-			//				}
-			//			}
-		};
-		cmbPlatforms.setOpaque(false);
-		cmbPlatforms.setBorder(BorderFactory.createEmptyBorder());
-		cmbPlatforms.addItem(new EmptyPlatform());
-		cmbPlatforms.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				if (!dontFireEvents) {
-					int platformId = ((Platform) cmbPlatforms.getSelectedItem()).getId();
-					fireEvent(new BroFilterEvent(platformId, getCriteria()));
-				}
-			}
-		});
 
 		FormLayout layout = new FormLayout("min:grow",
 				"fill:pref");
@@ -244,6 +301,7 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 
 		JPanel pnlWrapper = new JPanel(new BorderLayout());
 		pnlWrapper.setOpaque(false);
+		pnlWrapper.add(btnResizeFilter, BorderLayout.WEST);
 		pnlWrapper.add(pnlSearchFieldInner);
 		pnlWrapper.add(btnTags, BorderLayout.EAST);
 
@@ -331,7 +389,7 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 				if (txtSearchGame.getText().isEmpty()) {
 					txtSearchGame.getDocument().removeDocumentListener(documentListener);
 					txtSearchGame.setText(Messages.get(MessageConstants.SEARCH_GAME) + " (Ctrl+F)");
-					txtSearchGame.setForeground(Color.GRAY);
+					txtSearchGame.setForeground(colorSearchEmpty);
 					txtSearchGame.getDocument().addDocumentListener(documentListener);
 				}
 			}
@@ -385,7 +443,11 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 	}
 
 	public int getSelectedPlatformId() {
-		return ((Platform) cmbPlatforms.getSelectedItem()).getId();
+		Object selectedItem = cmbPlatforms.getSelectedItem();
+		if (selectedItem instanceof Platform) {
+			return ((Platform) selectedItem).getId();
+		}
+		return PlatformConstants.NO_PLATFORM;
 	}
 
 	public Criteria getCriteria() {
@@ -540,7 +602,7 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 				dontFireEvents = true;
 				if (criteria.getText().isEmpty()) {
 					txtSearchGame.setText(Messages.get(MessageConstants.SEARCH_GAME) + " (Ctrl+F)");
-					txtSearchGame.setForeground(Color.GRAY);
+					txtSearchGame.setForeground(Color.WHITE);
 				} else {
 					txtSearchGame.setText(criteria.getText());
 					txtSearchGame.setForeground(UIManager.getColor("Label.foreground"));
@@ -739,7 +801,7 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 	@Override
 	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
-		BufferedImage background = IconStore.current().getButtonBarBackgroundImage();
+		BufferedImage background = IconStore.current().getCurrentTheme().getButtonBar().getImage();
 		if (background != null) {
 			Graphics2D g2d = (Graphics2D) g.create();
 			int w = getWidth();

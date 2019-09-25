@@ -33,6 +33,7 @@ import ch.sysout.emubro.api.event.EmulatorEvent;
 import ch.sysout.emubro.api.event.GameAddedEvent;
 import ch.sysout.emubro.api.event.GameRemovedEvent;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.JCustomButton;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
@@ -42,17 +43,17 @@ import ch.sysout.util.UIUtil;
 public class BrowseComputerPanel extends JPanel implements GameListener, EmulatorListener {
 	private static final long serialVersionUID = 1L;
 	private JLabel lblDragDropCover = new JLabel(Messages.get(MessageConstants.DRAG_AND_DROP_FOLDER_HERE));
-	private JButton btnAutoSearch = new JButton(Messages.get(MessageConstants.SEARCH_NOW));
-	private JButton btnCustomSearch = new JButton(Messages.get(MessageConstants.SEARCH_CUSTOM));
-	private JButton btnQuickSearch = new JButton(Messages.get(MessageConstants.SEARCH_QUICK));
-	private JButton btnLastSearch = new JButton(Messages.get(MessageConstants.SEARCH_LAST));
+	private JButton btnAutoSearch = new JCustomButton(Messages.get(MessageConstants.SEARCH_NOW));
+	private JButton btnCustomSearch = new JCustomButton(Messages.get(MessageConstants.SEARCH_CUSTOM));
+	private JButton btnQuickSearch = new JCustomButton(Messages.get(MessageConstants.SEARCH_QUICK));
+	private JButton btnLastSearch = new JCustomButton(Messages.get(MessageConstants.SEARCH_LAST));
 	private JCheckBox chkGameSearch = new JCheckBox(Messages.get(MessageConstants.SEARCH_GAMES));
 	private JCheckBox chkEmulatorSearch = new JCheckBox(Messages.get(MessageConstants.SEARCH_EMULATORS));
-	private JButton btnQuickSearchNow = new JButton(MessageConstants.SEARCH_NOW_SHORT, ImageUtil.getImageIconFrom(Icons.get("search", 16, 16)));
+	private JButton btnQuickSearchNow = new JCustomButton(MessageConstants.SEARCH_NOW_SHORT, ImageUtil.getImageIconFrom(Icons.get("search", 16, 16)));
 	private JButton lnkSearchResults = new JLinkButton(Messages.get(MessageConstants.SEARCH_LOGS));
 	private JButton lnkSearchSettings = new JLinkButton(Messages.get(MessageConstants.SEARCH_PROGRESS_SETTINGS));
-	private JButton btnUncategorized = new JButton(Messages.get(MessageConstants.ARCHIVES_AND_IMAGE_FILES, 0));
-	private JButton btnSetupFiles = new JButton(Messages.get(MessageConstants.SETUP_FILES, 0));
+	private JButton btnUncategorized = new JCustomButton(Messages.get(MessageConstants.ARCHIVES_AND_IMAGE_FILES, 0));
+	private JButton btnSetupFiles = new JCustomButton(Messages.get(MessageConstants.SETUP_FILES, 0));
 
 	private JButton btnCustomSearchNow;
 
@@ -82,6 +83,7 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 	private void createUI() {
 		setLayout(new BorderLayout());
 		setBorder(Paddings.TABBED_DIALOG);
+		setOpaque(false);
 
 		pnlOutter = new JPanel(new BorderLayout());
 		pnlOutter.setOpaque(false);
@@ -139,14 +141,16 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 		add(pnlLinks, BorderLayout.SOUTH);
 
 		tree = new FileTree();
-		btnCustomSearchNow = new JButton(Messages.get(MessageConstants.SEARCH_NOW_SHORT));
+		btnCustomSearchNow = new JCustomButton(Messages.get(MessageConstants.SEARCH_NOW_SHORT));
 		btnCustomSearchNow.setIcon(ImageUtil.getImageIconFrom(Icons.get("search", 24, 24)));
 		UIUtil.doHover(false, btnCustomSearchNow);
 		btnCustomSearchNow.addMouseListener(UIUtil.getMouseAdapter());
 		pnlFileTree = new JPanel(new BorderLayout());
+		pnlFileTree.setOpaque(false);
 		pnlFileTree.add(tree);
 		btnCustomSearchNow.setHorizontalAlignment(SwingConstants.LEFT);
 		JPanel pnlButton = new JPanel(new WrapLayout(FlowLayout.LEFT));
+		pnlButton.setOpaque(false);
 		pnlButton.add(btnCustomSearchNow);
 		pnlFileTree.add(pnlButton, BorderLayout.SOUTH);
 
@@ -299,13 +303,13 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 
 	private JPanel createFolderLinksPanel() {
 		JPanel pnl = new JPanel();
-		Component btnFolder = new JButton("Folder 1");
-		Component btnFolder2 = new JButton("Folder 2");
-		Component btnFolder3 = new JButton("Folder 3");
-		Component btnFolder4 = new JButton("Folder 4");
-		Component btnFolder5 = new JButton("Folder 5");
-		Component btnFolder6 = new JButton("Folder 6");
-		Component btnFolder7 = new JButton("Folder 7");
+		Component btnFolder = new JCustomButton("Folder 1");
+		Component btnFolder2 = new JCustomButton("Folder 2");
+		Component btnFolder3 = new JCustomButton("Folder 3");
+		Component btnFolder4 = new JCustomButton("Folder 4");
+		Component btnFolder5 = new JCustomButton("Folder 5");
+		Component btnFolder6 = new JCustomButton("Folder 6");
+		Component btnFolder7 = new JCustomButton("Folder 7");
 		pnl.add(btnFolder);
 		pnl.add(btnFolder2);
 		pnl.add(btnFolder3);

@@ -3,11 +3,11 @@ package ch.sysout.emubro.ui;
 import javax.swing.Action;
 import javax.swing.DefaultButtonModel;
 import javax.swing.Icon;
-import javax.swing.JButton;
 
+import ch.sysout.ui.util.JCustomButton;
 import ch.sysout.util.UIUtil;
 
-public class ButtonBarButton extends JButton {
+public class ButtonBarButton extends JCustomButton {
 	private static final long serialVersionUID = 1L;
 
 	private Icon icon;

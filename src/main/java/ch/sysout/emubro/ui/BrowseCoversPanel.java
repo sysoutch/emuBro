@@ -1,6 +1,5 @@
 package ch.sysout.emubro.ui;
 
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.dnd.DropTarget;
@@ -33,6 +32,7 @@ import com.jgoodies.forms.layout.FormLayout;
 import ch.sysout.emubro.api.event.GameSelectionEvent;
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.JCustomButton;
 import ch.sysout.util.Messages;
 import ch.sysout.util.UIUtil;
 
@@ -65,7 +65,6 @@ public class BrowseCoversPanel extends JPanel {
 		WrapLayout wl = new WrapLayout();
 		wl.setAlignment(FlowLayout.LEFT);
 		pnlCovers.setLayout(wl);
-		pnlCovers.setBackground(Color.WHITE);
 		pnlCovers.setBorder(BorderFactory.createEmptyBorder());
 		pnlCovers.add(lblDragDropCover);
 		spCovers.getVerticalScrollBar().setUnitIncrement(16);
@@ -74,19 +73,24 @@ public class BrowseCoversPanel extends JPanel {
 		add(new JSeparator(SwingConstants.VERTICAL), cc.xy(2, 1));
 		add(createOptionPanel(), cc.xy(3, 1));
 
+		setOpaque(false);
+		spCovers.setOpaque(false);
+		spCovers.getViewport().setOpaque(false);
+		pnlCovers.setOpaque(false);
 	}
 
 	private JComponent createOptionPanel() {
 		pnlOptions = new JPanel();
+		pnlOptions.setOpaque(false);
 		pnlOptions.setBorder(Paddings.TABBED_DIALOG);
 		FormLayout layout = new FormLayout("pref, pref, pref",
 				"fill:pref, $rgap, fill:pref, fill:min:grow");
 		pnlOptions.setLayout(layout);
 		CellConstraints cc = new CellConstraints();
-		btnSetCoverForGame = new JButton(Messages.get("setCover"));
-		btnNextGame = new JButton(">");
-		btnPreviousGame = new JButton("<");
-		btnClearList = new JButton(Messages.get("clearList"));
+		btnSetCoverForGame = new JCustomButton(Messages.get("setCover"));
+		btnNextGame = new JCustomButton(">");
+		btnPreviousGame = new JCustomButton("<");
+		btnClearList = new JCustomButton(Messages.get("clearList"));
 
 		btnSetCoverForGame.setEnabled(false);
 		btnNextGame.setEnabled(false);
@@ -100,6 +104,8 @@ public class BrowseCoversPanel extends JPanel {
 
 		final JScrollPane sp = new JScrollPane(pnlOptions, ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS,
 				ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+		sp.setOpaque(false);
+		sp.getViewport().setOpaque(false);
 		sp.setBorder(BorderFactory.createEmptyBorder());
 		sp.getVerticalScrollBar().setUnitIncrement(16);
 		sp.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener() {

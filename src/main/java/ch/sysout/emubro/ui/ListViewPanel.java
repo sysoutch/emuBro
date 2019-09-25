@@ -95,7 +95,6 @@ import ch.sysout.emubro.impl.model.EmulatorConstants;
 import ch.sysout.emubro.impl.model.GameConstants;
 import ch.sysout.emubro.impl.model.PlatformConstants;
 import ch.sysout.emubro.util.MessageConstants;
-import ch.sysout.util.FontUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 import ch.sysout.util.UIUtil;
@@ -605,11 +604,13 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 			}
 
 			private void checkFontAndFontSize(JList<?> list, BroGame game, JLabel label, boolean isSelected) {
-				Font font = FontUtil.getCustomFont();
-				label.setFont(font);
+				// uncomment to override current font
+				//				Font font = FontUtil.getCustomFont();
+				//				label.setFont(font);
 				if (viewManager.getFontSize() <= 0) {
 					viewManager.setFontSize(label.getFont().getSize());
 				}
+				//				UIUtil.setForegroundDependOnBackground(IconStore.current().getCurrentTheme().getView().getColor(), label);
 				if (game.isFavorite()) {
 					if (!isSelected) {
 						label.setForeground(colorFavorite);
@@ -2070,14 +2071,24 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	@Override
 	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
-		BufferedImage background = IconStore.current().getBackgroundImage();
+		BufferedImage background = IconStore.current().getCurrentTheme().getView().getImage();
 		if (background != null) {
 			Graphics2D g2d = (Graphics2D) g.create();
 			int panelWidth = getWidth();
 			int panelHeight = getHeight();
-			g2d.drawImage(background, 0, 0, panelWidth, panelHeight, this);
+			int imgWidth = background.getWidth();
+			int imgHeight = background.getHeight();
 
-			BufferedImage imgTransparentOverlay = IconStore.current().getTransparentBackgroundOverlayImage();
+			g2d.setColor(IconStore.current().getCurrentTheme().getView().getColor());
+			g2d.fillRect(0, 0, panelWidth, panelHeight);
+
+			boolean shouldScale = false;
+			if (shouldScale) {
+				g2d.drawImage(background, 0, 0, panelWidth, panelHeight, this);
+			} else {
+				g2d.drawImage(background, 0, 0, imgWidth, imgHeight, this);
+			}
+			BufferedImage imgTransparentOverlay = IconStore.current().getCurrentTheme().getTransparentBackgroundOverlayImage();
 			if (imgTransparentOverlay != null) {
 				int width = imgTransparentOverlay.getWidth();
 				int height = imgTransparentOverlay.getHeight();

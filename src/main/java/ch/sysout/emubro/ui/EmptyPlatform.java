@@ -160,7 +160,7 @@ public class EmptyPlatform implements Platform {
 
 	@Override
 	public String toString() {
-		return "<html><strong>" + Messages.get("emptyPlatform") + "</strong></html>";
+		return Messages.get("emptyPlatform");
 	}
 
 	@Override

@@ -6,6 +6,8 @@ import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusAdapter;
@@ -13,6 +15,7 @@ import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.font.TextAttribute;
+import java.awt.image.BufferedImage;
 import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 import java.util.HashMap;
@@ -55,6 +58,8 @@ import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.impl.model.EmulatorConstants;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.JCustomButton;
+import ch.sysout.ui.util.JCustomToggleButton;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
@@ -64,7 +69,20 @@ import ch.sysout.util.UIUtil;
 public class GamePropertiesDialog extends JDialog {
 	private static final long serialVersionUID = 1L;
 
-	private JTabbedPane tpMain = new JTabbedPane();
+	private JTabbedPane tpMain = new JTabbedPane() {
+		@Override
+		protected void paintComponent(Graphics g) {
+			super.paintComponent(g);
+			BufferedImage background = IconStore.current().getCurrentTheme().getNavigationPane().getImage();
+			if (background != null) {
+				Graphics2D g2d = (Graphics2D) g.create();
+				int panelWidth = getWidth();
+				int panelHeight = getHeight();
+				g2d.drawImage(background, 0, 0, panelWidth, panelHeight, this);
+				g2d.dispose();
+			}
+		}
+	};
 	private JPanel pnlMain = new ScrollablePanel();
 	private JTextArea txtGamePath;
 	private JLabel txtGameFilename;
@@ -95,6 +113,7 @@ public class GamePropertiesDialog extends JDialog {
 		initComponents();
 		addListeners();
 		createUI();
+		//		setUndecorated(true);
 		pack();
 		setMinimumSize(getPreferredSize());
 		SwingUtilities.invokeLater(new Runnable() {
@@ -137,17 +156,20 @@ public class GamePropertiesDialog extends JDialog {
 	}
 
 	private void initComponents() {
-		btnOk = new JButton(Messages.get(MessageConstants.OK));
-		btnCancel = new JButton(Messages.get(MessageConstants.CANCEL));
+		btnOk = new JCustomButton(Messages.get(MessageConstants.OK));
+		btnCancel = new JCustomButton(Messages.get(MessageConstants.CANCEL));
 
 		createMainPanel();
 		FormLayout layout = new FormLayout("min:grow", "fill:min:grow");
 		JPanel pnl = new JPanel();
+		pnl.setOpaque(false);
 		pnl.setLayout(layout);
 		pnl.setMinimumSize(new Dimension(0, 0));
 		CellConstraints cc = new CellConstraints();
 		pnl.add(pnlMain, cc.xy(1, 1));
 		JScrollPane sp = new JScrollPane(pnl);
+		sp.setOpaque(false);
+		sp.getViewport().setOpaque(false);
 		sp.setBorder(BorderFactory.createEmptyBorder());
 		sp.getVerticalScrollBar().setUnitIncrement(16);
 		// JScrollPane spMain = new JScrollPane(pnl);
@@ -173,15 +195,18 @@ public class GamePropertiesDialog extends JDialog {
 
 	private void createUI() {
 		getRootPane().setBorder(Paddings.TABBED_DIALOG);
+		tpMain.setOpaque(false);
+		tpMain.setUI(new CustomTabbedPaneUI(Color.GREEN, Color.BLUE));
 		add(tpMain, BorderLayout.CENTER);
-
+		//		tpMain.getRootPane().setOpaque(false);
 		FormLayout layout = new FormLayout("24dlu:grow, $button, $rgap, $button, $rgap, $button", "$rgap, fill:pref");
 		layout.setColumnGroup(2, 4, 6);
 		JPanel pnlFooter = new JPanel(layout);
+		pnlFooter.setOpaque(false);
 		CellConstraints cc = new CellConstraints();
 		pnlFooter.add(btnOk, cc.xy(2, 2));
 		pnlFooter.add(btnCancel, cc.xy(4, 2));
-		pnlFooter.add(btnApply = new JButton(Messages.get(MessageConstants.APPLY)), cc.xy(6, 2));
+		pnlFooter.add(btnApply = new JCustomButton(Messages.get(MessageConstants.APPLY)), cc.xy(6, 2));
 		btnApply.setEnabled(false);
 		layout.setColumnGroup(2, 4, 6);
 		add(pnlFooter, BorderLayout.SOUTH);
@@ -192,6 +217,7 @@ public class GamePropertiesDialog extends JDialog {
 				"fill:default, fill:default:grow, $ugap, fill:pref, $ugap, fill:pref, $rgap, fill:pref, fill:$ugap, fill:pref, $ugap,"
 						+ "fill:pref, $rgap, top:pref, $ugap, fill:pref, $ugap, fill:pref, $rgap, fill:pref, $rgap, fill:pref, fill:min");
 		pnlMain.setLayout(layout);
+		pnlMain.setOpaque(false);
 		pnlMain.setBorder(Paddings.TABBED_DIALOG);
 		CellConstraints cc = new CellConstraints();
 		Platform platform = explorer.getPlatform(explorer.getCurrentGames().get(0).getPlatformId());
@@ -199,6 +225,8 @@ public class GamePropertiesDialog extends JDialog {
 		lblIcon.setHorizontalAlignment(SwingConstants.LEFT);
 		txtGameName = new JTextArea();
 		JScrollPane spGameName = new JScrollPane(txtGameName);
+		spGameName.setOpaque(false);
+		spGameName.getViewport().setOpaque(false);
 		pnlMain.add(spGameName, cc.xywh(3, 1, layout.getColumnCount() - 2, 2));
 		txtGameName.setCaretPosition(0);
 		txtGameName.setLineWrap(true);
@@ -223,7 +251,7 @@ public class GamePropertiesDialog extends JDialog {
 			emulatorId = EmulatorConstants.NO_EMULATOR;
 		}
 		pnlMain.add(new JLabel(emulatorName), cc.xy(3, 8));
-		pnlMain.add(btnModify = new JToggleButton(Messages.get(MessageConstants.MODIFY)), cc.xy(5, 8));
+		pnlMain.add(btnModify = new JCustomToggleButton(Messages.get(MessageConstants.MODIFY)), cc.xy(5, 8));
 
 		int rowHeight = ScreenSizeUtil.adjustValueToResolution(32);
 		EmulatorTableModel model = new EmulatorTableModel(platform.getEmulators(), emulatorId);

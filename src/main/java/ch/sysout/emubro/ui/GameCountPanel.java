@@ -10,7 +10,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionAdapter;
-import java.awt.image.BufferedImage;
 
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
@@ -35,7 +34,7 @@ import ch.sysout.util.UIUtil;
 
 public class GameCountPanel extends JPanel implements GameListener, DetailsPaneListener, LanguageListener {
 	private static final long serialVersionUID = 1L;
-	private JLabel lblGameCount = new JLabel2("");
+	private JLabel lblGameCount = new JLabel("");
 	private JLinkButton lnkSystemInformations = new JLinkButton("System informations");
 	private ProgressPanel pnlProgress;
 	JButton btnShowDetailsPane = new JButton();
@@ -56,7 +55,6 @@ public class GameCountPanel extends JPanel implements GameListener, DetailsPaneL
 	}
 
 	private void initComponents() {
-		setTextColors(IconStore.current().getButtonBarBackgroundImage());
 		lnkSystemInformations.addActionListener(new ActionListener() {
 
 			@Override
@@ -121,10 +119,6 @@ public class GameCountPanel extends JPanel implements GameListener, DetailsPaneL
 						h + (e.getYOnScreen() - (location.y + h)) + spaceToBorderY);
 			}
 		});
-	}
-
-	private void setTextColors(BufferedImage imgButtonBarBackground) {
-		UIUtil.setForegroundDependOnBackground(imgButtonBarBackground, 0, 0, lblGameCount);
 	}
 
 	private void initializeProgressPanel() {

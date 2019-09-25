@@ -42,7 +42,7 @@ public class ConfigWizardDialog extends JDialog implements ActionListener {
 	private JPanel pnlContent = new JPanel();
 	private JPanel pnlFooter = new JPanel();
 
-	private JLabel lblStep1 = new JLabel2(Messages.get(MessageConstants.WELCOME));
+	private JLabel lblStep1 = new JLabel(Messages.get(MessageConstants.WELCOME));
 	private JLinkButton lnkStep2 = new JLinkButton(Messages.get(MessageConstants.PLATFORMS));
 	private JLinkButton lnkStep3 = new JLinkButton(Messages.get(MessageConstants.EMULATORS));
 	private JLinkButton lnkStep4 = new JLinkButton(Messages.get(MessageConstants.FINISH));
@@ -150,7 +150,7 @@ public class ConfigWizardDialog extends JDialog implements ActionListener {
 		JLabel lblIcon = new JLabel(ImageUtil.getImageIconFrom(Icons.get("applicationIcon", 48, 48)));
 		pnlHeader.add(lblIcon, cc.xy(1, 1));
 
-		pnlHeader.add(new JLabel2(HEADER_TITLE), cc.xy(3, 1));
+		pnlHeader.add(new JLabel(HEADER_TITLE), cc.xy(3, 1));
 
 		pnlHeader.setBackground(UIManager.getColor("List.background"));
 	}
@@ -257,7 +257,7 @@ public class ConfigWizardDialog extends JDialog implements ActionListener {
 
 		public PlatformConfigPanel() {
 			super();
-			add(new JLabel2(message));
+			add(new JLabel(message));
 		}
 	}
 
@@ -281,7 +281,7 @@ public class ConfigWizardDialog extends JDialog implements ActionListener {
 
 		public CoverConfigPanel() {
 			super();
-			add(new JLabel2(message));
+			add(new JLabel(message));
 		}
 	}
 
@@ -293,7 +293,7 @@ public class ConfigWizardDialog extends JDialog implements ActionListener {
 
 		public FinishConfigPanel() {
 			super();
-			add(new JLabel2(message));
+			add(new JLabel(message));
 		}
 	}
 
