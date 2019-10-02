@@ -39,6 +39,8 @@ import com.jgoodies.forms.layout.FormLayout;
 import com.jgoodies.forms.layout.RowSpec;
 
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.JCustomButton;
+import ch.sysout.ui.util.JCustomToggleButton;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
@@ -51,13 +53,13 @@ public class HelpFrame extends JFrame implements ActionListener {
 	int size = ScreenSizeUtil.is3k() ? 24 : 16;
 	private JTextField txtSearch = new JTextField("Search help content (Ctrl+F)");
 
-	private JButton btnSearch = new JButton(ImageUtil.getImageIconFrom(Icons.get("search", 16, 16)));
-	private JButton btnHome = new JButton(ImageUtil.getImageIconFrom(Icons.get("home", size, size)));
-	private JButton btnPrevious = new JButton(ImageUtil.getImageIconFrom(Icons.get("previous", size, size)));
-	private JButton btnNext = new JButton(ImageUtil.getImageIconFrom(Icons.get("next", size, size)));
-	private JButton btnPrint = new JButton(ImageUtil.getImageIconFrom(Icons.get("print", size, size)));
-	private JButton btnSave = new JButton(ImageUtil.getImageIconFrom(Icons.get("save", size, size)));
-	private JButton btnClose = new JButton(Messages.get("close"));
+	private JButton btnSearch = new JCustomButton(ImageUtil.getImageIconFrom(Icons.get("search", 16, 16)));
+	private JButton btnHome = new JCustomButton(ImageUtil.getImageIconFrom(Icons.get("home", size, size)));
+	private JButton btnPrevious = new JCustomButton(ImageUtil.getImageIconFrom(Icons.get("previous", size, size)));
+	private JButton btnNext = new JCustomButton(ImageUtil.getImageIconFrom(Icons.get("next", size, size)));
+	private JButton btnPrint = new JCustomButton(ImageUtil.getImageIconFrom(Icons.get("print", size, size)));
+	private JButton btnSave = new JCustomButton(ImageUtil.getImageIconFrom(Icons.get("save", size, size)));
+	private JButton btnClose = new JCustomButton(Messages.get("close"));
 	private JEditorPane edit1;
 	private JScrollPane sp;
 	private JCheckBox chkAlwayOnTop = new JCheckBox(Messages.get(MessageConstants.ALWAYS_ON_TOP));
@@ -220,10 +222,8 @@ public class HelpFrame extends JFrame implements ActionListener {
 		for (HelpTopic topic : topics) {
 			layout.appendRow(RowSpec.decode("fill:pref"));
 			rowCount++;
-			JToggleButton btn = new JToggleButton(topic.getName());
+			JToggleButton btn = new JCustomToggleButton(topic.getName());
 			grp.add(btn);
-			UIUtil.doHover(false, btn);
-			btn.addMouseListener(UIUtil.getMouseAdapterKeepHoverWhenSelected());
 			btn.addFocusListener(UIUtil.getFocusAdapterKeepHoverWhenSelected());
 			btn.setHorizontalAlignment(SwingConstants.LEFT);
 			pnlWrapper.add(btn, cc.xy(1, rowCount));
@@ -234,10 +234,8 @@ public class HelpFrame extends JFrame implements ActionListener {
 			for (HelpPage page : topic.getHelpPages()) {
 				layout.appendRow(RowSpec.decode("fill:pref"));
 				rowCount++;
-				JButton btnPage = new JButton(page.getName());
+				JButton btnPage = new JCustomButton(page.getName());
 				grp.add(btnPage);
-				UIUtil.doHover(false, btnPage);
-				btnPage.addMouseListener(UIUtil.getMouseAdapterKeepHoverWhenSelected());
 				btnPage.addFocusListener(UIUtil.getFocusAdapterKeepHoverWhenSelected());
 				btnPage.setHorizontalAlignment(SwingConstants.LEFT);
 				pnlWrapper.add(btnPage, cc.xy(1, rowCount));
@@ -350,7 +348,6 @@ public class HelpFrame extends JFrame implements ActionListener {
 			for (Entry<AbstractButton, HelpTopic> t : map.entrySet()) {
 				if (t.getValue() == lastExpandedTopic) {
 					AbstractButton btn = t.getKey();
-					UIUtil.doHover(false, btn);
 				}
 			}
 			for (HelpPage page : lastExpandedTopic.getHelpPages()) {

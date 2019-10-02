@@ -173,10 +173,6 @@ import javax.xml.transform.stream.StreamResult;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.filefilter.IOFileFilter;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.HttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.message.BasicNameValuePair;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -267,6 +263,7 @@ import ch.sysout.emubro.ui.ViewPanelManager;
 import ch.sysout.emubro.ui.properties.DefaultEmulatorListener;
 import ch.sysout.emubro.ui.properties.PropertiesFrame;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.JCustomButton;
 import ch.sysout.util.FileUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
@@ -801,6 +798,18 @@ GameSelectionListener, BrowseComputerListener {
 		addEmulatorListener(this);
 		addTagListener(this);
 		view.addListeners();
+		view.addShowHideNavigationPaneListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if (view.getNavigationPaneState().equals(NavigationPanel.CENTERED)
+						|| view.getNavigationPaneState().equals(NavigationPanel.MAXIMIZED)) {
+					view.showNavigationPane(true, 32, NavigationPanel.MINIMIZED);
+				} else {
+					view.showNavigationPane(true, 220, NavigationPanel.MAXIMIZED);
+				}
+			}
+		});
 		view.addAutoSearchListener(new AutoSearchListener());
 		view.addQuickSearchListener(new QuickSearchListener());
 		view.addCustomSearchListener(new CustomSearchListener());
@@ -892,7 +901,7 @@ GameSelectionListener, BrowseComputerListener {
 		view.addAutoSearchTagsAllListener(new AutoSearchTagsAllListener());
 		view.addAutoSearchTagsListener(new AutoSearchTagsListener());
 		view.addCoverFromWebListener(new CoverFromWebListener());
-		view.addCoverFromEmuBroListener(new CoverFromEmuBroListener());
+		view.addCoverDownloadListener(new CoverDownloadListener());
 		view.addTrailerFromWebListener(new TrailerFromWebListener());
 		view.addSearchNetworkListener(new SearchNetworkListener());
 		view.addRenameGameListener(renameGameListener = new RenameGameListener());
@@ -1293,7 +1302,7 @@ GameSelectionListener, BrowseComputerListener {
 		}
 		int request = JOptionPane.showConfirmDialog(view, "Search and download game covers for missing covers?", "Search covers", JOptionPane.YES_NO_OPTION);
 		if (request == JOptionPane.YES_OPTION) {
-			downloadGameCoverZip(games);
+			downloadGameCover(games);
 		}
 	}
 
@@ -1305,7 +1314,7 @@ GameSelectionListener, BrowseComputerListener {
 		if (request == JOptionPane.YES_OPTION) {
 			List<Game> list = new ArrayList<>();
 			list.add(game);
-			downloadGameCoverZip(list);
+			downloadGameCover(list);
 		}
 	}
 
@@ -1710,11 +1719,11 @@ GameSelectionListener, BrowseComputerListener {
 		List<Integer> alreadyCheckedPlatformIds = new ArrayList<>();
 		double hundredPercent = games.size();
 		int count = 1;
-		double currentPercent = dlgSplashScreen.getValue();
+		double currentPercent = dlgSplashScreen.getProgressBarValue();
 		for (Game g : games) {
 			double dbl = currentPercent / hundredPercent;
 			double percent = dbl * count;
-			dlgSplashScreen.setValue(dlgSplashScreen.getValue() + (int) percent);
+			dlgSplashScreen.setProgressBarValue(dlgSplashScreen.getProgressBarValue() + (int) percent);
 			count++;
 			List<String> files = explorerDAO.getFilesForGame(g.getId());
 			List<Tag> tags = explorerDAO.getTagsForGame(g.getId());
@@ -4193,11 +4202,11 @@ GameSelectionListener, BrowseComputerListener {
 		}
 	}
 
-	class CoverFromEmuBroListener implements ActionListener {
+	class CoverDownloadListener implements ActionListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			List<Game> games = explorer.getCurrentGames();
-			downloadGameCoverZip(games);
+			downloadGameCover(games);
 		}
 	}
 
@@ -4523,12 +4532,10 @@ GameSelectionListener, BrowseComputerListener {
 				//			pnlAutoCase.setBackground(ValidationComponentUtils.getMandatoryBackground());
 				//			pnlCamelCase.setBackground(ValidationComponentUtils.getMandatoryBackground());
 
-				JButton btnMoreRenamingOptions = new JButton(Messages.get(MessageConstants.RENAMING_OPTIONS));
+				JButton btnMoreRenamingOptions = new JCustomButton(Messages.get(MessageConstants.RENAMING_OPTIONS));
 				int size = ScreenSizeUtil.is3k() ? 24 : 16;
 				btnMoreRenamingOptions.setIcon(ImageUtil.getImageIconFrom(Icons.get("arrowDown", size, size)));
 				btnMoreRenamingOptions.setHorizontalAlignment(SwingConstants.LEFT);
-				UIUtil.doHover(false, btnMoreRenamingOptions);
-				btnMoreRenamingOptions.addMouseListener(UIUtil.getMouseAdapter());
 				btnMoreRenamingOptions.addFocusListener(UIUtil.getFocusAdapterKeepHoverWhenSelected());
 				btnMoreRenamingOptions.addActionListener(new ActionListener() {
 
@@ -5458,28 +5465,14 @@ GameSelectionListener, BrowseComputerListener {
 		}
 	}
 
-	private void downloadGameCoverZip(final List<Game> games) {
+	private void downloadGameCover(final List<Game> games) {
 		showDownloadCoversDialog();
 
 		Thread t = new Thread(new Runnable() {
+			private boolean gameCoverSet;
+
 			@Override
 			public void run() {
-				SwingUtilities.invokeLater(new Runnable() {
-
-					@Override
-					public void run() {
-						progress.setString("Check games and set real titles");
-					}
-				});
-				List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
-				JsonArray mJSONArray = new JsonArray();
-
-				for (final Game game : games) {
-					String platformShortName = explorer.getPlatform(game.getPlatformId()).getShortName();
-				}
-				nameValuePairs.add(new BasicNameValuePair("arr", String.valueOf(mJSONArray.toString())));
-
-				HttpClient httpclient = HttpClients.createDefault();
 				SwingUtilities.invokeLater(new Runnable() {
 
 					@Override
@@ -5487,26 +5480,40 @@ GameSelectionListener, BrowseComputerListener {
 						progress.setString("request missing covers");
 					}
 				});
-				//Execute and get the response.
-
 				for (Game game : games) {
 					String gameCode = game.getGameCode();
+					String coverPlatform = explorer.getPlatform(game.getPlatformId()).getShortName();
+					String coverSource = "http://art.gametdb.com/" + coverPlatform;
+					String coverTypes[] = {
+							"cover3D", "cover"
+					};
+					String coverLanguages[] = {
+							"EN", "US"
+					};
+					String coverFileTypes[] = {
+							".png", ".jpg"
+					};
 					if (!gameCode.isEmpty()) {
 						Image image = null;
-						try {
-							URL url = new URL("http://art.gametdb.com/"+explorer.getPlatform(game.getPlatformId()).getShortName()+"/cover3D/EN/"+game.getGameCode()+".png");
-							image = ImageIO.read(url);
-							setCoverForGame(game, image);
-						} catch (IOException e) {
-							try {
-								URL url = new URL("http://art.gametdb.com/"+explorer.getPlatform(game.getPlatformId()).getShortName()+"/cover/EN/"+game.getGameCode()+".png");
-								image = ImageIO.read(url);
-								setCoverForGame(game, image);
-							} catch (IOException e1) {
+						outerLoop: for (int i = 0; i < coverTypes.length; i++) {
+							for (int k = 0; k < coverLanguages.length; k++) {
+								for (int l = 0; l < coverFileTypes.length; l++) {
+									try {
+										URL url = new URL(coverSource + "/"+coverTypes[i]+"/"+coverLanguages[k]+"/"
+												+ game.getGameCode() + coverFileTypes[l]);
+										image = ImageIO.read(url);
+										setCoverForGame(game, image);
+										gameCoverSet = true;
+									} catch (IOException e7) {
+										continue;
+									}
+									break outerLoop;
+								}
 							}
 						}
 					}
 				}
+				System.out.println("game cover set: " + gameCoverSet);
 				dlgDownloadCovers.dispose();
 			}
 		});
@@ -6866,8 +6873,7 @@ GameSelectionListener, BrowseComputerListener {
 						//						view.setLocationRelativeTo(null);
 					}
 					view.setVisible(true);
-					view.validate();
-					view.repaint();
+					UIUtil.revalidateAndRepaint(view);
 				}
 			});
 		}

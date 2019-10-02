@@ -38,16 +38,20 @@ import javax.swing.JList;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
+import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JSplitPane;
 import javax.swing.ListCellRenderer;
 import javax.swing.MenuElement;
 import javax.swing.MenuSelectionManager;
+import javax.swing.ScrollPaneConstants;
 import javax.swing.UIManager;
 import javax.swing.border.Border;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.plaf.basic.BasicComboBoxUI;
+import javax.swing.plaf.basic.BasicComboPopup;
+import javax.swing.plaf.basic.ComboPopup;
 
 import com.jgoodies.forms.factories.Paddings;
 import com.jgoodies.forms.layout.CellConstraints;
@@ -176,6 +180,27 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 		cmbPlatforms.setEditor(new CustomComboBoxEditor());
 		cmbPlatforms.setUI(new BasicComboBoxUI() {
 			@Override
+			protected ComboPopup createPopup() {
+				popup = new BasicComboPopup(comboBox) {
+
+					@Override
+					public void setBorder(Border border) {
+						super.setBorder(BorderFactory.createEmptyBorder());
+					}
+
+					@Override
+					protected JScrollPane createScroller() {
+						JScrollPane sp = new JCustomScrollPane(list,
+								ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+								ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+						sp.setHorizontalScrollBar(null);
+						return sp;
+					}
+				};
+				return popup;
+			}
+
+			@Override
 			protected JButton createArrowButton() {
 				return new JButton() {
 					private static final long serialVersionUID = 1L;
@@ -278,12 +303,10 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 		btnTags.setBorderPainted(false);
 		btnTags.setContentAreaFilled(false);
 		btnTags.setToolTipText("Tags");
-		btnTags.addMouseListener(UIUtil.getMouseAdapter());
 
 		btnFilterGroups.setBorderPainted(false);
 		btnFilterGroups.setContentAreaFilled(false);
 		btnFilterGroups.setToolTipText("Filter Groups");
-		btnFilterGroups.addMouseListener(UIUtil.getMouseAdapter());
 
 		pnlSearchField.setBorder(BorderFactory.createEmptyBorder());
 		txtSearchGame.setForeground(colorSearchEmpty);
@@ -801,13 +824,15 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 	@Override
 	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
-		BufferedImage background = IconStore.current().getCurrentTheme().getButtonBar().getImage();
+		Graphics2D g2d = (Graphics2D) g.create();
+		int w = getWidth();
+		int h = getHeight();
+		g2d.setColor(IconStore.current().getCurrentTheme().getGameFilterPane().getColor());
+		g2d.fillRect(0, 0, w, h);
+		BufferedImage background = IconStore.current().getCurrentTheme().getGameFilterPane().getImage();
 		if (background != null) {
-			Graphics2D g2d = (Graphics2D) g.create();
-			int w = getWidth();
-			int h = getHeight();
 			g2d.drawImage(background, 0, 0, w, h, this);
-			g2d.dispose();
 		}
+		g2d.dispose();
 	}
 }

@@ -107,12 +107,8 @@ public class AboutDialog extends JDialog implements ActionListener {
 		lblIcon.setBorderPainted(false);
 		lblIcon.setContentAreaFilled(false);
 		setActionCommands();
-
 		setOpaque(false, lblHeader, lblCopyright, txtDescription, lnkWebsite);
-
 		initTexts();
-		lnkWebsite.setForeground(Color.BLUE);
-
 		setEditable(false, lblHeader, lblCopyright, txtDescription);
 
 		// lblHeader.setEditable(false);

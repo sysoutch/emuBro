@@ -1,7 +1,13 @@
 package ch.sysout.emubro.ui;
 
+import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.GradientPaint;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
@@ -12,12 +18,13 @@ import java.awt.event.WindowEvent;
 
 import javax.swing.BorderFactory;
 import javax.swing.Icon;
-import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.WindowConstants;
+import javax.swing.plaf.basic.BasicProgressBarUI;
 
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
@@ -25,7 +32,6 @@ import com.jgoodies.forms.layout.FormLayout;
 import ch.sysout.ui.util.JCustomButton;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
-import ch.sysout.util.Messages;
 
 public class SplashScreenWindow extends JDialog {
 	private static final long serialVersionUID = 1L;
@@ -33,7 +39,7 @@ public class SplashScreenWindow extends JDialog {
 	private JProgressBar prg = new JProgressBar();
 	private Icon applicationIconStartInitialize = ImageUtil.getImageIconFrom(Icons.get("applicationBanner"));
 	private JLabel lbl = new JLabel(applicationIconStartInitialize);
-	private JButton btnCancel = new JCustomButton(Messages.get("cancel"));
+	private JCustomButton btnCancel = new JCustomButton("X");
 
 	protected int pressedX;
 	protected int pressedY;
@@ -52,13 +58,13 @@ public class SplashScreenWindow extends JDialog {
 		createUI();
 		setUndecorated(true); // remove system frame
 		//		AWTUtilities.setWindowOpaque(this, false); // enable opacity
-		setBackground(new Color(0f, 0f, 0f, 0.3f));
+		//		setBackground(new Color(0f, 0f, 0f, 0.9f));
 		pack();
 		// btnCancel.setVisible(false);
 	}
 
 	private void initComponents() {
-		getRootPane().setBorder(BorderFactory.createEtchedBorder());
+		getRootPane().setBorder(BorderFactory.createEmptyBorder());
 		prg.setOpaque(false);
 		prg.setStringPainted(true);
 		//		prg.setIndeterminate(true);
@@ -97,32 +103,81 @@ public class SplashScreenWindow extends JDialog {
 
 	private void createUI() {
 		JPanel pnlMain = new JPanel();
-		FormLayout layout = new FormLayout("min", "fill:pref, min, fill:pref:grow");
+		pnlMain.setOpaque(true);
+		FormLayout layout = new FormLayout("min:grow, min", "fill:pref, min, fill:pref, min, fill:pref:grow");
 		pnlMain.setLayout(layout);
-		CellConstraints cc2 = new CellConstraints();
-		pnlMain.add(lbl, cc2.xy(1, 1));
-
-		FormLayout layout2 = new FormLayout("pref:grow, min", "fill:pref");
 		CellConstraints cc = new CellConstraints();
-		JPanel pnl = new JPanel(layout2);
-		pnl.add(prg, cc.xy(1, 1));
+		pnlMain.setBackground(new Color(13, 35, 48));
+		pnlMain.add(btnCancel, cc.xy(2, 1));
+		pnlMain.add(lbl, cc.xyw(1, 3, layout.getColumnCount()));
+
+		prg.setBorder(BorderFactory.createEmptyBorder());
+		prg.setUI(new BasicProgressBarUI() {
+			GradientPaint gradient = new GradientPaint(50, 50, new Color(62, 123, 168),
+					300, 100, new Color(32, 92, 124));
+			Dimension horizDim = new Dimension(0, 48);
+
+			@Override
+			protected Dimension getPreferredInnerHorizontal() {
+				return horizDim;
+			}
+
+			@Override
+			protected void paintDeterminate(Graphics g, JComponent c) {
+				//				super.paintIndeterminate(g, c);
+				if (!(g instanceof Graphics2D)) {
+					return;
+				}
+
+				Insets b = progressBar.getInsets(); // area for border
+				int barRectWidth = progressBar.getWidth() - (b.right + b.left);
+				int barRectHeight = progressBar.getHeight() - (b.top + b.bottom);
+
+				if (barRectWidth <= 0 || barRectHeight <= 0) {
+					return;
+				}
+
+				int cellLength = getCellLength();
+				int cellSpacing = getCellSpacing();
+				// amount of progress to draw
+				int amountFull = getAmountFull(b, barRectWidth, barRectHeight);
+
+				Graphics2D g2 = (Graphics2D)g;
+				g2.setPaint(gradient);
+
+				// draw the cells
+				if (cellSpacing == 0 && amountFull > 0) {
+					// draw one big Rect because there is no space between cells
+					g2.setStroke(new BasicStroke(barRectHeight,
+							BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL));
+				} else {
+					// draw each individual cell
+					g2.setStroke(new BasicStroke(barRectHeight,
+							BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL,
+							0.f, new float[] { cellLength, cellSpacing }, 0.f));
+				}
+
+				g2.drawLine(b.left, (barRectHeight/2) + b.top,
+						amountFull + b.left, (barRectHeight/2) + b.top);
+
+				// Deal with possible text painting
+				if (progressBar.isStringPainted()) {
+					paintString(g, b.left, b.top,
+							barRectWidth, barRectHeight,
+							amountFull, b);
+				}
+				g2.dispose();
+			}
+		});
 		btnCancel.setFocusPainted(false);
-		pnl.add(btnCancel, cc.xy(2, 1));
-
-		pnlMain.add(pnl, cc2.xy(1, 3));
-		//		pnlMain.add(btnCancel, cc2.xy(1, 5));
-
+		pnlMain.add(prg, cc.xyw(1, 5, layout.getColumnCount()));
 		add(pnlMain);
-
-		pnlMain.setOpaque(false);
-		pnl.setOpaque(false);
 	}
 
 	public void restartApplication(String string) {
 		lbl.setIcon(applicationIconStartInitialize);
 		setText(string);
 		//		prg.setIndeterminate(true);
-		btnCancel.setText(Messages.get("cancel"));
 	}
 
 	public void setText(String message) {
@@ -133,14 +188,12 @@ public class SplashScreenWindow extends JDialog {
 		setText(message);
 		//		lbl.setIcon(ImageUtil.getImageIconFrom(Icons.get("applicationIconRed", size, size)));
 		prg.setIndeterminate(false);
-		btnCancel.setText(Messages.get("close"));
 	}
 
 	public void showWarning(final String message) {
 		setText(message);
 		//		lbl.setIcon(ImageUtil.getImageIconFrom(Icons.get("applicationIconOrange", size, size)));
 		prg.setIndeterminate(false);
-		btnCancel.setText(Messages.get("close"));
 	}
 
 	public void showSuccessIcon() {
@@ -152,14 +205,14 @@ public class SplashScreenWindow extends JDialog {
 		showSuccessIcon();
 	}
 
-	public void setValue(int value) {
+	public void setProgressBarValue(int value) {
 		if (prg.isIndeterminate()) {
 			prg.setIndeterminate(false);
 		}
 		prg.setValue(value);
 	}
 
-	public int getValue() {
+	public int getProgressBarValue() {
 		return prg.getValue();
 	}
 }

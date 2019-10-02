@@ -5,6 +5,7 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Font;
+import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.KeyboardFocusManager;
@@ -45,7 +46,6 @@ import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListSelectionModel;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
-import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -95,6 +95,7 @@ import ch.sysout.emubro.impl.model.EmulatorConstants;
 import ch.sysout.emubro.impl.model.GameConstants;
 import ch.sysout.emubro.impl.model.PlatformConstants;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.JCustomButton;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 import ch.sysout.util.UIUtil;
@@ -142,7 +143,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	private GroupContextMenu popupGroup;
 	protected int mouseOver = -1;
 	private Color c;
-	private Color color2 = new Color(56, 216, 120);
+	private Color secondColor = new Color(56, 216, 120);
 	private Cursor cursorDrag = Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR);
 	protected int lastHorizontalScrollBarValue;
 	protected int lastVerticalScrollBarValue;
@@ -178,6 +179,17 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	private int currentView;
 	private List<TagsFromGamesListener> tagsFromGamesListeners = new ArrayList<>();
 
+	//	private static final int WIDE = 640;
+	//	private static final int HIGH = 240;
+	//	private static final float HUE_MIN = 0;
+	//	private static final float HUE_MAX = 1;
+	//	private final Timer timer;
+	//	private float hue = HUE_MIN;
+	//	private float delta = 0.01f;
+	private Color colorFavorite = new Color(250, 250, 128);
+	private Color color1 = Color.DARK_GRAY;
+	private Color color2 = Color.GRAY;
+
 	public ListViewPanel(Explorer explorer, ViewPanelManager viewManager, GameContextMenu popupGame, ViewContextMenu popupView) {
 		super(new BorderLayout());
 		this.explorer = explorer;
@@ -200,6 +212,22 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				}
 			}
 		});
+
+		//		ActionListener action = new ActionListener(){
+		//
+		//			@Override
+		//			public void actionPerformed(ActionEvent evt){
+		//				hue += delta;
+		//				if (hue > HUE_MAX) {
+		//					hue = HUE_MIN;
+		//				}
+		//				color1 = Color.getHSBColor(hue, 1, 1);
+		//				color2 = Color.getHSBColor(hue + 16 * delta, 1, 1);
+		//				repaint();
+		//			}
+		//		};
+		//		timer = new Timer(10, action);
+		//		timer.start();
 	}
 
 	protected void showGamePopupMenu(Component relativeTo, int x, int y) {
@@ -241,6 +269,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	}
 
 	private JScrollPane createScrollPane(JList<Game> lst) {
+		lst.setOpaque(false);
 		JScrollPane sp = new JCustomScrollPane(lst);
 		sp.getHorizontalScrollBar().setOpaque(false);
 		sp.getVerticalScrollBar().setOpaque(false);
@@ -248,7 +277,6 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		sp.getVerticalScrollBar().setUnitIncrement(16);
 		sp.getViewport().setOpaque(false);
 		sp.setOpaque(false);
-		lst.setOpaque(false);
 		// done cause ModernScrollPane class breaks horizontal mouse wheel scrolling
 		sp.addMouseWheelListener(new MouseWheelListener() {
 
@@ -479,7 +507,6 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		setGameListRenderer(new DefaultListCellRenderer() {
 			private static final long serialVersionUID = 1L;
 
-			Color colorFavorite = new Color(250, 250, 128);
 			//			private Color colorBackground = UIManager.getColor("List.foreground");
 			//			final Color colorFavorite = Color.BLUE;
 			//			final Color colorError = ValidationComponentUtils.getErrorBackground();
@@ -612,8 +639,8 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				}
 				//				UIUtil.setForegroundDependOnBackground(IconStore.current().getCurrentTheme().getView().getColor(), label);
 				if (game.isFavorite()) {
+					label.setForeground(colorFavorite);
 					if (!isSelected) {
-						label.setForeground(colorFavorite);
 						if (viewStyle != ViewPanel.CONTENT_VIEW) {	// Cause in content view the game title is bold and the other informations not. It would looks too bold.
 							//						label.setFont(new Font(labelFont.getName(), Font.BOLD, getFontSize()));
 						}
@@ -1020,7 +1047,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 			}
 			pnlListPlatform.setLayout(layout);
 			pnlListPlatform.setBackground(UIManager.getColor("List.background"));
-			pnlListPlatform.setOpaque(true);
+			pnlListPlatform.setOpaque(false);
 			CellConstraints cc = new CellConstraints();
 			int x = 1;
 			int y = 1;
@@ -1064,18 +1091,13 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				int gameCount = mdlNew.getSize();
 				String gameCountString = (gameCount == 1) ? Messages.get(MessageConstants.GAME_COUNT1, gameCount)
 						: Messages.get(MessageConstants.GAME_COUNT, gameCount);
-				AbstractButton btn = new JButton(
+				JCustomButton btn = new JCustomButton(
 						"<html><strong>" + p.getName() + "</strong><br>" + gameCountString + "</html>");
+				btn.setKeepBackgroundOnHoverLost(true);
 				if (groupedViewButtons == null) {
 					groupedViewButtons = new ArrayList<AbstractButton>();
 				}
 				groupedViewButtons.add(btn);
-				// TitledBorder titledBorder =
-				// BorderFactory.createTitledBorder("");
-				// titledBorder.setTitleJustification(TitledBorder.LEFT);
-				// titledBorder.setTitlePosition(TitledBorder.LEFT);
-				// btn.setBorder(titledBorder);
-				//				btn.setContentAreaFilled(false);
 				btn.setHorizontalAlignment(SwingConstants.LEFT);
 				ImageIcon platformIcon = IconStore.current().getPlatformIcon(p.getId());
 				btn.setIcon(platformIcon);
@@ -1121,6 +1143,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		}
 		if (pnlWrapperListPlatformGroup == null) {
 			pnlWrapperListPlatformGroup = new JPanel(new BorderLayout());
+			pnlWrapperListPlatformGroup.setOpaque(false);
 			pnlWrapperListPlatformGroup.add(pnlListPlatform);
 		}
 		sps.get(lstGames).setViewportView(pnlWrapperListPlatformGroup);
@@ -1284,8 +1307,8 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				layout = new FormLayout("min:grow", "");
 			}
 			pnlListTitle.setLayout(layout);
+			pnlListTitle.setOpaque(false);
 			pnlListTitle.setBackground(UIManager.getColor("List.background"));
-			pnlListTitle.setOpaque(true);
 			CellConstraints cc = new CellConstraints();
 			int x = 1;
 			int y = 1;
@@ -1335,18 +1358,13 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				String gameCountString = (gameCount == 1) ? Messages.get(MessageConstants.GAME_COUNT1, gameCount)
 						: Messages.get(MessageConstants.GAME_COUNT, gameCount);
 				String withoutRegex = chars[i].replace("^[", "").replace("].*$", "").replace("^A-Z0-9", Messages.get(MessageConstants.OTHERS));
-				AbstractButton btn = new JButton(
+				JCustomButton btn = new JCustomButton(
 						"<html><strong>"+withoutRegex+"</strong><br>" + gameCountString + "</html>");
+				btn.setKeepBackgroundOnHoverLost(true);
 				if (groupedViewButtons == null) {
 					groupedViewButtons = new ArrayList<AbstractButton>();
 				}
 				groupedViewButtons.add(btn);
-				// TitledBorder titledBorder =
-				// BorderFactory.createTitledBorder("");
-				// titledBorder.setTitleJustification(TitledBorder.LEFT);
-				// titledBorder.setTitlePosition(TitledBorder.LEFT);
-				// btn.setBorder(titledBorder);
-				//				btn.setContentAreaFilled(false);
 				btn.setHorizontalAlignment(SwingConstants.LEFT);
 				btn.setComponentPopupMenu(popupGroup);
 				btn.addActionListener(new ActionListener() {
@@ -1387,6 +1405,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		}
 		if (pnlWrapperListTitleGroup == null) {
 			pnlWrapperListTitleGroup = new JPanel(new BorderLayout());
+			pnlWrapperListTitleGroup.setOpaque(false);
 			pnlWrapperListTitleGroup.add(pnlListTitle);
 		}
 		sps.get(lstGames).setViewportView(pnlWrapperListTitleGroup);
@@ -2071,24 +2090,30 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	@Override
 	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
-		BufferedImage background = IconStore.current().getCurrentTheme().getView().getImage();
+		Graphics2D g2d = (Graphics2D) g.create();
+		int panelWidth = getWidth();
+		int panelHeight = getHeight();
+
+		Theme currentTheme = IconStore.current().getCurrentTheme();
+		if (currentTheme.getView().hasGradientPaint()) {
+			GradientPaint p = currentTheme.getView().getGradientPaint();
+			g2d.setPaint(p);
+		} else if (currentTheme.getView().hasColor()) {
+			g2d.setColor(currentTheme.getView().getColor());
+		}
+		g2d.fillRect(0, 0, panelWidth, panelHeight);
+
+		BufferedImage background = currentTheme.getView().getImage();
 		if (background != null) {
-			Graphics2D g2d = (Graphics2D) g.create();
-			int panelWidth = getWidth();
-			int panelHeight = getHeight();
 			int imgWidth = background.getWidth();
 			int imgHeight = background.getHeight();
-
-			g2d.setColor(IconStore.current().getCurrentTheme().getView().getColor());
-			g2d.fillRect(0, 0, panelWidth, panelHeight);
-
 			boolean shouldScale = false;
 			if (shouldScale) {
 				g2d.drawImage(background, 0, 0, panelWidth, panelHeight, this);
 			} else {
 				g2d.drawImage(background, 0, 0, imgWidth, imgHeight, this);
 			}
-			BufferedImage imgTransparentOverlay = IconStore.current().getCurrentTheme().getTransparentBackgroundOverlayImage();
+			BufferedImage imgTransparentOverlay = currentTheme.getTransparentBackgroundOverlayImage();
 			if (imgTransparentOverlay != null) {
 				int width = imgTransparentOverlay.getWidth();
 				int height = imgTransparentOverlay.getHeight();
@@ -2104,7 +2129,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				int y = panelHeight-height;
 				g2d.drawImage(imgTransparentOverlay, x, y, width, height, this);
 			}
-			g2d.dispose();
 		}
+		g2d.dispose();
 	}
 }

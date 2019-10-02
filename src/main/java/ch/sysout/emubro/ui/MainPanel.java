@@ -932,7 +932,6 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				removeSplDetailsPane();
 			}
 		}
-		UIUtil.doHover(false, pnlDetails.btnHideDetailsPane, pnlDetails.btnPinUnpinDetailsPane);
 	}
 
 	private void addSplDetailsPane() {
@@ -1578,6 +1577,10 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 
 	public void showMenuBar(boolean b) {
 		mnuOrganizeOptions.showMenuBar(b);
+	}
+
+	public void showStatusBar(boolean b) {
+		mnuOrganizeOptions.showStatusBar(b);
 	}
 
 	public void setDividerLocations() {

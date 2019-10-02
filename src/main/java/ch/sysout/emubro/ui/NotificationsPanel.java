@@ -19,13 +19,13 @@ import java.util.Map;
 
 import javax.swing.AbstractButton;
 import javax.swing.Action;
-import javax.swing.BorderFactory;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
-import javax.swing.JEditorPane;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JTextPane;
+import javax.swing.text.JTextComponent;
 
 import com.jgoodies.forms.factories.Paddings;
 import com.jgoodies.forms.layout.CellConstraints;
@@ -34,6 +34,7 @@ import com.jgoodies.forms.layout.RowSpec;
 import com.jgoodies.validation.view.ValidationComponentUtils;
 
 import ch.sysout.emubro.controller.NotificationElementListener;
+import ch.sysout.ui.util.JCustomButton;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
@@ -48,7 +49,7 @@ public class NotificationsPanel extends JPanel {
 	private HashMap<JPanel, JPanel> mapPanels = new HashMap<>();
 
 	private List<NotificationElement> notificationElements = new ArrayList<>();
-	private Map<JEditorPane, NotificationElement> labels = new HashMap<>();
+	private Map<JTextComponent, NotificationElement> labels = new HashMap<>();
 	private Map<List<AbstractButton>, NotificationElement> links = new HashMap<>();
 
 	private Map<Integer, ImageIcon> infoIcons = new HashMap<>();
@@ -90,7 +91,7 @@ public class NotificationsPanel extends JPanel {
 	}
 
 	public void addNotificationElement(NotificationElement element3) {
-		String message = element3.getMessage().replace("<html>", "").replace("</html>", "");
+		String message = element3.getMessage();
 		Map<String, Action> actionMessages = element3.getActionMessages();
 		int notificationType = element3.getNotificationType();
 		if (notificationElements != null && notificationElements.contains(element3)) {
@@ -98,6 +99,7 @@ public class NotificationsPanel extends JPanel {
 		}
 		// LayoutManager formLayout = new FormLayout("min:grow");
 		final JPanel pnl = new JPanel(new GridLayout(0, 1));
+		pnl.setOpaque(false);
 		ActionListener actionHideMessage = new ActionListener() {
 
 			@Override
@@ -107,37 +109,35 @@ public class NotificationsPanel extends JPanel {
 		};
 		// pnl.setBackground(backgroundColor);
 
-		JEditorPane editorPane = new JEditorPane("text/html", "");
-		//		label.setLineWrap(true);
-		//		label.setWrapStyleWord(true);
-		//		label.setContentType("text/html");
-		editorPane.setEditable(false);
-		editorPane.setFocusable(false);
-		editorPane.setText("<font face=\"verdana\">"+message+"</font>");
-		labels.put(editorPane, element3);
+		JTextPane textPane = new JTextPane();
+		textPane.setOpaque(false);
+		textPane.setEditable(false);
+		textPane.setFocusable(false);
+		textPane.setText(message);
+		labels.put(textPane, element3);
 
 		int size = ScreenSizeUtil.adjustValueToResolution(16);
 		final JPanel pnl2 = new JPanel(new BorderLayout(0, 2));
+		pnl2.setOpaque(false);
 		pnl2.setBorder(Paddings.DLU4);
 		LayoutManager formLayoutPnlLabel = new FormLayout("min",
 				"fill:min");
 		JPanel pnlIcon = new JPanel(formLayoutPnlLabel);
-
+		pnlIcon.setOpaque(false);
 		pnlIcon.setBorder(Paddings.DLU4);
 		CellConstraints cc = new CellConstraints();
 		JLabel lblIcon = new JLabel();
 		pnlIcon.add(lblIcon, cc.xy(1, 1));
-		pnl2.add(editorPane, BorderLayout.NORTH);
+		pnl2.add(textPane, BorderLayout.NORTH);
 
-		// HTMLEditorKit kit = new HTMLEditorKit();
-		// StyleSheet styleSheet = kit.getStyleSheet();
-		// styleSheet.addRule("a {color:#ff0000;}");
 		WrapLayout wrapLayout = new WrapLayout();
 		wrapLayout.setAlignment(FlowLayout.LEFT);
 		JPanel pnl3 = new JPanel(wrapLayout);
+		pnl3.setOpaque(false);
 		List<AbstractButton> links2 = new ArrayList<>();
 		for (Map.Entry<String, Action> action : actionMessages.entrySet()) {
 			JButton lnk = new JLinkButton(Messages.get(action.getKey()));
+			lnk.setOpaque(false);
 			links2.add(lnk);
 			String key = action.getKey();
 			ActionListener value = action.getValue();
@@ -163,8 +163,7 @@ public class NotificationsPanel extends JPanel {
 
 		pnl2.add(pnl3, BorderLayout.WEST);
 
-		AbstractButton btnHideMessage = new JButton(iconHideMessage);
-		UIUtil.doHover(false, btnHideMessage);
+		AbstractButton btnHideMessage = new JCustomButton(iconHideMessage);
 		btnHideMessage.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseEntered(MouseEvent e) {
@@ -178,6 +177,7 @@ public class NotificationsPanel extends JPanel {
 		});
 		pnl2.add(btnHideMessage, BorderLayout.EAST);
 		JPanel pnlpnl = new JPanel(new BorderLayout());
+		pnlpnl.setOpaque(false);
 		pnlpnl.add(pnlIcon, BorderLayout.WEST);
 		pnlpnl.add(pnl2, BorderLayout.CENTER);
 		JLabel lblTimestamp = new JLabel();
@@ -186,7 +186,6 @@ public class NotificationsPanel extends JPanel {
 		ZonedDateTime date = ZonedDateTime.now();
 		lblTimestamp.setText(UIUtil.format(date));
 		lblTimestamp.setBorder(Paddings.DLU2);
-		lblTimestamp.setOpaque(true);
 		lblTimestamp.setEnabled(false);
 		lblTimestamp.setFocusable(false);
 		lblTimestamp.setFont(lblTimestamp.getFont().deriveFont(12.0f).deriveFont(Font.ITALIC));
@@ -205,62 +204,50 @@ public class NotificationsPanel extends JPanel {
 				infoIcons.put(size, ImageUtil.getImageIconFrom(Icons.get("info", size, size)));
 			}
 			lblIcon.setIcon(infoIcons.get(size));
-			editorPane.setBackground(Color.WHITE);
-			pnlIcon.setBackground(Color.WHITE);
-			pnl2.setBackground(Color.WHITE);
-			pnl3.setBackground(Color.WHITE);
-			lblTimestamp.setBackground(Color.WHITE);
-			pnl.setBorder(BorderFactory.createLineBorder(Color.white.darker()));
 			break;
 		case NotificationElement.INFORMATION_MANDATORY:
 			if (!infoImportantIcons.containsKey(size)) {
 				infoImportantIcons.put(size, ImageUtil.getImageIconFrom(Icons.get("infoImportant", size, size)));
 			}
 			lblIcon.setIcon(infoImportantIcons.get(size));
-			// pnl2.setBackground(ValidationComponentUtils.getMandatoryBackground());
-			// pnl3.setBackground(ValidationComponentUtils.getMandatoryBackground());
-			editorPane.setBackground(Color.WHITE);
+			textPane.setBackground(Color.WHITE);
 			pnlIcon.setBackground(Color.WHITE);
 			pnl2.setBackground(Color.WHITE);
 			pnl3.setBackground(Color.WHITE);
 			lblTimestamp.setBackground(Color.WHITE);
-			pnl.setBorder(BorderFactory.createLineBorder(ValidationComponentUtils.getMandatoryBackground().darker()));
 			break;
 		case NotificationElement.WARNING:
 			if (!warningIcons.containsKey(size)) {
 				warningIcons.put(size, ImageUtil.getImageIconFrom(Icons.get("warning", size, size)));
 			}
 			lblIcon.setIcon(warningIcons.get(size));
-			editorPane.setBackground(ValidationComponentUtils.getWarningBackground());
+			textPane.setBackground(ValidationComponentUtils.getWarningBackground());
 			pnlIcon.setBackground(ValidationComponentUtils.getWarningBackground());
 			pnl2.setBackground(ValidationComponentUtils.getWarningBackground());
 			pnl3.setBackground(ValidationComponentUtils.getWarningBackground());
 			lblTimestamp.setBackground(ValidationComponentUtils.getWarningBackground());
-			pnl.setBorder(BorderFactory.createLineBorder(ValidationComponentUtils.getWarningBackground().darker()));
 			break;
 		case NotificationElement.ERROR:
 			if (!errorIcons.containsKey(size)) {
 				errorIcons.put(size, ImageUtil.getImageIconFrom(Icons.get("error", size, size)));
 			}
 			lblIcon.setIcon(errorIcons.get(size));
-			editorPane.setBackground(ValidationComponentUtils.getErrorBackground());
+			textPane.setBackground(ValidationComponentUtils.getErrorBackground());
 			pnlIcon.setBackground(ValidationComponentUtils.getErrorBackground());
 			pnl2.setBackground(ValidationComponentUtils.getErrorBackground());
 			pnl3.setBackground(ValidationComponentUtils.getErrorBackground());
 			lblTimestamp.setBackground(ValidationComponentUtils.getErrorBackground());
-			pnl.setBorder(BorderFactory.createLineBorder(ValidationComponentUtils.getErrorBackground().darker()));
 			break;
 		case NotificationElement.SUCCESS:
 			if (!successIcons.containsKey(size)) {
 				successIcons.put(size, ImageUtil.getImageIconFrom(Icons.get("default", size, size)));
 			}
 			lblIcon.setIcon(successIcons.get(size));
-			editorPane.setBackground(ValidationUtil.getSuccessBackground());
+			textPane.setBackground(ValidationUtil.getSuccessBackground());
 			pnlIcon.setBackground(ValidationUtil.getSuccessBackground());
 			pnl2.setBackground(ValidationUtil.getSuccessBackground());
 			pnl3.setBackground(ValidationUtil.getSuccessBackground());
 			lblTimestamp.setBackground(ValidationUtil.getSuccessBackground());
-			pnl.setBorder(BorderFactory.createLineBorder(ValidationUtil.getSuccessBackground().darker()));
 			break;
 		default:
 			break;
@@ -322,14 +309,14 @@ public class NotificationsPanel extends JPanel {
 	}
 
 	public void languageChanged() {
-		for (JEditorPane lbl : labels.keySet()) {
+		for (JTextComponent lbl : labels.keySet()) {
 			NotificationElement messageKey = labels.get(lbl);
-			String text = messageKey.getMessage().replace("<html>", "").replace("</html>", "");
-			lbl.setText("<font face=\"verdana\">"+text+"</font>");
+			String text = messageKey.getMessage();
+			lbl.setText(text);
 		}
 		for (List<AbstractButton> lnk : links.keySet()) {
 			for (AbstractButton lbl : lnk) {
-				lbl.setText("<html><a href=''>" + Messages.get(lbl.getActionCommand()) + "</a></html>");
+				lbl.setText(Messages.get(lbl.getActionCommand()));
 			}
 		}
 	}

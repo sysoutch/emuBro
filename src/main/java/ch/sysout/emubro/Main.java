@@ -58,6 +58,7 @@ import ch.sysout.emubro.impl.dao.BroExplorerDAO;
 import ch.sysout.emubro.impl.model.BroExplorer;
 import ch.sysout.emubro.impl.model.BroPlatform;
 import ch.sysout.emubro.impl.model.BroTag;
+import ch.sysout.emubro.ui.IconStore;
 import ch.sysout.emubro.ui.MainFrame;
 import ch.sysout.emubro.ui.SplashScreenWindow;
 import ch.sysout.emubro.util.MessageConstants;
@@ -66,6 +67,7 @@ import ch.sysout.util.FontUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
+import ch.sysout.util.UIUtil;
 import ch.sysout.util.ValidationUtil;
 import net.arikia.dev.drpc.DiscordEventHandlers;
 import net.arikia.dev.drpc.DiscordEventHandlers.Builder;
@@ -92,7 +94,12 @@ public class Main {
 		System.setProperty("java.util.Arrays.useLegacyMergeSort", "true");
 		System.setProperty("apple.laf.useScreenMenuBar", "true");
 		setLookAndFeel();
-		initializeCustomTheme();
+		try {
+			initializeCustomTheme();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		dlgSplashScreen = new SplashScreenWindow(
 				Messages.get(MessageConstants.INIT_APPLICATION, Messages.get(MessageConstants.APPLICATION_TITLE)));
 		dlgSplashScreen.setLocationRelativeTo(null);
@@ -122,6 +129,7 @@ public class Main {
 		HSQLDBConnection hsqldbConnection = null;
 		try {
 			hsqldbConnection = new HSQLDBConnection(databasePath, databaseName);
+			dlgSplashScreen.setProgressBarValue(dlgSplashScreen.getProgressBarValue()+5);
 		} catch (SQLException e4) {
 			e4.printStackTrace();
 			dlgSplashScreen.showError(Messages.get(MessageConstants.CANNOT_OPEN_DATABASE));
@@ -142,11 +150,12 @@ public class Main {
 		Connection conn = hsqldbConnection.getConnection();
 		try {
 			explorerDAO = new BroExplorerDAO(explorerId, conn);
+			dlgSplashScreen.setProgressBarValue(dlgSplashScreen.getProgressBarValue()+5);
 			if (explorerDAO != null) {
-				dlgSplashScreen.setValue(10);
 				dlgSplashScreen.setText(Messages.get(MessageConstants.ALMOST_READY));
 				try {
 					explorer = new BroExplorer(currentApplicationVersion);
+					dlgSplashScreen.setProgressBarValue(dlgSplashScreen.getProgressBarValue()+5);
 
 					List<Platform> platforms = explorerDAO.getPlatforms();
 					explorer.setPlatforms(platforms);
@@ -206,6 +215,7 @@ public class Main {
 					mainFrame.initFilterGroups(filterGroups);
 					//					dlgSplashScreen.setText("view initialized");
 
+					dlgSplashScreen.setProgressBarValue(dlgSplashScreen.getProgressBarValue()+5);
 					final BroController controller = new BroController(dlgSplashScreen, explorerDAO, explorer, mainFrame, presence);
 					controller.addOrGetPlatformsAndEmulators(defaultPlatforms);
 					controller.addOrChangeTags(explorer.getUpdatedTags());
@@ -224,6 +234,7 @@ public class Main {
 							}
 						}
 					}
+					dlgSplashScreen.setProgressBarValue(dlgSplashScreen.getProgressBarValue()+5);
 					boolean applyData = controller.loadAppDataFromLastSession();
 					try {
 						controller.createView();
@@ -263,6 +274,8 @@ public class Main {
 					} else {
 						dlgSplashScreen.setLocation(x, y);
 					}
+					dlgSplashScreen.setProgressBarValue(dlgSplashScreen.getProgressBarValue()+5);
+					System.err.println(dlgSplashScreen.getProgressBarValue());
 					dlgSplashScreen.setText(Messages.get(MessageConstants.LOAD_GAME_LIST,
 							Messages.get(MessageConstants.APPLICATION_TITLE)));
 					List<Game> games = explorerDAO.getGames();
@@ -413,23 +426,24 @@ public class Main {
 		}
 	}
 
-	private static void initializeCustomTheme() {
+	private static void initializeCustomTheme() throws IOException {
+		IconStore.current().loadDefaultTheme("colored");
 		initializeCustomFonts();
 		initializeCustomColors();
 		initializeCustomMenus();
 		initializeCustomButtons();
 		UIManager.put("TabbedPane.contentOpaque", false);
 		UIManager.put("ToolTip.background", Color.BLACK);
-		UIManager.put("Tree.background", Color.BLACK);
-		UIManager.put("Tree.textBackground", Color.BLACK);
+		//		UIManager.put("Tree.background", Color.BLACK);
+		//		UIManager.put("Tree.textBackground", Color.BLACK);
 	}
 
 	private static void initializeCustomFonts() {
 		String[] keys = {
 				"Label.font",
 				"TextPane.font",
-				"TextArea.font",
 				"EditorPane.font",
+				"TextArea.font",
 				"TextField.font",
 				"Button.font",
 				"ToggleButton.font",
@@ -453,11 +467,12 @@ public class Main {
 	}
 
 	private static void initializeCustomColors() {
-		Color color = Color.WHITE;
+		Color color = UIUtil.getForegroundDependOnBackground(IconStore.current().getCurrentTheme().getBackground().getColor());
 		String[] keys = {
 				"Label.foreground",
-				"TextArea.foreground",
 				"TextPane.foreground",
+				"EditorPane.foreground",
+				"TextArea.foreground",
 				"Button.foreground",
 				"ToggleButton.foreground",
 				"RadioButton.foreground",
@@ -479,16 +494,17 @@ public class Main {
 				"ToolTip.foreground",
 				"TitledBorder.titleColor"
 		};
-		putCustomCover(color, keys);
+		putCustomColor(color, keys);
 	}
 
 	private static void initializeCustomMenus() {
 		UIManager.put("Menu.arrowIcon", ImageUtil.getImageIconFrom(Icons.get("arrowRightOtherWhite", 1)));
-		UIManager.put("Menu.background", Color.BLACK);
-		UIManager.put("MenuItem.background", Color.BLACK);
-		UIManager.put("CheckBoxMenuItem.background", Color.BLACK);
-		UIManager.put("RadioButtonMenuItem.background", Color.BLACK);
-		UIManager.put("Separator.background", Color.RED);
+		//		UIManager.put("Menu.background", Color.RED);
+		//		UIManager.put("MenuItem.background", Color.RED);
+		UIManager.put("CheckBoxMenuItem.opaque", false);
+		UIManager.put("RadioButtonMenuItem.opaque", false);
+		UIManager.put("Separator.background", Color.YELLOW);
+		UIManager.put("Separator.foreground", Color.YELLOW);
 		UIManager.put("PopupMenu.border", new EmptyBorder(0, 0, 0, 0));
 	}
 
@@ -497,7 +513,7 @@ public class Main {
 		UIManager.put("Button.border", BorderFactory.createEmptyBorder());
 	}
 
-	private static void putCustomCover(Color color, String...keys) {
+	private static void putCustomColor(Color color, String...keys) {
 		for (String key : keys) {
 			UIManager.put(key, color);
 		}

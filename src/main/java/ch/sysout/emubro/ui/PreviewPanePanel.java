@@ -183,7 +183,6 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		pnlNoSelection.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 16));
 
 		//		add(spSelection, BorderLayout.NORTH);
-		UIUtil.doHover(false, btnResizePreviewPane);
 		add(btnResizePreviewPane, BorderLayout.WEST);
 		add(pnlNoSelection);
 		spSelection.setOpaque(false);
@@ -336,15 +335,15 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 	@Override
 	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
+		Graphics2D g2d = (Graphics2D) g.create();
+		int x = 0;
+		int y = 0;
+		int w = getWidth();
+		int h = getHeight();
+		g2d.setColor(IconStore.current().getCurrentTheme().getPreviewPane().getColor());
+		g2d.fillRect(x, y, w, h);
 		BufferedImage imagePreviewPaneBackground = IconStore.current().getCurrentTheme().getPreviewPane().getImage();
 		if (imagePreviewPaneBackground != null) {
-			Graphics2D g2d = (Graphics2D) g.create();
-			int x = 0;
-			int y = 0;
-			int w = getWidth();
-			int h = getHeight();
-			g2d.setColor(IconStore.current().getCurrentTheme().getPreviewPane().getColor());
-			g2d.fillRect(x, y, w, h);
 			int imgWidth = imagePreviewPaneBackground.getWidth();
 			int imgHeight = imagePreviewPaneBackground.getHeight();
 			boolean shouldScale = true;
@@ -353,8 +352,8 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			} else {
 				g2d.drawImage(imagePreviewPaneBackground, 0, 0, imgWidth, imgHeight, this);
 			}
-			g2d.dispose();
 		}
+		g2d.dispose();
 	}
 
 	class SelectionPanel extends ScrollablePanel {
@@ -440,8 +439,6 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			pnl.add(pnlRatingBar, ccSelection.xyw(1, 9, columnCount));
 
 			btnComment = new JCustomButton(Messages.get(MessageConstants.GAME_COMMENT));
-			UIUtil.doHover(false, btnComment);
-			btnComment.addMouseListener(UIUtil.getMouseAdapter());
 			btnComment.addActionListener(new ActionListener() {
 
 				@Override
@@ -881,7 +878,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		public class GameDataPanel extends ScrollablePanel implements MouseListener {
 			private static final long serialVersionUID = 1L;
 
-			int size = ScreenSizeUtil.is3k() ? 32 : 24;
+			int size = ScreenSizeUtil.is3k() ? 32 : 32;
 			Color colorUnderlay = new Color(0f, 0f, 0f, 0.25f);
 
 			private ImageIcon icoRunGame = ImageUtil.getImageIconFrom(Icons.get("runGame", size, size));
@@ -930,10 +927,6 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 				btnMoreOptionsRunGame.addMouseListener(this);
 				btnSearchCover.addMouseListener(this);
 				btnSearchTrailer.addMouseListener(this);
-				btnRunGame.addMouseListener(UIUtil.getMouseAdapter());
-				btnMoreOptionsRunGame.addMouseListener(UIUtil.getMouseAdapter());
-				btnSearchCover.addMouseListener(UIUtil.getMouseAdapter());
-				btnSearchTrailer.addMouseListener(UIUtil.getMouseAdapter());
 			}
 
 			private void createUI() {
@@ -953,10 +946,9 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 				pnlRunGameWrapper.setBorder(BorderFactory.createLineBorder(colorUnderlay, 15));
 				//				pnlRunGameWrapper.add(lblRunGame);
 				//				pnlRunGameWrapper.add(lblMoreOptionsRunGame, BorderLayout.EAST);
-				UIUtil.doHover(false, btnRunGame, btnMoreOptionsRunGame, btnSearchCover, btnSearchTrailer);
 				//				add(pnlRunGameWrapper, cc.xyw(1, 1, 5));
-				((JCustomButton) btnRunGame).setKeepBackgroundOnHoverLost(true);
-				((JCustomButton) btnMoreOptionsRunGame).setKeepBackgroundOnHoverLost(true);
+				//				((JCustomButton) btnRunGame).setKeepBackgroundOnHoverLost(true);
+				//				((JCustomButton) btnMoreOptionsRunGame).setKeepBackgroundOnHoverLost(true);
 				add(btnRunGame, cc.xyw(1, 1, 4));
 				add(btnMoreOptionsRunGame, cc.xy(5, 1));
 				add(btnSearchCover, cc.xy(1, 3));
@@ -993,7 +985,6 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 					pnlRunGameWrapper.remove(lblMoreOptionsRunGame);
 					pnlRunGameWrapper.add(btnRunGame);
 					pnlRunGameWrapper.add(btnMoreOptionsRunGame, BorderLayout.EAST);
-					UIUtil.doHover(true, btnRunGame, btnMoreOptionsRunGame);
 				} else if (source == btnSearchCover) {
 					((AbstractButton) source).setText("Google");
 				} else if (source == btnSearchTrailer) {
@@ -1005,7 +996,6 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			public void mouseExited(MouseEvent e) {
 				JComponent source = (JComponent) e.getSource();
 				if (source == btnRunGame || source == btnMoreOptionsRunGame) {
-					UIUtil.doHover(false, btnRunGame, btnMoreOptionsRunGame);
 					pnlRunGameWrapper.remove(btnRunGame);
 					pnlRunGameWrapper.remove(btnMoreOptionsRunGame);
 					pnlRunGameWrapper.add(lblRunGame);
@@ -1097,8 +1087,6 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 
 				int size = ScreenSizeUtil.is3k() ? 24 : 16;
 				btnAddTag.setIcon(ImageUtil.getImageIconFrom(Icons.get("add", size, size)));
-				UIUtil.doHover(false, btnAddTag);
-				btnAddTag.addMouseListener(UIUtil.getMouseAdapter());
 				btnAddTag.addActionListener(new ActionListener() {
 
 					@Override

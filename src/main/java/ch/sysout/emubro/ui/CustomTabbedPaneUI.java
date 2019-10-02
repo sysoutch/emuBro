@@ -6,21 +6,18 @@ import java.awt.FontMetrics;
 import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Insets;
 import java.awt.Polygon;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.util.Arrays;
 
-import javax.swing.JComponent;
 import javax.swing.UIManager;
-import javax.swing.plaf.ComponentUI;
 import javax.swing.plaf.basic.BasicGraphicsUtils;
 import javax.swing.plaf.basic.BasicTabbedPaneUI;
 import javax.swing.text.View;
 
 public class CustomTabbedPaneUI extends BasicTabbedPaneUI {
-	private Color selectColor;
-	private Color deSelectColor;
 	private int inclTab = 4;
 	private int anchoFocoV = inclTab;
 	private int anchoFocoH = 4;
@@ -29,13 +26,17 @@ public class CustomTabbedPaneUI extends BasicTabbedPaneUI {
 	private Color colorTabTextSelected = Color.WHITE;
 	private Color colorTabText = Color.WHITE;
 
-	public CustomTabbedPaneUI(Color colorTabSelectedBackGround, Color colorTabBackGround) {
-		selectColor = colorTabSelectedBackGround;
-		deSelectColor = colorTabBackGround;
+	public CustomTabbedPaneUI() {
 	}
 
-	public static ComponentUI createUI(JComponent c) {
-		return new CustomTabbedPaneUI(Color.GRAY, Color.LIGHT_GRAY);
+	private final Insets borderInsets = new Insets(0, 0, 0, 0);
+
+	@Override
+	protected void paintContentBorder(Graphics g, int tabPlacement, int selectedIndex) {
+	}
+	@Override
+	protected Insets getContentBorderInsets(int tabPlacement) {
+		return borderInsets;
 	}
 
 	@Override
@@ -128,10 +129,12 @@ public class CustomTabbedPaneUI extends BasicTabbedPaneUI {
 		// ;
 		shape = new Polygon(xp, yp, xp.length);
 		if (isSelected) {
+			Color selectColor = IconStore.current().getCurrentTheme().getView().getColor();
 			g2D.setColor(selectColor);
 			//			g2D.setPaint(gradientShadow);
 		} else {
 			if (tabPane.isEnabled() && tabPane.isEnabledAt(tabIndex)) {
+				Color deSelectColor = IconStore.current().getCurrentTheme().getNavigationPane().getColor();
 				g2D.setColor(deSelectColor);
 				GradientPaint gradientShadowTmp = new GradientPaint(0, 0, new Color(255, 255, 200), 0, y + h / 2, new Color(240, 255, 210));
 				//				g2D.setPaint(gradientShadowTmp);

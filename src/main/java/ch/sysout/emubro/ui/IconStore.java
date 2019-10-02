@@ -1,6 +1,12 @@
 package ch.sysout.emubro.ui;
 
+import java.awt.Color;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -8,13 +14,18 @@ import java.util.Map;
 
 import javax.swing.ImageIcon;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.stream.JsonReader;
+
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.ScreenSizeUtil;
 
 public class IconStore {
 	private static IconStore instance;
 
-	private Theme currentTheme = new Theme("dark");
+	private Theme currentTheme;
 
 	private Map<Integer, ImageIcon> platformIcons = new HashMap<>();
 
@@ -38,6 +49,75 @@ public class IconStore {
 
 	private IconStore() {
 		// prevent instantiation of this class
+	}
+
+	public void loadDefaultTheme(String themeNameToLoad) throws IOException {
+		System.err.println(getResourceFiles("/themes/"));
+		File file = new File(getClass().getClassLoader().getResource(
+				"themes/"+themeNameToLoad+"/theme.json").getFile());
+		if (file.exists()) {
+			Theme theme = new Theme(themeNameToLoad);
+			Color backgroundColor = null;
+			Color menuBarColor = null;
+			try (JsonReader reader = new JsonReader(new InputStreamReader(new FileInputStream(file)))) {
+				JsonParser jsonParser = new JsonParser();
+				JsonObject json = jsonParser.parse(reader).getAsJsonObject();
+				System.out.println(json);
+				JsonElement colorElement = json.get("color");
+				backgroundColor = (colorElement == null) ? Color.WHITE
+						: Color.decode(colorElement.getAsString());
+				JsonElement jsonElement = json.get("menuBar");
+				if (jsonElement != null) {
+					JsonObject jsonObject = jsonElement.getAsJsonObject();
+					menuBarColor = Color.decode(jsonObject.get("color").getAsString());
+				}
+			}
+			if (menuBarColor == null) {
+				menuBarColor = backgroundColor.darker();
+			}
+			Color buttonBarColor = backgroundColor;
+			Color gameFilterPaneColor = backgroundColor;
+			Color viewColor = backgroundColor.brighter();
+			Color navigationColor = backgroundColor;
+			Color detailsPaneColor = backgroundColor;
+			Color previewPaneColor = backgroundColor;
+			Color statusBarColor = backgroundColor.darker();
+			theme.setBackground(ThemeFactory.createThemeBackground(backgroundColor));
+			theme.setMenuBar(ThemeFactory.createThemeBackground(menuBarColor));
+			theme.setButtonBar(ThemeFactory.createThemeBackground(buttonBarColor));
+			theme.setGameFilterPane(ThemeFactory.createThemeBackground(gameFilterPaneColor));
+			theme.setView(ThemeFactory.createThemeBackground(viewColor));
+			theme.setNavigationPane(ThemeFactory.createThemeBackground(navigationColor));
+			theme.setDetailsPane(ThemeFactory.createThemeBackground(detailsPaneColor));
+			theme.setPreviewPane(ThemeFactory.createThemeBackground(previewPaneColor));
+			theme.setStatusBar(ThemeFactory.createThemeBackground(statusBarColor));
+			currentTheme = theme;
+		}
+	}
+
+	public List<String> getDefaultThemes() throws IOException {
+		return getResourceFiles("/themes/");
+	}
+
+	private List<String> getResourceFiles(String path) throws IOException {
+		List<String> filenames = new ArrayList<>();
+		try (InputStream in = getResourceAsStream(path);
+				BufferedReader br = new BufferedReader(new InputStreamReader(in))) {
+			String resource;
+			while ((resource = br.readLine()) != null) {
+				filenames.add(resource);
+			}
+		}
+		return filenames;
+	}
+
+	private InputStream getResourceAsStream(String resource) {
+		final InputStream in = getContextClassLoader().getResourceAsStream(resource);
+		return in == null ? getClass().getResourceAsStream(resource) : in;
+	}
+
+	private ClassLoader getContextClassLoader() {
+		return Thread.currentThread().getContextClassLoader();
 	}
 
 	public static final IconStore current() {
@@ -130,7 +210,7 @@ public class IconStore {
 			iconFileName = "default.png";
 		}
 		if (!platformIcons.containsKey(platformId)) {
-			int size = ScreenSizeUtil.adjustValueToResolution(16);
+			int size = ScreenSizeUtil.adjustValueToResolution(24);
 			String iconFilePath = currentPlatformLogosDirectory + File.separator + iconFileName;
 			ImageIcon ii = ImageUtil.getImageIconFrom(iconFilePath, true);
 			ImageIcon ico = ImageUtil.scaleCover(ii, size, CoverConstants.SCALE_WIDTH_OPTION);

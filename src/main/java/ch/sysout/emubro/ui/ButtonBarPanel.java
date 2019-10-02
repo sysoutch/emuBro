@@ -338,15 +338,14 @@ public class ButtonBarPanel extends JPanel {
 	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
 		BufferedImage background = IconStore.current().getCurrentTheme().getButtonBar().getImage();
+		Graphics2D g2d = (Graphics2D) g.create();
+		int x = 0;
+		int y = 0;
+		int w = getWidth();
+		int h = getHeight();
+		g2d.setColor(IconStore.current().getCurrentTheme().getButtonBar().getColor());
+		g2d.fillRect(x, y, w, h);
 		if (background != null) {
-			Graphics2D g2d = (Graphics2D) g.create();
-			int x = 0;
-			int y = 0;
-			int w = getWidth();
-			int h = getHeight();
-			g2d.setColor(IconStore.current().getCurrentTheme().getButtonBar().getColor());
-			g2d.fillRect(x, y, w, h);
-
 			int imgWidth = background.getWidth();
 			int imgHeight = background.getHeight();
 			boolean shouldScale = false;
@@ -355,7 +354,7 @@ public class ButtonBarPanel extends JPanel {
 			} else {
 				g2d.drawImage(background, 0, 0, imgWidth, imgHeight, this);
 			}
-			g2d.dispose();
 		}
+		g2d.dispose();
 	}
 }

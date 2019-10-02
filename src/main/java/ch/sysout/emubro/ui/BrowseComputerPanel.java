@@ -53,7 +53,7 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 	private JButton lnkSearchResults = new JLinkButton(Messages.get(MessageConstants.SEARCH_LOGS));
 	private JButton lnkSearchSettings = new JLinkButton(Messages.get(MessageConstants.SEARCH_PROGRESS_SETTINGS));
 	private JButton btnUncategorized = new JCustomButton(Messages.get(MessageConstants.ARCHIVES_AND_IMAGE_FILES, 0));
-	private JButton btnSetupFiles = new JCustomButton(Messages.get(MessageConstants.SETUP_FILES, 0));
+	private JButton btnSetupFiles = new JCustomButton(Messages.get(MessageConstants.SEARCH_CUSTOM));
 
 	private JButton btnCustomSearchNow;
 
@@ -118,13 +118,9 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 		btnUncategorized.setVerticalAlignment(SwingConstants.CENTER);
 		btnUncategorized.setIcon(ImageUtil.getImageIconFrom(Icons.get("archiveAndImage", 22, 22)));
 
-		UIUtil.doHover(false, btnSetupFiles, btnUncategorized);
 		btnSetupFiles.setHorizontalAlignment(SwingConstants.LEFT);
 		btnSetupFiles.setVerticalAlignment(SwingConstants.CENTER);
 		btnSetupFiles.setIcon(ImageUtil.getImageIconFrom(Icons.get("setup", 22, 22)));
-
-		btnUncategorized.addMouseListener(UIUtil.getMouseAdapter());
-		btnSetupFiles.addMouseListener(UIUtil.getMouseAdapter());
 
 		FormLayout layout = new FormLayout("default, $ugap:grow, $lcgap, min:grow, $rgap, $lcgap, min:grow",
 				"$ugap, fill:pref, $rgap, fill:pref");
@@ -143,8 +139,6 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 		tree = new FileTree();
 		btnCustomSearchNow = new JCustomButton(Messages.get(MessageConstants.SEARCH_NOW_SHORT));
 		btnCustomSearchNow.setIcon(ImageUtil.getImageIconFrom(Icons.get("search", 24, 24)));
-		UIUtil.doHover(false, btnCustomSearchNow);
-		btnCustomSearchNow.addMouseListener(UIUtil.getMouseAdapter());
 		pnlFileTree = new JPanel(new BorderLayout());
 		pnlFileTree.setOpaque(false);
 		pnlFileTree.add(tree);
@@ -222,15 +216,8 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 		btnLastSearch.setHorizontalTextPosition(JLabel.RIGHT);
 		btnLastSearch.setVerticalTextPosition(JLabel.TOP);
 
-		UIUtil.doHover(false, btnAutoSearch, btnCustomSearch, btnQuickSearch, btnLastSearch);
-
 		// btnQuickSearch.setEnabled(false);
 		// btnLastSearch.setEnabled(false);
-
-		btnAutoSearch.addMouseListener(UIUtil.getMouseAdapter());
-		btnCustomSearch.addMouseListener(UIUtil.getMouseAdapter());
-		btnQuickSearch.addMouseListener(UIUtil.getMouseAdapter());
-		btnLastSearch.addMouseListener(UIUtil.getMouseAdapter());
 
 		lnkSearchResults.setIcon(ImageUtil.getImageIconFrom(Icons.get("serchLogs", 16, 16)));
 		lnkSearchSettings.setIcon(ImageUtil.getImageIconFrom(Icons.get("settings2", 16, 16)));
@@ -275,10 +262,7 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 		pnlBrowseOptionsPanel.add(btnQuickSearch, CC.xy(1, 3));
 		pnlBrowseOptionsPanel.add(btnLastSearch, CC.xy(3, 3));
 		//		pnlBrowseOptionsPanel.add(pnlFolderLinks, cc.xyw(1, 5, layout.getColumnCount()));
-		pnlBrowseOptionsPanel.revalidate();
-		pnlBrowseOptionsPanel.repaint();
-		pnlBrowseOptionsPanel.validate();
-		pnlBrowseOptionsPanel.repaint();
+		UIUtil.revalidateAndRepaint(pnlBrowseOptionsPanel);
 	}
 
 	private void switchToMinimizedView() {
@@ -287,8 +271,7 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 		pnlBrowseOptionsPanel.add(btnCustomSearch, CC.xy(1, 3));
 		pnlBrowseOptionsPanel.add(btnQuickSearch, CC.xy(1, 5));
 		pnlBrowseOptionsPanel.add(btnLastSearch, CC.xy(1, 7));
-		pnlBrowseOptionsPanel.validate();
-		pnlBrowseOptionsPanel.repaint();
+		UIUtil.revalidateAndRepaint(pnlBrowseOptionsPanel);
 	}
 
 	private JPanel createSpacePanel() {
@@ -322,12 +305,15 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 
 	private void createBrowsePanel() {
 		txtBrowseComputer = new JTextArea();
+		txtBrowseComputer.setOpaque(false);
 		// txtBrowse.setBorder(BorderFactory.createEmptyBorder());
 		txtBrowseComputer.setEditable(false);
 		txtBrowseComputer.setLineWrap(true);
 		txtBrowseComputer.setWrapStyleWord(false);
 		txtBrowseComputer.setPreferredSize(new Dimension(0, 0));
 		spBrowse = new JCustomScrollPane(txtBrowseComputer);
+		spBrowse.setOpaque(false);
+		spBrowse.getViewport().setOpaque(false);
 		spBrowse.setBorder(BorderFactory.createEmptyBorder());
 		spBrowse.getVerticalScrollBar().setUnitIncrement(16);
 	}
@@ -435,10 +421,6 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 		btnUncategorized.setHorizontalTextPosition(SwingConstants.RIGHT);
 		btnSetupFiles.setVerticalTextPosition(SwingConstants.CENTER);
 		btnUncategorized.setVerticalTextPosition(SwingConstants.CENTER);
-	}
-
-	public boolean isButtonsMinimized() {
-		return btnSetupFiles.getText().isEmpty() || btnUncategorized.getText().isEmpty();
 	}
 
 	@Override

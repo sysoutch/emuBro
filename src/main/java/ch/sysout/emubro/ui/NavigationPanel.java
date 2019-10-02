@@ -1,7 +1,6 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -63,8 +62,6 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 	private JDialog dlgPopup = new JDialog();
 	private JPanel pnlPopup;
 	private int currentNavView = ALL_GAMES;
-	private Color colorButtonForeground = Color.WHITE;
-	private Color colorButtonForegroundHover = Color.BLACK;
 
 	public NavigationPanel() {
 		super(new BorderLayout());
@@ -81,23 +78,19 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 		btnAllGames.setVerticalTextPosition(SwingConstants.CENTER);
 		btnAllGames.setFocusable(false);
 		btnAllGames.setBorder(new EmptyBorder(insets));
-		btnAllGames.setForeground(colorButtonForeground);
 
 		btnRecentlyPlayed.setHorizontalAlignment(SwingConstants.LEFT);
 		btnRecentlyPlayed.setHorizontalTextPosition(SwingConstants.RIGHT);
 		btnRecentlyPlayed.setVerticalTextPosition(SwingConstants.CENTER);
 		btnRecentlyPlayed.setFocusable(false);
 		btnRecentlyPlayed.setBorder(new EmptyBorder(insets));
-		btnRecentlyPlayed.setForeground(colorButtonForeground);
 
 		btnFavorites.setHorizontalAlignment(SwingConstants.LEFT);
 		btnFavorites.setHorizontalTextPosition(SwingConstants.RIGHT);
 		btnFavorites.setVerticalTextPosition(SwingConstants.CENTER);
 		btnFavorites.setFocusable(false);
 		btnFavorites.setBorder(new EmptyBorder(insets));
-		btnFavorites.setForeground(colorButtonForeground);
 
-		UIUtil.doHover(false, colorButtonForeground, btnAllGames, btnRecentlyPlayed, btnFavorites);
 		dlgPopup.setLayout(new BorderLayout());
 		dlgPopup.setUndecorated(true);
 		layoutPopup = new FormLayout("min:grow");
@@ -108,7 +101,6 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 		setToolTipTexts();
 		setIcons();
 		addToButtonGroup(new ButtonGroup(), btnAllGames, btnRecentlyPlayed, btnFavorites);
-		addListeners();
 	}
 
 	private void setToolTipTexts() {
@@ -127,12 +119,14 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 			protected void paintComponent(Graphics g) {
 				super.paintComponent(g);
 				BufferedImage background = IconStore.current().getCurrentTheme().getNavigationPane().getImage();
+				Graphics2D g2d = (Graphics2D) g.create();
+				int x = 0;
+				int y = 0;
+				int w = getWidth();
+				int h = getHeight();
+				g2d.setColor(IconStore.current().getCurrentTheme().getNavigationPane().getColor());
+				g2d.fillRect(x, y, w, h);
 				if (background != null) {
-					Graphics2D g2d = (Graphics2D) g.create();
-					int x = 0;
-					int y = 0;
-					int w = getWidth();
-					int h = getHeight();
 					int imgWidth = background.getWidth();
 					int imgHeight = background.getHeight();
 					boolean shouldScale = false;
@@ -180,20 +174,6 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 		for (AbstractButton btn : buttons) {
 			grp.add(btn);
 		}
-	}
-
-	private void addListeners() {
-		btnAllGames.addMouseListener(UIUtil.getMouseAdapterKeepHoverWhenSelected());
-		btnRecentlyPlayed.addMouseListener(UIUtil.getMouseAdapterKeepHoverWhenSelected());
-		btnFavorites.addMouseListener(UIUtil.getMouseAdapterKeepHoverWhenSelected());
-		// addActionListeners(btnPlatformFilter);
-		// addComponentListener(new ComponentAdapter() {
-		// @Override
-		// public void componentResized(ComponentEvent e) {
-		// super.componentResized(e);
-		// handleContentAlignmentIfNeeded();
-		// }
-		// });
 	}
 
 	public void addPlatformFilterListener(ActionListener l) {
@@ -387,8 +367,6 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 				btnFavorites.setText(Messages.get(MessageConstants.FAVORITES));
 			}
 			btnAllGames.setSelected(true);
-			UIUtil.doHover(false, btnRecentlyPlayed, btnFavorites);
-			UIUtil.doHover(true, btnAllGames);
 			spNavigationButtons.getVerticalScrollBar().setValue(spNavigationButtons.getVerticalScrollBar()
 					.getMinimum());
 			break;
@@ -403,8 +381,6 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 				btnFavorites.setText(Messages.get(MessageConstants.FAVORITES));
 			}
 			btnRecentlyPlayed.setSelected(true);
-			UIUtil.doHover(false, btnAllGames, btnFavorites);
-			UIUtil.doHover(true, btnRecentlyPlayed);
 			Rectangle bounds = spNavigationButtons.getViewport().getViewRect();
 			Dimension size = spNavigationButtons.getViewport().getViewSize();
 			int x = (size.width - bounds.width) / 2;
@@ -422,8 +398,6 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 				btnFavorites.setText(prefix + Messages.get(MessageConstants.FAVORITES) + postfix);
 			}
 			btnFavorites.setSelected(true);
-			UIUtil.doHover(false, btnAllGames, btnRecentlyPlayed);
-			UIUtil.doHover(true, colorButtonForegroundHover, btnFavorites);
 			spNavigationButtons.getVerticalScrollBar().setValue(spNavigationButtons.getVerticalScrollBar()
 					.getMaximum());
 			break;

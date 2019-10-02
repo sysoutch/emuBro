@@ -40,6 +40,8 @@ import com.jgoodies.forms.layout.FormLayout;
 import ch.sysout.emubro.api.dao.ExplorerDAO;
 import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.JCustomButton;
+import ch.sysout.ui.util.JCustomToggleButton;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
@@ -49,11 +51,11 @@ public class CoverBroFrame extends JFrame {
 	private static final long serialVersionUID = 1L;
 
 	private ImageEditPanel pnlImageEdit;
-	private JToggleButton btnCrop = new JToggleButton();
-	private JToggleButton btnRotate = new JToggleButton();
+	private JToggleButton btnCrop = new JCustomToggleButton();
+	private JToggleButton btnRotate = new JCustomToggleButton();
 	private JTextField txtCutBorder = new JTextField("5.3");
 	private JCheckBox chkScale = new JCheckBox(Messages.get(MessageConstants.SCALE_IMAGE));
-	private JButton btnSetAsCover = new JButton(Messages.get(MessageConstants.SET_AS_COVER));
+	private JButton btnSetAsCover = new JCustomButton(Messages.get(MessageConstants.SET_AS_COVER));
 	private int width;
 	private int height;
 
@@ -113,13 +115,10 @@ public class CoverBroFrame extends JFrame {
 		JPanel pnlButtonsTop = new JPanel(new FormLayout("pref:grow, $rgap, pref, $rgap, pref:grow",
 				"fill:pref"));
 		pnlButtonsTop.setBorder(Paddings.DLU4);
-		JToggleButton btnBasicCover = new JToggleButton("<html><center><strong>Basic Cover</strong><br/>"
+		JToggleButton btnBasicCover = new JCustomToggleButton("<html><center><strong>Basic Cover</strong><br/>"
 				+ "Front cover only</center></html>");
-		JToggleButton btnFrontBackCover = new JToggleButton("<html><center><strong>Split Cover</strong><br/>"
+		JToggleButton btnFrontBackCover = new JCustomToggleButton("<html><center><strong>Split Cover</strong><br/>"
 				+ "Front and back cover</center></html>");
-		btnBasicCover.addMouseListener(UIUtil.getMouseAdapterKeepHoverWhenSelected());
-		btnFrontBackCover.addMouseListener(UIUtil.getMouseAdapterKeepHoverWhenSelected());
-		UIUtil.doHover(false, btnBasicCover, btnFrontBackCover);
 		ButtonGroup grp = new ButtonGroup();
 		grp.add(btnBasicCover);
 		grp.add(btnFrontBackCover);
@@ -139,11 +138,8 @@ public class CoverBroFrame extends JFrame {
 		CellConstraints cc = new CellConstraints();
 		pnlButtonsLeft.add(btnRotate, cc.xy(1, 1));
 		pnlButtonsLeft.add(btnCrop, cc.xy(3, 1));
-		btnRotate.addMouseListener(UIUtil.getMouseAdapterKeepHoverWhenSelected());
 		btnRotate.addFocusListener(UIUtil.getFocusAdapterKeepHoverWhenSelected());
-		btnCrop.addMouseListener(UIUtil.getMouseAdapterKeepHoverWhenSelected());
 		btnCrop.addFocusListener(UIUtil.getFocusAdapterKeepHoverWhenSelected());
-		UIUtil.doHover(false, btnRotate, btnCrop);
 		btnCrop.addActionListener(new ActionListener() {
 
 			@Override
@@ -160,7 +156,7 @@ public class CoverBroFrame extends JFrame {
 		pnlButtonsBottom.setBorder(Paddings.DLU4);
 
 		txtHeight = new JTextField("200");
-		btnScaleNow = new JButton(Messages.get(MessageConstants.SCALE_IMAGE_NOW));
+		btnScaleNow = new JCustomButton(Messages.get(MessageConstants.SCALE_IMAGE_NOW));
 		pnlButtonsBottom.add(txtCutBorder);
 		pnlButtonsBottom.add(chkScale);
 		pnlButtonsBottom.add(btnSetAsCover);

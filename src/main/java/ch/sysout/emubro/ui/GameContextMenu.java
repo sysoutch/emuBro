@@ -66,7 +66,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 	private JMenu mnuShowTrailerWeb = new JMenu();
 	private JMenuItem itmDefaultTagSource = new JMenuItem();
 	private JMenuItem itmDefaultImportTagSource = new JMenuItem();
-	private JMenuItem itmDefaultCoverSourceEmuBro = new JMenuItem("emubro.net");
+	private JMenuItem itmCoverDownload = new JMenuItem("Download");
 	private JMenuItem itmDefaultCoverSource = new JMenuItem();
 	private JMenuItem itmDefaultTrailerSource = new JMenuItem();
 	private JMenuItem itmWebSearchSettings = new JMenuItem();
@@ -102,7 +102,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 				new JSeparator(), itmGameProperties);
 		addComponentsToJComponent(mnuRateGame, pnlRatingBar, new JSeparator(), itmComment);
 		addComponentsToJComponent(mnuShowTagsWeb, itmDefaultTagSource);
-		addComponentsToJComponent(mnuShowCoverWeb, itmDefaultCoverSourceEmuBro, itmDefaultCoverSource);
+		addComponentsToJComponent(mnuShowCoverWeb, itmCoverDownload, itmDefaultCoverSource);
 		addComponentsToJComponent(mnuShowTrailerWeb, itmDefaultTrailerSource);
 
 		int size = ScreenSizeUtil.is3k() ? 24 : 16;
@@ -225,7 +225,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 			}
 			group.add(rdb);
 			radios.add(rdb);
-			mnuRunWith.add(rdb);
+			addComponentsToJComponent(mnuRunWith, rdb);
 			rdb.addActionListener(new ActionListener() {
 
 				@Override
@@ -238,7 +238,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 			mnuRunWith.add(new JSeparator());
 		}
 		ImageIcon iconBlank = ImageUtil.getImageIconFrom(Icons.get("blank", 48, 48));
-		mnuRunWith.add(new JMenuItem(Messages.get("setEmulator") + "...", iconBlank));
+		addComponentsToJComponent(mnuRunWith, new JMenuItem(Messages.get("setEmulator") + "...", iconBlank));
 	}
 
 	protected void fireRunGameWithEvent(int emulatorId) {
@@ -265,15 +265,20 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		itmRenameGame.setIcon(ImageUtil.getImageIconFrom(Icons.get("rename", size, size)));
 		itmGameProperties.setIcon(ImageUtil.getImageIconFrom(Icons.get("gameProperties", size, size)));
 		itmDefaultTagSource.setIcon(ImageUtil.getImageIconFrom(Icons.get("applicationIcon", size, size)));
-		itmDefaultCoverSourceEmuBro.setIcon(ImageUtil.getImageIconFrom(Icons.get("applicationIcon", size, size)));
+		//		itmCoverDownload.setIcon(ImageUtil.getImageIconFrom(Icons.get("applicationIcon", size, size)));
 		itmDefaultCoverSource.setIcon(ImageUtil.getImageIconFrom(Icons.get("google", size, size)));
 		itmDefaultTrailerSource.setIcon(ImageUtil.getImageIconFrom(Icons.get("youtube", size, size)));
 	}
 
 	private void addComponentsToJComponent(JComponent component, Component... components) {
+		Color color = IconStore.current().getCurrentTheme().getMenuBar().getColor();
+		if (color == null) {
+			color = IconStore.current().getCurrentTheme().getBackground().getColor().darker();
+		}
 		for (Component c : components) {
 			if (c instanceof JComponent) {
 				((JComponent) c).setOpaque(true);
+				((JComponent) c).setBackground(color);
 			}
 			component.add(c);
 		}
@@ -299,8 +304,8 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		itmAutoSearchTags.addActionListener(l);
 	}
 
-	public void addCoverFromEmuBroListener(ActionListener l) {
-		itmDefaultCoverSourceEmuBro.addActionListener(l);
+	public void addCoverDownloadListener(ActionListener l) {
+		itmCoverDownload.addActionListener(l);
 	}
 
 	public void addCoverFromWebListener(ActionListener l) {

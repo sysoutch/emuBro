@@ -116,6 +116,7 @@ public final class FileTree extends JPanel {
 				setCellEditor(new CheckBoxNodeEditor(fileSystemView));
 			}
 		};
+		tree.setOpaque(false);
 		tree.addKeyListener(new KeyAdapter() {
 			@Override
 			public void keyPressed(KeyEvent e) {
@@ -160,7 +161,11 @@ public final class FileTree extends JPanel {
 		// tree.setToggleClickCount(1);
 
 		setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-		add(new JScrollPane(tree));
+		setOpaque(false);
+		JScrollPane sp = new JScrollPane(tree);
+		sp.getViewport().setOpaque(false);
+		sp.setOpaque(false);
+		add(sp);
 		setPreferredSize(new Dimension(0, 0));
 	}
 
@@ -229,10 +234,8 @@ public final class FileTree extends JPanel {
 }
 
 class TriStateCheckBox extends JCheckBox {
-	/**
-	 *
-	 */
 	private static final long serialVersionUID = 1L;
+
 	private Icon currentIcon;
 
 	@Override
@@ -377,10 +380,8 @@ class Task extends SwingWorker<String, File> {
 }
 
 class FileTreeCellRenderer extends TriStateCheckBox implements TreeCellRenderer {
-	/**
-	 *
-	 */
 	private static final long serialVersionUID = 1L;
+
 	private final FileSystemView fileSystemView;
 	private final JPanel panel = new JPanel(new BorderLayout());
 	private final DefaultTreeCellRenderer renderer = new DefaultTreeCellRenderer();
@@ -400,14 +401,22 @@ class FileTreeCellRenderer extends TriStateCheckBox implements TreeCellRenderer 
 		setOpaque(false);
 	}
 
+	//	@Override
+	//	public Color getBackgroundNonSelectionColor() {
+	//		return (null);
+	//	}
+	//
+	//	@Override
+	//	public Color getBackgroundSelectionColor() {
+	//		return Color.GREEN;
+	//	}
+
 	@Override
 	public Component getTreeCellRendererComponent(JTree tree, Object value, boolean selected, boolean expanded,
 			boolean leaf, int row, boolean hasFocus) {
 		JLabel l = (JLabel) renderer.getTreeCellRendererComponent(tree, value, selected, expanded, leaf, row, hasFocus);
-		l.setFont(tree.getFont());
 		if (value instanceof DefaultMutableTreeNode) {
 			setEnabled(tree.isEnabled());
-			setFont(tree.getFont());
 			Object userObject = ((DefaultMutableTreeNode) value).getUserObject();
 			if (userObject instanceof CheckBoxNode) {
 				CheckBoxNode node = (CheckBoxNode) userObject;
@@ -417,7 +426,6 @@ class FileTreeCellRenderer extends TriStateCheckBox implements TreeCellRenderer 
 					setIcon(null);
 				}
 				setText("");
-
 				File file = node.file;
 				l.setIcon(fileSystemView.getSystemIcon(file));
 				l.setText(fileSystemView.getSystemDisplayName(file));
@@ -448,10 +456,8 @@ class FileTreeCellRenderer extends TriStateCheckBox implements TreeCellRenderer 
 }
 
 class CheckBoxNodeEditor extends TriStateCheckBox implements TreeCellEditor {
-	/**
-	 *
-	 */
 	private static final long serialVersionUID = 1L;
+
 	private final FileSystemView fileSystemView;
 	private final JPanel panel = new JPanel(new BorderLayout());
 	private final DefaultTreeCellRenderer renderer = new DefaultTreeCellRenderer();
@@ -470,7 +476,11 @@ class CheckBoxNodeEditor extends TriStateCheckBox implements TreeCellEditor {
 		panel.setRequestFocusEnabled(false);
 		panel.setOpaque(false);
 		panel.add(this, BorderLayout.WEST);
-		setOpaque(false);
+	}
+
+	@Override
+	public Color getBackground() {
+		return null;
 	}
 
 	@Override
@@ -479,11 +489,8 @@ class CheckBoxNodeEditor extends TriStateCheckBox implements TreeCellEditor {
 		// JLabel l = (JLabel) renderer.getTreeCellRendererComponent(tree,
 		// value, selected, expanded, leaf, row, hasFocus);
 		JLabel l = (JLabel) renderer.getTreeCellRendererComponent(tree, value, true, expanded, leaf, row, true);
-		l.setFont(tree.getFont());
-		setOpaque(false);
 		if (value instanceof DefaultMutableTreeNode) {
 			setEnabled(tree.isEnabled());
-			setFont(tree.getFont());
 			Object userObject = ((DefaultMutableTreeNode) value).getUserObject();
 			if (userObject instanceof CheckBoxNode) {
 				CheckBoxNode node = (CheckBoxNode) userObject;

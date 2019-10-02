@@ -138,6 +138,8 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 	protected int scrollDistanceY;
 	protected int currentValue;
 
+	private Color foregroundColor = UIManager.getColor("Table.foreground");
+
 	public TableViewPanel(Explorer explorer, ViewPanelManager viewManager, GameContextMenu popupGame, ViewContextMenu popupView) {
 		super(new BorderLayout());
 		mdlTblAllGames = new GameTableModel(explorer);
@@ -177,6 +179,9 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 
 	private void initComponents() {
 		tblGames = new JTableDoubleClickOnHeaderFix();
+		tblGames.getTableHeader().setOpaque(false);
+		tblGames.getTableHeader().setBackground(IconStore.current().getCurrentTheme().getView().getColor());
+		tblGames.getTableHeader().setForeground(Color.white);
 		columnModel = tblGames.getColumnModel();
 		columnAdjuster = new TableColumnAdjuster(tblGames);
 		// columnModel.getColumn(0).setResizable(false);
@@ -187,17 +192,15 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 			@Override
 			protected void paintComponent(Graphics g) {
 				super.paintComponent(g);
+				Graphics2D g2d = (Graphics2D) g.create();
+				int panelWidth = getWidth();
+				int panelHeight = getHeight();
+				g2d.setColor(IconStore.current().getCurrentTheme().getView().getColor());
+				g2d.fillRect(0, 0, panelWidth, panelHeight);
 				BufferedImage background = IconStore.current().getCurrentTheme().getView().getImage();
 				if (background != null) {
-					Graphics2D g2d = (Graphics2D) g.create();
-					int panelWidth = getWidth();
-					int panelHeight = getHeight();
 					int imgWidth = background.getWidth();
 					int imgHeight = background.getHeight();
-
-					g2d.setColor(IconStore.current().getCurrentTheme().getView().getColor());
-					g2d.fillRect(0, 0, panelWidth, panelHeight);
-
 					boolean shouldScale = false;
 					if (shouldScale) {
 						g2d.drawImage(background, 0, 0, panelWidth, panelHeight, this);
@@ -220,8 +223,8 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 						int y = panelHeight-height;
 						g2d.drawImage(imgTransparentOverlay, x, y, width, height, this);
 					}
-					g2d.dispose();
 				}
+				g2d.dispose();
 			}
 		};
 		Color color = UIManager.getColor("Table.background");
@@ -318,7 +321,7 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 				//				tblGames.setToolTipText("");
 				int index = tblGames.rowAtPoint(p);
 				if (index > -1) {
-					Game text = (Game) model.getValueAt(index, -1);
+					Game text = (Game) model.getValueAt(tblGames.convertRowIndexToModel(index), -1);
 					ZonedDateTime lastPlayed = text.getLastPlayed();
 					tblGames.setToolTipText("<html><strong>" + Messages.get(MessageConstants.COLUMN_TITLE) + ": </strong>" + text.getName()
 					+ "<br><strong>"+Messages.get(MessageConstants.COLUMN_PLATFORM) + ": </strong>"+explorer.getPlatform(text.getPlatformId())
@@ -940,7 +943,7 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 
 	class CustomRenderer extends DefaultTableCellRenderer {
 		private static final long serialVersionUID = -1;
-		private Color colorFavorite = new Color(250, 176, 42);
+		private Color favoriteForegroundColor = new Color(250, 250, 128);
 
 		@Override
 		public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus,
@@ -953,9 +956,7 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 				//				Color selectedBackgroundColor = tblGames.getSelectionBackground();
 				Color selectedBackgroundColor = new Color(0f, 0f, 0f, 0.25f);
 				Color hoveredBackgroundColor = new Color(0f, 0f, 0f, 0.1f);
-
 				((JComponent) cellComponent).setOpaque(isSelected);
-
 				if (isSelected) {
 					Color selectedForegroundColor = UIManager.getColor("Table.selectionForeground");
 					cellComponent.setForeground(selectedForegroundColor);
@@ -964,6 +965,7 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 						//						Font fontBold = (font.isBold()) ? font : font.deriveFont(
 						//								Collections.singletonMap(TextAttribute.WEIGHT, TextAttribute.WEIGHT_BOLD));
 						//						cellComponent.setFont(fontBold);
+						cellComponent.setForeground(favoriteForegroundColor);
 					}
 				} else {
 					//					cellComponent.setBackground(null);
@@ -975,15 +977,18 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 							//							Font fontBold = (font.isBold()) ? font : font.deriveFont(
 							//									Collections.singletonMap(TextAttribute.WEIGHT, TextAttribute.WEIGHT_BOLD));
 							//							cellComponent.setFont(fontBold);
+							cellComponent.setForeground(favoriteForegroundColor);
+						} else {
+							cellComponent.setForeground(foregroundColor);
 						}
 					} else {
 						if (game.isFavorite()) {
 							//							Font fontBold = (font.isBold()) ? font : font.deriveFont(Font.BOLD);
 							//							cellComponent.setFont(fontBold);
-							cellComponent.setForeground(colorFavorite);
+							cellComponent.setForeground(favoriteForegroundColor);
 						} else {
 							//							Font fontPlain = cellComponent.getFont().deriveFont(Font.PLAIN);
-							cellComponent.setForeground(null);
+							cellComponent.setForeground(foregroundColor);
 							//							cellComponent.setFont(fontPlain);
 						}
 					}

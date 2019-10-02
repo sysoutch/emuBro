@@ -1,7 +1,6 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
@@ -39,7 +38,6 @@ import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
-import ch.sysout.util.UIUtil;
 
 public class DetailsPanel extends JPanel implements NotificationElementListener {
 	private static final long serialVersionUID = 1L;
@@ -108,7 +106,6 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		btnInformations.setFocusPainted(false);
 		btnWarnings.setFocusPainted(false);
 		btnErrors.setFocusPainted(false);
-		UIUtil.doHover(false, btnWarnings, btnErrors);
 
 		btnInformations.setHorizontalAlignment(SwingConstants.LEFT);
 		btnWarnings.setHorizontalAlignment(SwingConstants.LEFT);
@@ -156,7 +153,6 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				UIUtil.doHover(false, btnWarnings, btnErrors);
 				if (btnInformations.isSelected()) {
 					spNotifications.setVisible(true);
 					spWarnings.setVisible(false);
@@ -168,12 +164,10 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 				repaint();
 			}
 		});
-		btnInformations.addMouseListener(UIUtil.getMouseAdapterKeepHoverWhenSelected());
 		btnWarnings.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				UIUtil.doHover(false, btnInformations, btnErrors);
 				if (btnWarnings.isSelected()) {
 					spWarnings.setVisible(true);
 					spNotifications.setVisible(false);
@@ -186,12 +180,10 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 			}
 		});
 
-		btnWarnings.addMouseListener(UIUtil.getMouseAdapterKeepHoverWhenSelected());
 		btnErrors.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				UIUtil.doHover(false, btnInformations, btnWarnings);
 				if (btnErrors.isSelected()) {
 					spErrors.setVisible(true);
 					spNotifications.setVisible(false);
@@ -203,15 +195,12 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 				repaint();
 			}
 		});
-
-		btnErrors.addMouseListener(UIUtil.getMouseAdapterKeepHoverWhenSelected());
 	}
 
 	private void doHover(AbstractButton btn, boolean b) {
 		Cursor cursor = (b) ? Cursor.getPredefinedCursor(Cursor.HAND_CURSOR) : null;
 		btn.setCursor(cursor);
 		if (b || !btn.isSelected()) {
-			UIUtil.doHover(b, btn);
 		}
 		String style = (b) ? "underline" : "none";
 		String type = "NotificationType";
@@ -250,12 +239,7 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 				}
 			}
 		};
-		Color colorTabBackGround = IconStore.current().getCurrentTheme().getTabs().getColor();
-		BufferedImage previewPaneBgImage = IconStore.current().getCurrentTheme().getView().getImage();
-		if (previewPaneBgImage != null) {
-			Color colorTabSelectedBackGround = new Color(previewPaneBgImage.getRGB(previewPaneBgImage.getWidth()-1, 0));
-			tpDetailsPane.setUI(new CustomTabbedPaneUI(colorTabSelectedBackGround, colorTabBackGround));
-		}
+		tpDetailsPane.setUI(new CustomTabbedPaneUI());
 		//		tpDetailsPane.setAlpha(0.5f);
 		tpDetailsPane.setBorder(BorderFactory.createEmptyBorder());
 		tpDetailsPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
@@ -284,7 +268,6 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		pnl.add(pnlHideDetailsPanePanel = createHideDetailsPanePanel(), BorderLayout.CENTER);
 		pnl.setOpaque(false);
 
-		UIUtil.doHover(false, btnResizeDetailsPane);
 		add(btnResizeDetailsPane, BorderLayout.NORTH);
 		add(pnl, BorderLayout.EAST);
 		pnlBrowseComputer.setBorder(Paddings.TABBED_DIALOG);
@@ -295,28 +278,13 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		JPanel pnl = new JPanel(new BorderLayout());
 		pnl.setOpaque(false);
 		btnHideDetailsPane = new JCustomButton();
-		UIUtil.doHover(false, btnHideDetailsPane);
 		btnHideDetailsPane.setIcon(ImageUtil.getImageIconFrom(Icons.get("hideDetailsPane", 24, 24)));
 		btnHideDetailsPane.setActionCommand(GameViewConstants.HIDE_DETAILS_PANE);
 		btnHideDetailsPane.setToolTipText("Informationsbereich ausblenden (Alt+Shift+I)");
-		btnHideDetailsPane.addMouseListener(new MouseAdapter() {
-
-			@Override
-			public void mouseEntered(MouseEvent e) {
-				UIUtil.doHover(true, btnHideDetailsPane);
-			}
-
-			@Override
-			public void mouseExited(MouseEvent e) {
-				UIUtil.doHover(false, btnHideDetailsPane);
-			}
-		});
 		btnPinUnpinDetailsPane = new JCustomButton();
-		UIUtil.doHover(true, btnPinUnpinDetailsPane);
 		btnPinUnpinDetailsPane.setIcon(ImageUtil.getImageIconFrom(Icons.get("unpinDetailsPane", 24, 24)));
 		btnPinUnpinDetailsPane.setActionCommand(GameViewConstants.UNPIN_DETAILS_PANE);
 		btnPinUnpinDetailsPane.setToolTipText("Informationsbereich in eigenem Fenster öffnen");
-		btnPinUnpinDetailsPane.addMouseListener(UIUtil.getMouseAdapter());
 		JPanel pnl2 = new JPanel(new BorderLayout());
 		pnl2.setOpaque(false);
 		pnl2.add(btnPinUnpinDetailsPane, BorderLayout.NORTH);
@@ -524,20 +492,22 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		pnlBrowseCovers.addSelectPreviousGameListener(l);
 	}
 
+	public void addResizeDetailsPanelListener(MouseMotionListener l) {
+		btnResizeDetailsPane.addMouseMotionListener(l);
+	}
+
 	@Override
 	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
-		BufferedImage background = IconStore.current().getCurrentTheme().getNavigationPane().getImage();
+		int panelWidth = getWidth();
+		int panelHeight = getHeight();
+		Graphics2D g2d = (Graphics2D) g.create();
+		g2d.setColor(IconStore.current().getCurrentTheme().getDetailsPane().getColor());
+		g2d.fillRect(0, 0, panelWidth, panelHeight);
+		BufferedImage background = IconStore.current().getCurrentTheme().getDetailsPane().getImage();
 		if (background != null) {
-			Graphics2D g2d = (Graphics2D) g.create();
-			int panelWidth = getWidth();
-			int panelHeight = getHeight();
 			g2d.drawImage(background, 0, 0, panelWidth, panelHeight, this);
-			g2d.dispose();
 		}
-	}
-
-	public void addResizeDetailsPanelListener(MouseMotionListener l) {
-		btnResizeDetailsPane.addMouseMotionListener(l);
+		g2d.dispose();
 	}
 }

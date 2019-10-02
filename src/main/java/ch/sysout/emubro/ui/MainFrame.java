@@ -29,6 +29,7 @@ import java.awt.event.WindowFocusListener;
 import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeListener;
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -247,12 +248,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	private GameSettingsPopupMenu mnuGameSettings = new GameSettingsPopupMenu();
 
 	private ViewPanelManager viewManager;
-	private Color colorMenuBar;
-	private JRadioButtonMenuItem[] defaultThemesMenuItems = {
-			new JRadioButtonMenuItem("emubro"),
-			new JRadioButtonMenuItem("dark"),
-			new JRadioButtonMenuItem("light"),
-			new JRadioButtonMenuItem("colored") };
+	private List<JRadioButtonMenuItem> defaultThemesMenuItems = new ArrayList<>();
+	private ActionListener changeThemeListener;
 
 	public MainFrame(LookAndFeel defaultLookAndFeel, Explorer explorer) {
 		super(TITLE);
@@ -367,19 +364,18 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	}
 
 	private void initMenuBar() {
-		//		UIManager.put("MenuBar.background", Color.RED);
-		//		UIManager.put("Menu.background", colorMenuBar);
-		//		UIManager.put("MenuItem.background", colorMenuBar);
-		// change default selection colors
-		//		UIManager.put("Menu.selectionBackground", colorMenuBar);
-		//		UIManager.put("MenuItem.selectionBackground", colorMenuBar);
-
 		mnb = new JMenuBar();
-		colorMenuBar = IconStore.current().getCurrentTheme().getMenuBar().getColor();
 		mnb.setUI(new BasicMenuBarUI() {
 
 			@Override
 			public void paint(Graphics g, JComponent c) {
+				Color colorMenuBar = null;
+				if (IconStore.current().getCurrentTheme().getMenuBar().hasColor()) {
+					colorMenuBar = IconStore.current().getCurrentTheme().getMenuBar().getColor();
+				}
+				if (colorMenuBar == null) {
+					colorMenuBar = IconStore.current().getCurrentTheme().getBackground().getColor();
+				}
 				g.setColor(colorMenuBar);
 				g.fillRect(0, 0, c.getWidth(), c.getHeight());
 			}
@@ -467,6 +463,32 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmRenameGames = new JMenuItem(Messages.get("renameGames") + "...");
 		itmWebSearchSettings = new JMenuItem(Messages.get(MessageConstants.WEB_SEARCH_SETTINGS) + "...");
 
+		try {
+			for (String theme : IconStore.current().getDefaultThemes()) {
+				System.err.println("rdb added");
+				JRadioButtonMenuItem rdb;
+				defaultThemesMenuItems.add(rdb = new JRadioButtonMenuItem(theme));
+				rdb.addActionListener(new ActionListener() {
+
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						String themeName = ((AbstractButton) e.getSource()).getText();
+						try {
+							IconStore.current().loadDefaultTheme(themeName);
+							//							Main.initializeCustomColors();
+							//							SwingUtilities.updateComponentTreeUI(MainFrame.this);
+							MainFrame.this.repaint();
+						} catch (IOException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
+					}
+				});
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		//		UIUtil.setForegroundDependOnBackground(colorMenuBar,
 		//				mnuFile, mnuView, mnuGames, mnuLanguage, mnuHelp);
 	}
@@ -787,13 +809,17 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		});
 		addActionListeners(this, itmChooseDetails, itmSetColumnWidth, itmSetRowHeight, itmLanguageDe, itmLanguageEn,
 				itmLanguageFr);
-		for (Component buttonBarButton : buttonBarComponents) {
-			buttonBarButton.addMouseListener(this);
-			addMouseListeners(buttonBarButton);
-		}
 		addActionListeners(btnOrganize, btnChangeView, btnMoreOptionsChangeView, btnSetFilter);
 		pnlMain.addNavigationSplitPaneListener();
 		viewManager.addUpdateGameCountListener(this);
+	}
+
+	public void setChangeThemeListener(ActionListener l) {
+		changeThemeListener = l;
+	}
+
+	public void addShowHideNavigationPaneListener(ActionListener l) {
+		btnShowHideNavigationPanel.addActionListener(l);
 	}
 
 	public void addRunGameWithListener(RunGameWithListener l) {
@@ -806,12 +832,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 				"actionAddShowMenubarListener");
 		getRootPane().getActionMap().put("actionAddShowMenubarListener", l);
 		pnlMain.addShowMenuBarListener(l);
-	}
-
-	private void addMouseListeners(Component... o) {
-		for (Component obj : o) {
-			obj.addMouseListener(UIUtil.getMouseAdapter());
-		}
 	}
 
 	private void addActionListeners(AbstractButton... o) {
@@ -1070,8 +1090,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		pnlMain.getPopupGame().addAutoSearchTagsListener(l);
 	}
 
-	public void addCoverFromEmuBroListener(ActionListener l) {
-		pnlMain.getPopupGame().addCoverFromEmuBroListener(l);
+	public void addCoverDownloadListener(ActionListener l) {
+		pnlMain.getPopupGame().addCoverDownloadListener(l);
 	}
 
 	public void addCoverFromWebListener(ActionListener l) {
@@ -1196,7 +1216,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 		JPanel pnlGameCountSpecial = new JPanel(new BorderLayout());
 		pnlGameCountSpecial.setOpaque(false);
-		pnlGameCountSpecial.add(pnlGameCount.lblBlank, BorderLayout.WEST);
+		pnlGameCountSpecial.add(pnlGameCount.btnBlank, BorderLayout.WEST);
 		pnlGameCountSpecial.add(pnlGameCount.btnShowDetailsPane);
 		pnlGameCountSpecial.add(pnlGameCount.btnResize, BorderLayout.EAST);
 
@@ -1206,12 +1226,17 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 			@Override
 			protected void paintComponent(Graphics g) {
 				super.paintComponent(g);
-				BufferedImage background = IconStore.current().getCurrentTheme().getButtonBar().getImage();
-				if (background != null) {
+				int panelWidth = getWidth();
+				int panelHeight = getHeight();
+				Color color = IconStore.current().getCurrentTheme().getStatusBar().getColor();
+				if (color != null) {
 					Graphics2D g2d = (Graphics2D) g.create();
-					int w = getWidth();
-					int h = getHeight();
-					g2d.drawImage(background, 0, 0, w, h, this);
+					g2d.setColor(color);
+					g2d.fillRect(0, 0, panelWidth, panelHeight);
+					BufferedImage background = IconStore.current().getCurrentTheme().getStatusBar().getImage();
+					if (background != null) {
+						g2d.drawImage(background, 0, 0, panelWidth, panelHeight, this);
+					}
 					g2d.dispose();
 				}
 			}
@@ -1264,7 +1289,10 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 				new JSeparator(), itmFullScreen);
 
 		addComponentsToJComponent(mnuThemes, itmManageThemes, mnuChangeTheme);
-		addComponentsToJComponent(mnuChangeTheme, defaultThemesMenuItems);
+
+		for (JRadioButtonMenuItem cmp : defaultThemesMenuItems) {
+			addComponentsToJComponent(mnuChangeTheme, cmp);
+		}
 
 		addComponentsToJComponent(mnuManageTags, itmAutoSearchTags, itmManuallyAddTag);
 		addComponentsToJComponent(mnuGames, mnuManageTags, mnuManageCovers,
@@ -1330,11 +1358,14 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	private void addComponentsToJComponent(JComponent parentComponent, Component... components) {
 		for (Component c : components) {
+			Color color = IconStore.current().getCurrentTheme().getMenuBar().getColor();
+			if (color == null) {
+				color = IconStore.current().getCurrentTheme().getBackground().getColor().darker();
+			}
 			if (c instanceof JComponent) {
 				((JComponent) c).setOpaque(true);
-				UIUtil.setForegroundDependOnBackground(colorMenuBar, c);
-				c.setBackground(colorMenuBar);
 			}
+			c.setBackground(color);
 			parentComponent.add(c);
 		}
 	}
@@ -1343,8 +1374,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		for (Component c : components) {
 			if (c instanceof JComponent) {
 				((JComponent) c).setOpaque(true);
-				UIUtil.setForegroundDependOnBackground(colorMenuBar, c);
-				c.setBackground(colorMenuBar);
 			}
 			parentComponent.add(c);
 		}
@@ -1415,7 +1444,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		pnlColumnWidthSlider.setVisible(true);
 		dlgColumnWidth.setLocationRelativeTo(relativeTo);
 		dlgColumnWidth.setVisible(true);
-		UIUtil.doHover(false, btnColumnWidthSlider);
 		sliderColumnWidth.requestFocusInWindow();
 		MouseWheelListener wheel = new MouseWheelListener() {
 
@@ -1451,13 +1479,11 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 						dlgColumnWidth.add(pnlColumnWidthSlider);
 						showColumnWidthSliderPanel(pnlMain.getCurrentViewPanel());
 					}
-					UIUtil.doHover(false, btnPinColumnSliderWindow);
 				}
 			};
 			if (btnPinColumnSliderWindow == null) {
 				btnPinColumnSliderWindow = new JCustomButton();
 				btnPinColumnSliderWindow.setIcon(ImageUtil.getImageIconFrom(Icons.get("pin", 24, 24)));
-				btnPinColumnSliderWindow.addMouseListener(UIUtil.getMouseAdapter());
 				btnPinColumnSliderWindow.addMouseListener(new MouseAdapter() {
 					@Override
 					public void mousePressed(MouseEvent e) {
@@ -1506,11 +1532,9 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 						return;
 					}
 					showRowHeightSliderPanel(dlgColumnWidth);
-					UIUtil.doHover(false, btnColumnWidthSlider);
 				}
 			};
 			btnColumnWidthSlider.addActionListener(actionListener);
-			btnColumnWidthSlider.addMouseListener(UIUtil.getMouseAdapter());
 			btnColumnWidthSlider.addMouseListener(new MouseAdapter() {
 				@Override
 				public void mousePressed(MouseEvent e) {
@@ -1575,7 +1599,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		pnlRowHeightSlider.setVisible(true);
 		dlgRowHeight.setLocationRelativeTo(relativeTo);
 		dlgRowHeight.setVisible(true);
-		UIUtil.doHover(false, btnRowHeightSlider);
 		sliderRowHeight.requestFocusInWindow();
 		MouseWheelListener wheel = new MouseWheelListener() {
 
@@ -1611,13 +1634,11 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 						dlgRowHeight.add(pnlRowHeightSlider);
 						showRowHeightSliderPanel(pnlMain.getCurrentViewPanel());
 					}
-					UIUtil.doHover(false, btnPinRowSliderWindow);
 				}
 			};
 			if (btnPinRowSliderWindow == null) {
 				btnPinRowSliderWindow = new JCustomButton();
 				btnPinRowSliderWindow.setIcon(ImageUtil.getImageIconFrom(Icons.get("pin", 24, 24)));
-				btnPinRowSliderWindow.addMouseListener(UIUtil.getMouseAdapter());
 				btnPinRowSliderWindow.addMouseListener(new MouseAdapter() {
 					@Override
 					public void mousePressed(MouseEvent e) {
@@ -1670,7 +1691,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 				}
 			};
 			btnRowHeightSlider.addActionListener(actionListener);
-			btnRowHeightSlider.addMouseListener(UIUtil.getMouseAdapter());
 			btnRowHeightSlider.addMouseListener(new MouseAdapter() {
 				@Override
 				public void mousePressed(MouseEvent e) {
@@ -2503,18 +2523,13 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		AbstractButton source = (AbstractButton) e.getSource();
 		if (isButtonBarComponent(source)) {
 			if (!source.isSelected()) {
-				UIUtil.doHover(true, source);
 				if (source == btnRunGame) {
-					UIUtil.doHover(true, btnMoreOptionsRunGame);
 				}
 				if (source == btnMoreOptionsRunGame) {
-					UIUtil.doHover(true, btnRunGame);
 				}
 				if (source == btnChangeView) {
-					UIUtil.doHover(true, btnMoreOptionsChangeView);
 				}
 				if (source == btnMoreOptionsChangeView) {
-					UIUtil.doHover(true, btnChangeView);
 				}
 			}
 		}
@@ -2525,18 +2540,13 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		AbstractButton source = (AbstractButton) e.getSource();
 		if (isButtonBarComponent(source)) {
 			if (!source.isSelected()) {
-				UIUtil.doHover(false, source);
 				if (source == btnRunGame) {
-					UIUtil.doHover(false, btnMoreOptionsRunGame);
 				}
 				if (source == btnMoreOptionsRunGame) {
-					UIUtil.doHover(false, btnRunGame);
 				}
 				if (source == btnChangeView) {
-					UIUtil.doHover(false, btnMoreOptionsChangeView);
 				}
 				if (source == btnMoreOptionsChangeView) {
-					UIUtil.doHover(false, btnChangeView);
 				}
 			}
 		}

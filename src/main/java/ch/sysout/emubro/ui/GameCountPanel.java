@@ -26,6 +26,7 @@ import ch.sysout.emubro.api.GameListener;
 import ch.sysout.emubro.api.event.GameAddedEvent;
 import ch.sysout.emubro.api.event.GameRemovedEvent;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.JCustomButton;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
@@ -37,9 +38,9 @@ public class GameCountPanel extends JPanel implements GameListener, DetailsPaneL
 	private JLabel lblGameCount = new JLabel("");
 	private JLinkButton lnkSystemInformations = new JLinkButton("System informations");
 	private ProgressPanel pnlProgress;
-	JButton btnShowDetailsPane = new JButton();
+	JButton btnShowDetailsPane = new JCustomButton();
 	JLabel btnResize = new JLabel();
-	JButton lblBlank = new JButton();
+	JButton btnBlank = new JCustomButton();
 	private Icon iconResize;
 	private Icon iconShowGameDetailsPane;
 	//	private Icon iconGameDetailsPaneToFront;
@@ -69,15 +70,14 @@ public class GameCountPanel extends JPanel implements GameListener, DetailsPaneL
 		//		iconGameDetailsPaneToFront = ImageUtil.getImageIconFrom(Icons.get("showDetailsPane", size, size));
 		iconBlank = ImageUtil.getImageIconFrom(Icons.get("blank", size, size));
 
-		lblBlank.setIcon(iconBlank);
-		lblBlank.setFocusable(false);
-		lblBlank.setFocusPainted(false);
-		UIUtil.doHover(false, btnShowDetailsPane, lblBlank);
+		btnBlank.setIcon(iconBlank);
+		btnBlank.setEnabled(false);
+		btnBlank.setFocusable(false);
+		btnBlank.setFocusPainted(false);
 		btnShowDetailsPane.setIcon(iconShowGameDetailsPane);
 		btnShowDetailsPane.setToolTipText("Informationsbereich einblenden (Alt+Shift+I)");
 		btnShowDetailsPane.setActionCommand(GameViewConstants.SHOW_DETAILS_PANE);
 		btnShowDetailsPane.setVisible(false);
-		btnShowDetailsPane.addMouseListener(UIUtil.getMouseAdapter());
 
 		btnResize.setIcon(iconResize);
 		btnResize.addMouseListener(new MouseAdapter() {

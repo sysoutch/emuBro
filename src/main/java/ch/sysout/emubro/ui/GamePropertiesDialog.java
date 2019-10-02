@@ -196,7 +196,6 @@ public class GamePropertiesDialog extends JDialog {
 	private void createUI() {
 		getRootPane().setBorder(Paddings.TABBED_DIALOG);
 		tpMain.setOpaque(false);
-		tpMain.setUI(new CustomTabbedPaneUI(Color.GREEN, Color.BLUE));
 		add(tpMain, BorderLayout.CENTER);
 		//		tpMain.getRootPane().setOpaque(false);
 		FormLayout layout = new FormLayout("24dlu:grow, $button, $rgap, $button, $rgap, $button", "$rgap, fill:pref");
@@ -224,7 +223,7 @@ public class GamePropertiesDialog extends JDialog {
 		pnlMain.add(lblIcon = new JLabel(iconStore.getPlatformIcon(platform.getId())), cc.xy(1, 1));
 		lblIcon.setHorizontalAlignment(SwingConstants.LEFT);
 		txtGameName = new JTextArea();
-		JScrollPane spGameName = new JCustomScrollPane(txtGameName);
+		JScrollPane spGameName = new JScrollPane(txtGameName);
 		spGameName.setOpaque(false);
 		spGameName.getViewport().setOpaque(false);
 		pnlMain.add(spGameName, cc.xywh(3, 1, layout.getColumnCount() - 2, 2));

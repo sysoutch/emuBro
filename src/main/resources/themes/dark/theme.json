@@ -1,27 +1,4 @@
 {
-  "name":"Dark Mode"
-  "menuBar": {
-    "color":"#000",
-	"image":"menubar.jpg"
-  }
-  "view": {
-    "color":"#000",
-	"image":"bg-only.jpg"
-  }
-  "buttonBar": {
-    "color":"#000",
-	"image":"buttonbar.jpg"
-  }
-  "navigationPane": {
-    "color":"#000",
-	"image":"nav.jpg"
-  }
-  "previewPane": {
-    "color":"#000",
-	"image":"previewPane.jpg"
-  }
-  "tabs": {
-    "color":"#000",
-	"image":"tabs.jpg"
-  }
+  "name":"Dark Mode",
+  "color":"#032430"
 }

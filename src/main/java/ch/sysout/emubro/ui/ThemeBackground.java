@@ -1,6 +1,7 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.Color;
+import java.awt.GradientPaint;
 import java.awt.Point;
 import java.awt.image.BufferedImage;
 
@@ -10,6 +11,7 @@ public class ThemeBackground {
 	private BufferedImage image;
 	private Color color;
 	private Color colorFromImage;
+	private GradientPaint gradientPaint;
 	private Point pickColorFromPoint;
 
 	public ThemeBackground(BufferedImage image, Color color) {
@@ -23,6 +25,10 @@ public class ThemeBackground {
 		pickColorFromPoint = new Point(x, y);
 	}
 
+	public ThemeBackground(GradientPaint gradientPaint) {
+		this.gradientPaint = gradientPaint;
+	}
+
 	public BufferedImage getImage() {
 		return image;
 	}
@@ -31,18 +37,37 @@ public class ThemeBackground {
 		this.image = image;
 	}
 
+	public boolean hasColor() {
+		return getColor() != null;
+	}
+
 	public Color getColor() {
 		if (autoPickColorFromImageEnabled && image != null) {
 			if (pickColorFromPoint == null) {
 				pickColorFromPoint = new Point(0, 0);
 			}
-			return colorFromImage = new Color(image.getRGB(pickColorFromPoint.x, pickColorFromPoint.y));
+			if (colorFromImage == null) {
+				colorFromImage = new Color(image.getRGB(pickColorFromPoint.x, pickColorFromPoint.y));
+			}
+			return colorFromImage;
 		}
 		return color;
 	}
 
 	public void setColor(Color color) {
 		this.color = color;
+	}
+
+	public boolean hasGradientPaint() {
+		return gradientPaint != null;
+	}
+
+	public GradientPaint getGradientPaint() {
+		return gradientPaint;
+	}
+
+	public void setGradientPaint(GradientPaint gradientPaint) {
+		this.gradientPaint = gradientPaint;
 	}
 
 	public boolean isAutoPickColorFromImageEnabled() {

@@ -15,8 +15,6 @@ import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
 import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -53,21 +51,6 @@ public class UIUtil {
 	private static Color colorButtonForeground = UIManager.getColor("Button.foreground");
 	private static Color colorButtonForegroundHover = UIManager.getColor("Button.select");
 
-	public static void doHover(boolean b, AbstractButton... btns) {
-		Color color = b ? colorButtonForegroundHover : colorButtonForeground;
-		doHover(b, color, btns);
-	}
-
-	public static void doHover(boolean b, Color colorButtonForeground, AbstractButton... btns) {
-		for (AbstractButton btn : btns) {
-			btn.setContentAreaFilled(false);
-			btn.setBorderPainted(false);
-			//			btn.setContentAreaFilled(b);
-			//			btn.setBorderPainted(b);
-			//			btn.setForeground(colorButtonForeground);
-		}
-	}
-
 	public static void validateAndRepaint(JComponent pnlCovers) {
 		pnlCovers.validate();
 		pnlCovers.repaint();
@@ -78,48 +61,6 @@ public class UIUtil {
 		pnlCovers.repaint();
 	}
 
-	public static MouseListener getMouseAdapter() {
-		if (mouseAdapter == null) {
-			mouseAdapter = new MouseAdapter() {
-				@Override
-				public void mouseEntered(MouseEvent e) {
-					super.mouseEntered(e);
-					AbstractButton source = (AbstractButton) e.getSource();
-					UIUtil.doHover(true, source);
-				}
-
-				@Override
-				public void mouseExited(MouseEvent e) {
-					super.mouseExited(e);
-					AbstractButton source = (AbstractButton) e.getSource();
-					UIUtil.doHover(false, source);
-				}
-			};
-		}
-		return mouseAdapter;
-	}
-
-	public static MouseListener getMouseAdapterKeepHoverWhenSelected() {
-		if (mouseAdapterKeepHoverWhenSelected == null) {
-			mouseAdapterKeepHoverWhenSelected = new MouseAdapter() {
-				@Override
-				public void mouseEntered(MouseEvent e) {
-					super.mouseEntered(e);
-					AbstractButton source = (AbstractButton) e.getSource();
-					UIUtil.doHover(true, source);
-				}
-
-				@Override
-				public void mouseExited(MouseEvent e) {
-					super.mouseExited(e);
-					AbstractButton source = (AbstractButton) e.getSource();
-					UIUtil.doHover(source.isSelected(), source);
-				}
-			};
-		}
-		return mouseAdapterKeepHoverWhenSelected;
-	}
-
 	public static FocusListener getFocusAdapter() {
 		if (focusAdapter == null) {
 			focusAdapter = new FocusAdapter() {
@@ -127,14 +68,14 @@ public class UIUtil {
 				public void focusGained(FocusEvent e) {
 					super.focusGained(e);
 					AbstractButton source = (AbstractButton) e.getSource();
-					UIUtil.doHover(true, source);
+					//					UIUtil.doHover(true, source);
 				}
 
 				@Override
 				public void focusLost(FocusEvent e) {
 					super.focusLost(e);
 					AbstractButton source = (AbstractButton) e.getSource();
-					UIUtil.doHover(false, source);
+					//					UIUtil.doHover(false, source);
 				}
 			};
 		}
@@ -148,14 +89,14 @@ public class UIUtil {
 				public void focusGained(FocusEvent e) {
 					super.focusGained(e);
 					AbstractButton source = (AbstractButton) e.getSource();
-					UIUtil.doHover(true, source);
+					//					UIUtil.doHover(true, source);
 				}
 
 				@Override
 				public void focusLost(FocusEvent e) {
 					super.focusLost(e);
 					AbstractButton source = (AbstractButton) e.getSource();
-					UIUtil.doHover(source.isSelected(), source);
+					//					UIUtil.doHover(source.isSelected(), source);
 				}
 			};
 		}
@@ -257,16 +198,30 @@ public class UIUtil {
 	}
 
 	public static void setForegroundDependOnBackground(Color bg, Component... components) {
-		int r = bg.getRed();
-		int g = bg.getGreen();
-		int b = bg.getBlue();
-		//				if ((red + green + blue) <= 384) {
-		for (Component c : components) {
-			if (((r * 0.299) + (g * 0.587) + (b * 0.114)) > 186) {
-				c.setForeground(colorBlack);
-			} else {
-				c.setForeground(colorWhite);
+		if (bg != null) {
+			int r = bg.getRed();
+			int g = bg.getGreen();
+			int b = bg.getBlue();
+			//				if ((red + green + blue) <= 384) {
+			for (Component c : components) {
+				if (((r * 0.299) + (g * 0.587) + (b * 0.114)) > 186) {
+					c.setForeground(colorBlack);
+				} else {
+					c.setForeground(colorWhite);
+				}
 			}
+		}
+	}
+
+	public static Color getForegroundDependOnBackground(Color color) {
+		int r = color.getRed();
+		int g = color.getGreen();
+		int b = color.getBlue();
+		//				if ((red + green + blue) <= 384) {
+		if (((r * 0.299) + (g * 0.587) + (b * 0.114)) > 186) {
+			return colorBlack;
+		} else {
+			return colorWhite;
 		}
 	}
 }

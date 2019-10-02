@@ -21,6 +21,7 @@ class OrganizePopupMenu extends JPopupMenu {
 	private JCheckBoxMenuItem itmShowNavigationPanel = new JCheckBoxMenuItem(Messages.get("navigationPanel"));
 	private JCheckBoxMenuItem itmShowPreviewPanel = new JCheckBoxMenuItem(Messages.get("previewPanel"));
 	private JCheckBoxMenuItem itmShowGameDetailsPanel = new JCheckBoxMenuItem(Messages.get("informationPanel"));
+	private JCheckBoxMenuItem itmShowStatusBar = new JCheckBoxMenuItem(Messages.get("statusBar"));
 
 	private JMenuItem itmSettings = new JMenuItem(Messages.get("settings") + "...");
 	private JMenuItem itmExit = new JMenuItem(Messages.get("exit"));
@@ -30,11 +31,13 @@ class OrganizePopupMenu extends JPopupMenu {
 		itmShowNavigationPanel.setSelected(true);
 		itmShowPreviewPanel.setSelected(true);
 		itmShowGameDetailsPanel.setSelected(true);
+		itmShowStatusBar.setSelected(true);
 		mnuLayout.add(itmShowMenuBar);
 		mnuLayout.add(new JSeparator());
 		mnuLayout.add(itmShowNavigationPanel);
 		mnuLayout.add(itmShowPreviewPanel);
 		mnuLayout.add(itmShowGameDetailsPanel);
+		mnuLayout.add(itmShowStatusBar);
 		add(mnuLayout);
 		add(itmSettings);
 		add(new JSeparator());
@@ -101,6 +104,10 @@ class OrganizePopupMenu extends JPopupMenu {
 		itmShowGameDetailsPanel.addActionListener(l);
 	}
 
+	public void addShowStatusBarListener(ActionListener l) {
+		itmShowStatusBar.addActionListener(l);
+	}
+
 	public void addOpenPropertiesListener(ActionListener l) {
 		itmSettings.addActionListener(l);
 	}
@@ -115,6 +122,7 @@ class OrganizePopupMenu extends JPopupMenu {
 		itmShowNavigationPanel.setText(Messages.get("navigationPanel"));
 		itmShowPreviewPanel.setText(Messages.get("previewPanel"));
 		itmShowGameDetailsPanel.setText(Messages.get("informationPanel"));
+		itmShowStatusBar.setText(Messages.get("statusBar"));
 		itmSettings.setText(Messages.get("settings") + "...");
 		itmExit.setText(Messages.get("exit"));
 	}
@@ -137,5 +145,9 @@ class OrganizePopupMenu extends JPopupMenu {
 		itmShowNavigationPanel.setSelected(b);
 		itmShowNavigationPanel.setActionCommand(!b ? GameViewConstants.SHOW_NAVIGATION_PANE
 				: GameViewConstants.HIDE_NAVIGATION_PANE);
+	}
+
+	public void showStatusBar(boolean b) {
+		itmShowStatusBar.setSelected(b);
 	}
 }

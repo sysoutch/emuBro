@@ -9,10 +9,10 @@ import javax.swing.ListCellRenderer;
 
 import ch.sysout.emubro.api.model.Platform;
 
-public class CustomComboBoxRenderer extends JLabel implements ListCellRenderer {
+public class CustomComboBoxRenderer extends JLabel implements ListCellRenderer<Object> {
 	private static final long serialVersionUID = 1L;
 
-	private Color colorBackground = IconStore.current().getCurrentTheme().getButtonBar().getColor();
+	private Color colorBackground = IconStore.current().getCurrentTheme().getGameFilterPane().getColor();
 
 	public CustomComboBoxRenderer() {
 		setOpaque(true);
@@ -22,7 +22,7 @@ public class CustomComboBoxRenderer extends JLabel implements ListCellRenderer {
 	}
 
 	@Override
-	public Component getListCellRendererComponent(JList list, Object value,
+	public Component getListCellRendererComponent(JList<?> list, Object value,
 			int index, boolean isSelected, boolean cellHasFocus) {
 		setText(value.toString());
 		setIcon(IconStore.current().getPlatformIcon(((Platform) value).getId()));

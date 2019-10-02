@@ -30,6 +30,7 @@ import com.jgoodies.forms.layout.FormLayout;
 
 import ch.sysout.emubro.api.model.Emulator;
 import ch.sysout.emubro.controller.BroController.EmulatorListCellRenderer;
+import ch.sysout.ui.util.JCustomButton;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.ScreenSizeUtil;
@@ -43,8 +44,8 @@ public class AddEmulatorPanel extends JPanel {
 	private SupportedEmulatorsPanel pnlDownloadEmulators;
 	private ReadyToInstallEmulatorsPanel pnlReadyToInstallEmulators;
 
-	private AbstractButton btnDownloadEmulators = new JButton("<html><strong>Step 1:</strong> Download an emulator</html>", ImageUtil.getImageIconFrom(Icons.get("fromWeb", 32, 32)));
-	private AbstractButton btnReadyToInstallEmulators = new JButton("<html><strong>Step 2:</strong> Add your emulator</html>", ImageUtil.getImageIconFrom(Icons.get("fromComputer", 32, 32)));
+	private AbstractButton btnDownloadEmulators = new JCustomButton("<html><strong>Step 1:</strong> Download an emulator</html>", ImageUtil.getImageIconFrom(Icons.get("fromWeb", 32, 32)));
+	private AbstractButton btnReadyToInstallEmulators = new JCustomButton("<html><strong>Step 2:</strong> Add your emulator</html>", ImageUtil.getImageIconFrom(Icons.get("fromComputer", 32, 32)));
 
 	protected int minimumDividerLocation = -1;
 	protected int maximumDividerLocation = -1;
@@ -53,7 +54,7 @@ public class AddEmulatorPanel extends JPanel {
 		super(new BorderLayout(0, 10));
 		int size = ScreenSizeUtil.is3k() ? 24 : 16;
 		JPanel pnlTop = new JPanel(new BorderLayout());
-		btnBack = new JButton("Back to overview", ImageUtil.getImageIconFrom(Icons.get("previous2", size, size)));
+		btnBack = new JCustomButton("Back to overview", ImageUtil.getImageIconFrom(Icons.get("previous2", size, size)));
 		pnlTop.add(btnBack, BorderLayout.WEST);
 		add(pnlTop, BorderLayout.NORTH);
 		pnlDownloadEmulators = new SupportedEmulatorsPanel();
@@ -68,14 +69,11 @@ public class AddEmulatorPanel extends JPanel {
 		add(spl);
 
 		btnDownloadEmulators.setHorizontalAlignment(SwingConstants.LEFT);
-		btnDownloadEmulators.addMouseListener(UIUtil.getMouseAdapter());
 		btnDownloadEmulators.addFocusListener(UIUtil.getFocusAdapter());
 
 		btnReadyToInstallEmulators.setHorizontalAlignment(SwingConstants.LEFT);
-		btnReadyToInstallEmulators.addMouseListener(UIUtil.getMouseAdapter());
 		btnReadyToInstallEmulators.addFocusListener(UIUtil.getFocusAdapter());
 
-		UIUtil.doHover(false, btnDownloadEmulators, btnReadyToInstallEmulators);
 		PropertyChangeListener listener = new PropertyChangeListener() {
 			@Override
 			public void propertyChange(PropertyChangeEvent e) {
@@ -156,30 +154,25 @@ public class AddEmulatorPanel extends JPanel {
 
 		private void initComponents() {
 			lstSupportedEmulators.addListSelectionListener(this);
-			btnDownloadEmulator = new JButton("Download emulator");
-			btnDownloadEmulatorAptGet = new JButton("apt-get install");
-			UIUtil.doHover(false, btnDownloadEmulator, btnDownloadEmulatorAptGet);
+			btnDownloadEmulator = new JCustomButton("Download emulator");
+			btnDownloadEmulatorAptGet = new JCustomButton("apt-get install");
 			btnDownloadEmulator.setHorizontalAlignment(SwingConstants.LEFT);
 			btnDownloadEmulator.setEnabled(false);
-			btnDownloadEmulator.addMouseListener(UIUtil.getMouseAdapter());
 
 			btnDownloadEmulatorAptGet.setHorizontalAlignment(SwingConstants.LEFT);
 			btnDownloadEmulatorAptGet.setEnabled(false);
-			btnDownloadEmulatorAptGet.addMouseListener(UIUtil.getMouseAdapter());
 
 			btnDownloadEmulator.addFocusListener(new FocusAdapter() {
 				@Override
 				public void focusGained(FocusEvent e) {
 					super.focusGained(e);
 					AbstractButton source = (AbstractButton) e.getSource();
-					UIUtil.doHover(true, source);
 				}
 
 				@Override
 				public void focusLost(FocusEvent e) {
 					super.focusLost(e);
 					AbstractButton source = (AbstractButton) e.getSource();
-					UIUtil.doHover(false, source);
 				}
 			});
 			btnDownloadEmulatorAptGet.addFocusListener(new FocusAdapter() {
@@ -187,14 +180,12 @@ public class AddEmulatorPanel extends JPanel {
 				public void focusGained(FocusEvent e) {
 					super.focusGained(e);
 					AbstractButton source = (AbstractButton) e.getSource();
-					UIUtil.doHover(true, source);
 				}
 
 				@Override
 				public void focusLost(FocusEvent e) {
 					super.focusLost(e);
 					AbstractButton source = (AbstractButton) e.getSource();
-					UIUtil.doHover(false, source);
 				}
 			});
 			int rowHeight = ScreenSizeUtil.adjustValueToResolution(32);
@@ -262,16 +253,14 @@ public class AddEmulatorPanel extends JPanel {
 			int rowHeight = ScreenSizeUtil.adjustValueToResolution(32);
 			lstReadyToAddEmulators.setFixedCellHeight(rowHeight);
 			spReadyToAddEmulators = new JScrollPane(lstReadyToAddEmulators);
-			btnAddEmulator = new JButton("Add emulator", ImageUtil.getImageIconFrom(Icons.get("add", 24, 24)));
+			btnAddEmulator = new JCustomButton("Add emulator", ImageUtil.getImageIconFrom(Icons.get("add", 24, 24)));
 			lblSearchForEmulator = new JLabel("Scan folder for emulators:");
 			String userHome = System.getProperty("user.home");
 			txtSearchForEmulator = new JTextField(userHome + File.separator + "Downloads");
-			btnSearchForEmulator = new JButton("Scan now");
+			btnSearchForEmulator = new JCustomButton("Scan now");
 			btnSearchForEmulator.setHorizontalAlignment(SwingConstants.LEFT);
 			btnAddEmulator.setHorizontalAlignment(SwingConstants.RIGHT);
 			btnAddEmulator.setEnabled(false);
-			UIUtil.doHover(false, btnSearchForEmulator, btnAddEmulator);
-			btnSearchForEmulator.addMouseListener(UIUtil.getMouseAdapter());
 		}
 
 		private void createUI() {

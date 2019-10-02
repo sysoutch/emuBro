@@ -1,108 +1,122 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.Color;
+import java.awt.Image;
 import java.awt.image.BufferedImage;
 
-import ch.sysout.util.ImageUtil;
-
 public class Theme {
-	private static final int TOP_LEFT = 0;
-	private static final int BOTTOM_RIGHT = 1;
+	public static final int TOP_LEFT = 0;
+	public static final int BOTTOM_RIGHT = 1;
 
 	private String name;
-	private Color defaultBackgroundColor;
-
+	private ThemeBackground background;
 	private ThemeBackground menuBar;
 	private ThemeBackground buttonBar;
+	private ThemeBackground gameFilterPane;
 	private ThemeBackground view;
 	private ThemeBackground navigationPane;
 	private ThemeBackground previewPane;
+	private ThemeBackground detailsPane;
 	private ThemeBackground tabs;
+	private ThemeBackground statusBar;
 
 	public Theme(String name, Color defaultBackgroundColor) {
 		this.name = name;
-		this.defaultBackgroundColor = defaultBackgroundColor;
-		initBackgrounds();
+		background = new ThemeBackground(null, defaultBackgroundColor);
 	}
 
 	public Theme(String name) {
 		this(name, Color.WHITE);
 	}
 
-	private void initBackgrounds() {
-		// TODO init images and colors from json
-		menuBar = createThemeBackground(Color.BLACK);
-		buttonBar = createThemeBackground("buttonbar.jpg", true, BOTTOM_RIGHT);
-		view = createThemeBackground("bg-only.jpg", true, BOTTOM_RIGHT);
-		navigationPane = createThemeBackground("nav.jpg", true, BOTTOM_RIGHT);
-		previewPane = createThemeBackground("previewpane.jpg", true, BOTTOM_RIGHT);
-		tabs = createThemeBackground("tab.jpg");
+	public String getName() {
+		return name;
 	}
 
-	private ThemeBackground createThemeBackground(Color color) {
-		return new ThemeBackground(null, color);
+	public ThemeBackground getBackground() {
+		return background;
 	}
 
-	private ThemeBackground createThemeBackground(String string, boolean autoPickColorFromImage, int pickColorFromPoint) {
-		BufferedImage img = null;
-		try {
-			img = ImageUtil.getBufferedImageFrom("/themes/"+name+"/"+string);
-		} catch (Exception e) {
-			img = null;
-		}
-		Color color = defaultBackgroundColor;
-		int x;
-		int y;
-		switch (pickColorFromPoint) {
-		case TOP_LEFT:
-			x = 0;
-			y = 0;
-			break;
-		case BOTTOM_RIGHT:
-			x = (img != null) ? img.getWidth()-1 : 0;
-			y = (img != null) ? img.getHeight()-1 : 0;
-			break;
-		default:
-			x = 0;
-			y = 0;
-			break;
-		}
-		return new ThemeBackground(img, color, autoPickColorFromImage, x, y);
-	}
-
-	private ThemeBackground createThemeBackground(String string, boolean b) {
-		return createThemeBackground(string, false, TOP_LEFT);
-	}
-
-	private ThemeBackground createThemeBackground(String string) {
-		return createThemeBackground(string, false);
+	public void setBackground(ThemeBackground background) {
+		this.background = background;
 	}
 
 	public ThemeBackground getMenuBar() {
 		return menuBar;
 	}
 
+	public void setMenuBar(ThemeBackground menuBar) {
+		this.menuBar = menuBar;
+	}
+
 	public ThemeBackground getButtonBar() {
 		return buttonBar;
+	}
+
+	public void setButtonBar(ThemeBackground buttonBar) {
+		this.buttonBar = buttonBar;
+	}
+
+	public ThemeBackground getGameFilterPane() {
+		return gameFilterPane;
+	}
+
+	public void setGameFilterPane(ThemeBackground gameFilterPane) {
+		this.gameFilterPane = gameFilterPane;
 	}
 
 	public ThemeBackground getView() {
 		return view;
 	}
 
+	public void setView(ThemeBackground view) {
+		this.view = view;
+	}
+
+	public BufferedImage getTransparentBackgroundOverlayImage() {
+		return null;
+	}
+
+	public void setTransparentBackgroundOverlayImage(Image image) {
+	}
+
 	public ThemeBackground getNavigationPane() {
 		return navigationPane;
+	}
+
+	public void setNavigationPane(ThemeBackground navigationPane) {
+		this.navigationPane = navigationPane;
 	}
 
 	public ThemeBackground getPreviewPane() {
 		return previewPane;
 	}
 
+	public void setPreviewPane(ThemeBackground previewPane) {
+		this.previewPane = previewPane;
+	}
+
+	public ThemeBackground getDetailsPane() {
+		return detailsPane;
+	}
+
+	public void setDetailsPane(ThemeBackground detailsPane) {
+		this.detailsPane = detailsPane;
+	}
+
 	public ThemeBackground getTabs() {
 		return tabs;
 	}
 
-	public BufferedImage getTransparentBackgroundOverlayImage() {
-		return null;
+	public void setTabs(ThemeBackground tabs) {
+		this.tabs = tabs;
+	}
+
+	public ThemeBackground getStatusBar() {
+		return statusBar;
+	}
+
+	public void setStatusBar(ThemeBackground statusBar) {
+		this.statusBar = statusBar;
 	}
 }

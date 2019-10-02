@@ -4,6 +4,7 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.dnd.DropTargetListener;
@@ -77,8 +78,8 @@ public class BlankViewPanel extends ViewPanel {
 	public BlankViewPanel() {
 		super(new BorderLayout());
 		setIcons();
-
 		setOpaque(false);
+		setBorder(Paddings.TABBED_DIALOG);
 		Border boarder = Paddings.DLU4;
 		JPanel pnlAction = new JPanel(new FormLayout("left:default:grow",
 				"fill:pref, min, fill:pref, min, fill:pref, min, fill:pref"));
@@ -526,17 +527,22 @@ public class BlankViewPanel extends ViewPanel {
 	@Override
 	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
+		Graphics2D g2d = (Graphics2D) g.create();
+		int panelWidth = getWidth();
+		int panelHeight = getHeight();
+		Theme currentTheme = IconStore.current().getCurrentTheme();
+		if (currentTheme.getView().hasGradientPaint()) {
+			GradientPaint p = currentTheme.getView().getGradientPaint();
+			g2d.setPaint(p);
+		} else if (currentTheme.getView().hasColor()) {
+			g2d.setColor(currentTheme.getView().getColor());
+		}
+		g2d.fillRect(0, 0, panelWidth, panelHeight);
+
 		BufferedImage background = IconStore.current().getCurrentTheme().getView().getImage();
 		if (background != null) {
-			Graphics2D g2d = (Graphics2D) g.create();
-			int panelWidth = getWidth();
-			int panelHeight = getHeight();
 			int imgWidth = background.getWidth();
 			int imgHeight = background.getHeight();
-
-			g2d.setColor(IconStore.current().getCurrentTheme().getView().getColor());
-			g2d.fillRect(0, 0, panelWidth, panelHeight);
-
 			boolean shouldScale = false;
 			if (shouldScale) {
 				g2d.drawImage(background, 0, 0, panelWidth, panelHeight, this);

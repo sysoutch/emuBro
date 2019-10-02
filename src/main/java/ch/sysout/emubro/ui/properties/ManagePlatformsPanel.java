@@ -101,6 +101,7 @@ import ch.sysout.emubro.ui.SortedListModel;
 import ch.sysout.emubro.ui.TableColumnAdjuster;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.JCustomButton;
+import ch.sysout.ui.util.JCustomToggleButton;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
@@ -400,11 +401,11 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 	class EmulatorsPanel extends JPanel implements ListSelectionListener, ActionListener {
 		private static final long serialVersionUID = 1L;
 		private JTable tblEmulators;
-		private JButton btnAddEmulator = new JButton("", ImageUtil.getImageIconFrom(Icons.get("add", 24, 24)));
-		private JButton btnRemoveEmulator = new JButton("", ImageUtil.getImageIconFrom(Icons.get("remove2", 24, 24)));
-		private JButton btnSetDefaultEmulator = new JButton(Messages.get(MessageConstants.SET_DEFAULT));
-		private JButton btnEmulatorProperties = new JButton(Messages.get(MessageConstants.CONFIGURE));
-		private JToggleButton btnEmulatorProperties2 = new JToggleButton(Messages.get(MessageConstants.CONFIGURE));
+		private JButton btnAddEmulator = new JCustomButton("", ImageUtil.getImageIconFrom(Icons.get("add", 24, 24)));
+		private JButton btnRemoveEmulator = new JCustomButton("", ImageUtil.getImageIconFrom(Icons.get("remove2", 24, 24)));
+		private JButton btnSetDefaultEmulator = new JCustomButton(Messages.get(MessageConstants.SET_DEFAULT));
+		private JButton btnEmulatorProperties = new JCustomButton(Messages.get(MessageConstants.CONFIGURE));
+		private JToggleButton btnEmulatorProperties2 = new JCustomToggleButton(Messages.get(MessageConstants.CONFIGURE));
 		private EmulatorConfigurationPanel pnlEmulatorConfiguration;
 		private JSplitPane spl1 = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
 		private JPanel pnlAvailableEmulators = new JPanel();
@@ -460,7 +461,6 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 
 		private JPanel createEmulatorOverviewPanel() {
 			JPanel pnl = new JPanel(new BorderLayout());
-			UIUtil.doHover(false, btnAddEmulator, btnRemoveEmulator);
 
 			// lstEmulators.setPreferredSize(new Dimension(0,0));
 			btnRemoveEmulator.setEnabled(false);
@@ -532,7 +532,6 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 		private void addListeners() {
 			tblEmulators.getSelectionModel().addListSelectionListener(this);
 			btnAddEmulator.addActionListener(this);
-			btnAddEmulator.addMouseListener(UIUtil.getMouseAdapter());
 			pnlAddEmulator.addGoBackListener(new ActionListener() {
 
 				@Override
@@ -543,7 +542,6 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 				}
 			});
 
-			btnRemoveEmulator.addMouseListener(UIUtil.getMouseAdapter());
 			btnSetDefaultEmulator.addActionListener(new ActionListener() {
 
 				@Override
@@ -672,7 +670,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 			private ArrayList<String> buttonsTop;
 			private ArrayList<String> buttonsLeft;
 			private ArrayList<String> buttonsRight;
-			private AbstractButton btnFileChooser = new JButton("...");
+			private AbstractButton btnFileChooser = new JCustomButton("...");
 			private XFileDialog fcSetCover;
 
 			public EmulatorConfigurationPanel() {
@@ -731,7 +729,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 						s.split("\\\\");
 						type = 0;
 						String title = s;
-						JButton btn = new JButton(title.replace("[", "").replace("]", "").trim());
+						JButton btn = new JCustomButton(title.replace("[", "").replace("]", "").trim());
 						btn.setHorizontalAlignment(SwingConstants.LEFT);
 						layout.appendRow(RowSpec.decode("fill:pref"));
 						pnlGrid.add(btn, cc.xyw(1, layout.getRowCount(), layout.getColumnCount()));
@@ -1048,7 +1046,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 
 			private Component createCenterPanel() {
 				JPanel pnl = new JPanel(new BorderLayout());
-				pnl.add(new JButton("Drop a picture of a controller here"));
+				pnl.add(new JCustomButton("Drop a picture of a controller here"));
 				return pnl;
 			}
 
@@ -1438,7 +1436,6 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 		public void showAddEmulatorPanel(Platform platform) {
 			if (platform != null) {
 				// TODO dirty workaround for repaint. change it some time
-				UIUtil.doHover(false, btnAddEmulator, btnRemoveEmulator);
 				remove(pnlEmulatorOverview);
 				add(pnlAddEmulator);
 				showDefaultEmulatorsForPlatform(platform);
