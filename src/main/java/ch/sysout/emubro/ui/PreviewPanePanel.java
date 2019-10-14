@@ -1,5 +1,6 @@
 package ch.sysout.emubro.ui;
 
+import java.awt.AlphaComposite;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -7,9 +8,17 @@ import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.Image;
+import java.awt.Insets;
+import java.awt.MultipleGradientPaint.CycleMethod;
+import java.awt.Point;
+import java.awt.RadialGradientPaint;
+import java.awt.RenderingHints;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetListener;
 import java.awt.event.ActionEvent;
@@ -21,6 +30,8 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.font.TextAttribute;
+import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
@@ -103,6 +114,23 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 
 	private AbstractButton btnResizePreviewPane = new JCustomButton();
 
+	private Image gameBannerImage;
+
+	int thickness = 250;
+	private Color transparentColor = new Color(0f, 0f, 0f, 0.4f);
+	private Color color1 = transparentColor;
+	private Color color2 = IconStore.current().getCurrentTheme().getPreviewPane().getColor();
+
+	private GradientPaint gp3;
+	private GradientPaint gp2;
+	private GradientPaint gp4;
+
+	private GradientPaint gp1 = new GradientPaint(0, thickness, color1, 0, 0, color2, true);
+
+	private Image outputImage;
+
+	private GradientPaint gp33;
+
 	public PreviewPanePanel(Explorer explorer, GameContextMenu popupGame, ViewContextMenu popupView) {
 		super();
 		this.explorer = explorer;
@@ -139,6 +167,62 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		pnlNoSelection.setMinimumSize(new Dimension(0, 0));
 		spSelection.setVisible(false);
 		initNoSelectionText();
+	}
+
+	private Image blurBorder(Image input, double border) {
+		int w = input.getWidth(this);
+		int h = input.getHeight(this);
+		BufferedImage output = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+
+		Graphics2D g = output.createGraphics();
+		g.drawImage(input, 0, 0, null);
+
+		g.setComposite(AlphaComposite.DstOut);
+		Color c0 = new Color(0, 0, 0, 255);
+		Color c1 = new Color(0, 0, 0, 0);
+
+		double cy = border;
+		double cx = border;
+
+		// Left
+		g.setPaint(new GradientPaint(new Point2D.Double(0, cy), c0, new Point2D.Double(cx, cy), c1));
+		g.fill(new Rectangle2D.Double(0, cy, cx, h - cy - cy));
+
+		// Right
+		g.setPaint(new GradientPaint(new Point2D.Double(w - cx, cy), c1, new Point2D.Double(w, cy), c0));
+		g.fill(new Rectangle2D.Double(w - cx, cy, cx, h - cy - cy));
+
+		// Top
+		g.setPaint(new GradientPaint(new Point2D.Double(cx, 0), c0, new Point2D.Double(cx, cy), c1));
+		g.fill(new Rectangle2D.Double(cx, 0, w - cx - cx, cy));
+
+		// Bottom
+		g.setPaint(new GradientPaint(new Point2D.Double(cx, h - cy), c1, new Point2D.Double(cx, h), c0));
+		g.fill(new Rectangle2D.Double(cx, h - cy, w - cx - cx, cy));
+
+		// Top Left
+		g.setPaint(new RadialGradientPaint(new Rectangle2D.Double(0, 0, cx + cx, cy + cy), new float[] { 0, 1 },
+				new Color[] { c1, c0 }, CycleMethod.NO_CYCLE));
+		g.fill(new Rectangle2D.Double(0, 0, cx, cy));
+
+		// Top Right
+		g.setPaint(new RadialGradientPaint(new Rectangle2D.Double(w - cx - cx, 0, cx + cx, cy + cy),
+				new float[] { 0, 1 }, new Color[] { c1, c0 }, CycleMethod.NO_CYCLE));
+		g.fill(new Rectangle2D.Double(w - cx, 0, cx, cy));
+
+		// Bottom Left
+		g.setPaint(new RadialGradientPaint(new Rectangle2D.Double(0, h - cy - cy, cx + cx, cy + cy),
+				new float[] { 0, 1 }, new Color[] { c1, c0 }, CycleMethod.NO_CYCLE));
+		g.fill(new Rectangle2D.Double(0, h - cy, cx, cy));
+
+		// Bottom Right
+		g.setPaint(new RadialGradientPaint(new Rectangle2D.Double(w - cx - cx, h - cy - cy, cx + cx, cy + cy),
+				new float[] { 0, 1 }, new Color[] { c1, c0 }, CycleMethod.NO_CYCLE));
+		g.fill(new Rectangle2D.Double(w - cx, h - cy, cx, cy));
+
+		g.dispose();
+
+		return output;
 	}
 
 	private void initNoSelectionText() {
@@ -208,7 +292,14 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 				int platformId = firstGame.getPlatformId();
 				Icon icon = IconStore.current().getPlatformIcon(platformId);
 				pnlSelection.setGameTitle(firstGame.getName(), null);
+				System.out.println("description: "+firstGame.getDescription());
+				System.out.println("developer: "+firstGame.getDeveloper());
+				System.out.println("publisher: "+firstGame.getPublisher());
+				gameBannerImage = firstGame.getBannerImage();
+				repaint();
+
 				pnlSelection.setCurrentPlatform(explorer.getPlatform(platformId), icon);
+				pnlSelection.setDescription(firstGame.getDescription());
 				pnlSelection.setDateAdded(firstGame.getDateAdded());
 				pnlSelection.setPlayCount(firstGame.getPlayCount());
 				pnlSelection.setLastPlayed(firstGame.getLastPlayed());
@@ -353,7 +444,62 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 				g2d.drawImage(imagePreviewPaneBackground, 0, 0, imgWidth, imgHeight, this);
 			}
 		}
-		g2d.dispose();
+		if (explorer.hasCurrentGame()) {
+			if (gameBannerImage != null) {
+				int bannerWidth = gameBannerImage.getWidth(this);
+				int bannerHeight = gameBannerImage.getHeight(this);
+				if (bannerWidth >= bannerHeight) {
+					double scaleFactor = (double) bannerWidth / (double) bannerHeight;
+					int width = getWidth();
+					int height = (int) (width / scaleFactor);
+					int maxHeight = 400;
+					if (height > maxHeight) {
+						g2d.drawImage(gameBannerImage, 0, 0, width, height, this);
+						// bottom
+						if (gp3 == null || gp3.getPoint2().getY() != height) {
+							gp3 = new GradientPaint(0, 0, color1,
+									0, height, color2, false);
+						}
+						g2d.setPaint(gp3);
+						g2d.fillRect(0, 0, width, height);
+					} else {
+						double factor = (double) bannerHeight / (double)maxHeight;
+						g2d.drawImage(gameBannerImage, 0, 0, (int) (bannerWidth/factor), maxHeight, this);
+						if (gp3 == null || gp3.getPoint2().getY() != maxHeight) {
+							gp3 = new GradientPaint(0, 0, color1,
+									0, maxHeight, color2, false);
+						}
+						g2d.setPaint(gp3);
+						g2d.fillRect(0, 0, (int) (bannerWidth/factor), maxHeight);
+					}
+				} else {
+					double scaleFactor = (double) bannerHeight / (double) bannerWidth;
+					int height = getHeight();
+					int width = (int) (height / scaleFactor);
+					int maxWidth = 400;
+					if (width > maxWidth) {
+						g2d.drawImage(gameBannerImage, 0, 0, width, height, this);
+						// bottom
+						if (gp3 == null || gp3.getPoint2().getY() != width) {
+							gp3 = new GradientPaint(0, 0, color1,
+									width, 0, color2, false);
+						}
+						g2d.setPaint(gp3);
+						g2d.fillRect(0, 0, width, height);
+					} else {
+						double factor = (double) bannerWidth / (double) maxWidth;
+						g2d.drawImage(gameBannerImage, 0, 0, maxWidth, (int) (bannerHeight/factor), this);
+						if (gp3 == null || gp3.getPoint2().getY() != maxWidth) {
+							gp3 = new GradientPaint(0, 0, color1,
+									maxWidth, 0, color2, false);
+						}
+						g2d.setPaint(gp3);
+						g2d.fillRect(0, 0, maxWidth, (int) (bannerHeight/factor));
+					}
+				}
+			}
+			g2d.dispose();
+		}
 	}
 
 	class SelectionPanel extends ScrollablePanel {
@@ -373,15 +519,19 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		private JMenuItem itmAddCoverFromComputer = new JMenuItem(Messages.get(MessageConstants.ADD_COVER_FROM_COMPUTER));
 		private JMenuItem itmAddCoverFromWeb = new JMenuItem(Messages.get(MessageConstants.COVER_FROM_WEB));
 		private JMenuItem itmRemoveCover = new JMenuItem(Messages.get(MessageConstants.REMOVE_COVER));
-		private JPanel pnl;
+		//		private AccordionPanel pnlAccordion;
 		private JButton btnComment;
 		private Platform platform;
+		private JTextArea txtDescription = new JTextArea();
 
 		public SelectionPanel() {
-			setLayout(new BorderLayout());
 			initComponents();
 			setIcons();
 			createUI();
+		}
+
+		public void setDescription(String description) {
+			txtDescription.setText(description);
 		}
 
 		private void initComponents() {
@@ -419,25 +569,27 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		}
 
 		private void createUI() {
+
+			setLayout(new BorderLayout());
 			setOpaque(false);
 			pnlRatingBar.setOpaque(false);
 			pnlAutoScaleImage.setOpaque(false);
 			lblGameTitle.setMinimumSize(new Dimension(0, 0));
 			lnkPlatformTitle.setMinimumSize(new Dimension(0, 0));
-			FormLayout layoutTop = new FormLayout("min:grow",
-					"default, $rgap, default, $ugap, default, $ugap, default, $ugap, default, $lgap, default, $ugap,"
-							+ " fill:pref, $lgap, fill:pref, fill:$ugap, fill:pref, fill:$ugap, fill:default"/*, fill:$ugap, fill:default */);
-			pnl = new JPanel(layoutTop);
-			pnl.setOpaque(false);
-			int columnCount = layoutTop.getColumnCount();
-			CellConstraints ccSelection = new CellConstraints();
-			pnl.setLayout(layoutTop);
-			pnl.add(lblGameTitle, ccSelection.xyw(1, 1, columnCount));
-			pnl.add(lnkPlatformTitle, ccSelection.xyw(1, 3, columnCount));
-			pnl.add(pnlGameData, ccSelection.xyw(1, 5, columnCount));
-			pnl.add(pnlAutoScaleImage, ccSelection.xyw(1, 7, columnCount));
-			pnl.add(pnlRatingBar, ccSelection.xyw(1, 9, columnCount));
 
+			JPanel pnl = createPanel();
+			add(pnl, BorderLayout.NORTH);
+
+			//			pnlAccordion = new AccordionPanel(AccordionPanel.VERTICAL_ACCORDION);
+			//			pnlAccordion.setOpaque(false);
+			//
+			txtDescription.setOpaque(false);
+			txtDescription.setLineWrap(true);
+			txtDescription.setWrapStyleWord(true);
+			add(txtDescription); // don't use scrollpane if not needed, otherwise there might be scroll issues
+		}
+
+		private JPanel createPanel() {
 			btnComment = new JCustomButton(Messages.get(MessageConstants.GAME_COMMENT));
 			btnComment.addActionListener(new ActionListener() {
 
@@ -450,6 +602,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			btnComment.setMinimumSize(new Dimension(0, 0));
 			btnComment.setHorizontalAlignment(SwingConstants.LEFT);
 			btnComment.setIcon(ImageUtil.getImageIconFrom(Icons.get("gameComment", 16, 16)));
+
 			JPanel pnlCommentWrapper = new JPanel(new BorderLayout());
 			pnlCommentWrapper.setOpaque(false);
 			pnlCommentWrapper.add(btnComment, BorderLayout.WEST);
@@ -459,16 +612,29 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			pnlDateAdded.setBackground(colorUnderlay);
 			pnlLastPlayed.setBackground(colorUnderlay);
 
-			pnl.add(pnlCommentWrapper, ccSelection.xyw(1, 11, columnCount));
-			pnl.add(pnlTags, ccSelection.xyw(1, 13, columnCount));
-			pnl.add(pnlPlayCount, ccSelection.xyw(1, 15, columnCount));
-			pnl.add(pnlLastPlayed, ccSelection.xyw(1, 17, columnCount));
-			pnl.add(pnlDateAdded, ccSelection.xyw(1, 19, columnCount));
-			//			pnl.add(pnlPath, ccSelection.xyw(1, 21, columnCount));
-			add(pnl);
+			FormLayout layoutTop = new FormLayout("default:grow",
+					"default, $rgap, default, $ugap, default, $ugap, default");
+			JPanel pnl = new JPanel(layoutTop);
+			pnl.setOpaque(false);
+			int columnCount = layoutTop.getColumnCount();
+			CellConstraints ccSelection = new CellConstraints();
+			pnl.setLayout(layoutTop);
+			pnl.add(lblGameTitle, ccSelection.xyw(1, 1, columnCount));
+			//			pnl.add(pnlGameData, ccSelection.xyw(1, 5, columnCount));
+			pnl.add(lnkPlatformTitle, ccSelection.xyw(1, 3, columnCount));
+			pnl.add(pnlAutoScaleImage, ccSelection.xy(1, 5));
+			//			pnl.add(pnlRatingBar, ccSelection.xyw(1, 9, columnCount));
+			//			pnl.add(pnlCommentWrapper, ccSelection.xyw(1, 11, columnCount));
+			//			pnl.add(pnlTags, ccSelection.xyw(1, 13, columnCount));
+			//			pnl.add(pnlPlayCount, ccSelection.xyw(1, 15, columnCount));
+			//			pnl.add(pnlLastPlayed, ccSelection.xyw(1, 17, columnCount));
+			//			pnl.add(pnlDateAdded, ccSelection.xyw(1, 19, columnCount));
+			return pnl;
 		}
 
 		private void initGameTitle() {
+			lblGameTitle.setHorizontalTextPosition(SwingConstants.LEFT);
+			lblGameTitle.setVerticalTextPosition(SwingConstants.TOP);
 			lblGameTitle.setOpaque(false);
 			//			lblGameTitle.addMouseListener(new MouseAdapter() {
 			//				@Override
@@ -546,7 +712,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		public void gameCoverChanged(Game game, Image image) {
 			if (currentGames != null && currentGames.size() == 1
 					&& currentGames.get(0) == game) {
-				pnlSelection.setGameTitle(game.getName(), null);
+				//				pnlSelection.setGameTitle(game.getName(), null);
 				if (image == null) {
 					pnlSelection.pnlAutoScaleImage.setGameCover(null);
 				} else {
@@ -949,10 +1115,10 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 				//				add(pnlRunGameWrapper, cc.xyw(1, 1, 5));
 				//				((JCustomButton) btnRunGame).setKeepBackgroundOnHoverLost(true);
 				//				((JCustomButton) btnMoreOptionsRunGame).setKeepBackgroundOnHoverLost(true);
-				add(btnRunGame, cc.xyw(1, 1, 4));
-				add(btnMoreOptionsRunGame, cc.xy(5, 1));
-				add(btnSearchCover, cc.xy(1, 3));
-				add(btnSearchTrailer, cc.xy(3, 3));
+				//				add(btnRunGame, cc.xyw(1, 1, 4));
+				//				add(btnMoreOptionsRunGame, cc.xy(5, 1));
+				//				add(btnSearchCover, cc.xy(1, 3));
+				//				add(btnSearchTrailer, cc.xy(3, 3));
 				//			int size = ScreenSizeUtil.is3k() ? 24 : 16;
 				//			btnAddTag.setIcon(ImageUtil.getImageIconFrom(Icons.get("add", size, size)));
 				//			btnAddTag.setBorderPainted(false);
@@ -1203,4 +1369,193 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 	public int getCustomDividerSize() {
 		return btnResizePreviewPane.getWidth();
 	}
+}
+
+class AccordianPanel extends JPanel {
+	boolean movingComponents = false;
+	int visibleIndex = 3;
+
+	public AccordianPanel() {
+		setLayout(null);
+		setOpaque(false);
+		// Add children and compute prefSize.
+		int childCount = 4;
+		Dimension d = new Dimension();
+		int h = 0;
+		for (int j = 0; j < childCount; j++) {
+			ChildPanel child = new ChildPanel(j + 1, ml);
+			add(child);
+			d = child.getPreferredSize();
+			child.setBounds(0, h, d.width, d.height);
+			if (j < childCount - 1) {
+				h += ControlPanel.HEIGHT;
+			}
+		}
+		h += d.height;
+		setPreferredSize(new Dimension(d.width, h));
+		// Set z-order for children.
+		setZOrder();
+	}
+
+	private void setZOrder() {
+		Component[] c = getComponents();
+		for (int j = 0; j < c.length - 1; j++) {
+			setComponentZOrder(c[j], c.length - 1 - j);
+		}
+	}
+
+	private void setChildVisible(int indexToOpen) {
+		// If visibleIndex < indexToOpen, components at
+		// [visibleIndex+1 down to indexToOpen] move up.
+		// If visibleIndex > indexToOpen, components at
+		// [indexToOpen+1 up to visibleIndex] move down.
+		// Collect indices of components that will move
+		// and determine the distance/direction to move.
+		int[] indices = new int[0];
+		int travelLimit = 0;
+		if (visibleIndex < indexToOpen) {
+			travelLimit = ControlPanel.HEIGHT - getComponent(visibleIndex).getHeight();
+			int n = indexToOpen - visibleIndex;
+			indices = new int[n];
+			for (int j = visibleIndex, k = 0; j < indexToOpen; j++, k++) {
+				indices[k] = j + 1;
+			}
+		} else if (visibleIndex > indexToOpen) {
+			travelLimit = getComponent(visibleIndex).getHeight() - ControlPanel.HEIGHT;
+			int n = visibleIndex - indexToOpen;
+			indices = new int[n];
+			for (int j = indexToOpen, k = 0; j < visibleIndex; j++, k++) {
+				indices[k] = j + 1;
+			}
+		}
+		movePanels(indices, travelLimit);
+		visibleIndex = indexToOpen;
+	}
+
+	private void movePanels(final int[] indices, final int travel) {
+		movingComponents = true;
+		Thread thread = new Thread(new Runnable() {
+			@Override
+			public void run() {
+				Component[] c = getComponents();
+				int limit = travel > 0 ? travel : 0;
+				int count = travel > 0 ? 0 : travel;
+				int dy = travel > 0 ? 8 : -8;
+				System.out.println("-----travel=" + travel);
+				System.out.println("--count---=" + count);
+				System.out.println("-limit-" + limit);
+
+				while (count < limit) {
+					try {
+						Thread.sleep(25);
+					} catch (InterruptedException e) {
+						System.out.println("interrupted");
+						break;
+					}
+					for (int j = 0; j < indices.length; j++) {
+
+						// The z-order reversed the order returned
+						// by getComponents. Adjust the indices to
+						// get the correct components to relocate.
+						int index = c.length - 1 - indices[j];
+						Point p = c[index].getLocation();
+						p.y += dy;
+						c[index].setLocation(p.x, p.y);
+						System.out.println("x=" + p.x + "y=" + p.y);
+					}
+					repaint();
+					count = count + 8;
+				}
+				movingComponents = false;
+			}
+		});
+		thread.setPriority(Thread.NORM_PRIORITY);
+		thread.start();
+	}
+
+	private MouseListener ml = new MouseAdapter() {
+		@Override
+		public void mousePressed(MouseEvent e) {
+			int index = ((ControlPanel) e.getSource()).id - 1;
+			if (!movingComponents) {
+				setChildVisible(index);
+			}
+		}
+	};
+
+	public JPanel getPanel() {
+		JPanel panel = new JPanel(new BorderLayout());
+		panel.setOpaque(false);
+		panel.add(this);
+		return panel;
+	}
+}
+
+class ChildPanel extends JPanel {
+	public ChildPanel(int id, MouseListener ml) {
+		setLayout(new BorderLayout());
+		setOpaque(false);
+		add(new ControlPanel(id, ml), "First");
+		add(getContent(id));
+	}
+
+	private JPanel getContent(int id) {
+		JPanel panel = new JPanel(new GridBagLayout());
+		panel.setOpaque(false);
+		GridBagConstraints gbc = new GridBagConstraints();
+		gbc.insets = new Insets(2, 2, 2, 2);
+		gbc.weightx = 1.0;
+		gbc.weighty = 1.0;
+		gbc.anchor = gbc.NORTHWEST;
+		panel.add(new JLabel("Panel " + id + " Content"), gbc);
+		return panel;
+	}
+
+	@Override
+	public Dimension getPreferredSize() {
+		return new Dimension(300, 150);
+	}
+}
+
+class ControlPanel extends JPanel {
+	int id;
+	JLabel titleLabel;
+	Color c1 = new Color(200, 180, 180);
+	Color c2 = new Color(200, 220, 220);
+	Color fontFg = Color.blue;
+	Color rolloverFg = Color.red;
+	public final static int HEIGHT = 45;
+
+	public ControlPanel(int id, MouseListener ml) {
+		this.id = id;
+		setLayout(new BorderLayout());
+		add(titleLabel = new JLabel("Panel " + id, JLabel.CENTER));
+		titleLabel.setForeground(fontFg);
+		Dimension d = getPreferredSize();
+		d.height = HEIGHT;
+		setPreferredSize(d);
+		addMouseListener(ml);
+		addMouseListener(listener);
+	}
+
+	@Override
+	protected void paintComponent(Graphics g) {
+		int w = getWidth();
+		Graphics2D g2 = (Graphics2D) g;
+		g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+		g2.setPaint(new GradientPaint(w / 2, 0, c1, w / 2, HEIGHT / 2, c2));
+		g2.fillRect(0, 0, w, HEIGHT);
+	}
+
+	private MouseListener listener = new MouseAdapter() {
+		@Override
+		public void mouseEntered(MouseEvent e) {
+			titleLabel.setForeground(rolloverFg);
+		}
+
+		@Override
+		public void mouseExited(MouseEvent e) {
+			titleLabel.setForeground(fontFg);
+		}
+	};
 }

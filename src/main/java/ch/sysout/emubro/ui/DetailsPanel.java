@@ -71,7 +71,7 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 
 	private CellConstraints cc2;
 
-	private AbstractButton btnResizeDetailsPane = new JCustomButton();
+	AbstractButton btnResizeDetailsPane = new JCustomButton();
 
 	public DetailsPanel() {
 		super(new BorderLayout());

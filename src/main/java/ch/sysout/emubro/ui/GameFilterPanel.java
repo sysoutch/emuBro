@@ -274,7 +274,8 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 		txtSearchGame.setBorder(BorderFactory.createEmptyBorder());
 		txtSearchGame.setOpaque(false);
 		pnlSearchField.setOpaque(false);
-		pnlSearchFieldInner.setOpaque(false);
+		pnlSearchFieldInner.setOpaque(true);
+		pnlSearchFieldInner.setBackground(IconStore.current().getCurrentTheme().getGameFilterPane().getColor().brighter());
 		//		pnlSearchFieldInner.setBorder(textFieldBorder);
 
 		// pnlSearchFieldInner.setBackground(getBackground());

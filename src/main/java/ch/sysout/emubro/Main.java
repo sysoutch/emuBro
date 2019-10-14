@@ -107,6 +107,11 @@ public class Main {
 		String clientId = "560036334744371200";
 		initDiscord(clientId);
 		initializeApplication(args);
+		//		initializeDriveServices();
+	}
+
+	private static void initializeDriveServices() {
+		DriveController.initialize();
 	}
 
 	private static void initDiscord(String clientId) {
@@ -275,7 +280,6 @@ public class Main {
 						dlgSplashScreen.setLocation(x, y);
 					}
 					dlgSplashScreen.setProgressBarValue(dlgSplashScreen.getProgressBarValue()+5);
-					System.err.println(dlgSplashScreen.getProgressBarValue());
 					dlgSplashScreen.setText(Messages.get(MessageConstants.LOAD_GAME_LIST,
 							Messages.get(MessageConstants.APPLICATION_TITLE)));
 					List<Game> games = explorerDAO.getGames();
@@ -427,7 +431,7 @@ public class Main {
 	}
 
 	private static void initializeCustomTheme() throws IOException {
-		IconStore.current().loadDefaultTheme("colored");
+		IconStore.current().loadDefaultTheme("crashbandicoot");
 		initializeCustomFonts();
 		initializeCustomColors();
 		initializeCustomMenus();
@@ -503,8 +507,9 @@ public class Main {
 		//		UIManager.put("MenuItem.background", Color.RED);
 		UIManager.put("CheckBoxMenuItem.opaque", false);
 		UIManager.put("RadioButtonMenuItem.opaque", false);
-		UIManager.put("Separator.background", Color.YELLOW);
-		UIManager.put("Separator.foreground", Color.YELLOW);
+		Color color = IconStore.current().getCurrentTheme().getMenuBar().getColor().brighter();
+		UIManager.put("Separator.background", color);
+		UIManager.put("Separator.foreground", color);
 		UIManager.put("PopupMenu.border", new EmptyBorder(0, 0, 0, 0));
 	}
 

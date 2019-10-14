@@ -53,12 +53,16 @@ public class IconStore {
 
 	public void loadDefaultTheme(String themeNameToLoad) throws IOException {
 		System.err.println(getResourceFiles("/themes/"));
-		File file = new File(getClass().getClassLoader().getResource(
-				"themes/"+themeNameToLoad+"/theme.json").getFile());
+		String themeDirectory = "themes/"+themeNameToLoad;
+		File file = new File(getClass().getClassLoader().getResource(themeDirectory+"/theme.json").getFile());
 		if (file.exists()) {
 			Theme theme = new Theme(themeNameToLoad);
 			Color backgroundColor = null;
 			Color menuBarColor = null;
+			Color viewColor = null;
+			String viewImage = null;
+			Color previewPaneColor = null;
+			String previewPaneImage = null;
 			try (JsonReader reader = new JsonReader(new InputStreamReader(new FileInputStream(file)))) {
 				JsonParser jsonParser = new JsonParser();
 				JsonObject json = jsonParser.parse(reader).getAsJsonObject();
@@ -66,30 +70,61 @@ public class IconStore {
 				JsonElement colorElement = json.get("color");
 				backgroundColor = (colorElement == null) ? Color.WHITE
 						: Color.decode(colorElement.getAsString());
-				JsonElement jsonElement = json.get("menuBar");
-				if (jsonElement != null) {
-					JsonObject jsonObject = jsonElement.getAsJsonObject();
+				JsonElement menuBar = json.get("menuBar");
+				if (menuBar != null) {
+					JsonObject jsonObject = menuBar.getAsJsonObject();
 					menuBarColor = Color.decode(jsonObject.get("color").getAsString());
+				}
+
+				JsonElement view = json.get("view");
+				if (view != null) {
+					JsonObject jsonObject = view.getAsJsonObject();
+					viewColor = Color.decode(jsonObject.get("color").getAsString());
+					viewImage = jsonObject.get("image").getAsString();
+				}
+
+				JsonElement previewpane = json.get("previewpane");
+				if (previewpane != null) {
+					JsonObject jsonObject = previewpane.getAsJsonObject();
+					previewPaneColor = Color.decode(jsonObject.get("color").getAsString());
+					previewPaneImage = jsonObject.get("image").getAsString();
 				}
 			}
 			if (menuBarColor == null) {
 				menuBarColor = backgroundColor.darker();
 			}
+			if (viewColor == null) {
+				viewColor = backgroundColor.brighter();
+			}
+			if (previewPaneColor == null) {
+				previewPaneColor = backgroundColor;
+			}
 			Color buttonBarColor = backgroundColor;
 			Color gameFilterPaneColor = backgroundColor;
-			Color viewColor = backgroundColor.brighter();
 			Color navigationColor = backgroundColor;
 			Color detailsPaneColor = backgroundColor;
-			Color previewPaneColor = backgroundColor;
 			Color statusBarColor = backgroundColor.darker();
 			theme.setBackground(ThemeFactory.createThemeBackground(backgroundColor));
 			theme.setMenuBar(ThemeFactory.createThemeBackground(menuBarColor));
 			theme.setButtonBar(ThemeFactory.createThemeBackground(buttonBarColor));
 			theme.setGameFilterPane(ThemeFactory.createThemeBackground(gameFilterPaneColor));
-			theme.setView(ThemeFactory.createThemeBackground(viewColor));
+
+			if (viewImage != null) {
+				ThemeBackground themeBackGround = ThemeFactory.createThemeBackground(themeDirectory + "/images/" + viewImage);
+				themeBackGround.setColor(viewColor);
+				theme.setView(themeBackGround);
+			} else {
+				theme.setView(ThemeFactory.createThemeBackground(viewColor));
+			}
 			theme.setNavigationPane(ThemeFactory.createThemeBackground(navigationColor));
 			theme.setDetailsPane(ThemeFactory.createThemeBackground(detailsPaneColor));
-			theme.setPreviewPane(ThemeFactory.createThemeBackground(previewPaneColor));
+			if (viewImage != null) {
+				ThemeBackground themeBackGround = ThemeFactory.createThemeBackground(themeDirectory + "/images/" + previewPaneImage);
+				themeBackGround.setColor(viewColor);
+				theme.setPreviewPane(themeBackGround);
+			} else {
+				theme.setPreviewPane(ThemeFactory.createThemeBackground(previewPaneColor));
+			}
 			theme.setStatusBar(ThemeFactory.createThemeBackground(statusBarColor));
 			currentTheme = theme;
 		}

@@ -12,7 +12,7 @@ import ch.sysout.emubro.api.model.Platform;
 public class CustomComboBoxRenderer extends JLabel implements ListCellRenderer<Object> {
 	private static final long serialVersionUID = 1L;
 
-	private Color colorBackground = IconStore.current().getCurrentTheme().getGameFilterPane().getColor();
+	private Color colorBackground = IconStore.current().getCurrentTheme().getGameFilterPane().getColor().brighter();
 
 	public CustomComboBoxRenderer() {
 		setOpaque(true);

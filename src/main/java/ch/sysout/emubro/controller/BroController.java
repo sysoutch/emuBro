@@ -11,10 +11,12 @@ import java.awt.FlowLayout;
 import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.GraphicsEnvironment;
 import java.awt.HeadlessException;
 import java.awt.Image;
 import java.awt.Insets;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.Toolkit;
 import java.awt.Window;
@@ -162,6 +164,10 @@ import javax.swing.filechooser.FileSystemView;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamConstants;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerConfigurationException;
@@ -269,6 +275,7 @@ import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.LnkParser;
 import ch.sysout.util.Messages;
+import ch.sysout.util.RobotUtil;
 import ch.sysout.util.ScreenSizeUtil;
 import ch.sysout.util.UIUtil;
 import ch.sysout.util.ValidationUtil;
@@ -595,11 +602,9 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	public void createView() throws Exception {
-		view.adjustSplitPaneDividerSizes();
 		if (explorerDAO.isGreetingNotificationActive()) {
 			showGreetingInformation();
 		}
-
 		if (!explorer.isSearchProcessComplete() && explorerDAO.isBrowseComputerNotificationActive()) {
 			showBrowseComputerNotification();
 		}
@@ -2297,6 +2302,13 @@ GameSelectionListener, BrowseComputerListener {
 							view.toFront();
 						}
 					});
+					frameEmulationOverlay.addScreenshotListener(new ActionListener() {
+
+						@Override
+						public void actionPerformed(ActionEvent e) {
+							doScreenshotOfUnderlayingWindow(game);
+						}
+					});
 					view.setState(Frame.ICONIFIED);
 					frameEmulationOverlay.setLocation(ScreenSizeUtil.getWidth() - frameEmulationOverlay.getWidth(), 0);
 					frameEmulationOverlay.setVisible(true);
@@ -2440,12 +2452,25 @@ GameSelectionListener, BrowseComputerListener {
 		discordRpc.setStartTimestamps(System.currentTimeMillis());
 		DiscordRPC.discordUpdatePresence(discordRpc.build());
 
+		final ScheduledExecutorService executorService2 = Executors.newSingleThreadScheduledExecutor();
+		boolean shouldAutomaticallyDoScreenshot = game.getBannerImage() == null;
+		if (shouldAutomaticallyDoScreenshot) {
+			Runnable runnableTaskScreenshot = new Runnable() {
+
+				@Override
+				public void run() {
+					doScreenshotOfUnderlayingWindow(game);
+				}
+			};
+			executorService2.schedule(runnableTaskScreenshot, 15, TimeUnit.SECONDS);
+		}
 		if (p != null) {
 			TimerTask taskRunGame = new TimerTask() {
 
 				@Override
 				public void run() {
 					if (!p.isAlive()) {
+						executorService2.shutdownNow();
 						p.destroy();
 						int exitValue = p.exitValue();
 						SwingUtilities.invokeLater(new Runnable() {
@@ -3380,7 +3405,7 @@ GameSelectionListener, BrowseComputerListener {
 					if (addCover) {
 						try {
 							Image resized = frameCoverBro.getResizedImage();
-							setCoverForGame(explorer.getCurrentGames().get(0), resized);
+							setCoverForGame(explorer.getCurrentGames().get(0), resized, ".jpg");
 							//					publish(resized);
 						} catch (Exception e1) {
 							UIUtil.showErrorMessage(frameCoverBro, "Oops. Please make a selection", "no selection");
@@ -3479,55 +3504,58 @@ GameSelectionListener, BrowseComputerListener {
 		}
 	}
 
-	protected void setCoverForGame(Game game, Image resized) {
+	/**
+	 * TODO change this method to use original image size and file name
+	 *
+	 * @param game
+	 * @param gameCover
+	 * @param fileType
+	 */
+	protected void setCoverForGame(Game game, Image gameCover, String fileType) {
+		if (fileType != null && !fileType.startsWith(".")) {
+			fileType = "." + fileType;
+		}
 		String emuBroCoverHome = explorer.getGameCoversPath();
 		String checksum = explorer.getChecksumById(game.getChecksumId());
 		String gameCoverDir = emuBroCoverHome + File.separator + checksum;
-		String coverPathTemp = gameCoverDir + File.separator + checksum + ".tmp";
+		String coverPathTemp = gameCoverDir + File.separator + checksum + fileType;
 		File coverFile = new File(coverPathTemp);
 		if (!coverFile.exists()) {
 			coverFile.mkdirs();
 		}
 		try {
-			ImageIO.write((RenderedImage) resized, "png", coverFile);
+			ImageIO.write((RenderedImage) gameCover, fileType.replace(".", ""), coverFile);
 		} catch (IOException e2) {
 			// TODO Auto-generated catch block
 			e2.printStackTrace();
 		}
 
-		String checksumOfCover;
-		try {
-			checksumOfCover = FileUtil.getChecksumOfFile(coverFile);
-			File newFile = new File(gameCoverDir + File.separator + checksumOfCover + ".png");
-			if (newFile.exists()) {
-				newFile.delete();
-			}
-			if (coverFile.renameTo(newFile)) {
-				System.out.println("File rename success");;
-			} else {
-				System.out.println("File rename failed");
-			}
+		File newFile = new File(gameCoverDir + File.separator + "test" + fileType);
+		if (newFile.exists()) {
+			newFile.delete();
+		}
+		if (coverFile.renameTo(newFile)) {
+			System.out.println("File rename success");;
+		} else {
+			System.out.println("File rename failed");
+		}
 
-			String coverPath = newFile.getAbsolutePath();
-			if (!game.getCoverPath().equals(coverPath)) {
-				game.setCoverPath(coverPath);
-				SwingUtilities.invokeLater(new Runnable() {
+		String coverPath = newFile.getAbsolutePath();
+		if (!game.getCoverPath().equals(coverPath)) {
+			game.setCoverPath(coverPath);
+			SwingUtilities.invokeLater(new Runnable() {
 
-					@Override
-					public void run() {
-						view.gameCoverChanged(game, resized);
-					}
-				});
-				try {
-					explorerDAO.setGameCoverPath(game.getId(), coverPath);
-				} catch (SQLException e2) {
-					// TODO Auto-generated catch block
-					e2.printStackTrace();
+				@Override
+				public void run() {
+					view.gameCoverChanged(game, gameCover);
 				}
+			});
+			try {
+				explorerDAO.setGameCoverPath(game.getId(), coverPath);
+			} catch (SQLException e2) {
+				// TODO Auto-generated catch block
+				e2.printStackTrace();
 			}
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
 	}
 
@@ -5493,7 +5521,7 @@ GameSelectionListener, BrowseComputerListener {
 					String coverFileTypes[] = {
 							".png", ".jpg"
 					};
-					if (!gameCode.isEmpty()) {
+					if (gameCode != null && !gameCode.isEmpty()) {
 						Image image = null;
 						outerLoop: for (int i = 0; i < coverTypes.length; i++) {
 							for (int k = 0; k < coverLanguages.length; k++) {
@@ -5502,7 +5530,7 @@ GameSelectionListener, BrowseComputerListener {
 										URL url = new URL(coverSource + "/"+coverTypes[i]+"/"+coverLanguages[k]+"/"
 												+ game.getGameCode() + coverFileTypes[l]);
 										image = ImageIO.read(url);
-										setCoverForGame(game, image);
+										setCoverForGame(game, image, coverFileTypes[l]);
 										gameCoverSet = true;
 									} catch (IOException e7) {
 										continue;
@@ -5511,9 +5539,11 @@ GameSelectionListener, BrowseComputerListener {
 								}
 							}
 						}
+						System.out.println("game cover set: " + gameCoverSet);
+					} else {
+						System.out.println("no game code set");
 					}
 				}
-				System.out.println("game cover set: " + gameCoverSet);
 				dlgDownloadCovers.dispose();
 			}
 		});
@@ -7650,6 +7680,36 @@ GameSelectionListener, BrowseComputerListener {
 					e.printStackTrace();
 				}
 
+				String platformShortName = p0.getShortName();
+				File xmlFile = new File(explorer.getResourcesPath() + "/platforms/"+platformShortName+"/games/db.xml");
+				if (!xmlFile.exists()) {
+					// check if zip exists.
+					// if it doesn't exist: download it from gametdb and save it to this folder
+					// if it exists: unpack zip and check again
+				} else {
+					Map<String, List<String[]>> elements = countElements(xmlFile,
+							gameCode);
+					if (elements != null) {
+						List<String[]> arrays = elements.get(gameCode);
+						if (arrays != null) {
+							for (String[] arr2 : arrays) {
+								if (arr2[0].equals("synopsis")) {
+									element.setDescription(arr2[1]);
+									try {
+										explorerDAO.setGameDescription(gameId, arr2[1]);
+									} catch (SQLException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									}
+								} else if (arr2[0].equals("developer")) {
+									element.setDeveloper(arr2[1]);
+								} else if (arr2[0].equals("publisher")) {
+									element.setPublisher(arr2[1]);
+								}
+							}
+						}
+					}
+				}
 			}
 
 			if (filePath.toLowerCase().endsWith(".exe")) {
@@ -7817,6 +7877,74 @@ GameSelectionListener, BrowseComputerListener {
 			}
 		} while (fileChannel.isOpen() && (position + dimension) <= fileChannelSize);
 		return gameCode;
+	}
+
+	public Map<String, List<String[]>> countElements(File xmlFile, String gameCode) {
+		Map<String, List<String[]>> counts = new HashMap<>();
+		try {
+			XMLInputFactory inputFactory = XMLInputFactory.newInstance();
+			FileInputStream fileInputStream = new FileInputStream(xmlFile);
+			XMLStreamReader reader = inputFactory.createXMLStreamReader(fileInputStream);
+			String gameCodeFound = null;
+			boolean localeFound = false;
+			boolean synopsisFound = false;
+			List<String[]> gameDataObject = new ArrayList<>();
+			while (reader.hasNext()) {
+				reader.next();
+				if (reader.getEventType() == XMLStreamConstants.START_ELEMENT) {
+					String elementText = reader.getLocalName();
+					if (gameCodeFound != null) {
+						String elementText2 = reader.getLocalName();
+						if (synopsisFound) {
+							if (elementText2.equals("publisher")) {
+								String publisher = reader.getElementText();
+								String[] arr = { "publisher", publisher };
+								gameDataObject.add(arr);
+								break;
+							} else if (elementText2.equals("developer")) {
+								String developer = reader.getElementText();
+								String[] arr = { "developer", developer };
+								gameDataObject.add(arr);
+								continue;
+							}
+						} else {
+							if (localeFound) {
+								if (elementText2.equals("synopsis")) {
+									String synopsis = reader.getElementText();
+									String[] arr = { "synopsis", synopsis };
+									gameDataObject.add(arr);
+									synopsisFound = true;
+									continue;
+								}
+							} else {
+								if (elementText.equals("locale") && reader.getAttributeValue(null, "lang").equals("EN")) {
+									localeFound = true;
+									continue;
+								}
+							}
+						}
+					} else if (elementText.equals("id")) {
+						String attributeValue = reader.getElementText();
+						if (attributeValue != null && attributeValue.equals(gameCode)) {
+							gameCodeFound = attributeValue;
+							continue;
+						}
+					}
+				}
+				//				if (reader.isStartElement() && reader.getLocalName().equals("game")) {
+				//					String relTypeValue = reader.getAttributeValue("", "name");
+				//					if (!counts.containsKey(relTypeValue)) {
+				//						counts.put(relTypeValue, 0);
+				//					}
+				//					counts.put(relTypeValue, counts.get(relTypeValue) + 1);
+				//				}
+			}
+			counts.put(gameCodeFound, gameDataObject);
+			fileInputStream.close();
+		} catch (XMLStreamException | IOException e) {
+			e.printStackTrace();
+		}
+		return counts;
 	}
 
 	@Override
@@ -8214,58 +8342,79 @@ GameSelectionListener, BrowseComputerListener {
 		}
 	}
 
-	//	@Override
-	//	public void messageReceived(IoSession session, Object message) throws Exception {
-	//		String str = message.toString();
-	//		if (str.trim().equalsIgnoreCase("quit")) {
-	//			session.closeNow();
-	//			checkAndExit();
-	//			return;
-	//		}
-	//		session.write("command executed: " + str);
-	//		System.out.println("Message written... " + str);
-	//		switch (str) {
-	//		case "selected":
-	//			List<Game> currentGames = explorer.getCurrentGames();
-	//			StringBuilder sb = new StringBuilder();
-	//			for (Game g : currentGames) {
-	//				sb.append(g.getName()).append("(ID: ").append(g.getId()).append(")\n");
-	//			}
-	//			session.write(sb.toString());
-	//			break;
-	//		case "listgames":
-	//			List<Game> allGames = explorer.getGames();
-	//			StringBuilder sb2 = new StringBuilder();
-	//			for (Game g : allGames) {
-	//				sb2.append(g.getName()).append("(ID: ").append(g.getId()).append(")\n");
-	//			}
-	//			session.write(sb2.toString());
-	//			break;
-	//		case "rungame":
-	//			session.write("started selected games: " + explorer.getCurrentGames());
-	//			runGame();
-	//			break;
-	//		case "settings":
-	//			showPropertiesFrame();
-	//			session.write("properties frame visible");
-	//			break;
-	//		case "version":
-	//			session.write("emuBro version: " + explorer.getCurrentApplicationVersion());
-	//			break;
-	//		}
-	//		if (str.startsWith("select ")) {
-	//			int gameId = Integer.valueOf(str.split(" ")[1]);
-	//			session.write("game selected: " + gameId);
-	//			view.getViewManager().selectGame(gameId);
-	//		}
-	//		if (str.startsWith("rate ")) {
-	//			int gameId = Integer.valueOf(str.split(" ")[1]);
-	//			session.write("game rated: " + gameId);
-	//			List<Game> currentGames = explorer.getCurrentGames();
-	//			for (Game game : currentGames) {
-	//				game.setRate(gameId);
-	//				rateGame(game);
-	//			}
-	//		}
-	//	}
+	private void doScreenshotOfUnderlayingWindow(final Game game) {
+		boolean showOverlayFrameAfterScreenshot = false;
+		if (frameEmulationOverlay.isActive()) {
+			showOverlayFrameAfterScreenshot = true;
+			frameEmulationOverlay.setVisible(false);
+		}
+		//		if (frameEmulationOverlay.getState() == Frame.NORMAL) {
+		//			frameEmulationOverlay.setState(Frame.ICONIFIED);
+		//		} else {
+		//			frameEmulationOverlay.setVisible(false);
+		//		}
+		TimerTask task = new TimerTask() {
+
+			@Override
+			public void run() {
+				RobotUtil.doScreenshot();
+				TimerTask task = new TimerTask() {
+
+					@Override
+					public void run() {
+						try {
+							Image img = ImageUtil.getImageFromClipboard();
+							int screenWidth = ScreenSizeUtil.getWidth();
+							int screenHeight = ScreenSizeUtil.getHeight();
+							int imageWidth = img.getWidth(null);
+							int imageHeight = img.getHeight(null);
+							Rectangle taskBarSize = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
+							int taskBarWidth = ScreenSizeUtil.getWidth() - taskBarSize.width;
+							int taskBarHeight = ScreenSizeUtil.getHeight() - taskBarSize.height;
+							int taskBarPosition = (taskBarWidth == 0) ? 0 : 1;
+							boolean windowedScreenshot = imageWidth < screenWidth || imageHeight < screenHeight;
+							boolean maximizedScreenshot = (taskBarPosition == 0) ? (imageWidth == screenWidth && imageHeight == screenHeight-taskBarHeight)
+									: (imageWidth == screenWidth-taskBarWidth && imageHeight == screenHeight);
+							boolean fullScreenScreenshot = imageWidth == screenWidth && imageHeight == screenHeight;
+							System.out.println("maximized: "+ maximizedScreenshot);
+							System.out.println("fullscreen: "+ fullScreenScreenshot);
+							if (windowedScreenshot) {
+								System.out.println("You did a screenshot of a non-fullscreen window. Do you want to try to auto crop the image to remove the title- and menubar?");
+							}
+							game.setBannerImage(img);
+							String gameChecksum = explorer.getChecksumById(game.getChecksumId());
+							File bannerImageFile = new File(explorer.getResourcesPath() + File.separator + "screenshots" + File.separator + gameChecksum + File.separator + System.currentTimeMillis() + ".jpg");
+							boolean dirsCreated = bannerImageFile.mkdirs();
+							ImageIO.write((RenderedImage) img, "jpg", bannerImageFile);
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					}
+				};
+				Timer timer = new Timer();
+				timer.schedule(task, 500);
+			}
+		};
+		Timer timer = new Timer();
+		timer.schedule(task, 100);
+
+		if (showOverlayFrameAfterScreenshot) {
+			TimerTask task2 = new TimerTask() {
+
+				@Override
+				public void run() {
+					frameEmulationOverlay.setVisible(true);
+					//				if (frameEmulationOverlay.isVisible()) {
+					//					frameEmulationOverlay.setState(Frame.NORMAL);
+					//				} else {
+					//					frameEmulationOverlay.setVisible(true);
+					//				}
+				}
+			};
+			Timer timer2 = new Timer();
+			timer2.schedule(task2, 1000);
+		}
+	}
+
 }

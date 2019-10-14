@@ -169,6 +169,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	private JCheckBoxMenuItem itmFullScreen;
 	private JRadioButtonMenuItem itmSetFilter;
 	private JCheckBoxMenuItem itmHideExtensions;
+	private JCheckBoxMenuItem itmShowToolTipTexts;
 	private JCheckBoxMenuItem itmTouchScreenOptimizedScroll;
 	private JRadioButtonMenuItem itmLanguageDe;
 	private JRadioButtonMenuItem itmLanguageEn;
@@ -420,6 +421,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmChooseDetails = new JMenuItem();
 		itmHideExtensions = new JCheckBoxMenuItem();
 		itmTouchScreenOptimizedScroll = new JCheckBoxMenuItem();
+		itmShowToolTipTexts = new JCheckBoxMenuItem();
 		itmRefresh = new JMenuItem();
 		itmFullScreen = new JCheckBoxMenuItem();
 		itmLanguageDe = new JRadioButtonMenuItem();
@@ -465,7 +467,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 		try {
 			for (String theme : IconStore.current().getDefaultThemes()) {
-				System.err.println("rdb added");
 				JRadioButtonMenuItem rdb;
 				defaultThemesMenuItems.add(rdb = new JRadioButtonMenuItem(theme));
 				rdb.addActionListener(new ActionListener() {
@@ -508,14 +509,14 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		btnRemoveGame = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("remove", size, size)), Messages.get(MessageConstants.REMOVE));
 		btnRenameGame = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("rename", size, size)), Messages.get(MessageConstants.RENAME));
 		btnGameProperties = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("gameProperties", size, size)), Messages.get(MessageConstants.GAME_PROPERTIES));
+		btnSetFilter = new ButtonBarButton("", iconSearchGame, Messages.get(MessageConstants.SET_FILTER));
 		btnChangeView = new ButtonBarButton("", iconChangeView, null);
 		btnMoreOptionsChangeView = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("arrowDownOtherWhite", 1)), Messages.get(MessageConstants.MORE_OPTIONS));
 		btnPreviewPane = new ButtonBarButton("", iconPreviewPaneHide, null);
 		btnPreviewPane.setActionCommand(GameViewConstants.HIDE_PREVIEW_PANE);
-		btnSetFilter = new ButtonBarButton("", iconSearchGame, Messages.get(MessageConstants.SET_FILTER));
 		buttonBarComponents = new JComponent[] { btnShowHideNavigationPanel, btnOrganize, btnSettings, btnRunGame, btnMoreOptionsRunGame,
 				btnRemoveGame, btnRenameGame,
-				btnGameProperties, btnChangeView, btnMoreOptionsChangeView, btnPreviewPane, btnSetFilter };
+				btnGameProperties, btnSetFilter, btnChangeView, btnMoreOptionsChangeView, btnPreviewPane};
 		//		btnRunGame.setComponentPopupMenu(mnuGameSettings);
 
 		setButtonBarToolTips();
@@ -846,10 +847,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		}
 	}
 
-	public void adjustSplitPaneDividerSizes() {
-		pnlMain.adjustSplitPaneDividerSizes();
-	}
-
 	public void addChangeToAllGamesListener(ActionListener l) {
 		itmChangeToAll.addActionListener(l);
 		pnlMain.addChangeToAllGamesListener(l);
@@ -933,6 +930,11 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	public void addTouchScreenOptimizedScrollListener(ActionListener l) {
 		itmTouchScreenOptimizedScroll.addActionListener(l);
 		pnlMain.addTouchScreenOptimizedScrollListener(l);
+	}
+
+	public void addShowToolTipTextsListener(ActionListener l) {
+		itmShowToolTipTexts.addActionListener(l);
+		pnlMain.addShowToolTipTextsListener(l);
 	}
 
 	public void setRefreshGameListListener(ActionListener l) {
@@ -1259,7 +1261,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		mnuUpdateAvailable.setVisible(false);
 		itmApplicationUpdateAvailable.setVisible(false);
 		itmSignatureUpdateAvailable.setVisible(false);
-		addComponentsToJComponent(mnb, mnuFile, mnuView, mnuThemes, mnuGames, /*mnuPlugins, mnuLookAndFeel,*/ Box.createHorizontalGlue(), mnuUpdateAvailable, mnuLanguage, mnuHelp);
+		addComponentsToJComponent(false, mnb, mnuFile, mnuView, mnuThemes, mnuGames, /*mnuPlugins, mnuLookAndFeel,*/ Box.createHorizontalGlue(), mnuUpdateAvailable, mnuLanguage, mnuHelp);
 		setJMenuBar(mnb);
 	}
 
@@ -1285,7 +1287,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 				new JSeparator(), itmSetFilter, /*itmChooseDetails,*/
 				/* new JSeparator(), */mnuChangeTo,
 				new JSeparator(), itmSetColumnWidth, itmSetRowHeight,
-				new JSeparator(), itmTouchScreenOptimizedScroll,
+				new JSeparator(), itmShowToolTipTexts, itmTouchScreenOptimizedScroll,
 				new JSeparator(), itmFullScreen);
 
 		addComponentsToJComponent(mnuThemes, itmManageThemes, mnuChangeTheme);
@@ -1357,13 +1359,17 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	}
 
 	private void addComponentsToJComponent(JComponent parentComponent, Component... components) {
+		addComponentsToJComponent(true, parentComponent, components);
+	}
+
+	private void addComponentsToJComponent(boolean opaque, JComponent parentComponent, Component... components) {
 		for (Component c : components) {
 			Color color = IconStore.current().getCurrentTheme().getMenuBar().getColor();
 			if (color == null) {
 				color = IconStore.current().getCurrentTheme().getBackground().getColor().darker();
 			}
 			if (c instanceof JComponent) {
-				((JComponent) c).setOpaque(true);
+				((JComponent) c).setOpaque(opaque);
 			}
 			c.setBackground(color);
 			parentComponent.add(c);
@@ -2281,6 +2287,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmHideExtensions.setToolTipText(Messages.get(MessageConstants.HIDE_EXTENSIONS_TOOL_TIP));
 		itmTouchScreenOptimizedScroll.setText(Messages.get(MessageConstants.TOUCH_SCREEN_SCROLL));
 		itmTouchScreenOptimizedScroll.setToolTipText(Messages.get(MessageConstants.TOUCH_SCREEN_SCROLL_TOOL_TIP));
+		itmShowToolTipTexts.setText(Messages.get(MessageConstants.SHOW_TOOL_TIP_TEXTS));
 		itmRefresh.setText(Messages.get(MessageConstants.REFRESH));
 		itmFullScreen.setText(Messages.get(MessageConstants.fullscreen));
 		itmLanguageDe.setText(Messages.get(MessageConstants.LANGUAGE_DE));

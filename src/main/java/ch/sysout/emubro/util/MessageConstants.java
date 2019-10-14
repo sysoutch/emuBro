@@ -302,6 +302,7 @@ public class MessageConstants {
 	public static final String SHOW_PREVIEW_PANE = "showPreviewPane";
 	public static final String TOUCH_SCREEN_SCROLL = "touchScreenScroll";
 	public static final String TOUCH_SCREEN_SCROLL_TOOL_TIP = "touchScreenScrollToolTip";
+	public static final String SHOW_TOOL_TIP_TEXTS = "showToolTipTexts";
 	public static final String OVERLAY_PANEL_SETTINGS = "overlayPanelSettings";
 	public static final String HIDE_OVERLAY_PANEL = "hideOverlayPanel";
 	public static final String REMOVE_GAME = "removeGame";

@@ -160,4 +160,8 @@ public interface ExplorerDAO {
 	List<FilterGroup> getFilterGroups() throws SQLException;
 
 	void addFilterGroup(FilterGroup filterGroup) throws SQLException;
+
+	String getGameDescription(int gameId) throws SQLException;
+
+	void setGameDescription(int gameId, String description) throws SQLException;
 }

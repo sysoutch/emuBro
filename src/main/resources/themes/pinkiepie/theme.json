@@ -1,0 +1,12 @@
+{
+  "name":"Colored Mode",
+  "color":"#DB7093",
+  "view": {
+    "color":"#DB7093",
+	"image":"bg2.jpg"
+  },
+  "previewpane": {
+    "color":"#DB7093",
+	"image":"previewpane.jpg"
+  }
+}

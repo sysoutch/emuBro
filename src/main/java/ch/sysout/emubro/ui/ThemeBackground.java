@@ -9,10 +9,20 @@ public class ThemeBackground {
 	private boolean autoPickColorFromImageEnabled;
 
 	private BufferedImage image;
+
+	private boolean verticalCenterImageEnabled = true;
+	private boolean horizontalCenterImageEnabled = true;
+
+	private boolean imageScaleEnabled = false; // TODO make this dynamic
+	private boolean scaleProportionallyEnabled = false;
+
 	private Color color;
 	private Color colorFromImage;
 	private GradientPaint gradientPaint;
 	private Point pickColorFromPoint;
+
+	private ThemeImage imageNew;
+	private ThemeColor colorNew;
 
 	public ThemeBackground(BufferedImage image, Color color) {
 		this(image, color, false, 0, 0);
@@ -84,5 +94,21 @@ public class ThemeBackground {
 
 	public void setPickColorFromPoint(int x, int y) {
 		pickColorFromPoint = new Point(x, y);
+	}
+
+	public boolean isImageScaleEnabled() {
+		return imageScaleEnabled;
+	}
+
+	public boolean isScaleProportionallyEnabled() {
+		return scaleProportionallyEnabled;
+	}
+
+	public boolean isVerticalCenterImageEnabled() {
+		return verticalCenterImageEnabled;
+	}
+
+	public boolean isHorizontalCenterImageEnabled() {
+		return horizontalCenterImageEnabled;
 	}
 }

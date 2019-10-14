@@ -6,7 +6,7 @@ import java.awt.Component;
 import javax.swing.plaf.basic.BasicComboBoxEditor;
 
 public class CustomComboBoxEditor extends BasicComboBoxEditor {
-	private Color color = IconStore.current().getCurrentTheme().getGameFilterPane().getColor();
+	private Color color = IconStore.current().getCurrentTheme().getGameFilterPane().getColor().brighter();
 	private Color color2 = Color.WHITE;
 
 	@Override

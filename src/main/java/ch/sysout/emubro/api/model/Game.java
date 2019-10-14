@@ -1,5 +1,6 @@
 package ch.sysout.emubro.api.model;
 
+import java.awt.Image;
 import java.time.ZonedDateTime;
 import java.util.List;
 
@@ -133,4 +134,20 @@ public interface Game extends Comparable<Game> {
 	void setGameCode(String gameCode);
 
 	void setChecksumId(int defaultChecksumId);
+
+	String getDescription();
+
+	void setDescription(String synopsis);
+
+	String getDeveloper();
+
+	void setDeveloper(String string);
+
+	String getPublisher();
+
+	void setPublisher(String string);
+
+	Image getBannerImage();
+
+	void setBannerImage(Image img);
 }

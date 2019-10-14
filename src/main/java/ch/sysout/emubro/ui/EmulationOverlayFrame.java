@@ -54,6 +54,7 @@ public class EmulationOverlayFrame extends JFrame {
 	final JPopupMenu popup = new JPopupMenu();
 	private JMenuItem btnSendEsc = new JMenuItem(Messages.get(MessageConstants.SEND_ESC));
 	private JMenuItem btnSendAltEnter = new JMenuItem(Messages.get(MessageConstants.SEND_ALT_ENTER));
+	private JMenuItem btnScreenshot = new JMenuItem("Screenshot");
 	private JButton btnShowProcessManager = new JButton(Messages.get(MessageConstants.SHOW_PROCESS_MANAGER));
 	private JMenuItem btnShowApplication = new JMenuItem(
 			Messages.get(MessageConstants.SHOW_APPLICATION, Messages.get(MessageConstants.APPLICATION_TITLE)));
@@ -78,7 +79,7 @@ public class EmulationOverlayFrame extends JFrame {
 	private void initComponents() {
 		btnMenu.setFocusPainted(false);
 		addComponentsToPopup(popup, btnShowApplication, new JSeparator(), btnStopEmulation, new JSeparator(),
-				btnSendEsc, btnSendAltEnter, new JSeparator(), btnEmulationOverlayPanelSettings, new JSeparator(),
+				btnSendEsc, btnSendAltEnter, btnScreenshot, new JSeparator(), btnEmulationOverlayPanelSettings, new JSeparator(),
 				btnHideEmulationOverlayPanel);
 
 		// btnMenu.setComponentPopupMenu(popup);
@@ -358,7 +359,7 @@ public class EmulationOverlayFrame extends JFrame {
 		pack();
 	}
 
-	private void showButton() {
+	public void showButton() {
 		try {
 			setOpacity(1f);
 		} catch (UnsupportedOperationException e) {
@@ -372,7 +373,7 @@ public class EmulationOverlayFrame extends JFrame {
 		setAlwaysOnTop(true);
 	}
 
-	private void hideButton() {
+	public void hideButton() {
 		if (!popup.isVisible()) {
 			try {
 				setOpacity(0.1f);
@@ -388,6 +389,10 @@ public class EmulationOverlayFrame extends JFrame {
 
 	public void addShowApplicationListener(ActionListener l) {
 		btnShowApplication.addActionListener(l);
+	}
+
+	public void addScreenshotListener(ActionListener l) {
+		btnScreenshot.addActionListener(l);
 	}
 
 	private List<Image> getIcons() {

@@ -1,5 +1,6 @@
 package ch.sysout.emubro.impl.model;
 
+import java.awt.Image;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +25,10 @@ public class BroGame implements Game {
 	private int platformId;
 	private String platformIconFileName;
 	private List<Tag> tags = new ArrayList<>();
+	private String description;
+	private String developer;
+	private String publisher;
+	private Image bannerImage;
 
 	public BroGame(int id, String name, String gameCode, int defaultFileId, int defaultChecksumId, String iconPath, String coverPath, int rate, ZonedDateTime dateAdded,
 			ZonedDateTime lastPlayed, int playCount, int emulatorId, int platformId, String platformIconFileName) {
@@ -254,5 +259,48 @@ public class BroGame implements Game {
 	@Override
 	public boolean hasTag(int tagId) {
 		return getTag(tagId) != null;
+	}
+
+	@Override
+	public String getDescription() {
+		return description;
+	}
+
+	@Override
+	public void setDescription(String description) {
+		System.out.println("BroGame: set description: " + description);
+		this.description = description;
+	}
+
+	@Override
+	public String getDeveloper() {
+		return developer;
+	}
+
+	@Override
+	public void setDeveloper(String string) {
+		System.out.println("BroGame: set developer: " + string);
+		developer = string;
+	}
+
+	@Override
+	public String getPublisher() {
+		return publisher;
+	}
+
+	@Override
+	public void setPublisher(String string) {
+		System.out.println("BroGame: set publisher: " + string);
+		publisher = string;
+	}
+
+	@Override
+	public Image getBannerImage() {
+		return bannerImage;
+	}
+
+	@Override
+	public void setBannerImage(Image bannerImage) {
+		this.bannerImage = bannerImage;
 	}
 }

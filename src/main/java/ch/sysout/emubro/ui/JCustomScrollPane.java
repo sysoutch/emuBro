@@ -89,7 +89,6 @@ public class JCustomScrollPane extends JScrollPane {
 		setComponentZOrder(getVerticalScrollBar(), 1);
 		setComponentZOrder(getHorizontalScrollBar(), 0);
 		setComponentZOrder(getViewport(), 2);
-
 		viewport.setView(view);
 	}
 

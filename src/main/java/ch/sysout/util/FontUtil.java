@@ -16,7 +16,7 @@ public class FontUtil {
 			InputStream is = null;
 			try {
 				GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-				is = FontUtil.class.getResourceAsStream("/fonts/OpenSans/OpenSans-Regular.ttf");
+				is = FontUtil.class.getResourceAsStream("/fonts/OpenSans/OpenSans-Bold.ttf");
 				customFont = Font.createFont(Font.TRUETYPE_FONT, is);
 				customFont = customFont.deriveFont(16f);
 				ge.registerFont(customFont);

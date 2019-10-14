@@ -68,7 +68,7 @@ public class ViewContextMenu extends JPopupMenu implements ActionListener {
 	private JRadioButtonMenuItem itmChangeToAll;
 	private JRadioButtonMenuItem itmChangeToFavorites;
 	private JRadioButtonMenuItem itmChangeToRecentlyPlayed;
-
+	private JCheckBoxMenuItem itmShowToolTipTexts;
 	private JCheckBoxMenuItem itmTouchScreenOptimizedScroll;
 
 	public ViewContextMenu() {
@@ -87,7 +87,7 @@ public class ViewContextMenu extends JPopupMenu implements ActionListener {
 				new JSeparator(), itmTagsSearch, itmCoverSearch, itmTrailerSearch/*, itmWebSearchSettings*/,
 				new JSeparator(), itmRenameGames,
 				new JSeparator(), itmSetColumnWidth, itmSetRowHeight,
-				new JSeparator(), itmTouchScreenOptimizedScroll,
+				new JSeparator(), itmShowToolTipTexts, itmTouchScreenOptimizedScroll,
 				new JSeparator(), itmFullScreen);
 		addComponentsToJComponent(mnuAdd, itmAddFiles, itmAddFolders, new JSeparator(), itmFilesFromClipboard);
 		addComponentsToJComponent(mnuChangeTo, itmChangeToAll, itmChangeToFavorites, itmChangeToRecentlyPlayed);
@@ -137,6 +137,7 @@ public class ViewContextMenu extends JPopupMenu implements ActionListener {
 		itmChangeToRecentlyPlayed = new JRadioButtonMenuItem(Messages.get("recentlyPlayed"));
 		itmHideExtensions = new JCheckBoxMenuItem(Messages.get("hideExtensions"));
 		itmTouchScreenOptimizedScroll = new JCheckBoxMenuItem(Messages.get(MessageConstants.TOUCH_SCREEN_SCROLL));
+		itmShowToolTipTexts = new JCheckBoxMenuItem(Messages.get(MessageConstants.SHOW_TOOL_TIP_TEXTS));
 		mnuAdd.addMenuListener(new MenuListener() {
 
 			@Override
@@ -253,6 +254,8 @@ public class ViewContextMenu extends JPopupMenu implements ActionListener {
 		itmChangeToRecentlyPlayed.setText(Messages.get("recentlyPlayed"));
 		itmHideExtensions.setText(Messages.get(MessageConstants.HIDE_EXTENSIONS));
 		itmTouchScreenOptimizedScroll.setText(Messages.get(MessageConstants.TOUCH_SCREEN_SCROLL));
+		itmTouchScreenOptimizedScroll.setToolTipText(Messages.get(MessageConstants.TOUCH_SCREEN_SCROLL_TOOL_TIP));
+		itmShowToolTipTexts.setText(Messages.get(MessageConstants.SHOW_TOOL_TIP_TEXTS));
 	}
 
 	public void addAddFilesListener(ActionListener l) {
@@ -327,6 +330,10 @@ public class ViewContextMenu extends JPopupMenu implements ActionListener {
 
 	public void addTouchScreenOptimizedScrollListener(ActionListener l) {
 		itmTouchScreenOptimizedScroll.addActionListener(l);
+	}
+
+	public void addShowToolTipTextsListener(ActionListener l) {
+		itmShowToolTipTexts.addActionListener(l);
 	}
 
 	public void setRefreshGameListListener(ActionListener l) {

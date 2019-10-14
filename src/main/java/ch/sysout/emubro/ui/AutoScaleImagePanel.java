@@ -24,14 +24,16 @@ public class AutoScaleImagePanel extends JPanel {
 			double scaleFactor = (double) bi.getWidth(null) / (double) bi.getHeight(null);
 			int height = getHeight();
 			int width = (int) (height * scaleFactor);
+			int x = 0;
+			int y = 0;
 			if (width <= getWidth()) {
-				int x = 0;
-				int y = getHeight() / 2 - height / 2;
+				//				int x = 0;
+				//				int y = getHeight() / 2 - height / 2;
 				g2d.drawImage(bi, x, y, width, height, this);
 				// setSize(width, height);
 			} else {
-				int x = 0;
-				int y = (int) (getHeight() / 2 - ((getWidth() / scaleFactor) / 2));
+				//				int x = 0;
+				//				int y = (int) (getHeight() / 2 - ((getWidth() / scaleFactor) / 2));
 				g2d.drawImage(bi, x, y, getWidth(), (int) (getWidth() / scaleFactor), this);
 				// setSize(getWidth(), (int) (getWidth() / scaleFactor));
 			}

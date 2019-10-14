@@ -6,6 +6,7 @@ import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
@@ -195,19 +196,70 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 				Graphics2D g2d = (Graphics2D) g.create();
 				int panelWidth = getWidth();
 				int panelHeight = getHeight();
-				g2d.setColor(IconStore.current().getCurrentTheme().getView().getColor());
+				Theme currentTheme = IconStore.current().getCurrentTheme();
+				if (currentTheme.getView().hasGradientPaint()) {
+					GradientPaint p = currentTheme.getView().getGradientPaint();
+					g2d.setPaint(p);
+				} else if (currentTheme.getView().hasColor()) {
+					g2d.setColor(currentTheme.getView().getColor());
+				}
 				g2d.fillRect(0, 0, panelWidth, panelHeight);
-				BufferedImage background = IconStore.current().getCurrentTheme().getView().getImage();
+
+				BufferedImage background = currentTheme.getView().getImage();
 				if (background != null) {
 					int imgWidth = background.getWidth();
 					int imgHeight = background.getHeight();
-					boolean shouldScale = false;
+					int x = 0;
+					int y = 0;
+					boolean shouldScale = currentTheme.getView().isImageScaleEnabled();
 					if (shouldScale) {
-						g2d.drawImage(background, 0, 0, panelWidth, panelHeight, this);
+						int new_width = imgWidth;
+						int new_height = imgHeight;
+						boolean scaleProportionally = currentTheme.getView().isScaleProportionallyEnabled();
+						if (scaleProportionally) {
+							// first check if we need to scale width
+							if (imgWidth > panelWidth) {
+								//scale width to fit
+								new_width = panelWidth;
+								//scale height to maintain aspect ratio
+								new_height = (new_width * imgHeight) / imgWidth;
+							}
+
+							// then check if we need to scale even with the new height
+							if (new_height > panelHeight) {
+								//scale height to fit instead
+								new_height = panelHeight;
+								//scale width to maintain aspect ratio
+								new_width = (new_height * imgWidth) / imgHeight;
+							}
+							if (new_width < panelWidth) {
+								x += (panelWidth-new_width) / 2;
+							}
+							if (new_height < panelHeight) {
+								y += (panelHeight-new_height) / 2; // image centered
+								//					y = panelHeight-new_height; // image bottom
+							}
+						} else {
+							new_width = panelWidth;
+							new_height = panelHeight;
+						}
+						g2d.drawImage(background, x, y, new_width, new_height, this);
 					} else {
-						g2d.drawImage(background, 0, 0, imgWidth, imgHeight, this);
+						boolean shouldVerticalCenterImage = currentTheme.getView().isVerticalCenterImageEnabled();
+						boolean shouldHorizontalCenterImage = currentTheme.getView().isHorizontalCenterImageEnabled();
+						if (shouldVerticalCenterImage) {
+							if (imgWidth > panelWidth) {
+								x -= (imgWidth-panelWidth) / 2;
+							}
+						}
+						if (shouldHorizontalCenterImage) {
+							if (imgHeight > panelHeight) {
+								y -= (imgHeight-panelHeight) / 2;
+							}
+						}
+						g2d.drawImage(background, x, y, imgWidth, imgHeight, this);
 					}
-					BufferedImage imgTransparentOverlay = IconStore.current().getCurrentTheme().getTransparentBackgroundOverlayImage();
+					BufferedImage imgTransparentOverlay = currentTheme.getTransparentBackgroundOverlayImage();
 					if (imgTransparentOverlay != null) {
 						int width = imgTransparentOverlay.getWidth();
 						int height = imgTransparentOverlay.getHeight();
@@ -219,8 +271,8 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 							width = scaledWidth;
 							height = scaledHeight;
 						}
-						int x = panelWidth-width;
-						int y = panelHeight-height;
+						x = panelWidth-width;
+						y = panelHeight-height;
 						g2d.drawImage(imgTransparentOverlay, x, y, width, height, this);
 					}
 				}

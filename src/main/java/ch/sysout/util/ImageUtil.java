@@ -2,6 +2,10 @@ package ch.sysout.util;
 
 import java.awt.Graphics2D;
 import java.awt.Image;
+import java.awt.Toolkit;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
+import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -45,7 +49,7 @@ public class ImageUtil {
 	 * @throws IOException
 	 */
 	public static BufferedImage getBufferedImageFrom(String filepath) throws Exception {
-		return getBufferedImageFrom(filepath, false);
+		return getBufferedImageFrom(filepath.startsWith("/") ? filepath : ("/"+filepath), false);
 	}
 
 	/**
@@ -189,5 +193,19 @@ public class ImageUtil {
 
 	public static Image getBufferedImageFrom(InputStream is) throws IOException {
 		return ImageIO.read(is);
+	}
+
+	public static Image getImageFromClipboard() {
+		Transferable transferable = Toolkit.getDefaultToolkit().getSystemClipboard().getContents(null);
+		if (transferable != null && transferable.isDataFlavorSupported(DataFlavor.imageFlavor)) {
+			Image img;
+			try {
+				img = (Image) transferable.getTransferData(DataFlavor.imageFlavor);
+				return img;
+			} catch (UnsupportedFlavorException | IOException e) {
+				return null;
+			}
+		}
+		return null;
 	}
 }

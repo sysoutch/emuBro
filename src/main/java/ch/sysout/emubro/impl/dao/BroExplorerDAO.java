@@ -870,4 +870,16 @@ public class BroExplorerDAO implements ExplorerDAO {
 	public void addFilterGroup(FilterGroup filterGroup) throws SQLException {
 
 	}
+
+	@Override
+	public String getGameDescription(int gameId) throws SQLException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void setGameDescription(int gameId, String description) throws SQLException {
+		// TODO Auto-generated method stub
+
+	}
 }

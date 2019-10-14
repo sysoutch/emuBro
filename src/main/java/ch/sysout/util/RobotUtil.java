@@ -2,15 +2,11 @@ package ch.sysout.util;
 
 import java.awt.AWTException;
 import java.awt.Robot;
+import java.awt.event.KeyEvent;
 
 public class RobotUtil {
 
 	static Robot robot;
-
-	public static void mouseMove(int x, int y) {
-		initializeIfNot();
-		robot.mouseMove(x, y);
-	}
 
 	private static void initializeIfNot() {
 		if (robot == null) {
@@ -21,6 +17,19 @@ public class RobotUtil {
 				e.printStackTrace();
 			}
 		}
+	}
+
+	public static void mouseMove(int x, int y) {
+		initializeIfNot();
+		robot.mouseMove(x, y);
+	}
+
+	public static void doScreenshot() {
+		initializeIfNot();
+		robot.keyPress(KeyEvent.VK_ALT);
+		robot.keyPress(KeyEvent.VK_PRINTSCREEN);
+		robot.keyRelease(KeyEvent.VK_PRINTSCREEN);
+		robot.keyRelease(KeyEvent.VK_ALT);
 	}
 
 	//	public static void copyImageToClipboard(Rectangle screen) {
