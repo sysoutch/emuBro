@@ -522,7 +522,8 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		//		private AccordionPanel pnlAccordion;
 		private JButton btnComment;
 		private Platform platform;
-		private JTextArea txtDescription = new JTextArea();
+		private JTextArea txtDescription = new JTextArea(0, 5);
+		private String description;
 
 		public SelectionPanel() {
 			initComponents();
@@ -531,7 +532,18 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		}
 
 		public void setDescription(String description) {
-			txtDescription.setText(description);
+			this.description = description;
+			if (description != null && !description.trim().isEmpty()) {
+				int limit = 100;
+				int length = description.length();
+				if (length > limit) {
+					txtDescription.setText(description.substring(0, limit)+"...\n\n(Click to show more)");
+				} else {
+					txtDescription.setText(description);
+				}
+			} else {
+				txtDescription.setText("no description set");
+			}
 		}
 
 		private void initComponents() {
@@ -584,8 +596,20 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			//			pnlAccordion.setOpaque(false);
 			//
 			txtDescription.setOpaque(false);
+			txtDescription.setEditable(false);
 			txtDescription.setLineWrap(true);
 			txtDescription.setWrapStyleWord(true);
+			txtDescription.addMouseListener(new MouseAdapter() {
+				@Override
+				public void mousePressed(MouseEvent e) {
+					if (txtDescription.getText().endsWith("(Click to show more)")) {
+						txtDescription.setText(description);
+						txtDescription.setCaretPosition(0);
+					} else {
+						setDescription(description);
+					}
+				}
+			});
 			add(txtDescription); // don't use scrollpane if not needed, otherwise there might be scroll issues
 		}
 
