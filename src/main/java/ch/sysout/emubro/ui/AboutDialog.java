@@ -1,9 +1,11 @@
 package ch.sysout.emubro.ui;
 
-import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Desktop;
 import java.awt.Dimension;
+import java.awt.GradientPaint;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -77,7 +79,6 @@ public class AboutDialog extends JDialog implements ActionListener {
 
 		setUndecorated(true); // remove system frame
 		//		AWTUtilities.setWindowOpaque(this, false); // enable opacity
-		setBackground(new Color(0f, 0f, 0f, 0.75f));
 		//		SwingUtils.createDialogBackPanel(this, view.getContentPane());
 
 		pack();
@@ -193,17 +194,38 @@ public class AboutDialog extends JDialog implements ActionListener {
 	private void createUI() {
 		FormLayout layout = new FormLayout("default, $button:grow, $button",
 				"fill:pref, $rgap, fill:pref, $rgap, fill:pref:grow, fill:$rgap, fill:pref, $rgap, fill:pref, $ugap, pref");
-		setLayout(layout);
-		getRootPane().setBorder(Paddings.DIALOG);
+		JPanel pnl = new JPanel(layout) {
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			protected void paintComponent(Graphics g) {
+				super.paintComponent(g);
+				Graphics2D g2d = (Graphics2D) g.create();
+				int panelWidth = getWidth();
+				int panelHeight = getHeight();
+				Theme currentTheme = IconStore.current().getCurrentTheme();
+				if (currentTheme.getView().hasGradientPaint()) {
+					GradientPaint p = currentTheme.getView().getGradientPaint();
+					g2d.setPaint(p);
+				} else if (currentTheme.getView().hasColor()) {
+					g2d.setColor(currentTheme.getView().getColor());
+				}
+				g2d.fillRect(0, 0, panelWidth, panelHeight);
+				g2d.dispose();
+			}
+		};
+		pnl.setOpaque(false);
+		pnl.setBorder(Paddings.DIALOG);
+		//		getRootPane().setBorder(Paddings.DIALOG);
 		CellConstraints cc = new CellConstraints();
-		add(lblIcon, cc.xyw(1, 1, layout.getColumnCount()));
-		add(lblHeader, cc.xyw(1, 3, layout.getColumnCount()));
-		add(txtDescription, cc.xyw(1, 5, layout.getColumnCount()));
-		add(lblCopyright, cc.xyw(1, 9, layout.getColumnCount()));
+		pnl.add(lblIcon, cc.xyw(1, 1, layout.getColumnCount()));
+		pnl.add(lblHeader, cc.xyw(1, 3, layout.getColumnCount()));
+		pnl.add(txtDescription, cc.xyw(1, 5, layout.getColumnCount()));
+		pnl.add(lblCopyright, cc.xyw(1, 9, layout.getColumnCount()));
 		JPanel pnlWebsite = new JPanel();
 		pnlWebsite.setOpaque(false);
 		pnlWebsite.add(lnkWebsite);
-		add(pnlWebsite, cc.xyw(1, 7, layout.getColumnCount()));
+		pnl.add(pnlWebsite, cc.xyw(1, 7, layout.getColumnCount()));
 
 		FormLayout layout2 = new FormLayout(
 				"default, $lcgap, default, $lcgap, default, $lcgap, default, $lcgap, default, $lcgap, default", "fill:pref");
@@ -232,8 +254,9 @@ public class AboutDialog extends JDialog implements ActionListener {
 			pnlSocialButtons.add(button, cc2.xy(x, 1));
 			x += 2;
 		}
-		add(pnlSocialButtons, cc.xy(1, 11));
-		add(btnClose, cc.xy(3, 11));
+		pnl.add(pnlSocialButtons, cc.xy(1, 11));
+		pnl.add(btnClose, cc.xy(3, 11));
+		add(pnl);
 	}
 
 	@Override
@@ -259,19 +282,7 @@ public class AboutDialog extends JDialog implements ActionListener {
 				}
 			}
 		} else if (source == lnkWebsite) {
-			try {
-				UIUtil.openWebsite("https://emubro.net");
-			} catch (IOException e1) {
-				UIUtil.showWarningMessage(this, "Maybe there is a conflict with your default web browser and you have to set it again."
-						+ "\n\nThe default program page in control panel will be opened now..", "default web browser");
-				try {
-					Runtime.getRuntime().exec("control.exe /name Microsoft.DefaultPrograms /page pageDefaultProgram");
-				} catch (IOException e2) {
-					UIUtil.showErrorMessage(this, "The default program page couldn't be opened.", "oops");
-				}
-			} catch (URISyntaxException e1) {
-				UIUtil.showErrorMessage(this, "The url couldn't be opened.", "oops");
-			}
+			UIUtil.openWebsite("https://emubro.net", this);
 		} else if (source == btnClose) {
 			dispose();
 		}

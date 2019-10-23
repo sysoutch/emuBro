@@ -9,6 +9,7 @@ import java.awt.Dialog.ModalityType;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Frame;
+import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
@@ -20,7 +21,10 @@ import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.Toolkit;
 import java.awt.Window;
+import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.FlavorEvent;
+import java.awt.datatransfer.FlavorListener;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.dnd.DnDConstants;
@@ -65,6 +69,8 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
+import java.lang.reflect.Array;
+import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -135,7 +141,9 @@ import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JColorChooser;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
@@ -146,6 +154,7 @@ import javax.swing.JProgressBar;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JSlider;
+import javax.swing.JSpinner;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
@@ -156,6 +165,8 @@ import javax.swing.SwingWorker;
 import javax.swing.UIManager;
 import javax.swing.WindowConstants;
 import javax.swing.border.TitledBorder;
+import javax.swing.colorchooser.AbstractColorChooserPanel;
+import javax.swing.colorchooser.ColorSelectionModel;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.ListSelectionEvent;
@@ -263,6 +274,7 @@ import ch.sysout.emubro.ui.RateListener;
 import ch.sysout.emubro.ui.RatingBarPanel;
 import ch.sysout.emubro.ui.SortedListModel;
 import ch.sysout.emubro.ui.SplashScreenWindow;
+import ch.sysout.emubro.ui.Theme;
 import ch.sysout.emubro.ui.UpdateDialog;
 import ch.sysout.emubro.ui.ViewPanel;
 import ch.sysout.emubro.ui.ViewPanelManager;
@@ -405,6 +417,7 @@ GameSelectionListener, BrowseComputerListener {
 	private CharsetDecoder decoder = iso88591Charset.newDecoder()
 			.onMalformedInput(CodingErrorAction.REPLACE).onUnmappableCharacter(CodingErrorAction.REPLACE)
 			.replaceWith(".");
+	protected FlavorListener lastFlavorListener;
 
 	public BroController(SplashScreenWindow dlgSplashScreen, ExplorerDAO explorerDAO, Explorer model, MainFrame view, Builder discordRpc) {
 		this.dlgSplashScreen = dlgSplashScreen;
@@ -967,24 +980,14 @@ GameSelectionListener, BrowseComputerListener {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				try {
-					UIUtil.openWebsite("https://discord.gg/EtKvZ2F");
-				} catch (IOException | URISyntaxException e1) {
-					UIUtil.showErrorMessage(view, "Something went wrong..", "Oops");
-					e1.printStackTrace();
-				}
+				UIUtil.openWebsite("https://discord.gg/EtKvZ2F", dlgConfigWizard);
 			}
 		};
 		actionOpenRedditLink = new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				try {
-					UIUtil.openWebsite("https://www.reddit.com/r/emuBro");
-				} catch (IOException | URISyntaxException e1) {
-					UIUtil.showErrorMessage(view, "Something went wrong..", "Oops");
-					e1.printStackTrace();
-				}
+				UIUtil.openWebsite("https://www.reddit.com/r/emuBro", dlgConfigWizard);
 			}
 		};
 		view.addDiscordInviteLinkListener(actionOpenDiscordLink);
@@ -1009,6 +1012,128 @@ GameSelectionListener, BrowseComputerListener {
 			@Override
 			public void windowClosed(WindowEvent e) {
 				super.windowClosed(e);
+			}
+		});
+
+		SwingUtilities.invokeLater(new Runnable() {
+
+			@Override
+			public void run() {
+				JColorChooser safd = new JColorChooser();
+
+				ColorSelectionModel model = safd.getSelectionModel();
+				ChangeListener changeListener = new ChangeListener() {
+					@Override
+					public void stateChanged(ChangeEvent changeEvent) {
+						//						Color newForegroundColor = safd.getColor();
+						//						label.setForeground(newForegroundColor);
+						Color color = safd.getColor();
+						Theme currentTheme = IconStore.current().getCurrentTheme();
+						Color menuBarColor = color.darker();
+						Color buttonBarColor = color;
+						Color gameFilterPaneColor = color;
+						Color viewColor = color.brighter();
+						Color navigationColor = color;
+						Color previewPaneColor = color;
+						Color detailsPaneColor = color;
+						Color tabsColor = color.brighter();
+						Color statusBarColor = color.darker();
+						currentTheme.getBackground().setColor(color);
+						currentTheme.getMenuBar().setColor(menuBarColor);
+						currentTheme.getButtonBar().setColor(buttonBarColor);
+						currentTheme.getGameFilterPane().setColor(gameFilterPaneColor);
+						currentTheme.getView().setColor(viewColor);
+						currentTheme.getNavigationPane().setColor(navigationColor);
+						currentTheme.getPreviewPane().setColor(previewPaneColor);
+						currentTheme.getDetailsPane().setColor(detailsPaneColor);
+						currentTheme.getTabs().setColor(tabsColor);
+						currentTheme.getStatusBar().setColor(statusBarColor);
+						view.repaint();
+					}
+				};
+				model.addChangeListener(changeListener);
+
+				try {
+					makeCustomSettingsForColorChooser(safd);
+				} catch (NoSuchFieldException | SecurityException | IllegalArgumentException
+						| IllegalAccessException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
+				AbstractColorChooserPanel[] panels = safd.getChooserPanels();
+
+				JPanel p = new JPanel() {
+					@Override
+					protected void paintComponent(Graphics g) {
+						super.paintComponent(g);
+						Graphics2D g2d = (Graphics2D) g.create();
+						int panelWidth = getWidth();
+						int panelHeight = getHeight();
+						Theme currentTheme = IconStore.current().getCurrentTheme();
+						if (currentTheme.getView().hasGradientPaint()) {
+							GradientPaint p = currentTheme.getView().getGradientPaint();
+							g2d.setPaint(p);
+						} else if (currentTheme.getView().hasColor()) {
+							g2d.setColor(currentTheme.getView().getColor());
+						}
+						g2d.fillRect(0, 0, panelWidth, panelHeight);
+						g2d.dispose();
+					}
+				};
+				p.setOpaque(false);
+				panels[2].setOpaque(false);
+				panels[2].setBorder(new TitledBorder(panels[2].getDisplayName()));
+				p.add(panels[2]);
+
+				//				JColorChooser.createDialog(view, "JColorChooser", false, safd, null, null);
+				JDialog dlg = new JDialog();
+				dlg.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+				//				dlg.setUndecorated(true);
+				dlg.add(p);
+				dlg.pack();
+				dlg.setLocationRelativeTo(view);
+				dlg.setVisible(true);
+
+				//				TestColorPicker colorPicker = new TestColorPicker();
+				//				colorPicker.addColorPickerListener(new ColorPickerListener() {
+				//
+				//					@Override
+				//					public void colorChanged(Color color) {
+				//					}
+				//				});
+			}
+
+			private void makeCustomSettingsForColorChooser(JColorChooser safd) throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
+				AbstractColorChooserPanel[] colorPanels = safd.getChooserPanels();
+				for (int i = 1; i < colorPanels.length; i++) {
+					AbstractColorChooserPanel cp = colorPanels[i];
+					cp.setOpaque(false);
+
+					Field f = cp.getClass().getDeclaredField("panel");
+					f.setAccessible(true);
+
+					Object colorPanel = f.get(cp);
+					((JComponent) colorPanel).setOpaque(false);
+					Field f2 = colorPanel.getClass().getDeclaredField("spinners");
+					f2.setAccessible(true);
+					Object spinners = f2.get(colorPanel);
+
+					Object transpSlispinner = Array.get(spinners, 3);
+					if (i == colorPanels.length - 1) {
+						transpSlispinner = Array.get(spinners, 4);
+					}
+					Field f3 = transpSlispinner.getClass().getDeclaredField("slider");
+					f3.setAccessible(true);
+					JSlider slider = (JSlider) f3.get(transpSlispinner);
+					slider.setOpaque(false);
+					//					slider.setEnabled(false);
+					Field f4 = transpSlispinner.getClass().getDeclaredField("spinner");
+					f4.setAccessible(true);
+					JSpinner spinner = (JSpinner) f4.get(transpSlispinner);
+					spinner.setOpaque(false);
+					//			        spinner.setEnabled(false);
+				}
 			}
 		});
 	}
@@ -2478,6 +2603,12 @@ GameSelectionListener, BrowseComputerListener {
 							@Override
 							public void run() {
 								System.err.println("emulation stopped");
+
+								if (lastFlavorListener != null) {
+									System.err.println("removed unused clipboard listener");
+									Toolkit.getDefaultToolkit().getSystemClipboard().removeFlavorListener(lastFlavorListener);
+									lastFlavorListener = null;
+								}
 
 								discordRpc.setDetails("");
 								discordRpc.setStartTimestamps(0);
@@ -4261,19 +4392,7 @@ GameSelectionListener, BrowseComputerListener {
 					boolean useSpecificSite = site != null && !site.trim().isEmpty();
 					String searchString = (useSpecificSite ? "site:"+site + " "  : "") + gameName + " " + defPlatformName + " " + coverOrIcon;
 					String url = "https://www.google.com/search?q="+searchString.replace(" ", "+").replace("&", "%26")+"&tbm=isch";
-					try {
-						UIUtil.openWebsite(url);
-					} catch (IOException e1) {
-						UIUtil.showWarningMessage(view, "Maybe there is a conflict with your default web browser and you have to set it again."
-								+ "\n\nThe default program page in control panel will be opened now..", "default web browser");
-						try {
-							Runtime.getRuntime().exec("control.exe /name Microsoft.DefaultPrograms /page pageDefaultProgram");
-						} catch (IOException e2) {
-							UIUtil.showErrorMessage(view, "The default program page couldn't be opened.", "oops");
-						}
-					} catch (URISyntaxException e1) {
-						UIUtil.showErrorMessage(view, "The url couldn't be opened.", "oops");
-					}
+					UIUtil.openWebsite(url, view);
 				}
 			}
 		}
@@ -4291,19 +4410,7 @@ GameSelectionListener, BrowseComputerListener {
 						? platformShortName : platform.getName();
 				String searchString = gameName + " " + defPlatformName;
 				String url = "https://www.youtube.com/results?search_query="+searchString.replace(" ", "+").replace("&", "%26") + "&tbm=vid";
-				try {
-					UIUtil.openWebsite(url);
-				} catch (IOException e1) {
-					UIUtil.showWarningMessage(view, "Maybe there is a conflict with your default web browser and you have to set it again."
-							+ "\n\nThe default program page in control panel will be opened now..", "default web browser");
-					try {
-						Runtime.getRuntime().exec("control.exe /name Microsoft.DefaultPrograms /page pageDefaultProgram");
-					} catch (IOException e2) {
-						UIUtil.showErrorMessage(view, "The default program page couldn't be opened.", "oops");
-					}
-				} catch (URISyntaxException e1) {
-					UIUtil.showErrorMessage(view, "The url couldn't be opened.", "oops");
-				}
+				UIUtil.openWebsite(url, view);
 			}
 		}
 	}
@@ -5313,6 +5420,7 @@ GameSelectionListener, BrowseComputerListener {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
+			//			view.undockPropertiesFrame();
 			frameProperties.dispose();
 		}
 	}
@@ -5423,12 +5531,7 @@ GameSelectionListener, BrowseComputerListener {
 
 								@Override
 								public void run() {
-									try {
-										UIUtil.openWebsite(selectedEmulator.getWebsite());
-									} catch (IOException | URISyntaxException e) {
-										// TODO Auto-generated catch block
-										e.printStackTrace();
-									}
+									UIUtil.openWebsite(selectedEmulator.getWebsite(), view);
 								}
 							});
 						}
@@ -6398,6 +6501,27 @@ GameSelectionListener, BrowseComputerListener {
 			frameProperties.addRemoveEmulatorListener2(new RemoveEmulatorListener());
 			frameProperties.addOpenEmulatorPropertiesPanelListener(new OpenEmulatorPanelListener());
 			frameProperties.addOpenEmulatorPropertiesPanelListener2(new OpenEmulatorPanelListener());
+			frameProperties.addOpenWebsiteListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					UIUtil.openWebsite(frameProperties.getSelectedEmulator().getWebsite(), view);
+				}
+			});
+			frameProperties.addRunEmulatorListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					Emulator emulator = frameProperties.getSelectedEmulator();
+					ProcessBuilder pb = new ProcessBuilder(emulator.getPath());
+					try {
+						Process process = pb.start();
+					} catch (IOException e1) {
+						UIUtil.showErrorMessage(frameProperties, "couldn't run emulator.\n\n"
+								+ e1.getMessage(), "error starting emulator");
+					}
+				}
+			});
 			frameProperties.adjustSplitPaneDividerSizes();
 			frameProperties.adjustSplitPaneDividerLocations();
 			frameProperties.setPlatformListModel(mdlPropertiesLstPlatforms);
@@ -6439,17 +6563,7 @@ GameSelectionListener, BrowseComputerListener {
 					try {
 						downloadEmulator(selectedEmulator);
 					} catch (IOException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-						try {
-							UIUtil.openWebsite(selectedEmulator.getWebsite());
-						} catch (IOException e2) {
-							// TODO Auto-generated catch block
-							e2.printStackTrace();
-						} catch (URISyntaxException e2) {
-							// TODO Auto-generated catch block
-							e2.printStackTrace();
-						}
+						UIUtil.openWebsite(selectedEmulator.getWebsite(), frameProperties);
 					}
 				}
 			});
@@ -6479,17 +6593,7 @@ GameSelectionListener, BrowseComputerListener {
 							try {
 								downloadEmulator(selectedEmulator);
 							} catch (IOException e1) {
-								// TODO Auto-generated catch block
-								e1.printStackTrace();
-								try {
-									UIUtil.openWebsite(selectedEmulator.getWebsite());
-								} catch (IOException e2) {
-									// TODO Auto-generated catch block
-									e2.printStackTrace();
-								} catch (URISyntaxException e2) {
-									// TODO Auto-generated catch block
-									e2.printStackTrace();
-								}
+								UIUtil.openWebsite(selectedEmulator.getWebsite(), frameProperties);
 							}
 						}
 					}
@@ -6507,6 +6611,7 @@ GameSelectionListener, BrowseComputerListener {
 		} else {
 			frameProperties.setVisible(true);
 		}
+		//		view.dockPropertiesFrame(frameProperties.getMainPanel());
 	}
 
 	class ExportGameListToTxtListener implements ActionListener {
@@ -8343,52 +8448,69 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	private void doScreenshotOfUnderlayingWindow(final Game game) {
-		boolean showOverlayFrameAfterScreenshot = false;
+		final boolean showOverlayFrameAfterScreenshot = frameEmulationOverlay.isActive();
 		if (frameEmulationOverlay.isActive()) {
-			showOverlayFrameAfterScreenshot = true;
 			frameEmulationOverlay.setVisible(false);
 		}
-		//		if (frameEmulationOverlay.getState() == Frame.NORMAL) {
-		//			frameEmulationOverlay.setState(Frame.ICONIFIED);
-		//		} else {
-		//			frameEmulationOverlay.setVisible(false);
-		//		}
 		TimerTask task = new TimerTask() {
 
 			@Override
 			public void run() {
-				RobotUtil.doScreenshot();
+				checkSetNewGameBannerFor(game, showOverlayFrameAfterScreenshot);
+			}
+		};
+		Timer timer = new Timer();
+		timer.schedule(task, 100);
+	}
+
+	protected void checkSetNewGameBannerFor(Game game, boolean showOverlayFrameAfterScreenshot) {
+		//		final Image imgOld = ImageUtil.getImageFromClipboard();
+		if (lastFlavorListener != null) {
+			System.err.println("remove last clipboard listener");
+			Toolkit.getDefaultToolkit().getSystemClipboard().removeFlavorListener(lastFlavorListener);
+		}
+		System.err.println("clearing clipboard..");
+		UIUtil.copyTextToClipboard(null); // needs to be done to detect further flavor changes
+		FlavorListener flavorListener = new FlavorListener() {
+			FlavorListener dizz = this;
+
+			@Override
+			public void flavorsChanged(FlavorEvent e) {
+				System.out.println("flavor changed");
+				System.err.println("remove clipboard listener");
+				Toolkit.getDefaultToolkit().getSystemClipboard().removeFlavorListener(dizz);
+				lastFlavorListener = null;
+
 				TimerTask task = new TimerTask() {
 
 					@Override
 					public void run() {
+						Image imgNew = null;
 						try {
-							Image img = ImageUtil.getImageFromClipboard();
-							int screenWidth = ScreenSizeUtil.getWidth();
-							int screenHeight = ScreenSizeUtil.getHeight();
-							int imageWidth = img.getWidth(null);
-							int imageHeight = img.getHeight(null);
-							Rectangle taskBarSize = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
-							int taskBarWidth = ScreenSizeUtil.getWidth() - taskBarSize.width;
-							int taskBarHeight = ScreenSizeUtil.getHeight() - taskBarSize.height;
-							int taskBarPosition = (taskBarWidth == 0) ? 0 : 1;
-							boolean windowedScreenshot = imageWidth < screenWidth || imageHeight < screenHeight;
-							boolean maximizedScreenshot = (taskBarPosition == 0) ? (imageWidth == screenWidth && imageHeight == screenHeight-taskBarHeight)
-									: (imageWidth == screenWidth-taskBarWidth && imageHeight == screenHeight);
-							boolean fullScreenScreenshot = imageWidth == screenWidth && imageHeight == screenHeight;
-							System.out.println("maximized: "+ maximizedScreenshot);
-							System.out.println("fullscreen: "+ fullScreenScreenshot);
-							if (windowedScreenshot) {
-								System.out.println("You did a screenshot of a non-fullscreen window. Do you want to try to auto crop the image to remove the title- and menubar?");
+							System.err.println("get new image from clipboard");
+							imgNew = ImageUtil.getImageFromClipboard((Clipboard) e.getSource());
+						} catch (IllegalStateException ex) {
+							System.err.println("clipboard is busy");
+						}
+						if (imgNew != null) {
+							System.err.println("set new game banner...");
+							setNewGameBannerFor(game, imgNew);
+							System.out.println("ClipBoard UPDATED: " + e.getSource() + " " + e.toString());
+
+							// show overlayframe after screenshot if required
+							if (showOverlayFrameAfterScreenshot) {
+								TimerTask task2 = new TimerTask() {
+
+									@Override
+									public void run() {
+										frameEmulationOverlay.setVisible(true);
+									}
+								};
+								Timer timer2 = new Timer();
+								timer2.schedule(task2, 1000);
 							}
-							game.setBannerImage(img);
-							String gameChecksum = explorer.getChecksumById(game.getChecksumId());
-							File bannerImageFile = new File(explorer.getResourcesPath() + File.separator + "screenshots" + File.separator + gameChecksum + File.separator + System.currentTimeMillis() + ".jpg");
-							boolean dirsCreated = bannerImageFile.mkdirs();
-							ImageIO.write((RenderedImage) img, "jpg", bannerImageFile);
-						} catch (IOException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
+						} else {
+							System.err.println("img is null");
 						}
 					}
 				};
@@ -8396,25 +8518,44 @@ GameSelectionListener, BrowseComputerListener {
 				timer.schedule(task, 500);
 			}
 		};
-		Timer timer = new Timer();
-		timer.schedule(task, 100);
-
-		if (showOverlayFrameAfterScreenshot) {
-			TimerTask task2 = new TimerTask() {
-
-				@Override
-				public void run() {
-					frameEmulationOverlay.setVisible(true);
-					//				if (frameEmulationOverlay.isVisible()) {
-					//					frameEmulationOverlay.setState(Frame.NORMAL);
-					//				} else {
-					//					frameEmulationOverlay.setVisible(true);
-					//				}
-				}
-			};
-			Timer timer2 = new Timer();
-			timer2.schedule(task2, 1000);
-		}
+		lastFlavorListener = flavorListener;
+		Toolkit.getDefaultToolkit().getSystemClipboard().addFlavorListener(flavorListener);
+		System.err.println("make screenshot..");
+		RobotUtil.doScreenshot();
+		//		checkSetNewGameBannerFor2(game, imgOld);
 	}
 
+	protected void setNewGameBannerFor(Game game, Image imgNew) {
+		int screenWidth = ScreenSizeUtil.getWidth();
+		int screenHeight = ScreenSizeUtil.getHeight();
+		int imageWidth = imgNew.getWidth(null);
+		int imageHeight = imgNew.getHeight(null);
+		Rectangle taskBarSize = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
+		int taskBarWidth = ScreenSizeUtil.getWidth() - taskBarSize.width;
+		int taskBarHeight = ScreenSizeUtil.getHeight() - taskBarSize.height;
+		int taskBarPosition = (taskBarWidth == 0) ? 0 : 1;
+		boolean windowedScreenshot = imageWidth < screenWidth || imageHeight < screenHeight;
+		boolean maximizedScreenshot = (taskBarPosition == 0)
+				? (imageWidth == screenWidth && imageHeight == screenHeight - taskBarHeight)
+						: (imageWidth == screenWidth - taskBarWidth && imageHeight == screenHeight);
+				boolean fullScreenScreenshot = imageWidth == screenWidth && imageHeight == screenHeight;
+				System.out.println("maximized: " + maximizedScreenshot);
+				System.out.println("fullscreen: " + fullScreenScreenshot);
+				if (windowedScreenshot) {
+					System.out.println(
+							"You did a screenshot of a non-fullscreen window. Do you want to try to auto crop the image to remove the title- and menubar?");
+				}
+				game.setBannerImage(imgNew);
+
+				String gameChecksum = explorer.getChecksumById(game.getChecksumId());
+				File bannerImageFile = new File(explorer.getResourcesPath() + File.separator + "gamebanners"
+						+ File.separator + gameChecksum + ".jpg");
+				boolean dirsCreated = bannerImageFile.mkdirs();
+				try {
+					ImageIO.write((RenderedImage) imgNew, "jpg", bannerImageFile);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+	}
 }

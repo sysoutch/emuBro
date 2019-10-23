@@ -7,6 +7,7 @@ import java.awt.Dimension;
 import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.dnd.DropTargetListener;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseListener;
@@ -16,9 +17,7 @@ import java.util.List;
 
 import javax.swing.Action;
 import javax.swing.BorderFactory;
-import javax.swing.Icon;
 import javax.swing.JButton;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.border.Border;
@@ -138,9 +137,9 @@ public class BlankViewPanel extends ViewPanel {
 		//		txt.setLineWrap(true);
 		//		txt.setWrapStyleWord(true);
 		//		pnl.add(txt, BorderLayout.CENTER);
-		Icon icon = ImageUtil.getImageIconFrom("/images/source.gif");
-		JLabel label = new JLabel(icon);
-		pnl.add(label);
+		//		Icon icon = ImageUtil.getImageIconFrom("/images/source.gif");
+		//		JLabel label = new JLabel(icon);
+		//		pnl.add(label);
 
 		JPanel pnlWrapper = new JPanel(new BorderLayout());
 		pnlWrapper.setOpaque(false);
@@ -541,6 +540,9 @@ public class BlankViewPanel extends ViewPanel {
 
 		BufferedImage background = currentTheme.getView().getImage();
 		if (background != null) {
+			g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+			g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+			g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 			int imgWidth = background.getWidth();
 			int imgHeight = background.getHeight();
 			int x = 0;
@@ -609,6 +611,8 @@ public class BlankViewPanel extends ViewPanel {
 				y = panelHeight-height;
 				g2d.drawImage(imgTransparentOverlay, x, y, width, height, this);
 			}
+			g2d.setColor(getTransparencyColor());
+			g2d.fillRect(0, 0, panelWidth, panelHeight);
 		}
 		g2d.dispose();
 	}

@@ -88,11 +88,12 @@ public class Main {
 	private static LookAndFeel defaultLookAndFeel;
 	private static BroExplorer explorer;
 	private static net.arikia.dev.drpc.DiscordRichPresence.Builder presence;
-	private static final String currentApplicationVersion = "0.7.1";
+	private static final String currentApplicationVersion = "0.8.0";
 
 	public static void main(String[] args) {
 		System.setProperty("java.util.Arrays.useLegacyMergeSort", "true");
 		System.setProperty("apple.laf.useScreenMenuBar", "true");
+		UIManager.put("Tree.rendererFillBackground", false);
 		setLookAndFeel();
 		try {
 			initializeCustomTheme();
@@ -431,7 +432,7 @@ public class Main {
 	}
 
 	private static void initializeCustomTheme() throws IOException {
-		IconStore.current().loadDefaultTheme("crashbandicoot");
+		IconStore.current().loadDefaultTheme("dark");
 		initializeCustomFonts();
 		initializeCustomColors();
 		initializeCustomMenus();

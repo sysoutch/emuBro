@@ -103,6 +103,7 @@ public class IconStore {
 			Color gameFilterPaneColor = backgroundColor;
 			Color navigationColor = backgroundColor;
 			Color detailsPaneColor = backgroundColor;
+			Color tabsColor = backgroundColor.brighter();
 			Color statusBarColor = backgroundColor.darker();
 			theme.setBackground(ThemeFactory.createThemeBackground(backgroundColor));
 			theme.setMenuBar(ThemeFactory.createThemeBackground(menuBarColor));
@@ -118,9 +119,10 @@ public class IconStore {
 			}
 			theme.setNavigationPane(ThemeFactory.createThemeBackground(navigationColor));
 			theme.setDetailsPane(ThemeFactory.createThemeBackground(detailsPaneColor));
-			if (viewImage != null) {
+			theme.setTabs(ThemeFactory.createThemeBackground(tabsColor));
+			if (previewPaneImage != null) {
 				ThemeBackground themeBackGround = ThemeFactory.createThemeBackground(themeDirectory + "/images/" + previewPaneImage);
-				themeBackGround.setColor(viewColor);
+				themeBackGround.setColor(previewPaneColor);
 				theme.setPreviewPane(themeBackGround);
 			} else {
 				theme.setPreviewPane(ThemeFactory.createThemeBackground(previewPaneColor));

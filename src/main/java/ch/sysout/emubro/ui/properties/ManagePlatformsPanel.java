@@ -3,11 +3,10 @@ package ch.sysout.emubro.ui.properties;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Cursor;
-import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.FileDialog;
 import java.awt.FlowLayout;
+import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.event.ActionEvent;
@@ -15,17 +14,14 @@ import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.ItemListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseListener;
-import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -43,7 +39,6 @@ import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JList;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
@@ -92,13 +87,16 @@ import ch.sysout.emubro.controller.BroController.PlatformListCellRenderer;
 import ch.sysout.emubro.impl.model.BroEmulator;
 import ch.sysout.emubro.ui.AddEmulatorPanel;
 import ch.sysout.emubro.ui.AddPlatformDialog;
+import ch.sysout.emubro.ui.CustomTabbedPaneUI;
 import ch.sysout.emubro.ui.EmulatorTableCellRenderer;
 import ch.sysout.emubro.ui.EmulatorTableModel;
 import ch.sysout.emubro.ui.IconStore;
+import ch.sysout.emubro.ui.JCustomScrollPane;
 import ch.sysout.emubro.ui.JLinkButton;
 import ch.sysout.emubro.ui.JTableDoubleClickOnHeaderFix;
 import ch.sysout.emubro.ui.SortedListModel;
 import ch.sysout.emubro.ui.TableColumnAdjuster;
+import ch.sysout.emubro.ui.Theme;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.JCustomButton;
 import ch.sysout.ui.util.JCustomToggleButton;
@@ -146,7 +144,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 
 	private void createUI() {
 		pnlPlatforms.setOpaque(false);
-
+		pnlEmulators.setOpaque(false);
 		FormLayout layout = new FormLayout("min:grow", "fill:min:grow");
 		setLayout(layout);
 		CellConstraints cc = new CellConstraints();
@@ -255,6 +253,14 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 		pnlEmulators.addOpenEmulatorPropertiesPanelListener2(l);
 	}
 
+	public void addRunEmulatorListener(ActionListener l) {
+		pnlEmulators.addRunEmulatorListener(l);
+	}
+
+	public void addOpenWebsiteListener(ActionListener l) {
+		pnlEmulators.addOpenWebsiteListener(l);
+	}
+
 	public void showEmulatorPropertiesPanel(boolean b) {
 		pnlEmulators.showEmulatorPropertiesPanel(b);
 	}
@@ -284,13 +290,37 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 		private void createUI() {
 			int rowHeight = ScreenSizeUtil.adjustValueToResolution(32);
 			lstPlatforms.setFixedCellHeight(rowHeight);
+			lstPlatforms.setOpaque(false);
+			chkShowOnlyInstalledPlatforms.setOpaque(false);
 			chkShowOnlyInstalledPlatforms.setToolTipText(Messages.get(MessageConstants.TOOL_TIP_SHOW_ONLY_INSTALLED_PLATFORMS));
 			chkShowOnlyInstalledPlatforms.setMinimumSize(new Dimension(0, 0));
 			FormLayout layout = new FormLayout("default, $rgap:grow, pref",
 					"fill:default:grow, $lgap, fill:pref, $rgap, fill:pref");
 			setLayout(layout);
 			CellConstraints cc = new CellConstraints();
-			add(spLstPlatforms = new JScrollPane(lstPlatforms), cc.xyw(1, 1, layout.getColumnCount()));
+			spLstPlatforms = new JCustomScrollPane(lstPlatforms) {
+				private static final long serialVersionUID = 1L;
+
+				@Override
+				protected void paintComponent(Graphics g) {
+					super.paintComponent(g);
+					Graphics2D g2d = (Graphics2D) g.create();
+					int panelWidth = getWidth();
+					int panelHeight = getHeight();
+					Theme currentTheme = IconStore.current().getCurrentTheme();
+					if (currentTheme.getView().hasGradientPaint()) {
+						GradientPaint p = currentTheme.getView().getGradientPaint();
+						g2d.setPaint(p);
+					} else if (currentTheme.getView().hasColor()) {
+						g2d.setColor(currentTheme.getView().getColor());
+					}
+					g2d.fillRect(0, 0, panelWidth, panelHeight);
+					g2d.dispose();
+				}
+			};
+			spLstPlatforms.setOpaque(false);
+			spLstPlatforms.getViewport().setOpaque(false);
+			add(spLstPlatforms, cc.xyw(1, 1, layout.getColumnCount()));
 			add(chkShowOnlyInstalledPlatforms, cc.xyw(1, 3, layout.getColumnCount()));
 			add(btnAddPlatform, cc.xy(1, 5));
 			add(btnEditPlatform, cc.xy(3, 5));
@@ -393,8 +423,6 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 			JPanel pnl2 = new JPanel(new BorderLayout());
 			pnl2.add(pnl, BorderLayout.WEST);
 			add(spGameDirectories = new JScrollPane(pnl2), cc.xy(1, 3));
-			pnl.setBackground(UIManager.getColor("List.background"));
-			pnl2.setBackground(UIManager.getColor("List.background"));
 		}
 	}
 
@@ -413,21 +441,24 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 		private AddEmulatorPanel pnlAddEmulator;
 		protected JPanel pnlSelectedEmulatorMinimized;
 		private Map<Integer, EmulatorTableModel> emulatorModels = new HashMap<>();
-		private JLabel lnkRunEmulator = new JLabel("<html><a href=''>Emulator starten</a></html>");
-		private JLabel lnkWebsite = new JLabel("<html><a href=''>Website besuchen</a></html>");
+		private JLinkButton lnkRunEmulator = new JLinkButton("Start emulator");
+		private JLinkButton lnkWebsite = new JLinkButton("Visit website");
 		public JScrollPane spConfigurationFile;
 		private JScrollPane spEmulators;
 		private Map<Integer, ListModel<Emulator>> defaultEmulatorModels = new HashMap<>();
 		private JPanel pnlNoPlatformSelected = new JPanel();
 		private Component lastTopComponent;
+		public boolean makeInput;
 
 		public EmulatorsPanel() {
 			super(new BorderLayout());
 			setBorder(Paddings.TABBED_DIALOG);
+			pnlNoPlatformSelected.setOpaque(false);
 			pnlNoPlatformSelected.add(new JLabel("<html><center>No platform currently selected.<br><br>Select a platform from the list on the left to show its emulators</center></html>"));
 			int rowHeight = ScreenSizeUtil.adjustValueToResolution(32);
 			EmulatorTableModel model = new EmulatorTableModel(null);
 			tblEmulators = new JTableDoubleClickOnHeaderFix();
+			tblEmulators.setOpaque(false);
 			tblEmulators.setPreferredScrollableViewportSize(tblEmulators.getPreferredSize());
 			tblEmulators.setRowHeight(rowHeight);
 			tblEmulators.setAutoscrolls(false);
@@ -461,7 +492,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 
 		private JPanel createEmulatorOverviewPanel() {
 			JPanel pnl = new JPanel(new BorderLayout());
-
+			pnl.setOpaque(false);
 			// lstEmulators.setPreferredSize(new Dimension(0,0));
 			btnRemoveEmulator.setEnabled(false);
 			btnSetDefaultEmulator.setIcon(ImageUtil.getImageIconFrom(Icons.get("default", 22, 22)));
@@ -473,8 +504,30 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 			FormLayout layout = new FormLayout("default, min, default, $ugap:grow, default, $rgap, default",
 					"fill:default:grow, $lgap, fill:pref");
 			pnlAvailableEmulators.setLayout(layout);
+			pnlAvailableEmulators.setOpaque(false);
 			CellConstraints cc = new CellConstraints();
-			spEmulators = new JScrollPane(tblEmulators);
+			spEmulators = new JCustomScrollPane(tblEmulators) {
+				private static final long serialVersionUID = 1L;
+
+				@Override
+				protected void paintComponent(Graphics g) {
+					super.paintComponent(g);
+					Graphics2D g2d = (Graphics2D) g.create();
+					int panelWidth = getWidth();
+					int panelHeight = getHeight();
+					Theme currentTheme = IconStore.current().getCurrentTheme();
+					if (currentTheme.getView().hasGradientPaint()) {
+						GradientPaint p = currentTheme.getView().getGradientPaint();
+						g2d.setPaint(p);
+					} else if (currentTheme.getView().hasColor()) {
+						g2d.setColor(currentTheme.getView().getColor());
+					}
+					g2d.fillRect(0, 0, panelWidth, panelHeight);
+					g2d.dispose();
+				}
+			};
+			spEmulators.setOpaque(false);
+			spEmulators.getViewport().setOpaque(false);
 			pnlAvailableEmulators.add(spEmulators, cc.xyw(1, 1, layout.getColumnCount()));
 			pnlAvailableEmulators.add(btnAddEmulator, cc.xy(1, 3));
 			pnlAvailableEmulators.add(btnRemoveEmulator, cc.xy(3, 3));
@@ -483,6 +536,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 
 			JPanel pnlEmulatorConfiguration = new JPanel(new BorderLayout());
 			pnlEmulatorConfiguration.add(createEmulatorConfigurationPanel());
+			spl1.setOpaque(false);
 			spl1.setBorder(BorderFactory.createEmptyBorder());
 			spl1.setTopComponent(pnlAvailableEmulators);
 			// spl1.setBottomComponent(pnlEmulatorConfiguration);
@@ -496,6 +550,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 
 		private JPanel createSelectedEmulatorMinimizedPanel() {
 			JPanel pnl = new JPanel();
+			pnl.setOpaque(false);
 			// pnl.setBorder(Paddings.TABBED_DIALOG);
 			FormLayout layout = new FormLayout("pref, $ugap, pref, min:grow, $rgap, pref",
 					"fill:pref, $rgap");
@@ -516,6 +571,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 		private JPanel createEmulatorConfigurationPanel() {
 			if (pnlEmulatorConfiguration == null) {
 				pnlEmulatorConfiguration = new EmulatorConfigurationPanel();
+				pnlEmulatorConfiguration.setOpaque(false);
 			}
 			return pnlEmulatorConfiguration;
 		}
@@ -596,6 +652,14 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 
 		public void addOpenEmulatorPropertiesPanelListener2(MouseListener l) {
 			tblEmulators.addMouseListener(l);
+		}
+
+		public void addRunEmulatorListener(ActionListener l) {
+			lnkRunEmulator.addActionListener(l);
+		}
+
+		public void addOpenWebsiteListener(ActionListener l) {
+			lnkWebsite.addActionListener(l);
 		}
 
 		protected void showEmulatorPropertiesPanel(boolean b) {
@@ -720,6 +784,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 				FormLayout layout = new FormLayout("min, $lcgap, min:grow, $ugap, default");
 				CellConstraints cc = new CellConstraints();
 				JPanel pnlGrid = new JPanel(layout);
+				pnlGrid.setOpaque(false);
 
 				int type = 0;
 				int doMode = -1;
@@ -755,6 +820,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 										boolean offOrFalse = value.trim().equalsIgnoreCase("off") || value.trim().equalsIgnoreCase("false");
 										if (onOrTrue || offOrFalse) {
 											chkValue = new JCheckBox(value.trim());
+											chkValue.setOpaque(false);
 											chkValue.setSelected(onOrTrue);
 											if (arr2.length > 1) {
 												String comment = arr2[1].trim();
@@ -882,14 +948,20 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 				// wrap
 				// correctly
 
-				spGeneralSettings = new JScrollPane(createGeneralSettingsPanel());
+				spGeneralSettings = new JCustomScrollPane(createGeneralSettingsPanel());
+				spGeneralSettings.setOpaque(false);
+				spGeneralSettings.getViewport().setOpaque(false);
 				spGeneralSettings.setBorder(BorderFactory.createEmptyBorder());
 				spGeneralSettings.getVerticalScrollBar().setUnitIncrement(16);
 
-				spInputConfiguration = new JScrollPane(createInputConfigurationPanel());
+				spInputConfiguration = new JCustomScrollPane(createInputConfigurationPanel());
+				spInputConfiguration.setOpaque(false);
+				spInputConfiguration.getViewport().setOpaque(false);
 				spInputConfiguration.setBorder(BorderFactory.createEmptyBorder());
 				spInputConfiguration.getVerticalScrollBar().setUnitIncrement(16);
 
+				tpMain.setUI(new CustomTabbedPaneUI());
+				tpMain.setBorder(BorderFactory.createEmptyBorder());
 				tpMain.addTab(Messages.get(MessageConstants.GENERAL), spGeneralSettings);
 				tpMain.addTab(Messages.get(MessageConstants.INPUT), spInputConfiguration);
 				tpMain.addTab(Messages.get(MessageConstants.ADVANCED), pnlConfigurationFile);
@@ -897,63 +969,41 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 				tpMain.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
 				txtConfigurationFile.setEditable(false);
 				tpMain.setVisible(false);
-				MouseAdapter mouseAdapter = new MouseAdapter() {
-					@Override
-					public void mouseEntered(MouseEvent e) {
-						super.mouseEntered(e);
-						Object source = e.getSource();
-						if (source == lnkRunEmulator || source == lnkWebsite) {
-							((Component) source).setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-						}
-					}
+				//					@Override
+				//					public void mouseClicked(MouseEvent e) {
+				//						if (e.getSource() == lnkWebsite) {
+				//							if (Desktop.isDesktopSupported()) {
+				//								try {
+				//									Desktop.getDesktop().browse(new URI(lnkWebsite.getToolTipText()));
+				//								} catch (IOException e1) {
+				//									// TODO Auto-generated catch block
+				//									e1.printStackTrace();
+				//								} catch (URISyntaxException e1) {
+				//									// TODO Auto-generated catch block
+				//									e1.printStackTrace();
+				//								}
+				//							}
+				//						} else if (e.getSource() == lnkRunEmulator) {
+				//							try {
+				//								String emulatorPath = lnkRunEmulator.getToolTipText();
+				//								String emulatorPathNoFile = FilenameUtils.getFullPath(emulatorPath);
+				//								Runtime.getRuntime().exec(emulatorPath, null, new File(emulatorPathNoFile));
+				//							} catch (IOException e1) {
+				//								String message = "Failed to start the emulator.\n\n"
+				//										+ "Detailed error message:";
+				//								String title = "Cannot run emulator";
+				//								JTextArea txt = new JTextArea(e1.getMessage());
+				//								txt.setLineWrap(true);
+				//								txt.setWrapStyleWord(false);
+				//								Object[] obj = {
+				//										message,
+				//										txt
+				//								};
+				//								JOptionPane.showConfirmDialog(lnkRunEmulator, obj, title, JOptionPane.ERROR_MESSAGE);
+				//							}
+				//						}
+				//					}
 
-					@Override
-					public void mouseExited(MouseEvent e) {
-						super.mouseEntered(e);
-						Object source = e.getSource();
-						if (source == lnkRunEmulator || source == lnkWebsite) {
-							((Component) e.getSource()).setCursor(null);
-						}
-					}
-
-					@Override
-					public void mouseClicked(MouseEvent e) {
-						if (e.getSource() == lnkWebsite) {
-							if (Desktop.isDesktopSupported()) {
-								try {
-									Desktop.getDesktop().browse(new URI(lnkWebsite.getToolTipText()));
-								} catch (IOException e1) {
-									// TODO Auto-generated catch block
-									e1.printStackTrace();
-								} catch (URISyntaxException e1) {
-									// TODO Auto-generated catch block
-									e1.printStackTrace();
-								}
-							}
-						} else if (e.getSource() == lnkRunEmulator) {
-							try {
-								String emulatorPath = lnkRunEmulator.getToolTipText();
-								String emulatorPathNoFile = FilenameUtils.getFullPath(emulatorPath);
-								Runtime.getRuntime().exec(emulatorPath, null, new File(emulatorPathNoFile));
-							} catch (IOException e1) {
-								String message = "Failed to start the emulator.\n\n"
-										+ "Detailed error message:";
-								String title = "Cannot run emulator";
-								JTextArea txt = new JTextArea(e1.getMessage());
-								txt.setLineWrap(true);
-								txt.setWrapStyleWord(false);
-								Object[] obj = {
-										message,
-										txt
-								};
-								JOptionPane.showConfirmDialog(lnkRunEmulator, obj, title, JOptionPane.ERROR_MESSAGE);
-							}
-						}
-					}
-				};
-
-				lnkRunEmulator.addMouseListener(mouseAdapter);
-				lnkWebsite.addMouseListener(mouseAdapter);
 				btnFileChooser.addActionListener(new ActionListener() {
 
 					@Override
@@ -1009,6 +1059,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 
 			private Component createGeneralSettingsPanel() {
 				pnlGeneralSettings = new JPanel();
+				pnlGeneralSettings.setOpaque(false);
 				pnlGeneralSettings.setBorder(Paddings.TABBED_DIALOG);
 				FormLayout layout = new FormLayout("default, min, min:grow", "fill:min:grow");
 				CellConstraints cc = new CellConstraints();
@@ -1020,13 +1071,11 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 			private Component createGeneralSettingsPanel2() {
 				FormLayout layout = new FormLayout("default, $ugap, min:grow", "fill:pref, $rgap, fill:min:grow");
 				// layout.setRowGroup(9, 13);
-
 				CellConstraints cc = new CellConstraints();
-
 				JPanel pnl = new JPanel(layout);
+				pnl.setOpaque(false);
 				pnl.add(new JLabel("<html><strong>Supported filetypes</strong></html>"), cc.xy(1, 1));
 				pnl.add(pnlSupportedFileTypes, cc.xy(1, 3));
-
 				pnl.add(new JLabel("<html><strong>Startup parameters</strong></html>"), cc.xy(3, 1));
 				pnl.add(pnlCommandLineArguments, cc.xy(3, 3));
 				return pnl;
@@ -1034,6 +1083,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 
 			private Component createInputConfigurationPanel() {
 				pnlInputConfiguration = new JPanel();
+				pnlInputConfiguration.setOpaque(false);
 				pnlInputConfiguration.setBorder(Paddings.TABBED_DIALOG);
 				pnlInputConfiguration.setLayout(new BorderLayout(20, 20));
 				pnlInputConfiguration.add(createTopPanel(), BorderLayout.NORTH);
@@ -1046,12 +1096,14 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 
 			private Component createCenterPanel() {
 				JPanel pnl = new JPanel(new BorderLayout());
+				pnl.setOpaque(false);
 				pnl.add(new JCustomButton("Drop a picture of a controller here"));
 				return pnl;
 			}
 
 			private Component createBottomPanel() {
 				JPanel pnl = new JPanel();
+				pnl.setOpaque(false);
 				return pnl;
 			}
 
@@ -1063,33 +1115,21 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 				buttonsRight.add("A");
 
 				JPanel pnl3 = new JPanel(new BorderLayout());
+				pnl3.setOpaque(false);
 				FormLayout layout = new FormLayout("pref, $rgap, $button",
 						"min:grow, fill:pref, $rgap, fill:pref, $rgap, fill:pref, $rgap, fill:pref, min:grow");
 				JPanel pnl4 = new JPanel(layout);
+				pnl4.setOpaque(false);
 				pnl4.setBorder(BorderFactory.createTitledBorder("Buttons"));
 				CellConstraints cc = new CellConstraints();
 
 				int x = 1;
 				int y = 2;
 				for (String btn : buttonsRight) {
-					JTextComponent btn2 = new JTextField("Unassigned");
-					btn2.setBackground(ValidationComponentUtils.getWarningBackground());
-					btn2.setEditable(false);
+					JTextComponent txt = createInputTextField();
 					pnl4.add(new JLabel(btn), cc.xy(x, y));
-					pnl4.add(btn2, cc.xy(x + 2, y));
+					pnl4.add(txt, cc.xy(x + 2, y));
 					y += 2;
-					btn2.addFocusListener(new FocusListener() {
-
-						@Override
-						public void focusLost(FocusEvent e) {
-							btn2.setBackground(UIManager.getColor("TextField.background"));
-						}
-
-						@Override
-						public void focusGained(FocusEvent e) {
-							btn2.setBackground(ValidationComponentUtils.getMandatoryBackground());
-						}
-					});
 				}
 				pnl3.add(pnl4, BorderLayout.CENTER);
 				return pnl3;
@@ -1103,33 +1143,21 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 				buttonsLeft.add("Right");
 
 				JPanel pnl = new JPanel(new BorderLayout());
+				pnl.setOpaque(false);
 				FormLayout layout = new FormLayout("pref, $rgap, pref",
 						"min:grow, fill:pref, $rgap, fill:pref, $rgap, fill:pref, $rgap, fill:pref, min:grow");
 				JPanel pnl4 = new JPanel(layout);
+				pnl4.setOpaque(false);
 				pnl4.setBorder(BorderFactory.createTitledBorder("Digital Pad"));
 				CellConstraints cc = new CellConstraints();
 
 				int x = 1;
 				int y = 2;
 				for (String btn : buttonsLeft) {
-					JTextComponent btn2 = new JTextField("Unassigned");
-					btn2.setBackground(ValidationComponentUtils.getWarningBackground());
-					btn2.setEditable(false);
+					JTextComponent txt = createInputTextField();
 					pnl4.add(new JLabel(btn), cc.xy(x, y));
-					pnl4.add(btn2, cc.xy(x + 2, y));
+					pnl4.add(txt, cc.xy(x + 2, y));
 					y += 2;
-					btn2.addFocusListener(new FocusListener() {
-
-						@Override
-						public void focusLost(FocusEvent e) {
-							btn2.setBackground(UIManager.getColor("TextField.background"));
-						}
-
-						@Override
-						public void focusGained(FocusEvent e) {
-							btn2.setBackground(ValidationComponentUtils.getMandatoryBackground());
-						}
-					});
 				}
 				pnl.add(pnl4, BorderLayout.CENTER);
 				return pnl;
@@ -1163,9 +1191,11 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 				buttonsTop.add("Select");
 				buttonsTop.add("Start");
 				JPanel pnl0 = new JPanel(new BorderLayout());
+				pnl0.setOpaque(false);
 				FormLayout layout = new FormLayout("pref, $rgap, pref, $rgap, pref, $rgap, pref",
 						"fill:pref, $ugap, fill:pref, $lgap, fill:pref");
 				JPanel pnl1 = new JPanel(layout);
+				pnl1.setOpaque(false);
 				CellConstraints cc = new CellConstraints();
 
 				JComboBox<String> cmbPlayer = new JComboBox<>();
@@ -1180,9 +1210,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 				int x = 1;
 				int y = 3;
 				for (String btn : buttonsTop) {
-					JTextComponent txt = new JTextField("Unassigned");
-					txt.setBackground(ValidationComponentUtils.getWarningBackground());
-					txt.setEditable(false);
+					JTextComponent txt = createInputTextField();
 					pnl1.add(new JLabel(btn), cc.xy(x, y));
 					pnl1.add(txt, cc.xy(x += 2, y));
 					if (x == layout.getColumnCount()) {
@@ -1191,23 +1219,6 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 					} else {
 						x += 2;
 					}
-					txt.addFocusListener(new FocusListener() {
-						private boolean doNotMakeInput;
-
-						@Override
-						public void focusLost(FocusEvent e) {
-							txt.setBackground(UIManager.getColor("TextField.background"));
-						}
-
-						@Override
-						public void focusGained(FocusEvent e) {
-							if (doNotMakeInput) {
-								return;
-							}
-							doNotMakeInput = true;
-							txt.setBackground(ValidationComponentUtils.getMandatoryBackground());
-						}
-					});
 				}
 				pnl0.add(pnl1, BorderLayout.CENTER);
 				return pnl0;
@@ -1216,10 +1227,15 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 			private void createUI() {
 				add(tpMain);
 
-				spCommandLineArguments = new JScrollPane(lblCommandLineArguments);
+				spCommandLineArguments = new JCustomScrollPane(lblCommandLineArguments);
+				spCommandLineArguments.setOpaque(false);
+				spCommandLineArguments.getViewport().setOpaque(false);
+				pnlCommandLineArguments.setOpaque(false);
 				pnlCommandLineArguments.add(spCommandLineArguments);
 
-				spConfigurationFile = new JScrollPane();
+				spConfigurationFile = new JCustomScrollPane(null);
+				spConfigurationFile.setOpaque(false);
+				spConfigurationFile.getViewport().setOpaque(false);
 				spConfigurationFile.getVerticalScrollBar().setUnitIncrement(16);
 				spConfigurationFile.setBorder(BorderFactory.createEmptyBorder());
 
@@ -1228,6 +1244,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 				pnlConfigurationFile.setLayout(layout);
 				CellConstraints cc = new CellConstraints();
 
+				pnlConfigurationFile.setOpaque(false);
 				pnlConfigurationFile.setBorder(Paddings.TABBED_DIALOG);
 				pnlConfigurationFile.add(spConfigurationFile, cc.xy(1, 1));
 
@@ -1238,7 +1255,10 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 				pnlConfigFilePath.add(btnFileChooser, BorderLayout.EAST);
 				pnlConfigurationFile.add(pnlConfigFilePath, cc.xy(1, 3));
 
-				JScrollPane spSupportedFileTypes = new JScrollPane(txtSupportedFileTypes);
+				JScrollPane spSupportedFileTypes = new JCustomScrollPane(txtSupportedFileTypes);
+				spSupportedFileTypes.setOpaque(false);
+				spSupportedFileTypes.getViewport().setOpaque(false);
+				pnlSupportedFileTypes.setOpaque(false);
 				pnlSupportedFileTypes.add(spSupportedFileTypes);
 			}
 
@@ -1294,6 +1314,50 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 
 		public void adjustSplitPaneDividerLocations() {
 			spl1.setDividerLocation(0.25);
+		}
+
+		public JTextComponent createInputTextField() {
+			JTextField txt = new JTextField("Unassigned");
+			txt.setBackground(ValidationComponentUtils.getWarningBackground());
+			txt.setEditable(false);
+			txt.setHorizontalAlignment(SwingConstants.CENTER);
+			txt.addFocusListener(new FocusListener() {
+
+				@Override
+				public void focusLost(FocusEvent e) {
+					checkInput(txt);
+				}
+
+				@Override
+				public void focusGained(FocusEvent e) {
+					enterInput(txt);
+				}
+			});
+			return txt;
+		}
+
+		protected void enterInput(JTextComponent txt) {
+			if (makeInput) {
+				return;
+			}
+			makeInput = true;
+			txt.setBackground(ValidationComponentUtils.getMandatoryBackground());
+			txt.addKeyListener(new KeyAdapter() {
+				@Override
+				public void keyPressed(KeyEvent e) {
+					super.keyPressed(e);
+					String input = ""+e.getKeyChar();
+					txt.setText(input.toUpperCase());
+				}
+			});
+		}
+
+		protected void checkInput(JTextComponent txt) {
+			if (!makeInput) {
+				return;
+			}
+			makeInput = false;
+			txt.setBackground(UIManager.getColor("TextField.background"));
 		}
 
 		@Override
@@ -1630,29 +1694,5 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 
 	public void addSearchForEmulatorListener(ActionListener l) {
 		pnlEmulators.pnlAddEmulator.addSearchForEmulatorListener(l);
-	}
-
-	@Override
-	protected void paintComponent(Graphics g) {
-		super.paintComponent(g);
-		BufferedImage imagePreviewPaneBackground = IconStore.current().getCurrentTheme().getPreviewPane().getImage();
-		if (imagePreviewPaneBackground != null) {
-			Graphics2D g2d = (Graphics2D) g.create();
-			int x = 0;
-			int y = 0;
-			int w = getWidth();
-			int h = getHeight();
-			g2d.setColor(IconStore.current().getCurrentTheme().getPreviewPane().getColor());
-			g2d.fillRect(x, y, w, h);
-			int imgWidth = imagePreviewPaneBackground.getWidth();
-			int imgHeight = imagePreviewPaneBackground.getHeight();
-			boolean shouldScale = true;
-			if (shouldScale) {
-				g2d.drawImage(imagePreviewPaneBackground, 0, 0, w, h, this);
-			} else {
-				g2d.drawImage(imagePreviewPaneBackground, 0, 0, imgWidth, imgHeight, this);
-			}
-			g2d.dispose();
-		}
 	}
 }

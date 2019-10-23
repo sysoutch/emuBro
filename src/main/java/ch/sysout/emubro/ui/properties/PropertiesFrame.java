@@ -2,6 +2,9 @@ package ch.sysout.emubro.ui.properties;
 
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
+import java.awt.GradientPaint;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
@@ -18,7 +21,6 @@ import javax.swing.DefaultListModel;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -52,8 +54,12 @@ import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.controller.BroController.EmulatorListCellRenderer;
 import ch.sysout.emubro.controller.BroController.PlatformListCellRenderer;
 import ch.sysout.emubro.impl.model.BroEmulator;
+import ch.sysout.emubro.ui.IconStore;
+import ch.sysout.emubro.ui.JCustomScrollPane;
+import ch.sysout.emubro.ui.Theme;
 import ch.sysout.emubro.ui.WrapLayout;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.JCustomButton;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 
@@ -68,6 +74,8 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 	private JButton btnClose;
 
 	private Explorer explorer;
+
+	private JPanel pnlMain;
 
 	public PropertiesFrame(Explorer explorer) {
 		super();
@@ -122,8 +130,30 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 	}
 
 	private void createUI() {
-		JScrollPane spTab1 = new JScrollPane(pnlManagePlatforms);
-		JScrollPane spTab2 = new JScrollPane(pnlAdvancedProperties);
+		pnlMain = new JPanel(new BorderLayout()) {
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			protected void paintComponent(Graphics g) {
+				super.paintComponent(g);
+				Graphics2D g2d = (Graphics2D) g.create();
+				int panelWidth = getWidth();
+				int panelHeight = getHeight();
+				Theme currentTheme = IconStore.current().getCurrentTheme();
+				if (currentTheme.getView().hasGradientPaint()) {
+					GradientPaint p = currentTheme.getView().getGradientPaint();
+					g2d.setPaint(p);
+				} else if (currentTheme.getView().hasColor()) {
+					g2d.setColor(currentTheme.getView().getColor());
+				}
+				g2d.fillRect(0, 0, panelWidth, panelHeight);
+				g2d.dispose();
+			}
+		};
+		pnlMain.setOpaque(false);
+		pnlMain.setBorder(Paddings.TABBED_DIALOG);
+		JScrollPane spTab1 = new JCustomScrollPane(pnlManagePlatforms);
+		JScrollPane spTab2 = new JCustomScrollPane(pnlAdvancedProperties);
 		spTab1.setOpaque(false);
 		spTab1.getViewport().setOpaque(false);
 		pnlManagePlatforms.setOpaque(false);
@@ -137,15 +167,14 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 		tpMain.addTab(Messages.get(MessageConstants.GENERAL), spTab1);
 		//		tpMain.addTab(Messages.get(MessageConstants.ADVANCED), spTab2);
 		//		tpMain.setEnabledAt(1, false);
-		add(tpMain);
+		pnlMain.add(tpMain);
 
 		JPanel pnl = new JPanel(new BorderLayout());
 		pnl.setOpaque(false);
 		pnl.setBorder(new EmptyBorder(10, 0, 0, 0));
-		pnl.add(btnClose = new JButton(Messages.get(MessageConstants.CLOSE)), BorderLayout.EAST);
-		add(pnl, BorderLayout.SOUTH);
-
-		((JComponent) getContentPane()).setBorder(Paddings.TABBED_DIALOG);
+		pnl.add(btnClose = new JCustomButton(Messages.get(MessageConstants.CLOSE)), BorderLayout.EAST);
+		pnlMain.add(pnl, BorderLayout.SOUTH);
+		add(pnlMain);
 		pack();
 	}
 
@@ -219,16 +248,16 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 
 		private ListModel<Platform> mdlLstAssociatePlatforms = new DefaultListModel<>();
 		private JList<Platform> lstAssociatePlatforms = new JList<>(mdlLstAssociatePlatforms);
-		private JScrollPane spAssociatePlatforms = new JScrollPane(lstAssociatePlatforms);
+		private JScrollPane spAssociatePlatforms = new JCustomScrollPane(lstAssociatePlatforms);
 
 		private JToggleButton btnMinimalist = new JToggleButton("Minimalist settings");
 		private JToggleButton btnRecommended = new JToggleButton("Recommended settings");
 		private JToggleButton btnHardcore = new JToggleButton("Hardcore settings");
 
 		private JCheckBox chkRunExternalTools = new JCheckBox(Messages.get(MessageConstants.RUN_EXTERNAL_TOOLS));
-		private JScrollPane spExternalTools = new JScrollPane();
-
-		private JList<String> lstTools;
+		private DefaultListModel<String> mdlLstTools = new DefaultListModel<>();
+		private JList<String> lstTools = new JList<>(mdlLstTools);
+		private JScrollPane spExternalTools = new JCustomScrollPane(lstTools);
 
 		public AdvancedPropertiesPanel() {
 			super();
@@ -346,12 +375,9 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 		}
 
 		private JPanel createStartupPanel(Border border) {
-			DefaultListModel<String> mdlLstTools = new DefaultListModel<>();
-			lstTools = new JList<>(mdlLstTools);
 			lstTools.setEnabled(false);
 			mdlLstTools.addElement("SCP Server Setup");
 			mdlLstTools.addElement("TocaEdit X360 Controller Emulator");
-			spExternalTools.setViewportView(lstTools);
 
 			// chkShowConfigWizardOnStartup.setBorder(new EmptyBorder(new
 			// Insets(0, 0, 0, 50)));
@@ -719,6 +745,14 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 		pnlManagePlatforms.addOpenEmulatorPropertiesPanelListener2(l);
 	}
 
+	public void addRunEmulatorListener(ActionListener l) {
+		pnlManagePlatforms.addRunEmulatorListener(l);
+	}
+
+	public void addOpenWebsiteListener(ActionListener l) {
+		pnlManagePlatforms.addOpenWebsiteListener(l);
+	}
+
 	public void setEmulators(List<BroEmulator> emulators) {
 		pnlManagePlatforms.setEmulators(emulators);
 	}
@@ -746,5 +780,9 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 
 	public Emulator getSelectedDownloadEmulator() {
 		return pnlManagePlatforms.getSelectedDownloadEmulator();
+	}
+
+	public JPanel getMainPanel() {
+		return pnlMain;
 	}
 }

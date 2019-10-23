@@ -3,6 +3,7 @@ package ch.sysout.util;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
@@ -196,7 +197,11 @@ public class ImageUtil {
 	}
 
 	public static Image getImageFromClipboard() {
-		Transferable transferable = Toolkit.getDefaultToolkit().getSystemClipboard().getContents(null);
+		return getImageFromClipboard(Toolkit.getDefaultToolkit().getSystemClipboard());
+	}
+
+	public static Image getImageFromClipboard(Clipboard source) {
+		Transferable transferable = source.getContents(null);
 		if (transferable != null && transferable.isDataFlavorSupported(DataFlavor.imageFlavor)) {
 			Image img;
 			try {
@@ -207,5 +212,30 @@ public class ImageUtil {
 			}
 		}
 		return null;
+	}
+
+	public static boolean hasClipboardImageChanged(BufferedImage oldImage, BufferedImage newImage) {
+		if (oldImage == null && newImage != null) {
+			return true;
+		}
+		if (newImage == null) {
+			throw new IllegalArgumentException("newImage must not be null");
+		}
+		// The images must be the same size.
+		if (oldImage.getWidth() != newImage.getWidth() || oldImage.getHeight() != newImage.getHeight()) {
+			return true;
+		}
+		int width = oldImage.getWidth();
+		int height = oldImage.getHeight();
+		// Loop over every pixel.
+		for (int y = 0; y < height; y++) {
+			for (int x = 0; x < width; x++) {
+				// Compare the pixels for equality.
+				if (oldImage.getRGB(x, y) != newImage.getRGB(x, y)) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 }

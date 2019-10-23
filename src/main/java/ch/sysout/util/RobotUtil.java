@@ -1,8 +1,10 @@
 package ch.sysout.util;
 
 import java.awt.AWTException;
+import java.awt.Rectangle;
 import java.awt.Robot;
 import java.awt.event.KeyEvent;
+import java.awt.image.BufferedImage;
 
 public class RobotUtil {
 
@@ -30,6 +32,11 @@ public class RobotUtil {
 		robot.keyPress(KeyEvent.VK_PRINTSCREEN);
 		robot.keyRelease(KeyEvent.VK_PRINTSCREEN);
 		robot.keyRelease(KeyEvent.VK_ALT);
+	}
+
+	public static BufferedImage createScreenCapture(Rectangle screenRect) {
+		initializeIfNot();
+		return robot.createScreenCapture(screenRect);
 	}
 
 	//	public static void copyImageToClipboard(Rectangle screen) {

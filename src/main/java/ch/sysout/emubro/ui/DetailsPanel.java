@@ -240,7 +240,6 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 			}
 		};
 		tpDetailsPane.setUI(new CustomTabbedPaneUI());
-		//		tpDetailsPane.setAlpha(0.5f);
 		tpDetailsPane.setBorder(BorderFactory.createEmptyBorder());
 		tpDetailsPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
 		tpDetailsPane.setTabPlacement(JTabbedPane.TOP);

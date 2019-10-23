@@ -1,5 +1,6 @@
 package ch.sysout.emubro.ui;
 
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.LayoutManager;
 import java.awt.dnd.DropTargetListener;
@@ -32,6 +33,8 @@ public abstract class ViewPanel extends JPanel implements GameSelectionListener 
 	public static final int CONTENT_VIEW = GameViewConstants.CONTENT_VIEW;
 	public static final int SLIDER_VIEW = GameViewConstants.SLIDER_VIEW;
 	public static final int COVER_VIEW = GameViewConstants.COVER_VIEW;
+
+	private Color transparencyColor = new Color(0f, 0f, 0f, 0.4f);
 
 	public ViewPanel() {
 		super();
@@ -183,4 +186,12 @@ public abstract class ViewPanel extends JPanel implements GameSelectionListener 
 	public abstract List<Game> getGames();
 
 	public abstract void coverSizeChanged(int currentCoverSize);
+
+	public Color getTransparencyColor() {
+		return transparencyColor;
+	}
+
+	public void setTransparencyColor(Color transparencyColor) {
+		this.transparencyColor = transparencyColor;
+	}
 }

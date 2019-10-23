@@ -1,8 +1,8 @@
 {
   "name":"Spyro",
-  "color":"#4b0082",
+  "color":"#2f073d",
   "view": {
-    "color":"#4b0082",
+    "color":"#4a175c",
 	"image":"bg-only.jpg"
   }
 }

@@ -1,6 +1,9 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
+import java.awt.GradientPaint;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -26,6 +29,7 @@ import com.jgoodies.forms.layout.RowSpec;
 import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.impl.BroConfigWizardListener;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.JCustomButton;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
@@ -49,9 +53,9 @@ public class ConfigWizardDialog extends JDialog implements ActionListener {
 
 	private JCheckBox chkShowOnStart = new JCheckBox("Assistenten beim Start anzeigen");
 
-	private JButton btnBack = new JButton("< Zurück");
-	private JButton btnForward = new JButton("Weiter >");
-	private JButton btnCancel = new JButton("Abbrechen");
+	private JButton btnBack = new JCustomButton("< Zurück");
+	private JButton btnForward = new JCustomButton("Weiter >");
+	private JButton btnCancel = new JCustomButton("Abbrechen");
 
 	private JPanel[] contentPanels = {
 			// new ManageEmulatorsPanel(new GameExplorer()),
@@ -63,8 +67,8 @@ public class ConfigWizardDialog extends JDialog implements ActionListener {
 
 	private Explorer explorer;
 
-	private AbstractButton btnDiscord = new JButton(ImageUtil.getImageIconFrom(Icons.get("discordBanner")));
-	private AbstractButton btnReddit = new JButton(ImageUtil.getImageIconFrom(Icons.get("redditBanner")));
+	private AbstractButton btnDiscord = new JCustomButton(ImageUtil.getImageIconFrom(Icons.get("discordBanner")));
+	private AbstractButton btnReddit = new JCustomButton(ImageUtil.getImageIconFrom(Icons.get("redditBanner")));
 
 	private JPanel pnlSocialWrapper;
 
@@ -112,24 +116,47 @@ public class ConfigWizardDialog extends JDialog implements ActionListener {
 	private void createUI() {
 		layout = new FormLayout("pref, min, min:grow",
 				"pref, min, fill:pref, min, top:pref:grow, min, pref");
-		setLayout(layout);
+		JPanel pnlMain = new JPanel(layout) {
+			private static final long serialVersionUID = 1L;
 
+			@Override
+			protected void paintComponent(Graphics g) {
+				super.paintComponent(g);
+				Graphics2D g2d = (Graphics2D) g.create();
+				int panelWidth = getWidth();
+				int panelHeight = getHeight();
+				Theme currentTheme = IconStore.current().getCurrentTheme();
+				if (currentTheme.getView().hasGradientPaint()) {
+					GradientPaint p = currentTheme.getView().getGradientPaint();
+					g2d.setPaint(p);
+				} else if (currentTheme.getView().hasColor()) {
+					g2d.setColor(currentTheme.getView().getColor());
+				}
+				g2d.fillRect(0, 0, panelWidth, panelHeight);
+				g2d.dispose();
+			}
+		};
+		pnlMain.setOpaque(false);
 		CellConstraints cc = new CellConstraints();
-		add(pnlHeader, cc.xyw(1, 1, layout.getColumnCount()));
-		add(new JSeparator(), cc.xyw(1, 2, layout.getColumnCount()));
-		add(pnlNavigation, cc.xy(1, 3));
-		add(new JSeparator(SwingConstants.VERTICAL), cc.xywh(2, 3, 1, layout.getRowCount()-4));
-		add(pnlContent, cc.xy(3, 3));
+		pnlMain.add(pnlHeader, cc.xyw(1, 1, layout.getColumnCount()));
+		pnlMain.add(new JSeparator(), cc.xyw(1, 2, layout.getColumnCount()));
+		pnlMain.add(pnlNavigation, cc.xy(1, 3));
+		pnlMain.add(new JSeparator(SwingConstants.VERTICAL), cc.xywh(2, 3, 1, layout.getRowCount()-4));
+		pnlContent.setLayout(new BorderLayout());
+		pnlContent.setOpaque(false);
+		pnlMain.add(pnlContent, cc.xy(3, 3));
 
 		pnlSocialWrapper = new JPanel(new BorderLayout());
+		pnlSocialWrapper.setOpaque(false);
 		JPanel pnlSocial = new JPanel();
+		pnlSocial.setOpaque(false);
 		pnlSocial.add(btnDiscord);
 		pnlSocial.add(btnReddit);
 		pnlSocialWrapper.add(pnlSocial, BorderLayout.WEST);
 
-		add(pnlSocialWrapper, cc.xy(3, 5));
-		add(new JSeparator(), cc.xyw(1, 6, layout.getColumnCount()));
-		add(pnlFooter, cc.xyw(1, 7, layout.getColumnCount()));
+		pnlMain.add(pnlSocialWrapper, cc.xy(3, 5));
+		pnlMain.add(new JSeparator(), cc.xyw(1, 6, layout.getColumnCount()));
+		pnlMain.add(pnlFooter, cc.xyw(1, 7, layout.getColumnCount()));
 
 		createHeaderUI();
 		createNavigationUI();
@@ -138,7 +165,7 @@ public class ConfigWizardDialog extends JDialog implements ActionListener {
 		setBorders();
 
 		pnlContent.add(currentContentPanel);
-
+		add(pnlMain);
 		pack();
 	}
 
@@ -159,14 +186,12 @@ public class ConfigWizardDialog extends JDialog implements ActionListener {
 		FormLayout layoutNavigation = new FormLayout("pref, $ugap",
 				"pref, $ugap, pref, $ugap, pref, $ugap, pref, $ugap, pref, $ugap:grow");
 		pnlNavigation.setLayout(layoutNavigation);
-
+		pnlNavigation.setOpaque(false);
 		CellConstraints cc = new CellConstraints();
 		pnlNavigation.add(lblStep1, cc.xy(1, 1));
 		pnlNavigation.add(lnkStep2, cc.xy(1, 3));
 		pnlNavigation.add(lnkStep3, cc.xy(1, 5));
 		pnlNavigation.add(lnkStep4, cc.xy(1, 7));
-
-		pnlContent.setLayout(new BorderLayout());
 	}
 
 	private void createFooterUI() {
@@ -174,8 +199,10 @@ public class ConfigWizardDialog extends JDialog implements ActionListener {
 				"pref");
 		// layoutFooter.setColumnGroup(3, 5);
 		pnlFooter.setLayout(layoutFooter);
+		pnlFooter.setOpaque(false);
 
 		CellConstraints cc = new CellConstraints();
+		chkShowOnStart.setOpaque(false);
 		pnlFooter.add(chkShowOnStart, cc.xy(1, 1));
 		pnlFooter.add(btnBack, cc.xy(3, 1));
 		pnlFooter.add(btnForward, cc.xy(5, 1));
@@ -245,6 +272,7 @@ public class ConfigWizardDialog extends JDialog implements ActionListener {
 
 		public GeneralConfigPanel() {
 			super(new BorderLayout());
+			setOpaque(false);
 			JLabel textPane = new JLabel(message);
 			add(textPane, BorderLayout.NORTH);
 		}
@@ -257,6 +285,7 @@ public class ConfigWizardDialog extends JDialog implements ActionListener {
 
 		public PlatformConfigPanel() {
 			super();
+			setOpaque(false);
 			add(new JLabel(message));
 		}
 	}
@@ -269,6 +298,7 @@ public class ConfigWizardDialog extends JDialog implements ActionListener {
 
 		public EmulatorConfigPanel() {
 			super();
+			setOpaque(false);
 			add(new JLabel(message));
 		}
 	}
@@ -293,6 +323,7 @@ public class ConfigWizardDialog extends JDialog implements ActionListener {
 
 		public FinishConfigPanel() {
 			super();
+			setOpaque(false);
 			add(new JLabel(message));
 		}
 	}

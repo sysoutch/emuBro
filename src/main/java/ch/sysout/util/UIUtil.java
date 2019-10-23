@@ -189,8 +189,20 @@ public class UIUtil {
 		actionMap.put(dispatchWindowClosingActionMapKey, dispatchClosing);
 	}
 
-	public static void openWebsite(String url) throws IOException, URISyntaxException {
-		Desktop.getDesktop().browse(new URI(url));
+	public static void openWebsite(String url, Component parent) {
+		try {
+			Desktop.getDesktop().browse(new URI(url));
+		} catch (IOException e1) {
+			UIUtil.showWarningMessage(parent, "Maybe there is a conflict with your default web browser and you have to set it again."
+					+ "\n\nThe default program page in control panel will be opened now..", "default web browser");
+			try {
+				Runtime.getRuntime().exec("control.exe /name Microsoft.DefaultPrograms /page pageDefaultProgram");
+			} catch (IOException e2) {
+				UIUtil.showErrorMessage(parent, "The default program page couldn't be opened.", "oops");
+			}
+		} catch (URISyntaxException e1) {
+			UIUtil.showErrorMessage(parent, "The url couldn't be opened.", "oops");
+		}
 	}
 
 	public static void setForegroundDependOnBackground(BufferedImage bg, int x, int y, Component... components) {

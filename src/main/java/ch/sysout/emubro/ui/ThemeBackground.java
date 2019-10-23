@@ -11,11 +11,12 @@ public class ThemeBackground {
 	private BufferedImage image;
 
 	private boolean verticalCenterImageEnabled = true;
-	private boolean horizontalCenterImageEnabled = true;
+	private boolean horizontalCenterImageEnabled = false;
 
 	private boolean imageScaleEnabled = false; // TODO make this dynamic
 	private boolean scaleProportionallyEnabled = false;
-
+	// TODO boolean for overscale
+	// TODO boolean for position
 	private Color color;
 	private Color colorFromImage;
 	private GradientPaint gradientPaint;

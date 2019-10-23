@@ -5,7 +5,6 @@ import java.awt.BorderLayout;
 import java.awt.KeyEventDispatcher;
 import java.awt.KeyboardFocusManager;
 import java.awt.Rectangle;
-import java.awt.Robot;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
@@ -28,6 +27,9 @@ import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.WindowConstants;
 
+import ch.sysout.util.ImageUtil;
+import ch.sysout.util.RobotUtil;
+
 public class PrintScreenDetector extends JFrame {
 	private static final long serialVersionUID = 1L;
 
@@ -37,8 +39,6 @@ public class PrintScreenDetector extends JFrame {
 	private JLabel lblResponse = new JLabel("Awaiting printscreen...");
 	private AutoScaleImagePanel pnlAutoScaleImage = new AutoScaleImagePanel();
 	private BufferedImage lastImage;
-
-	private Robot robot;
 
 	private Clipboard clipboard;
 
@@ -64,7 +64,6 @@ public class PrintScreenDetector extends JFrame {
 	public PrintScreenDetector() throws AWTException {
 		super("PrintScreen-Detector");
 		setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-		initRobot();
 		initComponents();
 		createUI();
 		pack();
@@ -101,7 +100,7 @@ public class PrintScreenDetector extends JFrame {
 		BufferedImage img = getImageFromClipboard();
 		if (img != null) {
 			clipboard.setContents(emptyTransferable, null);
-			if (lastImage == null || clipBoardImageChanged(img, lastImage)) {
+			if (lastImage == null || ImageUtil.hasClipboardImageChanged(img, lastImage)) {
 				System.out.println(lastImage == null ? "new clipboard image found" : "clipboard image has changed...");
 				try {
 					writeImage(img);
@@ -140,7 +139,7 @@ public class PrintScreenDetector extends JFrame {
 
 	private void doPrintScreen() {
 		Rectangle screenRect = new Rectangle(Toolkit.getDefaultToolkit().getScreenSize());
-		BufferedImage capture = robot.createScreenCapture(screenRect);
+		BufferedImage capture = RobotUtil.createScreenCapture(screenRect);
 		try {
 			writeImage(capture);
 		} catch (IOException e) {
@@ -159,12 +158,6 @@ public class PrintScreenDetector extends JFrame {
 				pnlAutoScaleImage.setGameCover(capture);
 			}
 		});
-	}
-
-	private void initRobot() throws AWTException {
-		if (robot == null) {
-			robot = new Robot();
-		}
 	}
 
 	public BufferedImage getImageFromClipboard() throws Exception {
@@ -187,28 +180,6 @@ public class PrintScreenDetector extends JFrame {
 		}
 		return null;
 	}
-
-	private boolean clipBoardImageChanged(BufferedImage imgA, BufferedImage imgB) {
-		// The images must be the same size.
-		if (imgA.getWidth() != imgB.getWidth() || imgA.getHeight() != imgB.getHeight()) {
-			return true;
-		}
-
-		int width = imgA.getWidth();
-		int height = imgA.getHeight();
-
-		// Loop over every pixel.
-		for (int y = 0; y < height; y++) {
-			for (int x = 0; x < width; x++) {
-				// Compare the pixels for equality.
-				if (imgA.getRGB(x, y) != imgB.getRGB(x, y)) {
-					return true;
-				}
-			}
-		}
-		return false;
-	}
-
 
 	public void startCapture() {
 		if (timer != null && timer.isRunning()) {

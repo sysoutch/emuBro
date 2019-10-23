@@ -251,6 +251,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	private ViewPanelManager viewManager;
 	private List<JRadioButtonMenuItem> defaultThemesMenuItems = new ArrayList<>();
 	private ActionListener changeThemeListener;
+	private JPanel pnlProperties;
 
 	public MainFrame(LookAndFeel defaultLookAndFeel, Explorer explorer) {
 		super(TITLE);
@@ -1207,7 +1208,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	private void createUI() {
 		createMenuBar();
-		FormLayout layout = new FormLayout("min:grow", "fill:pref, fill:pref");
+		FormLayout layout = new FormLayout("min:grow",
+				"fill:pref, fill:pref");
 		JPanel pnlWrapperTop = new JPanel(layout);
 		CellConstraints cc = new CellConstraints();
 		pnlWrapperTop.add(pnlButtonBar, cc.xy(1, 1));
@@ -2683,5 +2685,27 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	public void setSplPreviewPaneDividerLocation(int divLocation) {
 		pnlMain.setSplPreviewPaneDividerLocation(divLocation);
+	}
+
+	public void dockPropertiesFrame(JPanel pnlProperties) {
+		showViewSpecificPanels(false);
+		this.pnlProperties = pnlProperties;
+		remove(pnlMain);
+		add(pnlProperties);
+		UIUtil.revalidateAndRepaint(this);
+	}
+
+	public void undockPropertiesFrame() {
+		showViewSpecificPanels(true);
+		remove(pnlProperties);
+		add(pnlMain);
+		UIUtil.revalidateAndRepaint(this);
+	}
+
+	private void showViewSpecificPanels(boolean showPanels) {
+		mnb.setVisible(showPanels);
+		pnlButtonBar.setVisible(showPanels);
+		pnlGameFilter.setVisible(showPanels);
+
 	}
 }

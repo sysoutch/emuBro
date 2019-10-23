@@ -1,21 +1,15 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Component;
-import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.FocusAdapter;
-import java.awt.event.FocusEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.awt.font.TextAttribute;
-import java.awt.image.BufferedImage;
 import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 import java.util.HashMap;
@@ -70,21 +64,27 @@ public class GamePropertiesDialog extends JDialog {
 	private static final long serialVersionUID = 1L;
 
 	private JTabbedPane tpMain = new JTabbedPane() {
+		private static final long serialVersionUID = 1L;
+
 		@Override
 		protected void paintComponent(Graphics g) {
 			super.paintComponent(g);
-			BufferedImage background = IconStore.current().getCurrentTheme().getNavigationPane().getImage();
-			if (background != null) {
-				Graphics2D g2d = (Graphics2D) g.create();
-				int panelWidth = getWidth();
-				int panelHeight = getHeight();
-				g2d.drawImage(background, 0, 0, panelWidth, panelHeight, this);
-				g2d.dispose();
+			Graphics2D g2d = (Graphics2D) g.create();
+			int panelWidth = getWidth();
+			int panelHeight = getHeight();
+			Theme currentTheme = IconStore.current().getCurrentTheme();
+			if (currentTheme.getView().hasGradientPaint()) {
+				GradientPaint p = currentTheme.getView().getGradientPaint();
+				g2d.setPaint(p);
+			} else if (currentTheme.getView().hasColor()) {
+				g2d.setColor(currentTheme.getView().getColor());
 			}
+			g2d.fillRect(0, 0, panelWidth, panelHeight);
+			g2d.dispose();
 		}
 	};
 	private JPanel pnlMain = new ScrollablePanel();
-	private JTextArea txtGamePath;
+	private JLinkButton lnkGamePath;
 	private JLabel txtGameFilename;
 	private Font fontUnderline;
 	private Font fontNotUnderline;
@@ -323,40 +323,10 @@ public class GamePropertiesDialog extends JDialog {
 		pnlMain.add(new JLabel(Messages.get(MessageConstants.FILE_NAME) + ":"), cc.xy(1, 12));
 		pnlMain.add(txtGameFilename = new JLabel(name), cc.xyw(3, 12, layout.getColumnCount() - 2));
 		pnlMain.add(new JLabel(Messages.get(MessageConstants.COLUMN_FILE_PATH) + ":"), cc.xy(1, 14	));
-		pnlMain.add(txtGamePath = new JTextArea(parent), cc.xyw(3, 14, layout.getColumnCount() - 2));
+		pnlMain.add(lnkGamePath = new JLinkButton(parent), cc.xyw(3, 14, layout.getColumnCount() - 2));
 
 		txtGameFilename.setMinimumSize(new Dimension(0, 0));
-		txtGamePath.setMinimumSize(new Dimension(0, 0));
-		txtGamePath.setOpaque(false);
-		txtGamePath.setEditable(false);
-		txtGamePath.setForeground(new Color(0, 0, 224));
-		txtGamePath.setLineWrap(true);
-		txtGamePath.setWrapStyleWord(false);
-		txtGamePath.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseEntered(MouseEvent e) {
-				setGamePathUnderlined(true);
-				txtGamePath.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-			}
-
-			@Override
-			public void mouseExited(MouseEvent e) {
-				setGamePathUnderlined(false);
-				txtGamePath.setCursor(null);
-			}
-		});
-
-		txtGamePath.addFocusListener(new FocusAdapter() {
-			@Override
-			public void focusGained(FocusEvent e) {
-				setGamePathUnderlined(true);
-			}
-
-			@Override
-			public void focusLost(FocusEvent e) {
-				setGamePathUnderlined(false);
-			}
-		});
+		lnkGamePath.setOpaque(false);
 		ZonedDateTime lastPlayed = explorer.getCurrentGames().get(0).getLastPlayed();
 		if (lastPlayed == null) {
 
@@ -432,11 +402,11 @@ public class GamePropertiesDialog extends JDialog {
 			fontAttributesNotUnderlined.put(TextAttribute.UNDERLINE, -1);
 		}
 		if (underlined) {
-			fontUnderline = txtGamePath.getFont().deriveFont(fontAttributes);
-			txtGamePath.setFont(fontUnderline);
+			fontUnderline = lnkGamePath.getFont().deriveFont(fontAttributes);
+			lnkGamePath.setFont(fontUnderline);
 		} else {
-			fontNotUnderline = txtGamePath.getFont().deriveFont(fontAttributesNotUnderlined);
-			txtGamePath.setFont(fontNotUnderline);
+			fontNotUnderline = lnkGamePath.getFont().deriveFont(fontAttributesNotUnderlined);
+			lnkGamePath.setFont(fontNotUnderline);
 		}
 	}
 

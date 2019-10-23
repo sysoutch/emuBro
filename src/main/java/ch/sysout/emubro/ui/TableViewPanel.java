@@ -11,6 +11,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.RenderingHints;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetListener;
 import java.awt.event.ActionListener;
@@ -207,6 +208,9 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 
 				BufferedImage background = currentTheme.getView().getImage();
 				if (background != null) {
+					g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+					g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+					g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 					int imgWidth = background.getWidth();
 					int imgHeight = background.getHeight();
 					int x = 0;
@@ -275,13 +279,12 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 						y = panelHeight-height;
 						g2d.drawImage(imgTransparentOverlay, x, y, width, height, this);
 					}
+					g2d.setColor(getTransparencyColor());
+					g2d.fillRect(0, 0, panelWidth, panelHeight);
 				}
 				g2d.dispose();
 			}
 		};
-		Color color = UIManager.getColor("Table.background");
-		spTblGames.getViewport().setBackground(color);
-
 		setOpaque(false);
 		tblGames.setOpaque(false);
 		spTblGames.getViewport().setOpaque(false);
