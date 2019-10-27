@@ -882,9 +882,4 @@ public class BroExplorerDAO implements ExplorerDAO {
 		// TODO Auto-generated method stub
 
 	}
-
-	@Override
-	public void addGameInformations(GameDataObject obj) throws SQLException {
-		System.out.println(obj);
-	}
 }

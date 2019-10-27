@@ -15,6 +15,7 @@ public class ThemeBackground {
 
 	private boolean imageScaleEnabled = true; // TODO make this dynamic
 	private boolean scaleProportionallyEnabled = true;
+	private boolean addTransparencyPaneEnabled = false;
 	// TODO boolean for overscale
 	// TODO boolean for position
 	private Color color;
@@ -24,6 +25,7 @@ public class ThemeBackground {
 
 	private ThemeImage imageNew;
 	private ThemeColor colorNew;
+
 
 	public ThemeBackground(BufferedImage image, Color color) {
 		this(image, color, false, 0, 0);
@@ -111,5 +113,9 @@ public class ThemeBackground {
 
 	public boolean isHorizontalCenterImageEnabled() {
 		return horizontalCenterImageEnabled;
+	}
+
+	public boolean isAddTransparencyPaneEnabled() {
+		return addTransparencyPaneEnabled;
 	}
 }

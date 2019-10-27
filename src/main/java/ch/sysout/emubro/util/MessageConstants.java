@@ -356,6 +356,8 @@ public class MessageConstants {
 	public static final String BUSY = "busy";
 	public static final String OFFLINE = "offline";
 	public static final String UPDATING_DATABASE = "updatingDatabase";
+	public static final String DATABASE_INITIALIZED = "databaseInitialized";
+	public static final String GETTING_GAME_INFORMATIONS = "gettingGameInformations";
 	public static final String ALMOST_READY = "almostReady";
 	public static final String ROTATE_IMAGE = "rotateImage";
 	public static final String SCALE_IMAGE = "scaleImage";

@@ -1,12 +1,15 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
@@ -62,6 +65,7 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 	private JDialog dlgPopup = new JDialog();
 	private JPanel pnlPopup;
 	private int currentNavView = ALL_GAMES;
+	private Color transparencyColor = new Color(0f, 0f, 0f, 0.4f);
 
 	public NavigationPanel() {
 		super(new BorderLayout());
@@ -118,25 +122,109 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 			@Override
 			protected void paintComponent(Graphics g) {
 				super.paintComponent(g);
-				BufferedImage background = IconStore.current().getCurrentTheme().getNavigationPane().getImage();
 				Graphics2D g2d = (Graphics2D) g.create();
-				int x = 0;
-				int y = 0;
-				int w = getWidth();
-				int h = getHeight();
-				g2d.setColor(IconStore.current().getCurrentTheme().getNavigationPane().getColor());
-				g2d.fillRect(x, y, w, h);
+				int panelWidth = getWidth();
+				int panelHeight = getHeight();
+				Theme currentTheme = IconStore.current().getCurrentTheme();
+				ThemeBackground currentBackground = currentTheme.getNavigationPane();
+				if (currentBackground.hasGradientPaint()) {
+					GradientPaint p = currentBackground.getGradientPaint();
+					g2d.setPaint(p);
+				} else if (currentBackground.hasColor()) {
+					g2d.setColor(currentBackground.getColor());
+				}
+				g2d.fillRect(0, 0, panelWidth, panelHeight);
+
+				BufferedImage background = currentBackground.getImage();
 				if (background != null) {
+					g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+					g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+					g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 					int imgWidth = background.getWidth();
 					int imgHeight = background.getHeight();
-					boolean shouldScale = false;
+					int x = 0;
+					int y = 0;
+					boolean shouldScale = currentBackground.isImageScaleEnabled();
 					if (shouldScale) {
-						g2d.drawImage(background, 0, 0, w, h, this);
+						int new_width = imgWidth;
+						int new_height = imgHeight;
+						boolean scaleProportionally = currentBackground.isScaleProportionallyEnabled();
+						if (scaleProportionally) {
+							// first check if we need to scale width
+							if (imgWidth > panelWidth) {
+								//scale width to fit
+								new_width = panelWidth;
+								//scale height to maintain aspect ratio
+								new_height = (new_width * imgHeight) / imgWidth;
+							}
+
+							// then check if we need to scale even with the new height
+							if (new_height > panelHeight) {
+								//scale height to fit instead
+								new_height = panelHeight;
+								//scale width to maintain aspect ratio
+								new_width = (new_height * imgWidth) / imgHeight;
+							}
+							if (new_width < panelWidth) {
+								x += (panelWidth-new_width) / 2;
+							}
+							if (new_height < panelHeight) {
+								y += (panelHeight-new_height) / 2; // image centered
+								//					y = panelHeight-new_height; // image bottom
+							}
+						} else {
+							new_width = panelWidth;
+							new_height = panelHeight;
+						}
+						g2d.drawImage(background, x, y, new_width, new_height, this);
+						//						boolean addTransparencyPane = true;
+						//						if (addTransparencyPane) {
+						//							g2d.setColor(getTransparencyColor());
+						//							g2d.fillRect(x, y, new_width, new_height);
+						//						}
 					} else {
-						g2d.drawImage(background, 0, 0, imgWidth, imgHeight, this);
+						boolean shouldVerticalCenterImage = currentBackground.isVerticalCenterImageEnabled();
+						boolean shouldHorizontalCenterImage = currentBackground.isHorizontalCenterImageEnabled();
+						if (shouldVerticalCenterImage) {
+							if (imgWidth > panelWidth) {
+								x -= (imgWidth-panelWidth) / 2;
+							}
+						}
+						if (shouldHorizontalCenterImage) {
+							if (imgHeight > panelHeight) {
+								y -= (imgHeight-panelHeight) / 2;
+							}
+						}
+						g2d.drawImage(background, x, y, imgWidth, imgHeight, this);
+						//						boolean addTransparencyPane = true;
+						//						if (addTransparencyPane) {
+						//							g2d.setColor(getTransparencyColor());
+						//							g2d.fillRect(x, y, imgWidth, imgHeight);
+						//						}
 					}
-					g2d.dispose();
+					boolean addTransparencyPane = currentBackground.isAddTransparencyPaneEnabled();
+					if (addTransparencyPane) {
+						g2d.setColor(getTransparencyColor());
+						g2d.fillRect(0, 0, panelWidth, panelHeight);
+					}
+					BufferedImage imgTransparentOverlay = currentTheme.getTransparentBackgroundOverlayImage();
+					if (imgTransparentOverlay != null) {
+						int width = imgTransparentOverlay.getWidth();
+						int height = imgTransparentOverlay.getHeight();
+
+						double factor = background.getWidth() / panelWidth;
+						if (factor != 0) {
+							int scaledWidth = (int) (width/factor);
+							int scaledHeight = (int) (height/factor);
+							width = scaledWidth;
+							height = scaledHeight;
+						}
+						x = panelWidth-width;
+						y = panelHeight-height;
+						g2d.drawImage(imgTransparentOverlay, x, y, width, height, this);
+					}
 				}
+				g2d.dispose();
 			}
 		};
 		spNavigationButtons = new JCustomScrollPane(pnl);
@@ -158,6 +246,10 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 		spNavigationButtons.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
 		spNavigationButtons.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 		add(spNavigationButtons, BorderLayout.CENTER);
+	}
+
+	protected Color getTransparencyColor() {
+		return transparencyColor;
 	}
 
 	private void setIcons() {

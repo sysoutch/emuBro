@@ -530,15 +530,16 @@ public class BlankViewPanel extends ViewPanel {
 		int panelWidth = getWidth();
 		int panelHeight = getHeight();
 		Theme currentTheme = IconStore.current().getCurrentTheme();
-		if (currentTheme.getView().hasGradientPaint()) {
-			GradientPaint p = currentTheme.getView().getGradientPaint();
+		ThemeBackground currentBackground = currentTheme.getView();
+		if (currentBackground.hasGradientPaint()) {
+			GradientPaint p = currentBackground.getGradientPaint();
 			g2d.setPaint(p);
-		} else if (currentTheme.getView().hasColor()) {
-			g2d.setColor(currentTheme.getView().getColor());
+		} else if (currentBackground.hasColor()) {
+			g2d.setColor(currentBackground.getColor());
 		}
 		g2d.fillRect(0, 0, panelWidth, panelHeight);
 
-		BufferedImage background = currentTheme.getView().getImage();
+		BufferedImage background = currentBackground.getImage();
 		if (background != null) {
 			g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
 			g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
@@ -547,11 +548,11 @@ public class BlankViewPanel extends ViewPanel {
 			int imgHeight = background.getHeight();
 			int x = 0;
 			int y = 0;
-			boolean shouldScale = currentTheme.getView().isImageScaleEnabled();
+			boolean shouldScale = currentBackground.isImageScaleEnabled();
 			if (shouldScale) {
 				int new_width = imgWidth;
 				int new_height = imgHeight;
-				boolean scaleProportionally = currentTheme.getView().isScaleProportionallyEnabled();
+				boolean scaleProportionally = currentBackground.isScaleProportionallyEnabled();
 				if (scaleProportionally) {
 					// first check if we need to scale width
 					if (imgWidth > panelWidth) {
@@ -580,14 +581,14 @@ public class BlankViewPanel extends ViewPanel {
 					new_height = panelHeight;
 				}
 				g2d.drawImage(background, x, y, new_width, new_height, this);
-				boolean addTransparencyPane = true;
-				if (addTransparencyPane) {
-					g2d.setColor(getTransparencyColor());
-					g2d.fillRect(x, y, new_width, new_height);
-				}
+				//				boolean addTransparencyPane = true;
+				//				if (addTransparencyPane) {
+				//					g2d.setColor(getTransparencyColor());
+				//					g2d.fillRect(x, y, new_width, new_height);
+				//				}
 			} else {
-				boolean shouldVerticalCenterImage = currentTheme.getView().isVerticalCenterImageEnabled();
-				boolean shouldHorizontalCenterImage = currentTheme.getView().isHorizontalCenterImageEnabled();
+				boolean shouldVerticalCenterImage = currentBackground.isVerticalCenterImageEnabled();
+				boolean shouldHorizontalCenterImage = currentBackground.isHorizontalCenterImageEnabled();
 				if (shouldVerticalCenterImage) {
 					if (imgWidth > panelWidth) {
 						x -= (imgWidth-panelWidth) / 2;
@@ -599,11 +600,16 @@ public class BlankViewPanel extends ViewPanel {
 					}
 				}
 				g2d.drawImage(background, x, y, imgWidth, imgHeight, this);
-				boolean addTransparencyPane = true;
-				if (addTransparencyPane) {
-					g2d.setColor(getTransparencyColor());
-					g2d.fillRect(x, y, imgWidth, imgHeight);
-				}
+				//				boolean addTransparencyPane = true;
+				//				if (addTransparencyPane) {
+				//					g2d.setColor(getTransparencyColor());
+				//					g2d.fillRect(x, y, imgWidth, imgHeight);
+				//				}
+			}
+			boolean addTransparencyPane = currentBackground.isAddTransparencyPaneEnabled();
+			if (addTransparencyPane) {
+				g2d.setColor(getTransparencyColor());
+				g2d.fillRect(0, 0, panelWidth, panelHeight);
 			}
 			BufferedImage imgTransparentOverlay = currentTheme.getTransparentBackgroundOverlayImage();
 			if (imgTransparentOverlay != null) {

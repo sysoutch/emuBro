@@ -34,10 +34,6 @@ import javax.swing.JOptionPane;
 import javax.swing.LookAndFeel;
 import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
-import javax.xml.stream.XMLInputFactory;
-import javax.xml.stream.XMLStreamConstants;
-import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamReader;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -59,7 +55,6 @@ import ch.sysout.emubro.controller.UpdateDatabaseBro;
 import ch.sysout.emubro.discord.ReadyEvent;
 import ch.sysout.emubro.impl.BroDatabaseVersionMismatchException;
 import ch.sysout.emubro.impl.dao.BroExplorerDAO;
-import ch.sysout.emubro.impl.dao.GameDataObject;
 import ch.sysout.emubro.impl.model.BroExplorer;
 import ch.sysout.emubro.impl.model.BroPlatform;
 import ch.sysout.emubro.impl.model.BroTag;
@@ -163,7 +158,7 @@ public class Main {
 			explorerDAO = new BroExplorerDAO(explorerId, conn);
 			dlgSplashScreen.setProgressBarValue(dlgSplashScreen.getProgressBarValue()+5);
 			if (explorerDAO != null) {
-				dlgSplashScreen.setText(Messages.get(MessageConstants.ALMOST_READY));
+				dlgSplashScreen.setText(Messages.get(MessageConstants.DATABASE_INITIALIZED));
 				try {
 					explorer = new BroExplorer(currentApplicationVersion);
 					dlgSplashScreen.setProgressBarValue(dlgSplashScreen.getProgressBarValue()+5);
@@ -212,10 +207,11 @@ public class Main {
 					} catch (FileNotFoundException eFNF) {
 						updatedTags = new ArrayList<>();
 					}
-					checkAndUpdateGameInformations(defaultPlatforms);
+					dlgSplashScreen.setText(Messages.get(MessageConstants.GETTING_GAME_INFORMATIONS));
 					// explorer.setDefaultPlatforms(defaultPlatforms);
 					explorer.setUpdatedTags(updatedTags);
 
+					dlgSplashScreen.setText(Messages.get(MessageConstants.ALMOST_READY));
 					mainFrame = new MainFrame(defaultLookAndFeel, explorer);
 					mainFrame.setMinimumSize(mainFrame.getPreferredSize());
 					//					SwingUtilities.updateComponentTreeUI(mainFrame);
@@ -434,109 +430,6 @@ public class Main {
 				System.exit(0);
 			}
 		}
-	}
-
-	private static void checkAndUpdateGameInformations(List<BroPlatform> defaultPlatforms) {
-		for (Platform p0 : defaultPlatforms) {
-			String platformShortName = p0.getShortName();
-			File xmlFile = new File(explorer.getResourcesPath() + "/platforms/"+platformShortName+"/games/db.xml");
-			if (!xmlFile.exists()) {
-				System.err.println("xml doesnt exist for platform " + platformShortName);
-				// check if zip exists.
-				// if it doesn't exist: download it from gametdb and save it to this folder
-				// if it exists: unpack zip and check again
-			} else {
-				System.err.println("getting required game informations from xml for platform " + platformShortName);
-				saveRequiredGameInformationsFromXmlToDatabase(xmlFile);
-				//				if (elements != null) {
-				//					List<String[]> arrays = elements.get(gameCode);
-				//					if (arrays != null) {
-				//						for (String[] arr2 : arrays) {
-				//							if (arr2[0].equals("synopsis")) {
-				//								element.setDescription(arr2[1]);
-				//								try {
-				//									explorerDAO.setGameDescription(gameId, arr2[1]);
-				//								} catch (SQLException e) {
-				//									// TODO Auto-generated catch block
-				//									e.printStackTrace();
-				//								}
-				//							} else if (arr2[0].equals("developer")) {
-				//								element.setDeveloper(arr2[1]);
-				//							} else if (arr2[0].equals("publisher")) {
-				//								element.setPublisher(arr2[1]);
-				//							}
-				//						}
-				//					}
-				//				}
-			}
-		}
-	}
-
-	private static void saveRequiredGameInformationsFromXmlToDatabase(File xmlFile) {
-		try {
-			XMLInputFactory inputFactory = XMLInputFactory.newInstance();
-			FileInputStream fileInputStream = new FileInputStream(xmlFile);
-			XMLStreamReader reader = inputFactory.createXMLStreamReader(fileInputStream);
-			String gameCodeFound = null;
-			boolean localeFound = false;
-			boolean synopsisFound = false;
-			GameDataObject gameDataObject = new GameDataObject();
-			while (reader.hasNext()) {
-				reader.next();
-				if (reader.getEventType() == XMLStreamConstants.START_ELEMENT) {
-					String elementText = reader.getLocalName();
-					if (gameCodeFound != null) {
-						String elementText2 = reader.getLocalName();
-						if (synopsisFound) {
-							if (elementText2.equals("publisher")) {
-								String publisher = reader.getElementText();
-								gameDataObject.setPublisher(publisher);
-								try {
-									explorerDAO.addGameInformations(gameDataObject);
-								} catch (SQLException e) {
-									// TODO Auto-generated catch block
-									e.printStackTrace();
-								}
-								gameDataObject.clearGameInformations();
-								gameCodeFound = null;
-								localeFound = false;
-								synopsisFound = false;
-								continue;
-							} else if (elementText2.equals("developer")) {
-								String developer = reader.getElementText();
-								gameDataObject.setDeveloper(developer);
-								continue;
-							}
-						} else {
-							if (localeFound) {
-								if (elementText2.equals("synopsis")) {
-									String synopsis = reader.getElementText();
-									gameDataObject.setSynopsis(synopsis);
-									synopsisFound = true;
-									continue;
-								}
-							} else {
-								if (elementText.equals("locale") && reader.getAttributeValue(null, "lang").equals("EN")) {
-									localeFound = true;
-									continue;
-								}
-							}
-						}
-					} else if (elementText.equals("id")) {
-						String attributeValue = reader.getElementText();
-						if (attributeValue != null) {
-							gameCodeFound = attributeValue;
-							gameDataObject.setGameCode(attributeValue);
-							continue;
-						}
-					}
-				}
-			}
-			fileInputStream.close();
-		} catch (XMLStreamException | IOException e) {
-			e.printStackTrace();
-		}
-		//		return counts;
 	}
 
 	private static void initializeCustomTheme() throws IOException {

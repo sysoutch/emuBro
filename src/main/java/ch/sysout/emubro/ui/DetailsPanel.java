@@ -1,11 +1,14 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
@@ -72,6 +75,8 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 	private CellConstraints cc2;
 
 	AbstractButton btnResizeDetailsPane = new JCustomButton();
+
+	private Color transparencyColor = new Color(0f, 0f, 0f, 0.4f);
 
 	public DetailsPanel() {
 		super(new BorderLayout());
@@ -495,17 +500,114 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		btnResizeDetailsPane.addMouseMotionListener(l);
 	}
 
+	private Color getTransparencyColor() {
+		return transparencyColor;
+	}
+
 	@Override
 	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
+		Graphics2D g2d = (Graphics2D) g.create();
 		int panelWidth = getWidth();
 		int panelHeight = getHeight();
-		Graphics2D g2d = (Graphics2D) g.create();
-		g2d.setColor(IconStore.current().getCurrentTheme().getDetailsPane().getColor());
+		Theme currentTheme = IconStore.current().getCurrentTheme();
+		ThemeBackground currentBackground = currentTheme.getDetailsPane();
+		if (currentBackground.hasGradientPaint()) {
+			GradientPaint p = currentBackground.getGradientPaint();
+			g2d.setPaint(p);
+		} else if (currentBackground.hasColor()) {
+			g2d.setColor(currentBackground.getColor());
+		}
 		g2d.fillRect(0, 0, panelWidth, panelHeight);
-		BufferedImage background = IconStore.current().getCurrentTheme().getDetailsPane().getImage();
+
+		BufferedImage background = currentBackground.getImage();
 		if (background != null) {
-			g2d.drawImage(background, 0, 0, panelWidth, panelHeight, this);
+			g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+			g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+			g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			int imgWidth = background.getWidth();
+			int imgHeight = background.getHeight();
+			int x = 0;
+			int y = 0;
+			boolean shouldScale = currentBackground.isImageScaleEnabled();
+			if (shouldScale) {
+				int new_width = imgWidth;
+				int new_height = imgHeight;
+				boolean scaleProportionally = currentBackground.isScaleProportionallyEnabled();
+				if (scaleProportionally) {
+					// first check if we need to scale width
+					if (imgWidth > panelWidth) {
+						//scale width to fit
+						new_width = panelWidth;
+						//scale height to maintain aspect ratio
+						new_height = (new_width * imgHeight) / imgWidth;
+					}
+
+					// then check if we need to scale even with the new height
+					if (new_height > panelHeight) {
+						//scale height to fit instead
+						new_height = panelHeight;
+						//scale width to maintain aspect ratio
+						new_width = (new_height * imgWidth) / imgHeight;
+					}
+					if (new_width < panelWidth) {
+						x += (panelWidth-new_width) / 2;
+					}
+					if (new_height < panelHeight) {
+						y += (panelHeight-new_height) / 2; // image centered
+						//					y = panelHeight-new_height; // image bottom
+					}
+				} else {
+					new_width = panelWidth;
+					new_height = panelHeight;
+				}
+				g2d.drawImage(background, x, y, new_width, new_height, this);
+				//				boolean addTransparencyPane = true;
+				//				if (addTransparencyPane) {
+				//					g2d.setColor(getTransparencyColor());
+				//					g2d.fillRect(x, y, new_width, new_height);
+				//				}
+			} else {
+				boolean shouldVerticalCenterImage = currentBackground.isVerticalCenterImageEnabled();
+				boolean shouldHorizontalCenterImage = currentBackground.isHorizontalCenterImageEnabled();
+				if (shouldVerticalCenterImage) {
+					if (imgWidth > panelWidth) {
+						x -= (imgWidth-panelWidth) / 2;
+					}
+				}
+				if (shouldHorizontalCenterImage) {
+					if (imgHeight > panelHeight) {
+						y -= (imgHeight-panelHeight) / 2;
+					}
+				}
+				g2d.drawImage(background, x, y, imgWidth, imgHeight, this);
+				//				boolean addTransparencyPane = true;
+				//				if (addTransparencyPane) {
+				//					g2d.setColor(getTransparencyColor());
+				//					g2d.fillRect(x, y, imgWidth, imgHeight);
+				//				}
+			}
+			boolean addTransparencyPane = currentBackground.isAddTransparencyPaneEnabled();
+			if (addTransparencyPane) {
+				g2d.setColor(getTransparencyColor());
+				g2d.fillRect(0, 0, panelWidth, panelHeight);
+			}
+			BufferedImage imgTransparentOverlay = currentTheme.getTransparentBackgroundOverlayImage();
+			if (imgTransparentOverlay != null) {
+				int width = imgTransparentOverlay.getWidth();
+				int height = imgTransparentOverlay.getHeight();
+
+				double factor = background.getWidth() / panelWidth;
+				if (factor != 0) {
+					int scaledWidth = (int) (width/factor);
+					int scaledHeight = (int) (height/factor);
+					width = scaledWidth;
+					height = scaledHeight;
+				}
+				x = panelWidth-width;
+				y = panelHeight-height;
+				g2d.drawImage(imgTransparentOverlay, x, y, width, height, this);
+			}
 		}
 		g2d.dispose();
 	}
