@@ -2146,6 +2146,11 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 					new_height = panelHeight;
 				}
 				g2d.drawImage(background, x, y, new_width, new_height, this);
+				boolean addTransparencyPane = true;
+				if (addTransparencyPane) {
+					g2d.setColor(getTransparencyColor());
+					g2d.fillRect(x, y, new_width, new_height);
+				}
 			} else {
 				boolean shouldVerticalCenterImage = currentTheme.getView().isVerticalCenterImageEnabled();
 				boolean shouldHorizontalCenterImage = currentTheme.getView().isHorizontalCenterImageEnabled();
@@ -2160,6 +2165,11 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 					}
 				}
 				g2d.drawImage(background, x, y, imgWidth, imgHeight, this);
+				boolean addTransparencyPane = true;
+				if (addTransparencyPane) {
+					g2d.setColor(getTransparencyColor());
+					g2d.fillRect(x, y, imgWidth, imgHeight);
+				}
 			}
 			BufferedImage imgTransparentOverlay = currentTheme.getTransparentBackgroundOverlayImage();
 			if (imgTransparentOverlay != null) {
@@ -2177,8 +2187,6 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				y = panelHeight-height;
 				g2d.drawImage(imgTransparentOverlay, x, y, width, height, this);
 			}
-			g2d.setColor(getTransparencyColor());
-			g2d.fillRect(0, 0, panelWidth, panelHeight);
 		}
 		g2d.dispose();
 	}

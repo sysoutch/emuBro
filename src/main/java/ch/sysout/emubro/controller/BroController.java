@@ -175,10 +175,6 @@ import javax.swing.filechooser.FileSystemView;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.stream.XMLInputFactory;
-import javax.xml.stream.XMLStreamConstants;
-import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamReader;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerConfigurationException;
@@ -7784,37 +7780,6 @@ GameSelectionListener, BrowseComputerListener {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-
-				String platformShortName = p0.getShortName();
-				File xmlFile = new File(explorer.getResourcesPath() + "/platforms/"+platformShortName+"/games/db.xml");
-				if (!xmlFile.exists()) {
-					// check if zip exists.
-					// if it doesn't exist: download it from gametdb and save it to this folder
-					// if it exists: unpack zip and check again
-				} else {
-					Map<String, List<String[]>> elements = countElements(xmlFile,
-							gameCode);
-					if (elements != null) {
-						List<String[]> arrays = elements.get(gameCode);
-						if (arrays != null) {
-							for (String[] arr2 : arrays) {
-								if (arr2[0].equals("synopsis")) {
-									element.setDescription(arr2[1]);
-									try {
-										explorerDAO.setGameDescription(gameId, arr2[1]);
-									} catch (SQLException e) {
-										// TODO Auto-generated catch block
-										e.printStackTrace();
-									}
-								} else if (arr2[0].equals("developer")) {
-									element.setDeveloper(arr2[1]);
-								} else if (arr2[0].equals("publisher")) {
-									element.setPublisher(arr2[1]);
-								}
-							}
-						}
-					}
-				}
 			}
 
 			if (filePath.toLowerCase().endsWith(".exe")) {
@@ -7982,74 +7947,6 @@ GameSelectionListener, BrowseComputerListener {
 			}
 		} while (fileChannel.isOpen() && (position + dimension) <= fileChannelSize);
 		return gameCode;
-	}
-
-	public Map<String, List<String[]>> countElements(File xmlFile, String gameCode) {
-		Map<String, List<String[]>> counts = new HashMap<>();
-		try {
-			XMLInputFactory inputFactory = XMLInputFactory.newInstance();
-			FileInputStream fileInputStream = new FileInputStream(xmlFile);
-			XMLStreamReader reader = inputFactory.createXMLStreamReader(fileInputStream);
-			String gameCodeFound = null;
-			boolean localeFound = false;
-			boolean synopsisFound = false;
-			List<String[]> gameDataObject = new ArrayList<>();
-			while (reader.hasNext()) {
-				reader.next();
-				if (reader.getEventType() == XMLStreamConstants.START_ELEMENT) {
-					String elementText = reader.getLocalName();
-					if (gameCodeFound != null) {
-						String elementText2 = reader.getLocalName();
-						if (synopsisFound) {
-							if (elementText2.equals("publisher")) {
-								String publisher = reader.getElementText();
-								String[] arr = { "publisher", publisher };
-								gameDataObject.add(arr);
-								break;
-							} else if (elementText2.equals("developer")) {
-								String developer = reader.getElementText();
-								String[] arr = { "developer", developer };
-								gameDataObject.add(arr);
-								continue;
-							}
-						} else {
-							if (localeFound) {
-								if (elementText2.equals("synopsis")) {
-									String synopsis = reader.getElementText();
-									String[] arr = { "synopsis", synopsis };
-									gameDataObject.add(arr);
-									synopsisFound = true;
-									continue;
-								}
-							} else {
-								if (elementText.equals("locale") && reader.getAttributeValue(null, "lang").equals("EN")) {
-									localeFound = true;
-									continue;
-								}
-							}
-						}
-					} else if (elementText.equals("id")) {
-						String attributeValue = reader.getElementText();
-						if (attributeValue != null && attributeValue.equals(gameCode)) {
-							gameCodeFound = attributeValue;
-							continue;
-						}
-					}
-				}
-				//				if (reader.isStartElement() && reader.getLocalName().equals("game")) {
-				//					String relTypeValue = reader.getAttributeValue("", "name");
-				//					if (!counts.containsKey(relTypeValue)) {
-				//						counts.put(relTypeValue, 0);
-				//					}
-				//					counts.put(relTypeValue, counts.get(relTypeValue) + 1);
-				//				}
-			}
-			counts.put(gameCodeFound, gameDataObject);
-			fileInputStream.close();
-		} catch (XMLStreamException | IOException e) {
-			e.printStackTrace();
-		}
-		return counts;
 	}
 
 	@Override

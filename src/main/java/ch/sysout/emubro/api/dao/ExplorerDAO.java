@@ -13,6 +13,7 @@ import ch.sysout.emubro.api.model.Tag;
 import ch.sysout.emubro.impl.BroEmulatorDeletedException;
 import ch.sysout.emubro.impl.BroGameAlreadyExistsException;
 import ch.sysout.emubro.impl.BroGameDeletedException;
+import ch.sysout.emubro.impl.dao.GameDataObject;
 import ch.sysout.emubro.impl.model.BroEmulator;
 
 public interface ExplorerDAO {
@@ -164,4 +165,6 @@ public interface ExplorerDAO {
 	String getGameDescription(int gameId) throws SQLException;
 
 	void setGameDescription(int gameId, String description) throws SQLException;
+
+	void addGameInformations(GameDataObject obj) throws SQLException;
 }

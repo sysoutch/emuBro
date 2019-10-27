@@ -13,8 +13,8 @@ public class ThemeBackground {
 	private boolean verticalCenterImageEnabled = true;
 	private boolean horizontalCenterImageEnabled = false;
 
-	private boolean imageScaleEnabled = false; // TODO make this dynamic
-	private boolean scaleProportionallyEnabled = false;
+	private boolean imageScaleEnabled = true; // TODO make this dynamic
+	private boolean scaleProportionallyEnabled = true;
 	// TODO boolean for overscale
 	// TODO boolean for position
 	private Color color;
