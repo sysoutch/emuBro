@@ -161,7 +161,23 @@ public interface ExplorerDAO {
 
 	void addFilterGroup(FilterGroup filterGroup) throws SQLException;
 
+	String getRegion(int gameId) throws SQLException;
+
+	void setRegion(int gameId, String string) throws SQLException;
+
+	List<String> getLanguages(int gameId) throws SQLException;
+
+	void setLanguages(int gameId, String... strings) throws SQLException;
+
 	String getGameDescription(int gameId) throws SQLException;
 
 	void setGameDescription(int gameId, String description) throws SQLException;
+
+	String getDeveloper(int gameId) throws SQLException;
+
+	void setDeveloper(int gameId, String description) throws SQLException;
+
+	String getPublisher(int gameId) throws SQLException;
+
+	void setPublisher(int gameId, String description) throws SQLException;
 }

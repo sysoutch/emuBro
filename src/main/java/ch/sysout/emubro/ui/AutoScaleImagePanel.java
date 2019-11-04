@@ -24,7 +24,7 @@ public class AutoScaleImagePanel extends JPanel {
 			double scaleFactor = (double) bi.getWidth(null) / (double) bi.getHeight(null);
 			int height = getHeight();
 			int width = (int) (height * scaleFactor);
-			int x = 0;
+			int x = AutoScaleImagePanel.this.getWidth()/2-bi.getWidth(this)/2;
 			int y = 0;
 			if (width <= getWidth()) {
 				//				int x = 0;

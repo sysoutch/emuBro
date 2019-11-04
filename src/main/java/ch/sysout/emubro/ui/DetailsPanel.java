@@ -1,7 +1,6 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
@@ -76,15 +75,12 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 
 	AbstractButton btnResizeDetailsPane = new JCustomButton();
 
-	private Color transparencyColor = new Color(0f, 0f, 0f, 0.4f);
-
 	public DetailsPanel() {
 		super(new BorderLayout());
 		initComponents();
 		setIcons();
 		createUI();
 	}
-
 
 	private void initComponents() {
 		btnResizeDetailsPane.setFocusable(false);
@@ -500,10 +496,6 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		btnResizeDetailsPane.addMouseMotionListener(l);
 	}
 
-	private Color getTransparencyColor() {
-		return transparencyColor;
-	}
-
 	@Override
 	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
@@ -589,7 +581,7 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 			}
 			boolean addTransparencyPane = currentBackground.isAddTransparencyPaneEnabled();
 			if (addTransparencyPane) {
-				g2d.setColor(getTransparencyColor());
+				g2d.setColor(currentBackground.getTransparencyColor());
 				g2d.fillRect(0, 0, panelWidth, panelHeight);
 			}
 			BufferedImage imgTransparentOverlay = currentTheme.getTransparentBackgroundOverlayImage();

@@ -226,14 +226,40 @@ public class UIUtil {
 	}
 
 	public static Color getForegroundDependOnBackground(Color color) {
+		return getForegroundDependOnBackground(color, false);
+	}
+
+	public static Color getForegroundDependOnBackground(Color color, boolean coloredForeground) {
 		int r = color.getRed();
 		int g = color.getGreen();
 		int b = color.getBlue();
-		//				if ((red + green + blue) <= 384) {
-		if (((r * 0.299) + (g * 0.587) + (b * 0.114)) > 186) {
-			return colorBlack;
+		if (coloredForeground) {
+			float[] hsb = Color.RGBtoHSB(r, g, b, null);
+			float hueFloat = hsb[0];
+			float hue = hueFloat * 360;
+			if (hue >= 60f && hue < 180f) {
+				System.out.println("complement of green");
+				return getComplementaryColor(Color.GREEN);
+			} else if (hue >= 180f && hue < 300f) {
+				System.out.println("complement of blue");
+				return getComplementaryColor(Color.BLUE);
+			} else {
+				System.out.println("complement of red");
+				return getComplementaryColor(Color.RED);
+			}
 		} else {
-			return colorWhite;
+			if (((r * 0.299) + (g * 0.587) + (b * 0.114)) > 186) {
+				return colorBlack;
+			} else {
+				return colorWhite;
+			}
 		}
+	}
+	public static Color getComplementaryColor(Color color) {
+		int maxValue = 255;
+		int newRed = maxValue - color.getRed();
+		int newGreen = maxValue - color.getGreen();
+		int newBlue = maxValue - color.getBlue();
+		return new Color(newRed, newGreen, newBlue);
 	}
 }

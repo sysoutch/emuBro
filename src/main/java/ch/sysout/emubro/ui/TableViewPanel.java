@@ -190,6 +190,7 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 
 		// minWidth = col.getWidth();
 		spTblGames = new JScrollPane(tblGames) {
+			private static final long serialVersionUID = 1L;
 
 			@Override
 			protected void paintComponent(Graphics g) {
@@ -276,7 +277,7 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 					}
 					boolean addTransparencyPane = currentBackground.isAddTransparencyPaneEnabled();
 					if (addTransparencyPane) {
-						g2d.setColor(getTransparencyColor());
+						g2d.setColor(currentBackground.getTransparencyColor());
 						g2d.fillRect(0, 0, panelWidth, panelHeight);
 					}
 					BufferedImage imgTransparentOverlay = currentTheme.getTransparentBackgroundOverlayImage();
@@ -302,10 +303,11 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 		setOpaque(false);
 		tblGames.setOpaque(false);
 		spTblGames.getViewport().setOpaque(false);
+
 		TableCellRenderer renderer = tblGames.getTableHeader().getDefaultRenderer();
 		((JLabel) renderer).setHorizontalAlignment(SwingConstants.LEFT);
 		tblGames.getTableHeader().setDefaultRenderer(renderer);
-		tblGames.setIntercellSpacing(new Dimension(0, 0));
+		tblGames.setIntercellSpacing(new Dimension());
 		tblGames.setShowGrid(false);
 		tblGames.getColumnModel().setColumnMargin(0);
 		tblGames.setAutoscrolls(false);

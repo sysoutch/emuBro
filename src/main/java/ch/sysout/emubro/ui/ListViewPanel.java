@@ -2174,7 +2174,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 			}
 			boolean addTransparencyPane = currentBackground.isAddTransparencyPaneEnabled();
 			if (addTransparencyPane) {
-				g2d.setColor(getTransparencyColor());
+				g2d.setColor(currentBackground.getTransparencyColor());
 				g2d.fillRect(0, 0, panelWidth, panelHeight);
 			}
 			BufferedImage imgTransparentOverlay = currentTheme.getTransparentBackgroundOverlayImage();

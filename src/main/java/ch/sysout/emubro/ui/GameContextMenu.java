@@ -129,10 +129,11 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 	private void addNewTag(Tag tag) {
 		JMenuItem itmTag = new JMenuItem(tag.getName());
 		itmTag.setIcon(iconTag);
-
-		Color tagColor = Color.decode(tag.getHexColor());
-		itmTag.setForeground(tagColor);
-
+		String hexColor = tag.getHexColor();
+		if (hexColor != null && !hexColor.trim().isEmpty()) {
+			Color tagColor = Color.decode(tag.getHexColor());
+			itmTag.setForeground(tagColor);
+		}
 		addComponentsToJComponent(mnuAvailableTags, itmTag);
 		itmTag.addActionListener(new ActionListener() {
 
@@ -154,10 +155,11 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 
 	private void addTagItem(Tag tag) {
 		JMenu mnuTag = new JMenu(tag.getName());
-
-		Color tagColor = Color.decode(tag.getHexColor());
-		mnuTag.setForeground(tagColor);
-
+		String hexColor = tag.getHexColor();
+		if (hexColor != null && !hexColor.trim().isEmpty()) {
+			Color tagColor = Color.decode(hexColor);
+			mnuTag.setForeground(tagColor);
+		}
 		JMenuItem itmRemoveTag = new JMenuItem(Messages.get(MessageConstants.REMOVE_TAG));
 		//		JMenuItem itmRenameTag = new JMenuItem(Messages.get(MessageConstants.RENAME_TAG));
 		mnuTag.setIcon(iconTag);

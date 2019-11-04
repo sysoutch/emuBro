@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Random;
 
 import javax.swing.AbstractAction;
 import javax.swing.AbstractButton;
@@ -72,7 +73,6 @@ import javax.swing.plaf.basic.BasicMenuBarUI;
 
 import com.jgoodies.forms.factories.CC;
 import com.jgoodies.forms.factories.Paddings;
-import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 
 import ch.sysout.emubro.api.EmulatorListener;
@@ -291,8 +291,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		initializeButtonBar();
 		createButtonBar();
 		viewManager = new ViewPanelManager();
-		pnlMain = new MainPanel(explorer, viewManager, mnuGameSettings);
 		initializeGameFilter();
+		pnlMain = new MainPanel(explorer, viewManager, mnuGameSettings, pnlGameFilter);
 
 		pnlMain.getPreviewPane().addTagToGameFilterListener(pnlGameFilter);
 		// try {
@@ -510,14 +510,14 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		btnRemoveGame = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("remove", size, size)), Messages.get(MessageConstants.REMOVE));
 		btnRenameGame = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("rename", size, size)), Messages.get(MessageConstants.RENAME));
 		btnGameProperties = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("gameProperties", size, size)), Messages.get(MessageConstants.GAME_PROPERTIES));
-		btnSetFilter = new ButtonBarButton("", iconSearchGame, Messages.get(MessageConstants.SET_FILTER));
 		btnChangeView = new ButtonBarButton("", iconChangeView, null);
 		btnMoreOptionsChangeView = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("arrowDownOtherWhite", 1)), Messages.get(MessageConstants.MORE_OPTIONS));
+		btnSetFilter = new ButtonBarButton("", iconSearchGame, Messages.get(MessageConstants.SET_FILTER));
 		btnPreviewPane = new ButtonBarButton("", iconPreviewPaneHide, null);
 		btnPreviewPane.setActionCommand(GameViewConstants.HIDE_PREVIEW_PANE);
 		buttonBarComponents = new JComponent[] { btnShowHideNavigationPanel, btnOrganize, btnSettings, btnRunGame, btnMoreOptionsRunGame,
 				btnRemoveGame, btnRenameGame,
-				btnGameProperties, btnSetFilter, btnChangeView, btnMoreOptionsChangeView, btnPreviewPane};
+				btnGameProperties, btnChangeView, btnMoreOptionsChangeView, btnSetFilter, btnPreviewPane};
 		//		btnRunGame.setComponentPopupMenu(mnuGameSettings);
 
 		setButtonBarToolTips();
@@ -1208,13 +1208,13 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	private void createUI() {
 		createMenuBar();
-		FormLayout layout = new FormLayout("min:grow",
-				"fill:pref, fill:pref");
-		JPanel pnlWrapperTop = new JPanel(layout);
-		CellConstraints cc = new CellConstraints();
-		pnlWrapperTop.add(pnlButtonBar, cc.xy(1, 1));
-		pnlWrapperTop.add(pnlGameFilter, cc.xy(1, 2));
-		add(pnlWrapperTop, BorderLayout.NORTH);
+		//		FormLayout layout = new FormLayout("min:grow",
+		//				"fill:pref, fill:pref");
+		//		JPanel pnlWrapperTop = new JPanel(layout);
+		//		CellConstraints cc = new CellConstraints();
+		//		pnlWrapperTop.add(pnlButtonBar, cc.xy(1, 1));
+		//		pnlWrapperTop.add(pnlGameFilter, cc.xy(1, 2));
+		add(pnlButtonBar, BorderLayout.NORTH);
 		add(pnlMain);
 		pnlGameCount.setMinimumSize(new Dimension(0, 0));
 
@@ -1282,7 +1282,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		addComponentsToJComponent(mnuSetCoverSize, sliderCoverSize);
 
 		addComponentsToJComponent(mnuView, itmWelcomeView,
-				new JSeparator(), itmListView, itmElementView, itmTableView, itmContentView, itmSliderView, itmCoverView,
+				new JSeparator(), itmElementView, itmListView, itmTableView, itmContentView, itmSliderView, itmCoverView,
 				new JSeparator(), mnuSetCoverSize,
 				new JSeparator(), mnuSort, mnuGroup,
 				new JSeparator(), itmRefresh,
@@ -2363,6 +2363,22 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 				sortedPlatforms.add(explorer.getPlatform(platformId));
 			}
 			for (Tag tag : game.getTags()) {
+				String hexColor = tag.getHexColor();
+				Color tagColor = null;
+				if (hexColor != null && !hexColor.trim().isEmpty()) {
+					tagColor = Color.decode(hexColor);
+				} else {
+					Color backgroundColor = IconStore.current().getCurrentTheme().getButtonBar().getColor();
+					Color fontColor = UIUtil.getForegroundDependOnBackground(backgroundColor);
+					boolean useBrightColors = fontColor == Color.WHITE;
+					Random rand = new Random();
+					float value = (useBrightColors) ? 0.5f : 0;
+					float r = rand.nextFloat() / 2f + value;
+					float g = rand.nextFloat() / 2f + value;
+					float b = rand.nextFloat() / 2f + value;
+					tagColor = new Color(r, g, b);
+				}
+				tag.setColor(tagColor);
 				pnlGameFilter.addNewTag(tag);
 			}
 		}
@@ -2605,8 +2621,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		pnlMain.gameRated(game);
 	}
 
-	public boolean isViewPanelInitialized(int coverView) {
-		return pnlMain.isViewPanelInitialized(coverView);
+	public boolean isViewPanelInitialized(int viewPanel) {
+		return pnlMain.isViewPanelInitialized(viewPanel);
 	}
 
 	public void addOpenGameFolderListener(ActionListener l) {

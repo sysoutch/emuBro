@@ -1,6 +1,5 @@
 package ch.sysout.emubro.ui;
 
-import java.awt.Color;
 import java.awt.Component;
 import java.awt.GradientPaint;
 import java.awt.Graphics;
@@ -27,8 +26,6 @@ public class ButtonBarPanel extends JPanel {
 	private int lastPanelWidth = -1;
 
 	private boolean gameSelected = false;
-
-	private Color transparencyColor = new Color(0f, 0f, 0f, 0.4f);
 
 	public ButtonBarPanel() {
 		super();
@@ -339,10 +336,6 @@ public class ButtonBarPanel extends JPanel {
 		gameSelected = !e.getGames().isEmpty();
 	}
 
-	private Color getTransparencyColor() {
-		return transparencyColor;
-	}
-
 	@Override
 	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
@@ -428,7 +421,7 @@ public class ButtonBarPanel extends JPanel {
 			}
 			boolean addTransparencyPane = currentBackground.isAddTransparencyPaneEnabled();
 			if (addTransparencyPane) {
-				g2d.setColor(getTransparencyColor());
+				g2d.setColor(currentBackground.getTransparencyColor());
 				g2d.fillRect(0, 0, panelWidth, panelHeight);
 			}
 			BufferedImage imgTransparentOverlay = currentTheme.getTransparentBackgroundOverlayImage();

@@ -1,7 +1,6 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.GradientPaint;
 import java.awt.Graphics;
@@ -65,7 +64,6 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 	private JDialog dlgPopup = new JDialog();
 	private JPanel pnlPopup;
 	private int currentNavView = ALL_GAMES;
-	private Color transparencyColor = new Color(0f, 0f, 0f, 0.4f);
 
 	public NavigationPanel() {
 		super(new BorderLayout());
@@ -204,7 +202,7 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 					}
 					boolean addTransparencyPane = currentBackground.isAddTransparencyPaneEnabled();
 					if (addTransparencyPane) {
-						g2d.setColor(getTransparencyColor());
+						g2d.setColor(currentBackground.getTransparencyColor());
 						g2d.fillRect(0, 0, panelWidth, panelHeight);
 					}
 					BufferedImage imgTransparentOverlay = currentTheme.getTransparentBackgroundOverlayImage();
@@ -246,10 +244,6 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 		spNavigationButtons.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
 		spNavigationButtons.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 		add(spNavigationButtons, BorderLayout.CENTER);
-	}
-
-	protected Color getTransparencyColor() {
-		return transparencyColor;
 	}
 
 	private void setIcons() {

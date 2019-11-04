@@ -1,6 +1,5 @@
 package ch.sysout.emubro.ui;
 
-import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
@@ -49,10 +48,8 @@ public class JLinkButton extends JButton implements MouseListener, FocusListener
 		setBorder(BorderFactory.createEmptyBorder());
 		setContentAreaFilled(false);
 		setFocusPainted(false);
-		setForeground(Color.GREEN);
 		doHover(false);
 	}
-
 
 	void doHover(boolean b) {
 		Cursor cursor = (b) ? Cursor.getPredefinedCursor(Cursor.HAND_CURSOR) : null;

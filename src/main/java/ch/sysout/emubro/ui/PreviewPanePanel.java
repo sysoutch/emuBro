@@ -11,6 +11,7 @@ import java.awt.Font;
 import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.MultipleGradientPaint.CycleMethod;
 import java.awt.RadialGradientPaint;
@@ -127,8 +128,6 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 	private Image outputImage;
 
 	private GradientPaint gp33;
-
-	private Color transparencyColor = new Color(0f, 0f, 0f, 0.4f);
 
 	public PreviewPanePanel(Explorer explorer, GameContextMenu popupGame, ViewContextMenu popupView) {
 		super();
@@ -305,6 +304,8 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 
 				pnlSelection.setCurrentPlatform(explorer.getPlatform(platformId), icon);
 				pnlSelection.setDescription(firstGame.getDescription());
+				pnlSelection.setDeveloper(firstGame.getDeveloper());
+				pnlSelection.setPublisher(firstGame.getPublisher());
 				pnlSelection.setDateAdded(firstGame.getDateAdded());
 				pnlSelection.setPlayCount(firstGame.getPlayCount());
 				pnlSelection.setLastPlayed(firstGame.getLastPlayed());
@@ -513,7 +514,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			}
 			boolean addTransparencyPane = currentBackground.isAddTransparencyPaneEnabled();
 			if (addTransparencyPane) {
-				g2d.setColor(getTransparencyColor());
+				g2d.setColor(currentBackground.getTransparencyColor());
 				g2d.fillRect(0, 0, panelWidth, panelHeight);
 			}
 			BufferedImage imgTransparentOverlay = currentTheme.getTransparentBackgroundOverlayImage();
@@ -607,10 +608,6 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		}
 	}
 
-	private Color getTransparencyColor() {
-		return transparencyColor;
-	}
-
 	class SelectionPanel extends ScrollablePanel {
 		private static final long serialVersionUID = 1L;
 		private JLabel lblGameTitle = new JLabel("Game Title");
@@ -631,6 +628,8 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		//		private AccordionPanel pnlAccordion;
 		private JButton btnComment;
 		private Platform platform;
+		private JLabel lblDeveloper = new JLabel("");
+		private JLabel lblPublisher = new JLabel("");
 		private JTextArea txtDescription = new JTextArea(0, 5);
 		private String description;
 
@@ -653,6 +652,14 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			} else {
 				txtDescription.setText("no description set");
 			}
+		}
+
+		public void setDeveloper(String developer) {
+			lblDeveloper.setText("Developer: " + developer);
+		}
+
+		public void setPublisher(String publisher) {
+			lblPublisher.setText("Publisher: " + publisher);
 		}
 
 		private void initComponents() {
@@ -690,13 +697,15 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		}
 
 		private void createUI() {
-
 			setLayout(new BorderLayout());
 			setOpaque(false);
 			pnlRatingBar.setOpaque(false);
 			pnlAutoScaleImage.setOpaque(false);
 			lblGameTitle.setMinimumSize(new Dimension(0, 0));
 			lnkPlatformTitle.setMinimumSize(new Dimension(0, 0));
+			Color themeColor = IconStore.current().getCurrentTheme().getPreviewPane().getColor();
+			Color color = UIUtil.getForegroundDependOnBackground(themeColor, true);
+			lnkPlatformTitle.setForeground(color);
 
 			JPanel pnl = createPanel();
 			add(pnl, BorderLayout.NORTH);
@@ -704,13 +713,14 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			//			pnlAccordion = new AccordionPanel(AccordionPanel.VERTICAL_ACCORDION);
 			//			pnlAccordion.setOpaque(false);
 			//
+			//			txtDescription.setHorizontalAlignment(SwingConstants.CENTER);
 			txtDescription.setOpaque(false);
 			txtDescription.setEditable(false);
 			txtDescription.setLineWrap(true);
 			txtDescription.setWrapStyleWord(true);
 			txtDescription.addMouseListener(new MouseAdapter() {
 				@Override
-				public void mousePressed(MouseEvent e) {
+				public void mouseClicked(MouseEvent e) {
 					if (txtDescription.getText().endsWith("(Click to show more)")) {
 						txtDescription.setText(description);
 						txtDescription.setCaretPosition(0);
@@ -720,6 +730,13 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 				}
 			});
 			add(txtDescription); // don't use scrollpane if not needed, otherwise there might be scroll issues
+			JPanel pnlInfos = new JPanel(new GridLayout(0, 1));
+			pnlInfos.setBorder(Paddings.DLU7);
+			pnlInfos.setOpaque(false);
+			pnlInfos.add(lblDeveloper);
+			pnlInfos.add(lblPublisher);
+			pnlInfos.add(pnlTags);
+			add(pnlInfos, BorderLayout.SOUTH);
 		}
 
 		private JPanel createPanel() {
@@ -766,7 +783,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		}
 
 		private void initGameTitle() {
-			lblGameTitle.setFont(FontUtil.getCustomFontBold());
+			lblGameTitle.setHorizontalAlignment(SwingConstants.CENTER);
 			lblGameTitle.setHorizontalTextPosition(SwingConstants.LEFT);
 			lblGameTitle.setVerticalTextPosition(SwingConstants.TOP);
 			lblGameTitle.setOpaque(false);
@@ -795,6 +812,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		private void initPlatformTitle() {
 			lnkPlatformTitle.setBorder(Paddings.EMPTY);
 			lnkPlatformTitle.setBackground(getBackground());
+			lnkPlatformTitle.setHorizontalAlignment(SwingConstants.CENTER);
 			lnkPlatformTitle.addActionListener(new ActionListener() {
 
 				@Override
@@ -812,13 +830,15 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 
 		protected void setGameTitle(String s, Icon icon) {
 			String gameTitle = s.replace(".", " ").replace("_", " ");
-			lblGameTitle.setText(Messages.get(MessageConstants.GAME_TITLE_LARGE, gameTitle));
+			lblGameTitle.setFont(FontUtil.getCustomBoldFont(32));
+			lblGameTitle.setText(Messages.get(MessageConstants.GAME_TITLE, gameTitle));
 			lblGameTitle.setIcon(icon);
 		}
 
 		protected void setCurrentPlatform(Platform platform, Icon icon) {
 			this.platform = platform;
 			String name = (platform == null) ? "" : platform.getName();
+			lnkPlatformTitle.setFont(FontUtil.getCustomFont(18));
 			lnkPlatformTitle.setText(name);
 			lnkPlatformTitle.setIcon(icon);
 		}
@@ -1261,20 +1281,14 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 
 			@Override
 			public void mouseClicked(MouseEvent e) {
-				// TODO Auto-generated method stub
-
 			}
 
 			@Override
 			public void mousePressed(MouseEvent e) {
-				// TODO Auto-generated method stub
-
 			}
 
 			@Override
 			public void mouseReleased(MouseEvent e) {
-				// TODO Auto-generated method stub
-
 			}
 
 			@Override
@@ -1418,9 +1432,12 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			public void addTag(Tag tag) {
 				JButton btn = new JCustomButton(tag.getName());
 				btn.setIcon(iconTag);
-				Color randomColor = Color.decode(tag.getHexColor());
-				btn.setBackground(randomColor.brighter());
-				btn.setForeground(randomColor);
+				String hexColor = tag.getHexColor();
+				if (hexColor != null && !hexColor.trim().isEmpty()) {
+					Color tagColor = Color.decode(hexColor);
+					btn.setBackground(tagColor.brighter());
+					btn.setForeground(tagColor);
+				}
 				pnlTagList.add(btn);
 
 				tags.put(tag.getId(), btn);

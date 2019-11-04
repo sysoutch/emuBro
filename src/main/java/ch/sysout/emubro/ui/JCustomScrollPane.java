@@ -8,7 +8,12 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.Rectangle;
+import java.awt.event.ActionEvent;
+import java.awt.event.MouseWheelEvent;
+import java.awt.event.MouseWheelListener;
 
+import javax.swing.Action;
+import javax.swing.ActionMap;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JComponent;
@@ -37,11 +42,11 @@ public class JCustomScrollPane extends JScrollPane {
 
 		JScrollBar verticalScrollBar = getVerticalScrollBar();
 		verticalScrollBar.setOpaque(false);
-		verticalScrollBar.setUI(new ModernScrollBarUI(this));
+		verticalScrollBar.setUI(new CustomScrollBarUI(this));
 
 		JScrollBar horizontalScrollBar = getHorizontalScrollBar();
 		horizontalScrollBar.setOpaque(false);
-		horizontalScrollBar.setUI(new ModernScrollBarUI(this));
+		horizontalScrollBar.setUI(new CustomScrollBarUI(this));
 
 		setLayout(new ScrollPaneLayout() {
 			private static final long serialVersionUID = 1L;
@@ -90,6 +95,44 @@ public class JCustomScrollPane extends JScrollPane {
 		setComponentZOrder(getHorizontalScrollBar(), 0);
 		setComponentZOrder(getViewport(), 2);
 		viewport.setView(view);
+
+		// done cause this class breaks horizontal mouse wheel scrolling
+		addMouseWheelListener(new MouseWheelListener() {
+
+			@Override
+			public void mouseWheelMoved(MouseWheelEvent e) {
+				// Ignore events generated with a rotation of 0
+				// (not sure why these events are generated)
+				int rotation = e.getWheelRotation();
+				if (rotation == 0) {
+					return;
+				}
+				// Get the Action from the scrollbar ActionMap for the given key
+				JScrollPane scrollPane = (JScrollPane) e.getComponent();
+				if (isVerticalScrollBarRequired()) {
+					return;
+				}
+				JScrollBar horizontal = scrollPane.getHorizontalScrollBar();
+				// Get the appropriate Action key for the given rotation
+				// (unit/block scroll is system dependent)
+				String key = null;
+				if (e.getScrollType() == MouseWheelEvent.WHEEL_UNIT_SCROLL) {
+					key = (rotation < 0) ? "negativeUnitIncrement" : "positiveUnitIncrement";
+				} else {
+					key = (rotation < 0) ? "negativeBlockIncrement" : "positiveBlockIncrement";
+				}
+
+				ActionMap map = horizontal.getActionMap();
+				Action action = map.get(key);
+				ActionEvent event = new ActionEvent(horizontal, ActionEvent.ACTION_PERFORMED, "");
+				// Invoke the Action the appropriate number of times to simulate
+				// default mouse wheel scrolling
+				int unitsToScroll = Math.abs(e.getUnitsToScroll());
+				for (int i = 0; i < unitsToScroll; i++) {
+					action.actionPerformed(event);
+				}
+			}
+		});
 	}
 
 	private boolean isVerticalScrollBarRequired() {
@@ -104,10 +147,10 @@ public class JCustomScrollPane extends JScrollPane {
 		return viewSize.getWidth() > viewRect.getWidth();
 	}
 
-	private static class ModernScrollBarUI extends BasicScrollBarUI {
+	private static class CustomScrollBarUI extends BasicScrollBarUI {
 		private JScrollPane sp;
 
-		public ModernScrollBarUI(JCustomScrollPane sp) {
+		public CustomScrollBarUI(JCustomScrollPane sp) {
 			this.sp = sp;
 		}
 

@@ -1,5 +1,7 @@
 package ch.sysout.emubro.api.model;
 
+import java.awt.Color;
+
 public interface Tag extends Comparable<Tag> {
 	int getId();
 
@@ -12,4 +14,8 @@ public interface Tag extends Comparable<Tag> {
 	String getHexColor();
 
 	void setHexColor(String hexColor);
+
+	Color getColor();
+
+	void setColor(Color color);
 }

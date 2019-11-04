@@ -114,7 +114,6 @@ public class MessageConstants {
 	public static final String BIG_PICTURE_MODE = "bigPictureMode";
 	public static final String EXIT = "exit";
 	public static final String GAME_TITLE = "gameTitle";
-	public static final String GAME_TITLE_LARGE = "gameTitleLarge";
 	public static final String RUN_GAME = "runGame";
 	public static final String GAMES_FOUND1 = "gamesFound1";
 	public static final String RUN_ON_BOOT = "runOnBoot";
@@ -357,7 +356,6 @@ public class MessageConstants {
 	public static final String OFFLINE = "offline";
 	public static final String UPDATING_DATABASE = "updatingDatabase";
 	public static final String DATABASE_INITIALIZED = "databaseInitialized";
-	public static final String GETTING_GAME_INFORMATIONS = "gettingGameInformations";
 	public static final String ALMOST_READY = "almostReady";
 	public static final String ROTATE_IMAGE = "rotateImage";
 	public static final String SCALE_IMAGE = "scaleImage";

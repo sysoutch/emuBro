@@ -1,5 +1,6 @@
 package ch.sysout.emubro.impl.model;
 
+import java.awt.Color;
 import java.util.List;
 import java.util.Map;
 
@@ -10,6 +11,7 @@ public class BroTag implements Tag {
 	private int id = -1;
 	private String name;
 	private String hexColor;
+	private Color color;
 
 	public BroTag() {
 		this(-1, "", "");
@@ -54,6 +56,16 @@ public class BroTag implements Tag {
 	@Override
 	public void setHexColor(String hexColor) {
 		this.hexColor = hexColor;
+	}
+
+	@Override
+	public Color getColor() {
+		return color;
+	}
+
+	@Override
+	public void setColor(Color color) {
+		this.color = color;
 	}
 
 	@Override

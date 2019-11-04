@@ -135,6 +135,14 @@ public interface Game extends Comparable<Game> {
 
 	void setChecksumId(int defaultChecksumId);
 
+	String getRegion();
+
+	void setRegion(String string);
+
+	String getLanguages();
+
+	void setLanguages(String string);
+
 	String getDescription();
 
 	void setDescription(String synopsis);

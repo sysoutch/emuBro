@@ -8,8 +8,11 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
@@ -27,6 +30,9 @@ import java.util.Map;
 
 import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
+import javax.swing.DefaultListCellRenderer;
+import javax.swing.DefaultListModel;
+import javax.swing.DefaultListSelectionModel;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -45,10 +51,13 @@ import javax.swing.ListCellRenderer;
 import javax.swing.MenuElement;
 import javax.swing.MenuSelectionManager;
 import javax.swing.ScrollPaneConstants;
+import javax.swing.SwingConstants;
 import javax.swing.UIManager;
 import javax.swing.border.Border;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import javax.swing.plaf.basic.BasicComboBoxUI;
 import javax.swing.plaf.basic.BasicComboPopup;
 import javax.swing.plaf.basic.ComboPopup;
@@ -75,6 +84,8 @@ import ch.sysout.emubro.impl.filter.BroCriteria;
 import ch.sysout.emubro.impl.model.PlatformConstants;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.JCustomButton;
+import ch.sysout.ui.util.JCustomToggleButton;
+import ch.sysout.util.FontUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
@@ -98,7 +109,7 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 	private ImageIcon icoFilterGroups;
 	private ImageIcon iconRemove;
 	private JButton btnClose;
-	private JButton btnTags;
+	private AbstractButton btnTags;
 	private JButton btnFilterGroups;
 
 	private int size = ScreenSizeUtil.is3k() ? 24 : 16;
@@ -129,9 +140,24 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 
 	private JButton btnResizeFilter = new JCustomButton();
 
+	private JPanel pnlTags;
+	private Icon icoTag = ImageUtil.getImageIconFrom(Icons.get("tags", size, size));
+
+	private JList<String> lstTags;
+
+	private AbstractButton btnResizeGameFilterPane = new JCustomButton();
+
+	private JPanel pnlFilter;
+
 	public GameFilterPanel(Explorer explorer) {
 		super(new BorderLayout());
 		this.explorer = explorer;
+		initComponents();
+		setIcons();
+		createUI();
+	}
+
+	private void initComponents() {
 		icoSearch = ImageUtil.getImageIconFrom(Icons.get("search", size, size));
 		icoAdvancedSearch = ImageUtil.getImageIconFrom(Icons.get("tags", size, size));
 		icoFilterGroupsSettings = ImageUtil.getImageIconFrom(Icons.get("filter", size, size));
@@ -150,12 +176,36 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 			}
 		});
 		btnClose = new JButton(icoSearch);
-		btnTags = new JCustomButton("Tags", icoAdvancedSearch);
+		btnTags = new JCustomToggleButton("Tags", icoAdvancedSearch);
 		btnTags.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				showAdvancedSearchSettingsPopupMenu(btnTags);
+				pnlTags.setVisible(((AbstractButton) e.getSource()).isSelected());
+				JPopupMenu popup = new JPopupMenu() {
+					private static final long serialVersionUID = 1L;
+
+					@Override
+					protected void paintComponent(Graphics g) {
+						super.paintComponent(g);
+						Graphics2D g2d = (Graphics2D) g.create();
+						int w = getWidth();
+						int h = getHeight();
+						g2d.setColor(IconStore.current().getCurrentTheme().getGameFilterPane().getColor());
+						g2d.fillRect(0, 0, w, h);
+						BufferedImage background = IconStore.current().getCurrentTheme().getGameFilterPane().getImage();
+						if (background != null) {
+							g2d.drawImage(background, 0, 0, w, h, this);
+						}
+						g2d.dispose();
+					}
+				};
+				popup.setLightWeightPopupEnabled(false);
+				popup.setOpaque(false);
+				popup.add(pnlTags);
+				popup.setPreferredSize(new Dimension(GameFilterPanel.this.getWidth(), 220));
+				popup.show(pnlFilter, -1, pnlFilter.getHeight());
+				//				showAdvancedSearchSettingsPopupMenu(btnTags);
 			}
 		});
 		btnFilterGroups = new JButton("", icoFilterGroupsSettings);
@@ -169,11 +219,7 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 
 		icoClose = ImageUtil.getImageIconFrom(Icons.get("remove", size, size));
 		// txtSearchGame.setFont(ScreenSizeUtil.defaultFont());
-		initComponents();
-		createUI();
-	}
 
-	private void initComponents() {
 		cmbPlatforms = new JComboBox<Platform>();
 		cmbPlatforms.setEditable(true);
 		cmbPlatforms.setRenderer(new CustomComboBoxRenderer());
@@ -182,6 +228,7 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 			@Override
 			protected ComboPopup createPopup() {
 				popup = new BasicComboPopup(comboBox) {
+					private static final long serialVersionUID = 1L;
 
 					@Override
 					public void setBorder(Border border) {
@@ -264,6 +311,87 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 
 		int size = ScreenSizeUtil.is3k() ? 16 : 12;
 		btnResizeFilter.setIcon(ImageUtil.getImageIconFrom(Icons.get("barsWhiteVertical", size, size)));
+
+		pnlTags = createTagPanel();
+	}
+
+	private void setIcons() {
+		int size = ScreenSizeUtil.is3k() ? 16 : 12;
+		btnResizeGameFilterPane.setIcon(ImageUtil.getImageIconFrom(Icons.get("barsWhite", size, size)));
+	}
+
+	private JPanel createTagPanel() {
+		JPanel pnl = new JPanel(new BorderLayout());
+		pnl.setOpaque(false);
+		DefaultListModel<String> mdlLstTags = new DefaultListModel<>();
+		lstTags = new JList<>(mdlLstTags);
+		lstTags.setOpaque(false);
+		lstTags.setCellRenderer(new DefaultListCellRenderer() {
+			private static final long serialVersionUID = 1L;
+
+			private Border border = BorderFactory.createEmptyBorder();
+
+			@Override
+			public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected,
+					boolean cellHasFocus) {
+				JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected,
+						cellHasFocus);
+				//				label.setOpaque(isSelected);
+				//				label.setIcon(icoTag);
+				label.setBorder(border);
+				label.setHorizontalAlignment(SwingConstants.CENTER);
+				label.setFont(FontUtil.getCustomFont());
+				Color tagColor = tags.get(label.getText()).getColor();
+				if (isSelected) {
+					label.setBackground(tagColor);
+					label.setForeground(UIUtil.getForegroundDependOnBackground(tagColor));
+				} else {
+					label.setForeground(tagColor);
+					label.setBackground(IconStore.current().getCurrentTheme().getGameFilterPane().getColor());
+				}
+				return label;
+			}
+		});
+		//		lst.setFixedCellWidth(ScreenSizeUtil.adjustValueToResolution(255));
+		lstTags.setFixedCellHeight(48);
+		//		lst.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+		lstTags.setSelectionModel(new DefaultListSelectionModel() {
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public void setSelectionInterval(int index0, int index1) {
+				if(super.isSelectedIndex(index0)) {
+					super.removeSelectionInterval(index0, index1);
+				}
+				else {
+					super.addSelectionInterval(index0, index1);
+				}
+			}
+		});
+		lstTags.setLayoutOrientation(JList.VERTICAL_WRAP);
+		lstTags.addListSelectionListener(new ListSelectionListener() {
+
+			@Override
+			public void valueChanged(ListSelectionEvent e) {
+				int platformId = getSelectedPlatformId();
+				fireEvent(new BroFilterEvent(platformId, getCriteria()));
+			}
+		});
+		JScrollPane sp = new JCustomScrollPane(lstTags,
+				JScrollPane.VERTICAL_SCROLLBAR_NEVER, JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+		sp.getHorizontalScrollBar().setUnitIncrement(16);
+		sp.getVerticalScrollBar().setUnitIncrement(16);
+		sp.setOpaque(false);
+		sp.getViewport().setOpaque(false);
+		pnl.add(sp);
+		pnl.addComponentListener(new ComponentAdapter() {
+			@Override
+			public void componentResized(ComponentEvent e) {
+				super.componentResized(e);
+				fixRowCountForVisibleColumns(lstTags);
+			}
+		});
+		return pnl;
 	}
 
 	private void createUI() {
@@ -319,9 +447,9 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 		FormLayout layout = new FormLayout("min:grow",
 				"fill:pref");
 		CellConstraints cc = new CellConstraints();
-		JPanel pnl = new JPanel(layout);
-		pnl.setOpaque(false);
-		pnl.setBorder(Paddings.DLU2);
+		pnlFilter = new JPanel(layout);
+		pnlFilter.setOpaque(false);
+		pnlFilter.setBorder(Paddings.DLU2);
 
 		JPanel pnlWrapper = new JPanel(new BorderLayout());
 		pnlWrapper.setOpaque(false);
@@ -333,12 +461,15 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 		splFilterPlatformAndGame.setResizeWeight(0.625);
 		splFilterPlatformAndGame.setBorder(BorderFactory.createEmptyBorder());
 		splFilterPlatformAndGame.setContinuousLayout(true);
-		splFilterPlatformAndGame.setDividerSize(1);
+		splFilterPlatformAndGame.setDividerSize(0);
 		splFilterPlatformAndGame.setLeftComponent(cmbPlatforms);
 		splFilterPlatformAndGame.setRightComponent(pnlWrapper);
 		splFilterPlatformAndGame.setOpaque(false);
-		pnl.add(splFilterPlatformAndGame, cc.xy(1, 1));
-		add(pnl);
+		pnlFilter.add(splFilterPlatformAndGame, cc.xy(1, 1));
+
+		add(pnlFilter, BorderLayout.NORTH);
+		//		add(pnlTags);
+		add(btnResizeGameFilterPane, BorderLayout.SOUTH);
 
 		txtSearchGame.addKeyListener(new KeyAdapter() {
 			@Override
@@ -662,8 +793,11 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 				for (Tag t : tags) {
 					if (tmpId == t.getId()) {
 						itm.setEnabled(true);
-						Color tagColor = Color.decode(t.getHexColor());
-						itm.setForeground(tagColor);
+						String hexColor = t.getHexColor();
+						if (hexColor != null && !hexColor.trim().isEmpty()) {
+							Color tagColor = Color.decode(hexColor);
+							itm.setForeground(tagColor);
+						}
 						itm.setFont(getFont().deriveFont(Font.PLAIN));
 						continue outterLoop;
 					}
@@ -672,15 +806,14 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 	}
 
 	public void addNewTag(Tag tag) {
+		JCheckBoxMenuItem itmTag = new JCheckBoxMenuItem(tag.getName());
+		//		itmTag.setIcon(iconTag);
 		if (tags.containsKey(tag.getName())) {
 			return;
 		}
 		tags.put(tag.getName(), tag);
-		JCheckBoxMenuItem itmTag = new JCheckBoxMenuItem(tag.getName());
-		//		itmTag.setIcon(iconTag);
 
-		Color tagColor = Color.decode(tag.getHexColor());
-		itmTag.setForeground(tagColor);
+		((DefaultListModel<String>) lstTags.getModel()).addElement(tag.getName());
 
 		mnuTags.add(itmTag);
 		UIUtil.validateAndRepaint(mnuTags);
@@ -760,10 +893,10 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 
 	protected List<Tag> getSelectedTags() {
 		List<Tag> selectedTags = new ArrayList<>();
-		for (int i = 2; i < mnuTags.getComponents().length; i++) {
-			AbstractButton itm = (AbstractButton) mnuTags.getComponent(i);
-			if (itm.isSelected()) {
-				selectedTags.add(tags.get(itm.getText()));
+		for (int i = 0; i < lstTags.getModel().getSize(); i++) {
+			if (lstTags.isSelectedIndex(i)) {
+				String tagName = lstTags.getModel().getElementAt(i);
+				selectedTags.add(tags.get(tagName));
 			}
 		}
 		return selectedTags;
@@ -820,6 +953,58 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 		//				}
 		//			}
 		//		}
+	}
+
+	private void fixRowCountForVisibleColumns(JList<?> list) {
+		int nCols = 0;
+		int nRows = 0;
+		nRows = computeVisibleRowCount(list);
+		list.setVisibleRowCount(nRows);
+
+		//			nCols = computeVisibleColumnCount(list);
+
+		int nItems = list.getModel().getSize();
+
+		// Compute the number of rows that will result in the desired number of
+		// columns
+		if (nCols != 0) {
+			nRows = nItems / nCols;
+			if (nItems % nCols > 0) {
+				nRows++;
+			}
+			list.setVisibleRowCount(nRows);
+		}
+	}
+
+	private int computeVisibleColumnCount(JList<?> list) {
+		// It's assumed here that all cells have the same width. This method
+		// could be modified if this assumption is false. If there was cell
+		// padding, it would have to be accounted for here as well.
+		Rectangle cellBounds = list.getCellBounds(0, 0);
+		if (cellBounds != null) {
+			int cellWidth = cellBounds.width;
+			int width = list.getVisibleRect().width;
+			return (cellWidth == 0) ? 0 : width / cellWidth;
+		}
+		return 1;
+	}
+
+	private int computeVisibleRowCount(JList<?> list) {
+		// It's assumed here that all cells have the same width. This method
+		// could be modified if this assumption is false. If there was cell
+		// padding, it would have to be accounted for here as well.
+		if (list != null) {
+			Rectangle cellBounds = list.getCellBounds(0, 0);
+			if (cellBounds != null) {
+				int cellHeight = cellBounds.height;
+				int height = list.getVisibleRect().height;
+				if (height > 0 && cellHeight > 0) {
+					int result = height / cellHeight;
+					return result;
+				}
+			}
+		}
+		return 1;
 	}
 
 	@Override

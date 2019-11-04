@@ -99,8 +99,8 @@ public class BlankViewPanel extends ViewPanel {
 		pnlView.setBorder(new CompoundBorder(titledBorderView, boarder));
 		pnlView.setBackground(Color.WHITE);
 		CellConstraints cc = new CellConstraints();
-		pnlView.add(lnkListView, cc.xy(1, 1));
-		pnlView.add(lnkElementView, cc.xy(1, 3));
+		pnlView.add(lnkElementView, cc.xy(1, 1));
+		pnlView.add(lnkListView, cc.xy(1, 3));
 		pnlView.add(lnkTableView, cc.xy(1, 5));
 		pnlView.add(lnkContentView, cc.xy(1, 7));
 		pnlView.add(lnkSliderView, cc.xy(1, 9));
@@ -608,7 +608,7 @@ public class BlankViewPanel extends ViewPanel {
 			}
 			boolean addTransparencyPane = currentBackground.isAddTransparencyPaneEnabled();
 			if (addTransparencyPane) {
-				g2d.setColor(getTransparencyColor());
+				g2d.setColor(currentBackground.getTransparencyColor());
 				g2d.fillRect(0, 0, panelWidth, panelHeight);
 			}
 			BufferedImage imgTransparentOverlay = currentTheme.getTransparentBackgroundOverlayImage();

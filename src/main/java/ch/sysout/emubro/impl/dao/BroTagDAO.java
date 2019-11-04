@@ -22,8 +22,10 @@ public class BroTagDAO implements TagDAO {
 	public void addTag(Tag tag) throws SQLException {
 		ValidationUtil.checkNull(tag, "tag");
 		Statement stmt = conn.createStatement();
+		String hexColor = tag.getHexColor();
+		String hexColorFormatted = (hexColor == null || hexColor.trim().isEmpty() ? null : SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(hexColor)));
 		String sql = SqlUtil.insertIntoWithColumnsString("tag",
-				"tag_name", "tag_hexColor", SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(tag.getName())), SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(tag.getHexColor())));
+				"tag_name", "tag_hexColor", SqlUtil.getQuotedString(SqlUtil.getQuotationsMarkedString(tag.getName())), hexColorFormatted);
 		stmt.executeQuery(sql);
 		conn.commit();
 		stmt.close();

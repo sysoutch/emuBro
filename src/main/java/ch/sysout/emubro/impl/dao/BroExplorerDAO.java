@@ -872,6 +872,30 @@ public class BroExplorerDAO implements ExplorerDAO {
 	}
 
 	@Override
+	public String getRegion(int gameId) throws SQLException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void setRegion(int gameId, String string) throws SQLException {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public List<String> getLanguages(int gameId) throws SQLException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void setLanguages(int gameId, String... strings) throws SQLException {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
 	public String getGameDescription(int gameId) throws SQLException {
 		// TODO Auto-generated method stub
 		return null;
@@ -879,6 +903,30 @@ public class BroExplorerDAO implements ExplorerDAO {
 
 	@Override
 	public void setGameDescription(int gameId, String description) throws SQLException {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public String getDeveloper(int gameId) throws SQLException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void setDeveloper(int gameId, String description) throws SQLException {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public String getPublisher(int gameId) throws SQLException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void setPublisher(int gameId, String description) throws SQLException {
 		// TODO Auto-generated method stub
 
 	}

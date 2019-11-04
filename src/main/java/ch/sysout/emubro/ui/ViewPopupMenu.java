@@ -26,8 +26,8 @@ class ViewPopupMenu extends JPopupMenu implements ActionListener {
 	private JRadioButtonMenuItem itmCoversSmall = new JRadioButtonMenuItem(Messages.get("viewCoversSmall"));
 	private JRadioButtonMenuItem itmCoversSmallest = new JRadioButtonMenuItem(Messages.get("viewCoversSmallest"));
 	private JRadioButtonMenuItem itmWelcome = new JRadioButtonMenuItem(Messages.get(MessageConstants.VIEW_WELCOME));
-	private JRadioButtonMenuItem itmList = new JRadioButtonMenuItem(Messages.get(MessageConstants.VIEW_LIST));
 	private JRadioButtonMenuItem itmElements = new JRadioButtonMenuItem(Messages.get(MessageConstants.VIEW_ELEMENTS));
+	private JRadioButtonMenuItem itmList = new JRadioButtonMenuItem(Messages.get(MessageConstants.VIEW_LIST));
 	private JRadioButtonMenuItem itmDetails = new JRadioButtonMenuItem(Messages.get(MessageConstants.VIEW_TABLE));
 	private JRadioButtonMenuItem itmContent = new JRadioButtonMenuItem(Messages.get(MessageConstants.VIEW_CONTENT));
 	private JRadioButtonMenuItem itmSlider = new JRadioButtonMenuItem(Messages.get(MessageConstants.VIEW_SLIDER));
@@ -44,8 +44,8 @@ class ViewPopupMenu extends JPopupMenu implements ActionListener {
 		grp.add(itmCoversSmall);
 		grp.add(itmCoversSmallest);
 		grp.add(itmWelcome);
-		grp.add(itmList);
 		grp.add(itmElements);
+		grp.add(itmList);
 		grp.add(itmDetails);
 		grp.add(itmContent);
 		grp.add(itmSlider);
@@ -53,8 +53,8 @@ class ViewPopupMenu extends JPopupMenu implements ActionListener {
 
 		add(itmWelcome);
 		add(new JSeparator());
-		add(itmList);
 		add(itmElements);
+		add(itmList);
 		add(itmDetails);
 		add(itmContent);
 		add(itmSlider);

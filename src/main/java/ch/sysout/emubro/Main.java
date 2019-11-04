@@ -33,7 +33,6 @@ import javax.swing.BorderFactory;
 import javax.swing.JOptionPane;
 import javax.swing.LookAndFeel;
 import javax.swing.UIManager;
-import javax.swing.border.EmptyBorder;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -207,7 +206,6 @@ public class Main {
 					} catch (FileNotFoundException eFNF) {
 						updatedTags = new ArrayList<>();
 					}
-					dlgSplashScreen.setText(Messages.get(MessageConstants.GETTING_GAME_INFORMATIONS));
 					// explorer.setDefaultPlatforms(defaultPlatforms);
 					explorer.setUpdatedTags(updatedTags);
 
@@ -433,7 +431,7 @@ public class Main {
 	}
 
 	private static void initializeCustomTheme() throws IOException {
-		IconStore.current().loadDefaultTheme("dark");
+		IconStore.current().loadDefaultTheme("mario");
 		initializeCustomFonts();
 		initializeCustomColors();
 		initializeCustomMenus();
@@ -512,7 +510,7 @@ public class Main {
 		Color color = IconStore.current().getCurrentTheme().getMenuBar().getColor().brighter();
 		UIManager.put("Separator.background", color);
 		UIManager.put("Separator.foreground", color);
-		UIManager.put("PopupMenu.border", new EmptyBorder(0, 0, 0, 0));
+		UIManager.put("PopupMenu.border", BorderFactory.createEmptyBorder());
 	}
 
 	private static void initializeCustomButtons() {

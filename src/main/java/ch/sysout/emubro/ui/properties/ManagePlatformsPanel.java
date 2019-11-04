@@ -1249,6 +1249,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 				pnlConfigurationFile.add(spConfigurationFile, cc.xy(1, 1));
 
 				JPanel pnlConfigFilePath = new JPanel(new BorderLayout());
+				pnlConfigFilePath.setOpaque(false);
 				pnlConfigFilePath.add(new JLabel("File path: "), BorderLayout.WEST);
 				txtConfigFilePath.setMinimumSize(new Dimension(0, 0));
 				pnlConfigFilePath.add(txtConfigFilePath);

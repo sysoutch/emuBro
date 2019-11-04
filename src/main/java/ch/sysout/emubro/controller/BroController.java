@@ -245,6 +245,7 @@ import ch.sysout.emubro.impl.filter.BroFilterGroup;
 import ch.sysout.emubro.impl.model.BroEmulator;
 import ch.sysout.emubro.impl.model.BroGame;
 import ch.sysout.emubro.impl.model.BroPlatform;
+import ch.sysout.emubro.impl.model.BroTag;
 import ch.sysout.emubro.impl.model.EmulatorConstants;
 import ch.sysout.emubro.impl.model.FileStructure;
 import ch.sysout.emubro.impl.model.GameConstants;
@@ -1482,8 +1483,7 @@ GameSelectionListener, BrowseComputerListener {
 					if (explorer.hasFile(filePath)) {
 						return;
 					}
-					boolean downloadCover = false;
-					addGame(p0, file, downloadCover);
+					addGame(p0, file, true);
 					return;
 				}
 			}
@@ -3408,6 +3408,10 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	private void manuallyCheckAddGamesOrEmulators(List<File> files) {
+		//		if (files.size() == 1) {
+		//			manuallyCheckAddGameOrEmulator(files.get(0), true);
+		//			return;
+		//		}
 		List<File> gamesToCheck = new ArrayList<>();
 		JDialog dlgCheckFolder = new JDialog();
 		dlgCheckFolder.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
@@ -3417,7 +3421,6 @@ GameSelectionListener, BrowseComputerListener {
 		boolean subfoldersFound = false;
 		for (File file : files) {
 			if (file.isDirectory()) {
-
 				File[] subFolderFiles = file.listFiles();
 				for (File f : subFolderFiles) {
 					if (f.isFile()) {
@@ -5614,18 +5617,20 @@ GameSelectionListener, BrowseComputerListener {
 				});
 				for (Game game : games) {
 					String gameCode = game.getGameCode();
-					String coverPlatform = explorer.getPlatform(game.getPlatformId()).getShortName();
-					String coverSource = "http://art.gametdb.com/" + coverPlatform;
-					String coverTypes[] = {
-							"cover3D", "cover"
-					};
-					String coverLanguages[] = {
-							"EN", "US"
-					};
-					String coverFileTypes[] = {
-							".png", ".jpg"
-					};
-					if (gameCode != null && !gameCode.isEmpty()) {
+					if (gameCode == null || gameCode.isEmpty()) {
+						System.out.println("no game code set");
+					} else {
+						String coverPlatform = explorer.getPlatform(game.getPlatformId()).getShortName();
+						String coverSource = "http://art.gametdb.com/" + coverPlatform;
+						String coverTypes[] = {
+								"cover3D", "cover"
+						};
+						String coverLanguages[] = {
+								"EN", "US"
+						};
+						String coverFileTypes[] = {
+								".png", ".jpg"
+						};
 						Image image = null;
 						outerLoop: for (int i = 0; i < coverTypes.length; i++) {
 							for (int k = 0; k < coverLanguages.length; k++) {
@@ -5644,8 +5649,6 @@ GameSelectionListener, BrowseComputerListener {
 							}
 						}
 						System.out.println("game cover set: " + gameCoverSet);
-					} else {
-						System.out.println("no game code set");
 					}
 				}
 				dlgDownloadCovers.dispose();
@@ -6015,7 +6018,7 @@ GameSelectionListener, BrowseComputerListener {
 						return;
 					}
 					try {
-						manuallyCheckAddGameOrEmulator(potentialGame.toPath(), false);
+						manuallyCheckAddGameOrEmulator(potentialGame.toPath(), true);
 					} catch (ZipException e) {
 						// TODO Auto-generated catch block
 					} catch (SQLException e) {
@@ -6891,11 +6894,7 @@ GameSelectionListener, BrowseComputerListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			int divLocation = view.getSplPreviewPaneDividerLocation();
-			if (view.isViewPanelInitialized(GameViewConstants.COVER_VIEW)) {
-				view.changeToViewPanel(GameViewConstants.COVER_VIEW, null);
-			} else {
-				view.changeToViewPanel(GameViewConstants.COVER_VIEW, explorer.getGames());
-			}
+			view.changeToViewPanel(GameViewConstants.COVER_VIEW, explorer.getGames());
 			//			view.getSplGameDetailsPane().setDividerLocation(divLocationDetailsPane);
 			view.setSplPreviewPaneDividerLocation(divLocation); // this
 			// has
@@ -7672,7 +7671,7 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	public void addGame(Platform p0, Path path, boolean downloadCover) throws BroGameDeletedException {
-		addGame(p0, path, false, false, false);
+		addGame(p0, path, false, false, downloadCover);
 	}
 
 	public void addGame(Platform p0, Path path, boolean manuallyAdded, boolean favorite, boolean downloadCover) {
@@ -7805,19 +7804,67 @@ GameSelectionListener, BrowseComputerListener {
 				if (elements != null) {
 					List<String[]> arrays = elements.get(gameCode);
 					if (arrays != null) {
-						for (String[] arr2 : arrays) {
-							if (arr2[0].equals("synopsis")) {
-								element.setDescription(arr2[1]);
+						for (String[] array : arrays) {
+							if (array[0].equals("region")) {
+								element.setRegion(array[1]);
 								try {
-									explorerDAO.setGameDescription(gameId, arr2[1]);
+									explorerDAO.setRegion(gameId, array[1]);
 								} catch (SQLException e) {
 									// TODO Auto-generated catch block
 									e.printStackTrace();
 								}
-							} else if (arr2[0].equals("developer")) {
-								element.setDeveloper(arr2[1]);
-							} else if (arr2[0].equals("publisher")) {
-								element.setPublisher(arr2[1]);
+							} else if (array[0].equals("languages")) {
+								element.setLanguages(array[1]);
+								try {
+									explorerDAO.setLanguages(gameId, array[1].split(","));
+								} catch (SQLException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								}
+							} else if (array[0].equals("synopsis")) {
+								element.setDescription(array[1]);
+								try {
+									explorerDAO.setGameDescription(gameId, array[1]);
+								} catch (SQLException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								}
+							} else if (array[0].equals("developer")) {
+								element.setDeveloper(array[1]);
+								try {
+									explorerDAO.setDeveloper(gameId, array[1]);
+								} catch (SQLException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								}
+							} else if (array[0].equals("publisher")) {
+								element.setPublisher(array[1]);
+								try {
+									explorerDAO.setPublisher(gameId, array[1]);
+								} catch (SQLException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								}
+							} else if (array[0].equals("genre")) {
+								String[] genres = array[1].split(",");
+								for (String genre : genres) {
+									if (!explorer.hasTag(genre)) {
+										BroTag tag = new BroTag(-1, genre, null);
+										explorerDAO.addTag(tag);
+										tag.setId(explorerDAO.getLastAddedTagId());
+										explorer.addTag(tag);
+									}
+									Tag tag = explorer.getTag(genre);
+									if (!element.hasTag(tag.getId())) {
+										element.addTag(tag);
+										try {
+											explorerDAO.addTag(element.getId(), tag);
+										} catch (SQLException e) {
+											// TODO Auto-generated catch block
+											e.printStackTrace();
+										}
+									}
+								}
 							}
 						}
 					}
@@ -7990,6 +8037,9 @@ GameSelectionListener, BrowseComputerListener {
 		return gameCode;
 	}
 
+	/**
+	 * files are large. this is the reason a stream reader was used here.
+	 */
 	public Map<String, List<String[]>> countElements(File xmlFile, String gameCode) {
 		Map<String, List<String[]>> counts = new HashMap<>();
 		try {
@@ -8002,16 +8052,27 @@ GameSelectionListener, BrowseComputerListener {
 			List<String[]> gameDataObject = new ArrayList<>();
 			while (reader.hasNext()) {
 				reader.next();
+				if (gameCodeFound != null && reader.getEventType() == XMLStreamConstants.END_ELEMENT) {
+					String elementText = reader.getLocalName();
+					if (elementText.equals("game")) {
+						break;
+					}
+				}
 				if (reader.getEventType() == XMLStreamConstants.START_ELEMENT) {
 					String elementText = reader.getLocalName();
 					if (gameCodeFound != null) {
 						String elementText2 = reader.getLocalName();
 						if (synopsisFound) {
-							if (elementText2.equals("publisher")) {
+							if (elementText2.equals("genre")) {
+								String genre = reader.getElementText();
+								String[] arr = { "genre", genre };
+								gameDataObject.add(arr);
+								continue;
+							} else if (elementText2.equals("publisher")) {
 								String publisher = reader.getElementText();
 								String[] arr = { "publisher", publisher };
 								gameDataObject.add(arr);
-								break;
+								continue;
 							} else if (elementText2.equals("developer")) {
 								String developer = reader.getElementText();
 								String[] arr = { "developer", developer };
@@ -8028,7 +8089,17 @@ GameSelectionListener, BrowseComputerListener {
 									continue;
 								}
 							} else {
-								if (elementText.equals("locale") && reader.getAttributeValue(null, "lang").equals("EN")) {
+								if (elementText2.equals("region")) {
+									String region = reader.getElementText();
+									String[] arr = { "region", region };
+									gameDataObject.add(arr);
+									continue;
+								} else if (elementText2.equals("languages")) {
+									String languages = reader.getElementText();
+									String[] arr = { "languages", languages };
+									gameDataObject.add(arr);
+									continue;
+								} else if (elementText.equals("locale") && reader.getAttributeValue(null, "lang").equals("EN")) {
 									localeFound = true;
 									continue;
 								}

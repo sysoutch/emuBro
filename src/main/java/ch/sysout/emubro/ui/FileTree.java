@@ -162,7 +162,7 @@ public final class FileTree extends JPanel {
 
 		setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 		setOpaque(false);
-		JScrollPane sp = new JScrollPane(tree);
+		JScrollPane sp = new JCustomScrollPane(tree);
 		sp.getViewport().setOpaque(false);
 		sp.setOpaque(false);
 		add(sp);

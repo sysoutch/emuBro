@@ -25,6 +25,7 @@ public class BroGame implements Game {
 	private int platformId;
 	private String platformIconFileName;
 	private List<Tag> tags = new ArrayList<>();
+	private String region;
 	private String description;
 	private String developer;
 	private String publisher;
@@ -262,13 +263,32 @@ public class BroGame implements Game {
 	}
 
 	@Override
+	public String getRegion() {
+		return region;
+	}
+
+	@Override
+	public void setRegion(String region) {
+		this.region = region;
+	}
+
+	@Override
+	public String getLanguages() {
+		return null;
+	}
+
+	@Override
+	public void setLanguages(String string) {
+
+	}
+
+	@Override
 	public String getDescription() {
 		return description;
 	}
 
 	@Override
 	public void setDescription(String description) {
-		System.out.println("BroGame: set description: " + description);
 		this.description = description;
 	}
 
@@ -279,7 +299,6 @@ public class BroGame implements Game {
 
 	@Override
 	public void setDeveloper(String string) {
-		System.out.println("BroGame: set developer: " + string);
 		developer = string;
 	}
 
@@ -290,7 +309,6 @@ public class BroGame implements Game {
 
 	@Override
 	public void setPublisher(String string) {
-		System.out.println("BroGame: set publisher: " + string);
 		publisher = string;
 	}
 
