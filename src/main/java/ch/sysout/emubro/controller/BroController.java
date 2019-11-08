@@ -112,6 +112,8 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -420,6 +422,9 @@ GameSelectionListener, BrowseComputerListener {
 			.replaceWith(".");
 	protected FlavorListener lastFlavorListener;
 	private Map<String, File> xmlFiles;
+
+	private BlockingQueue<BufferedImage> queue;
+	private ExecutorService executorServiceDownloadGameCover;
 
 	public BroController(SplashScreenWindow dlgSplashScreen, ExplorerDAO explorerDAO, Explorer model, MainFrame view, Builder discordRpc) {
 		this.dlgSplashScreen = dlgSplashScreen;
@@ -1434,7 +1439,7 @@ GameSelectionListener, BrowseComputerListener {
 		}
 		int request = JOptionPane.showConfirmDialog(view, "Search and download game covers for missing covers?", "Search covers", JOptionPane.YES_NO_OPTION);
 		if (request == JOptionPane.YES_OPTION) {
-			downloadGameCover(games);
+			downloadGameCovers(games);
 		}
 	}
 
@@ -1444,9 +1449,7 @@ GameSelectionListener, BrowseComputerListener {
 		}
 		int request = JOptionPane.showConfirmDialog(view, "Search and download game cover?", "Search cover", JOptionPane.YES_NO_OPTION);
 		if (request == JOptionPane.YES_OPTION) {
-			List<Game> list = new ArrayList<>();
-			list.add(game);
-			downloadGameCover(list);
+			downloadGameCover(game);
 		}
 	}
 
@@ -4368,8 +4371,7 @@ GameSelectionListener, BrowseComputerListener {
 	class CoverDownloadListener implements ActionListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			List<Game> games = explorer.getCurrentGames();
-			downloadGameCover(games);
+			downloadGameCovers(explorer.getCurrentGames());
 		}
 	}
 
@@ -5599,62 +5601,99 @@ GameSelectionListener, BrowseComputerListener {
 			t.start();
 		}
 	}
+	private void downloadGameCovers(List<Game> games) {
+		for (Game game : games) {
+			downloadGameCover(game);
+		}
+	}
 
-	private void downloadGameCover(final List<Game> games) {
-		showDownloadCoversDialog();
-
-		Thread t = new Thread(new Runnable() {
-			private boolean gameCoverSet;
-
-			@Override
-			public void run() {
-				SwingUtilities.invokeLater(new Runnable() {
-
-					@Override
-					public void run() {
-						progress.setString("request missing covers");
-					}
-				});
-				for (Game game : games) {
-					String gameCode = game.getGameCode();
-					if (gameCode == null || gameCode.isEmpty()) {
-						System.out.println("no game code set");
-					} else {
-						String coverPlatform = explorer.getPlatform(game.getPlatformId()).getShortName();
-						String coverSource = "http://art.gametdb.com/" + coverPlatform;
-						String coverTypes[] = {
-								"cover3D", "cover"
-						};
-						String coverLanguages[] = {
-								"EN", "US"
-						};
-						String coverFileTypes[] = {
-								".png", ".jpg"
-						};
-						Image image = null;
-						outerLoop: for (int i = 0; i < coverTypes.length; i++) {
-							for (int k = 0; k < coverLanguages.length; k++) {
-								for (int l = 0; l < coverFileTypes.length; l++) {
-									try {
-										URL url = new URL(coverSource + "/"+coverTypes[i]+"/"+coverLanguages[k]+"/"
-												+ game.getGameCode() + coverFileTypes[l]);
-										image = ImageIO.read(url);
-										setCoverForGame(game, image, coverFileTypes[l]);
-										gameCoverSet = true;
-									} catch (IOException e7) {
-										continue;
-									}
-									break outerLoop;
-								}
-							}
-						}
-						System.out.println("game cover set: " + gameCoverSet);
-					}
-				}
-				dlgDownloadCovers.dispose();
+	private void downloadGameCover(final Game game) {
+		//		showDownloadCoversDialog();
+		//		boolean gameCoverSet = false;
+		//		SwingUtilities.invokeLater(new Runnable() {
+		//
+		//			@Override
+		//			public void run() {
+		//				progress.setString("request missing covers");
+		//			}
+		//		});
+		String gameCode = game.getGameCode();
+		if (gameCode == null || gameCode.isEmpty()) {
+			System.out.println("no game code set");
+		} else {
+			if (queue == null) {
+				queue = new ArrayBlockingQueue<>(1);
 			}
-		});
-		t.start();
+			if (executorServiceDownloadGameCover == null) {
+				executorServiceDownloadGameCover = Executors.newSingleThreadExecutor();
+			}
+			System.out.println("pool execute...");
+			executorServiceDownloadGameCover.execute(new Runnable() {
+
+				@Override
+				public void run() {
+					System.out.println("download game cover now...");
+					downloadGameCoverNow(game);
+				}
+			}); //start download and place on queue once completed
+			//			new Thread(() -> {
+			//				try {
+			//					BufferedImage image = queue.take();
+			//					setCoverForGame(game, image, coverFileTypes[l]);
+			//				} catch (InterruptedException e) {
+			//					// TODO Auto-generated catch block
+			//					e.printStackTrace();
+			//				}
+			//			}).start();
+		}
+		//		dlgDownloadCovers.dispose();
+	}
+
+	protected void downloadGameCoverNow(Game game) {
+		String coverPlatform = explorer.getPlatform(game.getPlatformId()).getShortName();
+		String coverSource = "http://art.gametdb.com/" + coverPlatform;
+		String coverTypes[] = {
+				"cover3D", "cover"
+		};
+		String coverLanguages[] = {
+				"EN", "US"
+		};
+		String coverFileTypes[] = {
+				".png", ".jpg"
+		};
+		URL url = null;
+		String fileType = null;
+		outerLoop: for (int i = 0; i < coverTypes.length; i++) {
+			for (int k = 0; k < coverLanguages.length; k++) {
+				for (int l = 0; l < coverFileTypes.length; l++) {
+					try {
+						System.out.println(System.currentTimeMillis() + " getting cover for game: " + game.getName());
+						url = new URL(coverSource + "/"+coverTypes[i]+"/"+coverLanguages[k]+"/"
+								+ game.getGameCode() + coverFileTypes[l]);
+					} catch (MalformedURLException e) {
+						continue;
+					}
+					try {
+						queue.put(ImageIO.read(url));
+						System.out.println("cover put to queue for game: " + game.getName());
+					} catch (InterruptedException | IOException e) {
+						continue;
+					}
+					System.out.println("end loop: " + game.getName());
+					fileType = coverFileTypes[l];
+					break outerLoop;
+				}
+			}
+		}
+		if (url != null) {
+			System.out.println("setting cover for game: " + game.getName());
+			try {
+				setCoverForGame(game, queue.take(), fileType);
+				System.out.println("cover set for game:"+game.getName()+": " + (game.hasCover()));
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 
 	private void showDownloadCoversDialog() {
