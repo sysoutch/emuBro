@@ -114,7 +114,7 @@ public class ButtonBarPanel extends JPanel {
 		int difference = currentWidth - buttonBarContentWidth;
 		//		if (gameSelected) {
 		if (hasText(1)) {
-			if (difference == 0) {
+			if (difference <= 0) {
 				setEmptyTextForComponent(1);
 				setEmptyTextForComponent(2);
 				SwingUtilities.invokeLater(new Runnable() {
@@ -127,7 +127,7 @@ public class ButtonBarPanel extends JPanel {
 			}
 			return;
 		} else if (hasText(7)) {
-			if (difference == 0) {
+			if (difference <= 0) {
 				setEmptyTextForComponent(7);
 				SwingUtilities.invokeLater(new Runnable() {
 
@@ -139,7 +139,7 @@ public class ButtonBarPanel extends JPanel {
 			}
 			return;
 		} else if (hasText(6)) {
-			if (difference == 0) {
+			if (difference <= 0) {
 				setEmptyTextForComponent(6);
 				SwingUtilities.invokeLater(new Runnable() {
 
@@ -151,7 +151,7 @@ public class ButtonBarPanel extends JPanel {
 			}
 			return;
 		} else if (hasText(5)) {
-			if (difference == 0) {
+			if (difference <= 0) {
 				setEmptyTextForComponent(5);
 				SwingUtilities.invokeLater(new Runnable() {
 
@@ -163,7 +163,7 @@ public class ButtonBarPanel extends JPanel {
 			}
 			return;
 		} else if (hasText(3)) {
-			if (difference == 0) {
+			if (difference <= 0) {
 				setEmptyTextForComponent(3);
 			}
 			return;
