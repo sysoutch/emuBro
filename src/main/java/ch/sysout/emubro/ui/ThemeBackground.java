@@ -14,7 +14,7 @@ public class ThemeBackground {
 	private boolean horizontalCenterImageEnabled = false;
 
 	private boolean imageScaleEnabled = true; // TODO make this dynamic
-	private boolean scaleProportionallyEnabled = false;
+	private boolean scaleProportionallyEnabled = true;
 	private boolean addTransparencyPaneEnabled = true;
 	private Color transparencyColor = new Color(0f, 0f, 0f, 0.4f);
 	// TODO boolean for overscale

@@ -20,6 +20,7 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 import java.awt.font.TextAttribute;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
@@ -149,6 +150,10 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 
 	private JPanel pnlFilter;
 
+	private JPopupMenu popupTags;
+
+	private AbstractButton btnPinUnpinTagsPanel = new JCustomToggleButton("Pin");
+
 	public GameFilterPanel(Explorer explorer) {
 		super(new BorderLayout());
 		this.explorer = explorer;
@@ -181,30 +186,11 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				pnlTags.setVisible(((AbstractButton) e.getSource()).isSelected());
-				JPopupMenu popup = new JPopupMenu() {
-					private static final long serialVersionUID = 1L;
+				popupTags.setPreferredSize(new Dimension(pnlFilter.getWidth(), 220));
+				//				popup.setPreferredSize(new Dimension(220, getParent().getHeight()));
+				popupTags.show(pnlFilter, -1, pnlFilter.getHeight());
+				//				popup.show(pnlFilter, pnlFilter.getWidth()-220, pnlFilter.getHeight());
 
-					@Override
-					protected void paintComponent(Graphics g) {
-						super.paintComponent(g);
-						Graphics2D g2d = (Graphics2D) g.create();
-						int w = getWidth();
-						int h = getHeight();
-						g2d.setColor(IconStore.current().getCurrentTheme().getGameFilterPane().getColor());
-						g2d.fillRect(0, 0, w, h);
-						BufferedImage background = IconStore.current().getCurrentTheme().getGameFilterPane().getImage();
-						if (background != null) {
-							g2d.drawImage(background, 0, 0, w, h, this);
-						}
-						g2d.dispose();
-					}
-				};
-				popup.setLightWeightPopupEnabled(false);
-				popup.setOpaque(false);
-				popup.add(pnlTags);
-				popup.setPreferredSize(new Dimension(GameFilterPanel.this.getWidth(), 220));
-				popup.show(pnlFilter, -1, pnlFilter.getHeight());
 				//				showAdvancedSearchSettingsPopupMenu(btnTags);
 			}
 		});
@@ -313,6 +299,36 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 		btnResizeFilter.setIcon(ImageUtil.getImageIconFrom(Icons.get("barsWhiteVertical", size, size)));
 
 		pnlTags = createTagPanel();
+		btnResizeGameFilterPane.addMouseMotionListener(new MouseMotionAdapter() {
+
+			@Override
+			public void mouseDragged(MouseEvent e) {
+				System.out.println("mouse dragged");
+				popupTags.setPreferredSize(new Dimension(pnlFilter.getWidth(), popupTags.getHeight()+1));
+			}
+		});
+
+		popupTags = new JPopupMenu() {
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			protected void paintComponent(Graphics g) {
+				super.paintComponent(g);
+				Graphics2D g2d = (Graphics2D) g.create();
+				int w = getWidth();
+				int h = getHeight();
+				g2d.setColor(IconStore.current().getCurrentTheme().getGameFilterPane().getColor());
+				g2d.fillRect(0, 0, w, h);
+				BufferedImage background = IconStore.current().getCurrentTheme().getGameFilterPane().getImage();
+				if (background != null) {
+					g2d.drawImage(background, 0, 0, w, h, this);
+				}
+				g2d.dispose();
+			}
+		};
+		popupTags.setLightWeightPopupEnabled(false);
+		popupTags.setOpaque(false);
+		popupTags.add(pnlTags);
 	}
 
 	private void setIcons() {
@@ -391,6 +407,7 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 				fixRowCountForVisibleColumns(lstTags);
 			}
 		});
+		pnl.add(btnPinUnpinTagsPanel, BorderLayout.SOUTH);
 		return pnl;
 	}
 
@@ -469,7 +486,7 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 
 		add(pnlFilter, BorderLayout.NORTH);
 		//		add(pnlTags);
-		add(btnResizeGameFilterPane, BorderLayout.SOUTH);
+		//		add(btnResizeGameFilterPane, BorderLayout.SOUTH);
 
 		txtSearchGame.addKeyListener(new KeyAdapter() {
 			@Override

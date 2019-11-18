@@ -431,7 +431,7 @@ public class Main {
 	}
 
 	private static void initializeCustomTheme() throws IOException {
-		IconStore.current().loadDefaultTheme("mario");
+		IconStore.current().loadDefaultTheme("dark");
 		initializeCustomFonts();
 		initializeCustomColors();
 		initializeCustomMenus();

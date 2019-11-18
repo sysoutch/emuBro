@@ -821,4 +821,14 @@ public class BroExplorer implements Explorer {
 		}
 		gameTitles.put(p.getId(), prop);
 	}
+
+	@Override
+	public String getRelativeTitlesSourceFilePath(Platform platform) {
+		return "gametdb/db.xml";
+	}
+
+	@Override
+	public String getCoverDownloadSource(Game game) {
+		return "http://art.gametdb.com/";
+	}
 }

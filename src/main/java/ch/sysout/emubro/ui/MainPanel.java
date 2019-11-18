@@ -423,7 +423,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 		}
 		splGameFilterAndCurrentView = new JSplitPane(JSplitPane.VERTICAL_SPLIT, true,
 				pnlGameFilter, viewManager.getCurrentViewPanel());
-		splGameFilterAndCurrentView.setDividerSize(1);
+		splGameFilterAndCurrentView.setDividerSize(0);
 		splGameFilterAndCurrentView.setBorder(BorderFactory.createEmptyBorder());
 
 

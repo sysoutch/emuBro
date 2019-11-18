@@ -177,6 +177,10 @@ public interface Explorer {
 
 	boolean hasGamesOrEmulators(int platformId);
 
+	String getCoverDownloadSource(Game game);
+
+	String getRelativeTitlesSourceFilePath(Platform platform);
+
 	// void addEmulator(Emulator emulator);
 	//
 	// void removeEmulator(Emulator emulator);

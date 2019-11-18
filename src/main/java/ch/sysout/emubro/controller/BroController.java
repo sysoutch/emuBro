@@ -112,8 +112,6 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -423,7 +421,6 @@ GameSelectionListener, BrowseComputerListener {
 	protected FlavorListener lastFlavorListener;
 	private Map<String, File> xmlFiles;
 
-	private BlockingQueue<BufferedImage> queue;
 	private ExecutorService executorServiceDownloadGameCover;
 
 	public BroController(SplashScreenWindow dlgSplashScreen, ExplorerDAO explorerDAO, Explorer model, MainFrame view, Builder discordRpc) {
@@ -3650,7 +3647,7 @@ GameSelectionListener, BrowseComputerListener {
 	 * @param fileType
 	 */
 	protected void setCoverForGame(Game game, Image gameCover, String fileType) {
-		if (fileType != null && !fileType.startsWith(".")) {
+		if (!fileType.startsWith(".")) {
 			fileType = "." + fileType;
 		}
 		String emuBroCoverHome = explorer.getGameCoversPath();
@@ -5621,14 +5618,16 @@ GameSelectionListener, BrowseComputerListener {
 		if (gameCode == null || gameCode.isEmpty()) {
 			System.out.println("no game code set");
 		} else {
-			if (queue == null) {
-				queue = new ArrayBlockingQueue<>(1);
+			String platformShortName = explorer.getPlatform(game.getPlatformId()).getShortName();
+			if (platformShortName == null || platformShortName.trim().isEmpty()) {
+				System.out.println("game has no coversource");
+				return;
 			}
 			if (executorServiceDownloadGameCover == null) {
 				executorServiceDownloadGameCover = Executors.newSingleThreadExecutor();
 			}
-			System.out.println("pool execute...");
-			executorServiceDownloadGameCover.execute(new Runnable() {
+			System.out.println("runnable submitted...");
+			executorServiceDownloadGameCover.submit(new Runnable() {
 
 				@Override
 				public void run() {
@@ -5650,8 +5649,8 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	protected void downloadGameCoverNow(Game game) {
-		String coverPlatform = explorer.getPlatform(game.getPlatformId()).getShortName();
-		String coverSource = "http://art.gametdb.com/" + coverPlatform;
+		String platformShortName = explorer.getPlatform(game.getPlatformId()).getShortName();
+		String coverSource = explorer.getCoverDownloadSource(game);
 		String coverTypes[] = {
 				"cover3D", "cover"
 		};
@@ -5659,7 +5658,7 @@ GameSelectionListener, BrowseComputerListener {
 				"EN", "US"
 		};
 		String coverFileTypes[] = {
-				".png", ".jpg"
+				".png"
 		};
 		URL url = null;
 		String fileType = null;
@@ -5668,15 +5667,32 @@ GameSelectionListener, BrowseComputerListener {
 				for (int l = 0; l < coverFileTypes.length; l++) {
 					try {
 						System.out.println(System.currentTimeMillis() + " getting cover for game: " + game.getName());
-						url = new URL(coverSource + "/"+coverTypes[i]+"/"+coverLanguages[k]+"/"
+						url = new URL(coverSource + platformShortName + "/"+coverTypes[i]+"/"+coverLanguages[k]+"/"
 								+ game.getGameCode() + coverFileTypes[l]);
+						if (url != null) {
+							System.out.println("setting cover for game: " + game.getName() + " url: " + url);
+							try {
+								setCoverForGame(game, ImageIO.read(url), coverFileTypes[l]);
+							} catch (IOException e) {
+								System.out.println("cannot set cover on given url, continue loop.." + url);
+								try {
+									TimeUnit.MICROSECONDS.sleep(1);
+								} catch (InterruptedException e1) {
+									// TODO Auto-generated catch block
+									e1.printStackTrace();
+								}
+								continue;
+							}
+							System.out.println("cover set for game:"+game.getName()+": " + (game.hasCover()));
+						}
 					} catch (MalformedURLException e) {
-						continue;
-					}
-					try {
-						queue.put(ImageIO.read(url));
-						System.out.println("cover put to queue for game: " + game.getName());
-					} catch (InterruptedException | IOException e) {
+						System.out.println("MalformedURLException on given url, continue loop.." + url);
+						try {
+							TimeUnit.MICROSECONDS.sleep(1);
+						} catch (InterruptedException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
 						continue;
 					}
 					System.out.println("end loop: " + game.getName());
@@ -5685,14 +5701,11 @@ GameSelectionListener, BrowseComputerListener {
 				}
 			}
 		}
-		if (url != null) {
-			System.out.println("setting cover for game: " + game.getName());
-			try {
-				setCoverForGame(game, queue.take(), fileType);
-				System.out.println("cover set for game:"+game.getName()+": " + (game.hasCover()));
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
+		try {
+			TimeUnit.MICROSECONDS.sleep(1);
+		} catch (InterruptedException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
 		}
 	}
 
@@ -7402,7 +7415,7 @@ GameSelectionListener, BrowseComputerListener {
 
 	private void setGameTitlesForPlatform(Platform p) {
 		String dir = explorer.getPlatformsDirectory() + File.separator + p.getShortName()
-		+ File.separator + "games" + File.separator + "titles.txt";
+		+ File.separator + "games" + File.separator + "sources" + File.separator + "gametdb" + File.separator + "titles.txt";
 		File f = new File(dir);
 		if (f.exists()) {
 			Properties prop = new Properties();
@@ -7436,33 +7449,32 @@ GameSelectionListener, BrowseComputerListener {
 	@Override
 	public void emulatorAdded(EmulatorEvent e) {
 		view.emulatorAdded(e);
-
-		File emuFile = new File(e.getEmulator().getPath());
-		ImageIcon ii = (ImageIcon) FileSystemView.getFileSystemView().getSystemIcon(emuFile);
-		int width = ii.getIconWidth();
-		int height = ii.getIconHeight();
-
-		double size = 32;
-		double factor2 = (height / size);
-		if (height > size) {
-			height = (int) (height / factor2);
-			width = (int) (width / factor2);
-		}
-		BufferedImage bi = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-		Graphics2D g2d = bi.createGraphics();
-		g2d.addRenderingHints(new RenderingHints(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY));
-		g2d.drawImage(ii.getImage(), 0, 0, width, height, null);
-		String emuBroIconHome = explorer.getResourcesPath() + File.separator + "images" + File.separator + "emulators";
-		String iconPathString = emuBroIconHome + File.separator + e.getEmulator().getId() + ".png";
+		String emuBroIconHome = explorer.getResourcesPath() + File.separator + "platforms" + File.separator + e.getPlatform().getShortName() + File.separator + "emulators" + File.separator + e.getEmulator().getShortName() + File.separator + "logo";
+		String iconPathString = emuBroIconHome + File.separator + "default.png";
 		File iconHomeFile = new File(iconPathString);
 		if (!iconHomeFile.exists()) {
 			iconHomeFile.mkdirs();
-		}
-		try {
-			ImageIO.write(bi, "png", new File(iconPathString));
-		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
+			File emuFile = new File(e.getEmulator().getPath());
+			ImageIcon ii = (ImageIcon) FileSystemView.getFileSystemView().getSystemIcon(emuFile);
+			int width = ii.getIconWidth();
+			int height = ii.getIconHeight();
+
+			double size = 32;
+			double factor2 = (height / size);
+			if (height > size) {
+				height = (int) (height / factor2);
+				width = (int) (width / factor2);
+			}
+			BufferedImage bi = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+			Graphics2D g2d = bi.createGraphics();
+			g2d.addRenderingHints(new RenderingHints(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY));
+			g2d.drawImage(ii.getImage(), 0, 0, width, height, null);
+			try {
+				ImageIO.write(bi, "png", new File(iconPathString));
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
 		}
 	}
 
@@ -7828,79 +7840,82 @@ GameSelectionListener, BrowseComputerListener {
 				xmlFiles = new HashMap<>();
 			}
 			String platformShortName = p0.getShortName();
-			if (!xmlFiles.containsKey(platformShortName)) {
-				File xmlFile = new File(explorer.getResourcesPath() + "/platforms/"+platformShortName+"/games/db.xml");
-				xmlFiles.put(platformShortName, xmlFile);
-			}
-			File xmlFile = xmlFiles.get(platformShortName);
-			if (!xmlFile.exists()) {
-				// check if zip exists.
-				// if it doesn't exist: download it from gametdb and save it to this folder
-				// if it exists: unpack zip and check again
-			} else {
-				Map<String, List<String[]>> elements = countElements(xmlFile,
-						gameCode);
-				if (elements != null) {
-					List<String[]> arrays = elements.get(gameCode);
-					if (arrays != null) {
-						for (String[] array : arrays) {
-							if (array[0].equals("region")) {
-								element.setRegion(array[1]);
-								try {
-									explorerDAO.setRegion(gameId, array[1]);
-								} catch (SQLException e) {
-									// TODO Auto-generated catch block
-									e.printStackTrace();
-								}
-							} else if (array[0].equals("languages")) {
-								element.setLanguages(array[1]);
-								try {
-									explorerDAO.setLanguages(gameId, array[1].split(","));
-								} catch (SQLException e) {
-									// TODO Auto-generated catch block
-									e.printStackTrace();
-								}
-							} else if (array[0].equals("synopsis")) {
-								element.setDescription(array[1]);
-								try {
-									explorerDAO.setGameDescription(gameId, array[1]);
-								} catch (SQLException e) {
-									// TODO Auto-generated catch block
-									e.printStackTrace();
-								}
-							} else if (array[0].equals("developer")) {
-								element.setDeveloper(array[1]);
-								try {
-									explorerDAO.setDeveloper(gameId, array[1]);
-								} catch (SQLException e) {
-									// TODO Auto-generated catch block
-									e.printStackTrace();
-								}
-							} else if (array[0].equals("publisher")) {
-								element.setPublisher(array[1]);
-								try {
-									explorerDAO.setPublisher(gameId, array[1]);
-								} catch (SQLException e) {
-									// TODO Auto-generated catch block
-									e.printStackTrace();
-								}
-							} else if (array[0].equals("genre")) {
-								String[] genres = array[1].split(",");
-								for (String genre : genres) {
-									if (!explorer.hasTag(genre)) {
-										BroTag tag = new BroTag(-1, genre, null);
-										explorerDAO.addTag(tag);
-										tag.setId(explorerDAO.getLastAddedTagId());
-										explorer.addTag(tag);
+			String relativeTitlesSourceFilePath = explorer.getRelativeTitlesSourceFilePath(p0);
+			if (relativeTitlesSourceFilePath != null && !relativeTitlesSourceFilePath.isEmpty()) {
+				if (!xmlFiles.containsKey(platformShortName)) {
+					File xmlFile = new File(explorer.getResourcesPath() + "/platforms/"+platformShortName+"/games/sources/"+relativeTitlesSourceFilePath);
+					xmlFiles.put(platformShortName, xmlFile);
+				}
+				File xmlFile = xmlFiles.get(platformShortName);
+				if (!xmlFile.exists()) {
+					// check if zip exists.
+					// if it doesn't exist: download it from gametdb and save it to this folder
+					// if it exists: unpack zip and check again
+				} else {
+					Map<String, List<String[]>> elements = countElements(xmlFile,
+							gameCode);
+					if (elements != null) {
+						List<String[]> arrays = elements.get(gameCode);
+						if (arrays != null) {
+							for (String[] array : arrays) {
+								if (array[0].equals("region")) {
+									element.setRegion(array[1]);
+									try {
+										explorerDAO.setRegion(gameId, array[1]);
+									} catch (SQLException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
 									}
-									Tag tag = explorer.getTag(genre);
-									if (!element.hasTag(tag.getId())) {
-										element.addTag(tag);
-										try {
-											explorerDAO.addTag(element.getId(), tag);
-										} catch (SQLException e) {
-											// TODO Auto-generated catch block
-											e.printStackTrace();
+								} else if (array[0].equals("languages")) {
+									element.setLanguages(array[1]);
+									try {
+										explorerDAO.setLanguages(gameId, array[1].split(","));
+									} catch (SQLException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									}
+								} else if (array[0].equals("synopsis")) {
+									element.setDescription(array[1]);
+									try {
+										explorerDAO.setGameDescription(gameId, array[1]);
+									} catch (SQLException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									}
+								} else if (array[0].equals("developer")) {
+									element.setDeveloper(array[1]);
+									try {
+										explorerDAO.setDeveloper(gameId, array[1]);
+									} catch (SQLException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									}
+								} else if (array[0].equals("publisher")) {
+									element.setPublisher(array[1]);
+									try {
+										explorerDAO.setPublisher(gameId, array[1]);
+									} catch (SQLException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									}
+								} else if (array[0].equals("genre")) {
+									String[] genres = array[1].split(",");
+									for (String genre : genres) {
+										if (!explorer.hasTag(genre)) {
+											BroTag tag = new BroTag(-1, genre, null);
+											explorerDAO.addTag(tag);
+											tag.setId(explorerDAO.getLastAddedTagId());
+											explorer.addTag(tag);
+										}
+										Tag tag = explorer.getTag(genre);
+										if (!element.hasTag(tag.getId())) {
+											element.addTag(tag);
+											try {
+												explorerDAO.addTag(element.getId(), tag);
+											} catch (SQLException e) {
+												// TODO Auto-generated catch block
+												e.printStackTrace();
+											}
 										}
 									}
 								}
@@ -7924,7 +7939,7 @@ GameSelectionListener, BrowseComputerListener {
 				g2d.addRenderingHints(
 						new RenderingHints(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY));
 				g2d.drawImage(ii.getImage(), 0, 0, width, height, null);
-				String emuBroIconHome = explorer.getResourcesPath() + File.separator+ "images" + File.separator + "games" + File.separator + "icons";
+				String emuBroIconHome = explorer.getResourcesPath() + File.separator + "games" + File.separator + File.separator + "icons";
 				String iconPathString = emuBroIconHome + File.separator + explorer.getPlatform(element.getPlatformId()).getShortName() + File.separator + element.getName() + ".png";
 				File iconHomeFile = new File(iconPathString);
 				if (!iconHomeFile.exists()) {
