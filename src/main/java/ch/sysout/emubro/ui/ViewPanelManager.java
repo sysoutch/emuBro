@@ -41,7 +41,7 @@ public class ViewPanelManager {
 	private int columnWidth = ScreenSizeUtil.adjustValueToResolution(250);
 	private int fontSize;
 
-	private BlankViewPanel pnlBlankView = new BlankViewPanel();
+	private WelcomeViewPanel pnlBlankView = new WelcomeViewPanel();
 	private ViewPanel currentViewPanel = pnlBlankView;
 	private int selectedGameId = GameConstants.NO_GAME;
 
@@ -631,7 +631,7 @@ public class ViewPanelManager {
 		return null;
 	}
 
-	public BlankViewPanel getBlankViewPanel() {
+	public WelcomeViewPanel getBlankViewPanel() {
 		return pnlBlankView;
 	}
 }

@@ -30,11 +30,12 @@ import com.jgoodies.forms.layout.FormLayout;
 
 import ch.sysout.emubro.api.model.Emulator;
 import ch.sysout.emubro.controller.BroController.EmulatorListCellRenderer;
+import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.ui.util.JCustomButton;
+import ch.sysout.ui.util.JCustomButton2;
+import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Icons;
-import ch.sysout.util.ImageUtil;
 import ch.sysout.util.ScreenSizeUtil;
-import ch.sysout.util.UIUtil;
 import ch.sysout.util.ValidationUtil;
 
 public class AddEmulatorPanel extends JPanel {
@@ -44,8 +45,8 @@ public class AddEmulatorPanel extends JPanel {
 	private SupportedEmulatorsPanel pnlDownloadEmulators;
 	private ReadyToInstallEmulatorsPanel pnlReadyToInstallEmulators;
 
-	private AbstractButton btnDownloadEmulators = new JCustomButton("<html><strong>Step 1:</strong> Download an emulator</html>", ImageUtil.getImageIconFrom(Icons.get("fromWeb", 32, 32)));
-	private AbstractButton btnReadyToInstallEmulators = new JCustomButton("<html><strong>Step 2:</strong> Add your emulator</html>", ImageUtil.getImageIconFrom(Icons.get("fromComputer", 32, 32)));
+	private AbstractButton btnDownloadEmulators = new JCustomButton2("<html><strong>Step 1:</strong> Download an emulator</html>", ImageUtil.getImageIconFrom(Icons.get("fromWeb", 32, 32)));
+	private AbstractButton btnReadyToInstallEmulators = new JCustomButton2("<html><strong>Step 2:</strong> Add your emulator</html>", ImageUtil.getImageIconFrom(Icons.get("fromComputer", 32, 32)));
 
 	protected int minimumDividerLocation = -1;
 	protected int maximumDividerLocation = -1;
@@ -59,7 +60,7 @@ public class AddEmulatorPanel extends JPanel {
 		add(pnlTop, BorderLayout.NORTH);
 		pnlDownloadEmulators = new SupportedEmulatorsPanel();
 		pnlReadyToInstallEmulators = new ReadyToInstallEmulatorsPanel();
-		JSplitPane spl = new JSplitPane();
+		final JSplitPane spl = new JSplitPane();
 		spl.setBorder(BorderFactory.createEmptyBorder());
 		spl.setContinuousLayout(true);
 		spl.setOrientation(JSplitPane.VERTICAL_SPLIT);

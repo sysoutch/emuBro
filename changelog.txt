@@ -1,24 +1,24 @@
 v0.8.0
-- new feature: auto download covers and set real titles for games
-- new feature: auto download emulators
-- unplanned feature: not able to update to this emuBro version. full package must be downloaded, sorry. at least database should update fine...
-- added: themes
-- added: gamebanner images
-- added: auto get game informations from xml file if supported
-- added: slider view
-- added: Discord Rich Presence
-- added: a game can now have an id. e.g. (Mario Kart Wii RMCP01)
-* added: new item "copy game path" to game context menu
-- fixed: reimproved browsing computer feature
-- fixed: annoying row height changes when switching views
-- fixed: startup speed improved a lot by lazy loading game covers
-- fixed button bar button behaviour
-- fixed: weird bug that selects all games after setting a filter
-- changed: reading file checksum improved for huge files regarding ram usage
-- changed: emubro-resources folder structure
-- changed: folder and file names for game covers
-- changed: madee a link label out of platform label in preview pane to add it to filter
-- removed help images (de/fr) from jar
+![feature] auto download covers and set real titles for games
+![feature] auto download emulators
+?[unplanned] not able to update to this emuBro version. full package must be downloaded, sorry. at least database should update fine...
++[added] flat look and feel + themes
++[added] gamebanner images
++[added] auto get game informations from xml file if supported
++[added] slider view
++[added] Discord Rich Presence
++[added] a game can now have an id. e.g. (Mario Kart Wii RMCP01)
++[added] new item "copy game path" in game context menu
+*[fixed] reimproved browsing computer feature
+*[fixed] annoying row height changes when switching views
+*[fixed] startup speed improved a lot by lazy loading game covers
+*[fixed] button bar button behaviour
+*[fixed] weird bug that selects all games after setting a filter
+~[changed] reading file checksum improved for huge files regarding ram usage
+~[changed] emubro-resources folder structure
+~[changed] folder and file names for game covers
+~[changed] clicking on platform label in preview pane add that platform to the filter
+-[removed] help images (de/fr) from jar
 
 
 v0.7.1
@@ -26,4 +26,4 @@ v0.7.1
 
 
 v0.7.0
-test release
+- test release

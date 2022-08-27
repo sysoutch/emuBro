@@ -4,7 +4,7 @@ import java.awt.Color;
 import java.awt.GradientPaint;
 import java.awt.image.BufferedImage;
 
-import ch.sysout.util.ImageUtil;
+import ch.sysout.ui.util.ImageUtil;
 
 public class ThemeFactory {
 	private static Color defaultBackgroundColor = Color.WHITE;

@@ -1,7 +1,6 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.Component;
-import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.PopupMenu;
@@ -344,13 +343,13 @@ public class ButtonBarPanel extends JPanel {
 		int panelHeight = getHeight();
 		Theme currentTheme = IconStore.current().getCurrentTheme();
 		ThemeBackground currentBackground = currentTheme.getButtonBar();
-		if (currentBackground.hasGradientPaint()) {
-			GradientPaint p = currentBackground.getGradientPaint();
-			g2d.setPaint(p);
-		} else if (currentBackground.hasColor()) {
-			g2d.setColor(currentBackground.getColor());
-		}
-		g2d.fillRect(0, 0, panelWidth, panelHeight);
+		//		if (currentBackground.hasGradientPaint()) {
+		//			GradientPaint p = currentBackground.getGradientPaint();
+		//			g2d.setPaint(p);
+		//		} else if (currentBackground.hasColor()) {
+		//			g2d.setColor(currentBackground.getColor());
+		//		}
+		//		g2d.fillRect(0, 0, panelWidth, panelHeight);
 
 		BufferedImage background = currentBackground.getImage();
 		if (background != null) {

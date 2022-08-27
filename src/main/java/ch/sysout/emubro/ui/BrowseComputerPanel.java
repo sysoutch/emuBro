@@ -1,6 +1,7 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -33,27 +34,28 @@ import ch.sysout.emubro.api.event.EmulatorEvent;
 import ch.sysout.emubro.api.event.GameAddedEvent;
 import ch.sysout.emubro.api.event.GameRemovedEvent;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.ui.util.JCustomButton;
+import ch.sysout.ui.util.JCustomButton2;
+import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Icons;
-import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
-import ch.sysout.util.UIUtil;
 
 public class BrowseComputerPanel extends JPanel implements GameListener, EmulatorListener {
 	private static final long serialVersionUID = 1L;
 	private JLabel lblDragDropCover = new JLabel(Messages.get(MessageConstants.DRAG_AND_DROP_FOLDER_HERE));
-	private JButton btnAutoSearch = new JCustomButton(Messages.get(MessageConstants.SEARCH_NOW));
-	private JButton btnCustomSearch = new JCustomButton(Messages.get(MessageConstants.SEARCH_CUSTOM));
-	private JButton btnQuickSearch = new JCustomButton(Messages.get(MessageConstants.SEARCH_QUICK));
-	private JButton btnLastSearch = new JCustomButton(Messages.get(MessageConstants.SEARCH_LAST));
+	private JButton btnAutoSearch = new JCustomButton2(Messages.get(MessageConstants.SEARCH_NOW));
+	private JButton btnCustomSearch = new JCustomButton2(Messages.get(MessageConstants.SEARCH_CUSTOM));
+	private JButton btnQuickSearch = new JCustomButton2(Messages.get(MessageConstants.SEARCH_QUICK));
+	private JButton btnLastSearch = new JCustomButton2(Messages.get(MessageConstants.SEARCH_LAST));
 	private JCheckBox chkGameSearch = new JCheckBox(Messages.get(MessageConstants.SEARCH_GAMES));
 	private JCheckBox chkEmulatorSearch = new JCheckBox(Messages.get(MessageConstants.SEARCH_EMULATORS));
-	private JButton btnQuickSearchNow = new JCustomButton(MessageConstants.SEARCH_NOW_SHORT, ImageUtil.getImageIconFrom(Icons.get("search", 16, 16)));
+	private JButton btnQuickSearchNow = new JCustomButton2(MessageConstants.SEARCH_NOW_SHORT, ImageUtil.getFlatSVGIconFrom(Icons.get("search"), 16, Color.LIGHT_GRAY));
 	private JButton lnkSearchResults = new JLinkButton(Messages.get(MessageConstants.SEARCH_LOGS));
 	private JButton lnkSearchSettings = new JLinkButton(Messages.get(MessageConstants.SEARCH_PROGRESS_SETTINGS));
-	private JButton btnUncategorized = new JCustomButton(Messages.get(MessageConstants.ARCHIVES_AND_IMAGE_FILES, 0));
-	private JButton btnSetupFiles = new JCustomButton(Messages.get(MessageConstants.SEARCH_CUSTOM));
+	private JButton btnUncategorized = new JCustomButton2(Messages.get(MessageConstants.ARCHIVES_AND_IMAGE_FILES, 0));
+	private JButton btnSetupFiles = new JCustomButton2(Messages.get(MessageConstants.SEARCH_CUSTOM));
 
 	private JButton btnCustomSearchNow;
 
@@ -122,7 +124,7 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 		btnSetupFiles.setVerticalAlignment(SwingConstants.CENTER);
 		btnSetupFiles.setIcon(ImageUtil.getImageIconFrom(Icons.get("setup", 22, 22)));
 
-		FormLayout layout = new FormLayout("default, $ugap:grow, $lcgap, min:grow, $rgap, $lcgap, min:grow",
+		FormLayout layout = new FormLayout("default, $ugap, $lcgap, min, $rgap, $lcgap, min, min:grow",
 				"$ugap, fill:pref, $rgap, fill:pref");
 		pnlLinks = new JPanel(layout);
 		pnlLinks.setOpaque(false);
@@ -138,7 +140,7 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 
 		tree = new FileTree();
 		btnCustomSearchNow = new JCustomButton(Messages.get(MessageConstants.SEARCH_NOW_SHORT));
-		btnCustomSearchNow.setIcon(ImageUtil.getImageIconFrom(Icons.get("search", 24, 24)));
+		btnCustomSearchNow.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("search"), 16, Color.LIGHT_GRAY));
 		pnlFileTree = new JPanel(new BorderLayout());
 		pnlFileTree.setOpaque(false);
 		pnlFileTree.add(tree);
@@ -188,7 +190,7 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 		layoutNormal.setColumnGroup(1, 3);
 
 		int size = ScreenSizeUtil.is3k() ? 32 : 24;
-		btnAutoSearch.setIcon(ImageUtil.getImageIconFrom(Icons.get("search", size, size)));
+		btnAutoSearch.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("search"), size, Color.LIGHT_GRAY));
 		btnCustomSearch.setIcon(ImageUtil.getImageIconFrom(Icons.get("browseFolder", size, size)));
 		btnQuickSearch.setIcon(ImageUtil.getImageIconFrom(Icons.get("quickSearch", size, size)));
 		btnLastSearch.setIcon(ImageUtil.getImageIconFrom(Icons.get("recentSearch", size, size)));
@@ -417,10 +419,10 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 		btnSetupFiles.setText(Messages.get(MessageConstants.SETUP_FILES, 0));
 		btnSetupFiles.setHorizontalAlignment(SwingConstants.LEFT);
 		btnUncategorized.setHorizontalAlignment(SwingConstants.LEFT);
-		btnSetupFiles.setHorizontalTextPosition(SwingConstants.RIGHT);
-		btnUncategorized.setHorizontalTextPosition(SwingConstants.RIGHT);
-		btnSetupFiles.setVerticalTextPosition(SwingConstants.CENTER);
-		btnUncategorized.setVerticalTextPosition(SwingConstants.CENTER);
+		//		btnSetupFiles.setHorizontalTextPosition(SwingConstants.RIGHT);
+		//		btnUncategorized.setHorizontalTextPosition(SwingConstants.RIGHT);
+		//		btnSetupFiles.setVerticalTextPosition(SwingConstants.CENTER);
+		//		btnUncategorized.setVerticalTextPosition(SwingConstants.CENTER);
 	}
 
 	@Override

@@ -19,7 +19,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.stream.JsonReader;
 
-import ch.sysout.util.ImageUtil;
+import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.util.ScreenSizeUtil;
 
 public class IconStore {
@@ -111,7 +111,7 @@ public class IconStore {
 			theme.setGameFilterPane(ThemeFactory.createThemeBackground(gameFilterPaneColor));
 
 			if (viewImage != null) {
-				ThemeBackground themeBackGround = ThemeFactory.createThemeBackground(themeDirectory + "/images/" + viewImage);
+				ThemeBackground themeBackGround = ThemeFactory.createThemeBackground(themeDirectory + File.separator + "images" + File.separator + viewImage);
 				themeBackGround.setColor(viewColor);
 				theme.setView(themeBackGround);
 			} else {
@@ -121,7 +121,7 @@ public class IconStore {
 			theme.setDetailsPane(ThemeFactory.createThemeBackground(detailsPaneColor));
 			theme.setTabs(ThemeFactory.createThemeBackground(tabsColor));
 			if (previewPaneImage != null) {
-				ThemeBackground themeBackGround = ThemeFactory.createThemeBackground(themeDirectory + "/images/" + previewPaneImage);
+				ThemeBackground themeBackGround = ThemeFactory.createThemeBackground(themeDirectory + File.separator + "images" + File.separator + previewPaneImage);
 				themeBackGround.setColor(previewPaneColor);
 				theme.setPreviewPane(themeBackGround);
 			} else {
@@ -324,38 +324,38 @@ public class IconStore {
 	}
 
 	public ImageIcon getScaledGameCover(int gameId, int currentCoverSize) {
-		ImageIcon icon = getGameCover(gameId);
+		ImageIcon gameCover = getGameCover(gameId);
 		Map<Integer, ImageIcon> scaledIconMap = scaledGameCovers.get(gameId);
 		if (scaledIconMap != null) {
 			if (scaledIconMap.containsKey(currentCoverSize)) {
-				icon = scaledIconMap.get(currentCoverSize);
+				gameCover = scaledIconMap.get(currentCoverSize);
 			}
 			else {
 				int scaleOption = CoverConstants.SCALE_AUTO_OPTION;
-				if (icon.getIconWidth() >= icon.getIconHeight()) {
+				if (gameCover.getIconWidth() >= gameCover.getIconHeight()) {
 					scaleOption = CoverConstants.SCALE_WIDTH_OPTION;
-				} else if (icon.getIconWidth() < icon.getIconHeight()) {
+				} else if (gameCover.getIconWidth() < gameCover.getIconHeight()) {
 					scaleOption = CoverConstants.SCALE_HEIGHT_OPTION;
 				}
-				icon = ImageUtil.scaleCover(icon, currentCoverSize, scaleOption);
-				scaledIconMap.put(currentCoverSize, icon);
+				gameCover = ImageUtil.scaleCover(gameCover, currentCoverSize, scaleOption);
+				scaledIconMap.put(currentCoverSize, gameCover);
 			}
 		} else {
-			if (icon == null) {
+			if (gameCover == null) {
 				return null;
 			}
 			Map<Integer, ImageIcon> newMap = new HashMap<>();
 			int scaleOption = CoverConstants.SCALE_AUTO_OPTION;
-			if (icon.getIconWidth() >= icon.getIconHeight()) {
+			if (gameCover.getIconWidth() >= gameCover.getIconHeight()) {
 				scaleOption = CoverConstants.SCALE_WIDTH_OPTION;
-			} else if (icon.getIconWidth() < icon.getIconHeight()) {
+			} else if (gameCover.getIconWidth() < gameCover.getIconHeight()) {
 				scaleOption = CoverConstants.SCALE_HEIGHT_OPTION;
 			}
-			icon = ImageUtil.scaleCover(icon, currentCoverSize, scaleOption);
-			newMap.put(currentCoverSize, icon);
+			gameCover = ImageUtil.scaleCover(gameCover, currentCoverSize, scaleOption);
+			newMap.put(currentCoverSize, gameCover);
 			scaledGameCovers.put(gameId, newMap);
 		}
-		return icon;
+		return gameCover;
 	}
 
 	public void addGameCoverListener(GameCoverListener l) {

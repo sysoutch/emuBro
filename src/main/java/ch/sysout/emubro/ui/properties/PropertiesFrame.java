@@ -2,9 +2,6 @@ package ch.sysout.emubro.ui.properties;
 
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
-import java.awt.GradientPaint;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
@@ -54,12 +51,9 @@ import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.controller.BroController.EmulatorListCellRenderer;
 import ch.sysout.emubro.controller.BroController.PlatformListCellRenderer;
 import ch.sysout.emubro.impl.model.BroEmulator;
-import ch.sysout.emubro.ui.IconStore;
 import ch.sysout.emubro.ui.JCustomScrollPane;
-import ch.sysout.emubro.ui.Theme;
 import ch.sysout.emubro.ui.WrapLayout;
 import ch.sysout.emubro.util.MessageConstants;
-import ch.sysout.ui.util.JCustomButton;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 
@@ -133,31 +127,27 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 		pnlMain = new JPanel(new BorderLayout()) {
 			private static final long serialVersionUID = 1L;
 
-			@Override
-			protected void paintComponent(Graphics g) {
-				super.paintComponent(g);
-				Graphics2D g2d = (Graphics2D) g.create();
-				int panelWidth = getWidth();
-				int panelHeight = getHeight();
-				Theme currentTheme = IconStore.current().getCurrentTheme();
-				if (currentTheme.getView().hasGradientPaint()) {
-					GradientPaint p = currentTheme.getView().getGradientPaint();
-					g2d.setPaint(p);
-				} else if (currentTheme.getView().hasColor()) {
-					g2d.setColor(currentTheme.getView().getColor());
-				}
-				g2d.fillRect(0, 0, panelWidth, panelHeight);
-				g2d.dispose();
-			}
+			//			@Override
+			//			protected void paintComponent(Graphics g) {
+			//				super.paintComponent(g);
+			//				Graphics2D g2d = (Graphics2D) g.create();
+			//				int panelWidth = getWidth();
+			//				int panelHeight = getHeight();
+			//				Theme currentTheme = IconStore.current().getCurrentTheme();
+			//				if (currentTheme.getView().hasGradientPaint()) {
+			//					GradientPaint p = currentTheme.getView().getGradientPaint();
+			//					g2d.setPaint(p);
+			//				} else if (currentTheme.getView().hasColor()) {
+			//					g2d.setColor(currentTheme.getView().getColor());
+			//				}
+			//				g2d.fillRect(0, 0, panelWidth, panelHeight);
+			//				g2d.dispose();
+			//			}
 		};
 		pnlMain.setOpaque(false);
 		pnlMain.setBorder(Paddings.TABBED_DIALOG);
 		JScrollPane spTab1 = new JCustomScrollPane(pnlManagePlatforms);
 		JScrollPane spTab2 = new JCustomScrollPane(pnlAdvancedProperties);
-		spTab1.setOpaque(false);
-		spTab1.getViewport().setOpaque(false);
-		pnlManagePlatforms.setOpaque(false);
-		tpMain.setOpaque(false);
 		spTab1.setBorder(BorderFactory.createEmptyBorder());
 		spTab2.setBorder(BorderFactory.createEmptyBorder());
 
@@ -165,14 +155,14 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 		spTab2.getVerticalScrollBar().setUnitIncrement(16);
 
 		tpMain.addTab(Messages.get(MessageConstants.GENERAL), spTab1);
-		//		tpMain.addTab(Messages.get(MessageConstants.ADVANCED), spTab2);
+		tpMain.addTab(Messages.get(MessageConstants.ADVANCED), spTab2);
 		//		tpMain.setEnabledAt(1, false);
 		pnlMain.add(tpMain);
 
 		JPanel pnl = new JPanel(new BorderLayout());
 		pnl.setOpaque(false);
 		pnl.setBorder(new EmptyBorder(10, 0, 0, 0));
-		pnl.add(btnClose = new JCustomButton(Messages.get(MessageConstants.CLOSE)), BorderLayout.EAST);
+		pnl.add(btnClose = new JButton(Messages.get(MessageConstants.CLOSE)), BorderLayout.EAST);
 		pnlMain.add(pnl, BorderLayout.SOUTH);
 		add(pnlMain);
 		pack();

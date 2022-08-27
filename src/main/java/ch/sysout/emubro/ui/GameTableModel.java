@@ -15,8 +15,8 @@ import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.impl.model.EmulatorConstants;
 import ch.sysout.emubro.impl.model.PlatformConstants;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Messages;
-import ch.sysout.util.UIUtil;
 
 public class GameTableModel extends DefaultTableModel {
 	private static final long serialVersionUID = 1L;

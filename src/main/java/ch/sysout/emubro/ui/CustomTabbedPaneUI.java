@@ -3,7 +3,6 @@ package ch.sysout.emubro.ui;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.FontMetrics;
-import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
@@ -12,7 +11,6 @@ import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.util.Arrays;
 
-import javax.swing.UIManager;
 import javax.swing.plaf.basic.BasicGraphicsUtils;
 import javax.swing.plaf.basic.BasicTabbedPaneUI;
 import javax.swing.text.View;
@@ -97,61 +95,61 @@ public class CustomTabbedPaneUI extends BasicTabbedPaneUI {
 		super.paintTabArea(g, tabPlacement, selectedIndex);
 	}
 
-	@Override
-	protected void paintTabBackground(Graphics g, int tabPlacement, int tabIndex, int x, int y, int w, int h, boolean isSelected) {
-		Graphics2D g2D = (Graphics2D) g;
-		GradientPaint gradientShadow;
-		int xp[] = null; // Para la forma
-		int yp[] = null;
-		switch (tabPlacement) {
-		case LEFT:
-			xp = new int[]{x, x, x + w, x + w, x};
-			yp = new int[]{y, y + h - 3, y + h - 3, y, y};
-			gradientShadow = new GradientPaint(x, y, new Color(100, 100, 255), x, y + h, Color.ORANGE);
-			break;
-		case RIGHT:
-			xp = new int[]{x, x, x + w - 2, x + w - 2, x};
-			yp = new int[]{y, y + h - 3, y + h - 3, y, y};
-			gradientShadow = new GradientPaint(x, y, new Color(100, 100, 255), x, y + h, new Color(153, 186, 243));
-			break;
-		case BOTTOM:
-			xp = new int[]{x, x, x + 3, x + w - inclTab - 6, x + w - inclTab - 2, x + w - inclTab, x + w - 3, x};
-			yp = new int[]{y, y + h - 3, y + h, y + h, y + h - 1, y + h - 3, y, y};
-			gradientShadow = new GradientPaint(x, y, new Color(100, 100, 255), x, y + h, Color.BLUE);
-			break;
-		case TOP:
-		default:
-			xp = new int[]{x, x, x + 3, x + w - inclTab - 6, x + w - inclTab - 2, x + w - inclTab, x + w - inclTab, x};
-			yp = new int[]{y + h, y + 3, y, y, y + 1, y + 3, y + h, y + h};
-			gradientShadow = new GradientPaint(0, 0, Color.ORANGE, 0, y + h / 2, new Color(240, 255, 210));
-			break;
-		}
-		// ;
-		shape = new Polygon(xp, yp, xp.length);
-		if (isSelected) {
-			Color selectColor = IconStore.current().getCurrentTheme().getView().getColor();
-			g2D.setColor(selectColor);
-			//			g2D.setPaint(gradientShadow);
-		} else {
-			if (tabPane.isEnabled() && tabPane.isEnabledAt(tabIndex)) {
-				Color deSelectColor = IconStore.current().getCurrentTheme().getNavigationPane().getColor();
-				g2D.setColor(deSelectColor);
-				GradientPaint gradientShadowTmp = new GradientPaint(0, 0, new Color(255, 255, 200), 0, y + h / 2, new Color(240, 255, 210));
-				//				g2D.setPaint(gradientShadowTmp);
-			} else {
-				GradientPaint gradientShadowTmp = new GradientPaint(0, 0, new Color(240, 255, 210), 0, y + 15 + h / 2, new Color(204, 204, 204));
-				//				g2D.setPaint(gradientShadowTmp);
-			}
-		}
-		//selectColor = new Color(255, 255, 200);
-		//deSelectColor = new Color(240, 255, 210);
-		g2D.fill(shape);
-		if (runCount > 1) {
-			g2D.setColor(hazAlfa(getRunForTab(tabPane.getTabCount(), tabIndex) - 1));
-			g2D.fill(shape);
-		}
-		g2D.fill(shape);
-	}
+	//	@Override
+	//	protected void paintTabBackground(Graphics g, int tabPlacement, int tabIndex, int x, int y, int w, int h, boolean isSelected) {
+	//		Graphics2D g2D = (Graphics2D) g;
+	//		GradientPaint gradientShadow;
+	//		int xp[] = null; // Para la forma
+	//		int yp[] = null;
+	//		switch (tabPlacement) {
+	//		case LEFT:
+	//			xp = new int[]{x, x, x + w, x + w, x};
+	//			yp = new int[]{y, y + h - 3, y + h - 3, y, y};
+	//			gradientShadow = new GradientPaint(x, y, new Color(100, 100, 255), x, y + h, Color.ORANGE);
+	//			break;
+	//		case RIGHT:
+	//			xp = new int[]{x, x, x + w - 2, x + w - 2, x};
+	//			yp = new int[]{y, y + h - 3, y + h - 3, y, y};
+	//			gradientShadow = new GradientPaint(x, y, new Color(100, 100, 255), x, y + h, new Color(153, 186, 243));
+	//			break;
+	//		case BOTTOM:
+	//			xp = new int[]{x, x, x + 3, x + w - inclTab - 6, x + w - inclTab - 2, x + w - inclTab, x + w - 3, x};
+	//			yp = new int[]{y, y + h - 3, y + h, y + h, y + h - 1, y + h - 3, y, y};
+	//			gradientShadow = new GradientPaint(x, y, new Color(100, 100, 255), x, y + h, Color.BLUE);
+	//			break;
+	//		case TOP:
+	//		default:
+	//			xp = new int[]{x, x, x + 3, x + w - inclTab - 6, x + w - inclTab - 2, x + w - inclTab, x + w - inclTab, x};
+	//			yp = new int[]{y + h, y + 3, y, y, y + 1, y + 3, y + h, y + h};
+	//			gradientShadow = new GradientPaint(0, 0, Color.ORANGE, 0, y + h / 2, new Color(240, 255, 210));
+	//			break;
+	//		}
+	//		// ;
+	//		shape = new Polygon(xp, yp, xp.length);
+	//		if (isSelected) {
+	//			Color selectColor = IconStore.current().getCurrentTheme().getView().getColor();
+	//			g2D.setColor(selectColor);
+	//			//			g2D.setPaint(gradientShadow);
+	//		} else {
+	//			if (tabPane.isEnabled() && tabPane.isEnabledAt(tabIndex)) {
+	//				Color deSelectColor = IconStore.current().getCurrentTheme().getNavigationPane().getColor();
+	//				g2D.setColor(deSelectColor);
+	//				GradientPaint gradientShadowTmp = new GradientPaint(0, 0, new Color(255, 255, 200), 0, y + h / 2, new Color(240, 255, 210));
+	//				//				g2D.setPaint(gradientShadowTmp);
+	//			} else {
+	//				GradientPaint gradientShadowTmp = new GradientPaint(0, 0, new Color(240, 255, 210), 0, y + 15 + h / 2, new Color(204, 204, 204));
+	//				//				g2D.setPaint(gradientShadowTmp);
+	//			}
+	//		}
+	//		//selectColor = new Color(255, 255, 200);
+	//		//deSelectColor = new Color(240, 255, 210);
+	//		g2D.fill(shape);
+	//		if (runCount > 1) {
+	//			g2D.setColor(hazAlfa(getRunForTab(tabPane.getTabCount(), tabIndex) - 1));
+	//			g2D.fill(shape);
+	//		}
+	//		g2D.fill(shape);
+	//	}
 
 	@Override
 	protected void paintText(Graphics g, int tabPlacement, Font font, FontMetrics metrics, int tabIndex, String title, Rectangle textRect, boolean isSelected) {
@@ -226,17 +224,17 @@ public class CustomTabbedPaneUI extends BasicTabbedPaneUI {
 		}
 	}
 
-	@Override
-	protected void paintTabBorder(Graphics g, int tabPlacement, int tabIndex, int x, int y, int w, int h, boolean isSelected) {
-	}
-
-	@Override
-	protected void paintFocusIndicator(Graphics g, int tabPlacement, Rectangle[] rects, int tabIndex, Rectangle iconRect, Rectangle textRect, boolean isSelected) {
-		if (tabPane.hasFocus() && isSelected) {
-			g.setColor(UIManager.getColor("ScrollBar.thumbShadow"));
-			g.drawPolygon(shape);
-		}
-	}
+	//	@Override
+	//	protected void paintTabBorder(Graphics g, int tabPlacement, int tabIndex, int x, int y, int w, int h, boolean isSelected) {
+	//	}
+	//
+	//	@Override
+	//	protected void paintFocusIndicator(Graphics g, int tabPlacement, Rectangle[] rects, int tabIndex, Rectangle iconRect, Rectangle textRect, boolean isSelected) {
+	//		if (tabPane.hasFocus() && isSelected) {
+	//			g.setColor(UIManager.getColor("ScrollBar.thumbShadow"));
+	//			g.drawPolygon(shape);
+	//		}
+	//	}
 
 	protected Color hazAlfa(int fila) {
 		int alfa = 0;

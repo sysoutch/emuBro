@@ -4,9 +4,9 @@ import javax.swing.Action;
 import javax.swing.DefaultButtonModel;
 import javax.swing.Icon;
 
-import ch.sysout.ui.util.JCustomButton;
+import ch.sysout.ui.util.JCustomButton2;
 
-public class ButtonBarButton extends JCustomButton {
+public class ButtonBarButton extends JCustomButton2 {
 	private static final long serialVersionUID = 1L;
 
 	private Icon icon;

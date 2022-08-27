@@ -1,5 +1,7 @@
 package ch.sysout.emubro.ui;
 
+import java.awt.Color;
+import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Insets;
@@ -10,6 +12,8 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionAdapter;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
@@ -26,21 +30,20 @@ import ch.sysout.emubro.api.GameListener;
 import ch.sysout.emubro.api.event.GameAddedEvent;
 import ch.sysout.emubro.api.event.GameRemovedEvent;
 import ch.sysout.emubro.util.MessageConstants;
-import ch.sysout.ui.util.JCustomButton;
+import ch.sysout.ui.util.ImageUtil;
+import ch.sysout.ui.util.JCustomButton2;
+import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Icons;
-import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
-import ch.sysout.util.UIUtil;
 
 public class GameCountPanel extends JPanel implements GameListener, DetailsPaneListener, LanguageListener {
 	private static final long serialVersionUID = 1L;
 	private JLabel lblGameCount = new JLabel("");
-	private JLinkButton lnkSystemInformations = new JLinkButton("System informations");
+	private JLinkButton lnkSystemInformations = new JLinkButton("retrieve system informations...");
 	private ProgressPanel pnlProgress;
-	JButton btnShowDetailsPane = new JCustomButton();
-	JLabel btnResize = new JLabel();
-	JButton btnBlank = new JCustomButton();
+	private JButton btnShowDetailsPane = new JCustomButton2();
+	private JLabel btnResize = new JLabel();
 	private Icon iconResize;
 	private Icon iconShowGameDetailsPane;
 	//	private Icon iconGameDetailsPaneToFront;
@@ -48,6 +51,9 @@ public class GameCountPanel extends JPanel implements GameListener, DetailsPaneL
 	private int gameCount;
 	protected Point spaceToBorder;
 	private String[] systemInformations;
+	protected boolean copySystemInformationsLocked = true;
+	private SystemInformationsDialog dlgSystemInformations;
+	private Component systemInformationsDialogRelativeToComponent;
 
 	public GameCountPanel() {
 		super();
@@ -56,11 +62,35 @@ public class GameCountPanel extends JPanel implements GameListener, DetailsPaneL
 	}
 
 	private void initComponents() {
+		lnkSystemInformations.setToolTipText("Click to copy to clipboard");
 		lnkSystemInformations.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				UIUtil.copyTextToClipboard(lnkSystemInformations.getText());
+				if (copySystemInformationsLocked) {
+					return;
+				}
+				final Color foreground = lnkSystemInformations.getForeground();
+				final String text = lnkSystemInformations.getText();
+				UIUtil.copyTextToClipboard(text);
+				copySystemInformationsLocked = true;
+				lnkSystemInformations.setForeground(Color.GREEN);
+				lnkSystemInformations.setText("system informations copied to clipboard");
+
+				showSystemInformationsDialog();
+
+				TimerTask task = new TimerTask() {
+					@Override
+					public void run() {
+						lnkSystemInformations.setForeground(foreground);
+						lnkSystemInformations.setText(text);
+						copySystemInformationsLocked = false;
+					}
+				};
+				Timer timer = new Timer("Timer");
+
+				long delay = 1000L;
+				timer.schedule(task, delay);
 			}
 		});
 		initializeProgressPanel();
@@ -70,10 +100,6 @@ public class GameCountPanel extends JPanel implements GameListener, DetailsPaneL
 		//		iconGameDetailsPaneToFront = ImageUtil.getImageIconFrom(Icons.get("showDetailsPane", size, size));
 		iconBlank = ImageUtil.getImageIconFrom(Icons.get("blank", size, size));
 
-		btnBlank.setIcon(iconBlank);
-		btnBlank.setEnabled(false);
-		btnBlank.setFocusable(false);
-		btnBlank.setFocusPainted(false);
 		btnShowDetailsPane.setIcon(iconShowGameDetailsPane);
 		btnShowDetailsPane.setToolTipText("Informationsbereich einblenden (Alt+Shift+I)");
 		btnShowDetailsPane.setActionCommand(GameViewConstants.SHOW_DETAILS_PANE);
@@ -121,9 +147,17 @@ public class GameCountPanel extends JPanel implements GameListener, DetailsPaneL
 		});
 	}
 
+	protected void showSystemInformationsDialog() {
+		if (dlgSystemInformations == null) {
+			dlgSystemInformations = new SystemInformationsDialog();
+		}
+		dlgSystemInformations.setLocationRelativeTo(systemInformationsDialogRelativeToComponent);
+		dlgSystemInformations.setVisible(true);
+		dlgSystemInformations.setSystemInformations(systemInformations);
+	}
+
 	private void initializeProgressPanel() {
 		pnlProgress = new ProgressPanel();
-		pnlProgress.setOpaque(false);
 	}
 
 	public void addBrowseComputerProgressBarListener(MouseListener l) {
@@ -131,11 +165,8 @@ public class GameCountPanel extends JPanel implements GameListener, DetailsPaneL
 	}
 
 	private void createUI() {
-		setOpaque(false);
 		pnlProgress.setVisible(false);
 		btnResize.setFocusable(false);
-		// JPanel pnl = new JPanel(new BorderLayout());
-		// pnl.add(pnlProgress);
 		FormLayout layout = new FormLayout("min, $rgap, min, $rgap, min:grow, $ugap, default",
 				"fill:min");
 		setLayout(layout);
@@ -145,7 +176,6 @@ public class GameCountPanel extends JPanel implements GameListener, DetailsPaneL
 		add(new JSeparator(JSeparator.VERTICAL), cc.xy(3, 1));
 		add(lnkSystemInformations, cc.xy(5, 1));
 		add(pnlProgress, cc.xy(7, 1));
-		// add(lblResize, cc.xywh(7, 2, 1, 1));
 	}
 
 	public void updateGameCount(int gameCount) {
@@ -208,8 +238,21 @@ public class GameCountPanel extends JPanel implements GameListener, DetailsPaneL
 		systemInformations = informations;
 		String string = "";
 		for (String s : informations) {
-			string += s;
+			string += s +"\t\r\n";
 		}
 		lnkSystemInformations.setText(string);
+		copySystemInformationsLocked = false;
+	}
+
+	public void showShowDetailsPaneButton(boolean b) {
+		btnShowDetailsPane.setVisible(b);
+	}
+
+	public Component getShowDetailsPaneButton() {
+		return btnShowDetailsPane;
+	}
+
+	public void setSystemInformationsDialogRelativeToComponent(Component systemInformationsDialogRelativeToComponent) {
+		this.systemInformationsDialogRelativeToComponent = systemInformationsDialogRelativeToComponent;
 	}
 }

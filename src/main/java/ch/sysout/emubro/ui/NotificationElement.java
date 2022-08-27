@@ -11,10 +11,9 @@ import ch.sysout.util.Messages;
 
 public class NotificationElement {
 	public static final int INFORMATION = 0;
-	public static final int INFORMATION_MANDATORY = 1;
-	public static final int WARNING = 2;
-	public static final int ERROR = 3;
-	public static final int SUCCESS = 4;
+	public static final int WARNING = 1;
+	public static final int ERROR = 2;
+	public static final int SUCCESS = 3;
 
 	private String[] messageKey;
 	private String[] actionMessageKeys2;

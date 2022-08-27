@@ -27,7 +27,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.WindowConstants;
 
-import ch.sysout.util.ImageUtil;
+import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.util.RobotUtil;
 
 public class PrintScreenDetector extends JFrame {
@@ -147,7 +147,7 @@ public class PrintScreenDetector extends JFrame {
 		}
 	}
 
-	private void writeImage(BufferedImage capture) throws IOException {
+	private void writeImage(final BufferedImage capture) throws IOException {
 		File file = new File("screenshots/" + System.currentTimeMillis() + ".jpg");
 		file.mkdirs();
 		ImageIO.write(capture, "jpg", file);

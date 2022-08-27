@@ -14,8 +14,8 @@ import javax.swing.text.BadLocationException;
 
 import ch.sysout.emubro.api.PopupMenuAdapter;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Messages;
-import ch.sysout.util.UIUtil;
 
 public class JExtendedTextField extends JTextField implements ActionListener {
 	private static final long serialVersionUID = 1L;

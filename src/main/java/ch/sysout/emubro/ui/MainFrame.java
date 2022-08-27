@@ -4,12 +4,12 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
+import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
-import java.awt.Insets;
 import java.awt.Point;
 import java.awt.dnd.DropTargetListener;
 import java.awt.event.ActionEvent;
@@ -29,6 +29,7 @@ import java.awt.event.WindowFocusListener;
 import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeListener;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -65,11 +66,9 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.WindowConstants;
-import javax.swing.border.EmptyBorder;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.MenuEvent;
 import javax.swing.event.MenuListener;
-import javax.swing.plaf.basic.BasicMenuBarUI;
 
 import com.jgoodies.forms.factories.CC;
 import com.jgoodies.forms.factories.Paddings;
@@ -104,13 +103,14 @@ import ch.sysout.emubro.impl.event.BroFilterEvent;
 import ch.sysout.emubro.impl.event.NavigationEvent;
 import ch.sysout.emubro.impl.model.BroEmulator;
 import ch.sysout.emubro.util.MessageConstants;
-import ch.sysout.ui.util.JCustomButton;
+import ch.sysout.ui.util.ImageUtil;
+import ch.sysout.ui.util.JCustomButton2;
+import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.FileUtil;
 import ch.sysout.util.Icons;
-import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
-import ch.sysout.util.UIUtil;
+import ch.sysout.util.ValidationUtil;
 
 /**
  * @author sysout.ch
@@ -127,7 +127,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	private JMenu mnuThemes;
 	private JMenuItem itmManageThemes;
 	private JMenu mnuChangeTheme;
-	private JMenu mnuPlugins;
+	//	private JMenu mnuPlugins;
 	private JMenuItem itmRefreshPlugins;
 	private JMenu mnuLookAndFeel;
 	private JMenu mnuLanguage;
@@ -152,6 +152,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	private JMenuItem itmLoadDisc;
 	private JMenuItem itmAddFiles;
 	private JMenuItem itmAddFolders;
+	private JMenuItem itmAddDummyGames;
 	private JMenuItem itmAddFilesFromClipboard;
 	private JMenuItem itmSearchNetwork;
 	private JMenuItem itmExportGameListToTxt;
@@ -161,6 +162,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	private JMenuItem itmExportGameListOptions;
 	private JMenuItem itmExportApplicationData;
 	private JMenuItem itmSettings;
+	private JMenuItem itmOpenUserProfileFolder;
 	private JMenuItem itmBigPictureMode;
 	private JMenuItem itmExit;
 	private JMenuItem itmSetColumnWidth;
@@ -174,6 +176,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	private JRadioButtonMenuItem itmLanguageDe;
 	private JRadioButtonMenuItem itmLanguageEn;
 	private JRadioButtonMenuItem itmLanguageFr;
+	private JRadioButtonMenuItem itmLanguagePr;
+	private JRadioButtonMenuItem itmLanguageEs;
 	private JMenuItem itmHelp;
 	private JMenuItem itmDiscord;
 	private JMenuItem itmConfigWizard;
@@ -228,7 +232,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	private ImageIcon iconPreviewPaneHide;
 	private ImageIcon iconChangeView;
 	private Icon iconSearchGame;
-	private Icon iconMyAccount;
 	private Icon iconSearchGameGreen;
 	private Icon iconSearchGameRed;
 
@@ -252,6 +255,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	private List<JRadioButtonMenuItem> defaultThemesMenuItems = new ArrayList<>();
 	private ActionListener changeThemeListener;
 	private JPanel pnlProperties;
+	private int minMenuBarWidthBeforeMinimize = 420;
 
 	public MainFrame(LookAndFeel defaultLookAndFeel, Explorer explorer) {
 		super(TITLE);
@@ -283,10 +287,9 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		iconPreviewPaneShow = ImageUtil.getImageIconFrom(Icons.get("showPreviewPane", size, size));
 		iconPreviewPaneHide = ImageUtil.getImageIconFrom(Icons.get("hidePreviewPane", size, size));
 		iconChangeView = ImageUtil.getImageIconFrom(Icons.get("viewTable", size, size));
-		iconSearchGame = ImageUtil.getImageIconFrom(Icons.get("searchGame2", size, size));
-		iconSearchGameGreen = ImageUtil.getImageIconFrom(Icons.get("searchGame2Green", size, size));
-		iconSearchGameRed = ImageUtil.getImageIconFrom(Icons.get("searchGame2Red", size, size));
-		iconMyAccount = ImageUtil.getImageIconFrom(Icons.get("myAccount", size, size));
+		iconSearchGame = ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), size, Color.LIGHT_GRAY);
+		iconSearchGameGreen = ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), size, new Color(0, 129, 0));
+		iconSearchGameRed = ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), size, new Color(199, 0, 0));
 
 		initializeButtonBar();
 		createButtonBar();
@@ -303,6 +306,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		// pnlMain = new MainPanel(this, Integer.valueOf(ViewPanel.LIST_VIEW));
 		// }
 		pnlGameCount = new GameCountPanel();
+		pnlGameCount.setSystemInformationsDialogRelativeToComponent(this);
 		pnlMain.addDetailsPaneListener(pnlGameCount);
 		pnlMain.addPreviewPaneListener(this);
 		pnlGameCount.addBrowseComputerProgressBarListener(new MouseAdapter() {
@@ -367,22 +371,22 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	private void initMenuBar() {
 		mnb = new JMenuBar();
-		mnb.setUI(new BasicMenuBarUI() {
-
-			@Override
-			public void paint(Graphics g, JComponent c) {
-				Color colorMenuBar = null;
-				if (IconStore.current().getCurrentTheme().getMenuBar().hasColor()) {
-					colorMenuBar = IconStore.current().getCurrentTheme().getMenuBar().getColor();
-				}
-				if (colorMenuBar == null) {
-					colorMenuBar = IconStore.current().getCurrentTheme().getBackground().getColor();
-				}
-				g.setColor(colorMenuBar);
-				g.fillRect(0, 0, c.getWidth(), c.getHeight());
-			}
-		});
-		mnb.setOpaque(false);
+		//		mnb.setUI(new BasicMenuBarUI() {
+		//
+		//			@Override
+		//			public void paint(Graphics g, JComponent c) {
+		//				Color colorMenuBar = null;
+		//				if (IconStore.current().getCurrentTheme().getMenuBar().hasColor()) {
+		//					colorMenuBar = IconStore.current().getCurrentTheme().getMenuBar().getColor();
+		//				}
+		//				if (colorMenuBar == null) {
+		//					colorMenuBar = IconStore.current().getCurrentTheme().getBackground().getColor();
+		//				}
+		//				g.setColor(colorMenuBar);
+		//				g.fillRect(0, 0, c.getWidth(), c.getHeight());
+		//			}
+		//		});
+		//		mnb.setOpaque(false);
 
 		mnb.setBorder(BorderFactory.createEmptyBorder());
 		mnuFile = new JMenu(Messages.get(MessageConstants.MNU_FILE));
@@ -391,7 +395,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		mnuThemes = new JMenu(Messages.get(MessageConstants.MNU_THEMES));
 		itmManageThemes = new JMenuItem(Messages.get(MessageConstants.ITM_MANAGE_THEMES));
 		mnuChangeTheme = new JMenu(Messages.get(MessageConstants.MNU_CHANGE_THEME));
-		mnuPlugins = new JMenu(Messages.get(MessageConstants.MNU_PLUGINS));
+		//		mnuPlugins = new JMenu(Messages.get(MessageConstants.MNU_PLUGINS));
 		itmRefreshPlugins = new JMenuItem(Messages.get(MessageConstants.ITM_REFRESH_PLUGINS));
 		mnuGames.setEnabled(false);
 		mnuLookAndFeel = new JMenu();
@@ -409,6 +413,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmLoadDisc = new JMenuItem();
 		itmAddFiles = new JMenuItem();
 		itmAddFolders = new JMenuItem();
+		itmAddDummyGames = new JMenuItem("Dummy game(s)...");
 		itmAddFilesFromClipboard = new JMenuItem();
 		itmSearchNetwork = new JMenuItem();
 		itmBigPictureMode = new JMenuItem();
@@ -428,6 +433,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmLanguageDe = new JRadioButtonMenuItem();
 		itmLanguageEn = new JRadioButtonMenuItem();
 		itmLanguageFr = new JRadioButtonMenuItem();
+		itmLanguagePr = new JRadioButtonMenuItem();
+		itmLanguageEs = new JRadioButtonMenuItem();
 		itmHelp = new JMenuItem();
 		itmDiscord = new JMenuItem();
 		itmConfigWizard = new JMenuItem();
@@ -436,6 +443,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmApplicationUpdateAvailable = new JMenuItem();
 		itmSignatureUpdateAvailable = new JMenuItem();
 		itmSettings = new JMenuItem();
+		itmOpenUserProfileFolder = new JMenuItem("Open User Profile Folder");
 		itmWelcomeView = new JRadioButtonMenuItem();
 		itmListView = new JRadioButtonMenuItem();
 		itmElementView = new JRadioButtonMenuItem();
@@ -453,8 +461,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmGroupAscending = new JRadioButtonMenuItem();
 		itmGroupDescending = new JRadioButtonMenuItem();
 		itmChangeToAll = new JRadioButtonMenuItem();
-		itmChangeToRecentlyPlayed = new JRadioButtonMenuItem();
 		itmChangeToFavorites = new JRadioButtonMenuItem();
+		itmChangeToRecentlyPlayed = new JRadioButtonMenuItem();
 		mnuSetCoverSize = new JMenu(Messages.get(MessageConstants.SET_COVER_SIZE));
 		mnuManageTags = new JMenu(Messages.get("manageTags"));
 		mnuManageCovers = new JMenuItem(Messages.get(MessageConstants.MANAGE_COVERS) + "...");
@@ -498,18 +506,15 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	private void initializeButtonBar() {
 		int size = ScreenSizeUtil.is3k() ? 32 : 24;
 		pnlButtonBar = new ButtonBarPanel();
-
-		//		int size2 = ScreenSizeUtil.is3k() ? 10 : 5;
-		//		Insets insets = new Insets(size2, size2, size2, size2);
-		btnShowHideNavigationPanel = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("barsWhite", size, size)));
+		btnShowHideNavigationPanel = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("bars"), 32, Color.LIGHT_GRAY));
 		btnShowHideNavigationPanel.setHorizontalTextPosition(SwingConstants.CENTER);
-		btnOrganize = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("organize", size, size)), Messages.get(MessageConstants.ORGANIZE));
-		btnSettings = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("settings", size, size)), Messages.get(MessageConstants.SETTINGS));
-		btnRunGame = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("runGame", size, size)), Messages.get(MessageConstants.RUN_GAME));
+		btnOrganize = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("organize"), size, Color.LIGHT_GRAY), Messages.get(MessageConstants.ORGANIZE));
+		btnSettings = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("settings"), size, Color.LIGHT_GRAY), Messages.get(MessageConstants.SETTINGS));
+		btnRunGame = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("runGame"), size, new Color(0, 129, 0)), Messages.get(MessageConstants.RUN_GAME));
 		btnMoreOptionsRunGame = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("arrowDownOtherWhite", 1)), "");
-		btnRemoveGame = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("remove", size, size)), Messages.get(MessageConstants.REMOVE));
-		btnRenameGame = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("rename", size, size)), Messages.get(MessageConstants.RENAME));
-		btnGameProperties = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("gameProperties", size, size)), Messages.get(MessageConstants.GAME_PROPERTIES));
+		btnRemoveGame = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("trash"), size, new Color(199, 0, 0)), Messages.get(MessageConstants.REMOVE));
+		btnRenameGame = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("rename"), size, Color.LIGHT_GRAY), Messages.get(MessageConstants.RENAME));
+		btnGameProperties = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("gameProperties"), size, Color.LIGHT_GRAY), Messages.get(MessageConstants.GAME_PROPERTIES));
 		btnChangeView = new ButtonBarButton("", iconChangeView, null);
 		btnMoreOptionsChangeView = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("arrowDownOtherWhite", 1)), Messages.get(MessageConstants.MORE_OPTIONS));
 		btnSetFilter = new ButtonBarButton("", iconSearchGame, Messages.get(MessageConstants.SET_FILTER));
@@ -518,15 +523,13 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		buttonBarComponents = new JComponent[] { btnShowHideNavigationPanel, btnOrganize, btnSettings, btnRunGame, btnMoreOptionsRunGame,
 				btnRemoveGame, btnRenameGame,
 				btnGameProperties, btnChangeView, btnMoreOptionsChangeView, btnSetFilter, btnPreviewPane};
-		//		btnRunGame.setComponentPopupMenu(mnuGameSettings);
-
 		setButtonBarToolTips();
 	}
 
 	private void initializeGameFilter() {
 		int size = ScreenSizeUtil.is3k() ? 10 : 5;
-		Insets insets = new Insets(size, size*2, size, size*2);
-		btnShowHideNavigationPanel.setBorder(new EmptyBorder(insets));
+		//		Insets insets = new Insets(size, size*2, size, size*2);
+		//		btnShowHideNavigationPanel.setBorder(new EmptyBorder(insets));
 		pnlGameFilter = new GameFilterPanel(explorer);
 		//		pnlGameFilter.setBorder(BorderFactory.createTitledBorder(""));
 		pnlGameFilter.setVisible(false);
@@ -701,20 +704,19 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		addToButtonGroup(new ButtonGroup(), itmSortAscending, itmSortDescending);
 		addToButtonGroup(new ButtonGroup(), itmGroupTitle, itmGroupPlatform, itmGroupBlank);
 		addToButtonGroup(new ButtonGroup(), itmGroupAscending, itmGroupDescending);
-		addToButtonGroup(new ButtonGroup(), itmChangeToAll, itmChangeToRecentlyPlayed, itmChangeToFavorites);
-		addToButtonGroup(new ButtonGroup(), itmLanguageDe, itmLanguageEn, itmLanguageFr);
+		addToButtonGroup(new ButtonGroup(), itmChangeToAll, itmChangeToFavorites, itmChangeToRecentlyPlayed);
+		addToButtonGroup(new ButtonGroup(), itmLanguageDe, itmLanguageEn, itmLanguageFr, itmLanguagePr, itmLanguageEs);
 	}
 
 	private void setIcons() {
 		int size = ScreenSizeUtil.is3k() ? 24 : 16;
-		//		itmLogOut.setIcon(ImageUtil.getImageIconFrom(Icons.get("myAccount", size, size)));
-		itmAddFiles.setIcon(ImageUtil.getImageIconFrom(Icons.get("addFile", size, size)));
-		itmAddFolders.setIcon(ImageUtil.getImageIconFrom(Icons.get("addFolder", size, size)));
-		itmAddFilesFromClipboard.setIcon(ImageUtil.getImageIconFrom(Icons.get("filesFromClipboard", size, size)));
+		itmAddFiles.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("addFile"), size, Color.LIGHT_GRAY));
+		itmAddFolders.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("addFolder"), size, new Color(255, 195, 0)));
+		itmAddFilesFromClipboard.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("filesFromClipboard"), size, Color.LIGHT_GRAY));
 		itmLoadDisc.setIcon(ImageUtil.getImageIconFrom(Icons.get("loadDisc", size, size)));
 		itmSearchNetwork.setIcon(ImageUtil.getImageIconFrom(Icons.get("searchNetwork", size, size)));
-		itmSettings.setIcon(ImageUtil.getImageIconFrom(Icons.get("settings", size, size)));
-		itmExit.setIcon(ImageUtil.getImageIconFrom(Icons.get("exit", size, size)));
+		itmSettings.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("settings"), size, Color.LIGHT_GRAY));
+		itmExit.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("exit"), size, new Color(204, 2, 2)));
 		itmCheckForUpdates.setIcon(ImageUtil.getImageIconFrom(Icons.get("checkForUpdates", size, size)));
 		itmExportGameListToTxt.setIcon(ImageUtil.getImageIconFrom(Icons.get("textPlain", size, size)));
 		itmExportGameListToCsv.setIcon(ImageUtil.getImageIconFrom(Icons.get("textCsv", size, size)));
@@ -727,28 +729,28 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmContentView.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewList", size, size)));
 		itmTableView.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewTable", size, size)));
 		itmCoverView.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewCovers", size, size)));
-		itmChangeToAll.setIcon(ImageUtil.getImageIconFrom(Icons.get("allGames", size, size)));
-		itmChangeToRecentlyPlayed.setIcon(ImageUtil.getImageIconFrom(Icons.get("recentlyPlayed", size, size)));
-		itmChangeToFavorites.setIcon(ImageUtil.getImageIconFrom(Icons.get("favorites", size, size)));
-		itmSetFilter.setIcon(ImageUtil.getImageIconFrom(Icons.get("setFilter", size, size)));
-		itmRenameGames.setIcon(ImageUtil.getImageIconFrom(Icons.get("rename", size, size)));
+		itmChangeToAll.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("allGames"), size, Color.LIGHT_GRAY));
+		itmChangeToFavorites.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("favorites"), size, new Color(255, 220, 125)));
+		itmChangeToRecentlyPlayed.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("recentlyPlayed"), size, new Color(181, 201, 255)));
+		itmSetFilter.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), size, Color.LIGHT_GRAY));
+		itmRenameGames.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rename"), size, Color.LIGHT_GRAY));
 		itmAutoSearchTags.setIcon(ImageUtil.getImageIconFrom(Icons.get("searchFile", size, size)));
-		itmTagSearch.setIcon(ImageUtil.getImageIconFrom(Icons.get("tags", size, size)));
-		itmCoverSearch.setIcon(ImageUtil.getImageIconFrom(Icons.get("picture", size, size)));
+		itmTagSearch.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("tag"), size, new Color(168, 124, 160)));
+		itmCoverSearch.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("picture"), size, Color.LIGHT_GRAY));
 		itmTrailerSearch.setIcon(ImageUtil.getImageIconFrom(Icons.get("video", size, size)));
-		itmSetColumnWidth.setIcon(ImageUtil.getImageIconFrom(Icons.get("columnWidth", size, size)));
-		itmSetRowHeight.setIcon(ImageUtil.getImageIconFrom(Icons.get("rowHeight", size, size)));
-		itmRefresh.setIcon(ImageUtil.getImageIconFrom(Icons.get("refresh", size, size)));
-		itmFullScreen.setIcon(ImageUtil.getImageIconFrom(Icons.get("fullscreen", size, size)));
+		itmSetColumnWidth.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("columnWidth"), size, Color.LIGHT_GRAY));
+		itmSetRowHeight.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rowHeight"), size, Color.LIGHT_GRAY));
+		itmRefresh.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("refresh"), size, Color.LIGHT_GRAY));
+		itmFullScreen.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("fullscreen"), size, new Color(144, 238, 144)));
 		Icon iconLanguageDe = ImageUtil.getImageIconFrom(Icons.get("languageDe", size, size));
 		Icon iconLanguageEn = ImageUtil.getImageIconFrom(Icons.get("languageEn", size, size));
 		Icon iconLanguageFr = ImageUtil.getImageIconFrom(Icons.get("languageFr", size, size));
 		itmLanguageDe.setIcon(iconLanguageDe);
 		itmLanguageEn.setIcon(iconLanguageEn);
 		itmLanguageFr.setIcon(iconLanguageFr);
-		mnuHelp.setIcon(ImageUtil.getImageIconFrom(Icons.get("help", size, size)));
-		itmHelp.setIcon(ImageUtil.getImageIconFrom(Icons.get("help", size, size)));
-		itmDiscord.setIcon(ImageUtil.getImageIconFrom(Icons.get("discord", size, size)));
+		mnuHelp.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("help"), size, Color.LIGHT_GRAY));
+		itmHelp.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("help"), size, Color.LIGHT_GRAY));
+		itmDiscord.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("discord"), size, new Color(114, 137, 218)));
 		itmAbout.setIcon(ImageUtil.getImageIconFrom(Icons.get("about", size, size)));
 		itmConfigWizard.setIcon(ImageUtil.getImageIconFrom(Icons.get("configWizard", size, size)));
 		Locale locale = Locale.getDefault();
@@ -780,11 +782,89 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmContentView.setActionCommand("changeToContentView");
 		itmCoverView.setActionCommand("changeToCoverView");
 		itmChangeToAll.setActionCommand("changeToAll");
-		itmChangeToRecentlyPlayed.setActionCommand("changeToRecentlyPlayed");
 		itmChangeToFavorites.setActionCommand("changeToFavorites");
+		itmChangeToRecentlyPlayed.setActionCommand("changeToRecentlyPlayed");
 	}
 
 	public void addListeners() {
+		itmAddDummyGames.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				File baseDirectory = new File("C:\\temp\\games");
+				createDummyGames(baseDirectory, "snes", "smc", 10);
+				createDummyGames(baseDirectory, "ps1", "iso", 10);
+				createDummyGames(baseDirectory, "ps1", "bin", 10);
+				createDummyGames(baseDirectory, "ps2", "iso", 10);
+				createDummyGames(baseDirectory, "psp", "cso", 10);
+				createDummyGames(baseDirectory, "psp", "iso", 10);
+				createDummyGames(baseDirectory, "n64", "n64", 10);
+			}
+
+			private void createDummyGames(File baseDirectory, String platformName, String fileExtension, int gameCount) {
+				File platformFolder = new File(baseDirectory.getAbsolutePath() + File.separator + platformName);
+				if (!platformFolder.exists()) {
+					if (platformFolder.mkdirs()) {
+						System.out.println("Director2y is created");
+					}
+					else {
+						System.out.println("Director2y cannot be created");
+					}
+				}
+				for (int i = 0; i < gameCount; i++) {
+					File myObj = new File(platformFolder.getAbsolutePath() + File.separator + platformName + "_game_"+i+"."+fileExtension);
+					try {
+						if (myObj.createNewFile()) {
+							System.out.println("File created: " + myObj.getName());
+							try {
+								FileWriter myWriter = new FileWriter(myObj);
+								myWriter.write("DummyGame"+i+"."+fileExtension);
+								myWriter.close();
+								System.out.println("Successfully wrote to the file.");
+							} catch (IOException e) {
+								System.out.println("An error occurred.");
+								e.printStackTrace();
+							}
+						} else {
+							System.out.println("File already exists.");
+						}
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+		});
+
+		itmOpenUserProfileFolder.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				final String path = System.getenv("USERPROFILE") + File.separator + ".emuBro";
+				try {
+					if (ValidationUtil.isWindows()) {
+						new ProcessBuilder("explorer.exe", "/select,",
+								path.replace("\\\\", "\\")).start();
+					} else if (ValidationUtil.isUnix()) {
+						ProcessBuilder builder = new ProcessBuilder("xdg-open", path);
+						builder.start();
+					} else if (ValidationUtil.isMac()) {
+
+					} else if (ValidationUtil.isSolaris()) {
+
+					}
+				} catch (IOException e1) {
+					if (Desktop.isDesktopSupported()) {
+						try {
+							Desktop.getDesktop().open(new File(path));
+						} catch (IOException e2) {
+							e2.printStackTrace();
+						}
+					}
+					e1.printStackTrace();
+				}
+			}
+		});
+
 		addShowMenubarListener(new ShowMenuBarListener());
 		addSetFilterListener(new ActionListener() {
 
@@ -1219,10 +1299,11 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		pnlGameCount.setMinimumSize(new Dimension(0, 0));
 
 		JPanel pnlGameCountSpecial = new JPanel(new BorderLayout());
-		pnlGameCountSpecial.setOpaque(false);
-		pnlGameCountSpecial.add(pnlGameCount.btnBlank, BorderLayout.WEST);
-		pnlGameCountSpecial.add(pnlGameCount.btnShowDetailsPane);
-		pnlGameCountSpecial.add(pnlGameCount.btnResize, BorderLayout.EAST);
+		//		pnlGameCountSpecial.setOpaque(false);
+		//		pnlGameCountSpecial.add(pnlGameCount.btnBlank, BorderLayout.WEST);
+		pnlGameCountSpecial.add(pnlGameCount.getShowDetailsPaneButton());
+
+		//		pnlGameCountSpecial.add(pnlGameCount.btnResize, BorderLayout.EAST);
 
 		JPanel pnlGameCountWrapper = new JPanel(new BorderLayout()) {
 			private static final long serialVersionUID = 1L;
@@ -1235,8 +1316,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 				Color color = IconStore.current().getCurrentTheme().getStatusBar().getColor();
 				if (color != null) {
 					Graphics2D g2d = (Graphics2D) g.create();
-					g2d.setColor(color);
-					g2d.fillRect(0, 0, panelWidth, panelHeight);
+					//					g2d.setColor(color);
+					//					g2d.fillRect(0, 0, panelWidth, panelHeight);
 					BufferedImage background = IconStore.current().getCurrentTheme().getStatusBar().getImage();
 					if (background != null) {
 						g2d.drawImage(background, 0, 0, panelWidth, panelHeight, this);
@@ -1263,7 +1344,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		mnuUpdateAvailable.setVisible(false);
 		itmApplicationUpdateAvailable.setVisible(false);
 		itmSignatureUpdateAvailable.setVisible(false);
-		addComponentsToJComponent(false, mnb, mnuFile, mnuView, mnuThemes, mnuGames, /*mnuPlugins, mnuLookAndFeel,*/ Box.createHorizontalGlue(), mnuUpdateAvailable, mnuLanguage, mnuHelp);
+		addComponentsToJComponent(false, mnb, mnuFile, mnuView, mnuThemes, mnuLookAndFeel, /*mnuGames, mnuPlugins,*/ Box.createHorizontalGlue(), mnuUpdateAvailable, mnuLanguage, mnuHelp);
 		setJMenuBar(mnb);
 	}
 
@@ -1271,10 +1352,10 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		addComponentsToJComponent(mnuFile, mnuAdd,
 				//				new JSeparator(), itmLoadDisc, itmSearchNetwork,
 				new JSeparator(), mnuExportGameList, itmExportApplicationData,
-				new JSeparator(), itmSettings,
+				new JSeparator(), itmOpenUserProfileFolder, itmSettings,
 				new JSeparator(), /*itmBigPictureMode, */itmExit);
 
-		addComponentsToJComponent(mnuAdd, itmAddFiles, itmAddFolders, new JSeparator(), itmAddFilesFromClipboard);
+		addComponentsToJComponent(mnuAdd, itmAddFiles, itmAddFolders, itmAddDummyGames , new JSeparator(), itmAddFilesFromClipboard);
 
 		addComponentsToJComponent(mnuExportGameList, itmExportGameListToTxt, itmExportGameListToCsv,
 				itmExportGameListToJson, itmExportGameListToXml, new JSeparator(), itmExportGameListOptions);
@@ -1303,8 +1384,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 				new JSeparator(), itmTagSearch, itmCoverSearch, itmTrailerSearch/*, itmWebSearchSettings*/,
 				new JSeparator(), itmRenameGames);
 
-		addComponentsToJComponent(mnuPlugins, itmRefreshPlugins,
-				new JSeparator());
+		//		addComponentsToJComponent(mnuPlugins, itmRefreshPlugins,
+		//				new JSeparator());
 
 		List<Component> items = new ArrayList<>();
 		ButtonGroup grp = new ButtonGroup();
@@ -1328,7 +1409,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 			}
 		});
 		items.add(new JSeparator());
-		for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
+		for (final UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
 			items.add(rdb = new JRadioButtonMenuItem(info.getName()));
 			grp.add(rdb);
 			rdb.addActionListener(new ActionListener() {
@@ -1341,16 +1422,35 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 						pnlMain.addDividerDraggedListeners();
 					} catch (ClassNotFoundException | InstantiationException | IllegalAccessException
 							| UnsupportedLookAndFeelException e1) {
-						// TODO Auto-generated catch block
 						e1.printStackTrace();
 					}
 				}
 			});
 		}
 		addComponentsToJComponent(mnuLookAndFeel, items);
-		addComponentsToJComponent(mnuLanguage, itmLanguageDe, itmLanguageEn, itmLanguageFr);
-		// addComponentsToJComponent(mnuSetColumnWidth, sliderColumnWidth);
-		// addComponentsToJComponent(mnuSetRowHeight, sliderRowHeight);
+
+		Locale locale = Locale.getDefault();
+		String userLanguage = locale.getLanguage();
+		List<JMenuItem> languageItems = new ArrayList<JMenuItem>();
+		Collections.addAll(languageItems, itmLanguageEn, itmLanguageDe, itmLanguageFr, itmLanguagePr, itmLanguageEs);
+		if (userLanguage.equals(Locale.ENGLISH.getLanguage())) {
+			addComponentsToJComponent(mnuLanguage, itmLanguageEn);
+			languageItems.remove(itmLanguageEn);
+		} else if (userLanguage.equals(Locale.GERMAN.getLanguage())) {
+			addComponentsToJComponent(mnuLanguage, itmLanguageDe);
+			languageItems.remove(itmLanguageDe);
+		} else if (userLanguage.equals(Locale.FRENCH.getLanguage())) {
+			addComponentsToJComponent(mnuLanguage, itmLanguageFr);
+			languageItems.remove(itmLanguageFr);
+		} else {
+			addComponentsToJComponent(mnuLanguage, itmLanguageEn);
+			languageItems.remove(itmLanguageEn);
+		}
+		addComponentsToJComponent(mnuLanguage, new JSeparator());
+		for (JMenuItem itm : languageItems) {
+			mnuLanguage.add(itm);
+		}
+
 		addComponentsToJComponent(mnuHelp, itmHelp, itmDiscord, new JSeparator(), itmConfigWizard, new JSeparator(), itmCheckForUpdates, itmAbout);
 		addComponentsToJComponent(mnuUpdateAvailable, itmApplicationUpdateAvailable, itmSignatureUpdateAvailable);
 		addComponentsToJComponent(mnuSort, itmSortTitle, itmSortPlatform, new JSeparator(), itmSortAscending,
@@ -1366,14 +1466,14 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	private void addComponentsToJComponent(boolean opaque, JComponent parentComponent, Component... components) {
 		for (Component c : components) {
-			Color color = IconStore.current().getCurrentTheme().getMenuBar().getColor();
-			if (color == null) {
-				color = IconStore.current().getCurrentTheme().getBackground().getColor().darker();
-			}
-			if (c instanceof JComponent) {
-				((JComponent) c).setOpaque(opaque);
-			}
-			c.setBackground(color);
+			//			Color color = IconStore.current().getCurrentTheme().getMenuBar().getColor();
+			//			if (color == null) {
+			//				color = IconStore.current().getCurrentTheme().getBackground().getColor().darker();
+			//			}
+			//			if (c instanceof JComponent) {
+			//				((JComponent) c).setOpaque(opaque);
+			//			}
+			//			c.setBackground(color);
 			parentComponent.add(c);
 		}
 	}
@@ -1475,23 +1575,25 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 			dlgColumnWidth.setUndecorated(true);
 			dlgColumnWidth.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 			initSliderColumnWidth();
-			ActionListener actionListener2 = new ActionListener() {
+			final ActionListener actionListener2 = new ActionListener() {
 
 				@Override
 				public void actionPerformed(ActionEvent e) {
 					if (!viewManager.isColumnWidthSliderPanelPinned()) {
 						closeColumnWidthSliderWindow();
 						pnlMain.pinColumnWidthSliderPanel(pnlColumnWidthSlider);
+						btnPinColumnSliderWindow.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("unpin"), 24, Color.LIGHT_GRAY));
 					} else {
 						pnlMain.unpinColumnWidthSliderPanel(pnlColumnWidthSlider);
 						dlgColumnWidth.add(pnlColumnWidthSlider);
 						showColumnWidthSliderPanel(pnlMain.getCurrentViewPanel());
+						btnPinColumnSliderWindow.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("pin"), 24, Color.LIGHT_GRAY));
 					}
 				}
 			};
 			if (btnPinColumnSliderWindow == null) {
-				btnPinColumnSliderWindow = new JCustomButton();
-				btnPinColumnSliderWindow.setIcon(ImageUtil.getImageIconFrom(Icons.get("pin", 24, 24)));
+				btnPinColumnSliderWindow = new JCustomButton2();
+				btnPinColumnSliderWindow.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("pin"), 24, Color.LIGHT_GRAY));
 				btnPinColumnSliderWindow.addMouseListener(new MouseAdapter() {
 					@Override
 					public void mousePressed(MouseEvent e) {
@@ -1507,8 +1609,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 				});
 				btnPinColumnSliderWindow.addActionListener(actionListener2);
 			}
-			btnColumnWidthSlider = new JCustomButton();
-			btnColumnWidthSlider.setIcon(ImageUtil.getImageIconFrom(Icons.get("columnWidth", 24, 24)));
+			btnColumnWidthSlider = new JCustomButton2();
+			btnColumnWidthSlider.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("columnWidth"), 24, Color.LIGHT_GRAY));
 			pnlColumnWidthSlider = new JPanel(new BorderLayout());
 			pnlColumnWidthSlider.setBorder(BorderFactory.createEtchedBorder());
 			pnlColumnWidthSlider.add(btnColumnWidthSlider, BorderLayout.WEST);
@@ -1530,7 +1632,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 				public void windowGainedFocus(WindowEvent e) {
 				}
 			});
-			ActionListener actionListener = new ActionListener() {
+			final ActionListener actionListener = new ActionListener() {
 
 				@Override
 				public void actionPerformed(ActionEvent e) {
@@ -1630,23 +1732,25 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 			dlgRowHeight.setUndecorated(true);
 			dlgRowHeight.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 			initSliderRowHeight();
-			ActionListener actionListener2 = new ActionListener() {
+			final ActionListener actionListener2 = new ActionListener() {
 
 				@Override
 				public void actionPerformed(ActionEvent e) {
 					if (!viewManager.isRowHeightSliderPanelPinned()) {
 						closeRowHeightSliderWindow();
 						pnlMain.pinRowHeightSliderPanel(pnlRowHeightSlider);
+						btnPinRowSliderWindow.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("unpin"), 24, Color.LIGHT_GRAY));
 					} else {
 						pnlMain.unpinRowHeightSliderPanel(pnlRowHeightSlider);
 						dlgRowHeight.add(pnlRowHeightSlider);
 						showRowHeightSliderPanel(pnlMain.getCurrentViewPanel());
+						btnPinRowSliderWindow.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("pin"), 24, Color.LIGHT_GRAY));
 					}
 				}
 			};
 			if (btnPinRowSliderWindow == null) {
-				btnPinRowSliderWindow = new JCustomButton();
-				btnPinRowSliderWindow.setIcon(ImageUtil.getImageIconFrom(Icons.get("pin", 24, 24)));
+				btnPinRowSliderWindow = new JCustomButton2();
+				btnPinRowSliderWindow.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("pin"), 24, Color.LIGHT_GRAY));
 				btnPinRowSliderWindow.addMouseListener(new MouseAdapter() {
 					@Override
 					public void mousePressed(MouseEvent e) {
@@ -1662,8 +1766,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 				});
 				btnPinRowSliderWindow.addActionListener(actionListener2);
 			}
-			btnRowHeightSlider = new JCustomButton();
-			btnRowHeightSlider.setIcon(ImageUtil.getImageIconFrom(Icons.get("rowHeight", 24, 24)));
+			btnRowHeightSlider = new JCustomButton2();
+			btnRowHeightSlider.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rowHeight"), 24, Color.LIGHT_GRAY));
 			pnlRowHeightSlider = new JPanel(new BorderLayout());
 			pnlRowHeightSlider.setBorder(BorderFactory.createEtchedBorder());
 			pnlRowHeightSlider.add(btnRowHeightSlider, BorderLayout.SOUTH);
@@ -1686,7 +1790,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 				public void windowGainedFocus(WindowEvent e) {
 				}
 			});
-			ActionListener actionListener = new ActionListener() {
+			final ActionListener actionListener = new ActionListener() {
 
 				@Override
 				public void actionPerformed(ActionEvent e) {
@@ -1745,11 +1849,11 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		case NavigationPanel.ALL_GAMES:
 			itmChangeToAll.setSelected(true);
 			break;
-		case NavigationPanel.RECENTLY_PLAYED:
-			itmChangeToRecentlyPlayed.setSelected(true);
-			break;
 		case NavigationPanel.FAVORITES:
 			itmChangeToFavorites.setSelected(true);
+			break;
+		case NavigationPanel.RECENTLY_PLAYED:
+			itmChangeToRecentlyPlayed.setSelected(true);
 			break;
 		}
 		pnlMain.navigationChanged(e);
@@ -1899,6 +2003,16 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	public void showMenuBar(boolean b) {
 		mnb.setVisible(b);
 		pnlMain.showMenuBar(b);
+
+		SwingUtilities.invokeLater(new Runnable() {
+
+			@Override
+			public void run() {
+				boolean minimizeItems = mnb.getWidth() < minMenuBarWidthBeforeMinimize ;
+				mnuLanguage.setText(minimizeItems ? "" : Messages.get(MessageConstants.MNU_LANGUAGE));
+				mnuHelp.setText(minimizeItems ? "" : Messages.get(MessageConstants.HELP));
+			}
+		});
 	}
 
 	public void showNavigationPane(boolean b) {
@@ -1924,7 +2038,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	public void showGameDetailsPane(boolean b) {
 		pnlMain.showDetailsPane(b);
-		pnlGameCount.btnShowDetailsPane.setVisible(!b);
+		pnlGameCount.showShowDetailsPaneButton(!b);
 		//		UIUtil.revalidateAndRepaint(this);
 	}
 
@@ -1935,7 +2049,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	public void showDetailsPane(boolean b, int detailsPaneHeight, boolean detailsPaneUnpinned,
 			int x, int y, int width, int height) {
 		pnlMain.showDetailsPane(b, detailsPaneHeight);
-		pnlGameCount.btnShowDetailsPane.setVisible(!b);
+		pnlGameCount.showShowDetailsPaneButton(!b);
 		UIUtil.revalidateAndRepaint(this);
 		if (detailsPaneUnpinned) {
 			pnlMain.pinDetailsPane(false, x, y, width, height);
@@ -2004,6 +2118,9 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	}
 
 	public void showHidePanels() {
+		boolean minimizeItems = mnb.getWidth() < minMenuBarWidthBeforeMinimize ;
+		mnuLanguage.setText(minimizeItems ? "" : Messages.get(MessageConstants.MNU_LANGUAGE));
+		mnuHelp.setText(minimizeItems ? "" : Messages.get(MessageConstants.HELP));
 		pnlButtonBar.checkMinimizeMaximizeButtons();
 		pnlMain.showHidePanels();
 		toFront();
@@ -2060,16 +2177,25 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 				super.keyPressed(e);
 				int keyCode = e.getKeyCode();
 				int value = 3;
-				if (keyCode == KeyEvent.VK_RIGHT) {
+				switch (keyCode) {
+				case KeyEvent.VK_RIGHT:
 					sliderColumnWidth.setValue(sliderColumnWidth.getValue() + value);
-				} else if (keyCode == KeyEvent.VK_LEFT) {
+					break;
+				case KeyEvent.VK_LEFT:
 					sliderColumnWidth.setValue(sliderColumnWidth.getValue() - value);
-				} else if (keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_ESCAPE) {
+					break;
+				case KeyEvent.VK_ENTER:
+				case KeyEvent.VK_ESCAPE:
 					dlgColumnWidth.dispose();
-				} else if (keyCode == KeyEvent.VK_UP) {
+					break;
+				case KeyEvent.VK_UP:
 					showRowHeightSliderPanel();
-				} else if (keyCode == KeyEvent.VK_DOWN) {
+					break;
+				case KeyEvent.VK_DOWN:
 					showRowHeightSliderPanel();
+					break;
+				default:
+					break;
 				}
 			}
 		});
@@ -2083,16 +2209,25 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 				super.keyPressed(e);
 				int keyCode = e.getKeyCode();
 				int value = 3;
-				if (keyCode == KeyEvent.VK_UP) {
+				switch (keyCode) {
+				case KeyEvent.VK_UP:
 					sliderRowHeight.setValue(sliderRowHeight.getValue() + value);
-				} else if (keyCode == KeyEvent.VK_DOWN) {
+					break;
+				case KeyEvent.VK_DOWN:
 					sliderRowHeight.setValue(sliderRowHeight.getValue() - value);
-				} else if (keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_ESCAPE) {
+					break;
+				case KeyEvent.VK_ENTER:
+				case KeyEvent.VK_ESCAPE:
 					dlgRowHeight.dispose();
-				} else if (keyCode == KeyEvent.VK_LEFT) {
+					break;
+				case KeyEvent.VK_LEFT:
 					showColumnWidthSliderPanel();
-				} else if (keyCode == KeyEvent.VK_RIGHT) {
+					break;
+				case KeyEvent.VK_RIGHT:
 					showColumnWidthSliderPanel();
+					break;
+				default:
+					break;
 				}
 			}
 		});
@@ -2249,8 +2384,9 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmManageThemes.setText(Messages.get(MessageConstants.ITM_MANAGE_THEMES));
 		mnuChangeTheme.setText(Messages.get(MessageConstants.MNU_CHANGE_THEME));
 		mnuLookAndFeel.setText(Messages.get(MessageConstants.MNU_LOOK_AND_FEEL));
-		mnuLanguage.setText(Messages.get(MessageConstants.MNU_LANGUAGE));
-		mnuHelp.setText(Messages.get(MessageConstants.HELP));
+		boolean minimizeItems = mnb.getWidth() < minMenuBarWidthBeforeMinimize ;
+		mnuLanguage.setText(minimizeItems ? "" : Messages.get(MessageConstants.MNU_LANGUAGE));
+		mnuHelp.setText(minimizeItems ? "" : Messages.get(MessageConstants.HELP));
 		mnuUpdateAvailable.setText("<html><strong>"+Messages.get(MessageConstants.UPDATE_AVAILABLE)+"</strong></html>");
 		itmApplicationUpdateAvailable.setText(Messages.get(MessageConstants.APPLICATION_UPDATE_AVAILABLE));
 		itmSignatureUpdateAvailable.setText(Messages.get(MessageConstants.SIGNATURE_UPDATE_AVAILABLE));
@@ -2658,6 +2794,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	public void gameRenamed(GameRenamedEvent event) {
 		viewManager.gameRenamed(event);
+		pnlMain.gameRenamed(event);
 	}
 
 	public void setCoverSize(int hugeCovers) {

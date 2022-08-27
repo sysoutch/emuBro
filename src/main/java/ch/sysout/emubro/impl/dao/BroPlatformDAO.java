@@ -42,8 +42,10 @@ public class BroPlatformDAO implements PlatformDAO {
 		for (String imageType : platform.getSupportedImageTypes()) {
 			supportedImageTypesString += imageType + " ";
 		}
-		for (String gameCodeRegex : platform.getGameCodeRegexes()) {
-			gameCodeRegexesString += gameCodeRegex + " ";
+		if (platform.getGameCodeRegexes() != null) {
+			for (String gameCodeRegex : platform.getGameCodeRegexes()) {
+				gameCodeRegexesString += gameCodeRegex + " ";
+			}
 		}
 		Statement stmt = conn.createStatement();
 		int structureId = (!platform.getFileStructure().isEmpty()) ? platform.getFileStructure().get(0).getId() : -2;

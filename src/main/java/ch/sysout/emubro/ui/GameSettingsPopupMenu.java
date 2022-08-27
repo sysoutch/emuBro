@@ -18,8 +18,8 @@ import javax.swing.filechooser.FileSystemView;
 import ch.sysout.emubro.api.RunGameWithListener;
 import ch.sysout.emubro.api.model.Emulator;
 import ch.sysout.emubro.impl.model.BroEmulator;
+import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.util.Icons;
-import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 
@@ -53,7 +53,7 @@ class GameSettingsPopupMenu extends JPopupMenu {
 		ScreenSizeUtil.adjustValueToResolution(32);
 		ButtonGroup group = new ButtonGroup();
 		List<JRadioButtonMenuItem> radios = new ArrayList<>();
-		for (Emulator emu : emulators) {
+		for (final Emulator emu : emulators) {
 			if (!emu.isInstalled()) {
 				continue;
 			}

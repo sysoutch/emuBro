@@ -6,7 +6,6 @@ import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
@@ -76,9 +75,9 @@ import ch.sysout.emubro.impl.model.BroGame;
 import ch.sysout.emubro.impl.model.EmulatorConstants;
 import ch.sysout.emubro.impl.model.GameConstants;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
-import ch.sysout.util.UIUtil;
 
 public class TableViewPanel extends ViewPanel implements ListSelectionListener, GameSelectionListener, FilterListener {
 	private static final long serialVersionUID = 1L;
@@ -200,13 +199,13 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 				int panelHeight = getHeight();
 				Theme currentTheme = IconStore.current().getCurrentTheme();
 				ThemeBackground currentBackground = currentTheme.getView();
-				if (currentBackground.hasGradientPaint()) {
-					GradientPaint p = currentBackground.getGradientPaint();
-					g2d.setPaint(p);
-				} else if (currentBackground.hasColor()) {
-					g2d.setColor(currentBackground.getColor());
-				}
-				g2d.fillRect(0, 0, panelWidth, panelHeight);
+				//				if (currentBackground.hasGradientPaint()) {
+				//					GradientPaint p = currentBackground.getGradientPaint();
+				//					g2d.setPaint(p);
+				//				} else if (currentBackground.hasColor()) {
+				//					g2d.setColor(currentBackground.getColor());
+				//				}
+				//				g2d.fillRect(0, 0, panelWidth, panelHeight);
 
 				BufferedImage background = currentBackground.getImage();
 				if (background != null) {
@@ -652,7 +651,7 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 		popupGame.languageChanged();
 		popupView.languageChanged();
 		((GameTableModel) mdlTblAllGames).languageChanged();
-		List<Integer> columnWidths = new ArrayList<>();
+		final List<Integer> columnWidths = new ArrayList<>();
 
 		for (int i = 0; i < tblGames.getColumnModel().getColumnCount(); i++) {
 			TableColumn nextElement = columnModel.getColumn(i);
@@ -844,6 +843,7 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 
 	@Override
 	public void navigationChanged(NavigationEvent e, FilterEvent filterEvent) {
+		List<Game> selectedGames = explorer.getCurrentGames();
 		int gameCount = 0;
 		switch (e.getView()) {
 		case NavigationPanel.ALL_GAMES:
@@ -863,6 +863,10 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 			setCurrentView(NavigationPanel.ALL_GAMES);
 			tblGames.setModel(mdlTblAllGames);
 			break;
+		}
+		if (selectedGames != null && !selectedGames.isEmpty()) {
+			ListSelectionModel selectionModel = tblGames.getSelectionModel();
+			selectionModel.setSelectionInterval(0, 0);
 		}
 		if (filterEvent.isPlatformFilterSet() || filterEvent.isGameFilterSet()) {
 			((GameTableModel) mdlTblFiltered).removeAllElements();

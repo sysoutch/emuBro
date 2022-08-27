@@ -1,7 +1,5 @@
 package ch.sysout.ui.util;
 
-import java.awt.Color;
-import java.awt.Graphics;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
@@ -11,9 +9,6 @@ import javax.swing.JToggleButton;
 
 public class JCustomToggleButton extends JToggleButton {
 	private static final long serialVersionUID = 1L;
-
-	private Color colorHover = new Color(0f, 0f, 0f, 0.2f);
-	private Color colorSelected = new Color(0f, 0f, 0f, 0.25f);
 
 	protected boolean hover;
 
@@ -100,43 +95,36 @@ public class JCustomToggleButton extends JToggleButton {
 	 *                  otherwise, the button is initially unselected
 	 */
 	public JCustomToggleButton (String text, Icon icon, boolean selected) {
-		//        // Create the model
-		//        setModel(new ToggleButtonModel());
-		//
-		//        model.setSelected(selected);
-		//
-		//        // initialize
-		//        init(text, icon);
 		super(text, icon, selected);
-		setOpaque(false);
-		setBorderPainted(false);
-		setContentAreaFilled(false);
+		if (!selected) {
+			setBorderPainted(false);
+			setContentAreaFilled(false);
+		}
 		addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseEntered(MouseEvent e) {
-				hover = true;
+				setBorderPainted(true);
+				setContentAreaFilled(true);
 			}
 
 			@Override
 			public void mouseExited(MouseEvent e) {
-				hover = false;
+				if (!isSelected()) {
+					setBorderPainted(false);
+					setContentAreaFilled(false);
+				}
 			}
 		});
-
 	}
 
 	@Override
-	protected void paintComponent(Graphics g) {
-		if (isEnabled()) {
-			if (isSelected()) {
-				g.setColor(colorSelected);
-				g.fillRect(0, 0, getWidth(), getHeight());
-			} else if (hover) {
-				g.setColor(colorHover);
-				g.fillRect(0, 0, getWidth(), getHeight());
-			}
-		}
-		super.paintComponent(g);
-		g.dispose();
+	public void setSelected(boolean b) {
+		super.setSelected(b);
+		setButtonDecorationEnabled(b);
+	}
+
+	public void setButtonDecorationEnabled(boolean b) {
+		setBorderPainted(b);
+		setContentAreaFilled(b);
 	}
 }

@@ -1,6 +1,7 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
@@ -19,12 +20,14 @@ import java.util.List;
 
 import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
+import javax.swing.Box;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
+import javax.swing.JToolBar;
 import javax.swing.SwingConstants;
 
 import com.jgoodies.forms.factories.Paddings;
@@ -34,10 +37,11 @@ import com.jgoodies.forms.layout.FormLayout;
 import ch.sysout.emubro.api.event.GameSelectionEvent;
 import ch.sysout.emubro.controller.NotificationElementListener;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.ui.util.JCustomButton;
+import ch.sysout.ui.util.JCustomButton2;
 import ch.sysout.ui.util.JCustomToggleButton;
 import ch.sysout.util.Icons;
-import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 
@@ -73,7 +77,7 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 
 	private CellConstraints cc2;
 
-	AbstractButton btnResizeDetailsPane = new JCustomButton();
+	AbstractButton btnResizeDetailsPane = new JCustomButton2();
 
 	public DetailsPanel() {
 		super(new BorderLayout());
@@ -112,9 +116,10 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		btnWarnings.setHorizontalAlignment(SwingConstants.LEFT);
 		btnErrors.setHorizontalAlignment(SwingConstants.LEFT);
 
-		btnInformations.setIcon(ImageUtil.getImageIconFrom(Icons.get("info", 22, 22)));
-		btnWarnings.setIcon(ImageUtil.getImageIconFrom(Icons.get("warning", 22, 22)));
-		btnErrors.setIcon(ImageUtil.getImageIconFrom(Icons.get("error", 22, 22)));
+		int size = 22;
+		btnInformations.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("info"), size, new Color(137, 207, 240)));
+		btnWarnings.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("warning"), size, new Color(240, 167, 50)));
+		btnErrors.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("error"), size, new Color(199, 62, 29)));
 
 		pnlInformations = new NotificationsPanel();
 		pnlWarnings = new NotificationsPanel();
@@ -125,6 +130,10 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		// pnlErrors.setBorder(BorderFactory.createLoweredBevelBorder());
 
 		pnlBrowseComputer = new BrowseComputerPanel() {
+			/**
+			 *
+			 */
+			private static final long serialVersionUID = 1L;
 			private int lastPreferredWidth;
 
 			@Override
@@ -227,6 +236,8 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		pnlTpInformationBar = new JPanel(new BorderLayout());
 		pnlTpInformationBar.setOpaque(false);
 		tpDetailsPane = new JTabbedPane(SwingConstants.BOTTOM) {
+			private static final long serialVersionUID = 1L;
+
 			@Override
 			protected void paintComponent(Graphics g) {
 				super.paintComponent(g);
@@ -240,43 +251,37 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 				}
 			}
 		};
-		tpDetailsPane.setUI(new CustomTabbedPaneUI());
-		tpDetailsPane.setBorder(BorderFactory.createEmptyBorder());
+
 		tpDetailsPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
 		tpDetailsPane.setTabPlacement(JTabbedPane.TOP);
-		pnlBrowseComputer.setOpaque(false);
-		pnlBrowseTags.setOpaque(false);
 		JScrollPane sp2 = new JCustomScrollPane(pnlBrowseComputer);
-		sp2.getViewport().setOpaque(false);
-		sp2.setOpaque(false);
 		sp2.setBorder(BorderFactory.createEmptyBorder());
 		sp2.getVerticalScrollBar().setUnitIncrement(16);
-		tpDetailsPane.addTab(Messages.get(MessageConstants.NOTIFICATIONS),
-				ImageUtil.getImageIconFrom(Icons.get("info", 16, 16), false), createNotificationPanel());
-		tpDetailsPane.addTab(Messages.get(MessageConstants.BROWSE_COMPUTER),
-				ImageUtil.getImageIconFrom(Icons.get("search", 16, 16), false), sp2);
-
-		ImageUtil.getImageIconFrom(Icons.get("fromComputer", 16, 16));
-		ImageUtil.getImageIconFrom(Icons.get("fromWeb", 16, 16));
-
-		tpDetailsPane.addTab(Messages.get(MessageConstants.BROWSE_COVERS), pnlBrowseCovers);
-		tpDetailsPane.addTab(Messages.get(MessageConstants.BROWSE_TAGS), pnlBrowseTags);
+		tpDetailsPane.addTab(Messages.get(MessageConstants.NOTIFICATIONS), ImageUtil.getFlatSVGIconFrom(Icons.get("info"), 16, new Color(137, 207, 240)), createNotificationPanel());
+		tpDetailsPane.addTab(Messages.get(MessageConstants.BROWSE_COMPUTER), ImageUtil.getFlatSVGIconFrom(Icons.get("search"), 16, Color.LIGHT_GRAY), sp2);
+		tpDetailsPane.addTab(Messages.get(MessageConstants.BROWSE_COVERS), ImageUtil.getFlatSVGIconFrom(Icons.get("picture"), 16, new Color(181, 201, 255)), pnlBrowseCovers);
+		tpDetailsPane.addTab(Messages.get(MessageConstants.BROWSE_TAGS), ImageUtil.getFlatSVGIconFrom(Icons.get("tag"), 16, new Color(168, 124, 160)), pnlBrowseTags);
 
 		pnlTpInformationBar.add(tpDetailsPane);
-		pnlTpInformationBar.setOpaque(false);
 		JPanel pnl = new JPanel(new BorderLayout());
 		pnl.add(pnlHideDetailsPanePanel = createHideDetailsPanePanel(), BorderLayout.CENTER);
-		pnl.setOpaque(false);
-
-		add(btnResizeDetailsPane, BorderLayout.NORTH);
 		add(pnl, BorderLayout.EAST);
 		pnlBrowseComputer.setBorder(Paddings.TABBED_DIALOG);
 		add(pnlTpInformationBar);
+
+		JToolBar trailing = new JToolBar();
+		trailing.setFloatable(false);
+		trailing.setBorder(null);
+		// trailing.add(new JButton("test"));
+		trailing.add(Box.createHorizontalGlue());
+		trailing.add(btnHideDetailsPane);
+		trailing.add(btnPinUnpinDetailsPane);
+		tpDetailsPane.putClientProperty("JTabbedPane.trailingComponent", trailing);
 	}
 
 	private Component createHideDetailsPanePanel() {
 		JPanel pnl = new JPanel(new BorderLayout());
-		pnl.setOpaque(false);
+		//		pnl.setOpaque(false);
 		btnHideDetailsPane = new JCustomButton();
 		btnHideDetailsPane.setIcon(ImageUtil.getImageIconFrom(Icons.get("hideDetailsPane", 24, 24)));
 		btnHideDetailsPane.setActionCommand(GameViewConstants.HIDE_DETAILS_PANE);
@@ -285,11 +290,11 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		btnPinUnpinDetailsPane.setIcon(ImageUtil.getImageIconFrom(Icons.get("unpinDetailsPane", 24, 24)));
 		btnPinUnpinDetailsPane.setActionCommand(GameViewConstants.UNPIN_DETAILS_PANE);
 		btnPinUnpinDetailsPane.setToolTipText("Informationsbereich in eigenem Fenster öffnen");
-		JPanel pnl2 = new JPanel(new BorderLayout());
-		pnl2.setOpaque(false);
-		pnl2.add(btnPinUnpinDetailsPane, BorderLayout.NORTH);
-		pnl2.add(btnHideDetailsPane, BorderLayout.SOUTH);
-		pnl.add(pnl2, BorderLayout.NORTH);
+		//		JPanel pnl2 = new JPanel(new BorderLayout());
+		//		pnl2.setOpaque(false);
+		//		pnl2.add(btnPinUnpinDetailsPane, BorderLayout.NORTH);
+		//		pnl2.add(btnHideDetailsPane, BorderLayout.SOUTH);
+		//		pnl.add(pnl2, BorderLayout.NORTH);
 		return pnl;
 	}
 
@@ -344,11 +349,6 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		int notificationType = element.getNotificationType();
 		switch (notificationType) {
 		case NotificationElement.INFORMATION:
-			pnlInformations.addNotificationElement(element);
-			pnlInformations.addNotificationElementListener(this);
-			updateInformationElementsCount();
-			break;
-		case NotificationElement.INFORMATION_MANDATORY:
 			pnlInformations.addNotificationElement(element);
 			pnlInformations.addNotificationElementListener(this);
 			updateInformationElementsCount();
@@ -508,9 +508,9 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 			GradientPaint p = currentBackground.getGradientPaint();
 			g2d.setPaint(p);
 		} else if (currentBackground.hasColor()) {
-			g2d.setColor(currentBackground.getColor());
+			//g2d.setColor(currentBackground.getColor());
 		}
-		g2d.fillRect(0, 0, panelWidth, panelHeight);
+		//g2d.fillRect(0, 0, panelWidth, panelHeight);
 
 		BufferedImage background = currentBackground.getImage();
 		if (background != null) {

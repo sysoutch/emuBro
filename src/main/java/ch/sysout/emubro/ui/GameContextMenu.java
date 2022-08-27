@@ -39,12 +39,12 @@ import ch.sysout.emubro.impl.event.BroTagAddedEvent;
 import ch.sysout.emubro.impl.event.BroTagRemovedEvent;
 import ch.sysout.emubro.impl.model.BroEmulator;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.ImageUtil;
+import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Icons;
-import ch.sysout.util.ImageUtil;
 import ch.sysout.util.MenuScroller;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
-import ch.sysout.util.UIUtil;
 
 public class GameContextMenu extends JPopupMenu implements GameSelectionListener, TagListener {
 	private static final long serialVersionUID = 1L;
@@ -52,8 +52,8 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 	private JMenuItem itmRunGame = new JMenuItem("");
 	private JMenu mnuRunWith = new JMenu("");
 	private JMenuItem itmRunWithDefault = new JMenuItem();
-	private JMenuItem itmChangePlatform = new JMenuItem();
 	private JMenuItem itmConfigureEmulator = new JMenuItem();
+	private JMenuItem itmChangePlatform = new JMenuItem();
 	private JMenu mnuRateGame = new JMenu();
 	private JMenu mnuAddTags = new JMenu();
 	private JMenu mnuAvailableTags = new JMenu();
@@ -79,7 +79,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 	private JMenuItem itmComment = new JMenuItem();
 
 	private int size = ScreenSizeUtil.is3k() ? 24 : 16;
-	private Icon iconTag = ImageUtil.getImageIconFrom(Icons.get("tags", size, size));
+	private Icon iconTag = ImageUtil.getFlatSVGIconFrom(Icons.get("tag"), size, new Color(168, 124, 160));
 	private Icon iconRemoveTag = ImageUtil.getImageIconFrom(Icons.get("remove", size, size));
 	//	private Icon iconRenameTag = ImageUtil.getImageIconFrom(Icons.get("rename", size, size));
 
@@ -94,7 +94,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 
 		setIcons();
 		addComponentsToJComponent(this, itmRunGame, mnuRunWith,
-				new JSeparator(), itmChangePlatform, itmConfigureEmulator,
+				new JSeparator(), itmConfigureEmulator, itmChangePlatform,
 				new JSeparator(), mnuRateGame, mnuAddTags, itmAddCoverComputer,
 				new JSeparator(), mnuShowTagsWeb, mnuShowCoverWeb, mnuShowTrailerWeb/*, itmWebSearchSettings*/,
 				new JSeparator(), itmRemoveGame, itmRenameGame,
@@ -108,7 +108,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		int size = ScreenSizeUtil.is3k() ? 24 : 16;
 		itmCreateNewTag.setIcon(ImageUtil.getImageIconFrom(Icons.get("add", size, size)));
 		itmAutoSearchTags.setIcon(ImageUtil.getImageIconFrom(Icons.get("searchFile", size, size)));
-		mnuShowTagsWeb.setIcon(ImageUtil.getImageIconFrom(Icons.get("tags", size, size)));
+		mnuShowTagsWeb.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("tag"), size, Color.LIGHT_GRAY));
 		addComponentsToJComponent(mnuImportTags, itmDefaultImportTagSource, new JSeparator());
 		addComponentsToJComponent(mnuAvailableTags, itmCreateNewTag, new JSeparator());
 		addComponentsToJComponent(mnuAddTags, itmAutoSearchTags, mnuAvailableTags, new JSeparator());
@@ -126,7 +126,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		}
 	}
 
-	private void addNewTag(Tag tag) {
+	private void addNewTag(final Tag tag) {
 		JMenuItem itmTag = new JMenuItem(tag.getName());
 		itmTag.setIcon(iconTag);
 		String hexColor = tag.getHexColor();
@@ -153,7 +153,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		});
 	}
 
-	private void addTagItem(Tag tag) {
+	private void addTagItem(final Tag tag) {
 		JMenu mnuTag = new JMenu(tag.getName());
 		String hexColor = tag.getHexColor();
 		if (hexColor != null && !hexColor.trim().isEmpty()) {
@@ -212,7 +212,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		ScreenSizeUtil.adjustValueToResolution(32);
 		ButtonGroup group = new ButtonGroup();
 		List<JRadioButtonMenuItem> radios = new ArrayList<>();
-		for (Emulator emu : emulators) {
+		for (final Emulator emu : emulators) {
 			if (!emu.isInstalled()) {
 				continue;
 			}
@@ -256,32 +256,32 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 	private void setIcons() {
 		int size = ScreenSizeUtil.is3k() ? 24 : 16;
 		mnuShowTrailerWeb.setIcon(ImageUtil.getImageIconFrom(Icons.get("video", size, size)));
-		mnuShowCoverWeb.setIcon(ImageUtil.getImageIconFrom(Icons.get("picture", size, size)));
-		itmRunGame.setIcon(ImageUtil.getImageIconFrom(Icons.get("runGame", size, size)));
-		//		itmChangePlatform.setIcon(ImageUtil.getImageIconFrom(Icons.get("settings", size, size)));
-		itmConfigureEmulator.setIcon(ImageUtil.getImageIconFrom(Icons.get("settings", size, size)));
+		mnuShowCoverWeb.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("picture"), size, new Color(181, 201, 255)));
+		itmRunGame.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("runGame"), size, new Color(0, 129, 0)));
+		itmConfigureEmulator.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("settings"), size, Color.LIGHT_GRAY));
+		itmChangePlatform.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("change"), size, Color.LIGHT_GRAY));
 		itmComment.setIcon(ImageUtil.getImageIconFrom(Icons.get("gameComment", size, size)));
 		itmOpenGameFolder.setIcon(ImageUtil.getImageIconFrom(Icons.get("openFolder", size, size)));
 		itmCopyGamePath.setIcon(ImageUtil.getImageIconFrom(Icons.get("copy", size, size)));
-		itmRemoveGame.setIcon(ImageUtil.getImageIconFrom(Icons.get("remove", size, size)));
-		itmRenameGame.setIcon(ImageUtil.getImageIconFrom(Icons.get("rename", size, size)));
-		itmGameProperties.setIcon(ImageUtil.getImageIconFrom(Icons.get("gameProperties", size, size)));
+		itmRemoveGame.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("trash"), size, new Color(199, 0, 0)));
+		itmRenameGame.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rename"), size, Color.LIGHT_GRAY));
 		itmDefaultTagSource.setIcon(ImageUtil.getImageIconFrom(Icons.get("applicationIcon", size, size)));
 		//		itmCoverDownload.setIcon(ImageUtil.getImageIconFrom(Icons.get("applicationIcon", size, size)));
-		itmDefaultCoverSource.setIcon(ImageUtil.getImageIconFrom(Icons.get("google", size, size)));
-		itmDefaultTrailerSource.setIcon(ImageUtil.getImageIconFrom(Icons.get("youtube", size, size)));
+		itmDefaultCoverSource.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("google"), size));
+		itmDefaultTrailerSource.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("youtube"), size));
+		itmGameProperties.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("gameProperties"), size, Color.LIGHT_GRAY));
 	}
 
 	private void addComponentsToJComponent(JComponent component, Component... components) {
-		Color color = IconStore.current().getCurrentTheme().getMenuBar().getColor();
-		if (color == null) {
-			color = IconStore.current().getCurrentTheme().getBackground().getColor().darker();
-		}
+		//		Color color = IconStore.current().getCurrentTheme().getMenuBar().getColor();
+		//		if (color == null) {
+		//			color = IconStore.current().getCurrentTheme().getBackground().getColor().darker();
+		//		}
 		for (Component c : components) {
-			if (c instanceof JComponent) {
-				((JComponent) c).setOpaque(true);
-				((JComponent) c).setBackground(color);
-			}
+			//			if (c instanceof JComponent) {
+			//				((JComponent) c).setOpaque(true);
+			//				((JComponent) c).setBackground(color);
+			//			}
 			component.add(c);
 		}
 	}
@@ -334,8 +334,8 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		itmRunGame.setText("<html><b>" + Messages.get(MessageConstants.RUN_GAME) + "</b></html>");
 		mnuRunWith.setText(Messages.get(MessageConstants.RUN_WITH) + "...");
 		itmRunWithDefault.setText(Messages.get(MessageConstants.SET_EMULATOR) + "...");
-		itmChangePlatform.setText(Messages.get(MessageConstants.CHANGE_PLATFORM) + "...");
 		itmConfigureEmulator.setText(Messages.get(MessageConstants.CONFIGURE_EMULATOR));
+		itmChangePlatform.setText(Messages.get(MessageConstants.CHANGE_PLATFORM) + "...");
 		itmWebSearchSettings.setText(Messages.get(MessageConstants.WEB_SEARCH_SETTINGS) + "...");
 		mnuRateGame.setText(Messages.get(MessageConstants.RATE_GAME));
 		mnuAvailableTags.setText(Messages.get(MessageConstants.ADD_TAGS_MANUALLY));

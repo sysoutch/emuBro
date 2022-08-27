@@ -5,7 +5,6 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Font;
-import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.KeyboardFocusManager;
@@ -41,17 +40,16 @@ import java.util.Map;
 
 import javax.swing.AbstractButton;
 import javax.swing.Action;
-import javax.swing.ActionMap;
 import javax.swing.BorderFactory;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListSelectionModel;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
+import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
-import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.KeyStroke;
 import javax.swing.ListCellRenderer;
@@ -60,7 +58,6 @@ import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.ToolTipManager;
-import javax.swing.UIManager;
 import javax.swing.border.Border;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
@@ -97,9 +94,10 @@ import ch.sysout.emubro.impl.model.GameConstants;
 import ch.sysout.emubro.impl.model.PlatformConstants;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.JCustomButton;
+import ch.sysout.ui.util.JCustomButton2;
+import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
-import ch.sysout.util.UIUtil;
 
 public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	private GameListModel mdlLstAllGames = new GameListModel();
@@ -143,8 +141,6 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	ViewContextMenu popupView;
 	private GroupContextMenu popupGroup;
 	protected int mouseOver = -1;
-	private Color c;
-	private Color secondColor = new Color(56, 216, 120);
 	private Cursor cursorDrag = Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR);
 	protected int lastHorizontalScrollBarValue;
 	protected int lastVerticalScrollBarValue;
@@ -180,16 +176,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	private int currentView;
 	private List<TagsFromGamesListener> tagsFromGamesListeners = new ArrayList<>();
 
-	//	private static final int WIDE = 640;
-	//	private static final int HIGH = 240;
-	//	private static final float HUE_MIN = 0;
-	//	private static final float HUE_MAX = 1;
-	//	private final Timer timer;
-	//	private float hue = HUE_MIN;
-	//	private float delta = 0.01f;
-	private Color colorFavorite = new Color(250, 250, 128);
-	private Color color1 = Color.DARK_GRAY;
-	private Color color2 = Color.GRAY;
+	private Color colorFavorite = new Color(255, 195, 0);
 
 	public ListViewPanel(Explorer explorer, ViewPanelManager viewManager, GameContextMenu popupGame, ViewContextMenu popupView) {
 		super(new BorderLayout());
@@ -197,7 +184,6 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		this.viewManager = viewManager;
 		this.popupGame = popupGame;
 		this.popupView = popupView;
-
 		initPopupGroup();
 		add(createScrollPane(lstGames));
 		setGameListRenderer();
@@ -213,22 +199,6 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				}
 			}
 		});
-
-		//		ActionListener action = new ActionListener(){
-		//
-		//			@Override
-		//			public void actionPerformed(ActionEvent evt){
-		//				hue += delta;
-		//				if (hue > HUE_MAX) {
-		//					hue = HUE_MIN;
-		//				}
-		//				color1 = Color.getHSBColor(hue, 1, 1);
-		//				color2 = Color.getHSBColor(hue + 16 * delta, 1, 1);
-		//				repaint();
-		//			}
-		//		};
-		//		timer = new Timer(10, action);
-		//		timer.start();
 	}
 
 	protected void showGamePopupMenu(Component relativeTo, int x, int y) {
@@ -269,9 +239,9 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		popupGroup = new GroupContextMenu();
 	}
 
-	private JScrollPane createScrollPane(JList<Game> lst) {
+	private JScrollPane createScrollPane(final JList<Game> lst) {
 		lst.setOpaque(false);
-		JScrollPane sp = new JCustomScrollPane(lst);
+		final JScrollPane sp = new JCustomScrollPane(lst);
 		sp.getHorizontalScrollBar().setOpaque(false);
 		sp.getVerticalScrollBar().setOpaque(false);
 		sp.getHorizontalScrollBar().setUnitIncrement(16);
@@ -279,39 +249,41 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		sp.getViewport().setOpaque(false);
 		sp.setOpaque(false);
 		// done cause ModernScrollPane class breaks horizontal mouse wheel scrolling
-		sp.addMouseWheelListener(new MouseWheelListener() {
-
-			@Override
-			public void mouseWheelMoved(MouseWheelEvent e) {
-				// Ignore events generated with a rotation of 0
-				// (not sure why these events are generated)
-				int rotation = e.getWheelRotation();
-				if (rotation == 0) {
-					return;
-				}
-				// Get the Action from the scrollbar ActionMap for the given key
-				JScrollPane scrollPane = (JScrollPane) e.getComponent();
-				JScrollBar horizontal = scrollPane.getHorizontalScrollBar();
-				// Get the appropriate Action key for the given rotation
-				// (unit/block scroll is system dependent)
-				String key = null;
-				if (e.getScrollType() == MouseWheelEvent.WHEEL_UNIT_SCROLL) {
-					key = (rotation < 0) ? "negativeUnitIncrement" : "positiveUnitIncrement";
-				} else {
-					key = (rotation < 0) ? "negativeBlockIncrement" : "positiveBlockIncrement";
-				}
-
-				ActionMap map = horizontal.getActionMap();
-				Action action = map.get(key);
-				ActionEvent event = new ActionEvent(horizontal, ActionEvent.ACTION_PERFORMED, "");
-				// Invoke the Action the appropriate number of times to simulate
-				// default mouse wheel scrolling
-				int unitsToScroll = Math.abs(e.getUnitsToScroll());
-				for (int i = 0; i < unitsToScroll; i++) {
-					action.actionPerformed(event);
-				}
-			}
-		});
+		// TODO maybe not required anymore with the new FlatLaf Look And Feel. check it.
+		// TODO if rly still required, disable horizontal scroll when vertical scroll bar is visible
+		//		sp.addMouseWheelListener(new MouseWheelListener() {
+		//
+		//			@Override
+		//			public void mouseWheelMoved(MouseWheelEvent e) {
+		//				// Ignore events generated with a rotation of 0
+		//				// (not sure why these events are generated)
+		//				int rotation = e.getWheelRotation();
+		//				if (rotation == 0) {
+		//					return;
+		//				}
+		//				// Get the Action from the scrollbar ActionMap for the given key
+		//				JScrollPane scrollPane = (JScrollPane) e.getComponent();
+		//				JScrollBar horizontal = scrollPane.getHorizontalScrollBar();
+		//				// Get the appropriate Action key for the given rotation
+		//				// (unit/block scroll is system dependent)
+		//				String key = null;
+		//				if (e.getScrollType() == MouseWheelEvent.WHEEL_UNIT_SCROLL) {
+		//					key = (rotation < 0) ? "negativeUnitIncrement" : "positiveUnitIncrement";
+		//				} else {
+		//					key = (rotation < 0) ? "negativeBlockIncrement" : "positiveBlockIncrement";
+		//				}
+		//
+		//				ActionMap map = horizontal.getActionMap();
+		//				Action action = map.get(key);
+		//				ActionEvent event = new ActionEvent(horizontal, ActionEvent.ACTION_PERFORMED, "");
+		//				// Invoke the Action the appropriate number of times to simulate
+		//				// default mouse wheel scrolling
+		//				int unitsToScroll = Math.abs(e.getUnitsToScroll());
+		//				for (int i = 0; i < unitsToScroll; i++) {
+		//					action.actionPerformed(event);
+		//				}
+		//			}
+		//		});
 
 		sp.addComponentListener(new ComponentAdapter() {
 			@Override
@@ -560,16 +532,24 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				int currentCoverSize = ScreenSizeUtil.adjustValueToResolution(viewManager.getCurrentCoverSize());
 				int borderHeight = ScreenSizeUtil.adjustValueToResolution(16);
 				Icon gameIcon = null;
-				if (viewStyle == ViewPanel.LIST_VIEW) {
+				switch (viewStyle) {
+				case ViewPanel.LIST_VIEW:
 					gameIcon = IconStore.current().getGameIcon(game.getId());
-				} else if (viewStyle == ViewPanel.ELEMENT_VIEW) {
+					break;
+				case ViewPanel.ELEMENT_VIEW:
 					gameIcon = IconStore.current().getGameIcon(game.getId());
-				} else if (viewStyle == ViewPanel.CONTENT_VIEW) {
+					break;
+				case ViewPanel.CONTENT_VIEW:
 					gameIcon = IconStore.current().getScaledGameCover(game.getId(), currentCoverSize);
-				} else if (viewStyle == ViewPanel.SLIDER_VIEW) {
+					break;
+				case ViewPanel.SLIDER_VIEW:
 					gameIcon = IconStore.current().getScaledGameCover(game.getId(), currentCoverSize);
-				} else if (viewStyle == ViewPanel.COVER_VIEW) {
+					break;
+				case ViewPanel.COVER_VIEW:
 					gameIcon = IconStore.current().getScaledGameCover(game.getId(), currentCoverSize);
+					break;
+				default:
+					break;
 				}
 				if (gameIcon != null) {
 					label.setIcon(gameIcon);
@@ -647,7 +627,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 							//						label.setFont(new Font(labelFont.getName(), Font.BOLD, getFontSize()));
 						}
 					} else {
-						label.setOpaque(true);
+						//						label.setOpaque(true);
 						label.setBackground(colorItemBackground);
 						if (viewStyle != ViewPanel.CONTENT_VIEW) {	// Cause in content view the game title is bold. This would set game title also plain.
 							//						label.setFont(new Font(labelFont.getName(), Font.PLAIN, getFontSize()));
@@ -655,7 +635,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 					}
 				} else {
 					if (isSelected) {
-						label.setOpaque(true);
+						//						label.setOpaque(true);
 						label.setBackground(colorItemBackground);
 					} else {
 						//						label.setForeground(colorBackground);
@@ -692,10 +672,10 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		setViewStyle(lstGames, viewStyle);
 	}
 
-	private void setViewStyle(JList<Game> lst, int viewStyle) {
-		int cellHeight = viewManager.getCurrentCoverSize();
-		int fontHeight = ScreenSizeUtil.adjustValueToResolution(24);
-		int borderHeight = ScreenSizeUtil.adjustValueToResolution(16);
+	private void setViewStyle(JList<Game> lst, final int viewStyle) {
+		final int cellHeight = viewManager.getCurrentCoverSize();
+		final int fontHeight = ScreenSizeUtil.adjustValueToResolution(24);
+		final int borderHeight = ScreenSizeUtil.adjustValueToResolution(16);
 		this.viewStyle = viewStyle;
 		switch (viewStyle) {
 		case ViewPanel.CONTENT_VIEW:
@@ -880,7 +860,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 
 	@Override
 	public void addIncreaseFontListener2(MouseWheelListener l) {
-		for (JScrollPane sp : sps.values()) {
+		for (final JScrollPane sp : sps.values()) {
 			sp.addMouseWheelListener(l);
 			sp.addMouseWheelListener(new MouseWheelListener() {
 
@@ -1048,13 +1028,13 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				layout = new FormLayout("min:grow", "");
 			}
 			pnlListPlatform.setLayout(layout);
-			pnlListPlatform.setBackground(UIManager.getColor("List.background"));
-			pnlListPlatform.setOpaque(false);
+			//			pnlListPlatform.setBackground(UIManager.getColor("List.background"));
+			//			pnlListPlatform.setOpaque(false);
 			CellConstraints cc = new CellConstraints();
 			int x = 1;
 			int y = 1;
-			for (Platform p : explorer.getPlatforms()) {
-				JList<Game> lst = new JList<>();
+			for (final Platform p : explorer.getPlatforms()) {
+				final JList<Game> lst = new JList<>();
 				GameListModel mdlAll = (GameListModel) lstGames.getModel();
 				GameListModel mdlNew = new GameListModel();
 				for (Game g : mdlAll.getAllElements()) {
@@ -1090,12 +1070,11 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				});
 				lst.addKeyListener(createKeyListener(lst));
 				lst.setVisibleRowCount(lstGames.getModel().getSize());
-				int gameCount = mdlNew.getSize();
+				final int gameCount = mdlNew.getSize();
 				String gameCountString = (gameCount == 1) ? Messages.get(MessageConstants.GAME_COUNT1, gameCount)
 						: Messages.get(MessageConstants.GAME_COUNT, gameCount);
-				JCustomButton btn = new JCustomButton(
+				final JButton btn = new JCustomButton2(
 						"<html><strong>" + p.getName() + "</strong><br>" + gameCountString + "</html>");
-				btn.setKeepBackgroundOnHoverLost(true);
 				if (groupedViewButtons == null) {
 					groupedViewButtons = new ArrayList<AbstractButton>();
 				}
@@ -1205,7 +1184,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 							@Override
 							public void run() {
 								if (oldCurrentGame == currentGames) {
-									KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
+									final KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
 									manager.focusNextComponent();
 									SwingUtilities.invokeLater(new Runnable() {
 
@@ -1227,7 +1206,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 							@Override
 							public void run() {
 								if (oldCurrentGame == currentGames) {
-									KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
+									final KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
 									manager.focusPreviousComponent();
 									SwingUtilities.invokeLater(new Runnable() {
 
@@ -1282,7 +1261,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		}
 	}
 
-	protected void expandList(JList<Game> lst, JComponent comp) {
+	protected void expandList(final JList<Game> lst, final JComponent comp) {
 		lst.setVisible(true);
 		SwingUtilities.invokeLater(new Runnable() {
 
@@ -1309,8 +1288,8 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				layout = new FormLayout("min:grow", "");
 			}
 			pnlListTitle.setLayout(layout);
-			pnlListTitle.setOpaque(false);
-			pnlListTitle.setBackground(UIManager.getColor("List.background"));
+			//			pnlListTitle.setOpaque(false);
+			//			pnlListTitle.setBackground(UIManager.getColor("List.background"));
 			CellConstraints cc = new CellConstraints();
 			int x = 1;
 			int y = 1;
@@ -1321,7 +1300,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 					"^[^A-Z0-9].*$"
 			};
 			for (int i = 0; i < chars.length; i++) {
-				JList<Game> lst = new JList<>();
+				final JList<Game> lst = new JList<>();
 				GameListModel mdlNew = new GameListModel();
 				for (Game g : mdlAll.getAllElements()) {
 					if (g.getName().trim().toUpperCase().matches(chars[i])) {
@@ -1360,7 +1339,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				String gameCountString = (gameCount == 1) ? Messages.get(MessageConstants.GAME_COUNT1, gameCount)
 						: Messages.get(MessageConstants.GAME_COUNT, gameCount);
 				String withoutRegex = chars[i].replace("^[", "").replace("].*$", "").replace("^A-Z0-9", Messages.get(MessageConstants.OTHERS));
-				JCustomButton btn = new JCustomButton(
+				final JCustomButton btn = new JCustomButton(
 						"<html><strong>"+withoutRegex+"</strong><br>" + gameCountString + "</html>");
 				btn.setKeepBackgroundOnHoverLost(true);
 				if (groupedViewButtons == null) {
@@ -1475,6 +1454,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 
 	@Override
 	public void navigationChanged(NavigationEvent e, FilterEvent filterEvent) {
+		List<Game> selectedGames = explorer.getCurrentGames();
 		int gameCount = 0;
 		switch (e.getView()) {
 		case NavigationPanel.ALL_GAMES:
@@ -1495,6 +1475,9 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 			lstGames.setModel(mdlLstFavorites);
 			setViewStyle(lstGames, viewStyle);
 			break;
+		}
+		if (selectedGames != null && !selectedGames.isEmpty()) {
+			lstGames.setSelectedValue(selectedGames.get(0), true);
 		}
 		if (filterEvent.isPlatformFilterSet() || filterEvent.isGameFilterSet()) {
 			mdlLstFilteredGames.removeAllElements();
@@ -1535,7 +1518,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	@Override
 	public void increaseFontSize() {
 		Rectangle visibleRect = lstGames.getVisibleRect();
-		int lastSelected = lstGames.locationToIndex(new Point(visibleRect.x + visibleRect.width / 2, visibleRect.y + visibleRect.height / 2));
+		final int lastSelected = lstGames.locationToIndex(new Point(visibleRect.x + visibleRect.width / 2, visibleRect.y + visibleRect.height / 2));
 		int newRowHeight = getRowHeight() + 4;
 		int newColumnWidth = getColumnWidth() + 64;
 		if (groupedViewButtons != null) {
@@ -1561,7 +1544,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	@Override
 	public void decreaseFontSize() {
 		Rectangle visibleRect = lstGames.getVisibleRect();
-		int lastSelected = lstGames.locationToIndex(new Point(visibleRect.x + visibleRect.width / 2, visibleRect.y + visibleRect.height / 2));
+		final int lastSelected = lstGames.locationToIndex(new Point(visibleRect.x + visibleRect.width / 2, visibleRect.y + visibleRect.height / 2));
 		int newRowHeight = getRowHeight() - 4;
 		int newColumnWidth = getColumnWidth() - 64;
 		if (newRowHeight > 16) {
@@ -1752,7 +1735,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	@Override
 	public void filterSet(FilterEvent event) {
 		Game selectedGame = lstGames.getSelectedValue();
-		int selectedGameId = (selectedGame != null) ? selectedGame.getId() : GameConstants.NO_GAME;
+		final int selectedGameId = (selectedGame != null) ? selectedGame.getId() : GameConstants.NO_GAME;
 		doNotFireSelectGameEvent = true;
 		doTheFilterNew(event);
 		// this invokelater is required because of a weird bug when a filter is set and a
@@ -2097,13 +2080,13 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		int panelHeight = getHeight();
 		Theme currentTheme = IconStore.current().getCurrentTheme();
 		ThemeBackground currentBackground = currentTheme.getView();
-		if (currentBackground.hasGradientPaint()) {
-			GradientPaint p = currentBackground.getGradientPaint();
-			g2d.setPaint(p);
-		} else if (currentBackground.hasColor()) {
-			g2d.setColor(currentBackground.getColor());
-		}
-		g2d.fillRect(0, 0, panelWidth, panelHeight);
+		//		if (currentBackground.hasGradientPaint()) {
+		//			GradientPaint p = currentBackground.getGradientPaint();
+		//			g2d.setPaint(p);
+		//		} else if (currentBackground.hasColor()) {
+		//			g2d.setColor(currentBackground.getColor());
+		//		}
+		//		g2d.fillRect(0, 0, panelWidth, panelHeight);
 
 		BufferedImage background = currentBackground.getImage();
 		if (background != null) {

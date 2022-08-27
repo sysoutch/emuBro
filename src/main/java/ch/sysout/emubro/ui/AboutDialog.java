@@ -3,9 +3,6 @@ package ch.sysout.emubro.ui;
 import java.awt.Cursor;
 import java.awt.Desktop;
 import java.awt.Dimension;
-import java.awt.GradientPaint;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -35,12 +32,12 @@ import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.ui.util.JCustomButton;
+import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Icons;
-import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
-import ch.sysout.util.UIUtil;
 
 public class AboutDialog extends JDialog implements ActionListener {
 	private static final long serialVersionUID = 1L;
@@ -54,11 +51,10 @@ public class AboutDialog extends JDialog implements ActionListener {
 	int size = ScreenSizeUtil.is3k() ? 32 : 24;
 	private JButton btnFacebook = new JButton(ImageUtil.getImageIconFrom(Icons.get("facebook", size, size)));
 	private JButton btnTwitter = new JButton(ImageUtil.getImageIconFrom(Icons.get("twitter", size, size)));
-	private JButton btnYoutube = new JButton(ImageUtil.getImageIconFrom(Icons.get("youtube", size, size)));
-	private JButton btnDiscord = new JButton(ImageUtil.getImageIconFrom(Icons.get("discord", size, size)));
-	private JButton btnReddit = new JButton(ImageUtil.getImageIconFrom(Icons.get("reddit", size, size)));
+	private JButton btnYoutube = new JButton(ImageUtil.getFlatSVGIconFrom(Icons.get("youtube"), size));
+	private JButton btnDiscord = new JButton(ImageUtil.getFlatSVGIconFrom(Icons.get("discord"), size));
+	private JButton btnReddit = new JButton(ImageUtil.getFlatSVGIconFrom(Icons.get("reddit"), size));
 	private JButton btnGitHub = new JButton(ImageUtil.getImageIconFrom(Icons.get("github", size, size)));
-
 	private AbstractButton[] socialMediaButtons = new JButton[] { btnFacebook, btnTwitter, btnYoutube, btnDiscord, btnReddit, btnGitHub };
 
 	private JButton btnClose = new JCustomButton(Messages.get(MessageConstants.CLOSE));
@@ -77,7 +73,7 @@ public class AboutDialog extends JDialog implements ActionListener {
 		initComponents();
 		createUI();
 
-		setUndecorated(true); // remove system frame
+		//		setUndecorated(true); // remove system frame
 		//		AWTUtilities.setWindowOpaque(this, false); // enable opacity
 		//		SwingUtils.createDialogBackPanel(this, view.getContentPane());
 
@@ -197,24 +193,24 @@ public class AboutDialog extends JDialog implements ActionListener {
 		JPanel pnl = new JPanel(layout) {
 			private static final long serialVersionUID = 1L;
 
-			@Override
-			protected void paintComponent(Graphics g) {
-				super.paintComponent(g);
-				Graphics2D g2d = (Graphics2D) g.create();
-				int panelWidth = getWidth();
-				int panelHeight = getHeight();
-				Theme currentTheme = IconStore.current().getCurrentTheme();
-				if (currentTheme.getView().hasGradientPaint()) {
-					GradientPaint p = currentTheme.getView().getGradientPaint();
-					g2d.setPaint(p);
-				} else if (currentTheme.getView().hasColor()) {
-					g2d.setColor(currentTheme.getView().getColor());
-				}
-				g2d.fillRect(0, 0, panelWidth, panelHeight);
-				g2d.dispose();
-			}
+			//			@Override
+			//			protected void paintComponent(Graphics g) {
+			//				super.paintComponent(g);
+			//				Graphics2D g2d = (Graphics2D) g.create();
+			//				int panelWidth = getWidth();
+			//				int panelHeight = getHeight();
+			//				Theme currentTheme = IconStore.current().getCurrentTheme();
+			//				if (currentTheme.getView().hasGradientPaint()) {
+			//					GradientPaint p = currentTheme.getView().getGradientPaint();
+			//					g2d.setPaint(p);
+			//				} else if (currentTheme.getView().hasColor()) {
+			//					g2d.setColor(currentTheme.getView().getColor());
+			//				}
+			//				g2d.fillRect(0, 0, panelWidth, panelHeight);
+			//				g2d.dispose();
+			//			}
 		};
-		pnl.setOpaque(false);
+		//		pnl.setOpaque(false);
 		pnl.setBorder(Paddings.DIALOG);
 		//		getRootPane().setBorder(Paddings.DIALOG);
 		CellConstraints cc = new CellConstraints();

@@ -45,7 +45,7 @@ public class GameListModel extends DefaultListModel<Game> {
 	}
 
 	@Override
-	public void addElement(Game element) {
+	public void addElement(final Game element) {
 		games.add(element);
 		SwingUtilities.invokeLater(new Runnable() {
 
@@ -62,7 +62,7 @@ public class GameListModel extends DefaultListModel<Game> {
 	}
 
 	@Override
-	public void add(int index, Game element) {
+	public void add(final int index, final Game element) {
 		games.add(index, element);
 		SwingUtilities.invokeLater(new Runnable() {
 
@@ -78,7 +78,7 @@ public class GameListModel extends DefaultListModel<Game> {
 		});
 	}
 
-	public void addElements(List<Game> games) {
+	public void addElements(final List<Game> games) {
 		if (games.size() > 0) {
 			this.games.addAll(games);
 			SwingUtilities.invokeLater(new Runnable() {

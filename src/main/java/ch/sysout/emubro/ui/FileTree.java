@@ -54,11 +54,12 @@ import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeCellEditor;
 import javax.swing.tree.TreeCellRenderer;
+import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.util.Icons;
-import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 
@@ -125,7 +126,7 @@ public final class FileTree extends JPanel {
 				}
 			}
 		});
-		JPopupMenu popupFileTree = new JPopupMenu();
+		final JPopupMenu popupFileTree = new JPopupMenu();
 		JMenuItem mnuOpenFolderInExplorer;
 		mnuOpenFolderInExplorer = new JMenuItem(Messages.get(MessageConstants.OPEN_FOLDER_IN_EXPLORER));
 		mnuOpenFolderInExplorer.setIcon(ImageUtil.getImageIconFrom(Icons.get("openFolder", 16, 16)));
@@ -211,9 +212,9 @@ public final class FileTree extends JPanel {
 		List<File> directories = new ArrayList<>();
 		searchTreeForCheckedNode(tree.getPathForRow(0));
 		DefaultMutableTreeNode root = (DefaultMutableTreeNode) treeModel.getRoot();
-		Enumeration<DefaultMutableTreeNode> enumer = root.breadthFirstEnumeration();
+		Enumeration<TreeNode> enumer = root.breadthFirstEnumeration();
 		while (enumer.hasMoreElements()) {
-			DefaultMutableTreeNode node = enumer.nextElement();
+			DefaultMutableTreeNode node = (DefaultMutableTreeNode) enumer.nextElement();
 			CheckBoxNode check = (CheckBoxNode) node.getUserObject();
 			if (check != null && check.status == Status.SELECTED) {
 				directories.add(check.file);

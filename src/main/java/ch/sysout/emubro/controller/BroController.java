@@ -9,7 +9,6 @@ import java.awt.Dialog.ModalityType;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Frame;
-import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
@@ -209,7 +208,6 @@ import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 import com.jgoodies.validation.view.ValidationComponentUtils;
 
-import au.com.bytecode.opencsv.CSVWriter;
 import ch.sysout.emubro.api.EmulatorListener;
 import ch.sysout.emubro.api.FilterListener;
 import ch.sysout.emubro.api.PlatformListener;
@@ -282,31 +280,31 @@ import ch.sysout.emubro.ui.ViewPanelManager;
 import ch.sysout.emubro.ui.properties.DefaultEmulatorListener;
 import ch.sysout.emubro.ui.properties.PropertiesFrame;
 import ch.sysout.emubro.util.MessageConstants;
-import ch.sysout.ui.util.JCustomButton;
+import ch.sysout.ui.util.ImageUtil;
+import ch.sysout.ui.util.JCustomButton2;
+import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.FileUtil;
 import ch.sysout.util.Icons;
-import ch.sysout.util.ImageUtil;
-import ch.sysout.util.LnkParser;
+import ch.sysout.util.LinkParser;
 import ch.sysout.util.Messages;
 import ch.sysout.util.RobotUtil;
 import ch.sysout.util.ScreenSizeUtil;
-import ch.sysout.util.UIUtil;
 import ch.sysout.util.ValidationUtil;
-import net.arikia.dev.drpc.DiscordRPC;
-import net.arikia.dev.drpc.DiscordRichPresence.Builder;
 import spark.Request;
+import spark.Response;
+import spark.Route;
 import spark.Spark;
 
 public class BroController implements ActionListener, PlatformListener, EmulatorListener, TagListener,
 GameSelectionListener, BrowseComputerListener {
-	Explorer explorer;
-	MainFrame view;
+	private Explorer explorer;
+	private MainFrame view;
 	private PropertiesFrame frameProperties;
 	private HelpFrame dlgHelp;
 	private AboutDialog dlgAbout;
 	private UpdateDialog dlgUpdates;
 
-	ExplorerDAO explorerDAO;
+	private ExplorerDAO explorerDAO;
 	private List<String> alreadyCheckedDirectories = new ArrayList<>();
 	private Properties properties;
 
@@ -372,10 +370,10 @@ GameSelectionListener, BrowseComputerListener {
 	private Map<String, ImageIcon> emulatorIcons = new HashMap<>();
 	private Map<String, Icon> emulatorFileIcons = new HashMap<>();
 	private List<String> encryptedFiles = new ArrayList<>();
-	BrowseComputerWorker workerBrowseComputer;
-	List<PlatformListener> platformListeners = new ArrayList<>();
-	List<EmulatorListener> emulatorListeners = new ArrayList<>();
-	List<TagListener> tagListeners = new ArrayList<>();
+	private BrowseComputerWorker workerBrowseComputer;
+	private List<PlatformListener> platformListeners = new ArrayList<>();
+	private List<EmulatorListener> emulatorListeners = new ArrayList<>();
+	private List<TagListener> tagListeners = new ArrayList<>();
 	private List<LanguageListener> languageListeners = new ArrayList<>();
 	private List<String> zipFiles = new ArrayList<>();
 	private List<String> rarFiles = new ArrayList<>();
@@ -409,7 +407,7 @@ GameSelectionListener, BrowseComputerListener {
 	private ActionListener actionOpenRedditLink;
 	private ConfigWizardDialog dlgConfigWizard;
 	private File lastDirFromFileChooser;
-	private Builder discordRpc;
+	//	private Builder discordRpc;
 	private String storageDirectory;
 	private List<Integer> alreadyCheckedPlatformIds = new ArrayList<>();
 	private ExecutorService executor = Executors.newCachedThreadPool();
@@ -423,12 +421,11 @@ GameSelectionListener, BrowseComputerListener {
 
 	private ExecutorService executorServiceDownloadGameCover;
 
-	public BroController(SplashScreenWindow dlgSplashScreen, ExplorerDAO explorerDAO, Explorer model, MainFrame view, Builder discordRpc) {
+	public BroController(SplashScreenWindow dlgSplashScreen, ExplorerDAO explorerDAO, Explorer model, MainFrame view) {
 		this.dlgSplashScreen = dlgSplashScreen;
 		this.explorerDAO = explorerDAO;
 		explorer = model;
 		this.view = view;
-		this.discordRpc = discordRpc;
 		explorer.setSearchProcessComplete(explorerDAO.isSearchProcessComplete());
 		platformComparator = new PlatformComparator(explorer);
 		initSpark();
@@ -445,55 +442,111 @@ GameSelectionListener, BrowseComputerListener {
 		if (!storageDir.isDirectory()) {
 			return;
 		}
-		Spark.post("/upload", (req, res) -> uploadFile(req));
-		Spark.post("/game/:id/run", (req, res) -> runGame(req.params(":id")));
-		Spark.post("/game/:id/select", (req, res) -> selectGame(req.params(":id")));
-		Spark.get("/download/:file", (req, res) -> downloadFile(req.params(":file")));
-		Spark.get("/gameCover/:gameId", (req, res) -> {
-			int gameId = Integer.valueOf(req.params(":gameId"));
-
-			HttpServletResponse raw = res.raw();
-			raw.setHeader("Content-Disposition", "attachment; filename=gamecover.png");
-
-			ImageIcon icon = IconStore.current().getGameCover(gameId);
-			BufferedImage bi = new BufferedImage(icon.getIconWidth(), icon.getIconHeight(),
-					BufferedImage.TYPE_INT_ARGB);
-			Graphics g = bi.createGraphics();
-			icon.paintIcon(null, g, 0, 0);
-			g.dispose();
-			try (OutputStream out = res.raw().getOutputStream()) {
-				ImageIO.write(bi, "png", out);
-				bi.flush();
-				out.close();
-				return raw;
+		Spark.post("/upload", new Route() {
+			@Override
+			public Object handle(Request req, Response res) throws Exception {
+				return uploadFile(req);
 			}
 		});
-		Spark.get("/platformIcon/:platformId", (req, res) -> {
-			int platformId = Integer.valueOf(req.params(":platformId"));
-
-			HttpServletResponse raw = res.raw();
-			raw.setHeader("Content-Disposition", "attachment; filename="+explorer.getPlatform(platformId).getName()+".png");
-
-			ImageIcon icon = IconStore.current().getPlatformIcon(platformId);
-			BufferedImage bi = new BufferedImage(icon.getIconWidth(), icon.getIconHeight(),
-					BufferedImage.TYPE_INT_ARGB);
-			Graphics g = bi.createGraphics();
-			icon.paintIcon(null, g, 0, 0);
-			g.dispose();
-			try (OutputStream out = res.raw().getOutputStream()) {
-				ImageIO.write(bi, "png", out);
-				bi.flush();
-				out.close();
-				return raw;
+		Spark.post("/game/:id/run", new Route() {
+			@Override
+			public Object handle(Request req, Response res) throws Exception {
+				return runGame(req.params(":id"));
 			}
 		});
-		Spark.get("/games", (req, res) -> listGames());
-		Spark.get("/current_games", (req, res) -> listGames(true));
-		Spark.get("/platforms", (req, res) -> listPlatforms());
-		Spark.get("/platforms/:id", (req, res) -> listPlatform(req.params(":id")));
-		Spark.get("/currentGames", (req, res) -> listGames(true));
+		Spark.post("/game/:id/select", new Route() {
+			@Override
+			public Object handle(Request req, Response res) throws Exception {
+				return selectGame(req.params(":id"));
+			}
+		});
+		Spark.get("/download/:file", new Route() {
+			@Override
+			public Object handle(Request req, Response res) throws Exception {
+				return downloadFile(req.params(":file"));
+			}
+		});
+		Spark.get("/gameCover/:gameId", new Route() {
+			@Override
+			public Object handle(Request req, Response res) throws Exception {
+				int gameId = Integer.valueOf(req.params(":gameId"));
 
-		Spark.delete("/delete/:file", (req, res) -> deleteFile(req.params(":file")));
+				HttpServletResponse raw = res.raw();
+				raw.setHeader("Content-Disposition", "attachment; filename=gamecover.png");
+
+				ImageIcon icon = IconStore.current().getGameCover(gameId);
+				BufferedImage bi = new BufferedImage(icon.getIconWidth(), icon.getIconHeight(),
+						BufferedImage.TYPE_INT_ARGB);
+				Graphics g = bi.createGraphics();
+				icon.paintIcon(null, g, 0, 0);
+				g.dispose();
+				try (OutputStream out = res.raw().getOutputStream()) {
+					ImageIO.write(bi, "png", out);
+					bi.flush();
+					out.close();
+					return raw;
+				}
+			}
+		});
+		Spark.get("/platformIcon/:platformId", new Route() {
+			@Override
+			public Object handle(Request req, Response res) throws Exception {
+				int platformId = Integer.valueOf(req.params(":platformId"));
+
+				HttpServletResponse raw = res.raw();
+				raw.setHeader("Content-Disposition", "attachment; filename="+explorer.getPlatform(platformId).getName()+".png");
+
+				ImageIcon icon = IconStore.current().getPlatformIcon(platformId);
+				BufferedImage bi = new BufferedImage(icon.getIconWidth(), icon.getIconHeight(),
+						BufferedImage.TYPE_INT_ARGB);
+				Graphics g = bi.createGraphics();
+				icon.paintIcon(null, g, 0, 0);
+				g.dispose();
+				try (OutputStream out = res.raw().getOutputStream()) {
+					ImageIO.write(bi, "png", out);
+					bi.flush();
+					out.close();
+					return raw;
+				}
+			}
+		});
+		Spark.get("/games", new Route() {
+			@Override
+			public Object handle(Request req, Response res) throws Exception {
+				return listGames();
+			}
+		});
+		Spark.get("/current_games", new Route() {
+			@Override
+			public Object handle(Request req, Response res) throws Exception {
+				return listGames(true);
+			}
+		});
+		Spark.get("/platforms", new Route() {
+			@Override
+			public Object handle(Request req, Response res) throws Exception {
+				return listPlatforms();
+			}
+		});
+		Spark.get("/platforms/:id", new Route() {
+			@Override
+			public Object handle(Request req, Response res) throws Exception {
+				return listPlatform(req.params(":id"));
+			}
+		});
+		Spark.get("/currentGames", new Route() {
+			@Override
+			public Object handle(Request req, Response res) throws Exception {
+				return listGames(true);
+			}
+		});
+
+		Spark.delete("/delete/:file", new Route() {
+			@Override
+			public Object handle(Request req, Response res) throws Exception {
+				return deleteFile(req.params(":file"));
+			}
+		});
 	}
 
 	private Object getPlatformIcon(String params) {
@@ -501,7 +554,7 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	private String runGame(String id) {
-		int gameId = Integer.valueOf(id);
+		final int gameId = Integer.valueOf(id);
 		explorer.setCurrentGames(explorer.getGame(gameId));
 		SwingUtilities.invokeLater(new Runnable() {
 
@@ -515,7 +568,7 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	private String selectGame(String id) {
-		int gameId = Integer.valueOf(id);
+		final int gameId = Integer.valueOf(id);
 		explorer.setCurrentGames(explorer.getGame(gameId));
 		SwingUtilities.invokeLater(new Runnable() {
 
@@ -702,7 +755,7 @@ GameSelectionListener, BrowseComputerListener {
 		actionKeys.put("hideMessage", hideAction);
 
 		NotificationElement element = new NotificationElement(new String[] { "browseComputerForGamesAndEmulators" },
-				actionKeys, NotificationElement.INFORMATION_MANDATORY, hideAction);
+				actionKeys, NotificationElement.INFORMATION, hideAction);
 		view.showInformation(element);
 	}
 
@@ -830,6 +883,15 @@ GameSelectionListener, BrowseComputerListener {
 				} else {
 					view.showNavigationPane(true, 220, NavigationPanel.MAXIMIZED);
 				}
+				// don't remove this invokeLater, otherwise Tags-Button in GameFilterPanel will
+				// get the old panel width values and button would not minimize correctly
+				SwingUtilities.invokeLater(new Runnable() {
+
+					@Override
+					public void run() {
+						view.showHidePanels();
+					}
+				});
 			}
 		});
 		view.addAutoSearchListener(new AutoSearchListener());
@@ -1023,7 +1085,7 @@ GameSelectionListener, BrowseComputerListener {
 
 			@Override
 			public void run() {
-				JColorChooser safd = new JColorChooser();
+				final JColorChooser safd = new JColorChooser();
 
 				ColorSelectionModel model = safd.getSelectionModel();
 				ChangeListener changeListener = new ChangeListener() {
@@ -1057,47 +1119,47 @@ GameSelectionListener, BrowseComputerListener {
 				};
 				model.addChangeListener(changeListener);
 
-				try {
-					makeCustomSettingsForColorChooser(safd);
-				} catch (NoSuchFieldException | SecurityException | IllegalArgumentException
-						| IllegalAccessException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+				//				try {
+				//					makeCustomSettingsForColorChooser(safd);
+				//				} catch (NoSuchFieldException | SecurityException | IllegalArgumentException
+				//						| IllegalAccessException e) {
+				//					// TODO Auto-generated catch block
+				//					e.printStackTrace();
+				//				}
 
-				AbstractColorChooserPanel[] panels = safd.getChooserPanels();
-
-				JPanel p = new JPanel() {
-					@Override
-					protected void paintComponent(Graphics g) {
-						super.paintComponent(g);
-						Graphics2D g2d = (Graphics2D) g.create();
-						int panelWidth = getWidth();
-						int panelHeight = getHeight();
-						Theme currentTheme = IconStore.current().getCurrentTheme();
-						if (currentTheme.getView().hasGradientPaint()) {
-							GradientPaint p = currentTheme.getView().getGradientPaint();
-							g2d.setPaint(p);
-						} else if (currentTheme.getView().hasColor()) {
-							g2d.setColor(currentTheme.getView().getColor());
-						}
-						g2d.fillRect(0, 0, panelWidth, panelHeight);
-						g2d.dispose();
-					}
-				};
-				p.setOpaque(false);
-				panels[2].setOpaque(false);
-				panels[2].setBorder(new TitledBorder(panels[2].getDisplayName()));
-				p.add(panels[2]);
+				//				AbstractColorChooserPanel[] panels = safd.getChooserPanels();
+				//				JPanel p = new JPanel() {
+				//					@Override
+				//					protected void paintComponent(Graphics g) {
+				//						super.paintComponent(g);
+				//						Graphics2D g2d = (Graphics2D) g.create();
+				//						int panelWidth = getWidth();
+				//						int panelHeight = getHeight();
+				//						Theme currentTheme = IconStore.current().getCurrentTheme();
+				//						if (currentTheme.getView().hasGradientPaint()) {
+				//							GradientPaint p = currentTheme.getView().getGradientPaint();
+				//							g2d.setPaint(p);
+				//						} else if (currentTheme.getView().hasColor()) {
+				//							g2d.setColor(currentTheme.getView().getColor());
+				//						}
+				//						g2d.fillRect(0, 0, panelWidth, panelHeight);
+				//						g2d.dispose();
+				//					}
+				//			};
+				//				p.setOpaque(false);
+				//				panels[2].setOpaque(false);
+				//				panels[2].setBorder(new TitledBorder(panels[2].getDisplayName()));
+				//				p.add(panels[2]);
 
 				//				JColorChooser.createDialog(view, "JColorChooser", false, safd, null, null);
-				JDialog dlg = new JDialog();
-				dlg.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-				//				dlg.setUndecorated(true);
-				dlg.add(p);
-				dlg.pack();
-				dlg.setLocationRelativeTo(view);
-				dlg.setVisible(true);
+
+				//				JDialog dlg = new JDialog();
+				//				dlg.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+				//				//				dlg.setUndecorated(true);
+				//				dlg.add(p);
+				//				dlg.pack();
+				//				dlg.setLocationRelativeTo(view);
+				//				dlg.setVisible(true);
 
 				//				TestColorPicker colorPicker = new TestColorPicker();
 				//				colorPicker.addColorPickerListener(new ColorPickerListener() {
@@ -1517,7 +1579,7 @@ GameSelectionListener, BrowseComputerListener {
 		tagListeners.add(l);
 	}
 
-	public void addOrChangeTags(List<Tag> tmpTags) {
+	public void addOrChangeTags(List<BroTag> tmpTags) {
 		if (tmpTags == null || tmpTags.isEmpty()) {
 			return;
 		}
@@ -1629,7 +1691,7 @@ GameSelectionListener, BrowseComputerListener {
 		return null;
 	}
 
-	public void showView(boolean applyData) throws FileNotFoundException, SQLException {
+	public void showView(final boolean applyData) throws FileNotFoundException, SQLException {
 		/*
 		 * this invokeLater has been done, because of an unexplainable (thread
 		 * problems?) NullPointerException in ListViewPanel when calling
@@ -1712,9 +1774,9 @@ GameSelectionListener, BrowseComputerListener {
 							Properties propCpu = SystemInformations.getCpuInformation();
 							Properties propGpu = SystemInformations.getGpuInformation();
 							Properties propRam = SystemInformations.getRamInformation();
-							String os = "OS: " + propOs.getProperty("Caption", "-");
-							String cpu = "Processor: " + propCpu.getProperty("Name", "-");
-							String gpu = "Graphics Card: " + propGpu.getProperty("Name", "-");
+							final String os = "OS: " + propOs.getProperty("Caption", "-");
+							final String cpu = "Processor: " + propCpu.getProperty("Name", "-");
+							final String gpu = "Graphics Card: " + propGpu.getProperty("Name", "-");
 							String ram = propRam.getProperty("Capacity", "0");
 							try {
 								long ramLong = Long.valueOf(ram);
@@ -1724,12 +1786,12 @@ GameSelectionListener, BrowseComputerListener {
 								// ignore
 								throw e;
 							}
-							String ram2 = "RAM: " + ram;
+							final String ram2 = "RAM: " + ram;
 							SwingUtilities.invokeLater(new Runnable() {
 
 								@Override
 								public void run() {
-									view.showSystemInformations(cpu, gpu, ram2);
+									view.showSystemInformations(os, cpu, gpu, ram2);
 								}
 							});
 						} catch (IOException e) {
@@ -2063,19 +2125,24 @@ GameSelectionListener, BrowseComputerListener {
 				return null;
 			}
 		}
-		if (fileType == FileTypeConstants.TXT_FILE) {
+		switch (fileType) {
+		case FileTypeConstants.TXT_FILE: {
 			List<Game> games = (request == JOptionPane.YES_OPTION) ? view.getGamesFromCurrentView() : explorer.getGames();
 			return exportGameListToTxtFile(games);
-		} else if (fileType == FileTypeConstants.CSV_FILE) {
+		}
+		case FileTypeConstants.CSV_FILE: {
 			List<Game> games = (request == JOptionPane.YES_OPTION) ? view.getGamesFromCurrentView() : explorer.getGames();
 			return exportGameListToCsvFile(games);
-		} else if (fileType == FileTypeConstants.JSON_FILE) {
+		}
+		case FileTypeConstants.JSON_FILE: {
 			List<Game> games = (request == JOptionPane.YES_OPTION) ? view.getGamesFromCurrentView() : explorer.getGames();
 			return exportGameListToJsonFile(games);
-		} else if (fileType == FileTypeConstants.XML_FILE) {
+		}
+		case FileTypeConstants.XML_FILE: {
 			List<Game> games = (request == JOptionPane.YES_OPTION) ? view.getGamesFromCurrentView() : explorer.getGames();
 			return exportGameListToXmlFile(games);
-		} else {
+		}
+		default:
 			throw new IllegalArgumentException("option must be one of " + "FileTypeConstants.TXT_FILE, "
 					+ "FileTypeConstants.CSV_FILE, " + "FileTypeConstants.XML_FILE");
 		}
@@ -2119,9 +2186,9 @@ GameSelectionListener, BrowseComputerListener {
 		FileWriter fw = new FileWriter(file);
 		BufferedWriter bw = new BufferedWriter(fw);
 
-		CSVWriter writer = new CSVWriter(bw, CSVWriter.DEFAULT_SEPARATOR, CSVWriter.NO_QUOTE_CHARACTER);
-		writer.writeAll(allLines);
-		writer.close();
+		//		CSVWriter writer = new CSVWriter(bw, CSVWriter.DEFAULT_SEPARATOR, CSVWriter.NO_QUOTE_CHARACTER);
+		//		writer.writeAll(allLines);
+		//		writer.close();
 		return file;
 	}
 
@@ -2142,21 +2209,16 @@ GameSelectionListener, BrowseComputerListener {
 	 * @throws DOMException
 	 */
 	private File exportGameListToXmlFile(List<Game> games) throws IOException, DOMException, SQLException {
-		File file;
-		Document doc;
-		Element el;
-
-		file = new File("gamelist.xml");
+		File file = new File("gamelist.xml");
 		file.createNewFile();
-
 		try {
 			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 			DocumentBuilder builder = factory.newDocumentBuilder();
 
-			doc = builder.newDocument();
+			Document doc = builder.newDocument();
 			doc.setXmlStandalone(true);
 
-			el = doc.createElement("games");
+			Element el = doc.createElement("games");
 			doc.appendChild(el);
 
 			for (Game g : games) {
@@ -2251,7 +2313,7 @@ GameSelectionListener, BrowseComputerListener {
 		}
 	}
 
-	private void runGame1(Game game, Platform platform) throws SQLException {
+	private void runGame1(final Game game, final Platform platform) throws SQLException {
 		Emulator emulator = null;
 		if (!game.hasEmulator()) {
 			List<BroEmulator> emulators = platform.getEmulators();
@@ -2300,7 +2362,7 @@ GameSelectionListener, BrowseComputerListener {
 		if (ValidationUtil.isWindows()) {
 			emulatorPath = emulatorPath.replace("%windir%", System.getenv("WINDIR"));
 		}
-		String emulatorStartParameters = emulator.getStartParameters();
+		final String emulatorStartParameters = emulator.getStartParameters();
 
 		List<String> gamePaths = explorer.getFiles(game);
 		String gamePath2 = null;
@@ -2440,7 +2502,7 @@ GameSelectionListener, BrowseComputerListener {
 					frameEmulationOverlay.setVisible(true);
 					dlgSplashScreen.dispose();
 					runGame2(game, startParametersList, emulatorFile.getParentFile());
-				} catch (IOException e) {
+				} catch (final IOException e) {
 					SwingUtilities.invokeLater(new Runnable() {
 
 						@Override
@@ -2557,7 +2619,7 @@ GameSelectionListener, BrowseComputerListener {
 		return true;
 	}
 
-	private void runGame2(Game game, List<String> startParametersList, File workingDirectory) throws IOException {
+	private void runGame2(final Game game, List<String> startParametersList, File workingDirectory) throws IOException {
 		int emulatorId = game.getDefaultEmulatorId();
 		int platformId = game.getPlatformId();
 		Emulator emulator;
@@ -2567,16 +2629,16 @@ GameSelectionListener, BrowseComputerListener {
 			int gameId = game.getId();
 			emulator = explorer.getEmulatorFromGame(gameId);
 		}
-		String taskName = emulator.getPath();
+		final String taskName = emulator.getPath();
 		getTaskList(taskName);
 
 		ProcessBuilder builder = new ProcessBuilder(startParametersList);
-		Process p = builder.redirectErrorStream(true).start();
+		final Process p = builder.redirectErrorStream(true).start();
 		frameEmulationOverlay.setProcess(p);
 
-		discordRpc.setDetails(game.getName() + " - " + explorer.getPlatform(platformId).getName());
-		discordRpc.setStartTimestamps(System.currentTimeMillis());
-		DiscordRPC.discordUpdatePresence(discordRpc.build());
+		//		discordRpc.setDetails(game.getName() + " - " + explorer.getPlatform(platformId).getName());
+		//		discordRpc.setStartTimestamps(System.currentTimeMillis());
+		//		DiscordRPC.discordUpdatePresence(discordRpc.build());
 
 		final ScheduledExecutorService executorService2 = Executors.newSingleThreadScheduledExecutor();
 		boolean shouldAutomaticallyDoScreenshot = game.getBannerImage() == null;
@@ -2598,7 +2660,7 @@ GameSelectionListener, BrowseComputerListener {
 					if (!p.isAlive()) {
 						executorService2.shutdownNow();
 						p.destroy();
-						int exitValue = p.exitValue();
+						final int exitValue = p.exitValue();
 						SwingUtilities.invokeLater(new Runnable() {
 
 							@Override
@@ -2611,9 +2673,9 @@ GameSelectionListener, BrowseComputerListener {
 									lastFlavorListener = null;
 								}
 
-								discordRpc.setDetails("");
-								discordRpc.setStartTimestamps(0);
-								DiscordRPC.discordUpdatePresence(discordRpc.build());
+								//								discordRpc.setDetails("");
+								//								discordRpc.setStartTimestamps(0);
+								//								DiscordRPC.discordUpdatePresence(discordRpc.build());
 
 								frameEmulationOverlay.dispose();
 								view.setState(Frame.NORMAL);
@@ -2936,7 +2998,7 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	private void exitNow(boolean installUpdate) {
-		DiscordRPC.discordShutdown();
+		//		DiscordRPC.discordShutdown();
 		if (installUpdate) {
 			try {
 				String userTmp = System.getProperty("java.io.tmpdir");
@@ -3267,7 +3329,7 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	private void checkLink(Path file, boolean downloadCover) throws IOException, SQLException, RarException {
-		LnkParser lnkParser = new LnkParser(file);
+		LinkParser lnkParser = new LinkParser(file);
 		manuallyCheckAddGameOrEmulator(Paths.get(lnkParser.getRealFilename()), downloadCover);
 	}
 
@@ -3309,13 +3371,13 @@ GameSelectionListener, BrowseComputerListener {
 		String title = Messages.get(MessageConstants.PLATFORM_NOT_RECOGNIZED_TITLE);
 		List<Platform> platforms = explorer.getPlatforms();
 		Platform[] objectsArr = platforms.toArray(new Platform[platforms.size()]);
-		JComboBox<Platform> cmbPlatforms = new JComboBox<>(objectsArr);
+		final JComboBox<Platform> cmbPlatforms = new JComboBox<>(objectsArr);
 		cmbPlatforms.setSelectedItem(null);
-		JLabel lbl = new JLabel("Choose a platform from the list below to categorize the file:");
+		final JLabel lbl = new JLabel("Choose a platform from the list below to categorize the file:");
 		JRadioButton rdbGame = new JRadioButton("Game");
 		JRadioButton rdbEmulator = new JRadioButton("Emulator");
 		JTextField txtEmulatorShortName = new JTextField();
-		JLinkButton lnk = new JLinkButton("Your platform doesn't show up? Create a new platform instead.");
+		final JLinkButton lnk = new JLinkButton("Your platform doesn't show up? Create a new platform instead.");
 		lbl.setEnabled(false);
 		rdbGame.setSelected(true);
 		cmbPlatforms.setEnabled(false);
@@ -3592,7 +3654,7 @@ GameSelectionListener, BrowseComputerListener {
 		return prop.getProperty(key);
 	}
 
-	private void setCoverForGameUsingOriginalFile(Game game, InputStream is) throws IOException {
+	private void setCoverForGameUsingOriginalFile(final Game game, final InputStream is) throws IOException {
 		String emuBroCoverHome = explorer.getGameCoversPath();
 		String checksum = explorer.getChecksumById(game.getChecksumId());
 		String gameCoverDir = emuBroCoverHome + File.separator + checksum;
@@ -3646,7 +3708,7 @@ GameSelectionListener, BrowseComputerListener {
 	 * @param gameCover
 	 * @param fileType
 	 */
-	protected void setCoverForGame(Game game, Image gameCover, String fileType) {
+	protected void setCoverForGame(final Game game, final Image gameCover, String fileType) {
 		if (!fileType.startsWith(".")) {
 			fileType = "." + fileType;
 		}
@@ -3890,6 +3952,7 @@ GameSelectionListener, BrowseComputerListener {
 			}
 			dlg.add(new JScrollPane(lst));
 			dlg.pack();
+			dlg.setLocationRelativeTo(view);
 			dlg.setVisible(true);
 		}
 	}
@@ -4591,7 +4654,7 @@ GameSelectionListener, BrowseComputerListener {
 				CellConstraints cc = new CellConstraints();
 				JPanel pnlWrapWrapper = new JPanel(new BorderLayout());
 				TitledBorder titledBorder = new TitledBorder(null, Messages.get(MessageConstants.RENAMING_OPTIONS), 0, TitledBorder.TOP);
-				JButton btn = new JButton();
+				final JButton btn = new JButton();
 				btn.setFocusPainted(false);
 				btn.setContentAreaFilled(false);
 				btn.setBorder(titledBorder);
@@ -4670,7 +4733,7 @@ GameSelectionListener, BrowseComputerListener {
 				//			pnlAutoCase.setBackground(ValidationComponentUtils.getMandatoryBackground());
 				//			pnlCamelCase.setBackground(ValidationComponentUtils.getMandatoryBackground());
 
-				JButton btnMoreRenamingOptions = new JCustomButton(Messages.get(MessageConstants.RENAMING_OPTIONS));
+				final JButton btnMoreRenamingOptions = new JCustomButton2(Messages.get(MessageConstants.RENAMING_OPTIONS));
 				int size = ScreenSizeUtil.is3k() ? 24 : 16;
 				btnMoreRenamingOptions.setIcon(ImageUtil.getImageIconFrom(Icons.get("arrowDown", size, size)));
 				btnMoreRenamingOptions.setHorizontalAlignment(SwingConstants.LEFT);
@@ -4867,7 +4930,7 @@ GameSelectionListener, BrowseComputerListener {
 		}
 
 		protected void showRenameGamesDialog(List<JCheckBox> dynamicCheckBoxes, boolean dots, boolean underlines) {
-			JDialog dlg = new JDialog();
+			final JDialog dlg = new JDialog();
 			dlg.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 			dlg.setModalityType(ModalityType.APPLICATION_MODAL);
 			dlg.setTitle("Rename games");
@@ -4910,7 +4973,6 @@ GameSelectionListener, BrowseComputerListener {
 			lstMatches.addListSelectionListener(listener);
 			lstPreviews.addListSelectionListener(listener2);
 
-
 			JPanel pnlOptions = new JPanel();
 			FormLayout layoutWrapper = new FormLayout("pref, $ugap, pref, min:grow, min",
 					"min, $rgap, min, $rgap, min, $rgap, min");
@@ -4951,8 +5013,8 @@ GameSelectionListener, BrowseComputerListener {
 			pnlOptions.add(pnlWrapWrapper);
 
 
-			JScrollPane spMatches = new JScrollPane(lstMatches);
-			JScrollPane spPreview = new JScrollPane(lstPreviews);
+			final JScrollPane spMatches = new JScrollPane(lstMatches);
+			final JScrollPane spPreview = new JScrollPane(lstPreviews);
 			spMatches.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener() {
 
 				@Override
@@ -5099,7 +5161,7 @@ GameSelectionListener, BrowseComputerListener {
 			int removeAll = JOptionPane.CANCEL_OPTION;
 			if (currentGames.size() > 1) {
 				if (view.getViewManager().isFilterFavoriteActive()) {
-					String[] buttons = { Messages.get(MessageConstants.REMOVE_GAMES), Messages.get(MessageConstants.REMOVE_GAMES_FROM_FAVORITES) };
+					String[] buttons = { Messages.get(MessageConstants.REMOVE_GAMES), Messages.get(MessageConstants.REMOVE_FROM_FAVORITES) };
 					String message = Messages.get(MessageConstants.REMOVE_OR_UNFAVORITE_GAMES, currentGames.size());
 					String title = "Remove or unfavorite games";
 					removeAll = JOptionPane.showOptionDialog(view, message, title, JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE, null, buttons, buttons[1]);
@@ -5114,13 +5176,13 @@ GameSelectionListener, BrowseComputerListener {
 					}
 				}
 			}
-			for (Game game : currentGames) {
+			for (final Game game : currentGames) {
 				String gameName = "<html><strong>"+game.getName()+"</strong></html>";
 				boolean doRemoveGame = false;
 				if (view.getViewManager().isFilterFavoriteActive()) {
 					int request2;
 					if (removeAll == JOptionPane.CANCEL_OPTION) {
-						String[] buttons = { Messages.get(MessageConstants.REMOVE_GAME), Messages.get(MessageConstants.REMOVE_GAME_FROM_FAVORITES) };
+						String[] buttons = { Messages.get(MessageConstants.REMOVE_GAME), Messages.get(MessageConstants.REMOVE_FROM_FAVORITES) };
 						String message = Messages.get(MessageConstants.CONFIRM_REMOVE_OR_UNFAVORITE_GAME, gameName,
 								explorer.getPlatform(game.getPlatformId()).getName());
 						String title = "Remove game or unfavorite";
@@ -5428,7 +5490,7 @@ GameSelectionListener, BrowseComputerListener {
 		}
 	}
 
-	public void downloadEmulator(Emulator selectedEmulator) throws IOException {
+	public void downloadEmulator(final Emulator selectedEmulator) throws IOException {
 		final List<Platform> platforms = explorer.getPlatforms();
 		List<String> links = new ArrayList<>();
 		String name = selectedEmulator.getName().toLowerCase() + ".json";
@@ -5487,7 +5549,6 @@ GameSelectionListener, BrowseComputerListener {
 			return;
 		}
 		JFileChooser fc = new JFileChooser();
-		fc.setOpaque(false);
 		fc.setBackground(Color.DARK_GRAY);
 		fc.setDialogType(JFileChooser.SAVE_DIALOG);
 		fc.setFileSelectionMode(JFileChooser.FILES_ONLY);
@@ -5508,7 +5569,6 @@ GameSelectionListener, BrowseComputerListener {
 		try {
 			url2 = new URL(downloadLink);
 		} catch (MalformedURLException e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
 		if (url2 != null) {
@@ -5969,7 +6029,7 @@ GameSelectionListener, BrowseComputerListener {
 		return t;
 	}
 
-	private void fireTagAddedEvent(Tag tag) {
+	private void fireTagAddedEvent(final Tag tag) {
 		SwingUtilities.invokeLater(new Runnable() {
 
 			@Override
@@ -6030,7 +6090,7 @@ GameSelectionListener, BrowseComputerListener {
 		}
 	}
 	class AddFilesListener implements ActionListener {
-		private JFileChooser fc = new JFileChooser();
+		private JFileChooser fc;
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
@@ -6049,12 +6109,13 @@ GameSelectionListener, BrowseComputerListener {
 		}
 
 		private void showFileChooser(int filesAndDirectories, File dir) {
-			setBG(fc.getComponents(), new Color(130, 165, 100));
-
+			if (fc == null) {
+				fc = new JFileChooser();
+				fc.setDialogType(JFileChooser.OPEN_DIALOG);
+				fc.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+				fc.setMultiSelectionEnabled(true);
+			}
 			fc.setCurrentDirectory(dir);
-			fc.setDialogType(JFileChooser.OPEN_DIALOG);
-			fc.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
-			fc.setMultiSelectionEnabled(true);
 			int returnVal = fc.showOpenDialog(view);
 			if (returnVal == JFileChooser.APPROVE_OPTION) {
 				File[] potentialGames = fc.getSelectedFiles();
@@ -6104,6 +6165,7 @@ GameSelectionListener, BrowseComputerListener {
 
 	class AddFoldersListener implements ActionListener {
 		private File lastDirFromFileChooser;
+		private JFileChooser fc;
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
@@ -6122,10 +6184,12 @@ GameSelectionListener, BrowseComputerListener {
 		}
 
 		private void showFileChooser(int directoriesOnly, File currentDirectory) {
-			JFileChooser fc = new JFileChooser();
-			fc.setDialogType(JFileChooser.OPEN_DIALOG);
-			fc.setFileSelectionMode(directoriesOnly);
-			fc.setMultiSelectionEnabled(true);
+			if (fc == null) {
+				fc = new JFileChooser();
+				fc.setDialogType(JFileChooser.OPEN_DIALOG);
+				fc.setFileSelectionMode(directoriesOnly);
+				fc.setMultiSelectionEnabled(true);
+			}
 			if (lastDirFromFileChooser == null) {
 				String tmp = null;
 				try {
@@ -7351,7 +7415,7 @@ GameSelectionListener, BrowseComputerListener {
 				actionKeys.put("updateNow", updateApplicationListener);
 				actionKeys.put("updateLater", null);
 				NotificationElement element = new NotificationElement(new String[] { "applicationUpdateAvailable" },
-						actionKeys, NotificationElement.INFORMATION_MANDATORY, null);
+						actionKeys, NotificationElement.INFORMATION, null);
 				view.showInformation(element);
 				currentState = "<html><center>"+Messages.get(MessageConstants.APPLICATION_UPDATE_AVAILABLE)+"<br/>("+uo.getApplicationVersion()+")</center></html>";
 				if (dlgUpdates == null) {
@@ -7373,7 +7437,7 @@ GameSelectionListener, BrowseComputerListener {
 				actionKeys.put("updateNow", null);
 				actionKeys.put("updateLater", null);
 				NotificationElement element = new NotificationElement(new String[] { "signatureUpdateAvailable" },
-						actionKeys, NotificationElement.INFORMATION_MANDATORY, null);
+						actionKeys, NotificationElement.INFORMATION, null);
 				view.showInformation(element);
 				view.signatureUpdateAvailable();
 			}
@@ -7688,7 +7752,7 @@ GameSelectionListener, BrowseComputerListener {
 		return null;
 	}
 
-	void firePlatformAddedEvent(Platform platform) {
+	void firePlatformAddedEvent(final Platform platform) {
 		SwingUtilities.invokeLater(new Runnable() {
 
 			@Override
@@ -7708,7 +7772,7 @@ GameSelectionListener, BrowseComputerListener {
 		}
 	}
 
-	void fireEmulatorRemovedEvent(Platform platform, Emulator emulator) {
+	void fireEmulatorRemovedEvent(final Platform platform, final Emulator emulator) {
 		SwingUtilities.invokeLater(new Runnable() {
 
 			@Override
@@ -7725,7 +7789,7 @@ GameSelectionListener, BrowseComputerListener {
 		addGame(p0, path, false, false, downloadCover);
 	}
 
-	public void addGame(Platform p0, Path path, boolean manuallyAdded, boolean favorite, boolean downloadCover) {
+	public void addGame(final Platform p0, Path path, final boolean manuallyAdded, boolean favorite, boolean downloadCover) {
 		int platformId = p0.getId();
 		if (!alreadyCheckedPlatformIds.contains(platformId)) {
 			alreadyCheckedPlatformIds.add(platformId);
@@ -7970,7 +8034,7 @@ GameSelectionListener, BrowseComputerListener {
 				}
 			});
 			if (downloadCover) {
-				askUserDownloadGameCovers(gameFinal);
+				//askUserDownloadGameCovers(gameFinal);
 			}
 			//	        BlockingQueue queue = new ArrayBlockingQueue(1024);
 			//			ExecutorService pool = Executors.newFixedThreadPool(5);
@@ -8184,7 +8248,7 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	@Override
-	public void rememberZipFile(String filePath) {
+	public void rememberZipFile(final String filePath) {
 		if (!zipFiles.contains(filePath)) {
 			zipFiles.add(filePath);
 			explorerDAO.rememberZipFile(filePath);
@@ -8199,7 +8263,7 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	@Override
-	public void rememberRarFile(String filePath) {
+	public void rememberRarFile(final String filePath) {
 		if (!rarFiles.contains(filePath)) {
 			rarFiles.add(filePath);
 			explorerDAO.rememberRarFile(filePath);
@@ -8214,7 +8278,7 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	@Override
-	public void rememberIsoFile(String filePath) {
+	public void rememberIsoFile(final String filePath) {
 		if (!isoFiles.contains(filePath)) {
 			isoFiles.add(filePath);
 			explorerDAO.rememberIsoFile(filePath);
@@ -8594,7 +8658,7 @@ GameSelectionListener, BrowseComputerListener {
 		timer.schedule(task, 100);
 	}
 
-	protected void checkSetNewGameBannerFor(Game game, boolean showOverlayFrameAfterScreenshot) {
+	protected void checkSetNewGameBannerFor(final Game game, final boolean showOverlayFrameAfterScreenshot) {
 		//		final Image imgOld = ImageUtil.getImageFromClipboard();
 		if (lastFlavorListener != null) {
 			System.err.println("remove last clipboard listener");
@@ -8606,7 +8670,7 @@ GameSelectionListener, BrowseComputerListener {
 			FlavorListener dizz = this;
 
 			@Override
-			public void flavorsChanged(FlavorEvent e) {
+			public void flavorsChanged(final FlavorEvent e) {
 				System.out.println("flavor changed");
 				System.err.println("remove clipboard listener");
 				Toolkit.getDefaultToolkit().getSystemClipboard().removeFlavorListener(dizz);
@@ -8669,24 +8733,24 @@ GameSelectionListener, BrowseComputerListener {
 		boolean maximizedScreenshot = (taskBarPosition == 0)
 				? (imageWidth == screenWidth && imageHeight == screenHeight - taskBarHeight)
 						: (imageWidth == screenWidth - taskBarWidth && imageHeight == screenHeight);
-				boolean fullScreenScreenshot = imageWidth == screenWidth && imageHeight == screenHeight;
-				System.out.println("maximized: " + maximizedScreenshot);
-				System.out.println("fullscreen: " + fullScreenScreenshot);
-				if (windowedScreenshot) {
-					System.out.println(
-							"You did a screenshot of a non-fullscreen window. Do you want to try to auto crop the image to remove the title- and menubar?");
-				}
-				game.setBannerImage(imgNew);
+		boolean fullScreenScreenshot = imageWidth == screenWidth && imageHeight == screenHeight;
+		System.out.println("maximized: " + maximizedScreenshot);
+		System.out.println("fullscreen: " + fullScreenScreenshot);
+		if (windowedScreenshot) {
+			System.out.println(
+					"You did a screenshot of a non-fullscreen window. Do you want to try to auto crop the image to remove the title- and menubar?");
+		}
+		game.setBannerImage(imgNew);
 
-				String gameChecksum = explorer.getChecksumById(game.getChecksumId());
-				File bannerImageFile = new File(explorer.getResourcesPath() + File.separator + "gamebanners"
-						+ File.separator + gameChecksum + ".jpg");
-				boolean dirsCreated = bannerImageFile.mkdirs();
-				try {
-					ImageIO.write((RenderedImage) imgNew, "jpg", bannerImageFile);
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+		String gameChecksum = explorer.getChecksumById(game.getChecksumId());
+		File bannerImageFile = new File(explorer.getResourcesPath() + File.separator + "games" + File.separator + "banners"
+				+ File.separator + gameChecksum + ".jpg");
+		boolean dirsCreated = bannerImageFile.mkdirs();
+		try {
+			ImageIO.write((RenderedImage) imgNew, "jpg", bannerImageFile);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 }

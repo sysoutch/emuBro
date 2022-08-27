@@ -1,5 +1,6 @@
 package ch.sysout.emubro.ui;
 
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -20,9 +21,9 @@ import javax.swing.event.MenuListener;
 
 import ch.sysout.emubro.controller.ViewConstants;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.util.FileUtil;
 import ch.sysout.util.Icons;
-import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 
@@ -186,21 +187,22 @@ public class ViewContextMenu extends JPopupMenu implements ActionListener {
 		//		itmListViewOneColumn.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewList", size, size)));
 		//		itmTableView.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewTable", size, size)));
 		//		itmCoverView.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewCovers", size, size)));
-		itmAddFiles.setIcon(ImageUtil.getImageIconFrom(Icons.get("addFile", size, size)));
-		itmAddFolders.setIcon(ImageUtil.getImageIconFrom(Icons.get("addFolder", size, size)));
-		itmFilesFromClipboard.setIcon(ImageUtil.getImageIconFrom(Icons.get("filesFromClipboard", size, size)));
-		itmChangeToAll.setIcon(ImageUtil.getImageIconFrom(Icons.get("allGames", size, size)));
-		itmChangeToFavorites.setIcon(ImageUtil.getImageIconFrom(Icons.get("favorites", size, size)));
-		itmChangeToRecentlyPlayed.setIcon(ImageUtil.getImageIconFrom(Icons.get("recentlyPlayed", size, size)));
-		itmSetFilter.setIcon(ImageUtil.getImageIconFrom(Icons.get("setFilter", size, size)));
-		itmRenameGames.setIcon(ImageUtil.getImageIconFrom(Icons.get("rename", size, size)));
-		itmTagsSearch.setIcon(ImageUtil.getImageIconFrom(Icons.get("tags", size, size)));
-		itmCoverSearch.setIcon(ImageUtil.getImageIconFrom(Icons.get("picture", size, size)));
+		itmAddFiles.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("addFile"), size, Color.LIGHT_GRAY));
+		itmAddFolders.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("addFolder"), size, new Color(255, 195, 0)));
+		itmFilesFromClipboard.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("filesFromClipboard"), size, Color.LIGHT_GRAY));
+
+		itmChangeToAll.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("allGames"), size, Color.LIGHT_GRAY));
+		itmChangeToFavorites.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("favorites"), size, new Color(255, 220, 125)));
+		itmChangeToRecentlyPlayed.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("recentlyPlayed"), size, new Color(181, 201, 255)));
+		itmSetFilter.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), size, Color.LIGHT_GRAY));
+		itmRenameGames.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rename"), size, Color.LIGHT_GRAY));
+		itmTagsSearch.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("tag"), size, new Color(168, 124, 160)));
+		itmCoverSearch.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("picture"), size, new Color(181, 201, 255)));
 		itmTrailerSearch.setIcon(ImageUtil.getImageIconFrom(Icons.get("video", size, size)));
-		itmSetColumnWidth.setIcon(ImageUtil.getImageIconFrom(Icons.get("columnWidth", size, size)));
-		itmSetRowHeight.setIcon(ImageUtil.getImageIconFrom(Icons.get("rowHeight", size, size)));
-		itmRefresh.setIcon(ImageUtil.getImageIconFrom(Icons.get("refresh", size, size)));
-		itmFullScreen.setIcon(ImageUtil.getImageIconFrom(Icons.get("fullscreen", size, size)));
+		itmSetColumnWidth.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("columnWidth"), size, Color.LIGHT_GRAY));
+		itmSetRowHeight.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rowHeight"), size, Color.LIGHT_GRAY));
+		itmRefresh.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("refresh"), size, Color.LIGHT_GRAY));
+		itmFullScreen.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("fullscreen"), size, new Color(144, 238, 144)));
 	}
 
 	private void addComponentsToJComponent(JComponent component, Component... components) {

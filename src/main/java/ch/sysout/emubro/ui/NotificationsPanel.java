@@ -4,7 +4,6 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
-import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.LayoutManager;
 import java.awt.event.ActionEvent;
@@ -19,6 +18,7 @@ import java.util.Map;
 
 import javax.swing.AbstractButton;
 import javax.swing.Action;
+import javax.swing.BorderFactory;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -34,12 +34,12 @@ import com.jgoodies.forms.layout.RowSpec;
 import com.jgoodies.validation.view.ValidationComponentUtils;
 
 import ch.sysout.emubro.controller.NotificationElementListener;
-import ch.sysout.ui.util.JCustomButton;
+import ch.sysout.ui.util.ImageUtil;
+import ch.sysout.ui.util.JCustomButton2;
+import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Icons;
-import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
-import ch.sysout.util.UIUtil;
 import ch.sysout.util.ValidationUtil;
 
 public class NotificationsPanel extends JPanel {
@@ -91,6 +91,9 @@ public class NotificationsPanel extends JPanel {
 	}
 
 	public void addNotificationElement(NotificationElement element3) {
+		ZonedDateTime date = ZonedDateTime.now();
+		String formattedDate = UIUtil.format(date);
+
 		String message = element3.getMessage();
 		Map<String, Action> actionMessages = element3.getActionMessages();
 		int notificationType = element3.getNotificationType();
@@ -99,6 +102,7 @@ public class NotificationsPanel extends JPanel {
 		}
 		// LayoutManager formLayout = new FormLayout("min:grow");
 		final JPanel pnl = new JPanel(new GridLayout(0, 1));
+		pnl.setBorder(BorderFactory.createTitledBorder(formattedDate));
 		pnl.setOpaque(false);
 		ActionListener actionHideMessage = new ActionListener() {
 
@@ -163,7 +167,7 @@ public class NotificationsPanel extends JPanel {
 
 		pnl2.add(pnl3, BorderLayout.WEST);
 
-		AbstractButton btnHideMessage = new JCustomButton(iconHideMessage);
+		final AbstractButton btnHideMessage = new JCustomButton2(iconHideMessage);
 		btnHideMessage.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseEntered(MouseEvent e) {
@@ -180,16 +184,6 @@ public class NotificationsPanel extends JPanel {
 		pnlpnl.setOpaque(false);
 		pnlpnl.add(pnlIcon, BorderLayout.WEST);
 		pnlpnl.add(pnl2, BorderLayout.CENTER);
-		JLabel lblTimestamp = new JLabel();
-		//		label.setLineWrap(true);
-		//		label.setWrapStyleWord(true);
-		ZonedDateTime date = ZonedDateTime.now();
-		lblTimestamp.setText(UIUtil.format(date));
-		lblTimestamp.setBorder(Paddings.DLU2);
-		lblTimestamp.setEnabled(false);
-		lblTimestamp.setFocusable(false);
-		lblTimestamp.setFont(lblTimestamp.getFont().deriveFont(12.0f).deriveFont(Font.ITALIC));
-		pnlpnl.add(lblTimestamp, BorderLayout.SOUTH);
 		pnl.add(pnlpnl);
 
 		//		StyleContext context = new StyleContext();
@@ -201,42 +195,29 @@ public class NotificationsPanel extends JPanel {
 		switch (notificationType) {
 		case NotificationElement.INFORMATION:
 			if (!infoIcons.containsKey(size)) {
-				infoIcons.put(size, ImageUtil.getImageIconFrom(Icons.get("info", size, size)));
+				infoIcons.put(size, ImageUtil.getFlatSVGIconFrom(Icons.get("info"), size, new Color(137, 207, 240)));
 			}
 			lblIcon.setIcon(infoIcons.get(size));
 			break;
-		case NotificationElement.INFORMATION_MANDATORY:
-			if (!infoImportantIcons.containsKey(size)) {
-				infoImportantIcons.put(size, ImageUtil.getImageIconFrom(Icons.get("infoImportant", size, size)));
-			}
-			lblIcon.setIcon(infoImportantIcons.get(size));
-			textPane.setBackground(Color.WHITE);
-			pnlIcon.setBackground(Color.WHITE);
-			pnl2.setBackground(Color.WHITE);
-			pnl3.setBackground(Color.WHITE);
-			lblTimestamp.setBackground(Color.WHITE);
-			break;
 		case NotificationElement.WARNING:
 			if (!warningIcons.containsKey(size)) {
-				warningIcons.put(size, ImageUtil.getImageIconFrom(Icons.get("warning", size, size)));
+				warningIcons.put(size, ImageUtil.getFlatSVGIconFrom(Icons.get("warning"), size, Color.ORANGE));
 			}
 			lblIcon.setIcon(warningIcons.get(size));
 			textPane.setBackground(ValidationComponentUtils.getWarningBackground());
 			pnlIcon.setBackground(ValidationComponentUtils.getWarningBackground());
 			pnl2.setBackground(ValidationComponentUtils.getWarningBackground());
 			pnl3.setBackground(ValidationComponentUtils.getWarningBackground());
-			lblTimestamp.setBackground(ValidationComponentUtils.getWarningBackground());
 			break;
 		case NotificationElement.ERROR:
 			if (!errorIcons.containsKey(size)) {
-				errorIcons.put(size, ImageUtil.getImageIconFrom(Icons.get("error", size, size)));
+				errorIcons.put(size, ImageUtil.getFlatSVGIconFrom(Icons.get("error"), size, Color.RED));
 			}
 			lblIcon.setIcon(errorIcons.get(size));
 			textPane.setBackground(ValidationComponentUtils.getErrorBackground());
 			pnlIcon.setBackground(ValidationComponentUtils.getErrorBackground());
 			pnl2.setBackground(ValidationComponentUtils.getErrorBackground());
 			pnl3.setBackground(ValidationComponentUtils.getErrorBackground());
-			lblTimestamp.setBackground(ValidationComponentUtils.getErrorBackground());
 			break;
 		case NotificationElement.SUCCESS:
 			if (!successIcons.containsKey(size)) {
@@ -247,7 +228,6 @@ public class NotificationsPanel extends JPanel {
 			pnlIcon.setBackground(ValidationUtil.getSuccessBackground());
 			pnl2.setBackground(ValidationUtil.getSuccessBackground());
 			pnl3.setBackground(ValidationUtil.getSuccessBackground());
-			lblTimestamp.setBackground(ValidationUtil.getSuccessBackground());
 			break;
 		default:
 			break;

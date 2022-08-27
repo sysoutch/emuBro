@@ -1,9 +1,6 @@
 package ch.sysout.ui.util;
 
 import java.awt.Color;
-import java.awt.Graphics;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.beans.ConstructorProperties;
 
 import javax.swing.Action;
@@ -72,42 +69,42 @@ public class JCustomButton extends JButton {
 		//        // initialize
 		//        init(text, icon);
 		super(text, icon);
-		setOpaque(false);
-		setBorderPainted(false);
-		setContentAreaFilled(false);
-		addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseEntered(MouseEvent e) {
-				hover = true;
-				repaint();
-			}
-
-			@Override
-			public void mouseExited(MouseEvent e) {
-				hover = false;
-				repaint();
-			}
-		});
+		//		setOpaque(false);
+		//		setBorderPainted(false);
+		//		setContentAreaFilled(false);
+		//		addMouseListener(new MouseAdapter() {
+		//			@Override
+		//			public void mouseEntered(MouseEvent e) {
+		//				hover = true;
+		//				repaint();
+		//			}
+		//
+		//			@Override
+		//			public void mouseExited(MouseEvent e) {
+		//				hover = false;
+		//				repaint();
+		//			}
+		//		});
 	}
 
 	public void setKeepBackgroundOnHoverLost(boolean keepBackgroundOnHoverLost) {
 		this.keepBackgroundOnHoverLost = keepBackgroundOnHoverLost;
 	}
 
-	@Override
-	protected void paintComponent(Graphics g) {
-		if (isEnabled()) {
-			if (keepBackgroundOnHoverLost) {
-				g.setColor(hover ? colorSelected : colorHover);
-				g.fillRect(0, 0, getWidth(), getHeight());
-			} else {
-				if (hover) {
-					g.setColor(colorHover);
-					g.fillRect(0, 0, getWidth(), getHeight());
-				}
-			}
-		}
-		super.paintComponent(g);
-		g.dispose();
-	}
+	//	@Override
+	//	protected void paintComponent(Graphics g) {
+	//		if (isEnabled()) {
+	//			if (keepBackgroundOnHoverLost) {
+	//				g.setColor(hover ? colorSelected : colorHover);
+	//				g.fillRect(0, 0, getWidth(), getHeight());
+	//			} else {
+	//				if (hover) {
+	//					g.setColor(colorHover);
+	//					g.fillRect(0, 0, getWidth(), getHeight());
+	//				}
+	//			}
+	//		}
+	//		super.paintComponent(g);
+	//		g.dispose();
+	//	}
 }

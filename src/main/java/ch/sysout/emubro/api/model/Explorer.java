@@ -73,7 +73,7 @@ public interface Explorer {
 	//
 	//	void setDefaultPlatforms(List<BroPlatform> platforms);
 
-	List<Tag> getUpdatedTags();
+	List<BroTag> getUpdatedTags();
 
 	void setUpdatedTags(List<BroTag> tags);
 

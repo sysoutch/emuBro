@@ -33,19 +33,18 @@ import javax.swing.SwingConstants;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
 
-import com.jgoodies.forms.factories.Paddings;
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 import com.jgoodies.forms.layout.RowSpec;
 
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.ui.util.JCustomButton;
 import ch.sysout.ui.util.JCustomToggleButton;
+import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Icons;
-import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
-import ch.sysout.util.UIUtil;
 
 public class HelpFrame extends JFrame implements ActionListener {
 	private static final long serialVersionUID = 1L;
@@ -166,7 +165,7 @@ public class HelpFrame extends JFrame implements ActionListener {
 
 	private void createUI() {
 		setLayout(new BorderLayout());
-		getRootPane().setBorder(Paddings.DIALOG);
+		//		getRootPane().setBorder(Paddings.DIALOG);
 		JPanel pnl = new JPanel(new BorderLayout());
 		pnl.add(createNavigationPanel(), BorderLayout.WEST);
 		pnl.add(createContentPanel(), BorderLayout.CENTER);

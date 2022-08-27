@@ -1,6 +1,5 @@
 package ch.sysout.emubro.ui;
 
-import java.awt.Color;
 import java.awt.Component;
 
 import javax.swing.JLabel;
@@ -12,12 +11,10 @@ import ch.sysout.emubro.api.model.Platform;
 public class CustomComboBoxRenderer extends JLabel implements ListCellRenderer<Object> {
 	private static final long serialVersionUID = 1L;
 
-	private Color colorBackground = IconStore.current().getCurrentTheme().getGameFilterPane().getColor().brighter();
-
 	public CustomComboBoxRenderer() {
-		setOpaque(true);
+		//		setOpaque(true);
 		//		setFont(new Font("Arial", Font.BOLD | Font.ITALIC, 54));
-		setBackground(colorBackground);
+		//		setBackground(colorBackground);
 		//		setForeground(Color.YELLOW);
 	}
 

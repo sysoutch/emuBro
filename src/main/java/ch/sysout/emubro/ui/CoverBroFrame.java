@@ -40,12 +40,12 @@ import com.jgoodies.forms.layout.FormLayout;
 import ch.sysout.emubro.api.dao.ExplorerDAO;
 import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.ui.util.JCustomButton;
 import ch.sysout.ui.util.JCustomToggleButton;
+import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Icons;
-import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
-import ch.sysout.util.UIUtil;
 
 public class CoverBroFrame extends JFrame {
 	private static final long serialVersionUID = 1L;

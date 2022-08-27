@@ -6,9 +6,6 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FileDialog;
 import java.awt.FlowLayout;
-import java.awt.GradientPaint;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
@@ -87,24 +84,22 @@ import ch.sysout.emubro.controller.BroController.PlatformListCellRenderer;
 import ch.sysout.emubro.impl.model.BroEmulator;
 import ch.sysout.emubro.ui.AddEmulatorPanel;
 import ch.sysout.emubro.ui.AddPlatformDialog;
-import ch.sysout.emubro.ui.CustomTabbedPaneUI;
 import ch.sysout.emubro.ui.EmulatorTableCellRenderer;
 import ch.sysout.emubro.ui.EmulatorTableModel;
-import ch.sysout.emubro.ui.IconStore;
 import ch.sysout.emubro.ui.JCustomScrollPane;
 import ch.sysout.emubro.ui.JLinkButton;
 import ch.sysout.emubro.ui.JTableDoubleClickOnHeaderFix;
 import ch.sysout.emubro.ui.SortedListModel;
 import ch.sysout.emubro.ui.TableColumnAdjuster;
-import ch.sysout.emubro.ui.Theme;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.ui.util.JCustomButton;
+import ch.sysout.ui.util.JCustomButton2;
 import ch.sysout.ui.util.JCustomToggleButton;
+import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Icons;
-import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
-import ch.sysout.util.UIUtil;
 import net.tomahawk.XFileDialog;
 
 public class ManagePlatformsPanel extends JPanel implements ActionListener {
@@ -153,10 +148,8 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 		pnlPlatformsEmulatorsComboWrapper.setBorder(Paddings.TABBED_DIALOG);
 		pnlPlatformsEmulatorsComboWrapper.add(pnlPlatforms, BorderLayout.CENTER);
 		spl00 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, pnlPlatformsEmulatorsComboWrapper, pnlEmulators);
-		spl00.setOpaque(false);
 		spl00.setBorder(BorderFactory.createEmptyBorder());
 		spl00.setContinuousLayout(true);
-		spl00.setOneTouchExpandable(true);
 		add(spl00, cc.xy(1, 1));
 	}
 
@@ -301,22 +294,22 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 			spLstPlatforms = new JCustomScrollPane(lstPlatforms) {
 				private static final long serialVersionUID = 1L;
 
-				@Override
-				protected void paintComponent(Graphics g) {
-					super.paintComponent(g);
-					Graphics2D g2d = (Graphics2D) g.create();
-					int panelWidth = getWidth();
-					int panelHeight = getHeight();
-					Theme currentTheme = IconStore.current().getCurrentTheme();
-					if (currentTheme.getView().hasGradientPaint()) {
-						GradientPaint p = currentTheme.getView().getGradientPaint();
-						g2d.setPaint(p);
-					} else if (currentTheme.getView().hasColor()) {
-						g2d.setColor(currentTheme.getView().getColor());
-					}
-					g2d.fillRect(0, 0, panelWidth, panelHeight);
-					g2d.dispose();
-				}
+				//				@Override
+				//				protected void paintComponent(Graphics g) {
+				//					super.paintComponent(g);
+				//					Graphics2D g2d = (Graphics2D) g.create();
+				//					int panelWidth = getWidth();
+				//					int panelHeight = getHeight();
+				//					Theme currentTheme = IconStore.current().getCurrentTheme();
+				//					if (currentTheme.getView().hasGradientPaint()) {
+				//						GradientPaint p = currentTheme.getView().getGradientPaint();
+				//						g2d.setPaint(p);
+				//					} else if (currentTheme.getView().hasColor()) {
+				//						g2d.setColor(currentTheme.getView().getColor());
+				//					}
+				//					g2d.fillRect(0, 0, panelWidth, panelHeight);
+				//					g2d.dispose();
+				//				}
 			};
 			spLstPlatforms.setOpaque(false);
 			spLstPlatforms.getViewport().setOpaque(false);
@@ -429,8 +422,8 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 	class EmulatorsPanel extends JPanel implements ListSelectionListener, ActionListener {
 		private static final long serialVersionUID = 1L;
 		private JTable tblEmulators;
-		private JButton btnAddEmulator = new JCustomButton("", ImageUtil.getImageIconFrom(Icons.get("add", 24, 24)));
-		private JButton btnRemoveEmulator = new JCustomButton("", ImageUtil.getImageIconFrom(Icons.get("remove2", 24, 24)));
+		private JButton btnAddEmulator = new JCustomButton2("", ImageUtil.getImageIconFrom(Icons.get("add", 24, 24)));
+		private JButton btnRemoveEmulator = new JCustomButton2("", ImageUtil.getImageIconFrom(Icons.get("remove2", 24, 24)));
 		private JButton btnSetDefaultEmulator = new JCustomButton(Messages.get(MessageConstants.SET_DEFAULT));
 		private JButton btnEmulatorProperties = new JCustomButton(Messages.get(MessageConstants.CONFIGURE));
 		private JToggleButton btnEmulatorProperties2 = new JCustomToggleButton(Messages.get(MessageConstants.CONFIGURE));
@@ -495,7 +488,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 			pnl.setOpaque(false);
 			// lstEmulators.setPreferredSize(new Dimension(0,0));
 			btnRemoveEmulator.setEnabled(false);
-			btnSetDefaultEmulator.setIcon(ImageUtil.getImageIconFrom(Icons.get("default", 22, 22)));
+			btnSetDefaultEmulator.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("checkMark"), 22, new Color(0, 129, 0)));
 			btnSetDefaultEmulator.setEnabled(false);
 			btnAddEmulator.setEnabled(false);
 			btnEmulatorProperties.setEnabled(false);
@@ -509,22 +502,22 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 			spEmulators = new JCustomScrollPane(tblEmulators) {
 				private static final long serialVersionUID = 1L;
 
-				@Override
-				protected void paintComponent(Graphics g) {
-					super.paintComponent(g);
-					Graphics2D g2d = (Graphics2D) g.create();
-					int panelWidth = getWidth();
-					int panelHeight = getHeight();
-					Theme currentTheme = IconStore.current().getCurrentTheme();
-					if (currentTheme.getView().hasGradientPaint()) {
-						GradientPaint p = currentTheme.getView().getGradientPaint();
-						g2d.setPaint(p);
-					} else if (currentTheme.getView().hasColor()) {
-						g2d.setColor(currentTheme.getView().getColor());
-					}
-					g2d.fillRect(0, 0, panelWidth, panelHeight);
-					g2d.dispose();
-				}
+				//				@Override
+				//				protected void paintComponent(Graphics g) {
+				//					super.paintComponent(g);
+				//					Graphics2D g2d = (Graphics2D) g.create();
+				//					int panelWidth = getWidth();
+				//					int panelHeight = getHeight();
+				//					Theme currentTheme = IconStore.current().getCurrentTheme();
+				//					if (currentTheme.getView().hasGradientPaint()) {
+				//						GradientPaint p = currentTheme.getView().getGradientPaint();
+				//						g2d.setPaint(p);
+				//					} else if (currentTheme.getView().hasColor()) {
+				//						g2d.setColor(currentTheme.getView().getColor());
+				//					}
+				//					g2d.fillRect(0, 0, panelWidth, panelHeight);
+				//					g2d.dispose();
+				//				}
 			};
 			spEmulators.setOpaque(false);
 			spEmulators.getViewport().setOpaque(false);
@@ -960,8 +953,8 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 				spInputConfiguration.setBorder(BorderFactory.createEmptyBorder());
 				spInputConfiguration.getVerticalScrollBar().setUnitIncrement(16);
 
-				tpMain.setUI(new CustomTabbedPaneUI());
-				tpMain.setBorder(BorderFactory.createEmptyBorder());
+				//				tpMain.setUI(new CustomTabbedPaneUI());
+				//				tpMain.setBorder(BorderFactory.createEmptyBorder());
 				tpMain.addTab(Messages.get(MessageConstants.GENERAL), spGeneralSettings);
 				tpMain.addTab(Messages.get(MessageConstants.INPUT), spInputConfiguration);
 				tpMain.addTab(Messages.get(MessageConstants.ADVANCED), pnlConfigurationFile);
@@ -1318,7 +1311,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 		}
 
 		public JTextComponent createInputTextField() {
-			JTextField txt = new JTextField("Unassigned");
+			final JTextField txt = new JTextField("Unassigned");
 			txt.setBackground(ValidationComponentUtils.getWarningBackground());
 			txt.setEditable(false);
 			txt.setHorizontalAlignment(SwingConstants.CENTER);
@@ -1337,7 +1330,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 			return txt;
 		}
 
-		protected void enterInput(JTextComponent txt) {
+		protected void enterInput(final JTextComponent txt) {
 			if (makeInput) {
 				return;
 			}

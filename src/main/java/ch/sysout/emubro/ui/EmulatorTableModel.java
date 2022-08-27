@@ -1,5 +1,6 @@
 package ch.sysout.emubro.ui;
 
+import java.awt.Color;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,8 +16,8 @@ import ch.sysout.emubro.api.model.Emulator;
 import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.impl.model.BroEmulator;
 import ch.sysout.emubro.impl.model.EmulatorConstants;
+import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.util.Icons;
-import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 
@@ -40,7 +41,7 @@ public class EmulatorTableModel extends DefaultTableModel {
 			setDefaultEmulatorId(defaultEmulatorId);
 		}
 		int size = (ScreenSizeUtil.is3k()) ? 24 : 16;
-		iconDefault = ImageUtil.getImageIconFrom(Icons.get("default", size, size));
+		iconDefault = ImageUtil.getFlatSVGIconFrom(Icons.get("checkMark"), size, new Color(0, 129, 0));
 
 		// this.emulators = emulators;
 		this.emulators = new ArrayList<>();
@@ -97,14 +98,15 @@ public class EmulatorTableModel extends DefaultTableModel {
 
 	@Override
 	public Class<?> getColumnClass(int columnIndex) {
-		if (columnIndex == 0) {
+		switch (columnIndex) {
+		case 0:
 			return ImageIcon.class;
-		}
-		if (columnIndex == 1) {
+		case 1:
 			return String.class;
-		}
-		if (columnIndex == 2) {
+		case 2:
 			return String.class;
+		default:
+			break;
 		}
 		return String.class;
 	}

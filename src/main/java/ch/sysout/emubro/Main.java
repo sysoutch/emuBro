@@ -11,9 +11,9 @@ import java.awt.TrayIcon;
 import java.awt.TrayIcon.MessageType;
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -38,9 +38,9 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.yaml.snakeyaml.Yaml;
 
+import com.formdev.flatlaf.FlatDarkLaf;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import com.jgoodies.looks.windows.WindowsLookAndFeel;
 
 import ch.sysout.emubro.api.dao.ExplorerDAO;
 import ch.sysout.emubro.api.filter.FilterGroup;
@@ -49,9 +49,9 @@ import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.api.model.Tag;
 import ch.sysout.emubro.controller.BroController;
+import ch.sysout.emubro.controller.DriveController;
 import ch.sysout.emubro.controller.HSQLDBConnection;
 import ch.sysout.emubro.controller.UpdateDatabaseBro;
-import ch.sysout.emubro.discord.ReadyEvent;
 import ch.sysout.emubro.impl.BroDatabaseVersionMismatchException;
 import ch.sysout.emubro.impl.dao.BroExplorerDAO;
 import ch.sysout.emubro.impl.model.BroExplorer;
@@ -61,20 +61,15 @@ import ch.sysout.emubro.ui.IconStore;
 import ch.sysout.emubro.ui.MainFrame;
 import ch.sysout.emubro.ui.SplashScreenWindow;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.ImageUtil;
+import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.FileUtil;
 import ch.sysout.util.FontUtil;
 import ch.sysout.util.Icons;
-import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
-import ch.sysout.util.UIUtil;
-import ch.sysout.util.ValidationUtil;
-import net.arikia.dev.drpc.DiscordEventHandlers;
-import net.arikia.dev.drpc.DiscordEventHandlers.Builder;
-import net.arikia.dev.drpc.DiscordRPC;
-import net.arikia.dev.drpc.DiscordRichPresence;
 
 public class Main {
-	private static LookAndFeel defaultWindowsLookAndFeel = new WindowsLookAndFeel();
+	//private static LookAndFeel defaultWindowsLookAndFeel = new WindowsLookAndFeel();
 	private static LookAndFeel defaultLinuxLookAndFeel;
 	private static LookAndFeel defaultMacLookAndFeel;
 
@@ -86,18 +81,24 @@ public class Main {
 	private static int explorerId = 0;
 	private static LookAndFeel defaultLookAndFeel;
 	private static BroExplorer explorer;
-	private static net.arikia.dev.drpc.DiscordRichPresence.Builder presence;
 	private static final String currentApplicationVersion = "0.8.0";
 
 	public static void main(String[] args) {
 		System.setProperty("java.util.Arrays.useLegacyMergeSort", "true");
 		System.setProperty("apple.laf.useScreenMenuBar", "true");
-		UIManager.put("Tree.rendererFillBackground", false);
 		setLookAndFeel();
+		// get back the smooth horizontal scroll feature when it was disabled by the
+		// look and feel (happens in WindowsLookAndFeel)
+		UIManager.put("List.lockToPositionOnScroll", Boolean.FALSE);
+		UIManager.put("Tree.rendererFillBackground", false);
+		UIManager.put("Button.arc", 0);
+		UIManager.put("Component.arc", 0);
+		UIManager.put("CheckBox.arc", 0);
+		UIManager.put("ProgressBar.arc", 0);
+		//				UIManager.put("TabbedPane.selectedBackground", Color.white);
 		try {
 			initializeCustomTheme();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		dlgSplashScreen = new SplashScreenWindow(
@@ -108,6 +109,11 @@ public class Main {
 		initDiscord(clientId);
 		initializeApplication(args);
 		//		initializeDriveServices();
+		try {
+			UIUtil.displayTray("We hope you like it!", "Welcome to emuBro");
+		} catch (AWTException e) {
+			e.printStackTrace();
+		}
 	}
 
 	private static void initializeDriveServices() {
@@ -115,10 +121,10 @@ public class Main {
 	}
 
 	private static void initDiscord(String clientId) {
-		DiscordEventHandlers handlers = new Builder().setReadyEventHandler(new ReadyEvent()).build();
-		DiscordRPC.discordInitialize(clientId, handlers, true);
-		presence = new DiscordRichPresence.Builder("");
-		DiscordRPC.discordUpdatePresence(presence.build());
+		//		DiscordEventHandlers handlers = new Builder().setReadyEventHandler(new ReadyEvent()).build();
+		//		DiscordRPC.discordInitialize(clientId, handlers, true);
+		//		presence = new DiscordRichPresence.Builder("");
+		//		DiscordRPC.discordUpdatePresence(presence.build());
 	}
 
 	public static void initializeApplication() {
@@ -169,13 +175,13 @@ public class Main {
 					explorer.setTags(tags);
 
 					List<FilterGroup> filterGroups = explorerDAO.getFilterGroups();
-					List<Tag> tagList = new ArrayList<>();
-					List<Tag> tagListFull = new ArrayList<>();
-					for (Tag t : tags) {
-						if (t.getId() == 2) {
-							tagListFull.add(t);
-						}
-					}
+					//					List<Tag> tagList = new ArrayList<>();
+					//					List<Tag> tagListFull = new ArrayList<>();
+					//					for (Tag t : tags) {
+					//						if (t.getId() == 2) {
+					//							tagListFull.add(t);
+					//						}
+					//					}
 					explorer.setFilterGroups(filterGroups);
 
 					String defaultResourcesDir = explorer.getResourcesPath();
@@ -193,7 +199,9 @@ public class Main {
 							file.mkdir();
 						}
 					}
-					String defaultTagsDir = defaultResourcesDir + "/tags/update";
+					// TODO first check defaultResourcesDir + File.separator + "tags" for not existing tags yet and add them
+					// ....
+					String defaultTagsDir = defaultResourcesDir + File.separator + "tags" + File.separator + "update";
 					List<BroPlatform> defaultPlatforms = null;
 					List<BroTag> updatedTags = null;
 					try {
@@ -221,7 +229,7 @@ public class Main {
 					//					dlgSplashScreen.setText("view initialized");
 
 					dlgSplashScreen.setProgressBarValue(dlgSplashScreen.getProgressBarValue()+5);
-					final BroController controller = new BroController(dlgSplashScreen, explorerDAO, explorer, mainFrame, presence);
+					final BroController controller = new BroController(dlgSplashScreen, explorerDAO, explorer, mainFrame/*, presence*/);
 					controller.addOrGetPlatformsAndEmulators(defaultPlatforms);
 					controller.addOrChangeTags(explorer.getUpdatedTags());
 					File dir1 = new File(defaultTagsDir);
@@ -432,12 +440,12 @@ public class Main {
 
 	private static void initializeCustomTheme() throws IOException {
 		IconStore.current().loadDefaultTheme("dark");
-		initializeCustomFonts();
-		initializeCustomColors();
-		initializeCustomMenus();
-		initializeCustomButtons();
-		UIManager.put("TabbedPane.contentOpaque", false);
-		UIManager.put("ToolTip.background", Color.BLACK);
+		//		initializeCustomFonts();
+		//		initializeCustomColors();
+		//		initializeCustomMenus();
+		//		initializeCustomButtons();
+		//		UIManager.put("TabbedPane.contentOpaque", false);
+		//		UIManager.put("ToolTip.background", Color.BLACK);
 		//		UIManager.put("Tree.background", Color.BLACK);
 		//		UIManager.put("Tree.textBackground", Color.BLACK);
 	}
@@ -471,34 +479,37 @@ public class Main {
 	}
 
 	private static void initializeCustomColors() {
-		Color color = UIUtil.getForegroundDependOnBackground(IconStore.current().getCurrentTheme().getBackground().getColor());
-		String[] keys = {
-				"Label.foreground",
-				"TextPane.foreground",
-				"EditorPane.foreground",
-				"TextArea.foreground",
-				"Button.foreground",
-				"ToggleButton.foreground",
-				"RadioButton.foreground",
-				"CheckBox.foreground",
-				"List.foreground",
-				"Table.foreground",
-				"TabbedPane.foreground",
-				"Tree.textForeground",
-				"Menu.foreground",
-				"MenuItem.foreground",
-				"MenuItem.acceleratorForeground",
-				"MenuItem.acceleratorSelectionForeground",
-				"CheckBoxMenuItem.foreground",
-				"CheckBoxMenuItem.acceleratorForeground",
-				"CheckBoxMenuItem.acceleratorSelectionForeground",
-				"RadioButtonMenuItem.foreground",
-				"RadioButtonMenuItem.acceleratorForeground",
-				"RadioButtonMenuItem.acceleratorSelectionForeground",
-				"ToolTip.foreground",
-				"TitledBorder.titleColor"
-		};
-		putCustomColor(color, keys);
+		Color c = IconStore.current().getCurrentTheme().getBackground().getColor();
+		if (c != null)  {
+			Color color = UIUtil.getForegroundDependOnBackground(c);
+			String[] keys = {
+					"Label.foreground",
+					"TextPane.foreground",
+					"EditorPane.foreground",
+					"TextArea.foreground",
+					"Button.foreground",
+					"ToggleButton.foreground",
+					"RadioButton.foreground",
+					"CheckBox.foreground",
+					"List.foreground",
+					"Table.foreground",
+					"TabbedPane.foreground",
+					"Tree.textForeground",
+					"Menu.foreground",
+					"MenuItem.foreground",
+					"MenuItem.acceleratorForeground",
+					"MenuItem.acceleratorSelectionForeground",
+					"CheckBoxMenuItem.foreground",
+					"CheckBoxMenuItem.acceleratorForeground",
+					"CheckBoxMenuItem.acceleratorSelectionForeground",
+					"RadioButtonMenuItem.foreground",
+					"RadioButtonMenuItem.acceleratorForeground",
+					"RadioButtonMenuItem.acceleratorSelectionForeground",
+					"ToolTip.foreground",
+					"TitledBorder.titleColor"
+			};
+			putCustomColor(color, keys);
+		}
 	}
 
 	private static void initializeCustomMenus() {
@@ -519,9 +530,9 @@ public class Main {
 	}
 
 	private static void putCustomColor(Color color, String...keys) {
-		for (String key : keys) {
-			UIManager.put(key, color);
-		}
+		//		for (String key : keys) {
+		//			UIManager.put(key, color);
+		//		}
 	}
 
 	private static void putCustomFont(Font customFont, String...keys) {
@@ -577,22 +588,8 @@ public class Main {
 	}
 
 	private static void setLookAndFeel() {
-		if (ValidationUtil.isUnix()) {
-			setLookAndFeel("");
-		} else if (ValidationUtil.isWindows()) {
-			setLookAndFeel(defaultWindowsLookAndFeel);
-		} else if (ValidationUtil.isMac()) {
-			setLookAndFeel("");
-		} else if (ValidationUtil.isSolaris()) {
-			setLookAndFeel("");
-		} else {
-			setLookAndFeel("");
-		}
+		FlatDarkLaf.setup();
 		defaultLookAndFeel = UIManager.getLookAndFeel();
-
-		// get back the smooth horizontal scroll feature when it was disabled by the
-		// look and feel (happens in WindowsLookAndFeel)
-		UIManager.put("List.lockToPositionOnScroll", Boolean.FALSE);
 	}
 
 	private static void setLookAndFeel(LookAndFeel lnf) {
@@ -641,40 +638,39 @@ public class Main {
 
 	public static List<BroPlatform> initDefaultPlatforms() throws FileNotFoundException {
 		List<BroPlatform> platforms = new ArrayList<>();
-		String defaultPlatformsFilePath = explorer.getResourcesPath() + "/platforms";
+		String defaultPlatformsFilePath = explorer.getResourcesPath() + File.separator + "platforms";
 		File dir = new File(defaultPlatformsFilePath);
 		if (!dir.exists()) {
 			throw new FileNotFoundException("directory does not exist: " + defaultPlatformsFilePath);
 		}
-		FileFilter fileFilter = new FileFilter() {
+		FilenameFilter fileFilter = new FilenameFilter() {
 
 			@Override
-			public boolean accept(File pathname) {
-				return pathname.isDirectory();
+			public boolean accept(File dir, String name) {
+				if (dir.isDirectory() && !dir.getAbsolutePath().toLowerCase().equals(defaultPlatformsFilePath.toLowerCase())) {
+					return false;
+				}
+				return name.toLowerCase().endsWith(".json");
 			}
 		};
 		for (File fDir : dir.listFiles(fileFilter)) {
-			File file = new File(fDir.getAbsolutePath() + File.separator + "config.json");
-			if (!file.exists()) {
-				// TODO handle file config.json doesn't exist
-			} else {
+			File file = fDir;
+			try {
+				InputStream is = new FileInputStream(file);
+				BufferedReader br = new BufferedReader(new InputStreamReader(is));
+				java.lang.reflect.Type collectionType = new TypeToken<BroPlatform>() {
+				}.getType();
+				Gson gson = new Gson();
+				platforms.add((BroPlatform) gson.fromJson(br, collectionType));
 				try {
-					InputStream is = new FileInputStream(file);
-					BufferedReader br = new BufferedReader(new InputStreamReader(is));
-					java.lang.reflect.Type collectionType = new TypeToken<BroPlatform>() {
-					}.getType();
-					Gson gson = new Gson();
-					platforms.add((BroPlatform) gson.fromJson(br, collectionType));
-					try {
-						br.close();
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				} catch (FileNotFoundException e1) {
+					br.close();
+				} catch (IOException e) {
 					// TODO Auto-generated catch block
-					e1.printStackTrace();
+					e.printStackTrace();
 				}
+			} catch (FileNotFoundException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
 			}
 		}
 		return platforms;

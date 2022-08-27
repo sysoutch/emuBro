@@ -32,11 +32,13 @@ import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JSeparator;
 
+import com.formdev.flatlaf.extras.FlatSVGIcon;
+
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.util.Icons;
-import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 import ch.sysout.util.ValidationUtil;
@@ -289,7 +291,8 @@ public class EmulationOverlayFrame extends JFrame {
 		btnStopEmulation.setToolTipText("Stop emulation");
 		btnShowApplication.setIcon(ImageUtil.getImageIconFrom(Icons.get("applicationIcon", size2, size2)));
 		btnShowApplication.setToolTipText("Show emuBro");
-		btnEmulationOverlayPanelSettings.setIcon(ImageUtil.getImageIconFrom(Icons.get("settings", size3, size3)));
+		FlatSVGIcon svgSettings = new FlatSVGIcon(Icons.get("settings"), size3, size3);
+		btnEmulationOverlayPanelSettings.setIcon(svgSettings);
 		btnHideEmulationOverlayPanel.setIcon(ImageUtil.getImageIconFrom(Icons.get("close3", size3, size3)));
 		btnStopEmulation.addActionListener(new ActionListener() {
 

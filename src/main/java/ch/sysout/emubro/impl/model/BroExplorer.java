@@ -35,7 +35,7 @@ public class BroExplorer implements Explorer {
 
 	private List<Integer> currentGameIds = new ArrayList<>();
 	//	private List<BroPlatform> defaultPlatforms;
-	private List<Tag> defaultTags;
+	private List<BroTag> defaultTags;
 	private boolean searchProcessComplete;
 	private boolean showConfigWizardAtStartup;
 	private String extensionsString = "";
@@ -78,7 +78,7 @@ public class BroExplorer implements Explorer {
 	//	}
 
 	@Override
-	public List<Tag> getUpdatedTags() {
+	public List<BroTag> getUpdatedTags() {
 		return defaultTags;
 	}
 

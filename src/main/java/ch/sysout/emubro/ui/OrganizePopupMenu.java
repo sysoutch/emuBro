@@ -1,5 +1,6 @@
 package ch.sysout.emubro.ui;
 
+import java.awt.Color;
 import java.awt.event.ActionListener;
 
 import javax.swing.JCheckBoxMenuItem;
@@ -8,8 +9,8 @@ import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
 import javax.swing.JSeparator;
 
+import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.util.Icons;
-import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 
@@ -52,8 +53,8 @@ class OrganizePopupMenu extends JPopupMenu {
 
 	private void setIcons() {
 		int size = ScreenSizeUtil.is3k() ? 24 : 16;
-		itmSettings.setIcon(ImageUtil.getImageIconFrom(Icons.get("settings", size, size)));
-		itmExit.setIcon(ImageUtil.getImageIconFrom(Icons.get("exit", size, size)));
+		itmSettings.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("settings"), size, Color.LIGHT_GRAY));
+		itmExit.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("exit"), size, new Color(204, 2, 2)));
 
 		// setIcon(mnuLayout, "/images/"+size+"/edit-layout.png");
 		// setIcon(mnuLayout, "/images/"+size+"/layout-content.png");

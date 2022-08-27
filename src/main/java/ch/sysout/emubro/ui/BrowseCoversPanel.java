@@ -33,8 +33,8 @@ import ch.sysout.emubro.api.event.GameSelectionEvent;
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.JCustomButton;
+import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Messages;
-import ch.sysout.util.UIUtil;
 
 public class BrowseCoversPanel extends JPanel {
 	private static final long serialVersionUID = 1L;

@@ -1,9 +1,6 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
-import java.awt.GradientPaint;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -29,11 +26,11 @@ import com.jgoodies.forms.layout.RowSpec;
 import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.impl.BroConfigWizardListener;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.ui.util.JCustomButton;
+import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Icons;
-import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
-import ch.sysout.util.UIUtil;
 
 public class ConfigWizardDialog extends JDialog implements ActionListener {
 	private static final long serialVersionUID = 1L;
@@ -119,22 +116,22 @@ public class ConfigWizardDialog extends JDialog implements ActionListener {
 		JPanel pnlMain = new JPanel(layout) {
 			private static final long serialVersionUID = 1L;
 
-			@Override
-			protected void paintComponent(Graphics g) {
-				super.paintComponent(g);
-				Graphics2D g2d = (Graphics2D) g.create();
-				int panelWidth = getWidth();
-				int panelHeight = getHeight();
-				Theme currentTheme = IconStore.current().getCurrentTheme();
-				if (currentTheme.getView().hasGradientPaint()) {
-					GradientPaint p = currentTheme.getView().getGradientPaint();
-					g2d.setPaint(p);
-				} else if (currentTheme.getView().hasColor()) {
-					g2d.setColor(currentTheme.getView().getColor());
-				}
-				g2d.fillRect(0, 0, panelWidth, panelHeight);
-				g2d.dispose();
-			}
+			//			@Override
+			//			protected void paintComponent(Graphics g) {
+			//				super.paintComponent(g);
+			//				Graphics2D g2d = (Graphics2D) g.create();
+			//				int panelWidth = getWidth();
+			//				int panelHeight = getHeight();
+			//				Theme currentTheme = IconStore.current().getCurrentTheme();
+			//				if (currentTheme.getView().hasGradientPaint()) {
+			//					GradientPaint p = currentTheme.getView().getGradientPaint();
+			//					g2d.setPaint(p);
+			//				} else if (currentTheme.getView().hasColor()) {
+			//					g2d.setColor(currentTheme.getView().getColor());
+			//				}
+			//				g2d.fillRect(0, 0, panelWidth, panelHeight);
+			//				g2d.dispose();
+			//			}
 		};
 		pnlMain.setOpaque(false);
 		CellConstraints cc = new CellConstraints();

@@ -12,7 +12,7 @@ import javax.swing.table.DefaultTableCellRenderer;
 
 import ch.sysout.emubro.api.model.Emulator;
 import ch.sysout.emubro.api.model.Platform;
-import ch.sysout.util.ImageUtil;
+import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.util.ScreenSizeUtil;
 
 public class EmulatorTableCellRenderer extends DefaultTableCellRenderer {

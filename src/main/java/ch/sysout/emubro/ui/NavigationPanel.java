@@ -1,6 +1,7 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.GradientPaint;
 import java.awt.Graphics;
@@ -18,7 +19,6 @@ import java.util.List;
 import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
-import javax.swing.ImageIcon;
 import javax.swing.JDialog;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -33,12 +33,12 @@ import com.jgoodies.forms.layout.FormLayout;
 import ch.sysout.emubro.api.GameViewListener;
 import ch.sysout.emubro.impl.event.NavigationEvent;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.ui.util.JCustomToggleButton;
+import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Icons;
-import ch.sysout.util.ImageUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
-import ch.sysout.util.UIUtil;
 
 public class NavigationPanel extends JPanel implements ActionListener, GameViewListener {
 	public static final long serialVersionUID = 1L;
@@ -49,11 +49,11 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 	public static final String CENTERED = "centered";
 	public static final String MAXIMIZED = "maximized";
 
-	private JToggleButton btnAllGames = new JCustomToggleButton(Messages.get(MessageConstants.ALL_GAMES));
-	private JToggleButton btnRecentlyPlayed = new JCustomToggleButton(Messages.get(MessageConstants.RECENTLY_PLAYED));
-	private JToggleButton btnFavorites = new JCustomToggleButton(Messages.get(MessageConstants.FAVORITES));
+	private JCustomToggleButton btnAllGames = new JCustomToggleButton(Messages.get(MessageConstants.ALL_GAMES));
+	private JCustomToggleButton btnFavorites = new JCustomToggleButton(Messages.get(MessageConstants.FAVORITES));
+	private JCustomToggleButton btnRecentlyPlayed = new JCustomToggleButton(Messages.get(MessageConstants.RECENTLY_PLAYED));
 	private List<JToggleButton> platformButtons = new ArrayList<>();
-	private AbstractButton[] buttons = new AbstractButton[] { btnAllGames, btnRecentlyPlayed, btnFavorites };
+	private AbstractButton[] buttons = new AbstractButton[] { btnAllGames, btnFavorites, btnRecentlyPlayed };
 
 	private int oldWidth;
 	private boolean minimizing;
@@ -129,9 +129,9 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 					GradientPaint p = currentBackground.getGradientPaint();
 					g2d.setPaint(p);
 				} else if (currentBackground.hasColor()) {
-					g2d.setColor(currentBackground.getColor());
+					//g2d.setColor(currentBackground.getColor());
 				}
-				g2d.fillRect(0, 0, panelWidth, panelHeight);
+				//g2d.fillRect(0, 0, panelWidth, panelHeight);
 
 				BufferedImage background = currentBackground.getImage();
 				if (background != null) {
@@ -248,12 +248,9 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 
 	private void setIcons() {
 		int size = ScreenSizeUtil.adjustValueToResolution(32);
-		ImageIcon iconAllGames = ImageUtil.getImageIconFrom(Icons.get("allGames", size, size));
-		ImageIcon iconRecentlyPlayed = ImageUtil.getImageIconFrom(Icons.get("recentlyPlayed", size, size));
-		ImageIcon iconFavoriters = ImageUtil.getImageIconFrom(Icons.get("favorites", size, size));
-		btnAllGames.setIcon(iconAllGames);
-		btnRecentlyPlayed.setIcon(iconRecentlyPlayed);
-		btnFavorites.setIcon(iconFavoriters);
+		btnAllGames.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("allGames"), size, Color.LIGHT_GRAY));
+		btnFavorites.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("favorites"), size, new Color(255, 195, 0)));
+		btnRecentlyPlayed.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("recentlyPlayed"), size, new Color(181, 201, 255)));
 	}
 
 	private void addToButtonGroup(ButtonGroup grp, AbstractButton... buttons) {
@@ -453,25 +450,11 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 				btnFavorites.setText(Messages.get(MessageConstants.FAVORITES));
 			}
 			btnAllGames.setSelected(true);
+			btnFavorites.setButtonDecorationEnabled(false);
+			btnRecentlyPlayed.setButtonDecorationEnabled(false);
+
 			spNavigationButtons.getVerticalScrollBar().setValue(spNavigationButtons.getVerticalScrollBar()
 					.getMinimum());
-			break;
-		case NavigationPanel.RECENTLY_PLAYED:
-			if (!btnAllGames.getText().isEmpty()) {
-				btnAllGames.setText(Messages.get(MessageConstants.ALL_GAMES));
-			}
-			if (!btnRecentlyPlayed.getText().isEmpty()) {
-				btnRecentlyPlayed.setText(prefix + Messages.get(MessageConstants.RECENTLY_PLAYED) + postfix);
-			}
-			if (!btnFavorites.getText().isEmpty()) {
-				btnFavorites.setText(Messages.get(MessageConstants.FAVORITES));
-			}
-			btnRecentlyPlayed.setSelected(true);
-			Rectangle bounds = spNavigationButtons.getViewport().getViewRect();
-			Dimension size = spNavigationButtons.getViewport().getViewSize();
-			int x = (size.width - bounds.width) / 2;
-			int y = (size.height - bounds.height) / 2;
-			spNavigationButtons.getViewport().setViewPosition(new Point(x, y));
 			break;
 		case NavigationPanel.FAVORITES:
 			if (!btnAllGames.getText().isEmpty()) {
@@ -484,6 +467,29 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 				btnFavorites.setText(prefix + Messages.get(MessageConstants.FAVORITES) + postfix);
 			}
 			btnFavorites.setSelected(true);
+			btnAllGames.setButtonDecorationEnabled(false);
+			btnRecentlyPlayed.setButtonDecorationEnabled(false);
+
+			Rectangle bounds = spNavigationButtons.getViewport().getViewRect();
+			Dimension size = spNavigationButtons.getViewport().getViewSize();
+			int x = (size.width - bounds.width) / 2;
+			int y = (size.height - bounds.height) / 2;
+			spNavigationButtons.getViewport().setViewPosition(new Point(x, y));
+			break;
+		case NavigationPanel.RECENTLY_PLAYED:
+			if (!btnAllGames.getText().isEmpty()) {
+				btnAllGames.setText(Messages.get(MessageConstants.ALL_GAMES));
+			}
+			if (!btnRecentlyPlayed.getText().isEmpty()) {
+				btnRecentlyPlayed.setText(prefix + Messages.get(MessageConstants.RECENTLY_PLAYED) + postfix);
+			}
+			if (!btnFavorites.getText().isEmpty()) {
+				btnFavorites.setText(Messages.get(MessageConstants.FAVORITES));
+			}
+			btnRecentlyPlayed.setSelected(true);
+			btnFavorites.setButtonDecorationEnabled(false);
+			btnAllGames.setButtonDecorationEnabled(false);
+
 			spNavigationButtons.getVerticalScrollBar().setValue(spNavigationButtons.getVerticalScrollBar()
 					.getMaximum());
 			break;
