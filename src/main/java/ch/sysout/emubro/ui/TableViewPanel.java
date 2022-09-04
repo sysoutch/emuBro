@@ -141,6 +141,8 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 
 	private Color foregroundColor = UIManager.getColor("Table.foreground");
 
+	private boolean themeChanged;
+
 	public TableViewPanel(Explorer explorer, ViewPanelManager viewManager, GameContextMenu popupGame, ViewContextMenu popupView) {
 		super(new BorderLayout());
 		mdlTblAllGames = new GameTableModel(explorer);
@@ -188,7 +190,7 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 		// columnModel.getColumn(0).setResizable(false);
 
 		// minWidth = col.getWidth();
-		spTblGames = new JScrollPane(tblGames) {
+		spTblGames = new JScrollPane(tblGames) { // if we change this to JCustomScrollPane, table header will be gone
 			private static final long serialVersionUID = 1L;
 
 			@Override
@@ -843,7 +845,6 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 
 	@Override
 	public void navigationChanged(NavigationEvent e, FilterEvent filterEvent) {
-		List<Game> selectedGames = explorer.getCurrentGames();
 		int gameCount = 0;
 		switch (e.getView()) {
 		case NavigationPanel.ALL_GAMES:
@@ -864,10 +865,7 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 			tblGames.setModel(mdlTblAllGames);
 			break;
 		}
-		if (selectedGames != null && !selectedGames.isEmpty()) {
-			ListSelectionModel selectionModel = tblGames.getSelectionModel();
-			selectionModel.setSelectionInterval(0, 0);
-		}
+		scrollToSelectedGames();
 		if (filterEvent.isPlatformFilterSet() || filterEvent.isGameFilterSet()) {
 			((GameTableModel) mdlTblFiltered).removeAllElements();
 			filterSet(filterEvent);
@@ -1379,5 +1377,19 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 
 	@Override
 	public void coverSizeChanged(int currentCoverSize) {
+	}
+
+	@Override
+	public void scrollToSelectedGames() {
+		List<Game> selectedGames = explorer.getCurrentGames();
+		if (selectedGames != null && !selectedGames.isEmpty()) {
+			ListSelectionModel selectionModel = tblGames.getSelectionModel();
+			selectionModel.setSelectionInterval(0, 0);
+		}
+	}
+
+	@Override
+	public void themeChanged() {
+		themeChanged = true;
 	}
 }

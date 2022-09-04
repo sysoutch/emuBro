@@ -52,6 +52,7 @@ import com.jgoodies.forms.layout.FormLayout;
 
 import ch.sysout.emubro.api.PlatformListener;
 import ch.sysout.emubro.api.RunGameWithListener;
+import ch.sysout.emubro.api.ScrollToCurrentGamesListener;
 import ch.sysout.emubro.api.TagListener;
 import ch.sysout.emubro.api.event.EmulatorEvent;
 import ch.sysout.emubro.api.event.GameAddedEvent;
@@ -178,6 +179,14 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 			};
 		};
 
+		pnlPreviewPane.addScrollToCurrentGamesListener(new ScrollToCurrentGamesListener() {
+
+			@Override
+			public void scrollToSelectedGames() {
+				viewManager.scrollToSelectedGames();
+			}
+		});
+
 		pnlPreviewPane.addResizePreviewPaneListener(new MouseMotionAdapter() {
 
 			@Override
@@ -255,12 +264,14 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 			}
 
 		});
+
 		pnlDetails.addSetCoverForGameListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				viewManager.setCoverForGame(explorer.getCurrentGames().get(0).getName());
 			}
 		});
+
 		pnlDetails.addSelectNextGameListener(new ActionListener() {
 
 			@Override
@@ -268,6 +279,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				viewManager.selectNextGame();
 			}
 		});
+
 		pnlDetails.addSelectPreviousGameListener(new ActionListener() {
 
 			@Override
@@ -275,6 +287,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				viewManager.selectPreviousGame();
 			}
 		});
+
 		pnlDetails.addResizeDetailsPanelListener(new MouseMotionAdapter() {
 			@Override
 			public void mouseDragged(MouseEvent e) {

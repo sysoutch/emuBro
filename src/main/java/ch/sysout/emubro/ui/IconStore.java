@@ -15,8 +15,10 @@ import java.util.Map;
 import javax.swing.ImageIcon;
 
 import com.google.gson.JsonElement;
+import com.google.gson.JsonIOException;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
 import com.google.gson.stream.JsonReader;
 
 import ch.sysout.ui.util.ImageUtil;
@@ -45,13 +47,13 @@ public class IconStore {
 
 	private List<GameCoverListener> gameCoverListeners = new ArrayList<>();
 
-	private String coverType2d = "2d";
+	private String coverType = "2d";
 
 	private IconStore() {
 		// prevent instantiation of this class
 	}
 
-	public void loadDefaultTheme(String themeNameToLoad) throws IOException {
+	public void loadDefaultTheme(String themeNameToLoad) throws IOException, JsonIOException, JsonSyntaxException {
 		System.err.println(getResourceFiles("/themes/"));
 		String themeDirectory = "themes/"+themeNameToLoad;
 		File file = new File(getClass().getClassLoader().getResource(themeDirectory+"/theme.json").getFile());
@@ -64,8 +66,8 @@ public class IconStore {
 			Color previewPaneColor = null;
 			String previewPaneImage = null;
 			try (JsonReader reader = new JsonReader(new InputStreamReader(new FileInputStream(file)))) {
-				JsonParser jsonParser = new JsonParser();
-				JsonObject json = jsonParser.parse(reader).getAsJsonObject();
+				JsonObject json;
+				json = JsonParser.parseReader(reader).getAsJsonObject();
 				System.out.println(json);
 				JsonElement colorElement = json.get("color");
 				backgroundColor = (colorElement == null) ? Color.WHITE
@@ -160,6 +162,7 @@ public class IconStore {
 	public static final IconStore current() {
 		return instance == null ? instance = new IconStore() : instance;
 	}
+
 	public void addPlatformCover(int platformId, String platformCoversDirectory) {
 		addPlatformCover(platformId, platformCoversDirectory, "");
 	}
@@ -168,8 +171,7 @@ public class IconStore {
 		if (coverFileName == null || coverFileName.isEmpty()) {
 			coverFileName = "front.jpg";
 		}
-		String separator = File.separator;
-		String coverFilePath = platformCoversDirectory + separator + coverType2d + separator + coverFileName;
+		String coverFilePath = platformCoversDirectory + File.separator + coverType + File.separator + coverFileName;
 		if (!platformCovers.containsKey(platformId)) {
 			int size = ScreenSizeUtil.adjustValueToResolution(200);
 			ImageIcon ii = ImageUtil.getImageIconFrom(coverFilePath, true);

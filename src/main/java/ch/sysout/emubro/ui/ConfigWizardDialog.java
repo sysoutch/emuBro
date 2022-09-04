@@ -27,7 +27,6 @@ import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.impl.BroConfigWizardListener;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.ImageUtil;
-import ch.sysout.ui.util.JCustomButton;
 import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;

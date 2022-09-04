@@ -78,11 +78,9 @@ import ch.sysout.emubro.impl.event.BroFilterEvent;
 import ch.sysout.emubro.impl.filter.BroCriteria;
 import ch.sysout.emubro.impl.model.PlatformConstants;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.FontUtil;
 import ch.sysout.ui.util.ImageUtil;
-import ch.sysout.ui.util.JCustomButton;
-import ch.sysout.ui.util.JCustomToggleButton;
 import ch.sysout.ui.util.UIUtil;
-import ch.sysout.util.FontUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
@@ -190,7 +188,7 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 		});
 
 		cmbPlatforms = new JComboBox<Platform>();
-		cmbPlatforms.setEditable(true);
+		cmbPlatforms.setEditable(false);
 		cmbPlatforms.setMinimumSize(new Dimension(0, 0));
 		cmbPlatforms.setRenderer(new CustomComboBoxRenderer());
 		//		cmbPlatforms.setEditor(new CustomComboBoxEditor());

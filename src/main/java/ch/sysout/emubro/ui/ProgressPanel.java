@@ -13,7 +13,6 @@ import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 
 import ch.sysout.ui.util.ImageUtil;
-import ch.sysout.ui.util.JCustomButton2;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
@@ -22,7 +21,7 @@ public class ProgressPanel extends JPanel {
 	private static final long serialVersionUID = 1L;
 
 	private JProgressBar prgBrowseComputer = new JProgressBar();
-	private JButton btnInterruptProgress = new JCustomButton2();
+	private JButton btnInterruptProgress = new JCustomButtonNew();
 
 	public ProgressPanel() {
 		super();

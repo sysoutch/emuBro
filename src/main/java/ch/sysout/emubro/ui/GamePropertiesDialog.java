@@ -51,8 +51,6 @@ import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.impl.model.EmulatorConstants;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.ImageUtil;
-import ch.sysout.ui.util.JCustomButton;
-import ch.sysout.ui.util.JCustomToggleButton;
 import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;

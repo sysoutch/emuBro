@@ -1,5 +1,6 @@
 package ch.sysout.emubro.ui;
 
+import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Desktop;
 import java.awt.Dimension;
@@ -33,7 +34,6 @@ import com.jgoodies.forms.layout.FormLayout;
 
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.ImageUtil;
-import ch.sysout.ui.util.JCustomButton;
 import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
@@ -49,12 +49,12 @@ public class AboutDialog extends JDialog implements ActionListener {
 	private JLinkButton lnkWebsite = new JLinkButton();
 
 	int size = ScreenSizeUtil.is3k() ? 32 : 24;
-	private JButton btnFacebook = new JButton(ImageUtil.getImageIconFrom(Icons.get("facebook", size, size)));
-	private JButton btnTwitter = new JButton(ImageUtil.getImageIconFrom(Icons.get("twitter", size, size)));
-	private JButton btnYoutube = new JButton(ImageUtil.getFlatSVGIconFrom(Icons.get("youtube"), size));
-	private JButton btnDiscord = new JButton(ImageUtil.getFlatSVGIconFrom(Icons.get("discord"), size));
-	private JButton btnReddit = new JButton(ImageUtil.getFlatSVGIconFrom(Icons.get("reddit"), size));
-	private JButton btnGitHub = new JButton(ImageUtil.getImageIconFrom(Icons.get("github", size, size)));
+	private JButton btnFacebook = new JButton(ImageUtil.getFlatSVGIconFrom(Icons.get("facebook"), size, Color.LIGHT_GRAY));
+	private JButton btnTwitter = new JButton(ImageUtil.getFlatSVGIconFrom(Icons.get("twitter"), size, Color.LIGHT_GRAY));
+	private JButton btnYoutube = new JButton(ImageUtil.getFlatSVGIconFrom(Icons.get("youtube"), size, Color.LIGHT_GRAY));
+	private JButton btnDiscord = new JButton(ImageUtil.getFlatSVGIconFrom(Icons.get("discord"), size, Color.LIGHT_GRAY));
+	private JButton btnReddit = new JButton(ImageUtil.getFlatSVGIconFrom(Icons.get("reddit"), size, Color.LIGHT_GRAY));
+	private JButton btnGitHub = new JButton(ImageUtil.getFlatSVGIconFrom(Icons.get("github"), size, Color.LIGHT_GRAY));
 	private AbstractButton[] socialMediaButtons = new JButton[] { btnFacebook, btnTwitter, btnYoutube, btnDiscord, btnReddit, btnGitHub };
 
 	private JButton btnClose = new JCustomButton(Messages.get(MessageConstants.CLOSE));
@@ -179,10 +179,58 @@ public class AboutDialog extends JDialog implements ActionListener {
 	private void addListeners() {
 		UIUtil.installEscapeCloseOperation(this);
 		addActionListeners(lblIcon, lnkWebsite, btnClose);
+
+		ColorStore colorStore = ColorStore.current();
+		colorStore.setColor("facebook", new Color(66, 103, 178));
+		colorStore.setColor("twitter", new Color(29, 161, 242));
+		colorStore.setColor("youtube", new Color(255, 0, 0));
+		colorStore.setColor("discord", new Color(114, 137, 218));
+		colorStore.setColor("reddit", new Color(255, 69, 0));
+		colorStore.setColor("github", new Color(51, 51, 51));
+		for (AbstractButton btn : socialMediaButtons) {
+			btn.addMouseListener(new MouseAdapter() {
+				@Override
+				public void mouseEntered(MouseEvent e) {
+					super.mouseEntered(e);
+					int increaseIconSizeValue = 0;
+					if (btn == btnFacebook) {
+						btn.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("facebook"), size+increaseIconSizeValue, colorStore.getColor("facebook")));
+					} else if (btn == btnTwitter) {
+						btn.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("twitter"), size+increaseIconSizeValue, colorStore.getColor("twitter")));
+					} else if (btn == btnYoutube) {
+						btn.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("youtube"), size+increaseIconSizeValue, colorStore.getColor("youtube")));
+					} else if (btn == btnDiscord) {
+						btn.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("discord"), size+increaseIconSizeValue, colorStore.getColor("discord")));
+					} else if (btn == btnReddit) {
+						btn.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("reddit"), size+increaseIconSizeValue, colorStore.getColor("reddit")));
+					} else if (btn == btnGitHub) {
+						btn.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("github"), size+increaseIconSizeValue, colorStore.getColor("github")));
+					}
+				}
+
+				@Override
+				public void mouseExited(MouseEvent e) {
+					super.mouseExited(e);
+					if (btn == btnFacebook) {
+						btn.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("facebook"), size, Color.LIGHT_GRAY));
+					} else if (btn == btnTwitter) {
+						btn.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("twitter"), size, Color.LIGHT_GRAY));
+					} else if (btn == btnYoutube) {
+						btn.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("youtube"), size, Color.LIGHT_GRAY));
+					} else if (btn == btnDiscord) {
+						btn.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("discord"), size, Color.LIGHT_GRAY));
+					} else if (btn == btnReddit) {
+						btn.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("reddit"), size, Color.LIGHT_GRAY));
+					} else if (btn == btnGitHub) {
+						btn.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("github"), size, Color.LIGHT_GRAY));
+					}
+				}
+			});
+		}
 	}
 
-	private void addActionListeners(AbstractButton... o) {
-		for (AbstractButton btn : o) {
+	private void addActionListeners(AbstractButton... buttons) {
+		for (AbstractButton btn : buttons) {
 			btn.addActionListener(this);
 		}
 	}

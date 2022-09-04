@@ -32,7 +32,6 @@ import com.jgoodies.forms.layout.FormLayout;
 import ch.sysout.emubro.api.event.GameSelectionEvent;
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.util.MessageConstants;
-import ch.sysout.ui.util.JCustomButton;
 import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Messages;
 
@@ -171,7 +170,8 @@ public class BrowseCoversPanel extends JPanel {
 	}
 
 	public void languageChanged() {
-		lblDragDropCover.setText(Messages.get(MessageConstants.DRAG_AND_DROP_FILES_OR_FOLDERS_HERE));
+		lblDragDropCover.setText("<html>"+Messages.get(MessageConstants.DRAG_AND_DROP_FILES_OR_FOLDERS_HERE) + "<br>"
+				+ "You don't have covers? Select one or more games and find some with Google</html>");
 		btnSetCoverForGame.setText(Messages.get(MessageConstants.SET_COVER));
 		btnClearList.setText(Messages.get(MessageConstants.CLEAR_LIST));
 	}

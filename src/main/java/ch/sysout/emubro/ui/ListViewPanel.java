@@ -93,8 +93,6 @@ import ch.sysout.emubro.impl.model.EmulatorConstants;
 import ch.sysout.emubro.impl.model.GameConstants;
 import ch.sysout.emubro.impl.model.PlatformConstants;
 import ch.sysout.emubro.util.MessageConstants;
-import ch.sysout.ui.util.JCustomButton;
-import ch.sysout.ui.util.JCustomButton2;
 import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
@@ -177,6 +175,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	private List<TagsFromGamesListener> tagsFromGamesListeners = new ArrayList<>();
 
 	private Color colorFavorite = new Color(255, 195, 0);
+	protected boolean themeChanged;
 
 	public ListViewPanel(Explorer explorer, ViewPanelManager viewManager, GameContextMenu popupGame, ViewContextMenu popupView) {
 		super(new BorderLayout());
@@ -291,6 +290,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				fixRowCountForVisibleColumns(lst);
 			}
 		});
+
 		lst.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mousePressed(MouseEvent e) {
@@ -487,7 +487,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 			private Border borderHover = BorderFactory.createLineBorder(getGameList().getSelectionBackground(), 1, false);
 			private Border borderEmpty = BorderFactory.createEmptyBorder(0, ScreenSizeUtil.adjustValueToResolution(8), 0, 0);
 			private Map<Integer, Border> borders = new HashMap<>();
-			private Color colorItemBackground = new Color(0f, 0f, 0f, 0.25f);
+			private Color colorItemBackground;
 
 			@Override
 			public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected,
@@ -620,6 +620,13 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 					viewManager.setFontSize(label.getFont().getSize());
 				}
 				//				UIUtil.setForegroundDependOnBackground(IconStore.current().getCurrentTheme().getView().getColor(), label);
+				if (colorItemBackground == null || themeChanged) {
+					Color bg = label.getBackground().brighter();
+					if (bg.getRGB() == label.getBackground().getRGB()) {
+						bg = label.getBackground().darker();
+					}
+					colorItemBackground = new Color(bg.getRed(), bg.getGreen(), bg.getBlue(), 180);
+				}
 				if (game.isFavorite()) {
 					label.setForeground(colorFavorite);
 					if (!isSelected) {
@@ -627,7 +634,6 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 							//						label.setFont(new Font(labelFont.getName(), Font.BOLD, getFontSize()));
 						}
 					} else {
-						//						label.setOpaque(true);
 						label.setBackground(colorItemBackground);
 						if (viewStyle != ViewPanel.CONTENT_VIEW) {	// Cause in content view the game title is bold. This would set game title also plain.
 							//						label.setFont(new Font(labelFont.getName(), Font.PLAIN, getFontSize()));
@@ -635,12 +641,12 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 					}
 				} else {
 					if (isSelected) {
-						//						label.setOpaque(true);
 						label.setBackground(colorItemBackground);
 					} else {
 						//						label.setForeground(colorBackground);
 					}
 				}
+				themeChanged = false;
 			}
 
 			private void checkHideExtensions(boolean hideExtensions, String gamePath, JLabel label) {
@@ -1073,7 +1079,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				final int gameCount = mdlNew.getSize();
 				String gameCountString = (gameCount == 1) ? Messages.get(MessageConstants.GAME_COUNT1, gameCount)
 						: Messages.get(MessageConstants.GAME_COUNT, gameCount);
-				final JButton btn = new JCustomButton2(
+				final JButton btn = new JCustomButtonNew(
 						"<html><strong>" + p.getName() + "</strong><br>" + gameCountString + "</html>");
 				if (groupedViewButtons == null) {
 					groupedViewButtons = new ArrayList<AbstractButton>();
@@ -1476,9 +1482,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 			setViewStyle(lstGames, viewStyle);
 			break;
 		}
-		if (selectedGames != null && !selectedGames.isEmpty()) {
-			lstGames.setSelectedValue(selectedGames.get(0), true);
-		}
+		scrollToSelectedGames();
 		if (filterEvent.isPlatformFilterSet() || filterEvent.isGameFilterSet()) {
 			mdlLstFilteredGames.removeAllElements();
 			filterSet(filterEvent);
@@ -2178,5 +2182,20 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 			}
 		}
 		g2d.dispose();
+	}
+
+	@Override
+	public void scrollToSelectedGames() {
+		List<Game> selectedGames = explorer.getCurrentGames();
+		if (selectedGames != null && !selectedGames.isEmpty()) {
+			int selectedIndex = lstGames.getSelectedIndex();
+			lstGames.removeSelectionInterval(selectedIndex, selectedIndex); // dirty. but otherwise scroll to selected game won't work
+			lstGames.setSelectedValue(selectedGames.get(0), true);
+		}
+	}
+
+	@Override
+	public void themeChanged() {
+		themeChanged = true;
 	}
 }

@@ -1,6 +1,7 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Image;
@@ -39,8 +40,6 @@ import com.jgoodies.forms.layout.RowSpec;
 
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.ImageUtil;
-import ch.sysout.ui.util.JCustomButton;
-import ch.sysout.ui.util.JCustomToggleButton;
 import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
@@ -52,7 +51,7 @@ public class HelpFrame extends JFrame implements ActionListener {
 	int size = ScreenSizeUtil.is3k() ? 24 : 16;
 	private JTextField txtSearch = new JTextField("Search help content (Ctrl+F)");
 
-	private JButton btnSearch = new JCustomButton(ImageUtil.getImageIconFrom(Icons.get("search", 16, 16)));
+	private JButton btnSearch = new JCustomButton(ImageUtil.getFlatSVGIconFrom(Icons.get("search"), size, Color.LIGHT_GRAY));
 	private JButton btnHome = new JCustomButton(ImageUtil.getImageIconFrom(Icons.get("home", size, size)));
 	private JButton btnPrevious = new JCustomButton(ImageUtil.getImageIconFrom(Icons.get("previous", size, size)));
 	private JButton btnNext = new JCustomButton(ImageUtil.getImageIconFrom(Icons.get("next", size, size)));

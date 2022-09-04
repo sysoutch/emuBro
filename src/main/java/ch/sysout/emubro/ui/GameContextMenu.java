@@ -42,7 +42,6 @@ import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Icons;
-import ch.sysout.util.MenuScroller;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 
@@ -55,7 +54,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 	private JMenuItem itmConfigureEmulator = new JMenuItem();
 	private JMenuItem itmChangePlatform = new JMenuItem();
 	private JMenu mnuRateGame = new JMenu();
-	private JMenu mnuAddTags = new JMenu();
+	private JMenu mnuManageTags = new JMenu();
 	private JMenu mnuAvailableTags = new JMenu();
 	private JMenu mnuImportTags = new JMenu();
 	private JMenuItem itmCreateNewTag = new JMenuItem();
@@ -72,8 +71,8 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 	private JMenuItem itmWebSearchSettings = new JMenuItem();
 	private JMenuItem itmRenameGame = new JMenuItem();
 	private JMenuItem itmRemoveGame = new JMenuItem();
-	private JMenuItem itmOpenGameFolder = new JMenuItem();
 	private JMenuItem itmCopyGamePath = new JMenuItem();
+	private JMenuItem itmOpenGameFolder = new JMenuItem();
 	private JMenuItem itmGameProperties = new JMenuItem();
 	private RatingBarPanel pnlRatingBar = new RatingBarPanel(null, false);
 	private JMenuItem itmComment = new JMenuItem();
@@ -90,15 +89,15 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 	private List<RunGameWithListener> runGameWithListeners = new ArrayList<>();
 
 	public GameContextMenu() {
-		MenuScroller.setScrollerFor(mnuAvailableTags, 8, 125, 3, 1);
+		//		MenuScroller.setScrollerFor(mnuAvailableTags, 8, 125, 3, 1);
 
 		setIcons();
 		addComponentsToJComponent(this, itmRunGame, mnuRunWith,
 				new JSeparator(), itmConfigureEmulator, itmChangePlatform,
-				new JSeparator(), mnuRateGame, mnuAddTags, itmAddCoverComputer,
+				new JSeparator(), mnuRateGame, mnuManageTags, itmAddCoverComputer,
 				new JSeparator(), mnuShowTagsWeb, mnuShowCoverWeb, mnuShowTrailerWeb/*, itmWebSearchSettings*/,
 				new JSeparator(), itmRemoveGame, itmRenameGame,
-				new JSeparator(), itmOpenGameFolder, itmCopyGamePath,
+				new JSeparator(),  itmCopyGamePath,itmOpenGameFolder,
 				new JSeparator(), itmGameProperties);
 		addComponentsToJComponent(mnuRateGame, pnlRatingBar, new JSeparator(), itmComment);
 		addComponentsToJComponent(mnuShowTagsWeb, itmDefaultTagSource);
@@ -111,7 +110,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		mnuShowTagsWeb.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("tag"), size, Color.LIGHT_GRAY));
 		addComponentsToJComponent(mnuImportTags, itmDefaultImportTagSource, new JSeparator());
 		addComponentsToJComponent(mnuAvailableTags, itmCreateNewTag, new JSeparator());
-		addComponentsToJComponent(mnuAddTags, itmAutoSearchTags, mnuAvailableTags, new JSeparator());
+		addComponentsToJComponent(mnuManageTags, itmAutoSearchTags, mnuAvailableTags, new JSeparator());
 		addPopupMenuListener(new PopupMenuAdapter() {
 			@Override
 			public void popupMenuWillBecomeVisible(PopupMenuEvent e) {
@@ -146,7 +145,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 					@Override
 					public void run() {
 						//							mnuManageTags.setPopupMenuVisible(GameContextMenu.this);
-						MenuSelectionManager.defaultManager().setSelectedPath(new MenuElement[] { GameContextMenu.this, mnuAddTags });
+						MenuSelectionManager.defaultManager().setSelectedPath(new MenuElement[] { GameContextMenu.this, mnuManageTags });
 					}
 				});
 			}
@@ -174,7 +173,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 
 					@Override
 					public void run() {
-						MenuSelectionManager.defaultManager().setSelectedPath(new MenuElement[] { GameContextMenu.this, mnuAddTags });
+						MenuSelectionManager.defaultManager().setSelectedPath(new MenuElement[] { GameContextMenu.this, mnuManageTags });
 					}
 				});
 			}
@@ -182,12 +181,12 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		//		itmRenameTag.setIcon(iconRenameTag);
 		addComponentsToJComponent(mnuTag, itmRemoveTag/*, itmRenameTag*/);
 		tags.put(tag.getId(), mnuTag);
-		addComponentsToJComponent(mnuAddTags, mnuTag);
+		addComponentsToJComponent(mnuManageTags, mnuTag);
 		UIUtil.revalidateAndRepaint(this);
 	}
 
 	private void removeTagItem(int tagId) {
-		mnuAddTags.remove(tags.get(tagId));
+		mnuManageTags.remove(tags.get(tagId));
 		tags.remove(tagId);
 		UIUtil.revalidateAndRepaint(this);
 	}
@@ -257,13 +256,13 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		int size = ScreenSizeUtil.is3k() ? 24 : 16;
 		mnuShowTrailerWeb.setIcon(ImageUtil.getImageIconFrom(Icons.get("video", size, size)));
 		mnuShowCoverWeb.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("picture"), size, new Color(181, 201, 255)));
-		itmRunGame.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("runGame"), size, new Color(0, 129, 0)));
+		itmRunGame.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("runGame"), size, new Color(40, 167, 69)));
 		itmConfigureEmulator.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("settings"), size, Color.LIGHT_GRAY));
 		itmChangePlatform.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("change"), size, Color.LIGHT_GRAY));
 		itmComment.setIcon(ImageUtil.getImageIconFrom(Icons.get("gameComment", size, size)));
-		itmOpenGameFolder.setIcon(ImageUtil.getImageIconFrom(Icons.get("openFolder", size, size)));
 		itmCopyGamePath.setIcon(ImageUtil.getImageIconFrom(Icons.get("copy", size, size)));
-		itmRemoveGame.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("trash"), size, new Color(199, 0, 0)));
+		itmOpenGameFolder.setIcon(ImageUtil.getImageIconFrom(Icons.get("openFolder", size, size)));
+		itmRemoveGame.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("trash"), size, new Color(237, 67, 55)));
 		itmRenameGame.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rename"), size, Color.LIGHT_GRAY));
 		itmDefaultTagSource.setIcon(ImageUtil.getImageIconFrom(Icons.get("applicationIcon", size, size)));
 		//		itmCoverDownload.setIcon(ImageUtil.getImageIconFrom(Icons.get("applicationIcon", size, size)));
@@ -341,7 +340,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		mnuAvailableTags.setText(Messages.get(MessageConstants.ADD_TAGS_MANUALLY));
 		mnuImportTags.setText(Messages.get(MessageConstants.IMPORT_TAGS));
 		itmDefaultImportTagSource.setText(Messages.get(MessageConstants.DEFAULT_TAG_SOURCE));
-		mnuAddTags.setText(Messages.get(MessageConstants.MANAGE_TAGS));
+		mnuManageTags.setText(Messages.get(MessageConstants.MANAGE_TAGS));
 		itmCreateNewTag.setText(Messages.get(MessageConstants.NEW_TAG));
 		itmAutoSearchTags.setText(Messages.get(MessageConstants.AUTO_SEARCH_TAG));
 		//		itmRemoveTag.setText(Messages.get(MessageConstants.REMOVE_TAG));
@@ -356,17 +355,17 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		itmDefaultTrailerSource.setText(Messages.get(MessageConstants.DEFAULT_TRAILER_SOURCE));
 		itmRenameGame.setText(Messages.get(MessageConstants.RENAME));
 		itmRemoveGame.setText(Messages.get(MessageConstants.REMOVE));
-		itmOpenGameFolder.setText(Messages.get(MessageConstants.OPEN_GAME_PATH));
 		itmCopyGamePath.setText(Messages.get(MessageConstants.COPY_GAME_PATH));
+		itmOpenGameFolder.setText(Messages.get(MessageConstants.OPEN_GAME_PATH));
 		itmGameProperties.setText(Messages.get(MessageConstants.GAME_PROPERTIES));
-	}
-
-	public void addOpenGameFolderListener(ActionListener l) {
-		itmOpenGameFolder.addActionListener(l);
 	}
 
 	public void addCopyGamePathListener(ActionListener l) {
 		itmCopyGamePath.addActionListener(l);
+	}
+
+	public void addOpenGameFolderListener(ActionListener l) {
+		itmOpenGameFolder.addActionListener(l);
 	}
 
 	public void addRateListener(RateListener l) {
@@ -384,8 +383,8 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 	@Override
 	public void gameSelected(GameSelectionEvent e) {
 		pnlRatingBar.gameSelected(e);
-		mnuAddTags.removeAll();
-		addComponentsToJComponent(mnuAddTags, itmAutoSearchTags, mnuAvailableTags, new JSeparator());
+		mnuManageTags.removeAll();
+		addComponentsToJComponent(mnuManageTags, itmAutoSearchTags, mnuAvailableTags, new JSeparator());
 		List<Game> games = e.getGames();
 		if (games != null && !games.isEmpty()) {
 			Game firstGame = e.getGames().get(0);

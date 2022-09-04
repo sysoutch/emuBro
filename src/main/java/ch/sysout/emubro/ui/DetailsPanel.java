@@ -38,9 +38,6 @@ import ch.sysout.emubro.api.event.GameSelectionEvent;
 import ch.sysout.emubro.controller.NotificationElementListener;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.ImageUtil;
-import ch.sysout.ui.util.JCustomButton;
-import ch.sysout.ui.util.JCustomButton2;
-import ch.sysout.ui.util.JCustomToggleButton;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
@@ -77,7 +74,7 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 
 	private CellConstraints cc2;
 
-	AbstractButton btnResizeDetailsPane = new JCustomButton2();
+	AbstractButton btnResizeDetailsPane = new JCustomButtonNew();
 
 	public DetailsPanel() {
 		super(new BorderLayout());

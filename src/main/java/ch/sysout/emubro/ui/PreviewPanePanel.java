@@ -70,6 +70,7 @@ import com.jgoodies.forms.layout.FormLayout;
 
 import ch.sysout.emubro.api.PlatformFromGameListener;
 import ch.sysout.emubro.api.RunGameWithListener;
+import ch.sysout.emubro.api.ScrollToCurrentGamesListener;
 import ch.sysout.emubro.api.TagListener;
 import ch.sysout.emubro.api.event.GameRenamedEvent;
 import ch.sysout.emubro.api.event.GameSelectionEvent;
@@ -81,11 +82,9 @@ import ch.sysout.emubro.api.model.Tag;
 import ch.sysout.emubro.controller.GameSelectionListener;
 import ch.sysout.emubro.impl.event.BroTagAddedEvent;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.FontUtil;
 import ch.sysout.ui.util.ImageUtil;
-import ch.sysout.ui.util.JCustomButton;
-import ch.sysout.ui.util.JCustomButton2;
 import ch.sysout.ui.util.UIUtil;
-import ch.sysout.util.FontUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
@@ -177,6 +176,10 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		pnlNoSelection.setMinimumSize(new Dimension(0, 0));
 		spSelection.setVisible(false);
 		initNoSelectionText();
+	}
+
+	public void addScrollToCurrentGamesListener(ScrollToCurrentGamesListener l) {
+		pnlSelection.evs.add(l);
 	}
 
 	private Image blurBorder(Image input, double border) {
@@ -632,6 +635,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		private JLabel lblPublisher = new JLabel("");
 		private JTextArea txtDescription = new JTextArea(0, 5);
 		private String description;
+		private List<ScrollToCurrentGamesListener> evs = new ArrayList<>();
 
 		public SelectionPanel() {
 			initComponents();
@@ -791,18 +795,19 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			lblGameTitle.setHorizontalAlignment(SwingConstants.CENTER);
 			lblGameTitle.setHorizontalTextPosition(SwingConstants.LEFT);
 			lblGameTitle.setVerticalTextPosition(SwingConstants.TOP);
-			//			lblGameTitle.addMouseListener(new MouseAdapter() {
-			//				@Override
-			//				public void mousePressed(MouseEvent e) {
-			//					if (currentGames.size() == 1) {
-			//						pnl.remove(lblGameTitle);
-			//						pnl.add(txtGameTitle, CC.xy(1, 1));
-			//						txtGameTitle.setText(currentGames.get(0).getName());
-			//						txtGameTitle.requestFocusInWindow();
-			//						UIUtil.revalidateAndRepaint(pnl);
-			//					}
-			//				}
-			//			});
+			lblGameTitle.addMouseListener(new MouseAdapter() {
+				@Override
+				public void mousePressed(MouseEvent e) {
+					fireRequestToScrollToCurrentGamesEvent();
+					//					if (currentGames.size() == 1) {
+					//						pnl.remove(lblGameTitle);
+					//						pnl.add(txtGameTitle, CC.xy(1, 1));
+					//						txtGameTitle.setText(currentGames.get(0).getName());
+					//						txtGameTitle.requestFocusInWindow();
+					//						UIUtil.revalidateAndRepaint(pnl);
+					//					}
+				}
+			});
 			//			txtGameTitle.addFocusListener(new FocusAdapter() {
 			//				@Override
 			//				public void focusLost(FocusEvent e) {
@@ -810,7 +815,13 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			//					pnl.add(lblGameTitle, CC.xy(1, 1));
 			//					UIUtil.revalidateAndRepaint(pnl);
 			//				}
-			//			});
+			//						});
+		}
+
+		protected void fireRequestToScrollToCurrentGamesEvent() {
+			for (ScrollToCurrentGamesListener l : evs ) {
+				l.scrollToSelectedGames();
+			}
 		}
 
 		private void initPlatformTitle() {
@@ -834,7 +845,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 
 		protected void setGameTitle(String s, Icon icon) {
 			String gameTitle = s.replace(".", " ").replace("_", " ");
-			lblGameTitle.setFont(FontUtil.getCustomBoldFont(32));
+			lblGameTitle.setFont(FontUtil.getCustomBoldFont(24));
 			lblGameTitle.setText(Messages.get(MessageConstants.GAME_TITLE, gameTitle));
 			lblGameTitle.setIcon(icon);
 		}
@@ -1205,12 +1216,12 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			int size = ScreenSizeUtil.is3k() ? 32 : 32;
 			Color colorUnderlay = new Color(0f, 0f, 0f, 0.25f);
 
-			private ImageIcon icoRunGame = ImageUtil.getFlatSVGIconFrom(Icons.get("runGame"), size, new Color(0, 129, 0));
+			private ImageIcon icoRunGame = ImageUtil.getFlatSVGIconFrom(Icons.get("runGame"), size, new Color(40, 167, 69));
 			private ImageIcon icoMoreOptionsRunGame = ImageUtil.getImageIconFrom(Icons.get("arrowDownOtherWhite", 1));
-			private JButton btnRunGame = new JCustomButton2(Messages.get(MessageConstants.RUN_GAME));
-			private JButton lblMoreOptionsRunGame = new JCustomButton2("");
-			private JButton btnSearchCover = new JCustomButton2();
-			private JButton btnSearchTrailer = new JCustomButton2();
+			private JButton btnRunGame = new JCustomButtonNew(Messages.get(MessageConstants.RUN_GAME));
+			private JButton lblMoreOptionsRunGame = new JCustomButtonNew("");
+			private JButton btnSearchCover = new JCustomButtonNew();
+			private JButton btnSearchTrailer = new JCustomButtonNew();
 
 			private JPanel pnlRunGameWrapper;
 

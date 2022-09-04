@@ -35,7 +35,6 @@ import com.jgoodies.validation.view.ValidationComponentUtils;
 
 import ch.sysout.emubro.controller.NotificationElementListener;
 import ch.sysout.ui.util.ImageUtil;
-import ch.sysout.ui.util.JCustomButton2;
 import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
@@ -167,7 +166,7 @@ public class NotificationsPanel extends JPanel {
 
 		pnl2.add(pnl3, BorderLayout.WEST);
 
-		final AbstractButton btnHideMessage = new JCustomButton2(iconHideMessage);
+		final AbstractButton btnHideMessage = new JCustomButtonNew(iconHideMessage);
 		btnHideMessage.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseEntered(MouseEvent e) {

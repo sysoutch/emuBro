@@ -1,5 +1,7 @@
-package ch.sysout.ui.util;
+package ch.sysout.emubro.ui;
 
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
@@ -113,6 +115,19 @@ public class JCustomToggleButton extends JToggleButton {
 					setBorderPainted(false);
 					setContentAreaFilled(false);
 				}
+			}
+		});
+		addFocusListener(new FocusAdapter() {
+			@Override
+			public void focusGained(FocusEvent e) {
+				setBorderPainted(true);
+				setContentAreaFilled(true);
+			}
+
+			@Override
+			public void focusLost(FocusEvent e) {
+				setBorderPainted(false);
+				setContentAreaFilled(false);
 			}
 		});
 	}

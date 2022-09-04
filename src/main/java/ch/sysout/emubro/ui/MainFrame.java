@@ -4,7 +4,6 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
-import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.Frame;
 import java.awt.Graphics;
@@ -34,8 +33,10 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Random;
 
 import javax.swing.AbstractAction;
@@ -70,6 +71,9 @@ import javax.swing.event.ChangeListener;
 import javax.swing.event.MenuEvent;
 import javax.swing.event.MenuListener;
 
+import com.formdev.flatlaf.FlatLaf;
+import com.formdev.flatlaf.intellijthemes.FlatAllIJThemes;
+import com.formdev.flatlaf.intellijthemes.FlatAllIJThemes.FlatIJLookAndFeelInfo;
 import com.jgoodies.forms.factories.CC;
 import com.jgoodies.forms.factories.Paddings;
 import com.jgoodies.forms.layout.FormLayout;
@@ -104,13 +108,11 @@ import ch.sysout.emubro.impl.event.NavigationEvent;
 import ch.sysout.emubro.impl.model.BroEmulator;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.ImageUtil;
-import ch.sysout.ui.util.JCustomButton2;
 import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.FileUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
-import ch.sysout.util.ValidationUtil;
 
 /**
  * @author sysout.ch
@@ -162,6 +164,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	private JMenuItem itmExportGameListOptions;
 	private JMenuItem itmExportApplicationData;
 	private JMenuItem itmSettings;
+	private JMenuItem itmOpenResourcesFolder;
 	private JMenuItem itmOpenUserProfileFolder;
 	private JMenuItem itmBigPictureMode;
 	private JMenuItem itmExit;
@@ -256,6 +259,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	private ActionListener changeThemeListener;
 	private JPanel pnlProperties;
 	private int minMenuBarWidthBeforeMinimize = 420;
+	private boolean changingLnFWarningDisplayed;
 
 	public MainFrame(LookAndFeel defaultLookAndFeel, Explorer explorer) {
 		super(TITLE);
@@ -288,8 +292,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		iconPreviewPaneHide = ImageUtil.getImageIconFrom(Icons.get("hidePreviewPane", size, size));
 		iconChangeView = ImageUtil.getImageIconFrom(Icons.get("viewTable", size, size));
 		iconSearchGame = ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), size, Color.LIGHT_GRAY);
-		iconSearchGameGreen = ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), size, new Color(0, 129, 0));
-		iconSearchGameRed = ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), size, new Color(199, 0, 0));
+		iconSearchGameGreen = ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), size, new Color(25, 135, 84));
+		iconSearchGameRed = ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), size, new Color(237, 67, 55));
 
 		initializeButtonBar();
 		createButtonBar();
@@ -443,6 +447,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmApplicationUpdateAvailable = new JMenuItem();
 		itmSignatureUpdateAvailable = new JMenuItem();
 		itmSettings = new JMenuItem();
+		itmOpenResourcesFolder = new JMenuItem("Open Resources Folder");
 		itmOpenUserProfileFolder = new JMenuItem("Open User Profile Folder");
 		itmWelcomeView = new JRadioButtonMenuItem();
 		itmListView = new JRadioButtonMenuItem();
@@ -510,9 +515,9 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		btnShowHideNavigationPanel.setHorizontalTextPosition(SwingConstants.CENTER);
 		btnOrganize = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("organize"), size, Color.LIGHT_GRAY), Messages.get(MessageConstants.ORGANIZE));
 		btnSettings = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("settings"), size, Color.LIGHT_GRAY), Messages.get(MessageConstants.SETTINGS));
-		btnRunGame = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("runGame"), size, new Color(0, 129, 0)), Messages.get(MessageConstants.RUN_GAME));
+		btnRunGame = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("runGame"), size, new Color(40, 167, 69)), Messages.get(MessageConstants.RUN_GAME));
 		btnMoreOptionsRunGame = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("arrowDownOtherWhite", 1)), "");
-		btnRemoveGame = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("trash"), size, new Color(199, 0, 0)), Messages.get(MessageConstants.REMOVE));
+		btnRemoveGame = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("trash"), size, new Color(237, 67, 55)), Messages.get(MessageConstants.REMOVE));
 		btnRenameGame = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("rename"), size, Color.LIGHT_GRAY), Messages.get(MessageConstants.RENAME));
 		btnGameProperties = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("gameProperties"), size, Color.LIGHT_GRAY), Messages.get(MessageConstants.GAME_PROPERTIES));
 		btnChangeView = new ButtonBarButton("", iconChangeView, null);
@@ -585,7 +590,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		int mnemonicMnuThemes = KeyEvent.VK_T;
 		int mnemonicItmManageThemes = KeyEvent.VK_M;
 		int mnemonicMnuChangeTheme = KeyEvent.VK_C;
-		int mnemonicMnuLookAndFeel = KeyEvent.VK_D;
+		int mnemonicMnuLookAndFeel = KeyEvent.VK_T;
 		int mnemonicMnuLanguage = KeyEvent.VK_L;
 		int mnemonicMnuHelp = KeyEvent.VK_H;
 		int mnemonicItmLoadDisc = KeyEvent.VK_L;
@@ -605,7 +610,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 			mnemonicMnuThemes = KeyEvent.VK_T;
 			mnemonicItmManageThemes = KeyEvent.VK_M;
 			mnemonicMnuChangeTheme = KeyEvent.VK_C;
-			mnemonicMnuLookAndFeel = KeyEvent.VK_O;
+			mnemonicMnuLookAndFeel = KeyEvent.VK_T;
 			mnemonicMnuLanguage = KeyEvent.VK_L;
 			mnemonicMnuHelp = KeyEvent.VK_H;
 			mnemonicItmLoadDisc = KeyEvent.VK_L;
@@ -625,7 +630,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 			mnemonicMnuThemes = KeyEvent.VK_T;
 			mnemonicItmManageThemes = KeyEvent.VK_V;
 			mnemonicMnuChangeTheme = KeyEvent.VK_W;
-			mnemonicMnuLookAndFeel = KeyEvent.VK_O;
+			mnemonicMnuLookAndFeel = KeyEvent.VK_T;
 			mnemonicMnuLanguage = KeyEvent.VK_P;
 			mnemonicMnuHelp = KeyEvent.VK_H;
 			mnemonicItmLoadDisc = KeyEvent.VK_L;
@@ -645,7 +650,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 			mnemonicMnuThemes = KeyEvent.VK_T;
 			mnemonicItmManageThemes = KeyEvent.VK_G;
 			mnemonicMnuChangeTheme = KeyEvent.VK_C;
-			mnemonicMnuLookAndFeel = KeyEvent.VK_O;
+			mnemonicMnuLookAndFeel = KeyEvent.VK_T;
 			mnemonicMnuLanguage = KeyEvent.VK_L;
 			mnemonicMnuHelp = KeyEvent.VK_I;
 			mnemonicItmLoadDisc = KeyEvent.VK_L;
@@ -716,7 +721,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmLoadDisc.setIcon(ImageUtil.getImageIconFrom(Icons.get("loadDisc", size, size)));
 		itmSearchNetwork.setIcon(ImageUtil.getImageIconFrom(Icons.get("searchNetwork", size, size)));
 		itmSettings.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("settings"), size, Color.LIGHT_GRAY));
-		itmExit.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("exit"), size, new Color(204, 2, 2)));
+		itmExit.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("exit"), size, new Color(237, 67, 55)));
 		itmCheckForUpdates.setIcon(ImageUtil.getImageIconFrom(Icons.get("checkForUpdates", size, size)));
 		itmExportGameListToTxt.setIcon(ImageUtil.getImageIconFrom(Icons.get("textPlain", size, size)));
 		itmExportGameListToCsv.setIcon(ImageUtil.getImageIconFrom(Icons.get("textCsv", size, size)));
@@ -792,13 +797,18 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				File baseDirectory = new File("C:\\temp\\games");
-				createDummyGames(baseDirectory, "snes", "smc", 10);
-				createDummyGames(baseDirectory, "ps1", "iso", 10);
-				createDummyGames(baseDirectory, "ps1", "bin", 10);
-				createDummyGames(baseDirectory, "ps2", "iso", 10);
-				createDummyGames(baseDirectory, "psp", "cso", 10);
-				createDummyGames(baseDirectory, "psp", "iso", 10);
-				createDummyGames(baseDirectory, "n64", "n64", 10);
+				int amount = 1000;
+				Map<String, String> dummyPlatforms = new HashMap<>();
+				dummyPlatforms.put("snes", "smc");
+				dummyPlatforms.put("ps1", "iso");
+				dummyPlatforms.put("ps1", "bin");
+				dummyPlatforms.put("ps2", "iso");
+				dummyPlatforms.put("psp", "cso");
+				dummyPlatforms.put("psp", "iso");
+				dummyPlatforms.put("n64", "n64");
+				for (Map.Entry<String, String> entry : dummyPlatforms.entrySet()) {
+					createDummyGames(baseDirectory, entry.getKey(), entry.getValue(), amount);
+				}
 			}
 
 			private void createDummyGames(File baseDirectory, String platformName, String fileExtension, int gameCount) {
@@ -835,31 +845,27 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 			}
 		});
 
+		itmOpenResourcesFolder.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				final String path = System.getProperty("user.dir") + File.separator + "emuBro-resources";
+				try {
+					FileUtil.openInExplorerIfSupported(path);
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+			}
+		});
+
 		itmOpenUserProfileFolder.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				final String path = System.getenv("USERPROFILE") + File.separator + ".emuBro";
 				try {
-					if (ValidationUtil.isWindows()) {
-						new ProcessBuilder("explorer.exe", "/select,",
-								path.replace("\\\\", "\\")).start();
-					} else if (ValidationUtil.isUnix()) {
-						ProcessBuilder builder = new ProcessBuilder("xdg-open", path);
-						builder.start();
-					} else if (ValidationUtil.isMac()) {
-
-					} else if (ValidationUtil.isSolaris()) {
-
-					}
+					FileUtil.openInExplorerIfSupported(path);
 				} catch (IOException e1) {
-					if (Desktop.isDesktopSupported()) {
-						try {
-							Desktop.getDesktop().open(new File(path));
-						} catch (IOException e2) {
-							e2.printStackTrace();
-						}
-					}
 					e1.printStackTrace();
 				}
 			}
@@ -1344,7 +1350,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		mnuUpdateAvailable.setVisible(false);
 		itmApplicationUpdateAvailable.setVisible(false);
 		itmSignatureUpdateAvailable.setVisible(false);
-		addComponentsToJComponent(false, mnb, mnuFile, mnuView, mnuThemes, mnuLookAndFeel, /*mnuGames, mnuPlugins,*/ Box.createHorizontalGlue(), mnuUpdateAvailable, mnuLanguage, mnuHelp);
+		addComponentsToJComponent(false, mnb, mnuFile, mnuView, mnuLookAndFeel, /*mnuThemes, mnuGames, mnuPlugins,*/ Box.createHorizontalGlue(), mnuUpdateAvailable, mnuLanguage, mnuHelp);
 		setJMenuBar(mnb);
 	}
 
@@ -1352,7 +1358,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		addComponentsToJComponent(mnuFile, mnuAdd,
 				//				new JSeparator(), itmLoadDisc, itmSearchNetwork,
 				new JSeparator(), mnuExportGameList, itmExportApplicationData,
-				new JSeparator(), itmOpenUserProfileFolder, itmSettings,
+				new JSeparator(), itmOpenResourcesFolder, itmOpenUserProfileFolder,
+				new JSeparator(), itmSettings,
 				new JSeparator(), /*itmBigPictureMode, */itmExit);
 
 		addComponentsToJComponent(mnuAdd, itmAddFiles, itmAddFolders, itmAddDummyGames , new JSeparator(), itmAddFilesFromClipboard);
@@ -1390,10 +1397,10 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		List<Component> items = new ArrayList<>();
 		ButtonGroup grp = new ButtonGroup();
 
-		JRadioButtonMenuItem rdb;
 		String lookAndFeelName = (defaultLookAndFeel == null) ? "" : defaultLookAndFeel.getName();
-		items.add(rdb = new JRadioButtonMenuItem(lookAndFeelName));
+		JRadioButtonMenuItem rdb = new JRadioButtonMenuItem(lookAndFeelName);
 		rdb.setSelected(true);
+		items.add(rdb);
 		grp.add(rdb);
 		rdb.addActionListener(new ActionListener() {
 
@@ -1401,15 +1408,14 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 			public void actionPerformed(ActionEvent e) {
 				try {
 					UIManager.setLookAndFeel(defaultLookAndFeel);
-					SwingUtilities.updateComponentTreeUI(MainFrame.this);
-					pnlMain.addDividerDraggedListeners();
+					updateLookAndFeel(true);
 				} catch (UnsupportedLookAndFeelException e1) {
 					e1.printStackTrace();
 				}
 			}
 		});
 		items.add(new JSeparator());
-		for (final UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
+		for (final FlatIJLookAndFeelInfo info : FlatAllIJThemes.INFOS) {
 			items.add(rdb = new JRadioButtonMenuItem(info.getName()));
 			grp.add(rdb);
 			rdb.addActionListener(new ActionListener() {
@@ -1418,8 +1424,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 				public void actionPerformed(ActionEvent e) {
 					try {
 						UIManager.setLookAndFeel(info.getClassName());
-						SwingUtilities.updateComponentTreeUI(MainFrame.this);
-						pnlMain.addDividerDraggedListeners();
+						updateLookAndFeel(true);
 					} catch (ClassNotFoundException | InstantiationException | IllegalAccessException
 							| UnsupportedLookAndFeelException e1) {
 						e1.printStackTrace();
@@ -1458,6 +1463,21 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		addComponentsToJComponent(mnuGroup, itmGroupBlank, itmGroupTitle, itmGroupPlatform, new JSeparator(),
 				itmGroupAscending, itmGroupDescending);
 		addComponentsToJComponent(mnuChangeTo, itmChangeToAll, itmChangeToFavorites, itmChangeToRecentlyPlayed);
+	}
+
+	private void updateLookAndFeel() {
+		updateLookAndFeel(false);
+	}
+
+	public void updateLookAndFeel(boolean showWarning) {
+		FlatLaf.updateUI();
+		pnlMain.addDividerDraggedListeners();
+		viewManager.themeChanged();
+		if (showWarning && !changingLnFWarningDisplayed) {
+			UIUtil.showWarningMessage(this, "Some components aren't updated properly after changing the Look And Feel.\n"
+					+ "If you notice visual bugs, please restart " + Messages.get(MessageConstants.APPLICATION_TITLE) + ".", "Look And Feel changed");
+			changingLnFWarningDisplayed = true;
+		}
 	}
 
 	private void addComponentsToJComponent(JComponent parentComponent, Component... components) {
@@ -1592,7 +1612,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 				}
 			};
 			if (btnPinColumnSliderWindow == null) {
-				btnPinColumnSliderWindow = new JCustomButton2();
+				btnPinColumnSliderWindow = new JCustomButtonNew();
 				btnPinColumnSliderWindow.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("pin"), 24, Color.LIGHT_GRAY));
 				btnPinColumnSliderWindow.addMouseListener(new MouseAdapter() {
 					@Override
@@ -1609,7 +1629,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 				});
 				btnPinColumnSliderWindow.addActionListener(actionListener2);
 			}
-			btnColumnWidthSlider = new JCustomButton2();
+			btnColumnWidthSlider = new JCustomButtonNew();
 			btnColumnWidthSlider.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("columnWidth"), 24, Color.LIGHT_GRAY));
 			pnlColumnWidthSlider = new JPanel(new BorderLayout());
 			pnlColumnWidthSlider.setBorder(BorderFactory.createEtchedBorder());
@@ -1749,7 +1769,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 				}
 			};
 			if (btnPinRowSliderWindow == null) {
-				btnPinRowSliderWindow = new JCustomButton2();
+				btnPinRowSliderWindow = new JCustomButtonNew();
 				btnPinRowSliderWindow.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("pin"), 24, Color.LIGHT_GRAY));
 				btnPinRowSliderWindow.addMouseListener(new MouseAdapter() {
 					@Override
@@ -1766,7 +1786,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 				});
 				btnPinRowSliderWindow.addActionListener(actionListener2);
 			}
-			btnRowHeightSlider = new JCustomButton2();
+			btnRowHeightSlider = new JCustomButtonNew();
 			btnRowHeightSlider.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rowHeight"), 24, Color.LIGHT_GRAY));
 			pnlRowHeightSlider = new JPanel(new BorderLayout());
 			pnlRowHeightSlider.setBorder(BorderFactory.createEtchedBorder());
@@ -2383,7 +2403,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		mnuThemes.setText(Messages.get(MessageConstants.MNU_THEMES));
 		itmManageThemes.setText(Messages.get(MessageConstants.ITM_MANAGE_THEMES));
 		mnuChangeTheme.setText(Messages.get(MessageConstants.MNU_CHANGE_THEME));
-		mnuLookAndFeel.setText(Messages.get(MessageConstants.MNU_LOOK_AND_FEEL));
+		mnuLookAndFeel.setText(Messages.get(MessageConstants.MNU_THEMES));
 		boolean minimizeItems = mnb.getWidth() < minMenuBarWidthBeforeMinimize ;
 		mnuLanguage.setText(minimizeItems ? "" : Messages.get(MessageConstants.MNU_LANGUAGE));
 		mnuHelp.setText(minimizeItems ? "" : Messages.get(MessageConstants.HELP));
@@ -2522,7 +2542,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		pnlGameFilter.initPlatforms(sortedPlatforms);
 		sortedPlatforms.clear();
 		mnuGames.setEnabled(true);
-		viewManager.initGames(games);
 	}
 
 	public boolean isDetailsPaneVisible() {

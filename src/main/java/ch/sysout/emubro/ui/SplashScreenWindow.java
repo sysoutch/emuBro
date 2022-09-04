@@ -22,7 +22,6 @@ import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 
 import ch.sysout.ui.util.ImageUtil;
-import ch.sysout.ui.util.JCustomButton;
 import ch.sysout.util.Icons;
 
 public class SplashScreenWindow extends JDialog {

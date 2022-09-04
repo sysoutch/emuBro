@@ -261,6 +261,7 @@ import ch.sysout.emubro.ui.GamePropertiesDialog;
 import ch.sysout.emubro.ui.GameViewConstants;
 import ch.sysout.emubro.ui.HelpFrame;
 import ch.sysout.emubro.ui.IconStore;
+import ch.sysout.emubro.ui.JCustomButtonNew;
 import ch.sysout.emubro.ui.JExtendedComboBox;
 import ch.sysout.emubro.ui.JExtendedTextField;
 import ch.sysout.emubro.ui.JLinkButton;
@@ -281,7 +282,6 @@ import ch.sysout.emubro.ui.properties.DefaultEmulatorListener;
 import ch.sysout.emubro.ui.properties.PropertiesFrame;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.ImageUtil;
-import ch.sysout.ui.util.JCustomButton2;
 import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.FileUtil;
 import ch.sysout.util.Icons;
@@ -322,6 +322,7 @@ GameSelectionListener, BrowseComputerListener {
 	private int splGameFilterDividerLocation;
 	private int detailsPaneNotificationTab;
 	private String language;
+	private String currentLnF;
 
 	private List<TimerTask> taskListRunningGames = new ArrayList<>();
 	private List<Timer> timerListRunningGames = new ArrayList<>();
@@ -337,7 +338,7 @@ GameSelectionListener, BrowseComputerListener {
 			"show_navigationpane",
 			"show_previewpane",
 			"show_detailspane",
-			"BLANK",
+			"theme",
 			"view",									// 10
 			"platform",
 			"show_wizard",
@@ -1935,6 +1936,17 @@ GameSelectionListener, BrowseComputerListener {
 			}
 		}
 		if (games != null && !games.isEmpty()) {
+			for (Game game : games) {
+				if (game != null) {
+					IconStore iconStore = IconStore.current();
+					if (game.hasIcon()) {
+						iconStore.addGameIconPath(game.getId(), game.getIconPath());
+					}
+					if (game.hasCover()) {
+						iconStore.addGameCoverPath(game.getId(), game.getCoverPath());
+					}
+				}
+			}
 			view.updateGameCount(games.size());
 			view.initGames(games);
 		}
@@ -1964,7 +1976,7 @@ GameSelectionListener, BrowseComputerListener {
 			fw.append(propertyKeys[6] + "=" + true + "\r\n"); // show_navigationpane
 			fw.append(propertyKeys[7] + "=" + view.isPreviewPaneVisible() + "\r\n"); // show_previewpane
 			fw.append(propertyKeys[8] + "=" + view.isDetailsPaneVisible() + "\r\n"); // show_detailspane
-			fw.append(propertyKeys[9] + "=" + true + "\r\n"); // BLANK
+			fw.append(propertyKeys[9] + "=" + getCurrentLnFClassName() + "\r\n"); // BLANK
 			fw.append(propertyKeys[10] + "=" + view.getSelectedNavigationItem() + "\r\n"); // view
 			fw.append(propertyKeys[11] + "=" + "Playstation 2" + "\r\n"); // platform
 			fw.append(propertyKeys[12] + "=" + explorer.isConfigWizardHiddenAtStartup() + "\r\n"); // show_wizard
@@ -2010,6 +2022,10 @@ GameSelectionListener, BrowseComputerListener {
 		}
 	}
 
+	private String getCurrentLnFClassName() {
+		return UIManager.getLookAndFeel().getClass().getCanonicalName();
+	}
+
 	public void applyAppDataFromLastSession() throws Exception {
 		if (properties != null && properties.size() > 0) {
 			try {
@@ -2019,6 +2035,7 @@ GameSelectionListener, BrowseComputerListener {
 				int height = Integer.parseInt(properties.getProperty(propertyKeys[3]));
 				boolean maximized = Boolean.parseBoolean(properties.getProperty(propertyKeys[4]));
 				boolean undecorated = Boolean.parseBoolean(properties.getProperty(propertyKeys[34]));
+				currentLnF = properties.getProperty(propertyKeys[9]);
 				navigationPaneDividerLocation = Integer.parseInt(properties.getProperty(propertyKeys[13]));
 				navigationPaneState = properties.getProperty(propertyKeys[33]);
 				previewPanelWidth = Integer.parseInt(properties.getProperty(propertyKeys[14]));
@@ -2026,6 +2043,10 @@ GameSelectionListener, BrowseComputerListener {
 				splGameFilterDividerLocation = Integer.parseInt(properties.getProperty(propertyKeys[17]));
 				detailsPaneNotificationTab = Integer.parseInt(properties.getProperty(propertyKeys[18]));
 				language = properties.getProperty(propertyKeys[19]);
+				if (currentLnF != null && !currentLnF.trim().isEmpty()) {
+					UIManager.setLookAndFeel(currentLnF);
+					view.updateLookAndFeel(false);
+				}
 				changeLanguage(new Locale(language));
 
 				Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(view.getGraphicsConfiguration());
@@ -2762,7 +2783,6 @@ GameSelectionListener, BrowseComputerListener {
 		if (ValidationUtil.isWindows()) {
 			String[] command = { "wmic", "process", "where", "\"name='Discord.exe'\"", "get", "name", "/FORMAT:LIST" };
 			ProcessBuilder pb = new ProcessBuilder(command);
-
 			pb.redirectErrorStream(true);
 			Process process = pb.start();
 			BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
@@ -4733,7 +4753,7 @@ GameSelectionListener, BrowseComputerListener {
 				//			pnlAutoCase.setBackground(ValidationComponentUtils.getMandatoryBackground());
 				//			pnlCamelCase.setBackground(ValidationComponentUtils.getMandatoryBackground());
 
-				final JButton btnMoreRenamingOptions = new JCustomButton2(Messages.get(MessageConstants.RENAMING_OPTIONS));
+				final JButton btnMoreRenamingOptions = new JCustomButtonNew(Messages.get(MessageConstants.RENAMING_OPTIONS));
 				int size = ScreenSizeUtil.is3k() ? 24 : 16;
 				btnMoreRenamingOptions.setIcon(ImageUtil.getImageIconFrom(Icons.get("arrowDown", size, size)));
 				btnMoreRenamingOptions.setHorizontalAlignment(SwingConstants.LEFT);
@@ -6484,14 +6504,11 @@ GameSelectionListener, BrowseComputerListener {
 
 					}
 				} catch (IOException e1) {
-					if (Desktop.isDesktopSupported()) {
-						try {
-							Desktop.getDesktop().open(new File(path3));
-						} catch (IOException e2) {
-							e2.printStackTrace();
-						}
+					try {
+						FileUtil.openInExplorerIfSupported(path3);
+					} catch (IOException e2) {
+						e1.printStackTrace();
 					}
-					e1.printStackTrace();
 				}
 			}
 		}
@@ -6740,7 +6757,7 @@ GameSelectionListener, BrowseComputerListener {
 			try {
 				File file = exportGameListTo(FileTypeConstants.TXT_FILE);
 				if (file != null) {
-					Desktop.getDesktop().open(file);
+					FileUtil.openInExplorerIfSupported(file);
 				}
 			} catch (IOException e1) {
 				e1.printStackTrace();
@@ -8021,7 +8038,11 @@ GameSelectionListener, BrowseComputerListener {
 				@Override
 				public void run() {
 					view.gameAdded(new BroGameAddedEvent(gameFinal, p0, explorer.getGameCount(), manuallyAdded));
-					IconStore.current().addPlatformIcon(p0.getId(), explorer.getPlatformsDirectory() + File.separator + p0.getShortName() + File.separator + "logo", p0.getIconFileName());
+					int gameId = gameFinal.getId();
+					IconStore iconStore = IconStore.current();
+					iconStore.addGameIconPath(gameId, gameFinal.getIconPath());
+					iconStore.addGameCoverPath(gameId, gameFinal.getCoverPath());
+					iconStore.addPlatformIcon(p0.getId(), explorer.getPlatformsDirectory() + File.separator + p0.getShortName() + File.separator + "logo", p0.getIconFileName());
 					if (manuallyAdded) {
 						SwingUtilities.invokeLater(new Runnable() {
 

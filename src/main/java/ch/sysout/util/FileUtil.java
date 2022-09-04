@@ -1,5 +1,6 @@
 package ch.sysout.util;
 
+import java.awt.Desktop;
 import java.awt.Toolkit;
 import java.awt.datatransfer.DataFlavor;
 import java.io.BufferedOutputStream;
@@ -112,5 +113,15 @@ public class FileUtil {
 	public static boolean hasFileInClipboard() {
 		return Toolkit.getDefaultToolkit().getSystemClipboard()
 				.isDataFlavorAvailable(DataFlavor.javaFileListFlavor);
+	}
+
+	public static void openInExplorerIfSupported(String path) throws IOException {
+		openInExplorerIfSupported(new File(path));
+	}
+
+	public static void openInExplorerIfSupported(File file) throws IOException {
+		if (Desktop.isDesktopSupported()) {
+			Desktop.getDesktop().open(file);
+		}
 	}
 }

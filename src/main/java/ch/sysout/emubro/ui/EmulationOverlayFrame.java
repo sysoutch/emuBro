@@ -249,51 +249,7 @@ public class EmulationOverlayFrame extends JFrame {
 				}
 			}
 		});
-	}
 
-	private void addComponentsToPopup(JPopupMenu popup2, Component... components) {
-		for (Component c : components) {
-			popup2.add(c);
-		}
-	}
-
-	private void createUI() {
-		int value = ScreenSizeUtil.adjustValueToResolution(2);
-		pnl.setLayout(new BorderLayout(0, value));
-		// btnStopEmulation.setBorder(new EmptyBorder(20, 20, 20, 20));
-		// pnl.add(btnShowProcessManager, BorderLayout.NORTH);
-
-		pnl.add(btnMenu, BorderLayout.NORTH);
-
-		int size = ScreenSizeUtil.adjustValueToResolution(32);
-		int size2 = ScreenSizeUtil.adjustValueToResolution(32);
-		int size3 = ScreenSizeUtil.adjustValueToResolution(16);
-
-		// btnShowProcessManager.setIcon(ImageUtil.getImageIconFrom(Icons.get("showProcessManager",
-		// size, size)));
-		btnMenu.setIcon(ImageUtil.getImageIconFrom(Icons.get("applicationIconOther", size, size)));
-		btnMenu.setToolTipText("<html><strong>emulation overlay panel</strong>" + "<br>* Click to show options"
-				+ "<br>* Drag to move panel" + "</html>");
-
-		btnSendEsc.setIcon(ImageUtil.getImageIconFrom(Icons.get("sendKeyCommand", size2, size2)));
-		btnSendEsc.setToolTipText("<html><strong>Send ESC</strong><br>"
-				+ "That function sends 'ESC' to the underlying window.<br><br>"
-				+ "This can be useful when you dont have a keyboard right now and you want to<br>"
-				+ "either quit the currently running emulator or game, or show/hide the menu bar.<br>"
-				+ "Most of the emulators and games listen to that hot key.</html>");
-		btnSendAltEnter.setIcon(ImageUtil.getImageIconFrom(Icons.get("sendKeyCommand", size2, size2)));
-		btnSendAltEnter.setToolTipText("<html><strong>Send Alt+Enter</strong><br>"
-				+ "That function sends 'Alt+Enter' to the underlying window.<br><br>"
-				+ "This can be useful when you dont have a keyboard right now and you want to<br>"
-				+ "go/leave fullscreen mode in the currently running emulator or game.<br>"
-				+ "Most of the emulators and games listen to that hot key.</html>");
-		btnStopEmulation.setIcon(ImageUtil.getImageIconFrom(Icons.get("stopProcess", size2, size2)));
-		btnStopEmulation.setToolTipText("Stop emulation");
-		btnShowApplication.setIcon(ImageUtil.getImageIconFrom(Icons.get("applicationIcon", size2, size2)));
-		btnShowApplication.setToolTipText("Show emuBro");
-		FlatSVGIcon svgSettings = new FlatSVGIcon(Icons.get("settings"), size3, size3);
-		btnEmulationOverlayPanelSettings.setIcon(svgSettings);
-		btnHideEmulationOverlayPanel.setIcon(ImageUtil.getImageIconFrom(Icons.get("close3", size3, size3)));
 		btnStopEmulation.addActionListener(new ActionListener() {
 
 			@Override
@@ -358,6 +314,49 @@ public class EmulationOverlayFrame extends JFrame {
 				}
 			}
 		});
+	}
+
+	private void addComponentsToPopup(JPopupMenu popup2, Component... components) {
+		for (Component c : components) {
+			popup2.add(c);
+		}
+	}
+
+	private void createUI() {
+		int value = ScreenSizeUtil.adjustValueToResolution(2);
+		pnl.setLayout(new BorderLayout(0, value));
+		// pnl.add(btnShowProcessManager, BorderLayout.NORTH);
+
+		pnl.add(btnMenu, BorderLayout.NORTH);
+
+		int size = ScreenSizeUtil.adjustValueToResolution(32);
+		int size2 = ScreenSizeUtil.adjustValueToResolution(32);
+		int size3 = ScreenSizeUtil.adjustValueToResolution(16);
+
+		// btnShowProcessManager.setIcon(ImageUtil.getImageIconFrom(Icons.get("showProcessManager",
+		// size, size)));
+		btnMenu.setIcon(ImageUtil.getImageIconFrom(Icons.get("applicationIconOther", size, size)));
+		btnMenu.setToolTipText("<html><strong>emulation overlay panel</strong>" + "<br>* Click to show options"
+				+ "<br>* Drag to move panel" + "</html>");
+
+		btnSendEsc.setIcon(ImageUtil.getImageIconFrom(Icons.get("sendKeyCommand", size2, size2)));
+		btnSendEsc.setToolTipText("<html><strong>Send ESC</strong><br>"
+				+ "That function sends 'ESC' to the underlying window.<br><br>"
+				+ "This can be useful when you dont have a keyboard right now and you want to<br>"
+				+ "either quit the currently running emulator or game, or show/hide the menu bar.<br>"
+				+ "Most of the emulators and games listen to that hot key.</html>");
+		btnSendAltEnter.setIcon(ImageUtil.getImageIconFrom(Icons.get("sendKeyCommand", size2, size2)));
+		btnSendAltEnter.setToolTipText("<html><strong>Send Alt+Enter</strong><br>"
+				+ "That function sends 'Alt+Enter' to the underlying window.<br><br>"
+				+ "This can be useful when you dont have a keyboard right now and you want to<br>"
+				+ "go/leave fullscreen mode in the currently running emulator or game.<br>"
+				+ "Most of the emulators and games listen to that hot key.</html>");
+		btnStopEmulation.setIcon(ImageUtil.getImageIconFrom(Icons.get("stopProcess", size2, size2)));
+		btnStopEmulation.setToolTipText("Stop emulation");
+		btnShowApplication.setIcon(ImageUtil.getImageIconFrom(Icons.get("applicationIcon", size2, size2)));
+		btnShowApplication.setToolTipText("Show emuBro");
+		btnEmulationOverlayPanelSettings.setIcon(new FlatSVGIcon(Icons.get("settings"), size3, size3));
+		btnHideEmulationOverlayPanel.setIcon(ImageUtil.getImageIconFrom(Icons.get("close3", size3, size3)));
 		add(pnl);
 		pack();
 	}

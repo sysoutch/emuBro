@@ -39,6 +39,7 @@ import org.apache.commons.io.FilenameUtils;
 import org.yaml.snakeyaml.Yaml;
 
 import com.formdev.flatlaf.FlatDarkLaf;
+import com.formdev.flatlaf.FlatLaf;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
@@ -61,10 +62,10 @@ import ch.sysout.emubro.ui.IconStore;
 import ch.sysout.emubro.ui.MainFrame;
 import ch.sysout.emubro.ui.SplashScreenWindow;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.FontUtil;
 import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.FileUtil;
-import ch.sysout.util.FontUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 
@@ -75,8 +76,8 @@ public class Main {
 
 	public static SplashScreenWindow dlgSplashScreen;
 
-	static ExplorerDAO explorerDAO = null;
-	static MainFrame mainFrame = null;
+	private static ExplorerDAO explorerDAO = null;
+	private static MainFrame mainFrame = null;
 
 	private static int explorerId = 0;
 	private static LookAndFeel defaultLookAndFeel;
@@ -95,7 +96,6 @@ public class Main {
 		UIManager.put("Component.arc", 0);
 		UIManager.put("CheckBox.arc", 0);
 		UIManager.put("ProgressBar.arc", 0);
-		//				UIManager.put("TabbedPane.selectedBackground", Color.white);
 		try {
 			initializeCustomTheme();
 		} catch (IOException e) {
@@ -588,7 +588,8 @@ public class Main {
 	}
 
 	private static void setLookAndFeel() {
-		FlatDarkLaf.setup();
+		FlatLaf laf = new FlatDarkLaf();
+		FlatLaf.setup(laf);
 		defaultLookAndFeel = UIManager.getLookAndFeel();
 	}
 
@@ -637,6 +638,47 @@ public class Main {
 	}
 
 	public static List<BroPlatform> initDefaultPlatforms() throws FileNotFoundException {
+		List<BroPlatform> platforms = new ArrayList<>();
+		String defaultPlatformsFilePath = explorer.getResourcesPath() + File.separator + "platforms";
+		File defaultPlatformsDirectory = new File(defaultPlatformsFilePath);
+		if (!defaultPlatformsDirectory.exists()) {
+			throw new FileNotFoundException("directory does not exist: " + defaultPlatformsFilePath);
+		}
+		FilenameFilter directoryFilter = new FilenameFilter() {
+
+			@Override
+			public boolean accept(File dir, String name) {
+				return dir.isDirectory();
+			}
+		};
+		Gson gson = new Gson();
+		java.lang.reflect.Type collectionType = new TypeToken<BroPlatform>() {}.getType();
+		for (File dir : defaultPlatformsDirectory.listFiles(directoryFilter)) {
+			File platformConfigFile = new File(dir + File.separator + "config.json");
+			if (!platformConfigFile.exists()) {
+				System.err.println("no config file found for platform: " + dir.getName());
+				continue;
+			}
+			try {
+				InputStream is = new FileInputStream(platformConfigFile);
+				BufferedReader br = new BufferedReader(new InputStreamReader(is));
+				BroPlatform platform = (BroPlatform) gson.fromJson(br, collectionType);
+				platforms.add(platform);
+				try {
+					br.close();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} catch (FileNotFoundException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+		}
+		return platforms;
+	}
+
+	public static List<BroPlatform> initDefaultPlatformsOld() throws FileNotFoundException {
 		List<BroPlatform> platforms = new ArrayList<>();
 		String defaultPlatformsFilePath = explorer.getResourcesPath() + File.separator + "platforms";
 		File dir = new File(defaultPlatformsFilePath);

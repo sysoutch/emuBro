@@ -1,4 +1,4 @@
-package ch.sysout.util;
+package ch.sysout.ui.util;
 
 import java.awt.Font;
 import java.awt.FontFormatException;

@@ -1,5 +1,6 @@
 package ch.sysout.emubro.ui;
 
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -15,7 +16,9 @@ import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.impl.model.EmulatorConstants;
 import ch.sysout.emubro.impl.model.PlatformConstants;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.ui.util.UIUtil;
+import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 
 public class GameTableModel extends DefaultTableModel {
@@ -34,6 +37,8 @@ public class GameTableModel extends DefaultTableModel {
 	private Map<Integer, ImageIcon> emulatorIcons = new HashMap<>();
 
 	private Explorer explorer;
+
+	private ImageIcon icoStar = ImageUtil.getFlatSVGIconFrom(Icons.get("rating"), 16, new Color(255, 195, 0));
 
 	public GameTableModel(Explorer explorer) {
 		this.explorer = explorer;
@@ -64,13 +69,11 @@ public class GameTableModel extends DefaultTableModel {
 				int platformId = game.getPlatformId();
 				Platform platform = (platformId == PlatformConstants.NO_PLATFORM) ? null : explorer.getPlatform(platformId);
 				int rate = game.getRate();
-
 				String lastPlayed = game.getLastPlayed() != null ? UIUtil.format(game.getLastPlayed()) : "";
 				String dateAdded = UIUtil.format(game.getDateAdded());
 				switch (columnIndex) {
 				case 0:
-					ImageIcon icon = IconStore.current().getPlatformIcon(game.getPlatformId());
-					value = icon;
+					value = IconStore.current().getPlatformIcon(game.getPlatformId());
 					break;
 				case 1:
 					value = game.getName();
@@ -105,25 +108,22 @@ public class GameTableModel extends DefaultTableModel {
 
 	@Override
 	public Class<?> getColumnClass(int columnIndex) {
-		if (columnIndex == 0) {
+		switch (columnIndex) {
+		case 0:
 			return ImageIcon.class;
-		}
-		if (columnIndex == 1) {
+		case 1:
 			return String.class;
-		}
-		if (columnIndex == 2) {
+		case 2:
 			return Platform.class;
-		}
-		if (columnIndex == 3) {
+		case 3:
 			return String.class;
-		}
-		if (columnIndex == 4) {
+		case 4:
 			return String.class;
-		}
-		if (columnIndex == 5) {
+		case 5:
 			return String.class;
+		default:
+			return super.getColumnClass(columnIndex);
 		}
-		return String.class;
 	}
 
 	/*
@@ -152,8 +152,7 @@ public class GameTableModel extends DefaultTableModel {
 			}
 		}
 		games.add(game);
-		Object[] gameArr = new Object[] { getEmulatorIcon(emulatorId), game.getName(), null,
-				explorer.getPlatform(game.getPlatformId()), lastPlayed, dateAdded, "" };
+		Object[] gameArr = new Object[] { getEmulatorIcon(emulatorId), game.getName(), explorer.getPlatform(game.getPlatformId()), null, lastPlayed, dateAdded };
 		super.addRow(gameArr);
 		//		fireTableRowsInserted(getRowCount() - 1, getRowCount() - 1);
 	}

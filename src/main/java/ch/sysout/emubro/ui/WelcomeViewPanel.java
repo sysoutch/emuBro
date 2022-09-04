@@ -41,7 +41,6 @@ import ch.sysout.emubro.controller.ViewConstants;
 import ch.sysout.emubro.impl.event.NavigationEvent;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.ImageUtil;
-import ch.sysout.ui.util.JCustomButton2;
 import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
@@ -50,28 +49,30 @@ import ch.sysout.util.ScreenSizeUtil;
 public class WelcomeViewPanel extends ViewPanel {
 	private static final long serialVersionUID = 1L;
 
-	private JButton lnkBrowseComputer = new JCustomButton2(Messages.get(MessageConstants.BROWSE_COMPUTER));
-	private JButton lnkAddFiles = new JCustomButton2(Messages.get(MessageConstants.ADD_FILES));
-	private JButton lnkAddFolders = new JCustomButton2(Messages.get(MessageConstants.ADD_FOLDERS));
-	private JButton lnkConfigure = new JCustomButton2(Messages.get(MessageConstants.CONFIGURE));
+	private JButton lnkBrowseComputer = new JCustomButtonNew(Messages.get(MessageConstants.BROWSE_COMPUTER));
+	private JButton lnkAddFiles = new JCustomButtonNew(Messages.get(MessageConstants.ADD_FILES));
+	private JButton lnkAddFolders = new JCustomButtonNew(Messages.get(MessageConstants.ADD_FOLDERS));
+	private JButton lnkConfigure = new JCustomButtonNew(Messages.get(MessageConstants.CONFIGURE));
 
-	private JButton lnkListView = new JCustomButton2(Messages.get(MessageConstants.VIEW_LIST));
-	private JButton lnkElementView = new JCustomButton2(Messages.get(MessageConstants.VIEW_ELEMENTS));
-	private JButton lnkTableView = new JCustomButton2(Messages.get(MessageConstants.VIEW_TABLE));
-	private JButton lnkContentView = new JCustomButton2(Messages.get(MessageConstants.VIEW_CONTENT));
-	private JButton lnkSliderView = new JCustomButton2(Messages.get(MessageConstants.VIEW_SLIDER));
-	private JButton lnkCoverView = new JCustomButton2(Messages.get(MessageConstants.VIEW_COVERS));
+	private JButton lnkListView = new JCustomButtonNew(Messages.get(MessageConstants.VIEW_LIST));
+	private JButton lnkElementView = new JCustomButtonNew(Messages.get(MessageConstants.VIEW_ELEMENTS));
+	private JButton lnkTableView = new JCustomButtonNew(Messages.get(MessageConstants.VIEW_TABLE));
+	private JButton lnkContentView = new JCustomButtonNew(Messages.get(MessageConstants.VIEW_CONTENT));
+	private JButton lnkSliderView = new JCustomButtonNew(Messages.get(MessageConstants.VIEW_SLIDER));
+	private JButton lnkCoverView = new JCustomButtonNew(Messages.get(MessageConstants.VIEW_COVERS));
 
-	private JButton lnkHelp = new JCustomButton2(Messages.get(MessageConstants.HELP));
-	private JButton lnkDiscord = new JCustomButton2(Messages.get(MessageConstants.EMUBRO_DISCORD));
-	private JButton lnkConfigWizard = new JCustomButton2(Messages.get(MessageConstants.CONFIGURE_WIZARD, Messages.get(MessageConstants.APPLICATION_TITLE)));
+	private JButton lnkHelp = new JCustomButtonNew(Messages.get(MessageConstants.HELP));
+	private JButton lnkDiscord = new JCustomButtonNew(Messages.get(MessageConstants.EMUBRO_DISCORD));
+	private JButton lnkConfigWizard = new JCustomButtonNew(Messages.get(MessageConstants.CONFIGURE_WIZARD, Messages.get(MessageConstants.APPLICATION_TITLE)));
 
-	private JButton lnkUpdateEmubro = new JCustomButton2(Messages.get(MessageConstants.SEARCH_FOR_UPDATES));
-	private JButton lnkAbout = new JCustomButton2(Messages.get(MessageConstants.ABOUT, Messages.get(MessageConstants.APPLICATION_TITLE)));
+	private JButton lnkUpdateEmubro = new JCustomButtonNew(Messages.get(MessageConstants.SEARCH_FOR_UPDATES));
+	private JButton lnkAbout = new JCustomButtonNew(Messages.get(MessageConstants.ABOUT, Messages.get(MessageConstants.APPLICATION_TITLE)));
 
 	private Border titledBorderAction = BorderFactory.createTitledBorder(Messages.get(MessageConstants.RUN_ACTION));
 	private Border titledBorderView = BorderFactory.createTitledBorder(Messages.get(MessageConstants.CHOOSE_VIEW));
 	private Border titledBorderHelp = BorderFactory.createTitledBorder(Messages.get(MessageConstants.HELP));
+
+	private boolean themeChanged;
 
 	public WelcomeViewPanel() {
 		super(new BorderLayout());
@@ -628,5 +629,15 @@ public class WelcomeViewPanel extends ViewPanel {
 			}
 		}
 		g2d.dispose();
+	}
+
+	@Override
+	public void scrollToSelectedGames() {
+
+	}
+
+	@Override
+	public void themeChanged() {
+		themeChanged = true;
 	}
 }

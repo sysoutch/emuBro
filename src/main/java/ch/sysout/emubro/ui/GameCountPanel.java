@@ -31,7 +31,6 @@ import ch.sysout.emubro.api.event.GameAddedEvent;
 import ch.sysout.emubro.api.event.GameRemovedEvent;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.ImageUtil;
-import ch.sysout.ui.util.JCustomButton2;
 import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
@@ -42,7 +41,7 @@ public class GameCountPanel extends JPanel implements GameListener, DetailsPaneL
 	private JLabel lblGameCount = new JLabel("");
 	private JLinkButton lnkSystemInformations = new JLinkButton("retrieve system informations...");
 	private ProgressPanel pnlProgress;
-	private JButton btnShowDetailsPane = new JCustomButton2();
+	private JButton btnShowDetailsPane = new JCustomButtonNew();
 	private JLabel btnResize = new JLabel();
 	private Icon iconResize;
 	private Icon iconShowGameDetailsPane;
@@ -64,6 +63,7 @@ public class GameCountPanel extends JPanel implements GameListener, DetailsPaneL
 	private void initComponents() {
 		lnkSystemInformations.setToolTipText("Click to copy to clipboard");
 		lnkSystemInformations.addActionListener(new ActionListener() {
+			private Color colorGreen = new Color(40, 167, 69);
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -74,7 +74,7 @@ public class GameCountPanel extends JPanel implements GameListener, DetailsPaneL
 				final String text = lnkSystemInformations.getText();
 				UIUtil.copyTextToClipboard(text);
 				copySystemInformationsLocked = true;
-				lnkSystemInformations.setForeground(Color.GREEN);
+				lnkSystemInformations.setForeground(colorGreen);
 				lnkSystemInformations.setText("system informations copied to clipboard");
 
 				showSystemInformationsDialog();

@@ -14,8 +14,6 @@ import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 
-import ch.sysout.ui.util.JCustomButton;
-
 public class AccordionPanel extends JPanel implements ActionListener {
 	private static final long serialVersionUID = 1L;
 

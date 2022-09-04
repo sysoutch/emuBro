@@ -1,4 +1,4 @@
-package ch.sysout.ui.util;
+package ch.sysout.emubro.ui;
 
 import java.awt.Color;
 import java.beans.ConstructorProperties;

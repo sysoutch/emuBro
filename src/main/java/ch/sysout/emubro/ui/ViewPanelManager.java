@@ -81,19 +81,6 @@ public class ViewPanelManager {
 		panels.add(pnlBlankView);
 	}
 
-	public void initGames(List<Game> games) {
-		for (Game game : games) {
-			if (game != null) {
-				if (game.hasIcon()) {
-					iconStore.addGameIconPath(game.getId(), game.getIconPath());
-				}
-				if (game.hasCover()) {
-					iconStore.addGameCoverPath(game.getId(), game.getCoverPath());
-				}
-			}
-		}
-	}
-
 	public void initPlatforms(List<Platform> platforms, String platformsDirectory) {
 		this.platforms = platforms;
 		for (Platform p : platforms) {
@@ -434,9 +421,6 @@ public class ViewPanelManager {
 	}
 
 	public void gameAdded(GameAddedEvent e, FilterEvent filterEvent) {
-		iconStore.addGameIconPath(e.getGame().getId(), e.getGame().getIconPath());
-		iconStore.addGameCoverPath(e.getGame().getId(), e.getGame().getCoverPath());
-		Platform p = e.getPlatform();
 		for (ViewPanel pnl : panels) {
 			if (pnl != null) {
 				pnl.gameAdded(e, filterEvent);
@@ -633,5 +617,21 @@ public class ViewPanelManager {
 
 	public WelcomeViewPanel getBlankViewPanel() {
 		return pnlBlankView;
+	}
+
+	public void scrollToSelectedGames() {
+		for (ViewPanel pnl : panels) {
+			if (pnl != null) {
+				pnl.scrollToSelectedGames();
+			}
+		}
+	}
+
+	public void themeChanged() {
+		for (ViewPanel pnl : panels) {
+			if (pnl != null) {
+				pnl.themeChanged();
+			}
+		}
 	}
 }

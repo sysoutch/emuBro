@@ -31,8 +31,6 @@ import com.jgoodies.forms.layout.FormLayout;
 import ch.sysout.emubro.api.model.Emulator;
 import ch.sysout.emubro.controller.BroController.EmulatorListCellRenderer;
 import ch.sysout.ui.util.ImageUtil;
-import ch.sysout.ui.util.JCustomButton;
-import ch.sysout.ui.util.JCustomButton2;
 import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.ScreenSizeUtil;
@@ -45,8 +43,8 @@ public class AddEmulatorPanel extends JPanel {
 	private SupportedEmulatorsPanel pnlDownloadEmulators;
 	private ReadyToInstallEmulatorsPanel pnlReadyToInstallEmulators;
 
-	private AbstractButton btnDownloadEmulators = new JCustomButton2("<html><strong>Step 1:</strong> Download an emulator</html>", ImageUtil.getImageIconFrom(Icons.get("fromWeb", 32, 32)));
-	private AbstractButton btnReadyToInstallEmulators = new JCustomButton2("<html><strong>Step 2:</strong> Add your emulator</html>", ImageUtil.getImageIconFrom(Icons.get("fromComputer", 32, 32)));
+	private AbstractButton btnDownloadEmulators = new JCustomButtonNew("<html><strong>Step 1:</strong> Download an emulator</html>", ImageUtil.getImageIconFrom(Icons.get("fromWeb", 32, 32)));
+	private AbstractButton btnReadyToInstallEmulators = new JCustomButtonNew("<html><strong>Step 2:</strong> Add your emulator</html>", ImageUtil.getImageIconFrom(Icons.get("fromComputer", 32, 32)));
 
 	protected int minimumDividerLocation = -1;
 	protected int maximumDividerLocation = -1;

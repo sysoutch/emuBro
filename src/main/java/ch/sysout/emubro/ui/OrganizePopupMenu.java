@@ -54,7 +54,7 @@ class OrganizePopupMenu extends JPopupMenu {
 	private void setIcons() {
 		int size = ScreenSizeUtil.is3k() ? 24 : 16;
 		itmSettings.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("settings"), size, Color.LIGHT_GRAY));
-		itmExit.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("exit"), size, new Color(204, 2, 2)));
+		itmExit.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("exit"), size, new Color(237, 67, 55)));
 
 		// setIcon(mnuLayout, "/images/"+size+"/edit-layout.png");
 		// setIcon(mnuLayout, "/images/"+size+"/layout-content.png");

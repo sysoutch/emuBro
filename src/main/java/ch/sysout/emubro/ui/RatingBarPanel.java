@@ -12,6 +12,7 @@ import java.awt.event.MouseListener;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.AbstractButton;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JLabel;
@@ -30,7 +31,7 @@ public class RatingBarPanel extends JPanel implements ActionListener, FocusListe
 	private static final long serialVersionUID = 1L;
 
 	public static final int MAXIMUM_RATE = 5;
-	private JButton[] labels;
+	private List<AbstractButton> buttons;
 	private int currentRate;
 	private ImageIcon icoRating;
 	private ImageIcon icoRatingAdd;
@@ -54,33 +55,29 @@ public class RatingBarPanel extends JPanel implements ActionListener, FocusListe
 	}
 
 	private void initComponents() {
-		JButton btn0 = new JButton("");
-		JButton btn1 = new JButton("");
-		JButton btn2 = new JButton("");
-		JButton btn3 = new JButton("");
-		JButton btn4 = new JButton("");
-		btn0.setBackground(Color.white);
-		labels = new JButton[] { btn0, btn1, btn2, btn3, btn4 };
-		btn0.setFocusable(focusable);
-		btn1.setFocusable(focusable);
-		btn2.setFocusable(focusable);
-		btn3.setFocusable(focusable);
-		btn4.setFocusable(focusable);
+		buttons = new ArrayList<>();
+		for (int i = 0; i < 5; i++) {
+			AbstractButton btn = new JButton("");
+			btn.setFocusable(focusable);
+			buttons.add(btn);
+		}
 		int size = ScreenSizeUtil.is3k() ? 32 : 16;
-		for (JButton lbl : labels) {
-			icoRating = ImageUtil.getImageIconFrom(Icons.get("rating", size, size));
-			icoRatingBlank = ImageUtil.getImageIconFrom(Icons.get("ratingBlank", size, size));
-			icoRatingAdd = ImageUtil.getImageIconFrom(Icons.get("ratingAdd", size, size));
-			icoRatingRemove = ImageUtil.getImageIconFrom(Icons.get("ratingRemove", size, size));
-			lbl.setIcon(icoRating);
-
-			// lbl.setBorder(BorderFactory.createEmptyBorder());
-			lbl.setContentAreaFilled(false);
-			lbl.setBorderPainted(false);
-			lbl.setFocusPainted(false);
-			lbl.addActionListener(this);
-			lbl.addMouseListener(this);
-			lbl.addFocusListener(this);
+		ColorStore.current().setColor("rating", new Color(255, 195, 0));
+		ColorStore.current().setColor("ratingBlank", Color.LIGHT_GRAY);
+		ColorStore.current().setColor("ratingAdd", new Color(133, 255, 0));
+		ColorStore.current().setColor("ratingRemove", new Color(237, 67, 55));
+		for (AbstractButton btn : buttons) {
+			icoRating = ImageUtil.getFlatSVGIconFrom(Icons.get("rating"), size, ColorStore.current().getColor("rating"));
+			icoRatingBlank = ImageUtil.getFlatSVGIconFrom(Icons.get("rating"), size, ColorStore.current().getColor("ratingBlank"));
+			icoRatingAdd = ImageUtil.getFlatSVGIconFrom(Icons.get("rating"), size, ColorStore.current().getColor("ratingAdd"));
+			icoRatingRemove = ImageUtil.getFlatSVGIconFrom(Icons.get("rating"), size, ColorStore.current().getColor("ratingRemove"));
+			btn.setIcon(icoRating);
+			btn.setContentAreaFilled(false);
+			btn.setBorderPainted(false);
+			btn.setFocusPainted(false);
+			btn.addActionListener(this);
+			btn.addMouseListener(this);
+			btn.addFocusListener(this);
 		}
 	}
 
@@ -93,8 +90,8 @@ public class RatingBarPanel extends JPanel implements ActionListener, FocusListe
 		pnl.setLayout(layout);
 		pnl.setOpaque(false);
 		layout.setAlignment(FlowLayout.LEADING);
-		for (int i = 0; i < labels.length; i++) {
-			pnl.add(labels[i]);
+		for (int i = 0; i < buttons.size(); i++) {
+			pnl.add(buttons.get(i));
 		}
 		add(pnl);
 	}
@@ -107,8 +104,8 @@ public class RatingBarPanel extends JPanel implements ActionListener, FocusListe
 					System.out.println("oops");
 				} else {
 					int rate = firstGame.getRate();
-					for (int i = 0; i < labels.length; i++) {
-						labels[i].setIcon((i + 1 <= rate) ? icoRating : icoRatingBlank);
+					for (int i = 0; i < buttons.size(); i++) {
+						buttons.get(i).setIcon((i + 1 <= rate) ? icoRating : icoRatingBlank);
 					}
 				}
 			}
@@ -125,20 +122,20 @@ public class RatingBarPanel extends JPanel implements ActionListener, FocusListe
 
 	@Override
 	public void mouseEntered(MouseEvent e) {
-		for (int i = 0; i < labels.length; i++) {
-			labels[i].setIcon(icoRating);
-			if (labels[i] == e.getSource()) {
+		for (int i = 0; i < buttons.size(); i++) {
+			buttons.get(i).setIcon(icoRating);
+			if (buttons.get(i) == e.getSource()) {
 				if (getCurrentGames().size() != 1) {
 					return;
 				}
 				currentRate = i;
 				int k = 0;
 				while (k <= i) {
-					labels[k++].setIcon(getCurrentGames().get(0).getRate() == 0 || k <= getCurrentGames().get(0).getRate() ? icoRating
+					buttons.get(k++).setIcon(getCurrentGames().get(0).getRate() == 0 || k <= getCurrentGames().get(0).getRate() ? icoRating
 							: icoRatingAdd);
 				}
 				while (k < getCurrentGames().get(0).getRate()) {
-					labels[k++].setIcon(icoRatingRemove);
+					buttons.get(k++).setIcon(icoRatingRemove);
 				}
 				return;
 			}
@@ -162,20 +159,20 @@ public class RatingBarPanel extends JPanel implements ActionListener, FocusListe
 
 	@Override
 	public void focusGained(FocusEvent e) {
-		for (int i = 0; i < labels.length; i++) {
-			labels[i].setIcon(icoRating);
-			if (labels[i] == e.getSource()) {
+		for (int i = 0; i < buttons.size(); i++) {
+			buttons.get(i).setIcon(icoRating);
+			if (buttons.get(i) == e.getSource()) {
 				if (getCurrentGames().size() != 11) {
 					return;
 				}
 				currentRate = i;
 				int k = 0;
 				while (k <= i) {
-					labels[k++].setIcon(getCurrentGames().get(0).getRate() == 0 || k <= getCurrentGames().get(0).getRate() ? icoRating
+					buttons.get(k++).setIcon(getCurrentGames().get(0).getRate() == 0 || k <= getCurrentGames().get(0).getRate() ? icoRating
 							: icoRatingAdd);
 				}
 				while (k < getCurrentGames().get(0).getRate()) {
-					labels[k++].setIcon(icoRatingRemove);
+					buttons.get(k++).setIcon(icoRatingRemove);
 				}
 				return;
 			}

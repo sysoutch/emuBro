@@ -1,6 +1,7 @@
-package ch.sysout.ui.util;
+package ch.sysout.emubro.ui;
 
-import java.awt.Color;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.beans.ConstructorProperties;
@@ -9,20 +10,15 @@ import javax.swing.Action;
 import javax.swing.Icon;
 import javax.swing.JButton;
 
-public class JCustomButton2 extends JButton {
+public class JCustomButtonNew extends JButton {
 	private static final long serialVersionUID = 1L;
 
-	private Color colorHover = new Color(0f, 0f, 0f, 0.2f);
-	private Color colorSelected = new Color(0f, 0f, 0f, 0.25f);
-
 	protected boolean hover;
-
-	private boolean keepBackgroundOnHoverLost;
 
 	/**
 	 * Creates a button with no set text or icon.
 	 */
-	public JCustomButton2() {
+	public JCustomButtonNew() {
 		this(null, null);
 	}
 
@@ -31,7 +27,7 @@ public class JCustomButton2 extends JButton {
 	 *
 	 * @param icon  the Icon image to display on the button
 	 */
-	public JCustomButton2(Icon icon) {
+	public JCustomButtonNew(Icon icon) {
 		this(null, icon);
 	}
 
@@ -41,7 +37,7 @@ public class JCustomButton2 extends JButton {
 	 * @param text  the text of the button
 	 */
 	@ConstructorProperties({"text"})
-	public JCustomButton2(String text) {
+	public JCustomButtonNew(String text) {
 		this(text, null);
 	}
 
@@ -53,7 +49,7 @@ public class JCustomButton2 extends JButton {
 	 *
 	 * @since 1.3
 	 */
-	public JCustomButton2(Action a) {
+	public JCustomButtonNew(Action a) {
 		this();
 		setAction(a);
 	}
@@ -64,7 +60,7 @@ public class JCustomButton2 extends JButton {
 	 * @param text  the text of the button
 	 * @param icon  the Icon image to display on the button
 	 */
-	public JCustomButton2(String text, Icon icon) {
+	public JCustomButtonNew(String text, Icon icon) {
 		//        // Create the model
 		//        setModel(new DefaultButtonModel());
 		//
@@ -76,24 +72,29 @@ public class JCustomButton2 extends JButton {
 		addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseEntered(MouseEvent e) {
-				//				hover = true;
-				//				repaint();
 				setBorderPainted(true);
 				setContentAreaFilled(true);
 			}
 
 			@Override
 			public void mouseExited(MouseEvent e) {
-				//				hover = false;
-				//				repaint();
 				setBorderPainted(false);
 				setContentAreaFilled(false);
 			}
 		});
-	}
+		addFocusListener(new FocusAdapter() {
+			@Override
+			public void focusGained(FocusEvent e) {
+				setBorderPainted(true);
+				setContentAreaFilled(true);
+			}
 
-	public void setKeepBackgroundOnHoverLost(boolean keepBackgroundOnHoverLost) {
-		this.keepBackgroundOnHoverLost = keepBackgroundOnHoverLost;
+			@Override
+			public void focusLost(FocusEvent e) {
+				setBorderPainted(false);
+				setContentAreaFilled(false);
+			}
+		});
 	}
 
 	//	@Override

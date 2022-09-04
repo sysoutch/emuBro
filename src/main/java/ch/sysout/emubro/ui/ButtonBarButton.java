@@ -4,9 +4,7 @@ import javax.swing.Action;
 import javax.swing.DefaultButtonModel;
 import javax.swing.Icon;
 
-import ch.sysout.ui.util.JCustomButton2;
-
-public class ButtonBarButton extends JCustomButton2 {
+public class ButtonBarButton extends JCustomButtonNew {
 	private static final long serialVersionUID = 1L;
 
 	private Icon icon;
@@ -14,7 +12,7 @@ public class ButtonBarButton extends JCustomButton2 {
 	private String toolTipText;
 
 	public ButtonBarButton(String label, Icon icon, String toolTipText) {
-		setFocusable(false);
+		//		setFocusable(false);
 		setToolTipText(toolTipText);
 		setModel(new DefaultButtonModel());
 		init(label, icon);

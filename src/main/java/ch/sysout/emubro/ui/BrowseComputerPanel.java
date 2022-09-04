@@ -35,8 +35,6 @@ import ch.sysout.emubro.api.event.GameAddedEvent;
 import ch.sysout.emubro.api.event.GameRemovedEvent;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.ImageUtil;
-import ch.sysout.ui.util.JCustomButton;
-import ch.sysout.ui.util.JCustomButton2;
 import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
@@ -45,17 +43,17 @@ import ch.sysout.util.ScreenSizeUtil;
 public class BrowseComputerPanel extends JPanel implements GameListener, EmulatorListener {
 	private static final long serialVersionUID = 1L;
 	private JLabel lblDragDropCover = new JLabel(Messages.get(MessageConstants.DRAG_AND_DROP_FOLDER_HERE));
-	private JButton btnAutoSearch = new JCustomButton2(Messages.get(MessageConstants.SEARCH_NOW));
-	private JButton btnCustomSearch = new JCustomButton2(Messages.get(MessageConstants.SEARCH_CUSTOM));
-	private JButton btnQuickSearch = new JCustomButton2(Messages.get(MessageConstants.SEARCH_QUICK));
-	private JButton btnLastSearch = new JCustomButton2(Messages.get(MessageConstants.SEARCH_LAST));
+	private JButton btnAutoSearch = new JCustomButtonNew(Messages.get(MessageConstants.SEARCH_NOW));
+	private JButton btnCustomSearch = new JCustomButtonNew(Messages.get(MessageConstants.SEARCH_CUSTOM));
+	private JButton btnQuickSearch = new JCustomButtonNew(Messages.get(MessageConstants.SEARCH_QUICK));
+	private JButton btnLastSearch = new JCustomButtonNew(Messages.get(MessageConstants.SEARCH_LAST));
 	private JCheckBox chkGameSearch = new JCheckBox(Messages.get(MessageConstants.SEARCH_GAMES));
 	private JCheckBox chkEmulatorSearch = new JCheckBox(Messages.get(MessageConstants.SEARCH_EMULATORS));
-	private JButton btnQuickSearchNow = new JCustomButton2(MessageConstants.SEARCH_NOW_SHORT, ImageUtil.getFlatSVGIconFrom(Icons.get("search"), 16, Color.LIGHT_GRAY));
+	private JButton btnQuickSearchNow = new JCustomButtonNew(MessageConstants.SEARCH_NOW_SHORT, ImageUtil.getFlatSVGIconFrom(Icons.get("search"), 16, Color.LIGHT_GRAY));
 	private JButton lnkSearchResults = new JLinkButton(Messages.get(MessageConstants.SEARCH_LOGS));
 	private JButton lnkSearchSettings = new JLinkButton(Messages.get(MessageConstants.SEARCH_PROGRESS_SETTINGS));
-	private JButton btnUncategorized = new JCustomButton2(Messages.get(MessageConstants.ARCHIVES_AND_IMAGE_FILES, 0));
-	private JButton btnSetupFiles = new JCustomButton2(Messages.get(MessageConstants.SEARCH_CUSTOM));
+	private JButton btnUncategorized = new JCustomButtonNew(Messages.get(MessageConstants.ARCHIVES_AND_IMAGE_FILES, 0));
+	private JButton btnSetupFiles = new JCustomButtonNew(Messages.get(MessageConstants.SEARCH_CUSTOM));
 
 	private JButton btnCustomSearchNow;
 
@@ -307,9 +305,9 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 
 	private void createBrowsePanel() {
 		txtBrowseComputer = new JTextArea();
-		txtBrowseComputer.setOpaque(false);
 		// txtBrowse.setBorder(BorderFactory.createEmptyBorder());
 		txtBrowseComputer.setEditable(false);
+		txtBrowseComputer.setFocusable(false);
 		txtBrowseComputer.setLineWrap(true);
 		txtBrowseComputer.setWrapStyleWord(false);
 		txtBrowseComputer.setPreferredSize(new Dimension(0, 0));

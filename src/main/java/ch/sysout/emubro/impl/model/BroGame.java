@@ -96,15 +96,6 @@ public class BroGame implements Game {
 		return iconPath;
 	}
 
-	@Override
-	public boolean hasIcon() {
-		return !iconPath.trim().isEmpty();
-	}
-
-	public void removeIcon() {
-		iconPath = "";
-	}
-
 	/**
 	 * @param iconPath
 	 *            the path to the icon. may be empty but not null
@@ -116,8 +107,12 @@ public class BroGame implements Game {
 	}
 
 	@Override
-	public String getCoverPath() {
-		return coverPath;
+	public boolean hasIcon() {
+		return !iconPath.trim().isEmpty();
+	}
+
+	public void removeIcon() {
+		iconPath = "";
 	}
 
 	@Override
@@ -127,6 +122,11 @@ public class BroGame implements Game {
 
 	public void removeCover() {
 		coverPath = "";
+	}
+
+	@Override
+	public String getCoverPath() {
+		return coverPath;
 	}
 
 	/**

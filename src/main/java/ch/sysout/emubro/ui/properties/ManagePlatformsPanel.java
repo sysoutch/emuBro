@@ -86,16 +86,16 @@ import ch.sysout.emubro.ui.AddEmulatorPanel;
 import ch.sysout.emubro.ui.AddPlatformDialog;
 import ch.sysout.emubro.ui.EmulatorTableCellRenderer;
 import ch.sysout.emubro.ui.EmulatorTableModel;
+import ch.sysout.emubro.ui.JCustomButton;
+import ch.sysout.emubro.ui.JCustomButtonNew;
 import ch.sysout.emubro.ui.JCustomScrollPane;
+import ch.sysout.emubro.ui.JCustomToggleButton;
 import ch.sysout.emubro.ui.JLinkButton;
 import ch.sysout.emubro.ui.JTableDoubleClickOnHeaderFix;
 import ch.sysout.emubro.ui.SortedListModel;
 import ch.sysout.emubro.ui.TableColumnAdjuster;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.ImageUtil;
-import ch.sysout.ui.util.JCustomButton;
-import ch.sysout.ui.util.JCustomButton2;
-import ch.sysout.ui.util.JCustomToggleButton;
 import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
@@ -422,8 +422,8 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 	class EmulatorsPanel extends JPanel implements ListSelectionListener, ActionListener {
 		private static final long serialVersionUID = 1L;
 		private JTable tblEmulators;
-		private JButton btnAddEmulator = new JCustomButton2("", ImageUtil.getImageIconFrom(Icons.get("add", 24, 24)));
-		private JButton btnRemoveEmulator = new JCustomButton2("", ImageUtil.getImageIconFrom(Icons.get("remove2", 24, 24)));
+		private JButton btnAddEmulator = new JCustomButtonNew("", ImageUtil.getImageIconFrom(Icons.get("add", 24, 24)));
+		private JButton btnRemoveEmulator = new JCustomButtonNew("", ImageUtil.getImageIconFrom(Icons.get("remove2", 24, 24)));
 		private JButton btnSetDefaultEmulator = new JCustomButton(Messages.get(MessageConstants.SET_DEFAULT));
 		private JButton btnEmulatorProperties = new JCustomButton(Messages.get(MessageConstants.CONFIGURE));
 		private JToggleButton btnEmulatorProperties2 = new JCustomToggleButton(Messages.get(MessageConstants.CONFIGURE));
@@ -488,7 +488,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 			pnl.setOpaque(false);
 			// lstEmulators.setPreferredSize(new Dimension(0,0));
 			btnRemoveEmulator.setEnabled(false);
-			btnSetDefaultEmulator.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("checkMark"), 22, new Color(0, 129, 0)));
+			btnSetDefaultEmulator.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("checkMark"), 22, new Color(40, 167, 69)));
 			btnSetDefaultEmulator.setEnabled(false);
 			btnAddEmulator.setEnabled(false);
 			btnEmulatorProperties.setEnabled(false);
@@ -1090,7 +1090,10 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 			private Component createCenterPanel() {
 				JPanel pnl = new JPanel(new BorderLayout());
 				pnl.setOpaque(false);
-				pnl.add(new JCustomButton("Drop a picture of a controller here"));
+				JCustomButtonNew btnGamePad = new JCustomButtonNew("Drop an image of a controller here", ImageUtil.getFlatSVGIconFrom(Icons.get("gamepadXbox"), 128, Color.LIGHT_GRAY));
+				btnGamePad.setHorizontalTextPosition(SwingConstants.CENTER);
+				btnGamePad.setVerticalTextPosition(SwingUtilities.TOP);
+				pnl.add(btnGamePad);
 				return pnl;
 			}
 

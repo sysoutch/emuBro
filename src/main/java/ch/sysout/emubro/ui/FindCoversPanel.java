@@ -23,8 +23,6 @@ import javax.swing.JToggleButton;
 import javax.swing.SwingWorker;
 
 import ch.sysout.ui.util.ImageUtil;
-import ch.sysout.ui.util.JCustomButton;
-import ch.sysout.ui.util.JCustomToggleButton;
 
 public class FindCoversPanel extends JPanel {
 	private static final long serialVersionUID = 1L;

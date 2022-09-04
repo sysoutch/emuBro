@@ -1,6 +1,7 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
+import java.awt.event.ActionListener;
 
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
@@ -25,8 +26,13 @@ public class SystemInformationsDialog extends JDialog {
 		super();
 		setTitle("System Informations");
 		setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+		initComponents();
 		createUI();
 		pack();
+	}
+
+	private void initComponents() {
+
 	}
 
 	private void createUI() {
@@ -38,6 +44,14 @@ public class SystemInformationsDialog extends JDialog {
 		pnl2.add(btnPaste);
 		pnl.add(pnl2, BorderLayout.SOUTH);
 		add(pnl, BorderLayout.SOUTH);
+	}
+
+	public void addCopyInformationsListener(ActionListener l) {
+		btnPaste.addActionListener(l);
+	}
+
+	public void addPasteInformationsListener(ActionListener l) {
+		btnPaste.addActionListener(l);
 	}
 
 	public void setSystemInformations(String... systemInformations) {
