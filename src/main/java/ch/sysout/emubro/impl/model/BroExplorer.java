@@ -143,6 +143,10 @@ public class BroExplorer implements Explorer {
 	public void setGames(List<Game> games) {
 		this.games.clear();
 		for (Game g : games) {
+			if (g == null) {
+				System.err.println("setGames(List<Game> games) in BroExplorer: game is null. this shouldn't happen, there is an issue elsewhere");
+				continue;
+			}
 			this.games.put(g.getId(), g);
 		}
 	}

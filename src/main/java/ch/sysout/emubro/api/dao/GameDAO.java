@@ -24,6 +24,8 @@ public interface GameDAO {
 
 	List<Game> getGames() throws SQLException;
 
+	List<Game> getRemovedGames() throws SQLException;
+
 	void updateLastPlayed(Game game) throws SQLException;
 
 	void updatePlayCount(Game game) throws SQLException;

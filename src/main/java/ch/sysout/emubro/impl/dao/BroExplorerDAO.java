@@ -266,6 +266,11 @@ public class BroExplorerDAO implements ExplorerDAO {
 	}
 
 	@Override
+	public List<Game> getRemovedGames() throws SQLException {
+		return gameDAO.getRemovedGames();
+	}
+
+	@Override
 	public List<String> getFiles() throws SQLException {
 		List<String> filesList = new ArrayList<>();
 		Statement stmt = conn.createStatement();

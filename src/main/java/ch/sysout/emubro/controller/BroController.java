@@ -1915,6 +1915,10 @@ GameSelectionListener, BrowseComputerListener {
 		int count = 1;
 		double currentPercent = dlgSplashScreen.getProgressBarValue();
 		for (Game g : games) {
+			if (g == null) {
+				System.err.println("initGameList(List<Game> games) in BroController: game is null. this shouldn't happen, there is an issue elsewhere");
+				continue;
+			}
 			double dbl = currentPercent / hundredPercent;
 			double percent = dbl * count;
 			dlgSplashScreen.setProgressBarValue(dlgSplashScreen.getProgressBarValue() + (int) percent);
@@ -2047,7 +2051,7 @@ GameSelectionListener, BrowseComputerListener {
 					UIManager.setLookAndFeel(currentLnF);
 					view.updateLookAndFeel(false);
 				}
-				changeLanguage(new Locale(language));
+				changeLanguage(language);
 
 				Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(view.getGraphicsConfiguration());
 				int taskBarHeight = screenInsets.bottom;
@@ -2100,6 +2104,10 @@ GameSelectionListener, BrowseComputerListener {
 		} else {
 			throw new IllegalArgumentException("unexpected tokens");
 		}
+	}
+
+	public void changeLanguage(String locale) {
+		changeLanguage(new Locale(locale));
 	}
 
 	public void changeLanguage(Locale locale) {
@@ -5189,7 +5197,8 @@ GameSelectionListener, BrowseComputerListener {
 						return;
 					}
 				} else {
-					removeAll = JOptionPane.showConfirmDialog(view, "Are you sure you want to remove the selected " + currentGames.size() + " games?",
+					removeAll = JOptionPane.showConfirmDialog(view, "Are you sure you want to remove the selected " + currentGames.size() + " games?\n\n"
+							+ "The games won't show up anymore when browsing the computer\nbut you can always manually add them again.",
 							Messages.get(MessageConstants.REMOVE_GAMES), JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 					if (removeAll != JOptionPane.YES_OPTION) {
 						return;

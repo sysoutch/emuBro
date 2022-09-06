@@ -69,6 +69,48 @@ import ch.sysout.util.FileUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 
+/**
+ * @author rainer
+ * FIXME unknown exception (prob some issue with the progress bar in SplashScreenWindow), maybe after restart emuBro when Theme was changed before?
+ * Exception in thread "AWT-EventQueue-0" java.lang.NullPointerException: Cannot read field "width" because "d" is null
+	at java.desktop/java.awt.Dimension.<init>(Dimension.java:113)
+	at java.desktop/javax.swing.plaf.basic.BasicProgressBarUI.getPreferredSize(BasicProgressBarUI.java:902)
+	at com.formdev.flatlaf.ui.FlatProgressBarUI.getPreferredSize(FlatProgressBarUI.java:165)
+	at java.desktop/javax.swing.JComponent.getPreferredSize(JComponent.java:1734)
+	at com.jgoodies.forms.layout.FormLayout$ComponentSizeCache.getPreferredSize(FormLayout.java:2002)
+	at com.jgoodies.forms.layout.FormLayout$PreferredHeightMeasure.sizeOf(FormLayout.java:1937)
+	at com.jgoodies.forms.layout.Sizes$ComponentSize.maximumSize(Sizes.java:429)
+	at com.jgoodies.forms.layout.FormSpec.maximumSize(FormSpec.java:606)
+	at com.jgoodies.forms.layout.FormLayout.maximumSizes(FormLayout.java:1598)
+	at com.jgoodies.forms.layout.FormLayout.computeGridOrigins(FormLayout.java:1486)
+	at com.jgoodies.forms.layout.FormLayout.layoutContainer(FormLayout.java:1323)
+	at java.desktop/java.awt.Container.layout(Container.java:1541)
+	at java.desktop/java.awt.Container.doLayout(Container.java:1530)
+	at java.desktop/java.awt.Container.validateTree(Container.java:1725)
+	at java.desktop/java.awt.Container.validateTree(Container.java:1734)
+	at java.desktop/java.awt.Container.validateTree(Container.java:1734)
+	at java.desktop/java.awt.Container.validateTree(Container.java:1734)
+	at java.desktop/java.awt.Container.validate(Container.java:1660)
+	at java.desktop/javax.swing.RepaintManager$3.run(RepaintManager.java:757)
+	at java.desktop/javax.swing.RepaintManager$3.run(RepaintManager.java:755)
+	at java.base/java.security.AccessController.doPrivileged(AccessController.java:399)
+	at java.base/java.security.ProtectionDomain$JavaSecurityAccessImpl.doIntersectionPrivilege(ProtectionDomain.java:86)
+	at java.desktop/javax.swing.RepaintManager.validateInvalidComponents(RepaintManager.java:754)
+	at java.desktop/javax.swing.RepaintManager$ProcessingRunnable.run(RepaintManager.java:1896)
+	at java.desktop/java.awt.event.InvocationEvent.dispatch(InvocationEvent.java:318)
+	at java.desktop/java.awt.EventQueue.dispatchEventImpl(EventQueue.java:773)
+	at java.desktop/java.awt.EventQueue$4.run(EventQueue.java:720)
+	at java.desktop/java.awt.EventQueue$4.run(EventQueue.java:714)
+	at java.base/java.security.AccessController.doPrivileged(AccessController.java:399)
+	at java.base/java.security.ProtectionDomain$JavaSecurityAccessImpl.doIntersectionPrivilege(ProtectionDomain.java:86)
+	at java.desktop/java.awt.EventQueue.dispatchEvent(EventQueue.java:742)
+	at java.desktop/java.awt.EventDispatchThread.pumpOneEventForFilters(EventDispatchThread.java:203)
+	at java.desktop/java.awt.EventDispatchThread.pumpEventsForFilter(EventDispatchThread.java:124)
+	at java.desktop/java.awt.EventDispatchThread.pumpEventsForHierarchy(EventDispatchThread.java:113)
+	at java.desktop/java.awt.EventDispatchThread.pumpEvents(EventDispatchThread.java:109)
+	at java.desktop/java.awt.EventDispatchThread.pumpEvents(EventDispatchThread.java:101)
+	at java.desktop/java.awt.EventDispatchThread.run(EventDispatchThread.java:90)
+ */
 public class Main {
 	//private static LookAndFeel defaultWindowsLookAndFeel = new WindowsLookAndFeel();
 	private static LookAndFeel defaultLinuxLookAndFeel;
@@ -293,6 +335,15 @@ public class Main {
 					List<Game> games = explorerDAO.getGames();
 					boolean gamesFound = games.size() > 0;
 					controller.initGameList(games);
+
+					System.out.println("removed games:");
+					try {
+						System.out.println(explorerDAO.getRemovedGames());
+					} catch (SQLException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+
 					controller.showView(applyData);
 					//					dlgSplashScreen.setValue(100);
 					boolean emulatorsFound = false;

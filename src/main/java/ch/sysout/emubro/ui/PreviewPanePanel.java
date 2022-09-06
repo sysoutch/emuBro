@@ -368,8 +368,8 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		}
 	}
 
-	public void gameCoverChanged(Game game, Image i) {
-		pnlSelection.gameCoverChanged(game, i);
+	public void gameCoverChanged(Game game, Image image) {
+		pnlSelection.gameCoverChanged(game, image);
 	}
 
 	public void languageChanged() {

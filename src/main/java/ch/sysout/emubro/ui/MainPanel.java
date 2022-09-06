@@ -1499,10 +1499,10 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 		pnlDetails.pnlBrowseCovers.removeAllPictures();
 	}
 
-	public void gameCoverChanged(Game game, Image i) {
+	public void gameCoverChanged(Game game, Image image) {
 		String gameCoverPath = game.getCoverPath();
 		viewManager.addGameCoverPath(game.getId(), gameCoverPath);
-		pnlPreviewPane.gameCoverChanged(game, i);
+		pnlPreviewPane.gameCoverChanged(game, image);
 	}
 
 	public int getDetailsPaneNotificationTab() {

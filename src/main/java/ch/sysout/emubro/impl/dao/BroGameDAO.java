@@ -258,12 +258,11 @@ public class BroGameDAO implements GameDAO {
 		return gameId;
 	}
 
-	@Override
-	public BroGame getGameAt(int gameId) throws SQLException {
+	private BroGame getGameAt(int gameId, boolean removed) throws SQLException {
 		Statement stmt = conn.createStatement();
 		stmt = conn.createStatement();
 
-		String sql = "select * from game where game_id = " + gameId + " and game_deleted != "+true;
+		String sql = "select * from game where game_id = " + gameId + " and game_deleted != " + !removed; // u need to check for game_deleted != !removed instead of = removed cause this isn't there when not deleted
 		ResultSet rset = stmt.executeQuery(sql);
 		BroGame game = null;
 		if (rset.next()) {
@@ -295,6 +294,11 @@ public class BroGameDAO implements GameDAO {
 		}
 		stmt.close();
 		return game;
+	}
+
+	@Override
+	public BroGame getGameAt(int gameId) throws SQLException {
+		return getGameAt(gameId, false);
 	}
 
 	@Override
@@ -364,14 +368,23 @@ public class BroGameDAO implements GameDAO {
 
 	@Override
 	public List<Game> getGames() throws SQLException {
+		return getGames(false);
+	}
+
+	@Override
+	public List<Game> getRemovedGames()  throws SQLException {
+		return getGames(true);
+	}
+
+	private List<Game> getGames(boolean removed) throws SQLException {
 		List<Game> games = new ArrayList<>();
 		Statement stmt = conn.createStatement();
 		stmt = conn.createStatement();
-		String sql = "select * from game where game_deleted != "+true + " order by lower(game_name)";
+		String sql = "select * from game where game_deleted != " + !removed + " order by lower(game_name)"; // u need to check for game_deleted != !removed instead of = removed cause this isn't there when not deleted
 		ResultSet rset = stmt.executeQuery(sql);
 		while (rset.next()) {
 			int id = rset.getInt("game_id");
-			Game game = getGameAt(id);
+			Game game = getGameAt(id, removed);
 			games.add(game);
 		}
 		stmt.close();

@@ -825,18 +825,15 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 					File myObj = new File(platformFolder.getAbsolutePath() + File.separator + platformName + "_game_"+i+"."+fileExtension);
 					try {
 						if (myObj.createNewFile()) {
-							System.out.println("File created: " + myObj.getName());
 							try {
 								FileWriter myWriter = new FileWriter(myObj);
 								myWriter.write("DummyGame"+i+"."+fileExtension);
 								myWriter.close();
-								System.out.println("Successfully wrote to the file.");
 							} catch (IOException e) {
-								System.out.println("An error occurred.");
 								e.printStackTrace();
 							}
 						} else {
-							System.out.println("File already exists.");
+							//							System.out.println("File already exists.");
 						}
 					} catch (IOException e) {
 						e.printStackTrace();
@@ -2338,8 +2335,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		pnlMain.removeAllPictures();
 	}
 
-	public void gameCoverChanged(Game game, Image i) {
-		pnlMain.gameCoverChanged(game, i);
+	public void gameCoverChanged(Game game, Image image) {
+		pnlMain.gameCoverChanged(game, image);
 	}
 
 	public int getDetailsPaneNotificationTab() {
@@ -2507,6 +2504,10 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		List<Platform> sortedPlatforms = new ArrayList<>();
 		pnlGameFilter.initTags(null);
 		for (Game game : games) {
+			if (game == null) {
+				System.err.println("initGames(List<Game> games) in MainFrame: game is null. this shouldn't happen, there is an issue elsewhere");
+				continue;
+			}
 			int platformId = game.getPlatformId();
 			boolean addPlatform = true;
 			for (Platform p : sortedPlatforms) {

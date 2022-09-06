@@ -16,12 +16,6 @@ import ch.sysout.emubro.impl.BroGameDeletedException;
 import ch.sysout.emubro.impl.model.BroEmulator;
 
 public interface ExplorerDAO {
-	List<Platform> getPlatforms() throws SQLException;
-
-	Game getGameAt(int index) throws SQLException;
-
-	List<Game> getGames() throws SQLException;
-
 	void addGame(Game game, String filePath)
 			throws SQLException, BroGameAlreadyExistsException, BroGameDeletedException;
 
@@ -38,6 +32,14 @@ public interface ExplorerDAO {
 	void updatePlayCount(Game game) throws SQLException;
 
 	void addEmulator(int platformId, Emulator emulator) throws SQLException, BroEmulatorDeletedException;
+
+	List<Platform> getPlatforms() throws SQLException;
+
+	Game getGameAt(int index) throws SQLException;
+
+	List<Game> getGames() throws SQLException;
+
+	List<Game> getRemovedGames() throws SQLException;
 
 	Emulator getEmulator(int id) throws SQLException;
 
