@@ -1100,12 +1100,16 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 		pnlNavigation.addChangeToAllGamesListener(l);
 	}
 
+	public void addChangeToFavoritesListener(ActionListener l) {
+		pnlNavigation.addChangeToFavoritesListener(l);
+	}
+
 	public void addChangeToRecentlyListener(ActionListener l) {
 		pnlNavigation.addChangeToRecentlyPlayedListener(l);
 	}
 
-	public void addChangeToFavoritesListener(ActionListener l) {
-		pnlNavigation.addChangeToFavoritesListener(l);
+	public void addChangeToRecycleBinListener(ActionListener l) {
+		pnlNavigation.addChangeToRecycleBinListener(l);
 	}
 
 	public void addChangeToTagsListener(ActionListener l) {

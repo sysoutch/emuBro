@@ -68,7 +68,8 @@ public class MessageConstants {
 	public static final String HIDE_EXTENSIONS = "hideExtensions";
 	public static final String HIDE_EXTENSIONS_TOOL_TIP = "hideExtensionsToolTip";
 	public static final String REFRESH = "refresh";
-	public static final String fullscreen = "fullscreen";
+	public static final String FULLSCREEN = "fullscreen";
+	public static final String RUN_EMULATOR = "runEmulator";
 	public static final String CONFIGURE = "configure";
 	public static final String CONFIGURE_EMULATOR = "configureEmulator";
 	public static final String CONFIGURE_WIZARD = "configureWizard";
@@ -96,10 +97,12 @@ public class MessageConstants {
 	public static final String ALL_GAMES = "allGames";
 	public static final String EMPTY_PLATFORM = "emptyPlatform";
 	public static final String RECENTLY_PLAYED = "recentlyPlayed";
+	public static final String RECYCLE_BIN = "recycleBin";
 	public static final String ADD_COVER = "addCover";
 	public static final String REMOVE_COVER = "removeCover";
 	public static final String RENAME = "rename";
 	public static final String RENAME_GAME = "renameGame";
+	public static final String RENAME_GAMES = "renameGames";
 	public static final String GAME_COUNT = "gameCount";
 	public static final String GAME_COUNT1 = "gameCount1";
 	public static final String PLATFORM_COUNT = "platformCount";
@@ -126,6 +129,7 @@ public class MessageConstants {
 	public static final String EXIT_AFTER_GAME_END = "exitAfterGameEnd";
 	public static final String SETTINGS = "settings";
 	public static final String SHOW_TRAILER = "showTrailer";
+	public static final String TRAILER_SEARCH = "trailerSearch";
 	public static final String WEB_SEARCH_SETTINGS = "webSearchSettings";
 	public static final String RATE_GAME = "rateGame";
 	public static final String RATE = "rate";

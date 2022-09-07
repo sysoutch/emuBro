@@ -261,7 +261,6 @@ public class BroGameDAO implements GameDAO {
 	private BroGame getGameAt(int gameId, boolean removed) throws SQLException {
 		Statement stmt = conn.createStatement();
 		stmt = conn.createStatement();
-
 		String sql = "select * from game where game_id = " + gameId + " and game_deleted != " + !removed; // u need to check for game_deleted != !removed instead of = removed cause this isn't there when not deleted
 		ResultSet rset = stmt.executeQuery(sql);
 		BroGame game = null;

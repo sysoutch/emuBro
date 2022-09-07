@@ -99,8 +99,9 @@ import ch.sysout.util.ScreenSizeUtil;
 
 public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	private GameListModel mdlLstAllGames = new GameListModel();
-	private GameListModel mdlLstRecentlyPlayed = new GameListModel();
 	private GameListModel mdlLstFavorites = new GameListModel();
+	private GameListModel mdlLstRecentlyPlayed = new GameListModel();
+	private GameListModel mdlLstRecycleBin = new GameListModel();
 	private GameListModel mdlLstFilteredGames = new GameListModel();
 
 	public class DisabledItemSelectionModel extends DefaultListSelectionModel {
@@ -829,8 +830,9 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		Game game = e.getGame();
 		mdlLstAllGames.removeElement(game);
 		mdlLstFavorites.removeElement(game);
-		mdlLstFilteredGames.removeElement(game);
 		mdlLstRecentlyPlayed.removeElement(game);
+		mdlLstFilteredGames.removeElement(game);
+		mdlLstRecycleBin.addElement(game);
 		selectGame(GameConstants.NO_GAME);
 		fixRowCountForVisibleColumns(lstGames);
 	}
@@ -1432,11 +1434,14 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		case NavigationPanel.ALL_GAMES:
 			lstGames.setModel(mdlLstAllGames);
 			break;
+		case NavigationPanel.FAVORITES:
+			lstGames.setModel(mdlLstFavorites);
+			break;
 		case NavigationPanel.RECENTLY_PLAYED:
 			lstGames.setModel(mdlLstRecentlyPlayed);
 			break;
-		case NavigationPanel.FAVORITES:
-			lstGames.setModel(mdlLstFavorites);
+		case NavigationPanel.RECYCLE_BIN:
+			lstGames.setModel(mdlLstRecycleBin);
 			break;
 		default:
 			lstGames.setModel(mdlLstAllGames);
@@ -1469,16 +1474,22 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 			lstGames.setModel(mdlLstAllGames);
 			setViewStyle(lstGames, viewStyle);
 			break;
+		case NavigationPanel.FAVORITES:
+			setCurrentView(NavigationPanel.FAVORITES);
+			gameCount = mdlLstFavorites.getSize();
+			lstGames.setModel(mdlLstFavorites);
+			setViewStyle(lstGames, viewStyle);
+			break;
 		case NavigationPanel.RECENTLY_PLAYED:
 			setCurrentView(NavigationPanel.RECENTLY_PLAYED);
 			gameCount = mdlLstRecentlyPlayed.getSize();
 			lstGames.setModel(mdlLstRecentlyPlayed);
 			setViewStyle(lstGames, viewStyle);
 			break;
-		case NavigationPanel.FAVORITES:
-			setCurrentView(NavigationPanel.FAVORITES);
-			gameCount = mdlLstFavorites.getSize();
-			lstGames.setModel(mdlLstFavorites);
+		case NavigationPanel.RECYCLE_BIN:
+			setCurrentView(NavigationPanel.RECYCLE_BIN);
+			gameCount = mdlLstRecycleBin.getSize();
+			lstGames.setModel(mdlLstRecycleBin);
 			setViewStyle(lstGames, viewStyle);
 			break;
 		}
@@ -1612,14 +1623,16 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		switch (sortBy) {
 		case ViewConstants.SORT_BY_PLATFORM:
 			mdlLstAllGames.sortByPlatform(platformComparator);
-			mdlLstRecentlyPlayed.sortByPlatform(platformComparator);
 			mdlLstFavorites.sortByPlatform(platformComparator);
+			mdlLstRecentlyPlayed.sortByPlatform(platformComparator);
+			mdlLstRecycleBin.sortByPlatform(platformComparator);
 			mdlLstFilteredGames.sortByPlatform(platformComparator);
 			break;
 		case ViewConstants.SORT_BY_TITLE:
 			mdlLstAllGames.sort();
-			mdlLstRecentlyPlayed.sort();
 			mdlLstFavorites.sort();
+			mdlLstRecentlyPlayed.sort();
+			mdlLstRecycleBin.sort();
 			mdlLstFilteredGames.sort();
 			break;
 		}
@@ -1637,14 +1650,16 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		switch (sortOrder) {
 		case ViewConstants.SORT_ASCENDING:
 			mdlLstAllGames.sort();
-			mdlLstRecentlyPlayed.sort();
 			mdlLstFavorites.sort();
+			mdlLstRecentlyPlayed.sort();
+			mdlLstRecycleBin.sort();
 			mdlLstFilteredGames.sort();
 			break;
 		case ViewConstants.SORT_DESCENDING:
 			mdlLstAllGames.sortReverseOrder();
-			mdlLstRecentlyPlayed.sortReverseOrder();
 			mdlLstFavorites.sortReverseOrder();
+			mdlLstRecentlyPlayed.sortReverseOrder();
+			mdlLstRecycleBin.sortReverseOrder();
 			mdlLstFilteredGames.sortReverseOrder();
 			break;
 		}
@@ -1827,10 +1842,12 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		GameListModel tmpMdl;
 		if (getCurrentView() == NavigationPanel.ALL_GAMES) {
 			tmpMdl = mdlLstAllGames;
-		} else if (getCurrentView() == NavigationPanel.RECENTLY_PLAYED) {
-			tmpMdl = mdlLstRecentlyPlayed;
 		} else if (getCurrentView() == NavigationPanel.FAVORITES) {
 			tmpMdl = mdlLstFavorites;
+		} else if (getCurrentView() == NavigationPanel.RECENTLY_PLAYED) {
+			tmpMdl = mdlLstRecentlyPlayed;
+		} else if (getCurrentView() == NavigationPanel.RECYCLE_BIN) {
+			tmpMdl = mdlLstRecycleBin;
 		} else {
 			tmpMdl = new GameListModel();
 		}
@@ -1841,10 +1858,12 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		List<Game> tmpGames;
 		if (getCurrentView() == NavigationPanel.ALL_GAMES) {
 			tmpGames = mdlLstAllGames.getAllElements();
-		} else if (getCurrentView() == NavigationPanel.RECENTLY_PLAYED) {
-			tmpGames = mdlLstRecentlyPlayed.getAllElements();
 		} else if (getCurrentView() == NavigationPanel.FAVORITES) {
 			tmpGames = mdlLstFavorites.getAllElements();
+		} else if (getCurrentView() == NavigationPanel.RECENTLY_PLAYED) {
+			tmpGames = mdlLstRecentlyPlayed.getAllElements();
+		} else if (getCurrentView() == NavigationPanel.RECYCLE_BIN) {
+			tmpGames = mdlLstRecycleBin.getAllElements();
 		} else {
 			tmpGames = new ArrayList<>();
 		}
@@ -1857,10 +1876,12 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 			List<Game> tmpGames = null;
 			if (getCurrentView() == NavigationPanel.ALL_GAMES) {
 				tmpGames = mdlLstAllGames.getAllElements();
-			} else if (getCurrentView() == NavigationPanel.RECENTLY_PLAYED) {
-				tmpGames = mdlLstRecentlyPlayed.getAllElements();
 			} else if (getCurrentView() == NavigationPanel.FAVORITES) {
 				tmpGames = mdlLstFavorites.getAllElements();
+			} else if (getCurrentView() == NavigationPanel.RECENTLY_PLAYED) {
+				tmpGames = mdlLstRecentlyPlayed.getAllElements();
+			} else if (getCurrentView() == NavigationPanel.RECYCLE_BIN) {
+				tmpGames = mdlLstRecycleBin.getAllElements();
 			}
 			int platformId = event.getPlatformId();
 			Criteria criteria = event.getCriteria();

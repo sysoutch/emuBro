@@ -51,6 +51,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 	private JMenuItem itmRunGame = new JMenuItem("");
 	private JMenu mnuRunWith = new JMenu("");
 	private JMenuItem itmRunWithDefault = new JMenuItem();
+	private JMenuItem itmRunEmulator = new JMenuItem();
 	private JMenuItem itmConfigureEmulator = new JMenuItem();
 	private JMenuItem itmChangePlatform = new JMenuItem();
 	private JMenu mnuRateGame = new JMenu();
@@ -93,7 +94,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 
 		setIcons();
 		addComponentsToJComponent(this, itmRunGame, mnuRunWith,
-				new JSeparator(), itmConfigureEmulator, itmChangePlatform,
+				new JSeparator(), itmRunEmulator, itmConfigureEmulator, itmChangePlatform,
 				new JSeparator(), mnuRateGame, mnuManageTags, itmAddCoverComputer,
 				new JSeparator(), mnuShowTagsWeb, mnuShowCoverWeb, mnuShowTrailerWeb/*, itmWebSearchSettings*/,
 				new JSeparator(), itmRemoveGame, itmRenameGame,
@@ -257,6 +258,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		mnuShowTrailerWeb.setIcon(ImageUtil.getImageIconFrom(Icons.get("video", size, size)));
 		mnuShowCoverWeb.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("picture"), size, new Color(181, 201, 255)));
 		itmRunGame.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("runGame"), size, new Color(40, 167, 69)));
+		itmRunEmulator.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("runGame"), size, new Color(181, 201, 255)));
 		itmConfigureEmulator.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("settings"), size, Color.LIGHT_GRAY));
 		itmChangePlatform.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("change"), size, Color.LIGHT_GRAY));
 		itmComment.setIcon(ImageUtil.getImageIconFrom(Icons.get("gameComment", size, size)));
@@ -333,6 +335,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		itmRunGame.setText("<html><b>" + Messages.get(MessageConstants.RUN_GAME) + "</b></html>");
 		mnuRunWith.setText(Messages.get(MessageConstants.RUN_WITH) + "...");
 		itmRunWithDefault.setText(Messages.get(MessageConstants.SET_EMULATOR) + "...");
+		itmRunEmulator.setText(Messages.get(MessageConstants.RUN_EMULATOR));
 		itmConfigureEmulator.setText(Messages.get(MessageConstants.CONFIGURE_EMULATOR));
 		itmChangePlatform.setText(Messages.get(MessageConstants.CHANGE_PLATFORM) + "...");
 		itmWebSearchSettings.setText(Messages.get(MessageConstants.WEB_SEARCH_SETTINGS) + "...");

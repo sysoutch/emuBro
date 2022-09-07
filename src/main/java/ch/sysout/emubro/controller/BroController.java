@@ -920,8 +920,9 @@ GameSelectionListener, BrowseComputerListener {
 		view.addLanguageEnglishListener(new LanguageEnglishListener());
 		view.addLanguageFrenchListener(new LanguageFrenchListener());
 		view.addChangeToAllGamesListener(new ChangeToAllGamesListener());
-		view.addChangeToRecentlyPlayedListener(new ChangeToRecentlyPlayedListener());
 		view.addChangeToFavoritesListener(new ChangeToFavoritesListener());
+		view.addChangeToRecentlyPlayedListener(new ChangeToRecentlyPlayedListener());
+		view.addChangeToRecycleBinListener(new ChangeToRecycleBinListener());
 		view.addFullScreenListener(new FullScreenListener());
 		view.addFullScreenListener2(new FullScreenListener());
 		view.addSortGameAscendingListListener(new SortGameListAscendingListener());
@@ -7073,6 +7074,19 @@ GameSelectionListener, BrowseComputerListener {
 		}
 	}
 
+	class ChangeToFavoritesListener implements ActionListener {
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			SwingUtilities.invokeLater(new Runnable() {
+
+				@Override
+				public void run() {
+					view.navigationChanged(new NavigationEvent(NavigationPanel.FAVORITES));
+				}
+			});
+		}
+	}
+
 	class ChangeToRecentlyPlayedListener implements ActionListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
@@ -7086,14 +7100,14 @@ GameSelectionListener, BrowseComputerListener {
 		}
 	}
 
-	class ChangeToFavoritesListener implements ActionListener {
+	class ChangeToRecycleBinListener implements ActionListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			SwingUtilities.invokeLater(new Runnable() {
 
 				@Override
 				public void run() {
-					view.navigationChanged(new NavigationEvent(NavigationPanel.FAVORITES));
+					view.navigationChanged(new NavigationEvent(NavigationPanel.RECYCLE_BIN));
 				}
 			});
 		}

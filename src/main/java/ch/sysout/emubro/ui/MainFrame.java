@@ -208,6 +208,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	private JRadioButtonMenuItem itmChangeToAll;
 	private JRadioButtonMenuItem itmChangeToFavorites;
 	private JRadioButtonMenuItem itmChangeToRecentlyPlayed;
+	private JRadioButtonMenuItem itmChangeToRecycleBin;
 	private JMenu mnuSetCoverSize;
 	private JSlider sliderCoverSize = new JSlider(JSlider.HORIZONTAL);
 	private DetailChooserDialog dlgDetailChooser;
@@ -468,6 +469,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmChangeToAll = new JRadioButtonMenuItem();
 		itmChangeToFavorites = new JRadioButtonMenuItem();
 		itmChangeToRecentlyPlayed = new JRadioButtonMenuItem();
+		itmChangeToRecycleBin = new JRadioButtonMenuItem();
 		mnuSetCoverSize = new JMenu(Messages.get(MessageConstants.SET_COVER_SIZE));
 		mnuManageTags = new JMenu(Messages.get("manageTags"));
 		mnuManageCovers = new JMenuItem(Messages.get(MessageConstants.MANAGE_COVERS) + "...");
@@ -690,6 +692,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmChangeToAll.setAccelerator(KeyStroke.getKeyStroke("control 1"));
 		itmChangeToFavorites.setAccelerator(KeyStroke.getKeyStroke("control 2"));
 		itmChangeToRecentlyPlayed.setAccelerator(KeyStroke.getKeyStroke("control 3"));
+		itmChangeToRecycleBin.setAccelerator(KeyStroke.getKeyStroke("control 4"));
 		itmHelp.setAccelerator(KeyStroke.getKeyStroke("F1"));
 		itmCheckForUpdates.setAccelerator(KeyStroke.getKeyStroke("F9"));
 		itmAbout.setAccelerator(KeyStroke.getKeyStroke("F12"));
@@ -709,7 +712,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		addToButtonGroup(new ButtonGroup(), itmSortAscending, itmSortDescending);
 		addToButtonGroup(new ButtonGroup(), itmGroupTitle, itmGroupPlatform, itmGroupBlank);
 		addToButtonGroup(new ButtonGroup(), itmGroupAscending, itmGroupDescending);
-		addToButtonGroup(new ButtonGroup(), itmChangeToAll, itmChangeToFavorites, itmChangeToRecentlyPlayed);
+		addToButtonGroup(new ButtonGroup(), itmChangeToAll, itmChangeToFavorites, itmChangeToRecentlyPlayed, itmChangeToRecycleBin);
 		addToButtonGroup(new ButtonGroup(), itmLanguageDe, itmLanguageEn, itmLanguageFr, itmLanguagePr, itmLanguageEs);
 	}
 
@@ -737,6 +740,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmChangeToAll.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("allGames"), size, Color.LIGHT_GRAY));
 		itmChangeToFavorites.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("favorites"), size, new Color(255, 220, 125)));
 		itmChangeToRecentlyPlayed.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("recentlyPlayed"), size, new Color(181, 201, 255)));
+		itmChangeToRecycleBin.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("trash"), size, Color.LIGHT_GRAY));
 		itmSetFilter.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), size, Color.LIGHT_GRAY));
 		itmRenameGames.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rename"), size, Color.LIGHT_GRAY));
 		itmAutoSearchTags.setIcon(ImageUtil.getImageIconFrom(Icons.get("searchFile", size, size)));
@@ -789,6 +793,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmChangeToAll.setActionCommand("changeToAll");
 		itmChangeToFavorites.setActionCommand("changeToFavorites");
 		itmChangeToRecentlyPlayed.setActionCommand("changeToRecentlyPlayed");
+		itmChangeToRecycleBin.setActionCommand("changeToRecycleBin");
 	}
 
 	public void addListeners() {
@@ -936,14 +941,19 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		pnlMain.addChangeToAllGamesListener(l);
 	}
 
+	public void addChangeToFavoritesListener(ActionListener l) {
+		itmChangeToFavorites.addActionListener(l);
+		pnlMain.addChangeToFavoritesListener(l);
+	}
+
 	public void addChangeToRecentlyPlayedListener(ActionListener l) {
 		itmChangeToRecentlyPlayed.addActionListener(l);
 		pnlMain.addChangeToRecentlyListener(l);
 	}
 
-	public void addChangeToFavoritesListener(ActionListener l) {
-		itmChangeToFavorites.addActionListener(l);
-		pnlMain.addChangeToFavoritesListener(l);
+	public void addChangeToRecycleBinListener(ActionListener l) {
+		itmChangeToRecycleBin.addActionListener(l);
+		pnlMain.addChangeToRecycleBinListener(l);
 	}
 
 	public void addChangeToTagsListener(ActionListener l) {
@@ -1459,7 +1469,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 				itmSortDescending);
 		addComponentsToJComponent(mnuGroup, itmGroupBlank, itmGroupTitle, itmGroupPlatform, new JSeparator(),
 				itmGroupAscending, itmGroupDescending);
-		addComponentsToJComponent(mnuChangeTo, itmChangeToAll, itmChangeToFavorites, itmChangeToRecentlyPlayed);
+		addComponentsToJComponent(mnuChangeTo, itmChangeToAll, itmChangeToFavorites, itmChangeToRecentlyPlayed, itmChangeToRecycleBin);
 	}
 
 	private void updateLookAndFeel() {
@@ -1871,6 +1881,9 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 			break;
 		case NavigationPanel.RECENTLY_PLAYED:
 			itmChangeToRecentlyPlayed.setSelected(true);
+			break;
+		case NavigationPanel.RECYCLE_BIN:
+			itmChangeToRecycleBin.setSelected(true);
 			break;
 		}
 		pnlMain.navigationChanged(e);
@@ -2444,7 +2457,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmTouchScreenOptimizedScroll.setToolTipText(Messages.get(MessageConstants.TOUCH_SCREEN_SCROLL_TOOL_TIP));
 		itmShowToolTipTexts.setText(Messages.get(MessageConstants.SHOW_TOOL_TIP_TEXTS));
 		itmRefresh.setText(Messages.get(MessageConstants.REFRESH));
-		itmFullScreen.setText(Messages.get(MessageConstants.fullscreen));
+		itmFullScreen.setText(Messages.get(MessageConstants.FULLSCREEN));
 		itmLanguageDe.setText(Messages.get(MessageConstants.LANGUAGE_DE));
 		itmLanguageEn.setText(Messages.get(MessageConstants.LANGUAGE_EN));
 		itmLanguageFr.setText(Messages.get(MessageConstants.LANGUAGE_FR));
@@ -2472,8 +2485,9 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmGroupAscending.setText(Messages.get(MessageConstants.ASCENDING));
 		itmGroupDescending.setText(Messages.get(MessageConstants.DESCENDING));
 		itmChangeToAll.setText(Messages.get(MessageConstants.ALL_GAMES));
-		itmChangeToRecentlyPlayed.setText(Messages.get(MessageConstants.RECENTLY_PLAYED));
 		itmChangeToFavorites.setText(Messages.get(MessageConstants.FAVORITES));
+		itmChangeToRecentlyPlayed.setText(Messages.get(MessageConstants.RECENTLY_PLAYED));
+		itmChangeToRecycleBin.setText(Messages.get(MessageConstants.RECYCLE_BIN));
 		if (!btnOrganize.getText().isEmpty()) {
 			btnOrganize.setText(Messages.get(MessageConstants.ORGANIZE));
 		}

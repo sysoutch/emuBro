@@ -69,6 +69,7 @@ public class ViewContextMenu extends JPopupMenu implements ActionListener {
 	private JRadioButtonMenuItem itmChangeToAll;
 	private JRadioButtonMenuItem itmChangeToFavorites;
 	private JRadioButtonMenuItem itmChangeToRecentlyPlayed;
+	private JRadioButtonMenuItem itmChangeToRecycleBin;
 	private JCheckBoxMenuItem itmShowToolTipTexts;
 	private JCheckBoxMenuItem itmTouchScreenOptimizedScroll;
 
@@ -91,7 +92,7 @@ public class ViewContextMenu extends JPopupMenu implements ActionListener {
 				new JSeparator(), itmShowToolTipTexts, itmTouchScreenOptimizedScroll,
 				new JSeparator(), itmFullScreen);
 		addComponentsToJComponent(mnuAdd, itmAddFiles, itmAddFolders, new JSeparator(), itmFilesFromClipboard);
-		addComponentsToJComponent(mnuChangeTo, itmChangeToAll, itmChangeToFavorites, itmChangeToRecentlyPlayed);
+		addComponentsToJComponent(mnuChangeTo, itmChangeToAll, itmChangeToFavorites, itmChangeToRecentlyPlayed, itmChangeToRecycleBin);
 		addComponentsToJComponent(mnuSort, itmSortTitle, itmSortPlatform, new JSeparator(), itmSortAscending,
 				itmSortDescending);
 		addComponentsToJComponent(mnuGroup, itmGroupBlank, itmGroupTitle, itmGroupPlatform, new JSeparator(),
@@ -99,24 +100,24 @@ public class ViewContextMenu extends JPopupMenu implements ActionListener {
 	}
 
 	private void initComponents() {
-		mnuAdd = new JMenu(Messages.get("add"));
-		mnuSort = new JMenu(Messages.get("sortBy"));
-		mnuGroup = new JMenu(Messages.get("groupBy"));
+		mnuAdd = new JMenu(Messages.get(MessageConstants.ADD));
+		mnuSort = new JMenu(Messages.get(MessageConstants.SORT_BY));
+		mnuGroup = new JMenu(Messages.get(MessageConstants.GROUP_BY));
 		itmAddFiles = new JMenuItem(Messages.get(MessageConstants.FILES, "") + "...");
 		itmAddFolders = new JMenuItem(Messages.get(MessageConstants.FOLDERS, "") + "...");
 		itmFilesFromClipboard = new JMenuItem(Messages.get(MessageConstants.FILES_FROM_CLIPBOARD));
-		itmSetColumnWidth = new JMenuItem(Messages.get("setColumnWidth"));
-		itmSetRowHeight = new JMenuItem(Messages.get("setRowHeight"));
-		itmRefresh = new JMenuItem(Messages.get("refresh"));
-		mnuChangeTo = new JMenu(Messages.get("changeTo"));
-		itmSetFilter = new JCheckBoxMenuItem(Messages.get("setFilter"));
-		itmChooseDetails = new JMenuItem(Messages.get("chooseDetails"));
-		itmRenameGames = new JMenuItem(Messages.get("renameGames") + "...");
+		itmSetColumnWidth = new JMenuItem(Messages.get(MessageConstants.SET_COLUMN_WIDTH));
+		itmSetRowHeight = new JMenuItem(Messages.get(MessageConstants.SET_ROW_HEIGHT));
+		itmRefresh = new JMenuItem(Messages.get(MessageConstants.REFRESH));
+		mnuChangeTo = new JMenu(Messages.get(MessageConstants.CHANGE_TO));
+		itmSetFilter = new JCheckBoxMenuItem(Messages.get(MessageConstants.SET_FILTER));
+		itmChooseDetails = new JMenuItem(Messages.get(MessageConstants.CHOOSE_DETAILS));
+		itmRenameGames = new JMenuItem(Messages.get(MessageConstants.RENAME_GAMES) + "...");
 		itmTagsSearch = new JMenuItem(Messages.get(MessageConstants.TAG_FROM_WEB) + "...");
 		itmCoverSearch = new JMenuItem(Messages.get(MessageConstants.COVER_FROM_WEB) + "...");
-		itmTrailerSearch = new JMenuItem(Messages.get("trailerSearch") + "...");
-		itmWebSearchSettings = new JMenuItem(Messages.get("webSearchSettings") + "...");
-		itmFullScreen = new JCheckBoxMenuItem(Messages.get("fullscreen"));
+		itmTrailerSearch = new JMenuItem(Messages.get(MessageConstants.TRAILER_SEARCH) + "...");
+		itmWebSearchSettings = new JMenuItem(Messages.get(MessageConstants.WEB_SEARCH_SETTINGS) + "...");
+		itmFullScreen = new JCheckBoxMenuItem(Messages.get(MessageConstants.FULLSCREEN));
 		//		itmWelcomeView = new JRadioButtonMenuItem();
 		//		itmListView = new JRadioButtonMenuItem(Messages.get("viewListHorizontalSb"));
 		//		itmElementView = new JRadioButtonMenuItem(Messages.get("viewListVerticalSb"));
@@ -124,19 +125,20 @@ public class ViewContextMenu extends JPopupMenu implements ActionListener {
 		//		itmTableView = new JRadioButtonMenuItem(Messages.get("viewDetails"));
 		//		itmContentView = new JRadioButtonMenuItem(Messages.get("viewContent"));
 		//		itmCoverView = new JRadioButtonMenuItem(Messages.get("viewCovers"));
-		itmSortTitle = new JRadioButtonMenuItem(Messages.get("byTitle"));
-		itmSortPlatform = new JRadioButtonMenuItem(Messages.get("byPlatform"));
-		itmSortAscending = new JRadioButtonMenuItem(Messages.get("ascending"));
-		itmSortDescending = new JRadioButtonMenuItem(Messages.get("descending"));
-		itmGroupBlank = new JRadioButtonMenuItem(Messages.get("byNothing"));
-		itmGroupTitle = new JRadioButtonMenuItem(Messages.get("byTitle"));
-		itmGroupPlatform = new JRadioButtonMenuItem(Messages.get("byPlatform"));
-		itmGroupAscending = new JRadioButtonMenuItem(Messages.get("ascending"));
-		itmGroupDescending = new JRadioButtonMenuItem(Messages.get("descending"));
-		itmChangeToAll = new JRadioButtonMenuItem(Messages.get("allGames"));
-		itmChangeToFavorites = new JRadioButtonMenuItem(Messages.get("favorites"));
-		itmChangeToRecentlyPlayed = new JRadioButtonMenuItem(Messages.get("recentlyPlayed"));
-		itmHideExtensions = new JCheckBoxMenuItem(Messages.get("hideExtensions"));
+		itmSortTitle = new JRadioButtonMenuItem(Messages.get(MessageConstants.BY_TITLE));
+		itmSortPlatform = new JRadioButtonMenuItem(Messages.get(MessageConstants.BY_PLATFORM));
+		itmSortAscending = new JRadioButtonMenuItem(Messages.get(MessageConstants.ASCENDING));
+		itmSortDescending = new JRadioButtonMenuItem(Messages.get(MessageConstants.DESCENDING));
+		itmGroupBlank = new JRadioButtonMenuItem(Messages.get(MessageConstants.BY_NOTHING));
+		itmGroupTitle = new JRadioButtonMenuItem(Messages.get(MessageConstants.BY_TITLE));
+		itmGroupPlatform = new JRadioButtonMenuItem(Messages.get(MessageConstants.BY_PLATFORM));
+		itmGroupAscending = new JRadioButtonMenuItem(Messages.get(MessageConstants.ASCENDING));
+		itmGroupDescending = new JRadioButtonMenuItem(Messages.get(MessageConstants.DESCENDING));
+		itmChangeToAll = new JRadioButtonMenuItem(Messages.get(MessageConstants.ALL_GAMES));
+		itmChangeToFavorites = new JRadioButtonMenuItem(Messages.get(MessageConstants.FAVORITES));
+		itmChangeToRecentlyPlayed = new JRadioButtonMenuItem(Messages.get(MessageConstants.RECENTLY_PLAYED));
+		itmChangeToRecycleBin= new JRadioButtonMenuItem(Messages.get(MessageConstants.RECYCLE_BIN));
+		itmHideExtensions = new JCheckBoxMenuItem(Messages.get(MessageConstants.HIDE_EXTENSIONS));
 		itmTouchScreenOptimizedScroll = new JCheckBoxMenuItem(Messages.get(MessageConstants.TOUCH_SCREEN_SCROLL));
 		itmShowToolTipTexts = new JCheckBoxMenuItem(Messages.get(MessageConstants.SHOW_TOOL_TIP_TEXTS));
 		mnuAdd.addMenuListener(new MenuListener() {
@@ -161,6 +163,7 @@ public class ViewContextMenu extends JPopupMenu implements ActionListener {
 		itmChangeToAll.setAccelerator(KeyStroke.getKeyStroke("control 1"));
 		itmChangeToFavorites.setAccelerator(KeyStroke.getKeyStroke("control 2"));
 		itmChangeToRecentlyPlayed.setAccelerator(KeyStroke.getKeyStroke("control 3"));
+		itmChangeToRecycleBin.setAccelerator(KeyStroke.getKeyStroke("control 4"));
 		itmRefresh.setAccelerator(KeyStroke.getKeyStroke("F5"));
 		itmFullScreen.setAccelerator(KeyStroke.getKeyStroke("F11"));
 	}
@@ -170,7 +173,7 @@ public class ViewContextMenu extends JPopupMenu implements ActionListener {
 		addToButtonGroup(new ButtonGroup(), itmSortAscending, itmSortDescending);
 		addToButtonGroup(new ButtonGroup(), itmGroupTitle, itmGroupPlatform, itmGroupBlank);
 		addToButtonGroup(new ButtonGroup(), itmGroupAscending, itmGroupDescending);
-		addToButtonGroup(new ButtonGroup(), itmChangeToAll, itmChangeToRecentlyPlayed, itmChangeToFavorites);
+		addToButtonGroup(new ButtonGroup(), itmChangeToAll, itmChangeToFavorites, itmChangeToRecentlyPlayed, itmChangeToRecycleBin);
 	}
 
 	private void addToButtonGroup(ButtonGroup grp, AbstractButton... buttons) {
@@ -194,6 +197,7 @@ public class ViewContextMenu extends JPopupMenu implements ActionListener {
 		itmChangeToAll.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("allGames"), size, Color.LIGHT_GRAY));
 		itmChangeToFavorites.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("favorites"), size, new Color(255, 220, 125)));
 		itmChangeToRecentlyPlayed.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("recentlyPlayed"), size, new Color(181, 201, 255)));
+		itmChangeToRecycleBin.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("allGames"), size, Color.LIGHT_GRAY));
 		itmSetFilter.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), size, Color.LIGHT_GRAY));
 		itmRenameGames.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rename"), size, Color.LIGHT_GRAY));
 		itmTagsSearch.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("tag"), size, new Color(168, 124, 160)));
@@ -217,24 +221,24 @@ public class ViewContextMenu extends JPopupMenu implements ActionListener {
 	}
 
 	public void languageChanged() {
-		mnuAdd.setText(Messages.get("add"));
-		mnuSort.setText(Messages.get("sortBy"));
-		mnuGroup.setText(Messages.get("groupBy"));
+		mnuAdd.setText(Messages.get(MessageConstants.ADD));
+		mnuSort.setText(Messages.get(MessageConstants.SORT_BY));
+		mnuGroup.setText(Messages.get(MessageConstants.GROUP_BY));
 		itmAddFiles.setText(Messages.get(MessageConstants.FILES, "") + "...");
 		itmAddFolders.setText(Messages.get(MessageConstants.FOLDERS, "") + "...");
 		itmFilesFromClipboard.setText(Messages.get(MessageConstants.FILES_FROM_CLIPBOARD));
-		itmSetColumnWidth.setText(Messages.get("setColumnWidth"));
-		itmSetRowHeight.setText(Messages.get("setRowHeight"));
-		itmRefresh.setText(Messages.get("refresh"));
-		mnuChangeTo.setText(Messages.get("changeTo"));
-		itmSetFilter.setText(Messages.get("setFilter"));
-		itmChooseDetails.setText(Messages.get("chooseDetails"));
-		itmRenameGames.setText(Messages.get("renameGames") + "...");
+		itmSetColumnWidth.setText(Messages.get(MessageConstants.SET_COLUMN_WIDTH));
+		itmSetRowHeight.setText(Messages.get(MessageConstants.SET_ROW_HEIGHT));
+		itmRefresh.setText(Messages.get(MessageConstants.REFRESH));
+		mnuChangeTo.setText(Messages.get(MessageConstants.CHANGE_TO));
+		itmSetFilter.setText(Messages.get(MessageConstants.SET_FILTER));
+		itmChooseDetails.setText(Messages.get(MessageConstants.CHOOSE_DETAILS));
+		itmRenameGames.setText(Messages.get(MessageConstants.RENAME_GAMES) + "...");
 		itmTagsSearch.setText(Messages.get(MessageConstants.TAG_FROM_WEB) + "...");
 		itmCoverSearch.setText(Messages.get(MessageConstants.COVER_FROM_WEB) + "...");
-		itmTrailerSearch.setText(Messages.get("trailerSearch") + "...");
+		itmTrailerSearch.setText(Messages.get(MessageConstants.TRAILER_SEARCH) + "...");
 		itmWebSearchSettings.setText(Messages.get(MessageConstants.WEB_SEARCH_SETTINGS) + "...");
-		itmFullScreen.setText(Messages.get("fullscreen"));
+		itmFullScreen.setText(Messages.get(MessageConstants.FULLSCREEN));
 		//		itmWelcomeView.setText(Messages.get(MessageConstants.VIEW_WELCOME));
 		//		itmListView.setText(Messages.get("viewListHorizontalSb"));
 		//		itmElementView.setText(Messages.get("viewListVerticalSb"));
@@ -242,18 +246,19 @@ public class ViewContextMenu extends JPopupMenu implements ActionListener {
 		//		itmTableView.setText(Messages.get("viewDetails"));
 		//		itmContentView.setText(Messages.get("viewContent"));
 		//		itmCoverView.setText(Messages.get("viewCovers"));
-		itmSortTitle.setText(Messages.get("byTitle"));
-		itmSortPlatform.setText(Messages.get("byPlatform"));
-		itmSortAscending.setText(Messages.get("ascending"));
-		itmSortDescending.setText(Messages.get("descending"));
-		itmGroupBlank.setText(Messages.get("byNothing"));
-		itmGroupTitle.setText(Messages.get("byTitle"));
-		itmGroupPlatform.setText(Messages.get("byPlatform"));
-		itmGroupAscending.setText(Messages.get("ascending"));
-		itmGroupDescending.setText(Messages.get("descending"));
-		itmChangeToAll.setText(Messages.get("allGames"));
-		itmChangeToFavorites.setText(Messages.get("favorites"));
-		itmChangeToRecentlyPlayed.setText(Messages.get("recentlyPlayed"));
+		itmSortTitle.setText(Messages.get(MessageConstants.BY_TITLE));
+		itmSortPlatform.setText(Messages.get(MessageConstants.BY_PLATFORM));
+		itmSortAscending.setText(Messages.get(MessageConstants.ASCENDING));
+		itmSortDescending.setText(Messages.get(MessageConstants.DESCENDING));
+		itmGroupBlank.setText(Messages.get(MessageConstants.BY_NOTHING));
+		itmGroupTitle.setText(Messages.get(MessageConstants.BY_TITLE));
+		itmGroupPlatform.setText(Messages.get(MessageConstants.BY_PLATFORM));
+		itmGroupAscending.setText(Messages.get(MessageConstants.ASCENDING));
+		itmGroupDescending.setText(Messages.get(MessageConstants.DESCENDING));
+		itmChangeToAll.setText(Messages.get(MessageConstants.ALL_GAMES));
+		itmChangeToFavorites.setText(Messages.get(MessageConstants.FAVORITES));
+		itmChangeToRecentlyPlayed.setText(Messages.get(MessageConstants.RECENTLY_PLAYED));
+		itmChangeToRecycleBin.setText(Messages.get(MessageConstants.RECYCLE_BIN));
 		itmHideExtensions.setText(Messages.get(MessageConstants.HIDE_EXTENSIONS));
 		itmTouchScreenOptimizedScroll.setText(Messages.get(MessageConstants.TOUCH_SCREEN_SCROLL));
 		itmTouchScreenOptimizedScroll.setToolTipText(Messages.get(MessageConstants.TOUCH_SCREEN_SCROLL_TOOL_TIP));
