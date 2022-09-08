@@ -30,7 +30,7 @@ public class SplashScreenWindow extends JDialog {
 	private JProgressBar prg = new JProgressBar();
 	private Icon applicationIconStartInitialize = ImageUtil.getImageIconFrom(Icons.get("applicationBanner"));
 	private JLabel lbl = new JLabel(applicationIconStartInitialize);
-	private JCustomButton btnCancel = new JCustomButton("X");
+	private JCustomButtonNew btnCancel = new JCustomButtonNew();
 
 	protected int pressedX;
 	protected int pressedY;
@@ -59,6 +59,8 @@ public class SplashScreenWindow extends JDialog {
 		//		prg.setOpaque(false);
 		prg.setStringPainted(true);
 		//		prg.setIndeterminate(true);
+		btnCancel.setFocusable(false);
+		btnCancel.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("close"), 16, Color.LIGHT_GRAY));
 		btnCancel.addActionListener(new ActionListener() {
 
 			@Override

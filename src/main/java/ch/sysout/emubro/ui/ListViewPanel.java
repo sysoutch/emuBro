@@ -176,6 +176,8 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	private List<TagsFromGamesListener> tagsFromGamesListeners = new ArrayList<>();
 
 	private Color colorFavorite = new Color(255, 195, 0);
+	private Color colorDeleted = new Color(237, 67, 55);
+
 	protected boolean themeChanged;
 
 	public ListViewPanel(Explorer explorer, ViewPanelManager viewManager, GameContextMenu popupGame, ViewContextMenu popupView) {
@@ -646,6 +648,9 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 					} else {
 						//						label.setForeground(colorBackground);
 					}
+				}
+				if (getCurrentView() == NavigationPanel.RECYCLE_BIN) {
+					label.setForeground(colorDeleted);
 				}
 				themeChanged = false;
 			}

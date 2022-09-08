@@ -261,6 +261,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	private JPanel pnlProperties;
 	private int minMenuBarWidthBeforeMinimize = 420;
 	private boolean changingLnFWarningDisplayed;
+	private int buttonBarIconSize = 24;
 
 	public MainFrame(LookAndFeel defaultLookAndFeel, Explorer explorer) {
 		super(TITLE);
@@ -288,13 +289,12 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	}
 
 	private void initComponents() {
-		int size = ScreenSizeUtil.is3k() ? 32 : 24;
-		iconPreviewPaneShow = ImageUtil.getImageIconFrom(Icons.get("showPreviewPane", size, size));
-		iconPreviewPaneHide = ImageUtil.getImageIconFrom(Icons.get("hidePreviewPane", size, size));
-		iconChangeView = ImageUtil.getImageIconFrom(Icons.get("viewTable", size, size));
-		iconSearchGame = ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), size, Color.LIGHT_GRAY);
-		iconSearchGameGreen = ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), size, new Color(25, 135, 84));
-		iconSearchGameRed = ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), size, new Color(237, 67, 55));
+		iconPreviewPaneShow = ImageUtil.getImageIconFrom(Icons.get("showPreviewPane", buttonBarIconSize, buttonBarIconSize));
+		iconPreviewPaneHide = ImageUtil.getImageIconFrom(Icons.get("hidePreviewPane", buttonBarIconSize, buttonBarIconSize));
+		iconChangeView = ImageUtil.getImageIconFrom(Icons.get("viewTable", buttonBarIconSize, buttonBarIconSize));
+		iconSearchGame = ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), buttonBarIconSize, Color.LIGHT_GRAY);
+		iconSearchGameGreen = ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), buttonBarIconSize, new Color(25, 135, 84));
+		iconSearchGameRed = ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), buttonBarIconSize, new Color(237, 67, 55));
 
 		initializeButtonBar();
 		createButtonBar();
@@ -511,17 +511,16 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	}
 
 	private void initializeButtonBar() {
-		int size = ScreenSizeUtil.is3k() ? 32 : 24;
 		pnlButtonBar = new ButtonBarPanel();
-		btnShowHideNavigationPanel = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("bars"), 32, Color.LIGHT_GRAY));
+		btnShowHideNavigationPanel = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("bars"), buttonBarIconSize, Color.LIGHT_GRAY));
 		btnShowHideNavigationPanel.setHorizontalTextPosition(SwingConstants.CENTER);
-		btnOrganize = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("organize"), size, Color.LIGHT_GRAY), Messages.get(MessageConstants.ORGANIZE));
-		btnSettings = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("settings"), size, Color.LIGHT_GRAY), Messages.get(MessageConstants.SETTINGS));
-		btnRunGame = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("runGame"), size, new Color(40, 167, 69)), Messages.get(MessageConstants.RUN_GAME));
+		btnOrganize = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("organize"), buttonBarIconSize, Color.LIGHT_GRAY), Messages.get(MessageConstants.ORGANIZE));
+		btnSettings = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("settings"), buttonBarIconSize, Color.LIGHT_GRAY), Messages.get(MessageConstants.SETTINGS));
+		btnRunGame = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("runGame"), buttonBarIconSize, new Color(40, 167, 69)), Messages.get(MessageConstants.RUN_GAME));
 		btnMoreOptionsRunGame = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("arrowDownOtherWhite", 1)), "");
-		btnRemoveGame = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("trash"), size, new Color(237, 67, 55)), Messages.get(MessageConstants.REMOVE));
-		btnRenameGame = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("rename"), size, Color.LIGHT_GRAY), Messages.get(MessageConstants.RENAME));
-		btnGameProperties = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("gameProperties"), size, Color.LIGHT_GRAY), Messages.get(MessageConstants.GAME_PROPERTIES));
+		btnRemoveGame = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("trash"), buttonBarIconSize, new Color(237, 67, 55)), Messages.get(MessageConstants.REMOVE));
+		btnRenameGame = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("rename"), buttonBarIconSize, Color.LIGHT_GRAY), Messages.get(MessageConstants.RENAME));
+		btnGameProperties = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("gameProperties"), buttonBarIconSize, Color.LIGHT_GRAY), Messages.get(MessageConstants.GAME_PROPERTIES));
 		btnChangeView = new ButtonBarButton("", iconChangeView, null);
 		btnMoreOptionsChangeView = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("arrowDownOtherWhite", 1)), Messages.get(MessageConstants.MORE_OPTIONS));
 		btnSetFilter = new ButtonBarButton("", iconSearchGame, Messages.get(MessageConstants.SET_FILTER));
@@ -735,6 +734,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmListView.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewList", size, size)));
 		itmElementView.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewList", size, size)));
 		itmContentView.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewList", size, size)));
+		itmSliderView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewSlider"), size, Color.LIGHT_GRAY));
 		itmTableView.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewTable", size, size)));
 		itmCoverView.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewCovers", size, size)));
 		itmChangeToAll.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("allGames"), size, Color.LIGHT_GRAY));
@@ -1519,10 +1519,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		Object source = e.getSource();
 		if (source == itmSetColumnWidth) {
 			showColumnWidthSliderPanel();
-
 		} else if (source == itmSetRowHeight) {
 			showRowHeightSliderPanel();
-
 		} else if (source == itmChooseDetails) {
 			if (dlgDetailChooser == null) {
 				dlgDetailChooser = new DetailChooserDialog();

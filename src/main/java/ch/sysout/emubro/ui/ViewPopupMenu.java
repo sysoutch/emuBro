@@ -1,5 +1,6 @@
 package ch.sysout.emubro.ui;
 
+import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
@@ -85,6 +86,7 @@ class ViewPopupMenu extends JPopupMenu implements ActionListener {
 		itmElements.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewList", size, size)));
 		itmDetails.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewTable", size, size)));
 		itmContent.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewList", size, size)));
+		itmSlider.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewSlider"), size, Color.LIGHT_GRAY));
 		itmCovers.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewCovers", size, size)));
 		itmCoversBiggest.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewCovers", size, size)));
 		itmCoversBig.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewCovers", size, size)));
