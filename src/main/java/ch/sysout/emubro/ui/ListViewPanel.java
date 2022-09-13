@@ -819,6 +819,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	@Override
 	public void gameAdded(GameAddedEvent e, FilterEvent filterEvent) {
 		Game game = e.getGame();
+		removeGameFromRecycleBin(game);;
 		mdlLstAllGames.addElement(game);
 		if (game.isFavorite()) {
 			mdlLstFavorites.addElement(game);
@@ -828,6 +829,10 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		//		} else {
 		fixRowCountForVisibleColumns(lstGames);
 		//		}
+	}
+
+	private void removeGameFromRecycleBin(Game game) {
+		mdlLstRecycleBin.removeElement(game);
 	}
 
 	@Override

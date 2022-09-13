@@ -46,7 +46,7 @@ public class JTableDoubleClickOnHeaderFix extends JTable {
 						.getRowSorter());
 				if (sorter != null) {
 					for (int i = 0; i < JTableDoubleClickOnHeaderFix.this.getColumnCount(); i++) {
-						((DefaultRowSorter) sorter).setSortable(i, !b);
+						((DefaultRowSorter<?, ?>) sorter).setSortable(i, !b);
 					}
 				}
 			}
@@ -144,7 +144,7 @@ public class JTableDoubleClickOnHeaderFix extends JTable {
 		@Override
 		public void mouseMoved(MouseEvent e) {
 			int row = rowAtPoint(e.getPoint());
-			if( row != rollOverRowIndex ) {
+			if (row != rollOverRowIndex) {
 				rollOverRowIndex = row;
 				repaint();
 			}

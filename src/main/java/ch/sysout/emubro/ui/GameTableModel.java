@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableModel;
@@ -38,7 +39,16 @@ public class GameTableModel extends DefaultTableModel {
 
 	private Explorer explorer;
 
-	private ImageIcon icoStar = ImageUtil.getFlatSVGIconFrom(Icons.get("rating"), 16, new Color(255, 195, 0));
+	private Icon icoStar = ImageUtil.getFlatSVGIconFrom(Icons.get("rating"), 16, new Color(255, 195, 0));
+	private Icon icoStarBlank = ImageUtil.getFlatSVGIconFrom(Icons.get("rating"), 16, Color.LIGHT_GRAY);
+	private Icon icoStarAdd = ImageUtil.getFlatSVGIconFrom(Icons.get("rating"), 16, new Color(40, 167, 69));
+	private Icon icoStarRemove = ImageUtil.getFlatSVGIconFrom(Icons.get("rating"), 16, new Color(237, 67, 55));
+	private CompoundIcon iconsStar0 = new CompoundIcon(icoStarBlank, icoStarBlank, icoStarBlank, icoStarBlank, icoStarBlank);
+	private CompoundIcon iconsStar1 = new CompoundIcon(icoStar, icoStarBlank, icoStarBlank, icoStarBlank, icoStarBlank);
+	private CompoundIcon iconsStar2 = new CompoundIcon(icoStar, icoStar, icoStarBlank, icoStarBlank, icoStarBlank);
+	private CompoundIcon iconsStar3 = new CompoundIcon(icoStar, icoStar, icoStar, icoStarBlank, icoStarBlank);
+	private CompoundIcon iconsStar4 = new CompoundIcon(icoStar, icoStar, icoStar, icoStar, icoStarBlank);
+	private CompoundIcon iconsStar5 = new CompoundIcon(icoStar, icoStar, icoStar, icoStar, icoStar);
 
 	public GameTableModel(Explorer explorer) {
 		this.explorer = explorer;
@@ -82,8 +92,30 @@ public class GameTableModel extends DefaultTableModel {
 					value = platform;
 					break;
 				case 3:
-					String stars = ((rate == 1) ? Messages.get(MessageConstants.STAR) : Messages.get(MessageConstants.STARS, rate));
-					value = (rate > 0) ? stars : "";
+					switch (rate) {
+					case 0:
+						value = iconsStar0;
+						break;
+					case 1:
+						value = iconsStar1;
+						break;
+					case 2:
+						value = iconsStar2;
+						break;
+					case 3:
+						value = iconsStar3;
+						break;
+					case 4:
+						value = iconsStar4;
+						break;
+					case 5:
+						value = iconsStar5;
+						break;
+					default:
+						value = iconsStar0;
+					}
+					//					String stars = ((rate == 1) ? Messages.get(MessageConstants.STAR) : Messages.get(MessageConstants.STARS, rate));
+					//					value = (rate > 0) ? stars : "";
 					break;
 				case 4:
 					value = dateAdded;
@@ -116,7 +148,7 @@ public class GameTableModel extends DefaultTableModel {
 		case 2:
 			return Platform.class;
 		case 3:
-			return String.class;
+			return Icon.class;
 		case 4:
 			return String.class;
 		case 5:

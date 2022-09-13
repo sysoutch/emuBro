@@ -165,11 +165,11 @@ public class WelcomeViewPanel extends ViewPanel {
 		lnkAddFiles.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("addFile"), size, Color.LIGHT_GRAY));
 		lnkAddFolders.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("addFolder"), size, Color.ORANGE));
 
-		lnkListView.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewList", size, size)));
-		lnkElementView.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewList", size, size)));
-		lnkContentView.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewList", size, size)));
-		lnkTableView.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewTable", size, size)));
-		lnkCoverView.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewCovers", size, size)));
+		lnkListView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewList"), size, Color.LIGHT_GRAY));
+		lnkElementView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewList"), size, Color.LIGHT_GRAY));
+		lnkContentView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewList"), size, Color.LIGHT_GRAY));
+		lnkTableView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewTable"), size, Color.LIGHT_GRAY));
+		lnkCoverView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewCovers"), size, Color.LIGHT_GRAY));
 
 		lnkHelp.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("help"), size, Color.LIGHT_GRAY));
 		lnkDiscord.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("discord"), size, new Color(114,137,218)));

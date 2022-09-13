@@ -47,7 +47,6 @@ public class SplashScreenWindow extends JDialog {
 		setText(message);
 		initComponents();
 		createUI();
-		setUndecorated(true); // remove system frame
 		//		AWTUtilities.setWindowOpaque(this, false); // enable opacity
 		//		setBackground(new Color(0f, 0f, 0f, 0.9f));
 		pack();
@@ -96,11 +95,11 @@ public class SplashScreenWindow extends JDialog {
 
 	private void createUI() {
 		JPanel pnlMain = new JPanel();
-		pnlMain.setOpaque(true);
+		//		pnlMain.setOpaque(true);
 		FormLayout layout = new FormLayout("min:grow, min", "fill:pref, min, fill:pref, min, fill:pref:grow");
 		pnlMain.setLayout(layout);
 		CellConstraints cc = new CellConstraints();
-		pnlMain.setBackground(new Color(13, 35, 48));
+		//		pnlMain.setBackground(new Color(13, 35, 48));
 		pnlMain.add(btnCancel, cc.xy(2, 1));
 		pnlMain.add(lbl, cc.xyw(1, 3, layout.getColumnCount()));
 

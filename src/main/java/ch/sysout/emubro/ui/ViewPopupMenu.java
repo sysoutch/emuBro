@@ -82,10 +82,10 @@ class ViewPopupMenu extends JPopupMenu implements ActionListener {
 	private void setIcons() {
 		int size = ScreenSizeUtil.is3k() ? 24 : 16;
 		itmWelcome.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewWelcome", size, size)));
-		itmList.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewList", size, size)));
-		itmElements.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewList", size, size)));
-		itmDetails.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewTable", size, size)));
-		itmContent.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewList", size, size)));
+		itmList.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewList"), size, Color.LIGHT_GRAY));
+		itmElements.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewList"), size, Color.LIGHT_GRAY));
+		itmDetails.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewTable"), size, Color.LIGHT_GRAY));
+		itmContent.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewList"), size, Color.LIGHT_GRAY));
 		itmSlider.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewSlider"), size, Color.LIGHT_GRAY));
 		itmCovers.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewCovers", size, size)));
 		itmCoversBiggest.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewCovers", size, size)));

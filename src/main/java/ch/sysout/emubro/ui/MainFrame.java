@@ -291,7 +291,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	private void initComponents() {
 		iconPreviewPaneShow = ImageUtil.getImageIconFrom(Icons.get("showPreviewPane", buttonBarIconSize, buttonBarIconSize));
 		iconPreviewPaneHide = ImageUtil.getImageIconFrom(Icons.get("hidePreviewPane", buttonBarIconSize, buttonBarIconSize));
-		iconChangeView = ImageUtil.getImageIconFrom(Icons.get("viewTable", buttonBarIconSize, buttonBarIconSize));
+		iconChangeView = ImageUtil.getFlatSVGIconFrom(Icons.get("viewTable"), buttonBarIconSize, Color.LIGHT_GRAY);
 		iconSearchGame = ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), buttonBarIconSize, Color.LIGHT_GRAY);
 		iconSearchGameGreen = ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), buttonBarIconSize, new Color(25, 135, 84));
 		iconSearchGameRed = ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), buttonBarIconSize, new Color(237, 67, 55));
@@ -731,11 +731,11 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmExportGameListToXml.setIcon(ImageUtil.getImageIconFrom(Icons.get("textXml", size, size)));
 		itmExportGameListOptions.setIcon(ImageUtil.getImageIconFrom(Icons.get("exportSettings", size, size)));
 		itmWelcomeView.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewWelcome", size, size)));
-		itmListView.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewList", size, size)));
-		itmElementView.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewList", size, size)));
-		itmContentView.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewList", size, size)));
+		itmListView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewList"), size, Color.LIGHT_GRAY));
+		itmElementView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewList"), size, Color.LIGHT_GRAY));
+		itmContentView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewList"), size, Color.LIGHT_GRAY));
 		itmSliderView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewSlider"), size, Color.LIGHT_GRAY));
-		itmTableView.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewTable", size, size)));
+		itmTableView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewTable"), size, Color.LIGHT_GRAY));
 		itmCoverView.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewCovers", size, size)));
 		itmChangeToAll.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("allGames"), size, Color.LIGHT_GRAY));
 		itmChangeToFavorites.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("favorites"), size, new Color(255, 220, 125)));

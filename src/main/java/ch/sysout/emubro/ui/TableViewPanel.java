@@ -143,6 +143,9 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 
 	private boolean themeChanged;
 
+	public Color selectedBackgroundColor = new Color(0f, 0f, 0f, 0.25f);
+	public Color hoveredBackgroundColor = new Color(0f, 0f, 0f, 0.1f);
+
 	public TableViewPanel(Explorer explorer, ViewPanelManager viewManager, GameContextMenu popupGame, ViewContextMenu popupView) {
 		super(new BorderLayout());
 		mdlTblAllGames = new GameTableModel(explorer);
@@ -182,9 +185,6 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 
 	private void initComponents() {
 		tblGames = new JTableDoubleClickOnHeaderFix();
-		tblGames.getTableHeader().setOpaque(false);
-		tblGames.getTableHeader().setBackground(IconStore.current().getCurrentTheme().getView().getColor());
-		tblGames.getTableHeader().setForeground(Color.white);
 		columnModel = tblGames.getColumnModel();
 		columnAdjuster = new TableColumnAdjuster(tblGames);
 		// columnModel.getColumn(0).setResizable(false);
@@ -515,9 +515,11 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 			if (b) {
 				for (Integer index : indices) {
 					GameTableModel model = ((GameTableModel) tblGames.getModel());
-					Game game = (Game) model.getValueAt(tblGames.convertRowIndexToModel(index), -1);
-					if (game != null) {
-						gamesList.add(game);
+					if (model.getRowCount() > 0 && index < model.getRowCount()) {
+						Game game = (Game) model.getValueAt(tblGames.convertRowIndexToModel(index), -1);
+						if (game != null) {
+							gamesList.add(game);
+						}
 					}
 				}
 				// mnuRunWith.add(new JMenuItem(""+game.getEmulatorId()));
@@ -696,7 +698,10 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 					columnModel.getColumn(i).setMaxWidth(columnWidths.get(i));
 					columnModel.getColumn(i).setMaxWidth(maxWidth);
 				}
-
+				DefaultTableCellRenderer rightRenderer = (DefaultTableCellRenderer) tblGames.getCellRenderer(0, 3); // dirty, but creating a new DefaultCellRenderer doesn't work
+				rightRenderer.setHorizontalAlignment(SwingConstants.LEFT);
+				//				rightRenderer.setVerticalAlignment(SwingConstants.CENTER);
+				tblGames.getColumnModel().getColumn(3).setCellRenderer(rightRenderer);
 			}
 		};
 		SwingUtilities.invokeLater(runnableResetColumns);
@@ -1016,7 +1021,7 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 
 	class CustomRenderer extends DefaultTableCellRenderer {
 		private static final long serialVersionUID = -1;
-		private Color favoriteForegroundColor = new Color(250, 250, 128);
+		private Color favoriteForegroundColor = new Color(255, 195, 0);
 
 		@Override
 		public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus,
@@ -1027,8 +1032,6 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 			if (game != null) {
 				//				Font font = cellComponent.getFont();
 				//				Color selectedBackgroundColor = tblGames.getSelectionBackground();
-				Color selectedBackgroundColor = new Color(0f, 0f, 0f, 0.25f);
-				Color hoveredBackgroundColor = new Color(0f, 0f, 0f, 0.1f);
 				((JComponent) cellComponent).setOpaque(isSelected);
 				if (isSelected) {
 					Color selectedForegroundColor = UIManager.getColor("Table.selectionForeground");
