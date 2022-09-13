@@ -36,7 +36,6 @@ public class CompoundIcon implements Icon {
 
 	@Override
 	public int getIconWidth() {
-		System.out.println("getting icon width...");
 		return totalIconWidth;
 	}
 
@@ -55,7 +54,6 @@ public class CompoundIcon implements Icon {
 
 	@Override
 	public int getIconHeight() {
-		System.out.println("getting icon height...");
 		return highestIconHeight;
 	}
 }
