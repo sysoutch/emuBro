@@ -7,9 +7,13 @@ import javax.swing.Icon;
 
 public class CompoundIcon implements Icon {
 	private Icon[] icons;
+	private int totalIconWidth;
+	private int highestIconHeight;
 
 	public CompoundIcon(Icon... icons) {
 		this.icons = icons;
+		setIconWidth();
+		setIconHeight();
 	}
 
 	@Override
@@ -20,30 +24,38 @@ public class CompoundIcon implements Icon {
 		}
 	}
 
+	private void setIconWidth() {
+		totalIconWidth = 0;
+		if (icons == null) {
+			return;
+		}
+		for (Icon ico : icons) {
+			totalIconWidth += ico.getIconWidth();
+		}
+	}
+
 	@Override
 	public int getIconWidth() {
+		System.out.println("getting icon width...");
+		return totalIconWidth;
+	}
+
+	private void setIconHeight() {
+		highestIconHeight = 0;
 		if (icons == null) {
-			return 0;
+			return;
 		}
-		int width = 0;
 		for (Icon ico : icons) {
-			width += ico.getIconWidth();
+			int icoHeight = ico.getIconHeight();
+			if (icoHeight > highestIconHeight) {
+				highestIconHeight = icoHeight;
+			}
 		}
-		return width;
 	}
 
 	@Override
 	public int getIconHeight() {
-		if (icons == null) {
-			return 0;
-		}
-		int height = 0;
-		for (Icon ico : icons) {
-			int icoHeight = ico.getIconHeight();
-			if (icoHeight > height) {
-				height = icoHeight;
-			}
-		}
-		return height;
+		System.out.println("getting icon height...");
+		return highestIconHeight;
 	}
 }
