@@ -485,7 +485,6 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 
 		private JPanel createEmulatorOverviewPanel() {
 			JPanel pnl = new JPanel(new BorderLayout());
-			pnl.setOpaque(false);
 			// lstEmulators.setPreferredSize(new Dimension(0,0));
 			btnRemoveEmulator.setEnabled(false);
 			btnSetDefaultEmulator.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("checkMark"), 22, new Color(40, 167, 69)));
@@ -499,26 +498,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 			pnlAvailableEmulators.setLayout(layout);
 			pnlAvailableEmulators.setOpaque(false);
 			CellConstraints cc = new CellConstraints();
-			spEmulators = new JCustomScrollPane(tblEmulators) {
-				private static final long serialVersionUID = 1L;
-
-				//				@Override
-				//				protected void paintComponent(Graphics g) {
-				//					super.paintComponent(g);
-				//					Graphics2D g2d = (Graphics2D) g.create();
-				//					int panelWidth = getWidth();
-				//					int panelHeight = getHeight();
-				//					Theme currentTheme = IconStore.current().getCurrentTheme();
-				//					if (currentTheme.getView().hasGradientPaint()) {
-				//						GradientPaint p = currentTheme.getView().getGradientPaint();
-				//						g2d.setPaint(p);
-				//					} else if (currentTheme.getView().hasColor()) {
-				//						g2d.setColor(currentTheme.getView().getColor());
-				//					}
-				//					g2d.fillRect(0, 0, panelWidth, panelHeight);
-				//					g2d.dispose();
-				//				}
-			};
+			spEmulators = new JCustomScrollPane(tblEmulators);
 			spEmulators.setOpaque(false);
 			spEmulators.getViewport().setOpaque(false);
 			pnlAvailableEmulators.add(spEmulators, cc.xyw(1, 1, layout.getColumnCount()));
@@ -529,7 +509,6 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 
 			JPanel pnlEmulatorConfiguration = new JPanel(new BorderLayout());
 			pnlEmulatorConfiguration.add(createEmulatorConfigurationPanel());
-			spl1.setOpaque(false);
 			spl1.setBorder(BorderFactory.createEmptyBorder());
 			spl1.setTopComponent(pnlAvailableEmulators);
 			// spl1.setBottomComponent(pnlEmulatorConfiguration);

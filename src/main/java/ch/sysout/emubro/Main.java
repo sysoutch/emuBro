@@ -13,10 +13,12 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.Reader;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Path;
@@ -28,6 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Properties;
 
 import javax.swing.BorderFactory;
 import javax.swing.JOptionPane;
@@ -112,6 +115,8 @@ import ch.sysout.util.Messages;
 	at java.desktop/java.awt.EventDispatchThread.run(EventDispatchThread.java:90)
  */
 public class Main {
+	public static Properties properties;
+	private static String currentLnF;
 	//private static LookAndFeel defaultWindowsLookAndFeel = new WindowsLookAndFeel();
 	private static LookAndFeel defaultLinuxLookAndFeel;
 	private static LookAndFeel defaultMacLookAndFeel;
@@ -124,12 +129,14 @@ public class Main {
 	private static int explorerId = 0;
 	private static LookAndFeel defaultLookAndFeel;
 	private static BroExplorer explorer;
+	private static String language;
 	private static final String currentApplicationVersion = "0.8.0";
 
 	public static void main(String[] args) {
 		System.setProperty("java.util.Arrays.useLegacyMergeSort", "true");
 		System.setProperty("apple.laf.useScreenMenuBar", "true");
-		setLookAndFeel();
+		loadAppDataFromLastSession();
+		applyAppDataFromLastSession();
 		// get back the smooth horizontal scroll feature when it was disabled by the
 		// look and feel (happens in WindowsLookAndFeel)
 		UIManager.put("List.lockToPositionOnScroll", Boolean.FALSE);
@@ -156,6 +163,53 @@ public class Main {
 		} catch (AWTException e) {
 			e.printStackTrace();
 		}
+	}
+
+	private static boolean loadAppDataFromLastSession() {
+		properties = new Properties();
+		String homePath = System.getProperty("user.home");
+		String path = homePath += homePath.endsWith(File.separator) ? ""
+				: File.separator + "." + Messages.get(MessageConstants.APPLICATION_TITLE).toLowerCase();
+		new File(path).mkdir();
+		File file = new File(path + File.separator + "window" + ".properties");
+		if (file.exists()) {
+			Reader reader = null;
+			boolean b = false;
+			try {
+				reader = new BufferedReader(new FileReader(file));
+				properties.load(reader);
+				b = true;
+			} catch (IOException e) {
+				e.printStackTrace();
+			} finally {
+				try {
+					reader.close();
+				} catch (Exception e) { }
+			}
+			return b;
+		}
+		return false;
+	}
+
+	private static void applyAppDataFromLastSession() {
+		if (properties != null && properties.size() > 0) {
+			currentLnF = properties.getProperty(BroController.propertyKeys[9]);
+			language = properties.getProperty(BroController.propertyKeys[19]);
+			if (language != null && !language.trim().isEmpty()) {
+				setLanguage(language);
+			}
+			if (currentLnF != null && !currentLnF.trim().isEmpty()) {
+				setLookAndFeel(currentLnF);
+			}
+		}
+	}
+
+	private static void setLanguage(String locale) {
+		setLanguage(new Locale(locale));
+	}
+
+	private static void setLanguage(Locale locale) {
+		Messages.setDefault(locale);
 	}
 
 	private static void initializeDriveServices() {
@@ -264,8 +318,7 @@ public class Main {
 					mainFrame.setMinimumSize(mainFrame.getPreferredSize());
 					//					SwingUtilities.updateComponentTreeUI(mainFrame);
 
-					String platformsDirectory = explorer.getPlatformsDirectory();
-					mainFrame.initPlatforms(platforms, platformsDirectory);
+					mainFrame.initPlatforms(platforms);
 					mainFrame.initTags(tags);
 					mainFrame.initFilterGroups(filterGroups);
 					//					dlgSplashScreen.setText("view initialized");
@@ -290,9 +343,10 @@ public class Main {
 						}
 					}
 					dlgSplashScreen.setProgressBarValue(dlgSplashScreen.getProgressBarValue()+5);
-					boolean applyData = controller.loadAppDataFromLastSession();
+					boolean applyData = loadAppDataFromLastSession();
 					try {
 						controller.createView();
+						controller.changeLanguage(language);
 					} catch (Exception e) {
 						e.printStackTrace();
 						JOptionPane.showMessageDialog(null, "Unexpected Exception occured while creating view: \n"
@@ -490,7 +544,8 @@ public class Main {
 	}
 
 	private static void initializeCustomTheme() throws IOException {
-		IconStore.current().loadDefaultTheme("dark");
+		IconStore.current().loadDefaultTheme(FlatLaf.isLafDark() ? "dark" : "light");
+
 		//		initializeCustomFonts();
 		//		initializeCustomColors();
 		//		initializeCustomMenus();

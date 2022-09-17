@@ -171,15 +171,21 @@ public interface Explorer {
 
 	Properties getGameTitlesFromPlatform(Platform platform);
 
-	void setGameTitlesForPlatform(Platform p, Properties prop);
+	void setGameTitlesForPlatform(Platform platform, Properties prop);
 
 	String getPlatformsDirectory();
+
+	String getCoversDirectoryFromPlatform(Platform platform);
+
+	String getLogosDirectoryFromPlatform(Platform platform);
 
 	boolean hasGamesOrEmulators(int platformId);
 
 	String getCoverDownloadSource(Game game);
 
 	String getRelativeTitlesSourceFilePath(Platform platform);
+
+	String getEmulatorsDirectory(Platform platform);
 
 	// void addEmulator(Emulator emulator);
 	//

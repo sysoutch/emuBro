@@ -92,7 +92,7 @@ public class ViewContextMenu extends JPopupMenu implements ActionListener {
 				new JSeparator(), itmShowToolTipTexts, itmTouchScreenOptimizedScroll,
 				new JSeparator(), itmFullScreen);
 		addComponentsToJComponent(mnuAdd, itmAddFiles, itmAddFolders, new JSeparator(), itmFilesFromClipboard);
-		addComponentsToJComponent(mnuChangeTo, itmChangeToAll, itmChangeToFavorites, itmChangeToRecentlyPlayed, itmChangeToRecycleBin);
+		addComponentsToJComponent(mnuChangeTo, itmChangeToAll, itmChangeToFavorites, itmChangeToRecentlyPlayed, new JSeparator(), itmChangeToRecycleBin);
 		addComponentsToJComponent(mnuSort, itmSortTitle, itmSortPlatform, new JSeparator(), itmSortAscending,
 				itmSortDescending);
 		addComponentsToJComponent(mnuGroup, itmGroupBlank, itmGroupTitle, itmGroupPlatform, new JSeparator(),

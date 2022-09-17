@@ -30,6 +30,8 @@ public class MessageConstants {
 	public static final String MNU_VIEW = "mnuView";
 	public static final String MNU_GAMES = "mnuGames";
 	public static final String MNU_THEMES = "mnuThemes";
+	public static final String MNU_DARK_THEMES = "mnuDarkThemes";
+	public static final String MNU_LIGHT_THEMES = "mnuLightThemes";
 	public static final String ITM_MANAGE_THEMES = "itmManageThemes";
 	public static final String MNU_CHANGE_THEME = "mnuChangeTheme";
 	public static final String MNU_PLUGINS = "mnuPlugins";
@@ -164,6 +166,7 @@ public class MessageConstants {
 	public static final String COPY_GAME_PATH = "copyGamePath";
 	public static final String OPEN_FOLDER_IN_EXPLORER = "openFolderInExplorer";
 	public static final String REMOVE = "remove";
+	public static final String RESTORE = "restore";
 	public static final String GAME_PROPERTIES = "gameProperties";
 	public static final String INIT_APPLICATION = "initApplication";
 	public static final String LOAD_GAME_LIST = "loadGameList";

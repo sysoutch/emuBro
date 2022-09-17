@@ -519,7 +519,6 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 					label.setHorizontalTextPosition(SwingConstants.CENTER);
 					label.setVerticalTextPosition(SwingConstants.BOTTOM);
 				}
-
 				BroGame game = (BroGame) value;
 				checkGameIcon(list, game, label);
 				checkFontAndFontSize(list, game, label, isSelected);
@@ -532,15 +531,15 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 			}
 
 			private void checkGameIcon(JList<?> list, BroGame game, JLabel label) {
-				int currentCoverSize = ScreenSizeUtil.adjustValueToResolution(viewManager.getCurrentCoverSize());
-				int borderHeight = ScreenSizeUtil.adjustValueToResolution(16);
+				int currentCoverSize = viewManager.getCurrentCoverSize();
+				int borderHeight = 16;
 				Icon gameIcon = null;
 				switch (viewStyle) {
 				case ViewPanel.LIST_VIEW:
 					gameIcon = IconStore.current().getGameIcon(game.getId());
 					break;
 				case ViewPanel.ELEMENT_VIEW:
-					gameIcon = IconStore.current().getGameIcon(game.getId());
+					gameIcon = IconStore.current().getScaledPlatformCover(game.getPlatformId(), currentCoverSize);
 					break;
 				case ViewPanel.CONTENT_VIEW:
 					gameIcon = IconStore.current().getScaledGameCover(game.getId(), currentCoverSize);
@@ -550,8 +549,6 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 					break;
 				case ViewPanel.COVER_VIEW:
 					gameIcon = IconStore.current().getScaledGameCover(game.getId(), currentCoverSize);
-					break;
-				default:
 					break;
 				}
 				if (gameIcon != null) {
@@ -616,35 +613,27 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 			}
 
 			private void checkFontAndFontSize(JList<?> list, BroGame game, JLabel label, boolean isSelected) {
-				// uncomment to override current font
-				//				Font font = FontUtil.getCustomFont();
-				//				label.setFont(font);
 				if (viewManager.getFontSize() <= 0) {
 					viewManager.setFontSize(label.getFont().getSize());
 				}
-				//				UIUtil.setForegroundDependOnBackground(IconStore.current().getCurrentTheme().getView().getColor(), label);
-				if (colorItemBackground == null || themeChanged) {
-					Color bg = label.getBackground().brighter();
-					if (bg.getRGB() == label.getBackground().getRGB()) {
-						bg = label.getBackground().darker();
-					}
-					colorItemBackground = new Color(bg.getRed(), bg.getGreen(), bg.getBlue(), 180);
-				}
+				// TODO implement this dynamically so user can decide if he wants bg from theme or this technique
+				//				if (colorItemBackground == null || themeChanged) {
+				//					Color bg = FlatLaf.isLafDark() ? label.getBackground().brighter() : label.getBackground().darker();
+				//					colorItemBackground = new Color(bg.getRed(), bg.getGreen(), bg.getBlue(), 180);
+				//				}
 				if (game.isFavorite()) {
 					label.setForeground(colorFavorite);
 					if (!isSelected) {
 						if (viewStyle != ViewPanel.CONTENT_VIEW) {	// Cause in content view the game title is bold and the other informations not. It would looks too bold.
-							//						label.setFont(new Font(labelFont.getName(), Font.BOLD, getFontSize()));
 						}
 					} else {
-						label.setBackground(colorItemBackground);
+						//						label.setBackground(colorItemBackground);
 						if (viewStyle != ViewPanel.CONTENT_VIEW) {	// Cause in content view the game title is bold. This would set game title also plain.
-							//						label.setFont(new Font(labelFont.getName(), Font.PLAIN, getFontSize()));
 						}
 					}
 				} else {
 					if (isSelected) {
-						label.setBackground(colorItemBackground);
+						//						label.setBackground(colorItemBackground);
 					} else {
 						//						label.setForeground(colorBackground);
 					}

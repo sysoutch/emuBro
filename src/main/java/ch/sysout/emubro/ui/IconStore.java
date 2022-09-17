@@ -169,9 +169,10 @@ public class IconStore {
 
 	public void addPlatformCover(int platformId, String platformCoversDirectory, String coverFileName) {
 		if (coverFileName == null || coverFileName.isEmpty()) {
-			coverFileName = "front.jpg";
+			coverFileName = "default.jpg";
 		}
-		String coverFilePath = platformCoversDirectory + File.separator + coverType + File.separator + coverFileName;
+		//		String coverFilePath = platformCoversDirectory + File.separator + coverType + File.separator + coverFileName;
+		String coverFilePath = platformCoversDirectory + File.separator + coverFileName;
 		if (!platformCovers.containsKey(platformId)) {
 			int size = ScreenSizeUtil.adjustValueToResolution(200);
 			ImageIcon ii = ImageUtil.getImageIconFrom(coverFilePath, true);

@@ -74,6 +74,8 @@ import ch.sysout.emubro.impl.model.BroEmulator;
 import ch.sysout.emubro.impl.model.BroGame;
 import ch.sysout.emubro.impl.model.EmulatorConstants;
 import ch.sysout.emubro.impl.model.GameConstants;
+import ch.sysout.emubro.ui.GameTableModel.LabelIcon;
+import ch.sysout.emubro.ui.GameTableModel.LabelIconRenderer;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Messages;
@@ -143,7 +145,7 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 
 	private boolean themeChanged;
 
-	public Color selectedBackgroundColor = new Color(0f, 0f, 0f, 0.25f);
+	public Color selectedBackgroundColor;
 	public Color hoveredBackgroundColor = new Color(0f, 0f, 0f, 0.1f);
 
 	public TableViewPanel(Explorer explorer, ViewPanelManager viewManager, GameContextMenu popupGame, ViewContextMenu popupView) {
@@ -185,6 +187,8 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 
 	private void initComponents() {
 		tblGames = new JTableDoubleClickOnHeaderFix();
+		tblGames.setDefaultRenderer(LabelIcon.class, new LabelIconRenderer());
+
 		columnModel = tblGames.getColumnModel();
 		columnAdjuster = new TableColumnAdjuster(tblGames);
 		// columnModel.getColumn(0).setResizable(false);
@@ -698,10 +702,9 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 					columnModel.getColumn(i).setMaxWidth(columnWidths.get(i));
 					columnModel.getColumn(i).setMaxWidth(maxWidth);
 				}
-				DefaultTableCellRenderer rightRenderer = (DefaultTableCellRenderer) tblGames.getCellRenderer(0, 3); // dirty, but creating a new DefaultCellRenderer doesn't work
-				rightRenderer.setHorizontalAlignment(SwingConstants.LEFT);
-				//				rightRenderer.setVerticalAlignment(SwingConstants.CENTER);
-				tblGames.getColumnModel().getColumn(3).setCellRenderer(rightRenderer);
+				DefaultTableCellRenderer leftRenderer = (DefaultTableCellRenderer) tblGames.getCellRenderer(0, 2);
+				leftRenderer.setHorizontalAlignment(SwingConstants.LEFT);
+				tblGames.getColumnModel().getColumn(2).setCellRenderer(leftRenderer);
 			}
 		};
 		SwingUtilities.invokeLater(runnableResetColumns);
@@ -1036,7 +1039,12 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 				if (isSelected) {
 					Color selectedForegroundColor = UIManager.getColor("Table.selectionForeground");
 					cellComponent.setForeground(selectedForegroundColor);
-					cellComponent.setBackground(selectedBackgroundColor);
+					// TODO implement this dynamically so user can decide if he wants bg from theme or this technique
+					//					if (selectedBackgroundColor == null || themeChanged) {
+					//						Color bg = FlatLaf.isLafDark() ? table.getBackground().brighter() : table.getBackground().darker();
+					//						selectedBackgroundColor = new Color(bg.getRed(), bg.getGreen(), bg.getBlue(), 180);
+					//					}
+					//					cellComponent.setBackground(selectedBackgroundColor);
 					if (game.isFavorite()) {
 						//						Font fontBold = (font.isBold()) ? font : font.deriveFont(
 						//								Collections.singletonMap(TextAttribute.WEIGHT, TextAttribute.WEIGHT_BOLD));
@@ -1380,6 +1388,8 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 
 	@Override
 	public void coverSizeChanged(int currentCoverSize) {
+		// uncomment this if u want to allow cover size changes. (e.g. when using platform icons as game icon)
+		((GameTableModel) mdlTblAllGames).coverSizeChanged(currentCoverSize);
 	}
 
 	@Override

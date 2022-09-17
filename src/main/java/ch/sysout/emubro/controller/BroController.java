@@ -58,7 +58,6 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -208,6 +207,7 @@ import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 import com.jgoodies.validation.view.ValidationComponentUtils;
 
+import ch.sysout.emubro.Main;
 import ch.sysout.emubro.api.EmulatorListener;
 import ch.sysout.emubro.api.FilterListener;
 import ch.sysout.emubro.api.PlatformListener;
@@ -306,7 +306,7 @@ GameSelectionListener, BrowseComputerListener {
 
 	private ExplorerDAO explorerDAO;
 	private List<String> alreadyCheckedDirectories = new ArrayList<>();
-	private Properties properties;
+	private Properties properties = Main.properties;
 
 	private Map<Game, Map<Process, Integer>> processes = new HashMap<>();
 
@@ -321,14 +321,12 @@ GameSelectionListener, BrowseComputerListener {
 	private int gameDetailsPanelHeight;
 	private int splGameFilterDividerLocation;
 	private int detailsPaneNotificationTab;
-	private String language;
-	private String currentLnF;
 
 	private List<TimerTask> taskListRunningGames = new ArrayList<>();
 	private List<Timer> timerListRunningGames = new ArrayList<>();
 	private EmulationOverlayFrame frameEmulationOverlay;
 
-	private static final String[] propertyKeys = {
+	public static final String[] propertyKeys = {
 			"x",
 			"y",
 			"width",
@@ -1210,32 +1208,6 @@ GameSelectionListener, BrowseComputerListener {
 		view.showOrHideResizeArea();
 	}
 
-	public boolean loadAppDataFromLastSession() {
-		properties = new Properties();
-		String homePath = System.getProperty("user.home");
-		String path = homePath += homePath.endsWith(File.separator) ? ""
-				: File.separator + "." + Messages.get(MessageConstants.APPLICATION_TITLE).toLowerCase();
-		new File(path).mkdir();
-		File file = new File(path + File.separator + "window" + ".properties");
-		if (file.exists()) {
-			Reader reader = null;
-			boolean b = false;
-			try {
-				reader = new BufferedReader(new FileReader(file));
-				properties.load(reader);
-				b = true;
-			} catch (IOException e) {
-				e.printStackTrace();
-			} finally {
-				try {
-					reader.close();
-				} catch (Exception e) { }
-			}
-			return b;
-		}
-		return false;
-	}
-
 	public boolean isApplicationUpdateAvailable() {
 		int versionCompare = versionCompare(explorer.getCurrentApplicationVersion(), applicationVersion);
 		return versionCompare == -1;
@@ -2040,19 +2012,12 @@ GameSelectionListener, BrowseComputerListener {
 				int height = Integer.parseInt(properties.getProperty(propertyKeys[3]));
 				boolean maximized = Boolean.parseBoolean(properties.getProperty(propertyKeys[4]));
 				boolean undecorated = Boolean.parseBoolean(properties.getProperty(propertyKeys[34]));
-				currentLnF = properties.getProperty(propertyKeys[9]);
 				navigationPaneDividerLocation = Integer.parseInt(properties.getProperty(propertyKeys[13]));
 				navigationPaneState = properties.getProperty(propertyKeys[33]);
 				previewPanelWidth = Integer.parseInt(properties.getProperty(propertyKeys[14]));
 				gameDetailsPanelHeight = Integer.parseInt(properties.getProperty(propertyKeys[15]));
 				splGameFilterDividerLocation = Integer.parseInt(properties.getProperty(propertyKeys[17]));
 				detailsPaneNotificationTab = Integer.parseInt(properties.getProperty(propertyKeys[18]));
-				language = properties.getProperty(propertyKeys[19]);
-				if (currentLnF != null && !currentLnF.trim().isEmpty()) {
-					UIManager.setLookAndFeel(currentLnF);
-					view.updateLookAndFeel(false);
-				}
-				changeLanguage(language);
 
 				Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(view.getGraphicsConfiguration());
 				int taskBarHeight = screenInsets.bottom;
@@ -7866,7 +7831,7 @@ GameSelectionListener, BrowseComputerListener {
 		Game element = new BroGame(GameConstants.NO_GAME, fileName, "", defaultFileId, explorerDAO.getChecksumId(checksum), null, null, 0, dateAdded, null, 0,
 				EmulatorConstants.NO_EMULATOR, platformId, platformIconFileName);
 		String defaultGameCover = p0.getDefaultGameCover();
-		IconStore.current().addPlatformCover(platformId, explorer.getPlatformsDirectory(), defaultGameCover);
+		IconStore.current().addPlatformCover(platformId, explorer.getCoversDirectoryFromPlatform(p0), defaultGameCover);
 		if (favorite) {
 			element.setRate(RatingBarPanel.MAXIMUM_RATE);
 		}

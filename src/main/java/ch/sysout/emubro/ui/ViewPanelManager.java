@@ -19,6 +19,7 @@ import ch.sysout.emubro.api.event.GameRemovedEvent;
 import ch.sysout.emubro.api.event.GameRenamedEvent;
 import ch.sysout.emubro.api.filter.Criteria;
 import ch.sysout.emubro.api.model.Emulator;
+import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.api.model.PlatformComparator;
@@ -81,20 +82,14 @@ public class ViewPanelManager {
 		panels.add(pnlBlankView);
 	}
 
-	public void initPlatforms(List<Platform> platforms, String platformsDirectory) {
+	public void initPlatforms(List<Platform> platforms, Explorer explorer) {
 		this.platforms = platforms;
 		for (Platform p : platforms) {
-			String emulatorsDirectory = platformsDirectory + File.separator + p.getShortName() + File.separator + "emulators";
-			initEmulatorIcons(emulatorsDirectory, p.getEmulators());
-			iconStore.addPlatformIcon(p.getId(), platformsDirectory + File.separator + p.getShortName() + File.separator + "logo", p.getIconFileName());
-			initPlatformCover(p, platformsDirectory);
+			int platformId = p.getId();
+			initEmulatorIcons(explorer.getEmulatorsDirectory(p), p.getEmulators());
+			iconStore.addPlatformIcon(platformId, explorer.getLogosDirectoryFromPlatform(p), p.getIconFileName());
+			iconStore.addPlatformCover(platformId, explorer.getCoversDirectoryFromPlatform(p), p.getDefaultGameCover());
 		}
-	}
-
-	private void initPlatformCover(Platform p, String currentPlatformCoversDirectory) {
-		String defaultGameCover = p.getDefaultGameCover();
-		int platformId = p.getId();
-		iconStore.addPlatformCover(platformId, currentPlatformCoversDirectory + File.separator + p.getShortName() + File.separator + "covers", defaultGameCover);
 	}
 
 	private void initEmulatorIcons(String emulatorIconDirectory, List<BroEmulator> list) {

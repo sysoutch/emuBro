@@ -1,6 +1,7 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.Color;
+import java.awt.Component;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -8,7 +9,10 @@ import java.util.Map;
 
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
+import javax.swing.JLabel;
+import javax.swing.JTable;
 import javax.swing.event.TableModelListener;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 
 import ch.sysout.emubro.api.model.Explorer;
@@ -26,7 +30,6 @@ public class GameTableModel extends DefaultTableModel {
 	private static final long serialVersionUID = 1L;
 
 	private String[] columnNames = {
-			"",
 			Messages.get(MessageConstants.COLUMN_TITLE),
 			Messages.get(MessageConstants.COLUMN_PLATFORM),
 			Messages.get(MessageConstants.COLUMN_RATING),
@@ -49,6 +52,10 @@ public class GameTableModel extends DefaultTableModel {
 	private CompoundIcon iconsStar3 = new CompoundIcon(icoStar, icoStar, icoStar, icoStarBlank, icoStarBlank);
 	private CompoundIcon iconsStar4 = new CompoundIcon(icoStar, icoStar, icoStar, icoStar, icoStarBlank);
 	private CompoundIcon iconsStar5 = new CompoundIcon(icoStar, icoStar, icoStar, icoStar, icoStar);
+
+	private int currentCoverSize;
+
+	private LabelIcon lblIcon = new LabelIcon(null, null);
 
 	public GameTableModel(Explorer explorer) {
 		this.explorer = explorer;
@@ -83,15 +90,17 @@ public class GameTableModel extends DefaultTableModel {
 				String dateAdded = UIUtil.format(game.getDateAdded());
 				switch (columnIndex) {
 				case 0:
-					value = IconStore.current().getPlatformIcon(game.getPlatformId());
+					value = lblIcon;
+					lblIcon.setText(game.getName());
+					lblIcon.setIcon(IconStore.current().getScaledPlatformCover(platformId, currentCoverSize > 0 ? currentCoverSize : 16));
 					break;
 				case 1:
-					value = game.getName();
+					//					value = platform;
+					value = lblIcon;
+					lblIcon.setText(platform.getName());
+					lblIcon.setIcon(IconStore.current().getPlatformIcon(platformId));
 					break;
 				case 2:
-					value = platform;
-					break;
-				case 3:
 					switch (rate) {
 					case 0:
 						value = iconsStar0;
@@ -117,10 +126,10 @@ public class GameTableModel extends DefaultTableModel {
 					//					String stars = ((rate == 1) ? Messages.get(MessageConstants.STAR) : Messages.get(MessageConstants.STARS, rate));
 					//					value = (rate > 0) ? stars : "";
 					break;
-				case 4:
+				case 3:
 					value = dateAdded;
 					break;
-				case 5:
+				case 4:
 					value = lastPlayed;
 					break;
 				}
@@ -142,19 +151,54 @@ public class GameTableModel extends DefaultTableModel {
 	public Class<?> getColumnClass(int columnIndex) {
 		switch (columnIndex) {
 		case 0:
-			return ImageIcon.class;
+			return LabelIcon.class;
 		case 1:
-			return String.class;
+			return LabelIcon.class;
 		case 2:
-			return Platform.class;
-		case 3:
 			return Icon.class;
-		case 4:
+		case 3:
 			return String.class;
-		case 5:
+		case 4:
 			return String.class;
 		default:
 			return super.getColumnClass(columnIndex);
+		}
+	}
+
+	public static class LabelIcon {
+		Icon icon;
+		String text;
+
+		public LabelIcon(Icon icon, String text) {
+			this.icon = icon;
+			this.text = text;
+		}
+
+		public void setIcon(ImageIcon icon) {
+			this.icon = icon;
+		}
+
+		public void setText(String text) {
+			this.text = text;
+		}
+	}
+
+	public static class LabelIconRenderer extends DefaultTableCellRenderer {
+		private static final long serialVersionUID = 1L;
+
+		public LabelIconRenderer() {
+			setHorizontalTextPosition(JLabel.RIGHT);
+			setVerticalTextPosition(JLabel.CENTER);
+		}
+
+		@Override
+		public Component getTableCellRendererComponent(JTable table, Object
+				value, boolean isSelected, boolean hasFocus, int row, int col) {
+			JLabel r = (JLabel) super.getTableCellRendererComponent(
+					table, value, isSelected, hasFocus, row, col);
+			setIcon(((LabelIcon) value).icon);
+			setText(((LabelIcon) value).text);
+			return r;
 		}
 	}
 
@@ -232,21 +276,18 @@ public class GameTableModel extends DefaultTableModel {
 		for (int i = 0; i < columnNames.length; i++) {
 			switch (i) {
 			case 0:
-				columnNames[i] = "";
-				break;
-			case 1:
 				columnNames[i] = Messages.get(MessageConstants.COLUMN_TITLE);
 				break;
-			case 2:
+			case 1:
 				columnNames[i] = Messages.get(MessageConstants.COLUMN_PLATFORM);
 				break;
-			case 3:
+			case 2:
 				columnNames[i] = Messages.get(MessageConstants.COLUMN_RATING);
 				break;
-			case 4:
+			case 3:
 				columnNames[i] = Messages.get(MessageConstants.COLUMN_DATE_ADDED);
 				break;
-			case 5:
+			case 4:
 				columnNames[i] = Messages.get(MessageConstants.COLUMN_LAST_PLAYED);
 				break;
 			}
@@ -271,5 +312,9 @@ public class GameTableModel extends DefaultTableModel {
 
 	public List<Game> getAllElements() {
 		return games;
+	}
+
+	public void coverSizeChanged(int currentCoverSize) {
+		this.currentCoverSize = currentCoverSize;
 	}
 }

@@ -814,16 +814,31 @@ public class BroExplorer implements Explorer {
 	}
 
 	@Override
+	public String getLogosDirectoryFromPlatform(Platform platform) {
+		return getPlatformsDirectory() + File.separator + platform.getShortName() + File.separator + "logos";
+	}
+
+	@Override
+	public String getCoversDirectoryFromPlatform(Platform platform) {
+		return getPlatformsDirectory() + File.separator + platform.getShortName() + File.separator + "covers";
+	}
+
+	@Override
+	public String getEmulatorsDirectory(Platform platform) {
+		return getPlatformsDirectory() + File.separator + platform.getShortName() + File.separator + "emulators";
+	}
+
+	@Override
 	public Properties getGameTitlesFromPlatform(Platform platform) {
 		return gameTitles != null ? gameTitles.get(platform.getId()) : null;
 	}
 
 	@Override
-	public void setGameTitlesForPlatform(Platform p, Properties prop) {
+	public void setGameTitlesForPlatform(Platform platform, Properties prop) {
 		if (gameTitles == null) {
 			gameTitles = new HashMap<>();
 		}
-		gameTitles.put(p.getId(), prop);
+		gameTitles.put(platform.getId(), prop);
 	}
 
 	@Override
