@@ -94,9 +94,6 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 	private List<GameSelectionListener> selectGameListeners = new ArrayList<>();
 	private JScrollPane spTblGames;
 
-	// private int[] twok = { 24, 250, 180, 150, 80, 200 };
-	// private int[] threek = { 32, 450, 300, 250, 120, 450 };
-
 	private static final int rowHeight = ScreenSizeUtil.adjustValueToResolution(24);
 	public static final int FIRST_COLUMN_WIDTH = rowHeight;
 
@@ -305,10 +302,6 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 				g2d.dispose();
 			}
 		};
-		setOpaque(false);
-		tblGames.setOpaque(false);
-		spTblGames.getViewport().setOpaque(false);
-
 		TableCellRenderer renderer = tblGames.getTableHeader().getDefaultRenderer();
 		((JLabel) renderer).setHorizontalAlignment(SwingConstants.LEFT);
 		tblGames.getTableHeader().setDefaultRenderer(renderer);
@@ -336,12 +329,17 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 				}
 			}
 		});
-
 		tblGames.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mousePressed(MouseEvent e) {
 				lastMouseX = e.getXOnScreen();
 				lastMouseY = e.getYOnScreen();
+				int row = tblGames.getSelectedRow();
+				int column = tblGames.getSelectedColumn();
+				if (column == GameTableModel.RATING_COLUMN_INDEX) {
+					System.out.println("clicked in rating cell");
+				}
+
 				//				if ((e.getModifiers() & InputEvent.BUTTON3_MASK) == InputEvent.BUTTON3_MASK) {
 				//					if (mouseOver > -1 && !tblGames.isSelectedIndex(mouseOver)) {
 				//						tblGames.setSelectedIndex(mouseOver);
@@ -723,8 +721,8 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 	}
 
 	@Override
-	public void hideExtensions(boolean selected) {
-		hideExtensions = selected;
+	public void hideExtensions(boolean hideExtensions) {
+		this.hideExtensions = hideExtensions;
 	}
 
 	public int getfontSize() {

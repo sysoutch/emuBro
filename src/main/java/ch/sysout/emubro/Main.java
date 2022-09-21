@@ -133,6 +133,7 @@ public class Main {
 	private static final String currentApplicationVersion = "0.8.0";
 
 	public static void main(String[] args) {
+		System.setProperty("sun.java2d.uiScale", "1.0");
 		System.setProperty("java.util.Arrays.useLegacyMergeSort", "true");
 		System.setProperty("apple.laf.useScreenMenuBar", "true");
 		loadAppDataFromLastSession();

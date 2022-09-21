@@ -33,5 +33,5 @@ public interface Emulator extends Comparable<Emulator> {
 
 	boolean isInstalled();
 
-	Object getParentFolder();
+	String getParentFolder();
 }

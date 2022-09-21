@@ -29,6 +29,12 @@ import ch.sysout.util.Messages;
 public class GameTableModel extends DefaultTableModel {
 	private static final long serialVersionUID = 1L;
 
+	public static final int TITLE_COLUMN_INDEX = 0;
+	public static final int PLATFORM_COLUMN_INDEX = 1;
+	public static final int RATING_COLUMN_INDEX = 2;
+	public static final int DATE_ADDED_COLUMN_INDEX = 3;
+	public static final int LAST_PLAYED_COLUMN_INDEX = 4;
+
 	private String[] columnNames = {
 			Messages.get(MessageConstants.COLUMN_TITLE),
 			Messages.get(MessageConstants.COLUMN_PLATFORM),
@@ -89,18 +95,18 @@ public class GameTableModel extends DefaultTableModel {
 				String lastPlayed = game.getLastPlayed() != null ? UIUtil.format(game.getLastPlayed()) : "";
 				String dateAdded = UIUtil.format(game.getDateAdded());
 				switch (columnIndex) {
-				case 0:
+				case TITLE_COLUMN_INDEX:
 					value = lblIcon;
 					lblIcon.setText(game.getName());
 					lblIcon.setIcon(IconStore.current().getScaledPlatformCover(platformId, currentCoverSize > 0 ? currentCoverSize : 16));
 					break;
-				case 1:
+				case PLATFORM_COLUMN_INDEX:
 					//					value = platform;
 					value = lblIcon;
 					lblIcon.setText(platform.getName());
 					lblIcon.setIcon(IconStore.current().getPlatformIcon(platformId));
 					break;
-				case 2:
+				case RATING_COLUMN_INDEX:
 					switch (rate) {
 					case 0:
 						value = iconsStar0;
@@ -126,10 +132,10 @@ public class GameTableModel extends DefaultTableModel {
 					//					String stars = ((rate == 1) ? Messages.get(MessageConstants.STAR) : Messages.get(MessageConstants.STARS, rate));
 					//					value = (rate > 0) ? stars : "";
 					break;
-				case 3:
+				case DATE_ADDED_COLUMN_INDEX:
 					value = dateAdded;
 					break;
-				case 4:
+				case LAST_PLAYED_COLUMN_INDEX:
 					value = lastPlayed;
 					break;
 				}
@@ -150,15 +156,15 @@ public class GameTableModel extends DefaultTableModel {
 	@Override
 	public Class<?> getColumnClass(int columnIndex) {
 		switch (columnIndex) {
-		case 0:
+		case TITLE_COLUMN_INDEX:
 			return LabelIcon.class;
-		case 1:
+		case PLATFORM_COLUMN_INDEX:
 			return LabelIcon.class;
-		case 2:
+		case RATING_COLUMN_INDEX:
 			return Icon.class;
-		case 3:
+		case DATE_ADDED_COLUMN_INDEX:
 			return String.class;
-		case 4:
+		case LAST_PLAYED_COLUMN_INDEX:
 			return String.class;
 		default:
 			return super.getColumnClass(columnIndex);
@@ -275,19 +281,19 @@ public class GameTableModel extends DefaultTableModel {
 	public void languageChanged() {
 		for (int i = 0; i < columnNames.length; i++) {
 			switch (i) {
-			case 0:
+			case TITLE_COLUMN_INDEX:
 				columnNames[i] = Messages.get(MessageConstants.COLUMN_TITLE);
 				break;
-			case 1:
+			case PLATFORM_COLUMN_INDEX:
 				columnNames[i] = Messages.get(MessageConstants.COLUMN_PLATFORM);
 				break;
-			case 2:
+			case RATING_COLUMN_INDEX:
 				columnNames[i] = Messages.get(MessageConstants.COLUMN_RATING);
 				break;
-			case 3:
+			case DATE_ADDED_COLUMN_INDEX:
 				columnNames[i] = Messages.get(MessageConstants.COLUMN_DATE_ADDED);
 				break;
-			case 4:
+			case LAST_PLAYED_COLUMN_INDEX:
 				columnNames[i] = Messages.get(MessageConstants.COLUMN_LAST_PLAYED);
 				break;
 			}

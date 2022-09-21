@@ -126,7 +126,7 @@ public abstract class ViewPanel extends JPanel implements GameSelectionListener 
 
 	public abstract void gameRated(Game list);
 
-	public abstract void hideExtensions(boolean shouldHide);
+	public abstract void hideExtensions(boolean hideExtensions);
 
 	public abstract void addDecreaseFontListener(Action l);
 

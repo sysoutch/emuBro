@@ -2353,6 +2353,11 @@ GameSelectionListener, BrowseComputerListener {
 				return;
 			}
 		}
+
+		if (emulator.getName().toLowerCase().equals("epsxe")) {
+			System.out.println("checking epsxe config...");
+		}
+
 		String emulatorPath = emulator.getPath();
 		if (ValidationUtil.isWindows()) {
 			emulatorPath = emulatorPath.replace("%windir%", System.getenv("WINDIR"));
@@ -2628,6 +2633,7 @@ GameSelectionListener, BrowseComputerListener {
 		getTaskList(taskName);
 
 		ProcessBuilder builder = new ProcessBuilder(startParametersList);
+		builder.directory(new File(FilenameUtils.getFullPath(emulator.getPath())));
 		final Process p = builder.redirectErrorStream(true).start();
 		frameEmulationOverlay.setProcess(p);
 
@@ -6626,6 +6632,7 @@ GameSelectionListener, BrowseComputerListener {
 				public void actionPerformed(ActionEvent e) {
 					Emulator emulator = frameProperties.getSelectedEmulator();
 					ProcessBuilder pb = new ProcessBuilder(emulator.getPath());
+					pb.directory(new File(FilenameUtils.getFullPath(emulator.getPath())));
 					try {
 						Process process = pb.start();
 					} catch (IOException e1) {
