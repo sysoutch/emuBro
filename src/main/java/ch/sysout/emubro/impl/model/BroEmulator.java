@@ -14,7 +14,7 @@ public class BroEmulator implements Emulator {
 	private int id;
 	private String name;
 	private String shortName;
-	private String path;
+	private String fullPath;
 	private String iconFilename;
 	private String configFilePath;
 	private String website;
@@ -24,13 +24,13 @@ public class BroEmulator implements Emulator {
 	private String setupFileMatch;
 	private boolean autoSearchEnabled = true;
 
-	public BroEmulator(int id, String name, String shortName, String path, String iconFilename, String configFilePath, String website,
+	public BroEmulator(int id, String name, String shortName, String fullPath, String iconFilename, String configFilePath, String website,
 			String startParameters, String[] supportedFileTypes, String searchString, String setupFileMatch, boolean autoSearchEnabled) {
 		ValidationUtil.checkNullOrEmpty(name, "name");
 		this.id = id;
 		this.name = name;
 		this.shortName = shortName;
-		this.path = (path == null) ? "" : path;
+		this.fullPath = (fullPath == null) ? "" : fullPath;
 		this.iconFilename = (iconFilename == null) ? "" : iconFilename;
 		this.configFilePath = (configFilePath == null) ? "" : configFilePath;
 		this.website = (website == null) ? "" : website;
@@ -52,7 +52,7 @@ public class BroEmulator implements Emulator {
 		this.id = id;
 		this.name = name;
 		this.shortName = shortName;
-		this.path = (path == null) ? "" : path;
+		this.fullPath = (path == null) ? "" : path;
 		this.iconFilename = (iconFilename == null) ? "" : iconFilename;
 		this.configFilePath = (configFilePath == null) ? "" : configFilePath;
 		this.website = (website == null) ? "" : website;
@@ -67,7 +67,7 @@ public class BroEmulator implements Emulator {
 		id = e.id;
 		name = e.name;
 		shortName = e.shortName;
-		path = e.path;
+		fullPath = e.fullPath;
 		iconFilename = e.getIconFilename();
 		configFilePath = e.getConfigFilePath();
 		website = e.website;
@@ -103,19 +103,24 @@ public class BroEmulator implements Emulator {
 
 	@Override
 	public String getPath() {
-		return path;
+		return FilenameUtils.getFullPathNoEndSeparator(fullPath);
+	}
+
+	@Override
+	public String getAbsolutePath() {
+		return fullPath;
 	}
 
 	@Override
 	public String getParentFolder() {
-		String tempPath = FilenameUtils.getFullPath(path);
+		String tempPath = FilenameUtils.getFullPath(fullPath);
 		String[] folderNames = tempPath.split((File.separator.equals("\\")) ? "\\\\" : File.separator);
 		return folderNames[folderNames.length - 1];
 	}
 
 	public void setPath(String path) {
 		ValidationUtil.checkNull(path, "path");
-		this.path = path;
+		this.fullPath = path;
 	}
 
 	@Override
@@ -191,12 +196,12 @@ public class BroEmulator implements Emulator {
 
 	@Override
 	public boolean isInstalled() {
-		return path != null && !path.trim().isEmpty();
+		return fullPath != null && !fullPath.trim().isEmpty();
 	}
 
 	@Override
 	public String toString() {
-		String postFix = (path == null || path.trim().isEmpty()) ? " (" + website + ")" : " (" + path + ")";
+		String postFix = (fullPath == null || fullPath.trim().isEmpty()) ? " (" + website + ")" : " (" + fullPath + ")";
 		return "<html><strong>" + name + "</strong>" + postFix + "</html>";
 	}
 

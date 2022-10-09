@@ -1,7 +1,6 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
@@ -21,6 +20,7 @@ import javax.swing.WindowConstants;
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 
+import ch.sysout.emubro.util.ColorConstants;
 import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.util.Icons;
 
@@ -59,7 +59,7 @@ public class SplashScreenWindow extends JDialog {
 		prg.setStringPainted(true);
 		//		prg.setIndeterminate(true);
 		btnCancel.setFocusable(false);
-		btnCancel.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("close"), 16, Color.LIGHT_GRAY));
+		btnCancel.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("close"), 16, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		btnCancel.addActionListener(new ActionListener() {
 
 			@Override

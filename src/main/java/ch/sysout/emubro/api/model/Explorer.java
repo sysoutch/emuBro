@@ -29,6 +29,10 @@ public interface Explorer {
 
 	void setGames(List<Game> games);
 
+	List<Game> getRemovedGames();
+
+	void setRemovedGames(List<Game> removedGames);
+
 	List<String> getExtensions();
 
 	String getExtensionsRegexString();
@@ -186,6 +190,10 @@ public interface Explorer {
 	String getRelativeTitlesSourceFilePath(Platform platform);
 
 	String getEmulatorsDirectory(Platform platform);
+
+	boolean isShowGameNamesEnabled();
+
+	void setShowGameNamesEnabled(boolean showGameNamesEnabled);
 
 	// void addEmulator(Emulator emulator);
 	//

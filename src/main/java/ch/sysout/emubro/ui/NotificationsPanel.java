@@ -232,7 +232,10 @@ public class NotificationsPanel extends JPanel {
 			break;
 		}
 		layoutMain.appendRow(RowSpec.decode("min"));
-		pnlGrid.add(pnl, ccMain.xy(1, layoutMain.getRowCount()));
+		NewNotificationPanel pnlNewNotifications;
+		//		pnlGrid.add(pnl, ccMain.xy(1, layoutMain.getRowCount()));
+		pnlGrid.add(pnlNewNotifications = new NewNotificationPanel(), ccMain.xy(1, layoutMain.getRowCount()));
+		pnlNewNotifications.addNotification(element3);
 		mapPanels.put(pnl, pnl);
 		btnHideMessage.addActionListener(actionHideMessage);
 		btnHideMessage.addActionListener(element3.getCloseAction());

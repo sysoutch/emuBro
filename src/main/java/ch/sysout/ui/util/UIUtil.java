@@ -37,9 +37,11 @@ import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
+import javax.swing.JProgressBar;
 import javax.swing.JRootPane;
 import javax.swing.KeyStroke;
 import javax.swing.UIManager;
+import javax.swing.WindowConstants;
 import javax.swing.text.JTextComponent;
 
 import ch.sysout.emubro.ui.AboutDialog;
@@ -289,5 +291,17 @@ public class UIUtil {
 		int newGreen = maxValue - color.getGreen();
 		int newBlue = maxValue - color.getBlue();
 		return new Color(newRed, newGreen, newBlue);
+	}
+
+	public static JDialog createProgressDialog(String string) {
+		JDialog dlg = new JDialog();
+		dlg.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+		JProgressBar prg;
+		dlg.add(prg = new JProgressBar());
+		prg.setString(string);
+		prg.setStringPainted(true);
+		prg.setIndeterminate(true);
+		dlg.pack();
+		return dlg;
 	}
 }

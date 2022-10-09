@@ -63,6 +63,7 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 	private JTabbedPane tpMain = new JTabbedPane();
 
 	private ManagePlatformsPanel pnlManagePlatforms;
+	private JPanel pnlInput = new JPanel();
 	private AdvancedPropertiesPanel pnlAdvancedProperties;
 
 	private JButton btnClose;
@@ -146,15 +147,17 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 		};
 		pnlMain.setOpaque(false);
 		pnlMain.setBorder(Paddings.TABBED_DIALOG);
-		JScrollPane spTab1 = new JCustomScrollPane(pnlManagePlatforms);
+		JScrollPane spTabGeneral = new JCustomScrollPane(pnlManagePlatforms);
+		JScrollPane spTabInput = new JCustomScrollPane(pnlInput);
 		JScrollPane spTab2 = new JCustomScrollPane(pnlAdvancedProperties);
-		spTab1.setBorder(BorderFactory.createEmptyBorder());
+		spTabGeneral.setBorder(BorderFactory.createEmptyBorder());
 		spTab2.setBorder(BorderFactory.createEmptyBorder());
 
-		spTab1.getVerticalScrollBar().setUnitIncrement(16);
+		spTabGeneral.getVerticalScrollBar().setUnitIncrement(16);
 		spTab2.getVerticalScrollBar().setUnitIncrement(16);
 
-		tpMain.addTab(Messages.get(MessageConstants.GENERAL), spTab1);
+		tpMain.addTab(Messages.get(MessageConstants.GENERAL), spTabGeneral);
+		tpMain.addTab(Messages.get(MessageConstants.INPUT), spTabInput);
 		tpMain.addTab(Messages.get(MessageConstants.ADVANCED), spTab2);
 		//		tpMain.setEnabledAt(1, false);
 		pnlMain.add(tpMain);

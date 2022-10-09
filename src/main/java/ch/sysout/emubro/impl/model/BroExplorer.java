@@ -24,6 +24,7 @@ import ch.sysout.util.FileUtil;
 
 public class BroExplorer implements Explorer {
 	private Map<Integer, Game> games = new HashMap<>();
+	private List<Game> removedGames;
 	private Map<String, Integer> files = new HashMap<>();
 
 	private Map<Integer, Platform> platforms = new HashMap<>();
@@ -45,6 +46,8 @@ public class BroExplorer implements Explorer {
 	private boolean discordFeatureDisabled = false; // this is intended to be false per default until user decides to disable it
 	private List<FilterGroup> filterGroups;
 	private Map<Integer, Properties> gameTitles;
+
+	private boolean showGameNamesEnabled = true;
 
 	public BroExplorer(String currentApplicationVersion) {
 		this.currentApplicationVersion = currentApplicationVersion;
@@ -107,6 +110,19 @@ public class BroExplorer implements Explorer {
 	@Override
 	public Game getGame(int gameId) {
 		return games.get(gameId);
+	}
+
+	@Override
+	public List<Game> getRemovedGames() {
+		return removedGames;
+	}
+
+	@Override
+	public void setRemovedGames(List<Game> removedGames) {
+		if (removedGames == null) {
+			removedGames = new ArrayList<>();
+		}
+		this.removedGames = removedGames;
 	}
 
 	@Override
@@ -849,5 +865,15 @@ public class BroExplorer implements Explorer {
 	@Override
 	public String getCoverDownloadSource(Game game) {
 		return "http://art.gametdb.com/";
+	}
+
+	@Override
+	public boolean isShowGameNamesEnabled() {
+		return showGameNamesEnabled;
+	}
+
+	@Override
+	public void setShowGameNamesEnabled(boolean showGameNamesEnabled) {
+		this.showGameNamesEnabled = showGameNamesEnabled;
 	}
 }

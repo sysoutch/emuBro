@@ -26,6 +26,7 @@ import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -61,9 +62,11 @@ import ch.sysout.emubro.impl.dao.BroExplorerDAO;
 import ch.sysout.emubro.impl.model.BroExplorer;
 import ch.sysout.emubro.impl.model.BroPlatform;
 import ch.sysout.emubro.impl.model.BroTag;
+import ch.sysout.emubro.ui.ColorStore;
 import ch.sysout.emubro.ui.IconStore;
 import ch.sysout.emubro.ui.MainFrame;
 import ch.sysout.emubro.ui.SplashScreenWindow;
+import ch.sysout.emubro.util.ColorConstants;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.FontUtil;
 import ch.sysout.ui.util.ImageUtil;
@@ -74,49 +77,12 @@ import ch.sysout.util.Messages;
 
 /**
  * @author rainer
- * FIXME unknown exception (prob some issue with the progress bar in SplashScreenWindow), maybe after restart emuBro when Theme was changed before?
- * Exception in thread "AWT-EventQueue-0" java.lang.NullPointerException: Cannot read field "width" because "d" is null
-	at java.desktop/java.awt.Dimension.<init>(Dimension.java:113)
-	at java.desktop/javax.swing.plaf.basic.BasicProgressBarUI.getPreferredSize(BasicProgressBarUI.java:902)
-	at com.formdev.flatlaf.ui.FlatProgressBarUI.getPreferredSize(FlatProgressBarUI.java:165)
-	at java.desktop/javax.swing.JComponent.getPreferredSize(JComponent.java:1734)
-	at com.jgoodies.forms.layout.FormLayout$ComponentSizeCache.getPreferredSize(FormLayout.java:2002)
-	at com.jgoodies.forms.layout.FormLayout$PreferredHeightMeasure.sizeOf(FormLayout.java:1937)
-	at com.jgoodies.forms.layout.Sizes$ComponentSize.maximumSize(Sizes.java:429)
-	at com.jgoodies.forms.layout.FormSpec.maximumSize(FormSpec.java:606)
-	at com.jgoodies.forms.layout.FormLayout.maximumSizes(FormLayout.java:1598)
-	at com.jgoodies.forms.layout.FormLayout.computeGridOrigins(FormLayout.java:1486)
-	at com.jgoodies.forms.layout.FormLayout.layoutContainer(FormLayout.java:1323)
-	at java.desktop/java.awt.Container.layout(Container.java:1541)
-	at java.desktop/java.awt.Container.doLayout(Container.java:1530)
-	at java.desktop/java.awt.Container.validateTree(Container.java:1725)
-	at java.desktop/java.awt.Container.validateTree(Container.java:1734)
-	at java.desktop/java.awt.Container.validateTree(Container.java:1734)
-	at java.desktop/java.awt.Container.validateTree(Container.java:1734)
-	at java.desktop/java.awt.Container.validate(Container.java:1660)
-	at java.desktop/javax.swing.RepaintManager$3.run(RepaintManager.java:757)
-	at java.desktop/javax.swing.RepaintManager$3.run(RepaintManager.java:755)
-	at java.base/java.security.AccessController.doPrivileged(AccessController.java:399)
-	at java.base/java.security.ProtectionDomain$JavaSecurityAccessImpl.doIntersectionPrivilege(ProtectionDomain.java:86)
-	at java.desktop/javax.swing.RepaintManager.validateInvalidComponents(RepaintManager.java:754)
-	at java.desktop/javax.swing.RepaintManager$ProcessingRunnable.run(RepaintManager.java:1896)
-	at java.desktop/java.awt.event.InvocationEvent.dispatch(InvocationEvent.java:318)
-	at java.desktop/java.awt.EventQueue.dispatchEventImpl(EventQueue.java:773)
-	at java.desktop/java.awt.EventQueue$4.run(EventQueue.java:720)
-	at java.desktop/java.awt.EventQueue$4.run(EventQueue.java:714)
-	at java.base/java.security.AccessController.doPrivileged(AccessController.java:399)
-	at java.base/java.security.ProtectionDomain$JavaSecurityAccessImpl.doIntersectionPrivilege(ProtectionDomain.java:86)
-	at java.desktop/java.awt.EventQueue.dispatchEvent(EventQueue.java:742)
-	at java.desktop/java.awt.EventDispatchThread.pumpOneEventForFilters(EventDispatchThread.java:203)
-	at java.desktop/java.awt.EventDispatchThread.pumpEventsForFilter(EventDispatchThread.java:124)
-	at java.desktop/java.awt.EventDispatchThread.pumpEventsForHierarchy(EventDispatchThread.java:113)
-	at java.desktop/java.awt.EventDispatchThread.pumpEvents(EventDispatchThread.java:109)
-	at java.desktop/java.awt.EventDispatchThread.pumpEvents(EventDispatchThread.java:101)
-	at java.desktop/java.awt.EventDispatchThread.run(EventDispatchThread.java:90)
  */
 public class Main {
 	public static Properties properties;
 	private static String currentLnF;
+	private static String lastDarkLnF;
+	private static String lastLightLnF;
 	//private static LookAndFeel defaultWindowsLookAndFeel = new WindowsLookAndFeel();
 	private static LookAndFeel defaultLinuxLookAndFeel;
 	private static LookAndFeel defaultMacLookAndFeel;
@@ -133,7 +99,7 @@ public class Main {
 	private static final String currentApplicationVersion = "0.8.0";
 
 	public static void main(String[] args) {
-		System.setProperty("sun.java2d.uiScale", "1.0");
+		//		System.setProperty("sun.java2d.uiScale", "1.0");
 		System.setProperty("java.util.Arrays.useLegacyMergeSort", "true");
 		System.setProperty("apple.laf.useScreenMenuBar", "true");
 		loadAppDataFromLastSession();
@@ -195,14 +161,27 @@ public class Main {
 	private static void applyAppDataFromLastSession() {
 		if (properties != null && properties.size() > 0) {
 			currentLnF = properties.getProperty(BroController.propertyKeys[9]);
+			lastDarkLnF = properties.getProperty(BroController.propertyKeys[35]);
+			lastLightLnF = properties.getProperty(BroController.propertyKeys[36]);
 			language = properties.getProperty(BroController.propertyKeys[19]);
 			if (language != null && !language.trim().isEmpty()) {
 				setLanguage(language);
 			}
 			if (currentLnF != null && !currentLnF.trim().isEmpty()) {
-				setLookAndFeel(currentLnF);
+				boolean useThemeBasedOnTimeOfDay = true;
+				if (useThemeBasedOnTimeOfDay) {
+					boolean shouldUseLightMode = shouldUseLightMode();
+					setLookAndFeel(shouldUseLightMode ? lastLightLnF : lastDarkLnF);
+				} else {
+					setLookAndFeel(currentLnF);
+				}
 			}
 		}
+	}
+
+	private static boolean shouldUseLightMode() {
+		int hour = LocalTime.now().getHour();
+		return hour > 6 && hour < 19;
 	}
 
 	private static void setLanguage(String locale) {
@@ -390,15 +369,6 @@ public class Main {
 					List<Game> games = explorerDAO.getGames();
 					boolean gamesFound = games.size() > 0;
 					controller.initGameList(games);
-
-					System.out.println("removed games:");
-					try {
-						System.out.println(explorerDAO.getRemovedGames());
-					} catch (SQLException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-
 					controller.showView(applyData);
 					//					dlgSplashScreen.setValue(100);
 					boolean emulatorsFound = false;
@@ -545,8 +515,13 @@ public class Main {
 	}
 
 	private static void initializeCustomTheme() throws IOException {
-		IconStore.current().loadDefaultTheme(FlatLaf.isLafDark() ? "dark" : "light");
-
+		boolean darkTheme = FlatLaf.isLafDark();
+		IconStore.current().loadDefaultTheme(darkTheme ? "dark" : "light");
+		ColorStore.current().setColor(ColorConstants.SVG_NO_COLOR_DARK, Color.GRAY);
+		ColorStore.current().setColor(ColorConstants.SVG_NO_COLOR_LIGHT, Color.LIGHT_GRAY);
+		Color svgNoColorDark = ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR_DARK);
+		Color svgNoColorLight = ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR_LIGHT);
+		ColorStore.current().setColor(ColorConstants.SVG_NO_COLOR, darkTheme ? svgNoColorLight : svgNoColorDark);
 		//		initializeCustomFonts();
 		//		initializeCustomColors();
 		//		initializeCustomMenus();

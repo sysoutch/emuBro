@@ -253,7 +253,7 @@ public class BroPlatform implements Platform {
 	@Override
 	public boolean hasEmulator(String emulatorPath) {
 		for (Emulator emu : emulators) {
-			if (emu.getPath().equals(emulatorPath)) {
+			if (emu.getAbsolutePath().equals(emulatorPath)) {
 				return true;
 			}
 		}

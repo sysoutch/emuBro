@@ -1,5 +1,6 @@
 package ch.sysout.emubro.ui;
 
+import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.dnd.DropTarget;
@@ -17,7 +18,6 @@ import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComponent;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
@@ -25,19 +25,21 @@ import javax.swing.JToggleButton;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingConstants;
 
+import com.jgoodies.forms.factories.CC;
 import com.jgoodies.forms.factories.Paddings;
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 
 import ch.sysout.emubro.api.event.GameSelectionEvent;
 import ch.sysout.emubro.api.model.Game;
+import ch.sysout.emubro.util.ColorConstants;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Messages;
 
 public class BrowseCoversPanel extends JPanel {
 	private static final long serialVersionUID = 1L;
-	private JLabel lblDragDropCover = new JLabel(Messages.get(MessageConstants.DRAG_AND_DROP_FILES_OR_FOLDERS_HERE));
+	private JButton lblDragDropCover = new JCustomButtonNew(Messages.get(MessageConstants.DRAG_AND_DROP_FILES_OR_FOLDERS_HERE));
 	private JPanel pnlCovers = new JPanel();
 	private JScrollPane spCovers = new JScrollPane(pnlCovers);
 	private ButtonGroup group = new ButtonGroup();
@@ -60,22 +62,26 @@ public class BrowseCoversPanel extends JPanel {
 	private void createUI() {
 		FormLayout layout = new FormLayout("min:grow, min, pref", "fill:min:grow");
 		setLayout(layout);
-		CellConstraints cc = new CellConstraints();
-		WrapLayout wl = new WrapLayout();
-		wl.setAlignment(FlowLayout.LEFT);
-		pnlCovers.setLayout(wl);
-		pnlCovers.setBorder(BorderFactory.createEmptyBorder());
-		pnlCovers.add(lblDragDropCover);
+
+		boolean bla = false;
+		if (bla) {
+			WrapLayout wl = new WrapLayout();
+			wl.setAlignment(FlowLayout.LEFT);
+			pnlCovers.setLayout(wl);
+			pnlCovers.setBorder(BorderFactory.createEmptyBorder());
+		} else {
+			pnlCovers.setLayout(new BorderLayout());
+			pnlCovers.add(lblDragDropCover);
+			lblDragDropCover.setBorder(BorderFactory.createDashedBorder(ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		}
 		spCovers.getVerticalScrollBar().setUnitIncrement(16);
 		spCovers.setBorder(BorderFactory.createEmptyBorder());
-		add(spCovers, cc.xy(1, 1));
-		add(new JSeparator(SwingConstants.VERTICAL), cc.xy(2, 1));
-		add(createOptionPanel(), cc.xy(3, 1));
 
-		setOpaque(false);
-		spCovers.setOpaque(false);
+		add(spCovers, CC.xy(1, 1));
+		add(new JSeparator(SwingConstants.VERTICAL), CC.xy(2, 1));
+		add(createOptionPanel(), CC.xy(3, 1));
+
 		spCovers.getViewport().setOpaque(false);
-		pnlCovers.setOpaque(false);
 	}
 
 	private JComponent createOptionPanel() {

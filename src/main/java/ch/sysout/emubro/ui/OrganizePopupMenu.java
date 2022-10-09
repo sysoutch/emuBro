@@ -24,7 +24,6 @@ class OrganizePopupMenu extends JPopupMenu {
 	private JCheckBoxMenuItem itmShowGameDetailsPanel = new JCheckBoxMenuItem(Messages.get("informationPanel"));
 	private JCheckBoxMenuItem itmShowStatusBar = new JCheckBoxMenuItem(Messages.get("statusBar"));
 
-	private JMenuItem itmSettings = new JMenuItem(Messages.get("settings") + "...");
 	private JMenuItem itmExit = new JMenuItem(Messages.get("exit"));
 
 	public OrganizePopupMenu() {
@@ -40,7 +39,6 @@ class OrganizePopupMenu extends JPopupMenu {
 		mnuLayout.add(itmShowGameDetailsPanel);
 		mnuLayout.add(itmShowStatusBar);
 		add(mnuLayout);
-		add(itmSettings);
 		add(new JSeparator());
 		add(itmExit);
 		setAccelerators();
@@ -53,7 +51,6 @@ class OrganizePopupMenu extends JPopupMenu {
 
 	private void setIcons() {
 		int size = ScreenSizeUtil.is3k() ? 24 : 16;
-		itmSettings.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("settings"), size, Color.LIGHT_GRAY));
 		itmExit.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("exit"), size, new Color(237, 67, 55)));
 
 		// setIcon(mnuLayout, "/images/"+size+"/edit-layout.png");
@@ -109,10 +106,6 @@ class OrganizePopupMenu extends JPopupMenu {
 		itmShowStatusBar.addActionListener(l);
 	}
 
-	public void addOpenPropertiesListener(ActionListener l) {
-		itmSettings.addActionListener(l);
-	}
-
 	public void addExitListener(ActionListener l) {
 		itmExit.addActionListener(l);
 	}
@@ -124,7 +117,6 @@ class OrganizePopupMenu extends JPopupMenu {
 		itmShowPreviewPanel.setText(Messages.get("previewPanel"));
 		itmShowGameDetailsPanel.setText(Messages.get("informationPanel"));
 		itmShowStatusBar.setText(Messages.get("statusBar"));
-		itmSettings.setText(Messages.get("settings") + "...");
 		itmExit.setText(Messages.get("exit"));
 	}
 

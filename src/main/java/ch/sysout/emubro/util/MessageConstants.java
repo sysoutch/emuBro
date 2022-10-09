@@ -45,6 +45,7 @@ public class MessageConstants {
 	public static final String RUN_ACTION = "runAction";
 	public static final String CHOOSE_VIEW = "chooseView";
 	public static final String HELP = "help";
+	public static final String TROUBLESHOOT = "troubleshoot";
 	public static final String EXPORT_GAME_LIST = "exportGameList";
 	public static final String EXPORT_APPLICATION_DATA = "exportApplicationData";
 	public static final String SORT_BY = "sortBy";
@@ -74,6 +75,7 @@ public class MessageConstants {
 	public static final String RUN_EMULATOR = "runEmulator";
 	public static final String CONFIGURE = "configure";
 	public static final String CONFIGURE_EMULATOR = "configureEmulator";
+	public static final String GAMEPAD_TESTER = "gamepadTester";
 	public static final String CONFIGURE_WIZARD = "configureWizard";
 	public static final String SEARCH_FOR_UPDATES = "searchForUpdates";
 	public static final String ABOUT = "about";
@@ -306,6 +308,8 @@ public class MessageConstants {
 	public static final String OTHERS = "others";
 	public static final String HIDE_PREVIEW_PANE = "hidePreviewPane";
 	public static final String SHOW_PREVIEW_PANE = "showPreviewPane";
+	public static final String SHOW_GAME_NAMES = "showGameNames";
+	public static final String SHOW_GAME_NAMES_TOOL_TIP = "showGameNamesToolTip";
 	public static final String TOUCH_SCREEN_SCROLL = "touchScreenScroll";
 	public static final String TOUCH_SCREEN_SCROLL_TOOL_TIP = "touchScreenScrollToolTip";
 	public static final String SHOW_TOOL_TIP_TEXTS = "showToolTipTexts";
@@ -372,4 +376,5 @@ public class MessageConstants {
 	public static final String WELCOME = "welcome";
 	public static final String FINISH = "finish";
 	public static final String EMUBRO_DISCORD = "emuBroDiscord";
+	public static final String RUN_CONFIGURATIONS = "runConfigurations";
 }

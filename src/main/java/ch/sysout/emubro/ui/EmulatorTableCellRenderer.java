@@ -44,7 +44,7 @@ public class EmulatorTableCellRenderer extends DefaultTableCellRenderer {
 			if (!icons.containsKey(emu.getId())) {
 				ico = IconStore.current().getEmulatorIcon(emu.getId());
 				if (ico == null) {
-					File file = new File(emu.getPath());
+					File file = new File(emu.getAbsolutePath());
 					ico = (ImageIcon) FileSystemView.getFileSystemView().getSystemIcon(file);
 				}
 				if (ico != null) {

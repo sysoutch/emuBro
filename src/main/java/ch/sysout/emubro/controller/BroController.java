@@ -192,6 +192,9 @@ import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
+import com.formdev.flatlaf.FlatDarkLaf;
+import com.formdev.flatlaf.FlatLaf;
+import com.formdev.flatlaf.FlatLightLaf;
 import com.github.junrar.Archive;
 import com.github.junrar.exception.RarException;
 import com.github.junrar.rarfile.FileHeader;
@@ -275,6 +278,7 @@ import ch.sysout.emubro.ui.RatingBarPanel;
 import ch.sysout.emubro.ui.SortedListModel;
 import ch.sysout.emubro.ui.SplashScreenWindow;
 import ch.sysout.emubro.ui.Theme;
+import ch.sysout.emubro.ui.TroubleshootFrame;
 import ch.sysout.emubro.ui.UpdateDialog;
 import ch.sysout.emubro.ui.ViewPanel;
 import ch.sysout.emubro.ui.ViewPanelManager;
@@ -287,8 +291,11 @@ import ch.sysout.util.FileUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.LinkParser;
 import ch.sysout.util.Messages;
+import ch.sysout.util.RegistryUtil;
 import ch.sysout.util.RobotUtil;
 import ch.sysout.util.ScreenSizeUtil;
+import ch.sysout.util.SevenZipUtils;
+import ch.sysout.util.SystemUtil;
 import ch.sysout.util.ValidationUtil;
 import spark.Request;
 import spark.Response;
@@ -301,6 +308,7 @@ GameSelectionListener, BrowseComputerListener {
 	private MainFrame view;
 	private PropertiesFrame frameProperties;
 	private HelpFrame dlgHelp;
+	private TroubleshootFrame dlgTroubleshoot;
 	private AboutDialog dlgAbout;
 	private UpdateDialog dlgUpdates;
 
@@ -361,7 +369,9 @@ GameSelectionListener, BrowseComputerListener {
 			"lastPnlDetailsPreferredWidth",
 			"lastPnlDetailsPreferredHeight",
 			"navigationPaneState",
-			"undecorated"
+			"undecorated",
+			"lastDarkLnF",									// 35
+			"lastLightLnF"
 	};
 
 	private SortedListModel<Platform> mdlPropertiesLstPlatforms = new SortedListModel<>();
@@ -1040,8 +1050,10 @@ GameSelectionListener, BrowseComputerListener {
 		view.addShowContextMenuListener(new ShowContextMenuListener());
 		//		view.addSetFilterListener(new AddFilterListener());
 		view.addHideExtensionsListener(new HideExtensionsListener());
+		view.addShowGameNamesListener(new ShowGameNamesListener());
 		view.addTouchScreenOptimizedScrollListener(new TouchScreenOptimizedScrollListener());
 		view.addOpenHelpListener(new OpenHelpListener());
+		view.addOpenTroubleshootListener(new OpenTroubleshootListener());
 		actionOpenDiscordLink = new ActionListener() {
 
 			@Override
@@ -1057,6 +1069,7 @@ GameSelectionListener, BrowseComputerListener {
 			}
 		};
 		view.addDiscordInviteLinkListener(actionOpenDiscordLink);
+		view.addOpenGamePadTesterListener(new OpenGamepadTesterListener());
 		view.addOpenConfigWizardListener(new OpenConfigWizardListener());
 		view.addOpenAboutListener(new OpenAboutListener());
 		view.addOpenUpdateListener(new OpenCheckForUpdatesListener());
@@ -1954,6 +1967,8 @@ GameSelectionListener, BrowseComputerListener {
 			fw.append(propertyKeys[7] + "=" + view.isPreviewPaneVisible() + "\r\n"); // show_previewpane
 			fw.append(propertyKeys[8] + "=" + view.isDetailsPaneVisible() + "\r\n"); // show_detailspane
 			fw.append(propertyKeys[9] + "=" + getCurrentLnFClassName() + "\r\n"); // BLANK
+			fw.append(propertyKeys[35] + "=" + getLastDarkLnFClassName() + "\r\n");
+			fw.append(propertyKeys[36] + "=" + getLastLightLnFClassName() + "\r\n");
 			fw.append(propertyKeys[10] + "=" + view.getSelectedNavigationItem() + "\r\n"); // view
 			fw.append(propertyKeys[11] + "=" + "Playstation 2" + "\r\n"); // platform
 			fw.append(propertyKeys[12] + "=" + explorer.isConfigWizardHiddenAtStartup() + "\r\n"); // show_wizard
@@ -2001,6 +2016,22 @@ GameSelectionListener, BrowseComputerListener {
 
 	private String getCurrentLnFClassName() {
 		return UIManager.getLookAndFeel().getClass().getCanonicalName();
+	}
+
+	private String getLastDarkLnFClassName() {
+		if (FlatLaf.isLafDark()) {
+			return getCurrentLnFClassName();
+		} else {
+			return FlatDarkLaf.class.getCanonicalName();
+		}
+	}
+
+	private String getLastLightLnFClassName() {
+		if (!FlatLaf.isLafDark()) {
+			return getCurrentLnFClassName();
+		} else {
+			return FlatLightLaf.class.getCanonicalName();
+		}
 	}
 
 	public void applyAppDataFromLastSession() throws Exception {
@@ -2354,11 +2385,80 @@ GameSelectionListener, BrowseComputerListener {
 			}
 		}
 
-		if (emulator.getName().toLowerCase().equals("epsxe")) {
-			System.out.println("checking epsxe config...");
+
+		// if emulator.regCheckModeEnabled
+		boolean errorsInEmulatorConfig = hasConfigIssues(emulator);
+		if (errorsInEmulatorConfig) {
+			try {
+				List<Integer> taskList = getTaskList(emulator.getAbsolutePath());
+				if (taskList != null && !taskList.isEmpty()) {
+					int request2 = JOptionPane.showConfirmDialog(view, emulator.getName() + " is currently running.\n"
+							+ "It will or will not work, but note that it's possible the other emulator will overwrite it when doing config change there.\n\n"
+							+ "You want to try to automatically quit all instances of this emulator?",
+							"Issues in emulator settings found", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+					if (request2 == JOptionPane.YES_OPTION) {
+						for (int pId : taskList) {
+							SystemUtil.killTask(pId);
+						}
+					}
+				}
+			} catch (IOException e1) {
+				// handle by waiting for process end or ... ? sth else
+			}
+			int request = JOptionPane.showConfirmDialog(view, "There are known issues found in the emulator configuration.\n"
+					+ ".... FIX WITH ....\n\n"
+					+ "You want to apply the suggested adjustments before starting the game?",
+					"Issues in emulator settings found", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
+			if (request == JOptionPane.CANCEL_OPTION || request == JOptionPane.CLOSED_OPTION) {
+				return;
+			}
+			boolean applySuggestedAdjustments = request == JOptionPane.YES_OPTION;
+			if (applySuggestedAdjustments) {
+				try {
+					RegistryUtil.createOrOverwriteRegistryKey("HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers", emulator.getAbsolutePath(), "~ HIGHDPIAWARE", "REG_SZ");
+				} catch (IOException e2) {
+					e2.printStackTrace();
+				}
+				boolean downloadGPUPlugin = !FileUtil.fileExists(emulator.getPath() + "plugins" + File.separator + "gpuPeteOpenGL2.dll");
+				if (downloadGPUPlugin) {
+					String downloadLink = "http://www.pbernert.com/gpupeteogl209.zip";
+					String websiteLink = "http://www.pbernert.com/html/gpu.htm";
+					File destFile = new File(emulator.getPath() + "plugins" + File.separator + "gpupeteogl209.zip");
+					downloadFile(downloadLink, websiteLink, destFile);
+					// TODO create initial registry keys after downloading plugin and registry location doesnt exit
+					// TODO maybe just run a .reg file?
+					//				RegistryUtil.createOrOverwriteRegistryKey("HKCU\\SOFTWARE\\Vision Thing\\PSEmu Pro\\GPU\\PeteOpenGL2", "NoRenderTexture", 1);
+					try {
+						RegistryUtil.importRegFile(explorer.getResourcesPath() + File.separator + "emulators" + File.separator +"epsxe"+ File.separator + "init_config" + File.separator + "plugins"+ File.separator + "gpu" +  File.separator  + "PeteOpenGL2.reg");
+					} catch (IOException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+				}
+				// TODO Check if epsxe.exe is still running. If so, ask the user if it's okay to end the task and continue. Otherwise, wait for epsxe.exe to shut down
+				try {
+					RegistryUtil.createOrOverwriteRegistryKey("HKCU\\SOFTWARE\\epsxe\\config", "CPUOverclocking", "10");
+					RegistryUtil.createOrOverwriteRegistryKey("HKCU\\SOFTWARE\\epsxe\\config", "BiosHLE", "0");  // check if bios path is set and if it exists
+					RegistryUtil.createOrOverwriteRegistryKey("HKCU\\SOFTWARE\\epsxe\\config", "BiosName", "bios\\scph1001.bin");  // check if bios path exists
+					RegistryUtil.createOrOverwriteRegistryKey("HKCU\\SOFTWARE\\epsxe\\config", "VideoPlugin", "gpuPeteOpenGL2.dll"); // check epsxe\plugins folder if plugin exists
+					RegistryUtil.createOrOverwriteRegistryKey("HKCU\\SOFTWARE\\epsxe\\config", "SoundEnabled", "1");
+					RegistryUtil.createOrOverwriteRegistryKey("HKCU\\SOFTWARE\\epsxe\\config", "SoundPlugin", "spuEternal.dll"); // check epsxe\plugins folder if plugin exists
+
+
+					int width = ScreenSizeUtil.getWidth();
+					int height = ScreenSizeUtil.getHeight();
+					RegistryUtil.createOrOverwriteRegistryKey("HKCU\\SOFTWARE\\Vision Thing\\PSEmu Pro\\GPU\\PeteOpenGL2", "ResX", width);
+					RegistryUtil.createOrOverwriteRegistryKey("HKCU\\SOFTWARE\\Vision Thing\\PSEmu Pro\\GPU\\PeteOpenGL2", "ResY", height);
+					RegistryUtil.createOrOverwriteRegistryKey("HKCU\\SOFTWARE\\Vision Thing\\PSEmu Pro\\GPU\\PeteOpenGL2", "NoRenderTexture", 1);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
+			}
 		}
 
-		String emulatorPath = emulator.getPath();
+		String emulatorPath = emulator.getAbsolutePath();
 		if (ValidationUtil.isWindows()) {
 			emulatorPath = emulatorPath.replace("%windir%", System.getenv("WINDIR"));
 		}
@@ -2524,6 +2624,150 @@ GameSelectionListener, BrowseComputerListener {
 		});
 	}
 
+	private void downloadFile(String downloadLink, String websiteLink, File destFile) {
+		URL url2 = null;
+		try {
+			url2 = new URL(downloadLink);
+		} catch (MalformedURLException e1) {
+			e1.printStackTrace();
+		}
+		if (url2 != null) {
+			final URL urlFinal = url2;
+			Thread t = new Thread(new Runnable() {
+
+				@Override
+				public void run() {
+					URLConnection con = null;
+					try {
+						con = urlFinal.openConnection();
+					} catch (IOException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+					if (con != null) {
+						con.setReadTimeout(20000);
+						try {
+							FileUtils.copyURLToFile(urlFinal, destFile);
+						} catch (IOException e1) {
+							e1.printStackTrace();
+							SwingUtilities.invokeLater(new Runnable() {
+
+								@Override
+								public void run() {
+									UIUtil.openWebsite(websiteLink, view);
+								}
+							});
+						}
+						// move the file first
+						if (isZipFile(destFile.getAbsolutePath())) {
+							String destDir = destFile.getParent();
+							File destDirFile = new File(destDir);
+							if (!destDirFile.exists()) {
+								destDirFile.mkdirs();
+							}
+							FileUtil.unzipArchive(destFile, destDir);
+						} else if (isRarFile(destFile.getAbsolutePath())) {
+							UIUtil.showWarningMessage(view, "emulator is in a rar archive.", "Archive detected");
+
+						} else if (is7ZipFile(destFile.getAbsolutePath())) {
+							UIUtil.showWarningMessage(view, "emulator is in a 7zip archive.", "Archive detected");
+
+						} else {
+							String filePath = destFile.getAbsolutePath();
+							// check if it is an .exe then maybe it's a setup
+							if (filePath.toLowerCase().endsWith(".exe")
+									|| filePath.toLowerCase().endsWith(".msi")) {
+								UIUtil.showWarningMessage(view, "it's maybe a setup file.", "Possible setup file");
+							}
+							UIUtil.showWarningMessage(view, "Emulator not detected. Add it yourself.", "Emulator not detected");
+						}
+					}
+				}
+			});
+			t.start();
+		}
+	}
+
+	private boolean hasConfigIssues(Emulator emulator) {
+		if (emulator.getName().toLowerCase().equals("epsxe")) {
+			System.out.println("checking "+emulator.getName() + " ("+emulator.getShortName()+") config...");
+			try {
+				Map<String, String> allConfigKeysAndValues = RegistryUtil.listAllKeysAndValues("HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers");
+				boolean itsOk = false;
+				for (Map.Entry<String, String> entry : allConfigKeysAndValues.entrySet()) {
+					String key = entry.getKey();
+					String value = entry.getValue();
+					System.out.println("key: " + key);
+					System.out.println("value: " + value);
+					if (key.equals(emulator.getAbsolutePath())) {
+						if (!value.equals("~ HIGHDPIAWARE")) {
+							return true;
+						}
+						itsOk = true;
+					}
+				}
+				// if we reach this point and its not ok, then there was no epsxe entry found, so we should crete one
+				if (!itsOk) {
+					return true;
+				}
+			} catch (IOException | InterruptedException e) {
+				e.printStackTrace();
+			}
+			try {
+				Map<String, String> allConfigKeysAndValues = RegistryUtil.listAllKeysAndValues("HKCU\\SOFTWARE\\epsxe\\config");
+				for (Map.Entry<String, String> entry : allConfigKeysAndValues.entrySet()) {
+					String key = entry.getKey();
+					String value = entry.getValue();
+					System.out.println("key: " + key);
+					System.out.println("value: " + value);
+					if ((key.equals("BiosHLE") && !value.equals("0"))
+							|| (key.equals("BiosName") && !value.equals("bios\\scph1001.bin"))
+							|| (key.equals("CPUOverclocking") && !value.equals("10"))
+							|| (key.equals("VideoPlugin") && !value.equals("gpuPeteOpenGL2.dll"))
+							|| (key.equals("SoundEnabled") && !value.equals("1"))
+							|| (key.equals("SoundPlugin") && !value.equals("spuEternal.dll"))
+							//							|| (key.equals("ResX") && !value.equals(""+widthHexString))
+							//							|| (key.equals("ResY") && !value.equals(""+heightHexString))
+							) {
+						return true;
+					}
+				}
+			} catch (IOException | InterruptedException e) {
+				e.printStackTrace();
+			}
+			try {
+				int width = ScreenSizeUtil.getWidth();
+				int height = ScreenSizeUtil.getHeight();
+				Map<String, String> allConfigKeysAndValues = RegistryUtil.listAllKeysAndValues("HKCU\\SOFTWARE\\Vision Thing\\PSEmu Pro\\GPU\\PeteOpenGL2");
+				for (Map.Entry<String, String> entry : allConfigKeysAndValues.entrySet()) {
+					String key = entry.getKey();
+					String value = entry.getValue().replace("0x", "");
+					System.out.println("key: " + key);
+					System.out.println("value: " + value);
+					if ((key.equals("NoRenderTexture") && value.equals("0"))) {
+						return true;
+					}
+					if (key.equals("ResX")) {
+						long resX = Long.parseLong(value, 16);
+						if (resX != width) {
+							return true;
+						}
+					}
+					if (key.equals("ResY")) {
+						long resY = Long.parseLong(value, 16);
+						if (resY != height) {
+							return true;
+						}
+					}
+				}
+			} catch (IOException | InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		return false;
+	}
+
 	private boolean isGameAlreadyRunning(Game game) {
 		Map<Process, Integer> lb = processes.get(game);
 		for (Entry<Process, Integer> entry2 : lb.entrySet()) {
@@ -2629,11 +2873,11 @@ GameSelectionListener, BrowseComputerListener {
 			int gameId = game.getId();
 			emulator = explorer.getEmulatorFromGame(gameId);
 		}
-		final String taskName = emulator.getPath();
+		final String taskName = emulator.getAbsolutePath();
 		getTaskList(taskName);
 
 		ProcessBuilder builder = new ProcessBuilder(startParametersList);
-		builder.directory(new File(FilenameUtils.getFullPath(emulator.getPath())));
+		builder.directory(new File(emulator.getPath()));
 		final Process p = builder.redirectErrorStream(true).start();
 		frameEmulationOverlay.setProcess(p);
 
@@ -2938,20 +3182,10 @@ GameSelectionListener, BrowseComputerListener {
 					int request = JOptionPane.showConfirmDialog(view, "Do you want to also close the currently running games?", "",
 							JOptionPane.YES_NO_CANCEL_OPTION);
 					if (request == JOptionPane.OK_OPTION) {
-						if (ValidationUtil.isWindows()) {
-							try {
-								Runtime.getRuntime().exec("cmd.exe /c taskkill -IM " + pId);
-							} catch (IOException e1) {
-								// TODO Auto-generated catch block
-								e1.printStackTrace();
-							}
-						} else if (ValidationUtil.isUnix()) {
-							try {
-								Runtime.getRuntime().exec("kill " + pId);
-							} catch (IOException e1) {
-								// TODO Auto-generated catch block
-								e1.printStackTrace();
-							}
+						try {
+							SystemUtil.killTask(pId);
+						} catch (IOException e) {
+							e.printStackTrace();
 						}
 					}
 				}
@@ -3112,7 +3346,7 @@ GameSelectionListener, BrowseComputerListener {
 							int request = JOptionPane.showConfirmDialog(view, message, title, JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 							if (request == JOptionPane.YES_OPTION) {
 								for (Emulator emu : p.getEmulators()) {
-									if (emu.getPath().equals(filePath)) {
+									if (emu.getAbsolutePath().equals(filePath)) {
 										p.setDefaultEmulatorId(emu.getId());
 										explorerDAO.setDefaultEmulatorId(p, emu.getId());
 									}
@@ -3360,11 +3594,37 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	private void check7Zip(String filePath, Path file, boolean downloadCover) {
-		String message = "<html><h3>This is a 7-Zip-Compressed archive.</h3>" + filePath
-				+ "<br><br>" + "Currently you must unzip it yourself and then add the game.<br/><br/>"
-				+ "<a href='bla.com'>Download 7-Zip to unzip this archive</a></html>";
-		String title = "7-Zip-Archive";
-		JOptionPane.showMessageDialog(view, message, title, JOptionPane.OK_OPTION);
+		SwingUtilities.invokeLater(new Runnable() {
+
+			@Override
+			public void run() {
+				String message = "<html><h3>This is a 7-Zip-Compressed archive.</h3>" + filePath
+						+ "<br><br>" + "Currently you must unzip it yourself and then add the game.<br/><br/>"
+						+ "<a href='bla.com'>Download 7-Zip to unzip this archive</a></html>";
+				String title = "7-Zip-Archive";
+				JOptionPane.showMessageDialog(view, message, title, JOptionPane.OK_OPTION);
+				JDialog dlg = UIUtil.createProgressDialog("extracting files from .7z-archive...");
+				dlg.setModalityType(ModalityType.APPLICATION_MODAL);
+				dlg.setLocationRelativeTo(view);
+				dlg.setVisible(true);
+
+				Thread myThread = new Thread(new Runnable() {
+
+					@Override
+					public void run() {
+						try {
+							SevenZipUtils.decompress(filePath, new File(FilenameUtils.getFullPath(filePath)));
+							if (dlg != null) {
+								dlg.dispose();
+							}
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					}
+				});
+				myThread.start();
+			}
+		});
 	}
 
 	private void checkExe(String filePath, Platform p0, Path file, boolean downloadCover) throws BroEmulatorDeletedException {
@@ -5903,7 +6163,7 @@ GameSelectionListener, BrowseComputerListener {
 		for (Platform p : explorer.getPlatforms()) {
 			for (Emulator emu : p.getEmulators()) {
 				if (emu.isInstalled()) {
-					String fullPath = FilenameUtils.getFullPath(emu.getPath());
+					String fullPath = FilenameUtils.getFullPath(emu.getAbsolutePath());
 					emulatorDirectories.add(fullPath);
 				}
 			}
@@ -6631,8 +6891,8 @@ GameSelectionListener, BrowseComputerListener {
 				@Override
 				public void actionPerformed(ActionEvent e) {
 					Emulator emulator = frameProperties.getSelectedEmulator();
-					ProcessBuilder pb = new ProcessBuilder(emulator.getPath());
-					pb.directory(new File(FilenameUtils.getFullPath(emulator.getPath())));
+					ProcessBuilder pb = new ProcessBuilder(emulator.getAbsolutePath());
+					pb.directory(new File(emulator.getPath()));
 					try {
 						Process process = pb.start();
 					} catch (IOException e1) {
@@ -7080,6 +7340,17 @@ GameSelectionListener, BrowseComputerListener {
 				@Override
 				public void run() {
 					view.navigationChanged(new NavigationEvent(NavigationPanel.RECYCLE_BIN));
+					if (explorer.getRemovedGames() == null) {
+						System.out.println("removed games:");
+						try {
+							List<Game> removedGames = explorerDAO.getRemovedGames();
+							System.out.println(removedGames);
+							explorer.setRemovedGames(removedGames);
+						} catch (SQLException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					}
 				}
 			});
 		}
@@ -7200,6 +7471,24 @@ GameSelectionListener, BrowseComputerListener {
 			}
 			dlgHelp.setLocationRelativeTo(view);
 			dlgHelp.setVisible(true);
+		}
+	}
+
+	class OpenTroubleshootListener implements ActionListener {
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			if (dlgTroubleshoot == null) {
+				dlgTroubleshoot = new TroubleshootFrame();
+			}
+			dlgTroubleshoot.setLocationRelativeTo(view);
+			dlgTroubleshoot.setVisible(true);
+		}
+	}
+
+	class OpenGamepadTesterListener implements ActionListener {
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			UIUtil.openWebsite("https://gamepad-tester.com/", view);
 		}
 	}
 
@@ -7530,7 +7819,7 @@ GameSelectionListener, BrowseComputerListener {
 		File iconHomeFile = new File(iconPathString);
 		if (!iconHomeFile.exists()) {
 			iconHomeFile.mkdirs();
-			File emuFile = new File(e.getEmulator().getPath());
+			File emuFile = new File(e.getEmulator().getAbsolutePath());
 			ImageIcon ii = (ImageIcon) FileSystemView.getFileSystemView().getSystemIcon(emuFile);
 			int width = ii.getIconWidth();
 			int height = ii.getIconHeight();
@@ -8313,6 +8602,14 @@ GameSelectionListener, BrowseComputerListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			view.hideExtensions(((AbstractButton) e.getSource()).isSelected());
+		}
+	}
+
+	public class ShowGameNamesListener implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			explorer.setShowGameNamesEnabled(!explorer.isShowGameNamesEnabled());
 		}
 	}
 

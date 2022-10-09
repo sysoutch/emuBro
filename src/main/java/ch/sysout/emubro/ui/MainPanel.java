@@ -1391,10 +1391,6 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 		mnuOrganizeOptions.addShowGameDetailsListener(l);
 	}
 
-	public void addOpenPropertiesListener(ActionListener l) {
-		mnuOrganizeOptions.addOpenPropertiesListener(l);
-	}
-
 	public void addExitListener(ActionListener l) {
 		mnuOrganizeOptions.addExitListener(l);
 	}
@@ -1889,5 +1885,8 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 
 	public void gameRenamed(GameRenamedEvent event) {
 		pnlPreviewPane.gameRenamed(event);
+	}
+
+	public void addShowGameNamesListener(ActionListener l) {
 	}
 }

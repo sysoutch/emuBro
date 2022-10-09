@@ -124,4 +124,12 @@ public class FileUtil {
 			Desktop.getDesktop().open(file);
 		}
 	}
+
+	public static boolean fileExists(File file) {
+		return file.exists();
+	}
+
+	public static boolean fileExists(String filePath) {
+		return fileExists(new File(filePath));
+	}
 }

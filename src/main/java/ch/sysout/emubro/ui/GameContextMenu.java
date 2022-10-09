@@ -51,6 +51,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 	private JMenuItem itmRunGame = new JMenuItem("");
 	private JMenu mnuRunWith = new JMenu("");
 	private JMenuItem itmRunWithDefault = new JMenuItem();
+	private JMenuItem itmRunConfigurations = new JMenuItem();
 	private JMenuItem itmRunEmulator = new JMenuItem();
 	private JMenuItem itmConfigureEmulator = new JMenuItem();
 	private JMenuItem itmChangePlatform = new JMenuItem();
@@ -93,7 +94,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		//		MenuScroller.setScrollerFor(mnuAvailableTags, 8, 125, 3, 1);
 
 		setIcons();
-		addComponentsToJComponent(this, itmRunGame, mnuRunWith,
+		addComponentsToJComponent(this, itmRunGame, mnuRunWith, itmRunConfigurations,
 				new JSeparator(), itmRunEmulator, itmConfigureEmulator, itmChangePlatform,
 				new JSeparator(), mnuRateGame, mnuManageTags, itmAddCoverComputer,
 				new JSeparator(), mnuShowTagsWeb, mnuShowCoverWeb, mnuShowTrailerWeb/*, itmWebSearchSettings*/,
@@ -216,10 +217,10 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 			if (!emu.isInstalled()) {
 				continue;
 			}
-			String s = "<html><strong>" + emu.getName() + "</strong> <br>(" + emu.getPath() + ")</html>";
+			String s = "<html><strong>" + emu.getName() + "</strong> <br>(" + emu.getAbsolutePath() + ")</html>";
 			Icon icon = IconStore.current().getEmulatorIcon(emu.getId());
 			if (icon == null) {
-				icon = FileSystemView.getFileSystemView().getSystemIcon(new File(emu.getPath()));
+				icon = FileSystemView.getFileSystemView().getSystemIcon(new File(emu.getAbsolutePath()));
 			}
 			JRadioButtonMenuItem rdb = new JRadioButtonMenuItem(s, icon);
 			if (defaultEmulatorId == emu.getId()) {
@@ -335,6 +336,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		itmRunGame.setText("<html><b>" + Messages.get(MessageConstants.RUN_GAME) + "</b></html>");
 		mnuRunWith.setText(Messages.get(MessageConstants.RUN_WITH) + "...");
 		itmRunWithDefault.setText(Messages.get(MessageConstants.SET_EMULATOR) + "...");
+		itmRunConfigurations.setText(Messages.get(MessageConstants.RUN_CONFIGURATIONS) + "...");
 		itmRunEmulator.setText(Messages.get(MessageConstants.RUN_EMULATOR));
 		itmConfigureEmulator.setText(Messages.get(MessageConstants.CONFIGURE_EMULATOR));
 		itmChangePlatform.setText(Messages.get(MessageConstants.CHANGE_PLATFORM) + "...");

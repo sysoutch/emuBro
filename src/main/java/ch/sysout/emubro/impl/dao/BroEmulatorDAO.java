@@ -58,7 +58,7 @@ public class BroEmulatorDAO implements EmulatorDAO {
 	@Override
 	public void addEmulator(int platformId, Emulator emulator) throws BroEmulatorDeletedException, SQLException {
 		ValidationUtil.checkNull(emulator, "emulator");
-		if (!hasEmulator(platformId, emulator.getPath())) {
+		if (!hasEmulator(platformId, emulator.getAbsolutePath())) {
 			if (isDeleted(platformId, emulator)) {
 				throw new BroEmulatorDeletedException("emulator was added already, but has been deleted: " + emulator.getName(), emulator);
 			}
@@ -73,7 +73,7 @@ public class BroEmulatorDAO implements EmulatorDAO {
 					"emulator_searchString", "emulator_supportedFileTypes", "emulator_autoSearchEnabled",
 					"emulator_deleted",
 					SqlUtil.getQuotedString(emulator.getName()),
-					SqlUtil.getQuotedString(emulator.getPath()),
+					SqlUtil.getQuotedString(emulator.getAbsolutePath()),
 					SqlUtil.getQuotedString(emulator.getIconFilename()),
 					SqlUtil.getQuotedString(emulator.getConfigFilePath()),
 					SqlUtil.getQuotedString(emulator.getWebsite()),
@@ -112,7 +112,7 @@ public class BroEmulatorDAO implements EmulatorDAO {
 			rsetCopy.add(rset.getInt("emulator_id"));
 		}
 		stmt.close();
-		String pathEdited = emulator.getPath().toLowerCase().trim();
+		String pathEdited = emulator.getAbsolutePath().toLowerCase().trim();
 		for (int i : rsetCopy) {
 			stmt = conn.createStatement();
 			sql = "select emulator_id, emulator_path from emulator where emulator_id="+i
@@ -190,7 +190,7 @@ public class BroEmulatorDAO implements EmulatorDAO {
 	@Override
 	public void restoreEmulator(Emulator emulator) throws SQLException {
 		Statement stmt = conn.createStatement();
-		String pathEdited = emulator.getPath().toLowerCase().trim();
+		String pathEdited = emulator.getAbsolutePath().toLowerCase().trim();
 		String sql = "update emulator set emulator_deleted=false where lower(emulator_path)="+SqlUtil.getQuotedString(pathEdited);
 		stmt.executeQuery(sql);
 		conn.commit();

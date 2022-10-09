@@ -261,7 +261,7 @@ public class BroPlatformDAO implements PlatformDAO {
 		conn.commit();
 		stmt.close();
 		for (Emulator e : p.getEmulators()) {
-			System.out.println(e.getPath());
+			System.out.println(e.getAbsolutePath());
 		}
 	}
 

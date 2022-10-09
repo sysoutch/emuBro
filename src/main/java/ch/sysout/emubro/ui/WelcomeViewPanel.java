@@ -23,8 +23,8 @@ import javax.swing.border.Border;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.TitledBorder;
 
+import com.jgoodies.forms.factories.CC;
 import com.jgoodies.forms.factories.Paddings;
-import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 
 import ch.sysout.emubro.api.TagListener;
@@ -62,10 +62,11 @@ public class WelcomeViewPanel extends ViewPanel {
 	private JButton lnkCoverView = new JCustomButtonNew(Messages.get(MessageConstants.VIEW_COVERS));
 
 	private JButton lnkHelp = new JCustomButtonNew(Messages.get(MessageConstants.HELP));
-	private JButton lnkDiscord = new JCustomButtonNew(Messages.get(MessageConstants.EMUBRO_DISCORD));
+	private JButton lnkTroubleshoot = new JCustomButtonNew(Messages.get(MessageConstants.TROUBLESHOOT));
+	private JButton lnkGamepadTester = new JCustomButtonNew(Messages.get(MessageConstants.GAMEPAD_TESTER));
 	private JButton lnkConfigWizard = new JCustomButtonNew(Messages.get(MessageConstants.CONFIGURE_WIZARD, Messages.get(MessageConstants.APPLICATION_TITLE)));
-
 	private JButton lnkUpdateEmubro = new JCustomButtonNew(Messages.get(MessageConstants.SEARCH_FOR_UPDATES));
+	private JButton lnkDiscord = new JCustomButtonNew(Messages.get(MessageConstants.EMUBRO_DISCORD));
 	private JButton lnkAbout = new JCustomButtonNew(Messages.get(MessageConstants.ABOUT, Messages.get(MessageConstants.APPLICATION_TITLE)));
 
 	private Border titledBorderAction = BorderFactory.createTitledBorder(Messages.get(MessageConstants.RUN_ACTION));
@@ -86,11 +87,10 @@ public class WelcomeViewPanel extends ViewPanel {
 		pnlAction.setMinimumSize(new Dimension(0, 0));
 		pnlAction.setBorder(new CompoundBorder(titledBorderAction, boarder));
 		pnlAction.setBackground(Color.WHITE);
-		CellConstraints cc2 = new CellConstraints();
-		pnlAction.add(lnkBrowseComputer, cc2.xy(1, 1));
-		pnlAction.add(lnkAddFiles, cc2.xy(1, 3));
-		pnlAction.add(lnkAddFolders, cc2.xy(1, 5));
-		pnlAction.add(lnkConfigure, cc2.xy(1, 7));
+		pnlAction.add(lnkBrowseComputer, CC.xy(1, 1));
+		pnlAction.add(lnkAddFiles, CC.xy(1, 3));
+		pnlAction.add(lnkAddFolders, CC.xy(1, 5));
+		pnlAction.add(lnkConfigure, CC.xy(1, 7));
 
 		JPanel pnlView = new JPanel(new FormLayout("left:default:grow",
 				"fill:pref, min, fill:pref, min, fill:pref, min, fill:pref, min, fill:pref, min, fill:pref"));
@@ -98,26 +98,26 @@ public class WelcomeViewPanel extends ViewPanel {
 		pnlView.setMinimumSize(new Dimension(0, 0));
 		pnlView.setBorder(new CompoundBorder(titledBorderView, boarder));
 		pnlView.setBackground(Color.WHITE);
-		CellConstraints cc = new CellConstraints();
-		pnlView.add(lnkElementView, cc.xy(1, 1));
-		pnlView.add(lnkListView, cc.xy(1, 3));
-		pnlView.add(lnkTableView, cc.xy(1, 5));
-		pnlView.add(lnkContentView, cc.xy(1, 7));
-		pnlView.add(lnkSliderView, cc.xy(1, 9));
-		pnlView.add(lnkCoverView, cc.xy(1, 11));
+		pnlView.add(lnkElementView, CC.xy(1, 1));
+		pnlView.add(lnkListView, CC.xy(1, 3));
+		pnlView.add(lnkTableView, CC.xy(1, 5));
+		pnlView.add(lnkContentView, CC.xy(1, 7));
+		pnlView.add(lnkSliderView, CC.xy(1, 9));
+		pnlView.add(lnkCoverView, CC.xy(1, 11));
 
 		JPanel pnlHelp = new JPanel(new FormLayout("left:default:grow",
-				"fill:pref, min, fill:pref, min, fill:pref, min, fill:pref, min, fill:pref"));
+				"fill:pref, min, fill:pref, min, fill:pref, min, fill:pref, min, fill:pref, min, fill:pref, min, fill:pref"));
 		pnlHelp.setOpaque(false);
 		pnlHelp.setMinimumSize(new Dimension(0, 0));
 		pnlHelp.setBorder(new CompoundBorder(titledBorderHelp, boarder));
 		pnlHelp.setBackground(Color.WHITE);
-		CellConstraints cc4 = new CellConstraints();
-		pnlHelp.add(lnkHelp, cc4.xy(1, 1));
-		pnlHelp.add(lnkDiscord, cc4.xy(1, 3));
-		pnlHelp.add(lnkConfigWizard, cc4.xy(1, 5));
-		pnlHelp.add(lnkUpdateEmubro, cc2.xy(1, 7));
-		pnlHelp.add(lnkAbout, cc4.xy(1, 9));
+		pnlHelp.add(lnkHelp, CC.xy(1, 1));
+		pnlHelp.add(lnkTroubleshoot, CC.xy(1, 3));
+		pnlHelp.add(lnkConfigWizard, CC.xy(1, 5));
+		pnlHelp.add(lnkGamepadTester, CC.xy(1, 7));
+		pnlHelp.add(lnkUpdateEmubro, CC.xy(1, 9));
+		pnlHelp.add(lnkDiscord, CC.xy(1, 11));
+		pnlHelp.add(lnkAbout, CC.xy(1, 13));
 
 		//		JPanel pnl = new JPanel(new FormLayout("default, $rgap, default, $rgap, default",
 		//				"top:default"));
@@ -144,9 +144,9 @@ public class WelcomeViewPanel extends ViewPanel {
 		JPanel pnlWrapper = new JPanel(new BorderLayout());
 		pnlWrapper.setOpaque(false);
 		pnlWrapper.add(pnlAction);
-		pnlWrapper.add(pnlView, BorderLayout.EAST);
+		pnlWrapper.add(pnlHelp, BorderLayout.SOUTH);
 		pnl.add(pnlWrapper, BorderLayout.EAST);
-		pnl.add(pnlHelp, BorderLayout.SOUTH);
+		pnl.add(pnlView);
 
 		JScrollPane sp = new JCustomScrollPane(pnl);
 		sp.setOpaque(false);
@@ -173,6 +173,7 @@ public class WelcomeViewPanel extends ViewPanel {
 
 		lnkHelp.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("help"), size, Color.LIGHT_GRAY));
 		lnkDiscord.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("discord"), size, new Color(114,137,218)));
+		lnkGamepadTester.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("allGames"), size, Color.LIGHT_GRAY));
 		lnkConfigWizard.setIcon(ImageUtil.getImageIconFrom(Icons.get("configWizard", size, size)));
 		lnkUpdateEmubro.setIcon(ImageUtil.getImageIconFrom(Icons.get("checkForUpdates", size, size)));
 		lnkAbout.setIcon(ImageUtil.getImageIconFrom(Icons.get("about", size, size)));
@@ -214,7 +215,9 @@ public class WelcomeViewPanel extends ViewPanel {
 		lnkSliderView.setText(Messages.get(MessageConstants.VIEW_SLIDER));
 		lnkCoverView.setText(Messages.get(MessageConstants.VIEW_COVERS));
 		lnkHelp.setText(Messages.get(MessageConstants.HELP));
+		lnkTroubleshoot.setText(Messages.get(MessageConstants.TROUBLESHOOT));
 		lnkDiscord.setText(Messages.get(MessageConstants.EMUBRO_DISCORD));
+		lnkGamepadTester.setText(Messages.get(MessageConstants.GAMEPAD_TESTER));
 		lnkConfigWizard.setText(Messages.get(MessageConstants.CONFIGURE_WIZARD, Messages.get(MessageConstants.APPLICATION_TITLE)));
 		lnkUpdateEmubro.setText(Messages.get(MessageConstants.SEARCH_FOR_UPDATES));
 		lnkAbout.setText(Messages.get(MessageConstants.ABOUT, Messages.get(MessageConstants.APPLICATION_TITLE)));
@@ -497,6 +500,10 @@ public class WelcomeViewPanel extends ViewPanel {
 
 	public void addDiscordInviteLinkListener(ActionListener l) {
 		lnkDiscord.addActionListener(l);
+	}
+
+	public void addOpenGamePadTesterListener(ActionListener l) {
+		lnkGamepadTester.addActionListener(l);
 	}
 
 	public void addOpenConfigWizardListener(ActionListener l) {

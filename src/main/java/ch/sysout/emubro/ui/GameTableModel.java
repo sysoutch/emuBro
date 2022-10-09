@@ -22,7 +22,6 @@ import ch.sysout.emubro.impl.model.EmulatorConstants;
 import ch.sysout.emubro.impl.model.PlatformConstants;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.ImageUtil;
-import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 
@@ -92,8 +91,8 @@ public class GameTableModel extends DefaultTableModel {
 				int platformId = game.getPlatformId();
 				Platform platform = (platformId == PlatformConstants.NO_PLATFORM) ? null : explorer.getPlatform(platformId);
 				int rate = game.getRate();
-				String lastPlayed = game.getLastPlayed() != null ? UIUtil.format(game.getLastPlayed()) : "";
-				String dateAdded = UIUtil.format(game.getDateAdded());
+				String lastPlayed = game.getLastPlayed() != null ? game.getFormattedLastPlayedDate() : "";
+				String dateAdded = game.getFormattedDateAdded();
 				switch (columnIndex) {
 				case TITLE_COLUMN_INDEX:
 					value = lblIcon;
@@ -186,6 +185,11 @@ public class GameTableModel extends DefaultTableModel {
 
 		public void setText(String text) {
 			this.text = text;
+		}
+
+		@Override
+		public String toString() {
+			return text;
 		}
 	}
 

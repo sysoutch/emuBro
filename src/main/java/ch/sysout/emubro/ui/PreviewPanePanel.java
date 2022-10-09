@@ -81,6 +81,7 @@ import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.api.model.Tag;
 import ch.sysout.emubro.controller.GameSelectionListener;
 import ch.sysout.emubro.impl.event.BroTagAddedEvent;
+import ch.sysout.emubro.util.ColorConstants;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.FontUtil;
 import ch.sysout.ui.util.ImageUtil;
@@ -1316,7 +1317,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			private JPanel pnlTagList = new JPanel();
 			private JButton btnAddTag = new JCustomButton(Messages.get(MessageConstants.ADD_TAG));
 			private int size = ScreenSizeUtil.is3k() ? 24 : 16;
-			private Icon iconTag = ImageUtil.getFlatSVGIconFrom(Icons.get("tag"), size, Color.LIGHT_GRAY);
+			private Icon iconTag = ImageUtil.getFlatSVGIconFrom(Icons.get("tag"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR));
 			private Map<Integer, JComponent> tags = new HashMap<>();
 			protected JPopupMenu popup = new JPopupMenu();
 			private JMenuItem itmAddToFilter;
@@ -1382,7 +1383,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 				add(pnlTagList);
 
 				int size = ScreenSizeUtil.is3k() ? 24 : 16;
-				btnAddTag.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("tagAdd"), size, Color.LIGHT_GRAY));
+				btnAddTag.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("tagAdd"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 				btnAddTag.addActionListener(new ActionListener() {
 
 					@Override

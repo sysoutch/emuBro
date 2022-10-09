@@ -74,7 +74,7 @@ public class EmulatorTableModel extends DefaultTableModel {
 	public Object getValueAt(int rowIndex, int columnIndex) {
 		Emulator emulator = emulators.get(rowIndex);
 		String emulatorName = emulator.getName();
-		String emulatorPath = emulator.getPath();
+		String emulatorPath = emulator.getAbsolutePath();
 		switch (columnIndex) {
 		case 0:
 			return rowIndex == defaultEmulatorId ? iconDefault : null;
@@ -124,7 +124,7 @@ public class EmulatorTableModel extends DefaultTableModel {
 				int size = ScreenSizeUtil.adjustValueToResolution(16);
 				String iconFilename = emulator.getIconFilename();
 				if (iconFilename.trim().isEmpty() || iconFilename.equalsIgnoreCase("blank.png")) {
-					File file = new File(emulator.getPath());
+					File file = new File(emulator.getAbsolutePath());
 					ico = (ImageIcon) FileSystemView.getFileSystemView().getSystemIcon(file);
 					//					int width = ico.getIconWidth();
 					//					int height = ico.getIconHeight();
@@ -149,7 +149,7 @@ public class EmulatorTableModel extends DefaultTableModel {
 				icons.put(emulator.getId(), ico);
 			}
 
-			Object[] emulatorArr = new Object[] { null, emulator.getName(), emulator.getPath() };
+			Object[] emulatorArr = new Object[] { null, emulator.getName(), emulator.getAbsolutePath() };
 			super.addRow(emulatorArr);
 			// System.out.println((getRowCount()-1) + ", "+(getRowCount()-1));
 			fireTableRowsInserted(getRowCount() - 1, getRowCount() - 1);

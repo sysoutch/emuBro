@@ -179,6 +179,10 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	private Color colorDeleted = new Color(237, 67, 55);
 
 	protected boolean themeChanged;
+	private String currentFilterText = "";
+
+	private Map<Game, String> textFilterHighlightedGameNames = new HashMap<>();
+	private boolean shouldUpdateCurrentFilterText;
 
 	public ListViewPanel(Explorer explorer, ViewPanelManager viewManager, GameContextMenu popupGame, ViewContextMenu popupView) {
 		super(new BorderLayout());
@@ -524,6 +528,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				checkFontAndFontSize(list, game, label, isSelected);
 				checkIsGameSelected(list, index, label);
 				//				checkHideExtensions(viewManager.isHideExtensionsEnabled(), explorer.getFiles(game).get(0), label);
+				checkTextFilter(list, game, label, isSelected);
 				if (isDragging()) {
 					setEnabled(true);
 				}
@@ -546,8 +551,14 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 					break;
 				case ViewPanel.SLIDER_VIEW:
 					gameIcon = IconStore.current().getScaledGameCover(game.getId(), currentCoverSize);
+					if (!explorer.isShowGameNamesEnabled())  {
+						label.setText("");
+					}
 					break;
 				case ViewPanel.COVER_VIEW:
+					if (!explorer.isShowGameNamesEnabled())  {
+						label.setText("");
+					}
 					gameIcon = IconStore.current().getScaledGameCover(game.getId(), currentCoverSize);
 					break;
 				}
@@ -665,7 +676,30 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				//					label.setForeground(UIManager.getColor("List.selectionForeground"));
 				//				}
 			}
+
+			private void checkTextFilter(JList<?> list, BroGame game, JLabel label, boolean isSelected) {
+				String lblText = label.getText();
+				// TODO check if this can be cached even more. or maybe just save it in Game object itself instead of creating an extra HasMap for this
+				if (!currentFilterText.isEmpty() && lblText.toLowerCase().contains(currentFilterText.toLowerCase())) {
+					if (shouldUpdateCurrentFilterText || !textFilterHighlightedGameNames.containsKey(game)) {
+						addOrOverwriteKey(game, lblText, isSelected);
+					}
+					label.setText(textFilterHighlightedGameNames.get(game).toString());
+				}
+			}
 		});
+	}
+
+	protected void addOrOverwriteKey(BroGame game, String lblText, boolean isSelected) {
+		lblText = "<html>"+lblText+"</html>";
+		int startIndex = lblText.toLowerCase().indexOf(currentFilterText.toLowerCase());
+		String str0 = "<font><span style=\"background-color:orange\">";
+		String str1 = "<font><span style=\"background-color:yellow\">";
+		String str2 = "</span></font>";
+		int endIndex = startIndex + str1.length() + currentFilterText.length();
+		String str = new StringBuilder(lblText).insert(startIndex, isSelected ? str0 : str1)
+				.insert(endIndex, str2).toString();
+		textFilterHighlightedGameNames.put(game, str);
 	}
 
 	@Override
@@ -1796,6 +1830,10 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		}
 		if (event.isGameFilterSet()) {
 			String text = event.getCriteria().getText();
+			if (!shouldUpdateCurrentFilterText && !text.equals(currentFilterText)) {
+				shouldUpdateCurrentFilterText = true;
+			}
+			currentFilterText = text;
 			boolean hasSearchString = text != null && !text.isEmpty();
 			boolean hasTags = event.hasTags();
 			for (int i = mdlLstFilteredGames.size()-1; i >= 0; i--) {
@@ -1816,6 +1854,11 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 					}
 				}
 			}
+		} else {
+			if (!currentFilterText.isEmpty()) {
+				textFilterHighlightedGameNames.clear();
+			}
+			currentFilterText = "";
 		}
 
 		GameListModel mdl = (!event.isPlatformFilterSet() && !event.isGameFilterSet()) ? getModelFromCurrentView()

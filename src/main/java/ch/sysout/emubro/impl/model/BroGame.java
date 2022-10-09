@@ -7,6 +7,7 @@ import java.util.List;
 
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.Tag;
+import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.ValidationUtil;
 
 public class BroGame implements Game {
@@ -19,7 +20,9 @@ public class BroGame implements Game {
 	private String coverPath;
 	private int rate;
 	private ZonedDateTime dateAdded;
+	private String formattedDateAdded;
 	private ZonedDateTime lastPlayed;
+	private String formattedLastPlayedDate;
 	private int playCount;
 	private int emulatorId;
 	private int platformId;
@@ -165,6 +168,14 @@ public class BroGame implements Game {
 	}
 
 	@Override
+	public String getFormattedDateAdded() {
+		if (formattedDateAdded == null) {
+			formattedDateAdded = UIUtil.format(dateAdded);
+		}
+		return formattedDateAdded;
+	}
+
+	@Override
 	public ZonedDateTime getLastPlayed() {
 		return lastPlayed;
 	}
@@ -172,6 +183,19 @@ public class BroGame implements Game {
 	@Override
 	public void setLastPlayed(ZonedDateTime date) {
 		lastPlayed = date;
+		setFormattedLastPlayedDate(date);
+	}
+
+	@Override
+	public String getFormattedLastPlayedDate() {
+		if (formattedLastPlayedDate == null) {
+			setFormattedLastPlayedDate(lastPlayed);
+		}
+		return formattedLastPlayedDate;
+	}
+
+	private void setFormattedLastPlayedDate(ZonedDateTime lastPlayed2) {
+		formattedLastPlayedDate = UIUtil.format(lastPlayed);
 	}
 
 	@Override

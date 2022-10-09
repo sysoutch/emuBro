@@ -32,6 +32,7 @@ import com.jgoodies.forms.layout.FormLayout;
 
 import ch.sysout.emubro.api.GameViewListener;
 import ch.sysout.emubro.impl.event.NavigationEvent;
+import ch.sysout.emubro.util.ColorConstants;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.ui.util.UIUtil;
@@ -240,10 +241,10 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 
 	private void setIcons() {
 		int size = ScreenSizeUtil.adjustValueToResolution(32);
-		btnAllGames.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("allGames"), size, Color.LIGHT_GRAY));
+		btnAllGames.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("allGames"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		btnFavorites.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("favorites"), size, new Color(255, 195, 0)));
 		btnRecentlyPlayed.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("recentlyPlayed"), size, new Color(181, 201, 255)));
-		btnRecycleBin.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("trash"), size, Color.LIGHT_GRAY));
+		btnRecycleBin.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("trash"), size, new Color(237, 67, 55)));
 	}
 
 	private void addToButtonGroup(ButtonGroup grp, AbstractButton... buttons) {

@@ -36,6 +36,7 @@ import com.jgoodies.forms.layout.FormLayout;
 
 import ch.sysout.emubro.api.event.GameSelectionEvent;
 import ch.sysout.emubro.controller.NotificationElementListener;
+import ch.sysout.emubro.util.ColorConstants;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.util.Icons;
@@ -255,7 +256,7 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		sp2.setBorder(BorderFactory.createEmptyBorder());
 		sp2.getVerticalScrollBar().setUnitIncrement(16);
 		tpDetailsPane.addTab(Messages.get(MessageConstants.NOTIFICATIONS), ImageUtil.getFlatSVGIconFrom(Icons.get("info"), 16, new Color(137, 207, 240)), createNotificationPanel());
-		tpDetailsPane.addTab(Messages.get(MessageConstants.BROWSE_COMPUTER), ImageUtil.getFlatSVGIconFrom(Icons.get("search"), 16, Color.LIGHT_GRAY), sp2);
+		tpDetailsPane.addTab(Messages.get(MessageConstants.BROWSE_COMPUTER), ImageUtil.getFlatSVGIconFrom(Icons.get("search"), 16, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)), sp2);
 		tpDetailsPane.addTab(Messages.get(MessageConstants.BROWSE_COVERS), ImageUtil.getFlatSVGIconFrom(Icons.get("picture"), 16, new Color(181, 201, 255)), pnlBrowseCovers);
 		tpDetailsPane.addTab(Messages.get(MessageConstants.BROWSE_TAGS), ImageUtil.getFlatSVGIconFrom(Icons.get("tag"), 16, new Color(168, 124, 160)), pnlBrowseTags);
 

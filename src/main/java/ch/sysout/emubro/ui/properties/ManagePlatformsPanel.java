@@ -84,6 +84,7 @@ import ch.sysout.emubro.controller.BroController.PlatformListCellRenderer;
 import ch.sysout.emubro.impl.model.BroEmulator;
 import ch.sysout.emubro.ui.AddEmulatorPanel;
 import ch.sysout.emubro.ui.AddPlatformDialog;
+import ch.sysout.emubro.ui.ColorStore;
 import ch.sysout.emubro.ui.EmulatorTableCellRenderer;
 import ch.sysout.emubro.ui.EmulatorTableModel;
 import ch.sysout.emubro.ui.JCustomButton;
@@ -94,6 +95,7 @@ import ch.sysout.emubro.ui.JLinkButton;
 import ch.sysout.emubro.ui.JTableDoubleClickOnHeaderFix;
 import ch.sysout.emubro.ui.SortedListModel;
 import ch.sysout.emubro.ui.TableColumnAdjuster;
+import ch.sysout.emubro.util.ColorConstants;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.ui.util.UIUtil;
@@ -349,6 +351,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 				new AddPlatformDialog().setVisible(true);
 			} else if (source == chkShowOnlyInstalledPlatforms) {
 				SortedListModel<Platform> model = (SortedListModel<Platform>) lstPlatforms.getModel();
+				Platform selectedPlatform = lstPlatforms.getSelectedValue();
 				if (chkShowOnlyInstalledPlatforms.isSelected()) {
 					for (int i = model.getSize()-1; i >= 0; i--) {
 						int platformId = model.getElementAt(i).getId();
@@ -356,12 +359,18 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 							model.removeElement(model.getElementAt(i));
 						}
 					}
+					lstPlatforms.setSelectedValue(selectedPlatform, true);
 				} else {
 					for (Platform platform : explorer.getPlatforms()) {
 						int platformId = platform.getId();
 						if (!explorer.hasGamesOrEmulators(platformId)) {
 							model.add(platform);
 						}
+					}
+					if (explorer.hasGamesOrEmulators(selectedPlatform.getId())) {
+						lstPlatforms.setSelectedValue(selectedPlatform, true);
+					} else {
+						lstPlatforms.setSelectedValue(null, false);
 					}
 				}
 			}
@@ -700,6 +709,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 			private JPanel pnlInputConfiguration;
 			private JScrollPane spInputConfiguration;
 			private JScrollPane spGeneralSettings;
+			private JScrollPane spEmulatorConfiguration;
 			private JScrollPane spCommandLineArguments;
 			private JLabel lblName = new JLabel();
 			private JLabel txtPath = new JLabel();
@@ -921,20 +931,21 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 				// correctly
 
 				spGeneralSettings = new JCustomScrollPane(createGeneralSettingsPanel());
-				spGeneralSettings.setOpaque(false);
-				spGeneralSettings.getViewport().setOpaque(false);
-				spGeneralSettings.setBorder(BorderFactory.createEmptyBorder());
+				//				spGeneralSettings.setBorder(BorderFactory.createEmptyBorder());
 				spGeneralSettings.getVerticalScrollBar().setUnitIncrement(16);
 
+				spEmulatorConfiguration = new JCustomScrollPane(createGeneralSettingsPanel());
+				spEmulatorConfiguration.getVerticalScrollBar().setUnitIncrement(16);
+
+
 				spInputConfiguration = new JCustomScrollPane(createInputConfigurationPanel());
-				spInputConfiguration.setOpaque(false);
-				spInputConfiguration.getViewport().setOpaque(false);
-				spInputConfiguration.setBorder(BorderFactory.createEmptyBorder());
+				//				spInputConfiguration.setBorder(BorderFactory.createEmptyBorder());
 				spInputConfiguration.getVerticalScrollBar().setUnitIncrement(16);
 
 				//				tpMain.setUI(new CustomTabbedPaneUI());
 				//				tpMain.setBorder(BorderFactory.createEmptyBorder());
 				tpMain.addTab(Messages.get(MessageConstants.GENERAL), spGeneralSettings);
+				tpMain.addTab(Messages.get(MessageConstants.CONFIGURE), spEmulatorConfiguration);
 				tpMain.addTab(Messages.get(MessageConstants.INPUT), spInputConfiguration);
 				tpMain.addTab(Messages.get(MessageConstants.ADVANCED), pnlConfigurationFile);
 				tpMain.setTabPlacement(SwingConstants.TOP);
@@ -1069,7 +1080,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 			private Component createCenterPanel() {
 				JPanel pnl = new JPanel(new BorderLayout());
 				pnl.setOpaque(false);
-				JCustomButtonNew btnGamePad = new JCustomButtonNew("Drop an image of a controller here", ImageUtil.getFlatSVGIconFrom(Icons.get("gamepadXbox"), 128, Color.LIGHT_GRAY));
+				JCustomButtonNew btnGamePad = new JCustomButtonNew("Drop an image of a controller here", ImageUtil.getFlatSVGIconFrom(Icons.get("gamepadXbox"), 128, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 				btnGamePad.setHorizontalTextPosition(SwingConstants.CENTER);
 				btnGamePad.setVerticalTextPosition(SwingUtilities.TOP);
 				pnl.add(btnGamePad);
@@ -1240,11 +1251,11 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 
 			public void setEmulator(Emulator emulator) {
 				String name = emulator.getName();
-				String path = emulator.getPath();
+				String path = emulator.getAbsolutePath();
 				String website = emulator.getWebsite();
 				String startParameters = emulator.getStartParameters();
 				List<String> fileTypes = emulator.getSupportedFileTypes();
-				String parent = new File(emulator.getPath()).getParent();
+				String parent = new File(emulator.getAbsolutePath()).getParent();
 				String configFilePathEdited = emulator.getConfigFilePath().replace("/", File.separator).trim();
 				final String configFilePath = parent + ((configFilePathEdited.startsWith(File.separator))
 						? configFilePathEdited : File.separator + configFilePathEdited);

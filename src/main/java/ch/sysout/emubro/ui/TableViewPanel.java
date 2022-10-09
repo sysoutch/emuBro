@@ -186,6 +186,20 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 		tblGames = new JTableDoubleClickOnHeaderFix();
 		tblGames.setDefaultRenderer(LabelIcon.class, new LabelIconRenderer());
 
+		tblGames.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				if (e.getClickCount() == 2) {
+					JTable target = (JTable)e.getSource();
+					int row = target.getSelectedRow();
+					int column = target.getSelectedColumn();
+					if (column == GameTableModel.RATING_COLUMN_INDEX) {
+						System.out.println("yeyy, chnge this cell to selecte somehow");
+					}
+				}
+			}
+		});
+
 		columnModel = tblGames.getColumnModel();
 		columnAdjuster = new TableColumnAdjuster(tblGames);
 		// columnModel.getColumn(0).setResizable(false);

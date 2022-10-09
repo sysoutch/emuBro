@@ -21,6 +21,7 @@ import javax.swing.JPanel;
 import ch.sysout.emubro.api.event.GameSelectionEvent;
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.controller.GameSelectionListener;
+import ch.sysout.emubro.util.ColorConstants;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.util.Icons;
@@ -63,7 +64,7 @@ public class RatingBarPanel extends JPanel implements ActionListener, FocusListe
 		}
 		int size = ScreenSizeUtil.is3k() ? 32 : 16;
 		ColorStore.current().setColor("rating", new Color(255, 195, 0));
-		ColorStore.current().setColor("ratingBlank", Color.LIGHT_GRAY);
+		ColorStore.current().setColor("ratingBlank", ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR));
 		ColorStore.current().setColor("ratingAdd", new Color(40, 167, 69));
 		ColorStore.current().setColor("ratingRemove", new Color(237, 67, 55));
 		for (AbstractButton btn : buttons) {

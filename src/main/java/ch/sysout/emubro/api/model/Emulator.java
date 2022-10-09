@@ -15,6 +15,8 @@ public interface Emulator extends Comparable<Emulator> {
 
 	String getPath();
 
+	String getAbsolutePath();
+
 	String getSearchString();
 
 	String getSetupFileMatch();

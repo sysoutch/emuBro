@@ -91,6 +91,8 @@ public interface Game extends Comparable<Game> {
 	 */
 	void setLastPlayed(ZonedDateTime date);
 
+	String getFormattedLastPlayedDate();
+
 	int getPlayCount();
 
 	void setPlayCount(int count);
@@ -114,6 +116,8 @@ public interface Game extends Comparable<Game> {
 	String getPlatformIconFileName();
 
 	ZonedDateTime getDateAdded();
+
+	String getFormattedDateAdded();
 
 	int getDefaultFileId();
 

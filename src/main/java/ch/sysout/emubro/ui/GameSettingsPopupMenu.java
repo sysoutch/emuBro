@@ -57,11 +57,11 @@ class GameSettingsPopupMenu extends JPopupMenu {
 			if (!emu.isInstalled()) {
 				continue;
 			}
-			String s = "<html><strong>" + emu.getName() + "</strong> <br>(" + emu.getPath() + ")</html>";
+			String s = "<html><strong>" + emu.getName() + "</strong> <br>(" + emu.getAbsolutePath() + ")</html>";
 			//			String path = "/platforms/emulators/" + emu.getIconFilename();
 			Icon icon = IconStore.current().getEmulatorIcon(emu.getId());;
 			if (icon == null) {
-				icon = FileSystemView.getFileSystemView().getSystemIcon(new File(emu.getPath()));
+				icon = FileSystemView.getFileSystemView().getSystemIcon(new File(emu.getAbsolutePath()));
 			}
 			JRadioButtonMenuItem rdb = new JRadioButtonMenuItem(s, icon);
 			if (defaultEmulatorId == emu.getId()) {
