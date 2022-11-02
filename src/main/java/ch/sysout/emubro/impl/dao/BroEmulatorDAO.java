@@ -112,17 +112,20 @@ public class BroEmulatorDAO implements EmulatorDAO {
 			rsetCopy.add(rset.getInt("emulator_id"));
 		}
 		stmt.close();
-		String pathEdited = emulator.getAbsolutePath().toLowerCase().trim();
-		for (int i : rsetCopy) {
-			stmt = conn.createStatement();
-			sql = "select emulator_id, emulator_path from emulator where emulator_id="+i
-					+ " and lower(emulator_path)="+SqlUtil.getQuotedString(pathEdited) + " and emulator_deleted="+true;
-			rset = stmt.executeQuery(sql);
-			if (rset.next()) {
+		String emulatorPath = emulator.getAbsolutePath();
+		if (emulatorPath != null) {
+			String pathEdited = emulatorPath.toLowerCase().trim();
+			for (int i : rsetCopy) {
+				stmt = conn.createStatement();
+				sql = "select emulator_id, emulator_path from emulator where emulator_id="+i
+						+ " and lower(emulator_path)="+SqlUtil.getQuotedString(pathEdited) + " and emulator_deleted="+true;
+				rset = stmt.executeQuery(sql);
+				if (rset.next()) {
+					stmt.close();
+					return true;
+				}
 				stmt.close();
-				return true;
 			}
-			stmt.close();
 		}
 		return false;
 	}

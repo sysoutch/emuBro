@@ -22,7 +22,7 @@ public interface Platform extends Comparable<Platform> {
 
 	void addSearchFor(String searchFor);
 
-	String getIconFileName();
+	String getIconFilename();
 
 	String getDefaultGameCover();
 

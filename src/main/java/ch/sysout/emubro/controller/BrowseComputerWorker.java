@@ -1,5 +1,6 @@
 package ch.sysout.emubro.controller;
 
+import java.awt.AWTException;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -13,6 +14,7 @@ import javax.swing.SwingWorker;
 import ch.sysout.emubro.api.dao.ExplorerDAO;
 import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.ui.MainFrame;
+import ch.sysout.ui.util.UIUtil;
 
 class BrowseComputerWorker extends SwingWorker<Void, File> {
 	long searchProcessEnded;
@@ -209,7 +211,11 @@ class BrowseComputerWorker extends SwingWorker<Void, File> {
 		view.searchProcessEnded();
 		searchProcessEnded = System.currentTimeMillis();
 		System.out.println(searchProcessEnded - searchProcessStarted + " milliseconds");
-
+		try {
+			UIUtil.displayTray("searchProcessEnded - searchProcessStarted + milliseconds", "search ended");
+		} catch (AWTException e) {
+			e.printStackTrace();
+		}
 		// try {
 		// Void result = workerBrowseComputer.get(); // this line can throw
 		// InterruptedException or ExecutionException

@@ -438,19 +438,20 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 		pnlFilter.setOpaque(false);
 		pnlFilter.setBorder(Paddings.DLU2);
 
-		JPanel pnlWrapper = new JPanel(new BorderLayout());
-		pnlWrapper.setOpaque(false);
-		pnlWrapper.add(txtSearchGame);
-		pnlWrapper.add(btnTags, BorderLayout.EAST);
-
 		JSplitPane splFilterPlatformAndGame = new JSplitPane();
-		splFilterPlatformAndGame.setResizeWeight(0.625);
+		splFilterPlatformAndGame.setResizeWeight(0);
 		splFilterPlatformAndGame.setBorder(BorderFactory.createEmptyBorder());
 		splFilterPlatformAndGame.setContinuousLayout(true);
 		splFilterPlatformAndGame.setLeftComponent(cmbPlatforms);
-		splFilterPlatformAndGame.setRightComponent(pnlWrapper);
-		splFilterPlatformAndGame.setOpaque(false);
-		pnlFilter.add(splFilterPlatformAndGame, cc.xy(1, 1));
+		splFilterPlatformAndGame.setRightComponent(txtSearchGame);
+
+		JSplitPane splFilterTextAndTag = new JSplitPane();
+		splFilterTextAndTag.setResizeWeight(1);
+		splFilterTextAndTag.setBorder(BorderFactory.createEmptyBorder());
+		splFilterTextAndTag.setContinuousLayout(true);
+		splFilterTextAndTag.setLeftComponent(splFilterPlatformAndGame);
+		splFilterTextAndTag.setRightComponent(btnTags);
+		pnlFilter.add(splFilterTextAndTag, cc.xy(1, 1));
 
 		add(pnlFilter, BorderLayout.NORTH);
 		//		add(pnlTags);

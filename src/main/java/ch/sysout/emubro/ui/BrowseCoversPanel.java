@@ -34,7 +34,9 @@ import ch.sysout.emubro.api.event.GameSelectionEvent;
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.util.ColorConstants;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.ui.util.UIUtil;
+import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 
 public class BrowseCoversPanel extends JPanel {
@@ -176,8 +178,10 @@ public class BrowseCoversPanel extends JPanel {
 	}
 
 	public void languageChanged() {
-		lblDragDropCover.setText("<html>"+Messages.get(MessageConstants.DRAG_AND_DROP_FILES_OR_FOLDERS_HERE) + "<br>"
-				+ "You don't have covers? Select one or more games and find some with Google</html>");
+		lblDragDropCover.setText(Messages.get(MessageConstants.DRAG_AND_DROP_FILES_OR_FOLDERS_HERE));
+		lblDragDropCover.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("download"), 48, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		lblDragDropCover.setHorizontalTextPosition(SwingConstants.CENTER);
+		lblDragDropCover.setVerticalTextPosition(SwingConstants.BOTTOM);
 		btnSetCoverForGame.setText(Messages.get(MessageConstants.SET_COVER));
 		btnClearList.setText(Messages.get(MessageConstants.CLEAR_LIST));
 	}

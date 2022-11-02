@@ -38,6 +38,7 @@ import ch.sysout.emubro.controller.GameSelectionListener;
 import ch.sysout.emubro.impl.event.BroTagAddedEvent;
 import ch.sysout.emubro.impl.event.BroTagRemovedEvent;
 import ch.sysout.emubro.impl.model.BroEmulator;
+import ch.sysout.emubro.util.ColorConstants;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.ui.util.UIUtil;
@@ -109,7 +110,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		int size = ScreenSizeUtil.is3k() ? 24 : 16;
 		itmCreateNewTag.setIcon(ImageUtil.getImageIconFrom(Icons.get("add", size, size)));
 		itmAutoSearchTags.setIcon(ImageUtil.getImageIconFrom(Icons.get("searchFile", size, size)));
-		mnuShowTagsWeb.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("tag"), size, Color.LIGHT_GRAY));
+		mnuShowTagsWeb.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("tag"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		addComponentsToJComponent(mnuImportTags, itmDefaultImportTagSource, new JSeparator());
 		addComponentsToJComponent(mnuAvailableTags, itmCreateNewTag, new JSeparator());
 		addComponentsToJComponent(mnuManageTags, itmAutoSearchTags, mnuAvailableTags, new JSeparator());
@@ -260,18 +261,18 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		mnuShowCoverWeb.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("picture"), size, new Color(181, 201, 255)));
 		itmRunGame.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("runGame"), size, new Color(40, 167, 69)));
 		itmRunEmulator.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("runGame"), size, new Color(181, 201, 255)));
-		itmConfigureEmulator.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("settings"), size, Color.LIGHT_GRAY));
-		itmChangePlatform.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("change"), size, Color.LIGHT_GRAY));
+		itmConfigureEmulator.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("settings"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		itmChangePlatform.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("change"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		itmComment.setIcon(ImageUtil.getImageIconFrom(Icons.get("gameComment", size, size)));
 		itmCopyGamePath.setIcon(ImageUtil.getImageIconFrom(Icons.get("copy", size, size)));
 		itmOpenGameFolder.setIcon(ImageUtil.getImageIconFrom(Icons.get("openFolder", size, size)));
 		itmRemoveGame.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("trash"), size, new Color(237, 67, 55)));
-		itmRenameGame.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rename"), size, Color.LIGHT_GRAY));
+		itmRenameGame.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rename"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		itmDefaultTagSource.setIcon(ImageUtil.getImageIconFrom(Icons.get("applicationIcon", size, size)));
 		//		itmCoverDownload.setIcon(ImageUtil.getImageIconFrom(Icons.get("applicationIcon", size, size)));
 		itmDefaultCoverSource.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("google"), size));
 		itmDefaultTrailerSource.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("youtube"), size));
-		itmGameProperties.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("gameProperties"), size, Color.LIGHT_GRAY));
+		itmGameProperties.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("gameProperties"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 	}
 
 	private void addComponentsToJComponent(JComponent component, Component... components) {

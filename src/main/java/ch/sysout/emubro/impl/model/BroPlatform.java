@@ -146,11 +146,8 @@ public class BroPlatform implements Platform {
 		return iconFilename != null && !iconFilename.trim().isEmpty();
 	}
 
-	/**
-	 * @return
-	 */
 	@Override
-	public String getIconFileName() {
+	public String getIconFilename() {
 		return iconFilename;
 	}
 

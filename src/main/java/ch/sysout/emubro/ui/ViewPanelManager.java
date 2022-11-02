@@ -87,7 +87,7 @@ public class ViewPanelManager {
 		for (Platform p : platforms) {
 			int platformId = p.getId();
 			initEmulatorIcons(explorer.getEmulatorsDirectory(p), p.getEmulators());
-			iconStore.addPlatformIcon(platformId, explorer.getLogosDirectoryFromPlatform(p), p.getIconFileName());
+			iconStore.addPlatformIcon(platformId, explorer.getLogosDirectoryFromPlatform(p), p.getIconFilename());
 			iconStore.addPlatformCover(platformId, explorer.getCoversDirectoryFromPlatform(p), p.getDefaultGameCover());
 		}
 	}

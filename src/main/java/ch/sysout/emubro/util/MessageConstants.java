@@ -377,4 +377,10 @@ public class MessageConstants {
 	public static final String FINISH = "finish";
 	public static final String EMUBRO_DISCORD = "emuBroDiscord";
 	public static final String RUN_CONFIGURATIONS = "runConfigurations";
+	public static final String SHOW_PLATFORM_ICONS_IN_VIEW = "showPlatformIconsInView";
+	public static final String ITM_MODIFY_THEME = "itmModifyTheme";
+	public static final String GRAPHICS = "graphics";
+	public static final String PLUGINS = "plugins";
+	public static final String QUICK_LOAD = "quickLoad";
+	public static final String QUICK_SAVE = "quickSave";
 }

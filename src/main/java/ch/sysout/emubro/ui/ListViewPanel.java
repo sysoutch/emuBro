@@ -64,6 +64,7 @@ import javax.swing.event.ListSelectionListener;
 
 import org.apache.commons.io.FilenameUtils;
 
+import com.formdev.flatlaf.FlatLaf;
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.ColumnSpec;
 import com.jgoodies.forms.layout.FormLayout;
@@ -627,24 +628,31 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				if (viewManager.getFontSize() <= 0) {
 					viewManager.setFontSize(label.getFont().getSize());
 				}
-				// TODO implement this dynamically so user can decide if he wants bg from theme or this technique
-				//				if (colorItemBackground == null || themeChanged) {
-				//					Color bg = FlatLaf.isLafDark() ? label.getBackground().brighter() : label.getBackground().darker();
-				//					colorItemBackground = new Color(bg.getRed(), bg.getGreen(), bg.getBlue(), 180);
-				//				}
+				// TODO impleme1nt this dynamically so user can decide if he wants bg from theme or this technique
+				if (colorItemBackground == null || themeChanged) {
+					Color bg = FlatLaf.isLafDark() ? label.getBackground().brighter() : label.getBackground().darker();
+					colorItemBackground = new Color(bg.getRed(), bg.getGreen(), bg.getBlue(), 180);
+				}
+				Theme currentTheme = IconStore.current().getCurrentTheme();
+				ThemeBackground currentBackground = currentTheme.getView();
+				boolean transparentSelection = currentBackground.isTransparentSelection();
 				if (game.isFavorite()) {
 					label.setForeground(colorFavorite);
 					if (!isSelected) {
 						if (viewStyle != ViewPanel.CONTENT_VIEW) {	// Cause in content view the game title is bold and the other informations not. It would looks too bold.
 						}
 					} else {
-						//						label.setBackground(colorItemBackground);
+						if (transparentSelection) {
+							label.setBackground(colorItemBackground);
+						}
 						if (viewStyle != ViewPanel.CONTENT_VIEW) {	// Cause in content view the game title is bold. This would set game title also plain.
 						}
 					}
 				} else {
 					if (isSelected) {
-						//						label.setBackground(colorItemBackground);
+						if (transparentSelection) {
+							label.setBackground(colorItemBackground);
+						}
 					} else {
 						//						label.setForeground(colorBackground);
 					}
@@ -708,9 +716,6 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	}
 
 	private void setViewStyle(JList<Game> lst, final int viewStyle) {
-		final int cellHeight = viewManager.getCurrentCoverSize();
-		final int fontHeight = ScreenSizeUtil.adjustValueToResolution(24);
-		final int borderHeight = ScreenSizeUtil.adjustValueToResolution(16);
 		this.viewStyle = viewStyle;
 		switch (viewStyle) {
 		case ViewPanel.CONTENT_VIEW:
@@ -729,7 +734,14 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 			layoutOrientation = JList.HORIZONTAL_WRAP;
 			break;
 		}
+		setFixedCellHeights(viewStyle);
+	}
+
+	private void setFixedCellHeights(int viewStyle) {
 		SwingUtilities.invokeLater(new Runnable() {
+			final int coverSize = viewManager.getCurrentCoverSize();
+			final int fontHeight = 24;
+			final int borderHeight = 16;
 
 			@Override
 			public void run() {
@@ -740,11 +752,11 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 						entry.getKey().setFixedCellHeight(entry.getValue().getViewport().getHeight());
 					} else {
 						if (viewStyle == ViewPanel.COVER_VIEW) {
-							entry.getKey().setFixedCellHeight(cellHeight);
+							entry.getKey().setFixedCellHeight(coverSize);
 						} else if (viewStyle == ViewPanel.CONTENT_VIEW) {
-							entry.getKey().setFixedCellHeight(cellHeight + borderHeight);
+							entry.getKey().setFixedCellHeight(coverSize + borderHeight);
 						} else {
-							entry.getKey().setFixedCellHeight(fontHeight + borderHeight);
+							entry.getKey().setFixedCellHeight(coverSize + borderHeight);
 						}
 						fixRowCountForVisibleColumns(entry.getKey());
 						entry.getKey().ensureIndexIsVisible(entry.getKey().getSelectedIndex());
@@ -2134,9 +2146,10 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 
 	@Override
 	public void coverSizeChanged(int currentCoverSize) {
-		for (JList<Game> lst : sps.keySet()) {
-			lst.repaint();
-		}
+		setFixedCellHeights(viewManager.getCurrentCoverSize());
+		//		for (JList<Game> lst : sps.keySet()) {
+		//			lst.repaint();
+		//		}
 	}
 
 	@Override

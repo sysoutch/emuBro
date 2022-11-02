@@ -1,5 +1,7 @@
 package ch.sysout.emubro.ui;
 
+import java.awt.Color;
+
 import javax.swing.JButton;
 import javax.swing.JPanel;
 
@@ -17,13 +19,13 @@ public class NewNotificationPanel extends JPanel {
 		JButton btn = new JCustomButtonNew(element3.getMessage());
 		switch (element3.getNotificationType()) {
 		case NotificationElement.INFORMATION:
-			btn.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("info"), 32));
+			btn.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("info"), 32, new Color(137, 207, 240)));
 			break;
 		case NotificationElement.WARNING:
-			btn.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("warning"), 32));
+			btn.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("warning"), 32, new Color(255, 195, 0)));
 			break;
 		case NotificationElement.ERROR:
-			btn.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("error"), 32));
+			btn.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("error"), 32, new Color(40, 167, 69)));
 			break;
 		}
 		add(btn);

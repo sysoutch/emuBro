@@ -192,7 +192,6 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 			@Override
 			public void mouseDragged(MouseEvent e) {
 				int loc = splNavigationAndCurrentViewWithPreviewPane.getDividerLocation();
-
 				int divLocation = splGameFilterWithCurrentViewAndPreviewPane.getDividerLocation();
 				splGameFilterWithCurrentViewAndPreviewPane.setDividerLocation(divLocation + e.getX());
 

@@ -102,8 +102,11 @@ public class Main {
 		//		System.setProperty("sun.java2d.uiScale", "1.0");
 		System.setProperty("java.util.Arrays.useLegacyMergeSort", "true");
 		System.setProperty("apple.laf.useScreenMenuBar", "true");
-		loadAppDataFromLastSession();
-		applyAppDataFromLastSession();
+		if (loadAppDataFromLastSession()) {
+			applyAppDataFromLastSession();
+		} else {
+			setDefaultLookAndFeel();
+		}
 		// get back the smooth horizontal scroll feature when it was disabled by the
 		// look and feel (happens in WindowsLookAndFeel)
 		UIManager.put("List.lockToPositionOnScroll", Boolean.FALSE);
@@ -167,8 +170,10 @@ public class Main {
 			if (language != null && !language.trim().isEmpty()) {
 				setLanguage(language);
 			}
+			//			FlatLaf.registerCustomDefaultsSource( "ch.sysout.emubro" );
+			//			FlatDarhkmirLaf.setup();
 			if (currentLnF != null && !currentLnF.trim().isEmpty()) {
-				boolean useThemeBasedOnTimeOfDay = true;
+				boolean useThemeBasedOnTimeOfDay = false;
 				if (useThemeBasedOnTimeOfDay) {
 					boolean shouldUseLightMode = shouldUseLightMode();
 					setLookAndFeel(shouldUseLightMode ? lastLightLnF : lastDarkLnF);
@@ -181,7 +186,8 @@ public class Main {
 
 	private static boolean shouldUseLightMode() {
 		int hour = LocalTime.now().getHour();
-		return hour > 6 && hour < 19;
+		//		return hour > 6 && hour < 20; // summer time 7-19
+		return hour > 7 && hour < 19; // winter time 8-20
 	}
 
 	private static void setLanguage(String locale) {
@@ -634,7 +640,7 @@ public class Main {
 		File resourcesFile = new File(workingDir + "/" + zipFileName);
 		FileUtils.copyURLToFile(url, resourcesFile);
 		FileUtil.unzipArchive(resourcesFile, workingDir, true);
-		System.err.println("resources folder has been downloaded");
+		System.out.println("resources folder has been downloaded");
 	}
 
 	private static void updateDatabaseVersion(Connection conn, String expectedDbVersion) {
@@ -669,12 +675,6 @@ public class Main {
 		dlgSplashScreen.dispose();
 	}
 
-	private static void setLookAndFeel() {
-		FlatLaf laf = new FlatDarkLaf();
-		FlatLaf.setup(laf);
-		defaultLookAndFeel = UIManager.getLookAndFeel();
-	}
-
 	private static void setLookAndFeel(LookAndFeel lnf) {
 		setLookAndFeel(lnf.getClass().getCanonicalName());
 	}
@@ -689,7 +689,7 @@ public class Main {
 	 */
 	private static void setLookAndFeel(String nameOrClassName) {
 		if (nameOrClassName == null || nameOrClassName.trim().isEmpty()) {
-			nameOrClassName = UIManager.getSystemLookAndFeelClassName();
+			nameOrClassName = FlatLaf.class.getCanonicalName();
 		}
 		nameOrClassName = nameOrClassName.trim();
 		// try setting lnf using classname
@@ -702,21 +702,19 @@ public class Main {
 					try {
 						UIManager.setLookAndFeel(info.getClassName());
 					} catch (Exception e1) {
-						setSystemLookAndFeel();
+						setDefaultLookAndFeel();
 					}
 					return;
 				}
 			}
-			setSystemLookAndFeel();
+			setDefaultLookAndFeel();
 		}
 	}
 
-	private static void setSystemLookAndFeel() {
-		try {
-			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-		} catch (Exception e2) {
-			// ignore
-		}
+	private static void setDefaultLookAndFeel() {
+		FlatLaf laf = new FlatDarkLaf();
+		FlatLaf.setup(laf);
+		defaultLookAndFeel = UIManager.getLookAndFeel();
 	}
 
 	public static List<BroPlatform> initDefaultPlatforms() throws FileNotFoundException {

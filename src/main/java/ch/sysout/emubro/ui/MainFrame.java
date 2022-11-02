@@ -5,6 +5,7 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -48,6 +49,7 @@ import javax.swing.ButtonGroup;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
@@ -119,8 +121,9 @@ import ch.sysout.util.ScreenSizeUtil;
  * @author sysout.ch
  *
  */
-public class MainFrame extends JFrame implements ActionListener, GameViewListener, GameListener, GameSelectionListener, PlatformListener,
-EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, PreviewPaneListener, UpdateGameCountListener, DirectorySearchedListener {
+public class MainFrame extends JFrame implements ActionListener, GameViewListener, GameListener, GameSelectionListener,
+PlatformListener, EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, PreviewPaneListener,
+UpdateGameCountListener, DirectorySearchedListener {
 	private static final long serialVersionUID = 1L;
 	private static final String TITLE = Messages.get(MessageConstants.APPLICATION_TITLE);
 	private JMenuBar mnb;
@@ -130,7 +133,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	private JMenu mnuThemesOld;
 	private JMenuItem itmManageThemesOld;
 	private JMenu mnuChangeThemeOld;
-	//	private JMenu mnuPlugins;
+	private JMenuItem itmModifyTheme;
+	// private JMenu mnuPlugins;
 	private JMenuItem itmRefreshPlugins;
 	private JMenu mnuThemes;
 	private JMenu mnuDarkLaFs;
@@ -177,6 +181,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	private JMenuItem itmChooseDetails;
 	private JCheckBoxMenuItem itmFullScreen;
 	private JRadioButtonMenuItem itmSetFilter;
+	private JCheckBoxMenuItem itmShowPlatformIconsInView;
 	private JCheckBoxMenuItem itmHideExtensions;
 	private JCheckBoxMenuItem itmShowGameNames;
 	private JCheckBoxMenuItem itmShowToolTipTexts;
@@ -278,7 +283,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		this.explorer = explorer;
 		setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
 		setIconImages(getIcons());
-		//		setUndecorated(true);
+		// setUndecorated(true);
 		initComponents();
 		createUI();
 		pnlMain.addDetailsFrameListener(this);
@@ -298,14 +303,21 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	}
 
 	private void initComponents() {
-		iconPreviewPaneShow = ImageUtil.getImageIconFrom(Icons.get("showPreviewPane", buttonBarIconSize, buttonBarIconSize));
-		iconPreviewPaneHide = ImageUtil.getImageIconFrom(Icons.get("hidePreviewPane", buttonBarIconSize, buttonBarIconSize));
-		iconChangeView = ImageUtil.getFlatSVGIconFrom(Icons.get("viewTable"), buttonBarIconSize, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR));
-		iconSearchGame = ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), buttonBarIconSize, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR));
-		iconSearchGameGreen = ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), buttonBarIconSize, new Color(25, 135, 84));
-		iconSearchGameRed = ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), buttonBarIconSize, new Color(237, 67, 55));
+		iconPreviewPaneShow = ImageUtil
+				.getImageIconFrom(Icons.get("showPreviewPane", buttonBarIconSize, buttonBarIconSize));
+		iconPreviewPaneHide = ImageUtil
+				.getImageIconFrom(Icons.get("hidePreviewPane", buttonBarIconSize, buttonBarIconSize));
+		iconChangeView = ImageUtil.getFlatSVGIconFrom(Icons.get("viewTable"), buttonBarIconSize,
+				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR));
+		iconSearchGame = ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), buttonBarIconSize,
+				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR));
+		iconSearchGameGreen = ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), buttonBarIconSize,
+				new Color(25, 135, 84));
+		iconSearchGameRed = ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), buttonBarIconSize,
+				new Color(237, 67, 55));
 		icoTrash = ImageUtil.getFlatSVGIconFrom(Icons.get("trash"), buttonBarIconSize, new Color(237, 67, 55));
-		icoTrashRestore = ImageUtil.getFlatSVGIconFrom(Icons.get("trashRestore"), buttonBarIconSize, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR));
+		icoTrashRestore = ImageUtil.getFlatSVGIconFrom(Icons.get("trashRestore"), buttonBarIconSize,
+				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR));
 
 		initializeButtonBar();
 		createButtonBar();
@@ -388,22 +400,23 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	private void initMenuBar() {
 		mnb = new JMenuBar();
-		//		mnb.setUI(new BasicMenuBarUI() {
+		// mnb.setUI(new BasicMenuBarUI() {
 		//
-		//			@Override
-		//			public void paint(Graphics g, JComponent c) {
-		//				Color colorMenuBar = null;
-		//				if (IconStore.current().getCurrentTheme().getMenuBar().hasColor()) {
-		//					colorMenuBar = IconStore.current().getCurrentTheme().getMenuBar().getColor();
-		//				}
-		//				if (colorMenuBar == null) {
-		//					colorMenuBar = IconStore.current().getCurrentTheme().getBackground().getColor();
-		//				}
-		//				g.setColor(colorMenuBar);
-		//				g.fillRect(0, 0, c.getWidth(), c.getHeight());
-		//			}
-		//		});
-		//		mnb.setOpaque(false);
+		// @Override
+		// public void paint(Graphics g, JComponent c) {
+		// Color colorMenuBar = null;
+		// if (IconStore.current().getCurrentTheme().getMenuBar().hasColor()) {
+		// colorMenuBar = IconStore.current().getCurrentTheme().getMenuBar().getColor();
+		// }
+		// if (colorMenuBar == null) {
+		// colorMenuBar =
+		// IconStore.current().getCurrentTheme().getBackground().getColor();
+		// }
+		// g.setColor(colorMenuBar);
+		// g.fillRect(0, 0, c.getWidth(), c.getHeight());
+		// }
+		// });
+		// mnb.setOpaque(false);
 
 		mnb.setBorder(BorderFactory.createEmptyBorder());
 		mnuFile = new JMenu(Messages.get(MessageConstants.MNU_FILE, Messages.get(MessageConstants.APPLICATION_TITLE)));
@@ -412,7 +425,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		mnuThemesOld = new JMenu(Messages.get(MessageConstants.MNU_THEMES));
 		itmManageThemesOld = new JMenuItem(Messages.get(MessageConstants.ITM_MANAGE_THEMES));
 		mnuChangeThemeOld = new JMenu(Messages.get(MessageConstants.MNU_CHANGE_THEME));
-		//		mnuPlugins = new JMenu(Messages.get(MessageConstants.MNU_PLUGINS));
+		itmModifyTheme = new JMenuItem(Messages.get(MessageConstants.ITM_MODIFY_THEME));
+		// mnuPlugins = new JMenu(Messages.get(MessageConstants.MNU_PLUGINS));
 		itmRefreshPlugins = new JMenuItem(Messages.get(MessageConstants.ITM_REFRESH_PLUGINS));
 		mnuGames.setEnabled(false);
 		mnuThemes = new JMenu();
@@ -445,6 +459,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmExportGameListOptions = new JMenuItem();
 		itmSetFilter = new JRadioButtonMenuItem();
 		itmChooseDetails = new JMenuItem();
+		itmShowPlatformIconsInView = new JCheckBoxMenuItem();
 		itmHideExtensions = new JCheckBoxMenuItem();
 		itmTouchScreenOptimizedScroll = new JCheckBoxMenuItem();
 		itmShowGameNames = new JCheckBoxMenuItem();
@@ -499,6 +514,100 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmRenameGames = new JMenuItem(Messages.get("renameGames") + "...");
 		itmWebSearchSettings = new JMenuItem(Messages.get(MessageConstants.WEB_SEARCH_SETTINGS) + "...");
 
+		itmModifyTheme.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				JDialog dlgModifyTheme = new JDialog();
+				dlgModifyTheme.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+				dlgModifyTheme.setAlwaysOnTop(true);
+				JCheckBox chkTransparentSelection = new JCheckBox("Transparent selection");
+				JCheckBox chkScaleToView = new JCheckBox("Scale to view");
+				JCheckBox chkScaleProportionally = new JCheckBox("Scale proportionally");
+				JCheckBox chkHorizontalCenter = new JCheckBox("Horizontal Center");
+				JCheckBox chkVerticalCenter = new JCheckBox("Vertical Center");
+				JCheckBox chkAddTransparencyBackground = new JCheckBox("Add Transparency Background");
+				JCheckBox chkIgnoreDetailsPanel = new JCheckBox("ignore DP");
+				JCheckBox chkIgnorePreviewPanel = new JCheckBox("ignore PP");
+
+				dlgModifyTheme.setLayout(new FlowLayout());
+				dlgModifyTheme.add(chkTransparentSelection);
+				dlgModifyTheme.add(chkScaleToView);
+				dlgModifyTheme.add(chkScaleProportionally);
+				dlgModifyTheme.add(chkHorizontalCenter);
+				dlgModifyTheme.add(chkVerticalCenter);
+				dlgModifyTheme.add(chkAddTransparencyBackground);
+				dlgModifyTheme.add(chkIgnoreDetailsPanel);
+				dlgModifyTheme.add(chkIgnorePreviewPanel);
+				dlgModifyTheme.pack();
+				dlgModifyTheme.setVisible(true);
+
+				chkScaleToView.addActionListener(new ActionListener() {
+
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						Theme currentTheme = IconStore.current().getCurrentTheme();
+						ThemeBackground currentBackground = currentTheme.getView();
+						currentBackground.setImageScaleEnabled(chkScaleToView.isSelected());
+						pnlMain.repaint();
+					}
+				});
+
+				chkScaleProportionally.addActionListener(new ActionListener() {
+
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						Theme currentTheme = IconStore.current().getCurrentTheme();
+						ThemeBackground currentBackground = currentTheme.getView();
+						currentBackground.setScaleProportionallyEnabled(chkScaleProportionally.isSelected());
+						pnlMain.repaint();
+					}
+				});
+
+				chkHorizontalCenter.addActionListener(new ActionListener() {
+
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						Theme currentTheme = IconStore.current().getCurrentTheme();
+						ThemeBackground currentBackground = currentTheme.getView();
+						currentBackground.setHorizontalCenterImageEnabled(chkHorizontalCenter.isSelected());
+						pnlMain.repaint();
+					}
+				});
+
+				chkVerticalCenter.addActionListener(new ActionListener() {
+
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						Theme currentTheme = IconStore.current().getCurrentTheme();
+						ThemeBackground currentBackground = currentTheme.getView();
+						currentBackground.setVerticalCenterImageEnabled(chkVerticalCenter.isSelected());
+						pnlMain.repaint();
+					}
+				});
+
+				chkAddTransparencyBackground.addActionListener(new ActionListener() {
+
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						Theme currentTheme = IconStore.current().getCurrentTheme();
+						ThemeBackground currentBackground = currentTheme.getView();
+						currentBackground.setAddTransparencyPaneEnabled(chkAddTransparencyBackground.isSelected());
+					}
+				});
+
+				chkTransparentSelection.addActionListener(new ActionListener() {
+
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						Theme currentTheme = IconStore.current().getCurrentTheme();
+						ThemeBackground currentBackground = currentTheme.getView();
+						currentBackground.setTransparentSelectionEnabled(chkTransparentSelection.isSelected());
+					}
+				});
+			}
+		});
+
 		try {
 			for (String theme : IconStore.current().getDefaultThemes()) {
 				JRadioButtonMenuItem rdb;
@@ -510,8 +619,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 						String themeName = ((AbstractButton) e.getSource()).getText();
 						try {
 							IconStore.current().loadDefaultTheme(themeName);
-							//							Main.initializeCustomColors();
-							//							SwingUtilities.updateComponentTreeUI(MainFrame.this);
+							// Main.initializeCustomColors();
+							// SwingUtilities.updateComponentTreeUI(MainFrame.this);
 							MainFrame.this.repaint();
 						} catch (IOException e1) {
 							// TODO Auto-generated catch block
@@ -524,38 +633,56 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		//		UIUtil.setForegroundDependOnBackground(colorMenuBar,
-		//				mnuFile, mnuView, mnuGames, mnuLanguage, mnuHelp);
+		// UIUtil.setForegroundDependOnBackground(colorMenuBar,
+		// mnuFile, mnuView, mnuGames, mnuLanguage, mnuHelp);
 	}
 
 	private void initializeButtonBar() {
 		pnlButtonBar = new ButtonBarPanel();
-		btnShowHideNavigationPanel = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("bars"), buttonBarIconSize, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		btnShowHideNavigationPanel = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("bars"),
+				buttonBarIconSize, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		btnShowHideNavigationPanel.setHorizontalTextPosition(SwingConstants.CENTER);
-		btnOrganize = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("organize"), buttonBarIconSize, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)), Messages.get(MessageConstants.ORGANIZE));
-		btnSettings = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("settings"), buttonBarIconSize, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)), Messages.get(MessageConstants.SETTINGS));
-		btnRunGame = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("runGame"), buttonBarIconSize, new Color(40, 167, 69)), Messages.get(MessageConstants.RUN_GAME));
-		btnMoreOptionsRunGame = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("arrowDownOtherWhite", 1)), "");
+		btnOrganize = new ButtonBarButton("",
+				ImageUtil.getFlatSVGIconFrom(Icons.get("organize"), buttonBarIconSize,
+						ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)),
+				Messages.get(MessageConstants.ORGANIZE));
+		btnSettings = new ButtonBarButton("",
+				ImageUtil.getFlatSVGIconFrom(Icons.get("settings"), buttonBarIconSize,
+						ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)),
+				Messages.get(MessageConstants.SETTINGS));
+		btnRunGame = new ButtonBarButton("",
+				ImageUtil.getFlatSVGIconFrom(Icons.get("runGame"), buttonBarIconSize, new Color(40, 167, 69)),
+				Messages.get(MessageConstants.RUN_GAME));
+		btnMoreOptionsRunGame = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("arrowDownOtherWhite", 1)),
+				"");
 		btnRemoveOrRestoreGame = new ButtonBarButton("", icoTrash, Messages.get(MessageConstants.REMOVE));
-		btnRenameGame = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("rename"), buttonBarIconSize, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)), Messages.get(MessageConstants.RENAME));
-		btnGameProperties = new ButtonBarButton("", ImageUtil.getFlatSVGIconFrom(Icons.get("gameProperties"), buttonBarIconSize, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)), Messages.get(MessageConstants.GAME_PROPERTIES));
+		btnRenameGame = new ButtonBarButton("",
+				ImageUtil.getFlatSVGIconFrom(Icons.get("rename"), buttonBarIconSize,
+						ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)),
+				Messages.get(MessageConstants.RENAME));
+		btnGameProperties = new ButtonBarButton("",
+				ImageUtil.getFlatSVGIconFrom(Icons.get("gameProperties"), buttonBarIconSize,
+						ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)),
+				Messages.get(MessageConstants.GAME_PROPERTIES));
 		btnChangeView = new ButtonBarButton("", iconChangeView, null);
-		btnMoreOptionsChangeView = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("arrowDownOtherWhite", 1)), Messages.get(MessageConstants.MORE_OPTIONS));
+		btnMoreOptionsChangeView = new ButtonBarButton("",
+				ImageUtil.getImageIconFrom(Icons.get("arrowDownOtherWhite", 1)),
+				Messages.get(MessageConstants.MORE_OPTIONS));
 		btnSetFilter = new ButtonBarButton("", iconSearchGame, Messages.get(MessageConstants.SET_FILTER));
 		btnPreviewPane = new ButtonBarButton("", iconPreviewPaneHide, null);
 		btnPreviewPane.setActionCommand(GameViewConstants.HIDE_PREVIEW_PANE);
-		buttonBarComponents = new JComponent[] { btnShowHideNavigationPanel, btnOrganize, btnSettings, btnRunGame, btnMoreOptionsRunGame,
-				btnRemoveOrRestoreGame, btnRenameGame,
-				btnGameProperties, btnChangeView, btnMoreOptionsChangeView, btnSetFilter, btnPreviewPane};
+		buttonBarComponents = new JComponent[] { btnShowHideNavigationPanel, btnOrganize, btnSettings, btnRunGame,
+				btnMoreOptionsRunGame, btnRemoveOrRestoreGame, btnRenameGame, btnGameProperties, btnChangeView,
+				btnMoreOptionsChangeView, btnSetFilter, btnPreviewPane };
 		setButtonBarToolTips();
 	}
 
 	private void initializeGameFilter() {
 		int size = ScreenSizeUtil.is3k() ? 10 : 5;
-		//		Insets insets = new Insets(size, size*2, size, size*2);
-		//		btnShowHideNavigationPanel.setBorder(new EmptyBorder(insets));
+		// Insets insets = new Insets(size, size*2, size, size*2);
+		// btnShowHideNavigationPanel.setBorder(new EmptyBorder(insets));
 		pnlGameFilter = new GameFilterPanel(explorer);
-		//		pnlGameFilter.setBorder(BorderFactory.createTitledBorder(""));
+		// pnlGameFilter.setBorder(BorderFactory.createTitledBorder(""));
 		pnlGameFilter.setVisible(false);
 		Action focusSearchFieldAction = new AbstractAction("focusAction") {
 			private static final long serialVersionUID = 1L;
@@ -591,12 +718,10 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	}
 
 	private void createButtonBar() {
-		FormLayout layout = new FormLayout(
-				"pref, min, pref, min, pref, min, pref, pref, min, pref, min, pref, "
-						+ "min, pref, min:grow, pref, pref, min, pref, min, pref",
-				"fill:default");
+		FormLayout layout = new FormLayout("pref, min, pref, min, pref, min, pref, pref, min, pref, min, pref, "
+				+ "min, pref, min:grow, pref, pref, min, pref, min, pref", "fill:default");
 		pnlButtonBar.setLayout(layout);
-		//		pnlButtonBar.setBorder(Paddings.DLU2);
+		// pnlButtonBar.setBorder(Paddings.DLU2);
 		int x[] = { 1, 3, 5, 7, 8, 10, 12, 14, 16, 17, 19, 21 };
 		int y = 1;
 		for (int i = 0; i < buttonBarComponents.length; i++) {
@@ -741,18 +866,22 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		addToButtonGroup(new ButtonGroup(), itmSortAscending, itmSortDescending);
 		addToButtonGroup(new ButtonGroup(), itmGroupTitle, itmGroupPlatform, itmGroupBlank);
 		addToButtonGroup(new ButtonGroup(), itmGroupAscending, itmGroupDescending);
-		addToButtonGroup(new ButtonGroup(), itmChangeToAll, itmChangeToFavorites, itmChangeToRecentlyPlayed, itmChangeToRecycleBin);
+		addToButtonGroup(new ButtonGroup(), itmChangeToAll, itmChangeToFavorites, itmChangeToRecentlyPlayed,
+				itmChangeToRecycleBin);
 		addToButtonGroup(new ButtonGroup(), itmLanguageDe, itmLanguageEn, itmLanguageFr, itmLanguagePr, itmLanguageEs);
 	}
 
 	private void setIcons() {
 		int size = ScreenSizeUtil.is3k() ? 24 : 16;
-		itmAddFiles.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("addFile"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		itmAddFiles.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("addFile"), size,
+				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		itmAddFolders.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("addFolder"), size, new Color(255, 195, 0)));
-		itmAddFilesFromClipboard.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("filesFromClipboard"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		itmAddFilesFromClipboard.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("filesFromClipboard"), size,
+				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		itmLoadDisc.setIcon(ImageUtil.getImageIconFrom(Icons.get("loadDisc", size, size)));
 		itmSearchNetwork.setIcon(ImageUtil.getImageIconFrom(Icons.get("searchNetwork", size, size)));
-		itmSettings.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("settings"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		itmSettings.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("settings"), size,
+				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		itmExit.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("exit"), size, new Color(237, 67, 55)));
 		itmCheckForUpdates.setIcon(ImageUtil.getImageIconFrom(Icons.get("checkForUpdates", size, size)));
 		itmExportGameListToTxt.setIcon(ImageUtil.getImageIconFrom(Icons.get("textPlain", size, size)));
@@ -761,25 +890,40 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmExportGameListToXml.setIcon(ImageUtil.getImageIconFrom(Icons.get("textXml", size, size)));
 		itmExportGameListOptions.setIcon(ImageUtil.getImageIconFrom(Icons.get("exportSettings", size, size)));
 		itmWelcomeView.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewWelcome", size, size)));
-		itmListView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewList"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		itmElementView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewList"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		itmContentView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewList"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		itmSliderView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewSlider"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		itmTableView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewTable"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		itmListView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewList"), size,
+				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		itmElementView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewList"), size,
+				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		itmContentView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewList"), size,
+				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		itmSliderView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewSlider"), size,
+				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		itmTableView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewTable"), size,
+				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		itmCoverView.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewCovers", size, size)));
-		itmChangeToAll.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("allGames"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		itmChangeToFavorites.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("favorites"), size, new Color(255, 220, 125)));
-		itmChangeToRecentlyPlayed.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("recentlyPlayed"), size, new Color(181, 201, 255)));
-		itmChangeToRecycleBin.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("trash"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		itmSetFilter.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		itmRenameGames.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rename"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		itmChangeToAll.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("allGames"), size,
+				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		itmChangeToFavorites
+		.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("favorites"), size, new Color(255, 220, 125)));
+		itmChangeToRecentlyPlayed
+		.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("recentlyPlayed"), size, new Color(181, 201, 255)));
+		itmChangeToRecycleBin.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("trash"), size,
+				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		itmSetFilter.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), size,
+				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		itmRenameGames.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rename"), size,
+				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		itmAutoSearchTags.setIcon(ImageUtil.getImageIconFrom(Icons.get("searchFile", size, size)));
 		itmTagSearch.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("tag"), size, new Color(168, 124, 160)));
-		itmCoverSearch.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("picture"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		itmCoverSearch.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("picture"), size,
+				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		itmTrailerSearch.setIcon(ImageUtil.getImageIconFrom(Icons.get("video", size, size)));
-		itmSetColumnWidth.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("columnWidth"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		itmSetRowHeight.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rowHeight"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		itmRefresh.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("refresh"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		itmSetColumnWidth.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("columnWidth"), size,
+				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		itmSetRowHeight.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rowHeight"), size,
+				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		itmRefresh.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("refresh"), size,
+				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		itmFullScreen.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("fullscreen"), size, new Color(144, 238, 144)));
 		Icon iconLanguageDe = ImageUtil.getImageIconFrom(Icons.get("languageDe", size, size));
 		Icon iconLanguageEn = ImageUtil.getImageIconFrom(Icons.get("languageEn", size, size));
@@ -787,11 +931,14 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmLanguageDe.setIcon(iconLanguageDe);
 		itmLanguageEn.setIcon(iconLanguageEn);
 		itmLanguageFr.setIcon(iconLanguageFr);
-		mnuHelp.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("help"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		itmHelp.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("help"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		mnuHelp.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("help"), size,
+				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		itmHelp.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("help"), size,
+				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		itmDiscord.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("discord"), size, new Color(114, 137, 218)));
 		itmAbout.setIcon(ImageUtil.getImageIconFrom(Icons.get("about", size, size)));
-		itmGamePadTester.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("allGames"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		itmGamePadTester.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("allGames"), size,
+				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		itmConfigWizard.setIcon(ImageUtil.getImageIconFrom(Icons.get("configWizard", size, size)));
 		Locale locale = Locale.getDefault();
 		String language = locale.getLanguage();
@@ -811,14 +958,20 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	}
 
 	private void setButtonBarIcons() {
-		btnShowHideNavigationPanel.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("bars"), buttonBarIconSize, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		btnOrganize.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("organize"), buttonBarIconSize, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		btnSettings.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("settings"), buttonBarIconSize, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		btnRunGame.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("runGame"), buttonBarIconSize, new Color(40, 167, 69)));
+		btnShowHideNavigationPanel.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("bars"), buttonBarIconSize,
+				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		btnOrganize.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("organize"), buttonBarIconSize,
+				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		btnSettings.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("settings"), buttonBarIconSize,
+				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		btnRunGame
+		.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("runGame"), buttonBarIconSize, new Color(40, 167, 69)));
 		btnMoreOptionsRunGame.setIcon(ImageUtil.getImageIconFrom(Icons.get("arrowDownOtherWhite", 1)));
 		btnRemoveOrRestoreGame.setIcon(icoTrash);
-		btnRenameGame.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rename"), buttonBarIconSize, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		btnGameProperties.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("gameProperties"), buttonBarIconSize, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		btnRenameGame.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rename"), buttonBarIconSize,
+				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		btnGameProperties.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("gameProperties"), buttonBarIconSize,
+				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		btnChangeView.setIcon(iconChangeView);
 		btnMoreOptionsChangeView.setIcon(ImageUtil.getImageIconFrom(Icons.get("arrowDownOtherWhite", 1)));
 		btnSetFilter.setIcon(iconSearchGame);
@@ -863,29 +1016,30 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 				}
 			}
 
-			private void createDummyGames(File baseDirectory, String platformName, String fileExtension, int gameCount) {
+			private void createDummyGames(File baseDirectory, String platformName, String fileExtension,
+					int gameCount) {
 				File platformFolder = new File(baseDirectory.getAbsolutePath() + File.separator + platformName);
 				if (!platformFolder.exists()) {
 					if (platformFolder.mkdirs()) {
 						System.out.println("Director2y is created");
-					}
-					else {
+					} else {
 						System.out.println("Director2y cannot be created");
 					}
 				}
 				for (int i = 0; i < gameCount; i++) {
-					File myObj = new File(platformFolder.getAbsolutePath() + File.separator + platformName + "_game_"+i+"."+fileExtension);
+					File myObj = new File(platformFolder.getAbsolutePath() + File.separator + platformName + "_game_"
+							+ i + "." + fileExtension);
 					try {
 						if (myObj.createNewFile()) {
 							try {
 								FileWriter myWriter = new FileWriter(myObj);
-								myWriter.write("DummyGame"+i+"."+fileExtension);
+								myWriter.write("DummyGame" + i + "." + fileExtension);
 								myWriter.close();
 							} catch (IOException e) {
 								e.printStackTrace();
 							}
 						} else {
-							//							System.out.println("File already exists.");
+							// System.out.println("File already exists.");
 						}
 					} catch (IOException e) {
 						e.printStackTrace();
@@ -965,8 +1119,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	}
 
 	public void addShowMenubarListener(Action l) {
-		getRootPane().getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(KeyStroke.getKeyStroke(KeyEvent.VK_ALT, 0, true),
-				"actionAddShowMenubarListener");
+		getRootPane().getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
+		.put(KeyStroke.getKeyStroke(KeyEvent.VK_ALT, 0, true), "actionAddShowMenubarListener");
 		getRootPane().getActionMap().put("actionAddShowMenubarListener", l);
 		pnlMain.addShowMenuBarListener(l);
 	}
@@ -1024,6 +1178,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	public void addExportGameListToCsvListener(ActionListener l) {
 		itmExportGameListToCsv.addActionListener(l);
 	}
+
 	public void addExportGameListToJsonListener(ActionListener l) {
 		itmExportGameListToJson.addActionListener(l);
 	}
@@ -1103,7 +1258,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	public void addOpenTroubleshootListener(ActionListener l) {
 		itmTroubleshoot.addActionListener(l);
-		//		viewManager.getBlankViewPanel().addOpenTroubleshootListener(l);
+		// viewManager.getBlankViewPanel().addOpenTroubleshootListener(l);
 	}
 
 	public void addDiscordInviteLinkListener(ActionListener l) {
@@ -1324,7 +1479,6 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		pnlMain.addRemoveEmulatorListener(l);
 	}
 
-
 	public void addShowNavigationPaneListener(ActionListener l) {
 		pnlMain.addShowNavigationPaneListener(l);
 	}
@@ -1362,22 +1516,22 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	private void createUI() {
 		createMenuBar();
-		//		FormLayout layout = new FormLayout("min:grow",
-		//				"fill:pref, fill:pref");
-		//		JPanel pnlWrapperTop = new JPanel(layout);
-		//		CellConstraints cc = new CellConstraints();
-		//		pnlWrapperTop.add(pnlButtonBar, cc.xy(1, 1));
-		//		pnlWrapperTop.add(pnlGameFilter, cc.xy(1, 2));
+		// FormLayout layout = new FormLayout("min:grow",
+		// "fill:pref, fill:pref");
+		// JPanel pnlWrapperTop = new JPanel(layout);
+		// CellConstraints cc = new CellConstraints();
+		// pnlWrapperTop.add(pnlButtonBar, cc.xy(1, 1));
+		// pnlWrapperTop.add(pnlGameFilter, cc.xy(1, 2));
 		add(pnlButtonBar, BorderLayout.NORTH);
 		add(pnlMain);
 		pnlGameCount.setMinimumSize(new Dimension(0, 0));
 
 		JPanel pnlGameCountSpecial = new JPanel(new BorderLayout());
-		//		pnlGameCountSpecial.setOpaque(false);
-		//		pnlGameCountSpecial.add(pnlGameCount.btnBlank, BorderLayout.WEST);
+		// pnlGameCountSpecial.setOpaque(false);
+		// pnlGameCountSpecial.add(pnlGameCount.btnBlank, BorderLayout.WEST);
 		pnlGameCountSpecial.add(pnlGameCount.getShowDetailsPaneButton());
 
-		//		pnlGameCountSpecial.add(pnlGameCount.btnResize, BorderLayout.EAST);
+		// pnlGameCountSpecial.add(pnlGameCount.btnResize, BorderLayout.EAST);
 
 		JPanel pnlGameCountWrapper = new JPanel(new BorderLayout()) {
 			private static final long serialVersionUID = 1L;
@@ -1390,8 +1544,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 				Color color = IconStore.current().getCurrentTheme().getStatusBar().getColor();
 				if (color != null) {
 					Graphics2D g2d = (Graphics2D) g.create();
-					//					g2d.setColor(color);
-					//					g2d.fillRect(0, 0, panelWidth, panelHeight);
+					// g2d.setColor(color);
+					// g2d.fillRect(0, 0, panelWidth, panelHeight);
 					BufferedImage background = IconStore.current().getCurrentTheme().getStatusBar().getImage();
 					if (background != null) {
 						g2d.drawImage(background, 0, 0, panelWidth, panelHeight, this);
@@ -1418,43 +1572,40 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		mnuUpdateAvailable.setVisible(false);
 		itmApplicationUpdateAvailable.setVisible(false);
 		itmSignatureUpdateAvailable.setVisible(false);
-		addComponentsToJComponent(false, mnb, mnuFile, mnuView, mnuThemes, /*mnuThemes, mnuGames, mnuPlugins,*/ Box.createHorizontalGlue(), mnuUpdateAvailable, mnuLanguage, mnuHelp);
+		addComponentsToJComponent(false, mnb, mnuFile, mnuView, mnuThemes,
+				/* mnuThemes, mnuGames, mnuPlugins, */ Box.createHorizontalGlue(), mnuUpdateAvailable, mnuLanguage,
+				mnuHelp);
 		setJMenuBar(mnb);
 	}
 
 	private void addMenuItems() {
 		addComponentsToJComponent(mnuFile, mnuAdd,
-				//				new JSeparator(), itmLoadDisc, itmSearchNetwork,
-				new JSeparator(), mnuExportGameList, itmExportApplicationData,
-				new JSeparator(), itmOpenResourcesFolder, itmOpenUserProfileFolder,
-				new JSeparator(), itmSettings,
-				new JSeparator(), /*itmBigPictureMode, */itmExit);
+				// new JSeparator(), itmLoadDisc, itmSearchNetwork,
+				new JSeparator(), mnuExportGameList, itmExportApplicationData, new JSeparator(), itmOpenResourcesFolder,
+				itmOpenUserProfileFolder, new JSeparator(), itmSettings, new JSeparator(),
+				/* itmBigPictureMode, */itmExit);
 
-		addComponentsToJComponent(mnuAdd, itmAddFiles, itmAddFolders, itmAddDummyGames , new JSeparator(), itmAddFilesFromClipboard);
+		addComponentsToJComponent(mnuAdd, itmAddFiles, itmAddFolders, itmAddDummyGames, new JSeparator(),
+				itmAddFilesFromClipboard);
 
 		addComponentsToJComponent(mnuExportGameList, itmExportGameListToTxt, itmExportGameListToCsv,
 				itmExportGameListToJson, itmExportGameListToXml, new JSeparator(), itmExportGameListOptions);
 
 		addComponentsToJComponent(mnuSetCoverSize, sliderCoverSize);
 
-		addComponentsToJComponent(mnuView, itmWelcomeView,
-				new JSeparator(), itmElementView, itmListView, itmTableView, itmContentView, itmSliderView, itmCoverView,
-				new JSeparator(), mnuSetCoverSize,
-				new JSeparator(), mnuSort, mnuGroup,
-				new JSeparator(), itmRefresh,
-				new JSeparator(), itmSetFilter, /*itmChooseDetails,*/
-				/* new JSeparator(), */mnuChangeTo,
-				new JSeparator(), itmSetColumnWidth, itmSetRowHeight,
-				new JSeparator(), itmShowGameNames, itmShowToolTipTexts, itmTouchScreenOptimizedScroll,
-				new JSeparator(), itmFullScreen);
+		addComponentsToJComponent(mnuView, itmWelcomeView, new JSeparator(), itmElementView, itmListView, itmTableView,
+				itmContentView, itmSliderView, itmCoverView, new JSeparator(), mnuSetCoverSize, new JSeparator(),
+				mnuSort, mnuGroup, new JSeparator(), itmRefresh, new JSeparator(), itmSetFilter, /* itmChooseDetails, */
+				/* new JSeparator(), */mnuChangeTo, new JSeparator(), itmSetColumnWidth, itmSetRowHeight,
+				new JSeparator(), itmShowPlatformIconsInView, itmShowGameNames, itmShowToolTipTexts,
+				itmTouchScreenOptimizedScroll, new JSeparator(), itmFullScreen);
 
 		addComponentsToJComponent(mnuManageTags, itmAutoSearchTags, itmManuallyAddTag);
-		addComponentsToJComponent(mnuGames, mnuManageTags, mnuManageCovers,
-				new JSeparator(), itmTagSearch, itmCoverSearch, itmTrailerSearch/*, itmWebSearchSettings*/,
-				new JSeparator(), itmRenameGames);
+		addComponentsToJComponent(mnuGames, mnuManageTags, mnuManageCovers, new JSeparator(), itmTagSearch,
+				itmCoverSearch, itmTrailerSearch/* , itmWebSearchSettings */, new JSeparator(), itmRenameGames);
 
-		//		addComponentsToJComponent(mnuPlugins, itmRefreshPlugins,
-		//				new JSeparator());
+		// addComponentsToJComponent(mnuPlugins, itmRefreshPlugins,
+		// new JSeparator());
 
 		ButtonGroup grp = new ButtonGroup();
 		for (final FlatIJLookAndFeelInfo info : FlatAllIJThemes.INFOS) {
@@ -1483,7 +1634,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		for (JRadioButtonMenuItem cmp : defaultThemesMenuItems) {
 			addComponentsToJComponent(mnuChangeThemeOld, cmp);
 		}
-		addComponentsToJComponent(mnuThemes, mnuChangeThemeOld, mnuDarkLaFs, mnuLightLaFs, itmAutoSwitchTheme);
+		addComponentsToJComponent(mnuThemes, itmModifyTheme, mnuChangeThemeOld, new JSeparator(), mnuDarkLaFs,
+				mnuLightLaFs, new JSeparator(), itmAutoSwitchTheme);
 
 		Locale locale = Locale.getDefault();
 		String userLanguage = locale.getLanguage();
@@ -1507,13 +1659,15 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 			mnuLanguage.add(itm);
 		}
 
-		addComponentsToJComponent(mnuHelp, itmHelp, itmTroubleshoot, new JSeparator(), itmConfigWizard, itmGamePadTester, new JSeparator(), itmCheckForUpdates, itmDiscord, itmAbout);
+		addComponentsToJComponent(mnuHelp, itmHelp, itmTroubleshoot, new JSeparator(), itmConfigWizard,
+				itmGamePadTester, new JSeparator(), itmCheckForUpdates, itmDiscord, itmAbout);
 		addComponentsToJComponent(mnuUpdateAvailable, itmApplicationUpdateAvailable, itmSignatureUpdateAvailable);
 		addComponentsToJComponent(mnuSort, itmSortTitle, itmSortPlatform, new JSeparator(), itmSortAscending,
 				itmSortDescending);
 		addComponentsToJComponent(mnuGroup, itmGroupBlank, itmGroupTitle, itmGroupPlatform, new JSeparator(),
 				itmGroupAscending, itmGroupDescending);
-		addComponentsToJComponent(mnuChangeTo, itmChangeToAll, itmChangeToFavorites, itmChangeToRecentlyPlayed, new JSeparator(), itmChangeToRecycleBin);
+		addComponentsToJComponent(mnuChangeTo, itmChangeToAll, itmChangeToFavorites, itmChangeToRecentlyPlayed,
+				new JSeparator(), itmChangeToRecycleBin);
 	}
 
 	private void updateLookAndFeel() {
@@ -1530,8 +1684,11 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		pnlMain.addDividerDraggedListeners();
 		viewManager.themeChanged();
 		if (showWarning && !changingLnFWarningDisplayed) {
-			UIUtil.showWarningMessage(this, "Some components aren't updated properly after changing the Look And Feel.\n"
-					+ "If you notice visual bugs, please restart " + Messages.get(MessageConstants.APPLICATION_TITLE) + ".", "Look And Feel changed");
+			UIUtil.showWarningMessage(this,
+					"Some components aren't updated properly after changing the Look And Feel.\n"
+							+ "If you notice visual bugs, please restart "
+							+ Messages.get(MessageConstants.APPLICATION_TITLE) + ".",
+					"Look And Feel changed");
 			changingLnFWarningDisplayed = true;
 		}
 	}
@@ -1542,14 +1699,15 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 	private void addComponentsToJComponent(boolean opaque, JComponent parentComponent, Component... components) {
 		for (Component c : components) {
-			//			Color color = IconStore.current().getCurrentTheme().getMenuBar().getColor();
-			//			if (color == null) {
-			//				color = IconStore.current().getCurrentTheme().getBackground().getColor().darker();
-			//			}
-			//			if (c instanceof JComponent) {
-			//				((JComponent) c).setOpaque(opaque);
-			//			}
-			//			c.setBackground(color);
+			// Color color = IconStore.current().getCurrentTheme().getMenuBar().getColor();
+			// if (color == null) {
+			// color =
+			// IconStore.current().getCurrentTheme().getBackground().getColor().darker();
+			// }
+			// if (c instanceof JComponent) {
+			// ((JComponent) c).setOpaque(opaque);
+			// }
+			// c.setBackground(color);
 			parentComponent.add(c);
 		}
 	}
@@ -1656,18 +1814,21 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 					if (!viewManager.isColumnWidthSliderPanelPinned()) {
 						closeColumnWidthSliderWindow();
 						pnlMain.pinColumnWidthSliderPanel(pnlColumnWidthSlider);
-						btnPinColumnSliderWindow.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("unpin"), 24, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+						btnPinColumnSliderWindow.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("unpin"), 24,
+								ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 					} else {
 						pnlMain.unpinColumnWidthSliderPanel(pnlColumnWidthSlider);
 						dlgColumnWidth.add(pnlColumnWidthSlider);
 						showColumnWidthSliderPanel(pnlMain.getCurrentViewPanel());
-						btnPinColumnSliderWindow.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("pin"), 24, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+						btnPinColumnSliderWindow.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("pin"), 24,
+								ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 					}
 				}
 			};
 			if (btnPinColumnSliderWindow == null) {
 				btnPinColumnSliderWindow = new JCustomButtonNew();
-				btnPinColumnSliderWindow.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("pin"), 24, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+				btnPinColumnSliderWindow.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("pin"), 24,
+						ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 				btnPinColumnSliderWindow.addMouseListener(new MouseAdapter() {
 					@Override
 					public void mousePressed(MouseEvent e) {
@@ -1684,7 +1845,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 				btnPinColumnSliderWindow.addActionListener(actionListener2);
 			}
 			btnColumnWidthSlider = new JCustomButtonNew();
-			btnColumnWidthSlider.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("columnWidth"), 24, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+			btnColumnWidthSlider.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("columnWidth"), 24,
+					ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 			pnlColumnWidthSlider = new JPanel(new BorderLayout());
 			pnlColumnWidthSlider.setBorder(BorderFactory.createEtchedBorder());
 			pnlColumnWidthSlider.add(btnColumnWidthSlider, BorderLayout.WEST);
@@ -1813,18 +1975,21 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 					if (!viewManager.isRowHeightSliderPanelPinned()) {
 						closeRowHeightSliderWindow();
 						pnlMain.pinRowHeightSliderPanel(pnlRowHeightSlider);
-						btnPinRowSliderWindow.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("unpin"), 24, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+						btnPinRowSliderWindow.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("unpin"), 24,
+								ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 					} else {
 						pnlMain.unpinRowHeightSliderPanel(pnlRowHeightSlider);
 						dlgRowHeight.add(pnlRowHeightSlider);
 						showRowHeightSliderPanel(pnlMain.getCurrentViewPanel());
-						btnPinRowSliderWindow.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("pin"), 24, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+						btnPinRowSliderWindow.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("pin"), 24,
+								ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 					}
 				}
 			};
 			if (btnPinRowSliderWindow == null) {
 				btnPinRowSliderWindow = new JCustomButtonNew();
-				btnPinRowSliderWindow.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("pin"), 24, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+				btnPinRowSliderWindow.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("pin"), 24,
+						ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 				btnPinRowSliderWindow.addMouseListener(new MouseAdapter() {
 					@Override
 					public void mousePressed(MouseEvent e) {
@@ -1841,7 +2006,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 				btnPinRowSliderWindow.addActionListener(actionListener2);
 			}
 			btnRowHeightSlider = new JCustomButtonNew();
-			btnRowHeightSlider.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rowHeight"), 24, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+			btnRowHeightSlider.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rowHeight"), 24,
+					ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 			pnlRowHeightSlider = new JPanel(new BorderLayout());
 			pnlRowHeightSlider.setBorder(BorderFactory.createEtchedBorder());
 			pnlRowHeightSlider.add(btnRowHeightSlider, BorderLayout.SOUTH);
@@ -1881,7 +2047,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 				@Override
 				public void mousePressed(MouseEvent e) {
 					pressedX = e.getX();
-					pressedY = e.getY()+sliderRowHeight.getHeight()+btnPinRowSliderWindow.getHeight();
+					pressedY = e.getY() + sliderRowHeight.getHeight() + btnPinRowSliderWindow.getHeight();
 				}
 
 				@Override
@@ -1955,7 +2121,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 			btnRemoveOrRestoreGame.setToolTipText(Messages.get(MessageConstants.REMOVE));
 		}
 		pnlMain.navigationChanged(e);
-		viewManager.navigationChanged(e, new BroFilterEvent(pnlGameFilter.getSelectedPlatformId(), pnlGameFilter.getCriteria()));
+		viewManager.navigationChanged(e,
+				new BroFilterEvent(pnlGameFilter.getSelectedPlatformId(), pnlGameFilter.getCriteria()));
 		// Object source = e.getSource();
 		// if (((GameViewChangeEvent) source).getView() ==
 		// GameViewConstants.LIST_VIEW) {
@@ -2024,7 +2191,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		mnuGames.setEnabled(true);
 		pnlGameFilter.gameAdded(e);
 		pnlGameCount.gameAdded(e);
-		FilterEvent filterEvent = new BroFilterEvent(pnlGameFilter.getSelectedPlatformId(), pnlGameFilter.getCriteria());
+		FilterEvent filterEvent = new BroFilterEvent(pnlGameFilter.getSelectedPlatformId(),
+				pnlGameFilter.getCriteria());
 		viewManager.gameAdded(e, filterEvent);
 		pnlMain.gameAdded(e);
 	}
@@ -2106,7 +2274,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 
 			@Override
 			public void run() {
-				boolean minimizeItems = mnb.getWidth() < minMenuBarWidthBeforeMinimize ;
+				boolean minimizeItems = mnb.getWidth() < minMenuBarWidthBeforeMinimize;
 				mnuLanguage.setText(minimizeItems ? "" : Messages.get(MessageConstants.MNU_LANGUAGE));
 				mnuHelp.setText(minimizeItems ? "" : Messages.get(MessageConstants.HELP));
 			}
@@ -2137,15 +2305,15 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	public void showGameDetailsPane(boolean b) {
 		pnlMain.showDetailsPane(b);
 		pnlGameCount.showShowDetailsPaneButton(!b);
-		//		UIUtil.revalidateAndRepaint(this);
+		// UIUtil.revalidateAndRepaint(this);
 	}
 
 	public void showDetailsPane(boolean b, int detailsPaneHeight) {
 		showDetailsPane(b, detailsPaneHeight, false, 0, 0, 0, 0);
 	}
 
-	public void showDetailsPane(boolean b, int detailsPaneHeight, boolean detailsPaneUnpinned,
-			int x, int y, int width, int height) {
+	public void showDetailsPane(boolean b, int detailsPaneHeight, boolean detailsPaneUnpinned, int x, int y, int width,
+			int height) {
 		pnlMain.showDetailsPane(b, detailsPaneHeight);
 		pnlGameCount.showShowDetailsPaneButton(!b);
 		UIUtil.revalidateAndRepaint(this);
@@ -2216,7 +2384,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 	}
 
 	public void showHidePanels() {
-		boolean minimizeItems = mnb.getWidth() < minMenuBarWidthBeforeMinimize ;
+		boolean minimizeItems = mnb.getWidth() < minMenuBarWidthBeforeMinimize;
 		mnuLanguage.setText(minimizeItems ? "" : Messages.get(MessageConstants.MNU_LANGUAGE));
 		mnuHelp.setText(minimizeItems ? "" : Messages.get(MessageConstants.HELP));
 		pnlButtonBar.checkMinimizeMaximizeButtons();
@@ -2484,14 +2652,17 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		mnuThemes.setText(Messages.get(MessageConstants.MNU_THEMES));
 		mnuDarkLaFs.setText(Messages.get(MessageConstants.MNU_DARK_THEMES));
 		mnuLightLaFs.setText(Messages.get(MessageConstants.MNU_LIGHT_THEMES));
-		boolean minimizeItems = mnb.getWidth() < minMenuBarWidthBeforeMinimize ;
+		boolean minimizeItems = mnb.getWidth() < minMenuBarWidthBeforeMinimize;
 		mnuLanguage.setText(minimizeItems ? "" : Messages.get(MessageConstants.MNU_LANGUAGE));
 		mnuHelp.setText(minimizeItems ? "" : Messages.get(MessageConstants.HELP));
-		mnuUpdateAvailable.setText("<html><strong>"+Messages.get(MessageConstants.UPDATE_AVAILABLE)+"</strong></html>");
+		mnuUpdateAvailable
+		.setText("<html><strong>" + Messages.get(MessageConstants.UPDATE_AVAILABLE) + "</strong></html>");
 		itmApplicationUpdateAvailable.setText(Messages.get(MessageConstants.APPLICATION_UPDATE_AVAILABLE));
 		itmSignatureUpdateAvailable.setText(Messages.get(MessageConstants.SIGNATURE_UPDATE_AVAILABLE));
 		mnuExportGameList.setText(Messages.get(MessageConstants.EXPORT_GAME_LIST));
-		itmExportApplicationData.setText(Messages.get(MessageConstants.EXPORT_APPLICATION_DATA, Messages.get(MessageConstants.APPLICATION_TITLE))+"...");
+		itmExportApplicationData.setText(
+				Messages.get(MessageConstants.EXPORT_APPLICATION_DATA, Messages.get(MessageConstants.APPLICATION_TITLE))
+				+ "...");
 		mnuSort.setText(Messages.get(MessageConstants.SORT_BY));
 		mnuGroup.setText(Messages.get(MessageConstants.GROUP_BY));
 		itmSetColumnWidth.setText(Messages.get(MessageConstants.SET_COLUMN_WIDTH));
@@ -2523,6 +2694,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmRenameGames.setText(Messages.get("renameGames") + "...");
 		itmHideExtensions.setText(Messages.get(MessageConstants.HIDE_EXTENSIONS));
 		itmHideExtensions.setToolTipText(Messages.get(MessageConstants.HIDE_EXTENSIONS_TOOL_TIP));
+		itmShowPlatformIconsInView.setText(Messages.get(MessageConstants.SHOW_PLATFORM_ICONS_IN_VIEW));
 		itmShowGameNames.setText(Messages.get(MessageConstants.SHOW_GAME_NAMES));
 		itmShowGameNames.setToolTipText(Messages.get(MessageConstants.SHOW_GAME_NAMES_TOOL_TIP));
 		itmTouchScreenOptimizedScroll.setText(Messages.get(MessageConstants.TOUCH_SCREEN_SCROLL));
@@ -2537,7 +2709,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		itmTroubleshoot.setText(Messages.get(MessageConstants.TROUBLESHOOT));
 		itmDiscord.setText(Messages.get(MessageConstants.EMUBRO_DISCORD));
 		itmGamePadTester.setText(Messages.get(MessageConstants.GAMEPAD_TESTER));
-		itmConfigWizard.setText(Messages.get(MessageConstants.CONFIGURE_WIZARD, Messages.get(MessageConstants.APPLICATION_TITLE)));
+		itmConfigWizard.setText(
+				Messages.get(MessageConstants.CONFIGURE_WIZARD, Messages.get(MessageConstants.APPLICATION_TITLE)));
 		itmCheckForUpdates.setText(Messages.get(MessageConstants.SEARCH_FOR_UPDATES));
 		itmAbout.setText(Messages.get(MessageConstants.ABOUT, Messages.get(MessageConstants.APPLICATION_TITLE)));
 		itmSettings.setText(Messages.get(MessageConstants.SETTINGS, "") + "...");
@@ -2593,7 +2766,8 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		pnlGameFilter.initTags(null);
 		for (Game game : games) {
 			if (game == null) {
-				System.err.println("initGames(List<Game> games) in MainFrame: game is null. this shouldn't happen, there is an issue elsewhere");
+				System.err.println(
+						"initGames(List<Game> games) in MainFrame: game is null. this shouldn't happen, there is an issue elsewhere");
 				continue;
 			}
 			int platformId = game.getPlatformId();
@@ -2756,6 +2930,7 @@ EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, Preview
 		}
 		return ViewConstants.GROUP_ASCENDING;
 	}
+
 	public boolean isMenuBarVisible() {
 		return mnb.isVisible();
 	}

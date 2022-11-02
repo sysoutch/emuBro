@@ -66,7 +66,7 @@ public class BroPlatformDAO implements PlatformDAO {
 				"platform_deleted",
 				SqlUtil.getQuotedString(platform.getName()),
 				SqlUtil.getQuotedString(platform.getShortName()),
-				SqlUtil.getQuotedString(platform.getIconFileName()),
+				SqlUtil.getQuotedString(platform.getIconFilename()),
 				SqlUtil.getQuotedString(platform.getDefaultGameCover()),
 				SqlUtil.getQuotedString(gameSearchModesString),
 				SqlUtil.getQuotedString(platform.getSearchFor()),
@@ -251,7 +251,7 @@ public class BroPlatformDAO implements PlatformDAO {
 		}
 		Statement stmt = conn.createStatement();
 		String sql2 = "update platform set platform_name='" + p.getName() + "'," + "platform_iconFilename='"
-				+ p.getIconFileName() + "'," + "platform_defaultGameCover='" + p.getDefaultGameCover() + "',"
+				+ p.getIconFilename() + "'," + "platform_defaultGameCover='" + p.getDefaultGameCover() + "',"
 				+ "platform_gameSearchModes='" + gameSearchModesString + "'," + "platform_searchFor='"
 				+ p.getSearchFor() + "'," + "platform_supportedArchiveTypes='" + supportedArchiveTypesString + "',"
 				+ "platform_supportedImageTypes='" + supportedImageTypesString + "'," + "platform_defaultEmulatorId="

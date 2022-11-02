@@ -56,6 +56,8 @@ public class EmulationOverlayFrame extends JFrame {
 	final JPopupMenu popup = new JPopupMenu();
 	private JMenuItem btnSendEsc = new JMenuItem(Messages.get(MessageConstants.SEND_ESC));
 	private JMenuItem btnSendAltEnter = new JMenuItem(Messages.get(MessageConstants.SEND_ALT_ENTER));
+	private JMenuItem btnQuickLoad = new JMenuItem(Messages.get(MessageConstants.QUICK_LOAD));
+	private JMenuItem btnQuickSave = new JMenuItem(Messages.get(MessageConstants.QUICK_SAVE));
 	private JMenuItem btnScreenshot = new JMenuItem("Screenshot");
 	private JButton btnShowProcessManager = new JButton(Messages.get(MessageConstants.SHOW_PROCESS_MANAGER));
 	private JMenuItem btnShowApplication = new JMenuItem(
@@ -80,10 +82,6 @@ public class EmulationOverlayFrame extends JFrame {
 
 	private void initComponents() {
 		btnMenu.setFocusPainted(false);
-		addComponentsToPopup(popup, btnShowApplication, new JSeparator(), btnStopEmulation, new JSeparator(),
-				btnSendEsc, btnSendAltEnter, btnScreenshot, new JSeparator(), btnEmulationOverlayPanelSettings, new JSeparator(),
-				btnHideEmulationOverlayPanel);
-
 		// btnMenu.setComponentPopupMenu(popup);
 		btnMenu.addActionListener(new ActionListener() {
 
@@ -357,6 +355,9 @@ public class EmulationOverlayFrame extends JFrame {
 		btnShowApplication.setToolTipText("Show emuBro");
 		btnEmulationOverlayPanelSettings.setIcon(new FlatSVGIcon(Icons.get("settings"), size3, size3));
 		btnHideEmulationOverlayPanel.setIcon(ImageUtil.getImageIconFrom(Icons.get("close3", size3, size3)));
+		addComponentsToPopup(popup, btnShowApplication, new JSeparator(), btnStopEmulation, new JSeparator(),
+				btnSendEsc, btnSendAltEnter, new JSeparator(), btnQuickLoad, btnQuickSave, new JSeparator(), btnScreenshot, new JSeparator(), btnEmulationOverlayPanelSettings, new JSeparator(),
+				btnHideEmulationOverlayPanel);
 		add(pnl);
 		pack();
 	}

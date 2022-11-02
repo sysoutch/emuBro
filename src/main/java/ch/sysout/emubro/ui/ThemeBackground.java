@@ -27,6 +27,8 @@ public class ThemeBackground {
 	private ThemeImage imageNew;
 	private ThemeColor colorNew;
 
+	private boolean transparentSelection;
+
 	public ThemeBackground(BufferedImage image, Color color) {
 		this(image, color, false, 0, 0);
 	}
@@ -103,23 +105,55 @@ public class ThemeBackground {
 		return imageScaleEnabled;
 	}
 
+	public void setImageScaleEnabled(boolean imageScaleEnabled) {
+		this.imageScaleEnabled = imageScaleEnabled;
+	}
+
 	public boolean isScaleProportionallyEnabled() {
 		return scaleProportionallyEnabled;
+	}
+
+	public void setScaleProportionallyEnabled(boolean scaleProportionallyEnabled) {
+		this.scaleProportionallyEnabled = scaleProportionallyEnabled;
 	}
 
 	public boolean isVerticalCenterImageEnabled() {
 		return verticalCenterImageEnabled;
 	}
 
+	public void setVerticalCenterImageEnabled(boolean verticalCenterImageEnabled) {
+		this.verticalCenterImageEnabled = verticalCenterImageEnabled;
+	}
+
 	public boolean isHorizontalCenterImageEnabled() {
 		return horizontalCenterImageEnabled;
+	}
+
+	public void setHorizontalCenterImageEnabled(boolean horizontalCenterImageEnabled) {
+		this.horizontalCenterImageEnabled = horizontalCenterImageEnabled;
 	}
 
 	public boolean isAddTransparencyPaneEnabled() {
 		return addTransparencyPaneEnabled;
 	}
 
+	public void setAddTransparencyPaneEnabled(boolean addTransparencyPaneEnabled) {
+		this.addTransparencyPaneEnabled = addTransparencyPaneEnabled;
+	}
+
 	public Color getTransparencyColor() {
 		return transparencyColor;
+	}
+
+	public void setTransparencyColor(Color transparencyColor) {
+		this.transparencyColor = transparencyColor;
+	}
+
+	public boolean isTransparentSelection() {
+		return transparentSelection;
+	}
+
+	public void setTransparentSelectionEnabled(boolean transparentSelection) {
+		this.transparentSelection = transparentSelection;
 	}
 }

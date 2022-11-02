@@ -321,7 +321,7 @@ GameSelectionListener, BrowseComputerListener {
 	private String applicationVersion = "";
 	private String platformDetectionVersion = "";
 	private String latestRelease = "https://api.github.com/repos/sysoutch/emuBro/releases";
-	private final String currentPlatformDetectionVersion = "20180827.0";
+	private final String currentPlatformDetectionVersion = "20221010.0";
 
 	private int navigationPaneDividerLocation;
 	private String navigationPaneState;
@@ -1234,25 +1234,22 @@ GameSelectionListener, BrowseComputerListener {
 	public UpdateObject retrieveLatestRevisionInformations() throws MalformedURLException, IOException {
 		String urlPath = latestRelease;
 		URL url = new URL(urlPath);
-		BufferedReader in;
 		HttpURLConnection con = (HttpURLConnection) url.openConnection();
 		con.setConnectTimeout(5000);
 		con.setReadTimeout(5000);
 		InputStream is = con.getInputStream();
 		Reader reader = new InputStreamReader(is);
-		in = new BufferedReader(reader);
-		boolean applicationUpdateAvailable = false;
-		boolean signatureUpdateAvailable = false;
+		BufferedReader in = new BufferedReader(reader);
 
-		JsonParser jsonParser = new JsonParser();
 		String readLine = in.readLine();
 		in.close();
 		String json = readLine;
-		JsonArray arr = jsonParser.parse(json).getAsJsonArray();
+		JsonArray arr = JsonParser.parseString(json).getAsJsonArray();
 		JsonObject obj = arr.get(0).getAsJsonObject();
 		JsonElement jsonElement = obj.get("tag_name");
 		applicationVersion = jsonElement.getAsString();
-		applicationUpdateAvailable = isApplicationUpdateAvailable();
+		boolean applicationUpdateAvailable = isApplicationUpdateAvailable();
+		boolean signatureUpdateAvailable = false;
 
 		JsonArray jsonArrayAssets = obj.get("assets").getAsJsonArray();
 		String downloadLink = "";
@@ -2104,7 +2101,9 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	public void changeLanguage(String locale) {
-		changeLanguage(new Locale(locale));
+		if (locale != null) {
+			changeLanguage(new Locale(locale));
+		}
 	}
 
 	public void changeLanguage(Locale locale) {
@@ -3466,7 +3465,7 @@ GameSelectionListener, BrowseComputerListener {
 		int request = JOptionPane.CANCEL_OPTION;
 		do {
 			request = JOptionPane.showConfirmDialog(view, messageEnlarged, title,
-					JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
+					JOptionPane.OK_CANCEL_OPTION, JOptionPane.INFORMATION_MESSAGE);
 		} while (request == JOptionPane.OK_OPTION && cmbPlatforms.getSelectedItem() == null);
 		if (request == JOptionPane.OK_OPTION) {
 			String fileExtension = FilenameUtils.getExtension(filePath);
@@ -4652,14 +4651,13 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	private File getFileFromUrl(String platformShortName) throws IOException {
-		String searchString = platformShortName;
 		//				String defPlatformName = (platformShortName != null && !platformShortName.trim().isEmpty())
 		//						? platformShortName : platform.getName();
 
 		try {
-			URL url = new URL("http://www.emubro.net/games/"+searchString.replace(" ", "%20")+".xml");
+			URL url = new URL("https://raw.githubusercontent.com/sysoutch/gamelist/master/"+platformShortName.replace(" ", "%20")+".json");
 			File emuBroGameHome = new File(explorer.getResourcesPath()
-					+ File.separator + "games" + File.separator + searchString+".xml");
+					+ File.separator + "games" + File.separator + platformShortName+".json");
 			URLConnection con = url.openConnection();
 			con.setReadTimeout(20000);
 			FileUtils.copyURLToFile(url, emuBroGameHome);
@@ -8122,7 +8120,7 @@ GameSelectionListener, BrowseComputerListener {
 			fileName = FilenameUtils.removeExtension(fileName);
 		}
 		ZonedDateTime dateAdded = ZonedDateTime.now();
-		String platformIconFileName = p0.getIconFileName();
+		String platformIconFileName = p0.getIconFilename();
 		int defaultFileId = 0;
 		Game element = new BroGame(GameConstants.NO_GAME, fileName, "", defaultFileId, explorerDAO.getChecksumId(checksum), null, null, 0, dateAdded, null, 0,
 				EmulatorConstants.NO_EMULATOR, platformId, platformIconFileName);
@@ -8326,7 +8324,7 @@ GameSelectionListener, BrowseComputerListener {
 					IconStore iconStore = IconStore.current();
 					iconStore.addGameIconPath(gameId, gameFinal.getIconPath());
 					iconStore.addGameCoverPath(gameId, gameFinal.getCoverPath());
-					iconStore.addPlatformIcon(p0.getId(), explorer.getPlatformsDirectory() + File.separator + p0.getShortName() + File.separator + "logo", p0.getIconFileName());
+					iconStore.addPlatformIcon(p0.getId(), explorer.getPlatformsDirectory() + File.separator + p0.getShortName() + File.separator + "logo", p0.getIconFilename());
 					if (manuallyAdded) {
 						SwingUtilities.invokeLater(new Runnable() {
 

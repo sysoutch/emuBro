@@ -946,7 +946,9 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 				//				tpMain.setBorder(BorderFactory.createEmptyBorder());
 				tpMain.addTab(Messages.get(MessageConstants.GENERAL), spGeneralSettings);
 				tpMain.addTab(Messages.get(MessageConstants.CONFIGURE), spEmulatorConfiguration);
+				tpMain.addTab(Messages.get(MessageConstants.GRAPHICS), new JPanel());
 				tpMain.addTab(Messages.get(MessageConstants.INPUT), spInputConfiguration);
+				tpMain.addTab(Messages.get(MessageConstants.PLUGINS), new JPanel());
 				tpMain.addTab(Messages.get(MessageConstants.ADVANCED), pnlConfigurationFile);
 				tpMain.setTabPlacement(SwingConstants.TOP);
 				tpMain.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);

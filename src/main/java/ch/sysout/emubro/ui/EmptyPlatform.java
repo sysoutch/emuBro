@@ -12,6 +12,13 @@ import ch.sysout.util.Messages;
 
 public class EmptyPlatform implements Platform {
 
+	private String iconFilename;
+
+	public EmptyPlatform() {
+		super();
+		this.iconFilename = "snes.png";
+	}
+
 	@Override
 	public int compareTo(Platform platform) {
 		return PlatformConstants.NO_PLATFORM;
@@ -50,14 +57,13 @@ public class EmptyPlatform implements Platform {
 	public void setSearchFor(String searchFor) {
 	}
 
-
 	@Override
 	public void addSearchFor(String searchFor) {
 	}
 
 	@Override
-	public String getIconFileName() {
-		return null;
+	public String getIconFilename() {
+		return iconFilename;
 	}
 
 	@Override
@@ -107,8 +113,6 @@ public class EmptyPlatform implements Platform {
 
 	@Override
 	public void setDefaultEmulatorId(int standardEmulatorId) {
-
-
 	}
 
 	@Override
@@ -122,7 +126,6 @@ public class EmptyPlatform implements Platform {
 
 	@Override
 	public void addEmulator(BroEmulator emulator) {
-
 	}
 
 	@Override
@@ -159,19 +162,17 @@ public class EmptyPlatform implements Platform {
 	}
 
 	@Override
-	public String toString() {
-		return Messages.get("emptyPlatform");
-	}
-
-	@Override
 	public boolean hasGameCodeRegexes() {
-		// TODO Auto-generated method stub
 		return false;
 	}
 
 	@Override
 	public List<String> getGameCodeRegexes() {
-		// TODO Auto-generated method stub
 		return null;
+	}
+
+	@Override
+	public String toString() {
+		return Messages.get("emptyPlatform");
 	}
 }
