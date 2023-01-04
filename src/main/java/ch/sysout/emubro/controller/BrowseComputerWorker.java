@@ -12,7 +12,9 @@ import java.util.List;
 import javax.swing.SwingWorker;
 
 import ch.sysout.emubro.api.dao.ExplorerDAO;
+import ch.sysout.emubro.api.event.SearchCompleteEvent;
 import ch.sysout.emubro.api.model.Explorer;
+import ch.sysout.emubro.impl.event.BroSearchCompleteEvent;
 import ch.sysout.emubro.ui.MainFrame;
 import ch.sysout.ui.util.UIUtil;
 
@@ -204,13 +206,14 @@ class BrowseComputerWorker extends SwingWorker<Void, File> {
 
 	@Override
 	protected void done() {
+		searchProcessEnded = System.currentTimeMillis();
+		long searchDuration = searchProcessEnded - searchProcessStarted;
+		System.out.println(searchDuration + " milliseconds");
 		if (!searchProcessInterrupted) {
-			fireSearchCompleteEvent();
+			fireSearchCompleteEvent(searchDuration);
 		}
 		searchProcessInterrupted = false;
 		view.searchProcessEnded();
-		searchProcessEnded = System.currentTimeMillis();
-		System.out.println(searchProcessEnded - searchProcessStarted + " milliseconds");
 		try {
 			UIUtil.displayTray("searchProcessEnded - searchProcessStarted + milliseconds", "search ended");
 		} catch (AWTException e) {
@@ -231,9 +234,10 @@ class BrowseComputerWorker extends SwingWorker<Void, File> {
 		// }
 	}
 
-	private void fireSearchCompleteEvent() {
+	private void fireSearchCompleteEvent(long searchDuration) {
+		SearchCompleteEvent ev = new BroSearchCompleteEvent(searchDuration);
 		for (BrowseComputerListener l : browseComputerListeners) {
-			l.searchProcessComplete();
+			l.searchProcessComplete(ev);
 		}
 	}
 

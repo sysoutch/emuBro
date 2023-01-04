@@ -32,6 +32,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.swing.BorderFactory;
 import javax.swing.JOptionPane;
@@ -62,6 +64,7 @@ import ch.sysout.emubro.impl.dao.BroExplorerDAO;
 import ch.sysout.emubro.impl.model.BroExplorer;
 import ch.sysout.emubro.impl.model.BroPlatform;
 import ch.sysout.emubro.impl.model.BroTag;
+import ch.sysout.emubro.themes.FlatDarhkmirLaf;
 import ch.sysout.emubro.ui.ColorStore;
 import ch.sysout.emubro.ui.IconStore;
 import ch.sysout.emubro.ui.MainFrame;
@@ -99,9 +102,12 @@ public class Main {
 	private static final String currentApplicationVersion = "0.8.0";
 
 	public static void main(String[] args) {
+		Logger logger = Logger.getLogger(Main.class.getName());
+
 		//		System.setProperty("sun.java2d.uiScale", "1.0");
 		System.setProperty("java.util.Arrays.useLegacyMergeSort", "true");
 		System.setProperty("apple.laf.useScreenMenuBar", "true");
+		System.setProperty("flatlaf.menuBarEmbedded", "true");
 		if (loadAppDataFromLastSession()) {
 			applyAppDataFromLastSession();
 		} else {
@@ -118,6 +124,7 @@ public class Main {
 		try {
 			initializeCustomTheme();
 		} catch (IOException e) {
+			logger.log(Level.ALL, e.getMessage());
 			e.printStackTrace();
 		}
 		dlgSplashScreen = new SplashScreenWindow(
@@ -131,6 +138,7 @@ public class Main {
 		try {
 			UIUtil.displayTray("We hope you like it!", "Welcome to emuBro");
 		} catch (AWTException e) {
+			logger.log(Level.ALL, e.getMessage());
 			e.printStackTrace();
 		}
 	}
@@ -170,8 +178,6 @@ public class Main {
 			if (language != null && !language.trim().isEmpty()) {
 				setLanguage(language);
 			}
-			//			FlatLaf.registerCustomDefaultsSource( "ch.sysout.emubro" );
-			//			FlatDarhkmirLaf.setup();
 			if (currentLnF != null && !currentLnF.trim().isEmpty()) {
 				boolean useThemeBasedOnTimeOfDay = false;
 				if (useThemeBasedOnTimeOfDay) {
@@ -179,6 +185,7 @@ public class Main {
 					setLookAndFeel(shouldUseLightMode ? lastLightLnF : lastDarkLnF);
 				} else {
 					setLookAndFeel(currentLnF);
+					setLookAndFeel(new FlatDarhkmirLaf());
 				}
 			}
 		}

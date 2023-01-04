@@ -184,6 +184,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 
 	private Map<Game, String> textFilterHighlightedGameNames = new HashMap<>();
 	private boolean shouldUpdateCurrentFilterText;
+	private int detailsPanelHeight;
 
 	public ListViewPanel(Explorer explorer, ViewPanelManager viewManager, GameContextMenu popupGame, ViewContextMenu popupView) {
 		super(new BorderLayout());
@@ -2144,6 +2145,10 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		return ((GameListModel) lstGames.getModel()).getAllElements();
 	}
 
+	public void setDetailsPanelHeight(int detailsPanelHeight) {
+		this.detailsPanelHeight = detailsPanelHeight;
+	}
+
 	@Override
 	public void coverSizeChanged(int currentCoverSize) {
 		setFixedCellHeights(viewManager.getCurrentCoverSize());
@@ -2157,7 +2162,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		super.paintComponent(g);
 		Graphics2D g2d = (Graphics2D) g.create();
 		int panelWidth = getWidth();
-		int panelHeight = getHeight();
+		int panelHeight = getHeight() + detailsPanelHeight;
 		Theme currentTheme = IconStore.current().getCurrentTheme();
 		ThemeBackground currentBackground = currentTheme.getView();
 		//		if (currentBackground.hasGradientPaint()) {

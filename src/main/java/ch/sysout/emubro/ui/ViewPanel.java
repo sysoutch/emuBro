@@ -187,4 +187,6 @@ public abstract class ViewPanel extends JPanel implements GameSelectionListener 
 	public abstract void scrollToSelectedGames();
 
 	public abstract void themeChanged();
+
+	//	public abstract void setDetailsPanelHeight(int detailsPanelHeight);
 }

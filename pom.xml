@@ -186,6 +186,11 @@
 			<artifactId>xz</artifactId>
 			<version>1.9</version>
 		</dependency>
+		<dependency>
+			<groupId>com.github.Dansoftowner</groupId>
+			<artifactId>jSystemThemeDetector</artifactId>
+			<version>3.8</version>
+		</dependency>
 	</dependencies>
 	<build>
 		<plugins>
@@ -241,6 +246,10 @@
 			<id>jcenter</id>
 			<url>https://jcenter.bintray.com</url>
 			<name>jcenter-bintray</name>
+		</repository>
+		<repository>
+			<id>jitpack.io</id>
+			<url>https://jitpack.io</url>
 		</repository>
 	</repositories>
 </project>

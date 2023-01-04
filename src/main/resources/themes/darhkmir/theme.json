@@ -1,8 +1,8 @@
 {
   "name":"Darhkmir",
-  "color":"#600000",
+  "color":"#c80104",
   "view": {
-	"color":"#c80104",
+	"color":"#ff5759",
 	"image":"bg-only.png"
   }
 }

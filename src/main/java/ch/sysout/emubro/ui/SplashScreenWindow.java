@@ -1,6 +1,8 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
@@ -10,7 +12,6 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
 import javax.swing.BorderFactory;
-import javax.swing.Icon;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -28,12 +29,15 @@ public class SplashScreenWindow extends JDialog {
 	private static final long serialVersionUID = 1L;
 
 	private JProgressBar prg = new JProgressBar();
-	private Icon applicationIconStartInitialize = ImageUtil.getImageIconFrom(Icons.get("applicationBanner"));
-	private JLabel lbl = new JLabel(applicationIconStartInitialize);
+	private JLabel lbl = new JLabel();
 	private JCustomButtonNew btnCancel = new JCustomButtonNew();
 
 	protected int pressedX;
 	protected int pressedY;
+
+	private PixelatedBackgroundPanel pnlPixelatedBackground;
+
+	private JPanel pnlMain;
 
 	public SplashScreenWindow() {
 		this("");
@@ -50,11 +54,15 @@ public class SplashScreenWindow extends JDialog {
 		//		AWTUtilities.setWindowOpaque(this, false); // enable opacity
 		//		setBackground(new Color(0f, 0f, 0f, 0.9f));
 		pack();
+		pnlPixelatedBackground.setBaseColor(pnlMain.getBackground());
+		setSize(new Dimension(600, 400));
 		// btnCancel.setVisible(false);
 	}
 
 	private void initComponents() {
 		getRootPane().setBorder(BorderFactory.createEmptyBorder());
+		//		lbl.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("applicationBanner"), 200, 200, Color.LIGHT_GRAY));
+		lbl.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("allGames"), 200, 200, Color.BLUE));
 		//		prg.setOpaque(false);
 		prg.setStringPainted(true);
 		//		prg.setIndeterminate(true);
@@ -94,14 +102,18 @@ public class SplashScreenWindow extends JDialog {
 	}
 
 	private void createUI() {
-		JPanel pnlMain = new JPanel();
+		pnlMain = new JPanel();
 		//		pnlMain.setOpaque(true);
-		FormLayout layout = new FormLayout("min:grow, min", "fill:pref, min, fill:pref, min, fill:pref:grow");
+		FormLayout layout = new FormLayout("min:grow, min", "fill:pref, min, fill:pref:grow, min, fill:pref");
 		pnlMain.setLayout(layout);
 		CellConstraints cc = new CellConstraints();
 		//		pnlMain.setBackground(new Color(13, 35, 48));
 		pnlMain.add(btnCancel, cc.xy(2, 1));
-		pnlMain.add(lbl, cc.xyw(1, 3, layout.getColumnCount()));
+		pnlPixelatedBackground = new PixelatedBackgroundPanel();
+		pnlPixelatedBackground.setMaxLoops(20);
+		pnlPixelatedBackground.setFactor(0.9);
+		pnlMain.add(pnlPixelatedBackground, cc.xyw(1, 3, layout.getColumnCount()));
+		//		pnlMain.add(lbl, cc.xyw(1, 3, layout.getColumnCount()));
 
 		//		prg.setBorder(BorderFactory.createEmptyBorder());
 		//		prg.setUI(new BasicProgressBarUI() {
@@ -167,7 +179,6 @@ public class SplashScreenWindow extends JDialog {
 	}
 
 	public void restartApplication(String string) {
-		lbl.setIcon(applicationIconStartInitialize);
 		setText(string);
 		//		prg.setIndeterminate(true);
 	}

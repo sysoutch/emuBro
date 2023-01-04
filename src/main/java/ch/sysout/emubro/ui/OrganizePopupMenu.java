@@ -19,6 +19,7 @@ class OrganizePopupMenu extends JPopupMenu {
 
 	private JMenu mnuLayout = new JMenu(Messages.get("layout"));
 	private JCheckBoxMenuItem itmShowMenuBar = new JCheckBoxMenuItem(Messages.get("menuBar"));
+	private JCheckBoxMenuItem itmMenuBarEmbedded = new JCheckBoxMenuItem(Messages.get("menuBarEmbedded"));
 	private JCheckBoxMenuItem itmShowNavigationPanel = new JCheckBoxMenuItem(Messages.get("navigationPanel"));
 	private JCheckBoxMenuItem itmShowPreviewPanel = new JCheckBoxMenuItem(Messages.get("previewPanel"));
 	private JCheckBoxMenuItem itmShowGameDetailsPanel = new JCheckBoxMenuItem(Messages.get("informationPanel"));
@@ -28,11 +29,13 @@ class OrganizePopupMenu extends JPopupMenu {
 
 	public OrganizePopupMenu() {
 		itmShowMenuBar.setSelected(true);
+		itmMenuBarEmbedded.setSelected(true);
 		itmShowNavigationPanel.setSelected(true);
 		itmShowPreviewPanel.setSelected(true);
 		itmShowGameDetailsPanel.setSelected(true);
 		itmShowStatusBar.setSelected(true);
 		mnuLayout.add(itmShowMenuBar);
+		mnuLayout.add(itmMenuBarEmbedded);
 		mnuLayout.add(new JSeparator());
 		mnuLayout.add(itmShowNavigationPanel);
 		mnuLayout.add(itmShowPreviewPanel);
@@ -88,6 +91,10 @@ class OrganizePopupMenu extends JPopupMenu {
 
 	public void addShowMenuBarListener(ActionListener l) {
 		itmShowMenuBar.addActionListener(l);
+	}
+
+	public void addMenuBarEmbeddedListener(ActionListener l) {
+		itmMenuBarEmbedded.addActionListener(l);
 	}
 
 	public void addShowNavigationListener(ActionListener l) {

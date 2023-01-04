@@ -878,7 +878,6 @@ UpdateGameCountListener, DirectorySearchedListener {
 		itmAddFolders.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("addFolder"), size, new Color(255, 195, 0)));
 		itmAddFilesFromClipboard.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("filesFromClipboard"), size,
 				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		itmLoadDisc.setIcon(ImageUtil.getImageIconFrom(Icons.get("loadDisc", size, size)));
 		itmSearchNetwork.setIcon(ImageUtil.getImageIconFrom(Icons.get("searchNetwork", size, size)));
 		itmSettings.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("settings"), size,
 				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
@@ -1075,6 +1074,13 @@ UpdateGameCountListener, DirectorySearchedListener {
 		});
 
 		addShowMenubarListener(new ShowMenuBarListener());
+		pnlMain.addMenuBarEmbeddedListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				System.setProperty("flatlaf.menuBarEmbedded", Boolean.toString(System.getProperty("flatlaf.menuBarEmbedded").equals("false")));
+			}
+		});
 		addSetFilterListener(new ActionListener() {
 
 			@Override
@@ -1123,6 +1129,10 @@ UpdateGameCountListener, DirectorySearchedListener {
 		.put(KeyStroke.getKeyStroke(KeyEvent.VK_ALT, 0, true), "actionAddShowMenubarListener");
 		getRootPane().getActionMap().put("actionAddShowMenubarListener", l);
 		pnlMain.addShowMenuBarListener(l);
+	}
+
+	public void addMenuBarEmbeddedListener(ActionListener l) {
+		pnlMain.addMenuBarEmbeddedListener(l);
 	}
 
 	private void addActionListeners(AbstractButton... o) {
@@ -1848,10 +1858,10 @@ UpdateGameCountListener, DirectorySearchedListener {
 			btnColumnWidthSlider.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("columnWidth"), 24,
 					ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 			pnlColumnWidthSlider = new JPanel(new BorderLayout());
-			pnlColumnWidthSlider.setBorder(BorderFactory.createEtchedBorder());
 			pnlColumnWidthSlider.add(btnColumnWidthSlider, BorderLayout.WEST);
 			pnlColumnWidthSlider.add(sliderColumnWidth);
 			pnlColumnWidthSlider.add(btnPinColumnSliderWindow, BorderLayout.EAST);
+			dlgColumnWidth.getRootPane().setBorder(BorderFactory.createEtchedBorder());
 			dlgColumnWidth.add(pnlColumnWidthSlider);
 			// window.add(sliderColumnWidth);
 			dlgColumnWidth.pack();
@@ -2009,11 +2019,10 @@ UpdateGameCountListener, DirectorySearchedListener {
 			btnRowHeightSlider.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rowHeight"), 24,
 					ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 			pnlRowHeightSlider = new JPanel(new BorderLayout());
-			pnlRowHeightSlider.setBorder(BorderFactory.createEtchedBorder());
 			pnlRowHeightSlider.add(btnRowHeightSlider, BorderLayout.SOUTH);
 			pnlRowHeightSlider.add(sliderRowHeight);
 			pnlRowHeightSlider.add(btnPinRowSliderWindow, BorderLayout.NORTH);
-
+			dlgRowHeight.getRootPane().setBorder(BorderFactory.createEtchedBorder());
 			dlgRowHeight.add(pnlRowHeightSlider);
 			dlgRowHeight.pack();
 			dlgRowHeight.addWindowFocusListener(new WindowFocusListener() {

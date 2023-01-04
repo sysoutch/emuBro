@@ -221,6 +221,7 @@ import ch.sysout.emubro.api.event.EmulatorEvent;
 import ch.sysout.emubro.api.event.FilterEvent;
 import ch.sysout.emubro.api.event.GameSelectionEvent;
 import ch.sysout.emubro.api.event.PlatformEvent;
+import ch.sysout.emubro.api.event.SearchCompleteEvent;
 import ch.sysout.emubro.api.event.TagEvent;
 import ch.sysout.emubro.api.filter.FilterGroup;
 import ch.sysout.emubro.api.model.Emulator;
@@ -268,7 +269,6 @@ import ch.sysout.emubro.ui.JCustomButtonNew;
 import ch.sysout.emubro.ui.JExtendedComboBox;
 import ch.sysout.emubro.ui.JExtendedTextField;
 import ch.sysout.emubro.ui.JLinkButton;
-import ch.sysout.emubro.ui.LanguageListener;
 import ch.sysout.emubro.ui.MainFrame;
 import ch.sysout.emubro.ui.NavigationPanel;
 import ch.sysout.emubro.ui.NotificationElement;
@@ -313,7 +313,6 @@ GameSelectionListener, BrowseComputerListener {
 	private UpdateDialog dlgUpdates;
 
 	private ExplorerDAO explorerDAO;
-	private List<String> alreadyCheckedDirectories = new ArrayList<>();
 	private Properties properties = Main.properties;
 
 	private Map<Game, Map<Process, Integer>> processes = new HashMap<>();
@@ -377,13 +376,11 @@ GameSelectionListener, BrowseComputerListener {
 	private SortedListModel<Platform> mdlPropertiesLstPlatforms = new SortedListModel<>();
 	private Map<String, ImageIcon> platformIcons = new HashMap<>();
 	private Map<String, ImageIcon> emulatorIcons = new HashMap<>();
-	private Map<String, Icon> emulatorFileIcons = new HashMap<>();
 	private List<String> encryptedFiles = new ArrayList<>();
 	private BrowseComputerWorker workerBrowseComputer;
 	private List<PlatformListener> platformListeners = new ArrayList<>();
 	private List<EmulatorListener> emulatorListeners = new ArrayList<>();
 	private List<TagListener> tagListeners = new ArrayList<>();
-	private List<LanguageListener> languageListeners = new ArrayList<>();
 	private List<String> zipFiles = new ArrayList<>();
 	private List<String> rarFiles = new ArrayList<>();
 	private List<String> isoFiles = new ArrayList<>();
@@ -406,7 +403,6 @@ GameSelectionListener, BrowseComputerListener {
 	private CoverBroFrame frameCoverBro;
 	public UpdateObject uo;
 	public UpdateApplicationListener updateApplicationListener;
-	private Map<String, Properties> mapProps = new HashMap<>();
 	private JDialog dlgDownloadCovers;
 	private JProgressBar progress;
 	private File lastEmuDownloadDirectory;
@@ -419,7 +415,6 @@ GameSelectionListener, BrowseComputerListener {
 	//	private Builder discordRpc;
 	private String storageDirectory;
 	private List<Integer> alreadyCheckedPlatformIds = new ArrayList<>();
-	private ExecutorService executor = Executors.newCachedThreadPool();
 	Charset defaultCharset = Charset.defaultCharset();
 	Charset iso88591Charset = Charset.forName("ISO-8859-1");
 	private CharsetDecoder decoder = iso88591Charset.newDecoder()
@@ -1461,7 +1456,12 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	@Override
-	public void searchProcessComplete() {
+	public void searchProcessComplete(SearchCompleteEvent ev) {
+		long duration = ev.getDuration();
+		// FIXME bug when browsing the computer on emuBro first start
+		if (duration < 1000) {
+
+		}
 		Map<String, Action> actionKeys = new HashMap<>();
 		actionKeys.put("hideMessage", hideBrowseComputerNotification());
 		NotificationElement element = new NotificationElement(new String[] { "searchProcessCompleted" },
@@ -1754,10 +1754,20 @@ GameSelectionListener, BrowseComputerListener {
 					@Override
 					public void run() {
 						try {
+							Properties propModel = SystemInformations.getModel();
+							Properties propName = SystemInformations.getName();
+							Properties propUserName = SystemInformations.getUserName();
+							Properties propManufacturer = SystemInformations.getManufacturer();
+							Properties propSystemType = SystemInformations.getSystemType();
 							Properties propOs = SystemInformations.getOsInformation();
 							Properties propCpu = SystemInformations.getCpuInformation();
 							Properties propGpu = SystemInformations.getGpuInformation();
 							Properties propRam = SystemInformations.getRamInformation();
+							final String model = "Model: " + propModel.getProperty("Model", "-");
+							final String name = "Name: " + propName.getProperty("Name", "-");
+							final String userName = "UserName: " + propUserName.getProperty("UserName", "-");
+							final String manufacturer = "Manufacturer: " + propManufacturer.getProperty("Manufacturer", "-");
+							final String systemType = "SystemType: " + propSystemType.getProperty("SystemType", "-");
 							final String os = "OS: " + propOs.getProperty("Caption", "-");
 							final String cpu = "Processor: " + propCpu.getProperty("Name", "-");
 							final String gpu = "Graphics Card: " + propGpu.getProperty("Name", "-");
@@ -1775,7 +1785,7 @@ GameSelectionListener, BrowseComputerListener {
 
 								@Override
 								public void run() {
-									view.showSystemInformations(os, cpu, gpu, ram2);
+									view.showSystemInformations(model, name, userName, manufacturer, systemType, os, cpu, gpu, ram2);
 								}
 							});
 						} catch (IOException e) {
@@ -3929,7 +3939,7 @@ GameSelectionListener, BrowseComputerListener {
 			newFile.delete();
 		}
 		if (destFileTmp.renameTo(newFile)) {
-			System.out.println("File rename success");;
+			System.out.println("File rename success");
 		} else{
 			System.out.println("File rename failed");
 		}
@@ -3991,7 +4001,7 @@ GameSelectionListener, BrowseComputerListener {
 			newFile.delete();
 		}
 		if (coverFile.renameTo(newFile)) {
-			System.out.println("File rename success");;
+			System.out.println("File rename success");
 		} else {
 			System.out.println("File rename failed");
 		}
@@ -7338,6 +7348,9 @@ GameSelectionListener, BrowseComputerListener {
 				@Override
 				public void run() {
 					view.navigationChanged(new NavigationEvent(NavigationPanel.RECYCLE_BIN));
+					dlgSplashScreen.setText("Retrieving removed games...");
+					dlgSplashScreen.setLocationRelativeTo(view);
+					dlgSplashScreen.setVisible(true);
 					if (explorer.getRemovedGames() == null) {
 						System.out.println("removed games:");
 						try {
@@ -7347,6 +7360,8 @@ GameSelectionListener, BrowseComputerListener {
 						} catch (SQLException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
+						} finally {
+							//							dlgSplashScreen.dispose();
 						}
 					}
 				}

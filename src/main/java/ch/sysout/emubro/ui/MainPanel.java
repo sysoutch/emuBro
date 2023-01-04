@@ -295,6 +295,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 
 				lastUserDefinedDetailsHeight = getHeight() - divLocation;
 				lastDetailsHeight = lastUserDefinedDetailsHeight;
+				pnlListView.setDetailsPanelHeight(lastDetailsHeight);
 				int minimumDetailsDividerLocation = splDetailsPane.getMinimumDividerLocation();
 
 				boolean detailsDividerEqualOrLessThanMinimum = splDetailsPane.getDividerLocation() <= minimumDetailsDividerLocation;
@@ -952,6 +953,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				removeSplDetailsPane();
 			}
 		}
+		pnlListView.setDetailsPanelHeight(lastDetailsHeight);
 	}
 
 	private void addSplDetailsPane() {
@@ -1375,6 +1377,10 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 
 	public void addShowMenuBarListener(ActionListener l) {
 		mnuOrganizeOptions.addShowMenuBarListener(l);
+	}
+
+	public void addMenuBarEmbeddedListener(ActionListener l) {
+		mnuOrganizeOptions.addMenuBarEmbeddedListener(l);
 	}
 
 	public void addShowNavigationPaneListener(ActionListener l) {

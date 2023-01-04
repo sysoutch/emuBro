@@ -5,6 +5,31 @@ import java.util.Properties;
 
 public class SystemInformations {
 
+	static Properties getModel() throws IOException {
+		String[] command = { "wmic", "computersystem", "get", "model", "/FORMAT:LIST" };
+		return getInformation(command);
+	}
+
+	public static Properties getName() throws IOException {
+		String[] command = { "wmic", "computersystem", "get", "name", "/FORMAT:LIST" };
+		return getInformation(command);
+	}
+
+	public static Properties getUserName() throws IOException {
+		String[] command = { "wmic", "computersystem", "get", "username", "/FORMAT:LIST" };
+		return getInformation(command);
+	}
+
+	public static Properties getManufacturer() throws IOException {
+		String[] command = { "wmic", "computersystem", "get", "manufacturer", "/FORMAT:LIST" };
+		return getInformation(command);
+	}
+
+	public static Properties getSystemType() throws IOException {
+		String[] command = { "wmic", "computersystem", "get", "systemtype", "/FORMAT:LIST" };
+		return getInformation(command);
+	}
+
 	static Properties getOsInformation() throws IOException {
 		String[] command = { "wmic", "os", "get", "Caption,Version,BuildNumber,OSArchitecture", "/FORMAT:LIST" };
 		return getInformation(command);
