@@ -191,6 +191,7 @@ UpdateGameCountListener, DirectorySearchedListener {
 	private JRadioButtonMenuItem itmLanguageFr;
 	private JRadioButtonMenuItem itmLanguagePr;
 	private JRadioButtonMenuItem itmLanguageEs;
+	private JRadioButtonMenuItem itmLanguageAfr;
 	private JMenuItem itmHelp;
 	private JMenuItem itmTroubleshoot;
 	private JMenuItem itmGamePadTester;
@@ -471,6 +472,7 @@ UpdateGameCountListener, DirectorySearchedListener {
 		itmLanguageFr = new JRadioButtonMenuItem();
 		itmLanguagePr = new JRadioButtonMenuItem();
 		itmLanguageEs = new JRadioButtonMenuItem();
+		itmLanguageAfr = new JRadioButtonMenuItem();
 		itmHelp = new JMenuItem();
 		itmTroubleshoot = new JMenuItem();
 		itmDiscord = new JMenuItem();
@@ -523,7 +525,7 @@ UpdateGameCountListener, DirectorySearchedListener {
 				dlgModifyTheme.setAlwaysOnTop(true);
 				JCheckBox chkTransparentSelection = new JCheckBox("Transparent selection");
 				JCheckBox chkScaleToView = new JCheckBox("Scale to view");
-				JCheckBox chkScaleProportionally = new JCheckBox("Scale proportionally");
+				JCheckBox chkStretchToView = new JCheckBox("Stretch to view");
 				JCheckBox chkHorizontalCenter = new JCheckBox("Horizontal Center");
 				JCheckBox chkVerticalCenter = new JCheckBox("Vertical Center");
 				JCheckBox chkAddTransparencyBackground = new JCheckBox("Add Transparency Background");
@@ -533,7 +535,7 @@ UpdateGameCountListener, DirectorySearchedListener {
 				dlgModifyTheme.setLayout(new FlowLayout());
 				dlgModifyTheme.add(chkTransparentSelection);
 				dlgModifyTheme.add(chkScaleToView);
-				dlgModifyTheme.add(chkScaleProportionally);
+				dlgModifyTheme.add(chkStretchToView);
 				dlgModifyTheme.add(chkHorizontalCenter);
 				dlgModifyTheme.add(chkVerticalCenter);
 				dlgModifyTheme.add(chkAddTransparencyBackground);
@@ -553,13 +555,13 @@ UpdateGameCountListener, DirectorySearchedListener {
 					}
 				});
 
-				chkScaleProportionally.addActionListener(new ActionListener() {
+				chkStretchToView.addActionListener(new ActionListener() {
 
 					@Override
 					public void actionPerformed(ActionEvent e) {
 						Theme currentTheme = IconStore.current().getCurrentTheme();
 						ThemeBackground currentBackground = currentTheme.getView();
-						currentBackground.setScaleProportionallyEnabled(chkScaleProportionally.isSelected());
+						currentBackground.setStretchToViewEnabled(chkStretchToView.isSelected());
 						pnlMain.repaint();
 					}
 				});
@@ -860,27 +862,23 @@ UpdateGameCountListener, DirectorySearchedListener {
 	}
 
 	private void setButtonGroups() {
-		addToButtonGroup(new ButtonGroup(), itmWelcomeView, itmListView, itmElementView, itmContentView, itmTableView,
-				itmSliderView, itmCoverView);
+		addToButtonGroup(new ButtonGroup(), itmWelcomeView, itmListView, itmElementView, itmContentView, itmTableView, itmSliderView, itmCoverView);
 		addToButtonGroup(new ButtonGroup(), itmSortTitle, itmSortPlatform);
 		addToButtonGroup(new ButtonGroup(), itmSortAscending, itmSortDescending);
 		addToButtonGroup(new ButtonGroup(), itmGroupTitle, itmGroupPlatform, itmGroupBlank);
 		addToButtonGroup(new ButtonGroup(), itmGroupAscending, itmGroupDescending);
-		addToButtonGroup(new ButtonGroup(), itmChangeToAll, itmChangeToFavorites, itmChangeToRecentlyPlayed,
-				itmChangeToRecycleBin);
-		addToButtonGroup(new ButtonGroup(), itmLanguageDe, itmLanguageEn, itmLanguageFr, itmLanguagePr, itmLanguageEs);
+		addToButtonGroup(new ButtonGroup(), itmChangeToAll, itmChangeToFavorites, itmChangeToRecentlyPlayed, itmChangeToRecycleBin);
+		addToButtonGroup(new ButtonGroup(), itmLanguageDe, itmLanguageEn, itmLanguageFr, itmLanguagePr, itmLanguageEs, itmLanguageAfr);
 	}
 
 	private void setIcons() {
 		int size = ScreenSizeUtil.is3k() ? 24 : 16;
-		itmAddFiles.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("addFile"), size,
-				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		itmAddFolders.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("addFolder"), size, new Color(255, 195, 0)));
-		itmAddFilesFromClipboard.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("filesFromClipboard"), size,
-				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		Color svgNoColor = ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR);
+		itmAddFiles.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("addFile"), size, svgNoColor));
+		itmAddFolders.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("addFolder"), size, svgNoColor));
+		itmAddFilesFromClipboard.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("filesFromClipboard"), size, svgNoColor));
 		itmSearchNetwork.setIcon(ImageUtil.getImageIconFrom(Icons.get("searchNetwork", size, size)));
-		itmSettings.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("settings"), size,
-				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		itmSettings.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("settings"), size, svgNoColor));
 		itmExit.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("exit"), size, new Color(237, 67, 55)));
 		itmCheckForUpdates.setIcon(ImageUtil.getImageIconFrom(Icons.get("checkForUpdates", size, size)));
 		itmExportGameListToTxt.setIcon(ImageUtil.getImageIconFrom(Icons.get("textPlain", size, size)));
@@ -889,55 +887,37 @@ UpdateGameCountListener, DirectorySearchedListener {
 		itmExportGameListToXml.setIcon(ImageUtil.getImageIconFrom(Icons.get("textXml", size, size)));
 		itmExportGameListOptions.setIcon(ImageUtil.getImageIconFrom(Icons.get("exportSettings", size, size)));
 		itmWelcomeView.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewWelcome", size, size)));
-		itmListView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewList"), size,
-				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		itmElementView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewList"), size,
-				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		itmContentView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewList"), size,
-				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		itmSliderView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewSlider"), size,
-				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		itmTableView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewTable"), size,
-				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		itmListView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewList"), size, svgNoColor));
+		itmElementView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewList"), size, svgNoColor));
+		itmContentView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewList"), size, svgNoColor));
+		itmSliderView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewSlider"), size, svgNoColor));
+		itmTableView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewTable"), size, svgNoColor));
 		itmCoverView.setIcon(ImageUtil.getImageIconFrom(Icons.get("viewCovers", size, size)));
-		itmChangeToAll.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("allGames"), size,
-				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		itmChangeToFavorites
-		.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("favorites"), size, new Color(255, 220, 125)));
-		itmChangeToRecentlyPlayed
-		.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("recentlyPlayed"), size, new Color(181, 201, 255)));
-		itmChangeToRecycleBin.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("trash"), size,
-				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		itmSetFilter.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), size,
-				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		itmRenameGames.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rename"), size,
-				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		itmChangeToAll.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("allGames"), size, svgNoColor));
+		itmChangeToFavorites.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("favorites"), size, svgNoColor));
+		itmChangeToRecentlyPlayed.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("recentlyPlayed"), size, svgNoColor));
+		itmChangeToRecycleBin.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("trash"), size, svgNoColor));
+		itmSetFilter.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), size, svgNoColor));
+		itmRenameGames.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rename"), size, svgNoColor));
 		itmAutoSearchTags.setIcon(ImageUtil.getImageIconFrom(Icons.get("searchFile", size, size)));
-		itmTagSearch.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("tag"), size, new Color(168, 124, 160)));
-		itmCoverSearch.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("picture"), size,
-				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		itmTagSearch.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("tag"), size, svgNoColor));
+		itmCoverSearch.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("picture"), size, svgNoColor));
 		itmTrailerSearch.setIcon(ImageUtil.getImageIconFrom(Icons.get("video", size, size)));
-		itmSetColumnWidth.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("columnWidth"), size,
-				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		itmSetRowHeight.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rowHeight"), size,
-				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		itmRefresh.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("refresh"), size,
-				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		itmFullScreen.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("fullscreen"), size, new Color(144, 238, 144)));
+		itmSetColumnWidth.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("columnWidth"), size, svgNoColor));
+		itmSetRowHeight.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rowHeight"), size, svgNoColor));
+		itmRefresh.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("refresh"), size, svgNoColor));
+		itmFullScreen.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("fullscreen"), size, svgNoColor));
 		Icon iconLanguageDe = ImageUtil.getImageIconFrom(Icons.get("languageDe", size, size));
 		Icon iconLanguageEn = ImageUtil.getImageIconFrom(Icons.get("languageEn", size, size));
 		Icon iconLanguageFr = ImageUtil.getImageIconFrom(Icons.get("languageFr", size, size));
 		itmLanguageDe.setIcon(iconLanguageDe);
 		itmLanguageEn.setIcon(iconLanguageEn);
 		itmLanguageFr.setIcon(iconLanguageFr);
-		mnuHelp.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("help"), size,
-				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		itmHelp.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("help"), size,
-				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		mnuHelp.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("help"), size, svgNoColor));
+		itmHelp.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("help"), size, svgNoColor));
 		itmDiscord.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("discord"), size, new Color(114, 137, 218)));
 		itmAbout.setIcon(ImageUtil.getImageIconFrom(Icons.get("about", size, size)));
-		itmGamePadTester.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("allGames"), size,
-				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		itmGamePadTester.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("allGames"), size, svgNoColor));
 		itmConfigWizard.setIcon(ImageUtil.getImageIconFrom(Icons.get("configWizard", size, size)));
 		Locale locale = Locale.getDefault();
 		String language = locale.getLanguage();
@@ -957,20 +937,15 @@ UpdateGameCountListener, DirectorySearchedListener {
 	}
 
 	private void setButtonBarIcons() {
-		btnShowHideNavigationPanel.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("bars"), buttonBarIconSize,
-				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		btnOrganize.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("organize"), buttonBarIconSize,
-				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		btnSettings.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("settings"), buttonBarIconSize,
-				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		btnRunGame
-		.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("runGame"), buttonBarIconSize, new Color(40, 167, 69)));
+		Color svgNoColor = ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR);
+		btnShowHideNavigationPanel.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("bars"), buttonBarIconSize, svgNoColor));
+		btnOrganize.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("organize"), buttonBarIconSize, svgNoColor));
+		btnSettings.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("settings"), buttonBarIconSize, svgNoColor));
+		btnRunGame.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("runGame"), buttonBarIconSize, new Color(40, 167, 69)));
 		btnMoreOptionsRunGame.setIcon(ImageUtil.getImageIconFrom(Icons.get("arrowDownOtherWhite", 1)));
 		btnRemoveOrRestoreGame.setIcon(icoTrash);
-		btnRenameGame.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rename"), buttonBarIconSize,
-				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		btnGameProperties.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("gameProperties"), buttonBarIconSize,
-				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		btnRenameGame.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rename"), buttonBarIconSize, svgNoColor));
+		btnGameProperties.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("gameProperties"), buttonBarIconSize, svgNoColor));
 		btnChangeView.setIcon(iconChangeView);
 		btnMoreOptionsChangeView.setIcon(ImageUtil.getImageIconFrom(Icons.get("arrowDownOtherWhite", 1)));
 		btnSetFilter.setIcon(iconSearchGame);
@@ -1650,7 +1625,7 @@ UpdateGameCountListener, DirectorySearchedListener {
 		Locale locale = Locale.getDefault();
 		String userLanguage = locale.getLanguage();
 		List<JMenuItem> languageItems = new ArrayList<JMenuItem>();
-		Collections.addAll(languageItems, itmLanguageEn, itmLanguageDe, itmLanguageFr, itmLanguagePr, itmLanguageEs);
+		Collections.addAll(languageItems, itmLanguageEn, itmLanguageDe, itmLanguageFr, itmLanguagePr, itmLanguageEs, itmLanguageAfr);
 		if (userLanguage.equals(Locale.ENGLISH.getLanguage())) {
 			addComponentsToJComponent(mnuLanguage, itmLanguageEn);
 			languageItems.remove(itmLanguageEn);

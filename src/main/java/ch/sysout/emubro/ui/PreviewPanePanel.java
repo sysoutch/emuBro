@@ -464,8 +464,11 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			if (shouldScale) {
 				int new_width = imgWidth;
 				int new_height = imgHeight;
-				boolean scaleProportionally = currentBackground.isScaleProportionallyEnabled();
-				if (scaleProportionally) {
+				boolean stretchToView = currentBackground.isStretchToViewEnabled();
+				if (stretchToView) {
+					new_width = panelWidth;
+					new_height = panelHeight;
+				} else {
 					// first check if we need to scale width
 					if (imgWidth > panelWidth) {
 						//scale width to fit
@@ -488,9 +491,6 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 						y += (panelHeight-new_height) / 2; // image centered
 						//					y = panelHeight-new_height; // image bottom
 					}
-				} else {
-					new_width = panelWidth;
-					new_height = panelHeight;
 				}
 				g2d.drawImage(background, x, y, new_width, new_height, this);
 				//				boolean addTransparencyPane = true;

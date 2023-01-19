@@ -36,6 +36,7 @@ import javax.swing.ImageIcon;
 import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollBar;
 import javax.swing.JSplitPane;
 import javax.swing.SwingUtilities;
@@ -144,6 +145,9 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 
 	private GameFilterPanel pnlGameFilter;
 
+	private JPopupMenu popupNavigation;
+	private JPanel pnlNavigationPopup;
+
 	public MainPanel(Explorer explorer, ViewPanelManager viewManager, GameSettingsPopupMenu mnuGameSettings, GameFilterPanel pnlGameFilter) {
 		super(new BorderLayout());
 		this.explorer = explorer;
@@ -178,6 +182,29 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				//								lastHeight = frameDetailsPane.getHeight();
 			};
 		};
+
+		pnlNavigationPopup = new JPanel();
+		popupNavigation = new JPopupMenu() {
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			protected void paintComponent(Graphics g) {
+				super.paintComponent(g);
+				Graphics2D g2d = (Graphics2D) g.create();
+				int w = getWidth();
+				int h = getHeight();
+				//g2d.setColor(IconStore.current().getCurrentTheme().getGameFilterPane().getColor());
+				//g2d.fillRect(0, 0, w, h);
+				BufferedImage background = IconStore.current().getCurrentTheme().getGameFilterPane().getImage();
+				if (background != null) {
+					g2d.drawImage(background, 0, 0, w, h, this);
+				}
+				g2d.dispose();
+			}
+		};
+		popupNavigation.setLightWeightPopupEnabled(false);
+		popupNavigation.setOpaque(false);
+		popupNavigation.add(pnlNavigationPopup);
 
 		pnlPreviewPane.addScrollToCurrentGamesListener(new ScrollToCurrentGamesListener() {
 
@@ -777,10 +804,20 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 
 	void showNavigationPane(boolean b, int dividerLocation, String navigationPaneState) {
 		lastNavigationPaneWidth = dividerLocation;
-		pnlNavigation.setNavigationPaneState(navigationPaneState);
 		pnlNavigation.setVisible(b);
-		splNavigationAndCurrentViewWithPreviewPane.setDividerLocation(dividerLocation);
-		mnuOrganizeOptions.showNavigationPane(b);
+		//		pnlNavigation.setNavigationPaneState(navigationPaneState);
+		//		splNavigationAndCurrentViewWithPreviewPane.setDividerLocation(dividerLocation);
+		//		mnuOrganizeOptions.showNavigationPane(b);
+
+		if (b) {
+			popupNavigation.setBorder(BorderFactory.createEmptyBorder());
+			popupNavigation.add(pnlNavigation);
+			int y = pnlGameFilter.isVisible() ? pnlGameFilter.getHeight() : 0;
+			popupNavigation.setPreferredSize(new Dimension(pnlNavigation.getButtonWidth(), splNavigationAndCurrentViewWithPreviewPane.getHeight() - y));
+			popupNavigation.show(this, 0, 0+y);
+		} else {
+			splNavigationAndCurrentViewWithPreviewPane.setLeftComponent(pnlNavigation);
+		}
 	}
 
 	void showPreviewPane(boolean b) {
@@ -953,7 +990,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				removeSplDetailsPane();
 			}
 		}
-		pnlListView.setDetailsPanelHeight(lastDetailsHeight);
+		viewManager.setDetailsPanelHeight(lastDetailsHeight);
 	}
 
 	private void addSplDetailsPane() {

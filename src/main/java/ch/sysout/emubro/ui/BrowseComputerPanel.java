@@ -33,6 +33,7 @@ import ch.sysout.emubro.api.GameListener;
 import ch.sysout.emubro.api.event.EmulatorEvent;
 import ch.sysout.emubro.api.event.GameAddedEvent;
 import ch.sysout.emubro.api.event.GameRemovedEvent;
+import ch.sysout.emubro.util.ColorConstants;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.ui.util.UIUtil;
@@ -52,8 +53,10 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 	private JButton btnQuickSearchNow = new JCustomButtonNew(MessageConstants.SEARCH_NOW_SHORT, ImageUtil.getFlatSVGIconFrom(Icons.get("search"), 16, Color.LIGHT_GRAY));
 	private JButton lnkSearchResults = new JLinkButton(Messages.get(MessageConstants.SEARCH_LOGS));
 	private JButton lnkSearchSettings = new JLinkButton(Messages.get(MessageConstants.SEARCH_PROGRESS_SETTINGS));
+	private JButton btnCommonGameFolders = new JCustomButtonNew(Messages.get(MessageConstants.COMMON_GAME_FOLDERS, 0));
+	private JButton btnCommonEmulatorFolders  = new JCustomButtonNew(Messages.get(MessageConstants.COMMON_EMULATOR_FOLDERS, 0));
 	private JButton btnUncategorized = new JCustomButtonNew(Messages.get(MessageConstants.ARCHIVES_AND_IMAGE_FILES, 0));
-	private JButton btnSetupFiles = new JCustomButtonNew(Messages.get(MessageConstants.SEARCH_CUSTOM));
+	private JButton btnSetupFiles = new JCustomButtonNew(Messages.get(MessageConstants.SEARCH_CUSTOM, 0));
 
 	private JButton btnCustomSearchNow;
 
@@ -65,7 +68,10 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 	private JScrollPane spBrowseComputer;
 	private FileTree tree;
 	private JPanel pnlSpace;
+	private int counterGameFolders = 0;
+	private int counterEmulatorFolders = 0;
 	private int counterUncategorized = 0;
+	private int counterSetupFiles = 0;
 	private JPanel pnlFileTree;
 	JPanel pnlLinks;
 	private FormLayout layoutNormal;
@@ -114,6 +120,14 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 		createBrowsePanel();
 		add(spBrowseComputer);
 
+		btnCommonGameFolders.setHorizontalAlignment(SwingConstants.LEFT);
+		btnCommonGameFolders.setVerticalAlignment(SwingConstants.CENTER);
+		btnCommonGameFolders.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("folder"), 22, 22, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+
+		btnCommonEmulatorFolders.setHorizontalAlignment(SwingConstants.LEFT);
+		btnCommonEmulatorFolders.setVerticalAlignment(SwingConstants.CENTER);
+		btnCommonEmulatorFolders.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("folder"), 22, 22, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+
 		btnUncategorized.setHorizontalAlignment(SwingConstants.LEFT);
 		btnUncategorized.setVerticalAlignment(SwingConstants.CENTER);
 		btnUncategorized.setIcon(ImageUtil.getImageIconFrom(Icons.get("archiveAndImage", 22, 22)));
@@ -122,7 +136,7 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 		btnSetupFiles.setVerticalAlignment(SwingConstants.CENTER);
 		btnSetupFiles.setIcon(ImageUtil.getImageIconFrom(Icons.get("setup", 22, 22)));
 
-		FormLayout layout = new FormLayout("default, $ugap, $lcgap, min, $rgap, $lcgap, min, min:grow",
+		FormLayout layout = new FormLayout("default, $ugap, $lcgap, min, $rgap, $lcgap, min, $rgap, $lcgap, min, $rgap, $lcgap, min, min:grow",
 				"$ugap, fill:pref, $rgap, fill:pref");
 		pnlLinks = new JPanel(layout);
 		pnlLinks.setOpaque(false);
@@ -130,10 +144,16 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 		pnlLinks.add(new JSeparator(), cc.xyw(1, 1, layout.getColumnCount()));
 		pnlLinks.add(lnkSearchResults, cc.xy(1, 2));
 		pnlLinks.add(lnkSearchSettings, cc.xy(1, 4));
+
 		pnlLinks.add(new JSeparator(SwingConstants.VERTICAL), cc.xywh(3, 2, 1, 3));
-		pnlLinks.add(btnUncategorized, cc.xywh(4, 2, 1, 3));
+		pnlLinks.add(btnCommonGameFolders, cc.xywh(4, 2, 1, 3));
 		pnlLinks.add(new JSeparator(SwingConstants.VERTICAL), cc.xywh(6, 2, 1, 3));
-		pnlLinks.add(btnSetupFiles, cc.xywh(7, 2, 1, 3));
+		pnlLinks.add(btnCommonEmulatorFolders, cc.xywh(7, 2, 1, 3));
+
+		pnlLinks.add(new JSeparator(SwingConstants.VERTICAL), cc.xywh(9, 2, 1, 3));
+		pnlLinks.add(btnUncategorized, cc.xywh(10, 2, 1, 3));
+		pnlLinks.add(new JSeparator(SwingConstants.VERTICAL), cc.xywh(12, 2, 1, 3));
+		pnlLinks.add(btnSetupFiles, cc.xywh(13, 2, 1, 3));
 		add(pnlLinks, BorderLayout.SOUTH);
 
 		tree = new FileTree();
@@ -374,8 +394,10 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 		lnkSearchResults.setText(Messages.get(MessageConstants.SEARCH_LOGS));
 		lnkSearchSettings.setText(Messages.get(MessageConstants.SEARCH_PROGRESS_SETTINGS));
 		lblBrowse.setText(Messages.get(MessageConstants.BROWSE_CURRENT_DIRECTORY));
+		btnCommonGameFolders.setText(Messages.get(MessageConstants.COMMON_GAME_FOLDERS, counterGameFolders));
+		btnCommonEmulatorFolders.setText(Messages.get(MessageConstants.COMMON_EMULATOR_FOLDERS, counterEmulatorFolders));
 		btnUncategorized.setText(Messages.get(MessageConstants.ARCHIVES_AND_IMAGE_FILES, counterUncategorized));
-		btnSetupFiles.setText(Messages.get(MessageConstants.SETUP_FILES, 0));
+		btnSetupFiles.setText(Messages.get(MessageConstants.SETUP_FILES, counterSetupFiles));
 	}
 
 	public List<File> getSelectedDirectoriesToBrowse() {
@@ -397,26 +419,40 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 	public void minimizeButtons() {
 		if (btnSetupFiles.getVerticalTextPosition() == SwingConstants.BOTTOM) {
 			switchToMinimizedView();
+			btnCommonGameFolders.setText("");
+			btnCommonEmulatorFolders.setText("");
 			btnUncategorized.setText("");
 			btnSetupFiles.setText("");
 		} else {
+			btnCommonGameFolders.setText(Messages.get(MessageConstants.COMMON_GAME_FOLDERS, counterGameFolders));
+			btnCommonGameFolders.setHorizontalAlignment(SwingConstants.CENTER);
+			btnCommonGameFolders.setHorizontalTextPosition(SwingConstants.CENTER);
+			btnCommonGameFolders.setVerticalTextPosition(SwingConstants.BOTTOM);
+			btnCommonEmulatorFolders.setText(Messages.get(MessageConstants.COMMON_EMULATOR_FOLDERS, counterEmulatorFolders));
+			btnCommonEmulatorFolders.setHorizontalAlignment(SwingConstants.CENTER);
+			btnCommonEmulatorFolders.setHorizontalTextPosition(SwingConstants.CENTER);
+			btnCommonEmulatorFolders.setVerticalTextPosition(SwingConstants.BOTTOM);
 			btnUncategorized.setText(Messages.get(MessageConstants.ARCHIVES_AND_IMAGE_FILES, counterUncategorized));
-			btnSetupFiles.setText(Messages.get(MessageConstants.SETUP_FILES, 0));
-			btnSetupFiles.setHorizontalAlignment(SwingConstants.CENTER);
 			btnUncategorized.setHorizontalAlignment(SwingConstants.CENTER);
-			btnSetupFiles.setHorizontalTextPosition(SwingConstants.CENTER);
 			btnUncategorized.setHorizontalTextPosition(SwingConstants.CENTER);
-			btnSetupFiles.setVerticalTextPosition(SwingConstants.BOTTOM);
 			btnUncategorized.setVerticalTextPosition(SwingConstants.BOTTOM);
+			btnSetupFiles.setText(Messages.get(MessageConstants.SETUP_FILES, counterSetupFiles));
+			btnSetupFiles.setHorizontalAlignment(SwingConstants.CENTER);
+			btnSetupFiles.setHorizontalTextPosition(SwingConstants.CENTER);
+			btnSetupFiles.setVerticalTextPosition(SwingConstants.BOTTOM);
 		}
 	}
 
 	public void maximizeButtons() {
 		switchToNormalView();
+		btnCommonGameFolders.setText(Messages.get(MessageConstants.COMMON_GAME_FOLDERS, counterGameFolders));
+		btnCommonGameFolders.setHorizontalAlignment(SwingConstants.LEFT);
+		btnCommonEmulatorFolders.setText(Messages.get(MessageConstants.COMMON_EMULATOR_FOLDERS, counterEmulatorFolders));
+		btnCommonEmulatorFolders.setHorizontalAlignment(SwingConstants.LEFT);
 		btnUncategorized.setText(Messages.get(MessageConstants.ARCHIVES_AND_IMAGE_FILES, counterUncategorized));
-		btnSetupFiles.setText(Messages.get(MessageConstants.SETUP_FILES, 0));
-		btnSetupFiles.setHorizontalAlignment(SwingConstants.LEFT);
 		btnUncategorized.setHorizontalAlignment(SwingConstants.LEFT);
+		btnSetupFiles.setText(Messages.get(MessageConstants.SETUP_FILES, counterSetupFiles));
+		btnSetupFiles.setHorizontalAlignment(SwingConstants.LEFT);
 		//		btnSetupFiles.setHorizontalTextPosition(SwingConstants.RIGHT);
 		//		btnUncategorized.setHorizontalTextPosition(SwingConstants.RIGHT);
 		//		btnSetupFiles.setVerticalTextPosition(SwingConstants.CENTER);

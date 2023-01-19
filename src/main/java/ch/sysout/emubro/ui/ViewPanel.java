@@ -33,6 +33,8 @@ public abstract class ViewPanel extends JPanel implements GameSelectionListener 
 	public static final int SLIDER_VIEW = GameViewConstants.SLIDER_VIEW;
 	public static final int COVER_VIEW = GameViewConstants.COVER_VIEW;
 
+	private int lastDetailsHeight;
+
 	public ViewPanel() {
 		super();
 	}
@@ -187,6 +189,14 @@ public abstract class ViewPanel extends JPanel implements GameSelectionListener 
 	public abstract void scrollToSelectedGames();
 
 	public abstract void themeChanged();
+
+	public int getDetailsPanelHeight() {
+		return lastDetailsHeight;
+	}
+
+	public void setDetailsPanelHeight(int lastDetailsHeight) {
+		this.lastDetailsHeight = lastDetailsHeight;
+	}
 
 	//	public abstract void setDetailsPanelHeight(int detailsPanelHeight);
 }

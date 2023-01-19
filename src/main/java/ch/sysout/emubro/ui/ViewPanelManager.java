@@ -629,4 +629,12 @@ public class ViewPanelManager {
 			}
 		}
 	}
+
+	public void setDetailsPanelHeight(int lastDetailsHeight) {
+		for (ViewPanel pnl : panels) {
+			if (pnl != null) {
+				pnl.setDetailsPanelHeight(lastDetailsHeight);
+			}
+		}
+	}
 }

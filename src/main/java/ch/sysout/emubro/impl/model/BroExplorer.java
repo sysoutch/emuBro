@@ -526,9 +526,12 @@ public class BroExplorer implements Explorer {
 	public List<String> getGameDirectoriesFromPlatform(int platformId) {
 		List<String> directories = new ArrayList<>();
 		for (Game game : getGamesFromPlatform(platformId)) {
-			String gamePath = FileUtil.getParentDirPath(getFiles(game).get(0));
-			if (!directories.contains(gamePath)) {
-				directories.add(gamePath);
+			List<String> gameFiles = getFiles(game);
+			if (gameFiles != null && gameFiles.size() > 0) {
+				String gamePath = FileUtil.getParentDirPath(gameFiles.get(0));
+				if (!directories.contains(gamePath)) {
+					directories.add(gamePath);
+				}
 			}
 		}
 		return directories;

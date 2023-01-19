@@ -14,7 +14,7 @@ public class ThemeBackground {
 	private boolean horizontalCenterImageEnabled = false;
 
 	private boolean imageScaleEnabled = true; // TODO make this dynamic
-	private boolean scaleProportionallyEnabled = true;
+	private boolean stretchToViewEnabled = true;
 	private boolean addTransparencyPaneEnabled = true;
 	private Color transparencyColor = new Color(0f, 0f, 0f, 0.4f);
 	// TODO boolean for overscale
@@ -109,12 +109,12 @@ public class ThemeBackground {
 		this.imageScaleEnabled = imageScaleEnabled;
 	}
 
-	public boolean isScaleProportionallyEnabled() {
-		return scaleProportionallyEnabled;
+	public boolean isStretchToViewEnabled() {
+		return stretchToViewEnabled;
 	}
 
-	public void setScaleProportionallyEnabled(boolean scaleProportionallyEnabled) {
-		this.scaleProportionallyEnabled = scaleProportionallyEnabled;
+	public void setStretchToViewEnabled(boolean stretchToViewEnabled) {
+		this.stretchToViewEnabled = stretchToViewEnabled;
 	}
 
 	public boolean isVerticalCenterImageEnabled() {

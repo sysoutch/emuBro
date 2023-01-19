@@ -184,7 +184,6 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 
 	private Map<Game, String> textFilterHighlightedGameNames = new HashMap<>();
 	private boolean shouldUpdateCurrentFilterText;
-	private int detailsPanelHeight;
 
 	public ListViewPanel(Explorer explorer, ViewPanelManager viewManager, GameContextMenu popupGame, ViewContextMenu popupView) {
 		super(new BorderLayout());
@@ -2145,10 +2144,6 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		return ((GameListModel) lstGames.getModel()).getAllElements();
 	}
 
-	public void setDetailsPanelHeight(int detailsPanelHeight) {
-		this.detailsPanelHeight = detailsPanelHeight;
-	}
-
 	@Override
 	public void coverSizeChanged(int currentCoverSize) {
 		setFixedCellHeights(viewManager.getCurrentCoverSize());
@@ -2162,7 +2157,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		super.paintComponent(g);
 		Graphics2D g2d = (Graphics2D) g.create();
 		int panelWidth = getWidth();
-		int panelHeight = getHeight() + detailsPanelHeight;
+		int panelHeight = getHeight() + getDetailsPanelHeight();
 		Theme currentTheme = IconStore.current().getCurrentTheme();
 		ThemeBackground currentBackground = currentTheme.getView();
 		//		if (currentBackground.hasGradientPaint()) {
@@ -2186,8 +2181,11 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 			if (shouldScale) {
 				int new_width = imgWidth;
 				int new_height = imgHeight;
-				boolean scaleProportionally = currentBackground.isScaleProportionallyEnabled();
-				if (scaleProportionally) {
+				boolean stretchToView = currentBackground.isStretchToViewEnabled();
+				if (stretchToView) {
+					new_width = panelWidth;
+					new_height = panelHeight;
+				} else {
 					// first check if we need to scale width
 					if (imgWidth > panelWidth) {
 						//scale width to fit
@@ -2210,9 +2208,6 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 						y += (panelHeight-new_height) / 2; // image centered
 						//					y = panelHeight-new_height; // image bottom
 					}
-				} else {
-					new_width = panelWidth;
-					new_height = panelHeight;
 				}
 				g2d.drawImage(background, x, y, new_width, new_height, this);
 				//				boolean addTransparencyPane = true;

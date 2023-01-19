@@ -99,7 +99,6 @@ public class PixelatedBackgroundPanel extends JPanel {
 
 	public void setMaxLoops(int maxLoops) {
 		this.maxLoops = maxLoops;
-		repaint();
 	}
 
 	public double getFactor() {

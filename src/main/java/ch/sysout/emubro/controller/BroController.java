@@ -2453,7 +2453,6 @@ GameSelectionListener, BrowseComputerListener {
 					RegistryUtil.createOrOverwriteRegistryKey("HKCU\\SOFTWARE\\epsxe\\config", "SoundEnabled", "1");
 					RegistryUtil.createOrOverwriteRegistryKey("HKCU\\SOFTWARE\\epsxe\\config", "SoundPlugin", "spuEternal.dll"); // check epsxe\plugins folder if plugin exists
 
-
 					int width = ScreenSizeUtil.getWidth();
 					int height = ScreenSizeUtil.getHeight();
 					RegistryUtil.createOrOverwriteRegistryKey("HKCU\\SOFTWARE\\Vision Thing\\PSEmu Pro\\GPU\\PeteOpenGL2", "ResX", width);
@@ -2463,7 +2462,6 @@ GameSelectionListener, BrowseComputerListener {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-
 			}
 		}
 
@@ -2894,25 +2892,25 @@ GameSelectionListener, BrowseComputerListener {
 		//		discordRpc.setStartTimestamps(System.currentTimeMillis());
 		//		DiscordRPC.discordUpdatePresence(discordRpc.build());
 
-		final ScheduledExecutorService executorService2 = Executors.newSingleThreadScheduledExecutor();
-		boolean shouldAutomaticallyDoScreenshot = game.getBannerImage() == null;
-		if (shouldAutomaticallyDoScreenshot) {
-			Runnable runnableTaskScreenshot = new Runnable() {
-
-				@Override
-				public void run() {
-					doScreenshotOfUnderlayingWindow(game);
-				}
-			};
-			executorService2.schedule(runnableTaskScreenshot, 15, TimeUnit.SECONDS);
-		}
+		//		final ScheduledExecutorService executorService2 = Executors.newSingleThreadScheduledExecutor();
+		//		boolean shouldAutomaticallyDoScreenshot = game.getBannerImage() == null;
+		//		if (shouldAutomaticallyDoScreenshot) {
+		//			Runnable runnableTaskScreenshot = new Runnable() {
+		//
+		//				@Override
+		//				public void run() {
+		//					doScreenshotOfUnderlayingWindow(game);
+		//				}
+		//			};
+		//			executorService2.schedule(runnableTaskScreenshot, 15, TimeUnit.SECONDS);
+		//		}
 		if (p != null) {
 			TimerTask taskRunGame = new TimerTask() {
 
 				@Override
 				public void run() {
 					if (!p.isAlive()) {
-						executorService2.shutdownNow();
+						//						executorService2.shutdownNow();
 						p.destroy();
 						final int exitValue = p.exitValue();
 						SwingUtilities.invokeLater(new Runnable() {
@@ -6157,11 +6155,14 @@ GameSelectionListener, BrowseComputerListener {
 
 	private void test(List<String> gameDirectories) {
 		for (Game g : explorer.getGames()) {
-			String fullPath = FilenameUtils.getFullPath(explorer.getFiles(g).get(0));
-			if (!gameDirectories.contains(fullPath)
-					&& explorer.getPlatform(g.getPlatformId()).isAutoSearchEnabled()) {
-				if (fullPath.startsWith("D:")) {
-					gameDirectories.add(fullPath);
+			List<String> files = explorer.getFiles(g);
+			if (files != null && files.size() > 0) {
+				String fullPath = FilenameUtils.getFullPath(files.get(0));
+				if (!gameDirectories.contains(fullPath)
+						&& explorer.getPlatform(g.getPlatformId()).isAutoSearchEnabled()) {
+					if (fullPath.startsWith("D:")) {
+						gameDirectories.add(fullPath);
+					}
 				}
 			}
 		}
@@ -7348,6 +7349,7 @@ GameSelectionListener, BrowseComputerListener {
 				@Override
 				public void run() {
 					view.navigationChanged(new NavigationEvent(NavigationPanel.RECYCLE_BIN));
+					dlgSplashScreen.setExitOnCloseEnabled(false);
 					dlgSplashScreen.setText("Retrieving removed games...");
 					dlgSplashScreen.setLocationRelativeTo(view);
 					dlgSplashScreen.setVisible(true);

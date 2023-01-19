@@ -1,7 +1,6 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.GradientPaint;
 import java.awt.Graphics;
@@ -138,8 +137,11 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 					if (shouldScale) {
 						int new_width = imgWidth;
 						int new_height = imgHeight;
-						boolean scaleProportionally = currentBackground.isScaleProportionallyEnabled();
-						if (scaleProportionally) {
+						boolean stretchToView = currentBackground.isStretchToViewEnabled();
+						if (stretchToView) {
+							new_width = panelWidth;
+							new_height = panelHeight;
+						} else {
 							// first check if we need to scale width
 							if (imgWidth > panelWidth) {
 								//scale width to fit
@@ -162,9 +164,6 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 								y += (panelHeight-new_height) / 2; // image centered
 								//					y = panelHeight-new_height; // image bottom
 							}
-						} else {
-							new_width = panelWidth;
-							new_height = panelHeight;
 						}
 						g2d.drawImage(background, x, y, new_width, new_height, this);
 						//						boolean addTransparencyPane = true;
@@ -242,9 +241,9 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 	private void setIcons() {
 		int size = ScreenSizeUtil.adjustValueToResolution(32);
 		btnAllGames.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("allGames"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		btnFavorites.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("favorites"), size, new Color(255, 195, 0)));
-		btnRecentlyPlayed.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("recentlyPlayed"), size, new Color(181, 201, 255)));
-		btnRecycleBin.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("trash"), size, new Color(237, 67, 55)));
+		btnFavorites.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("favorites"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		btnRecentlyPlayed.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("recentlyPlayed"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		btnRecycleBin.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("trash"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 	}
 
 	private void addToButtonGroup(ButtonGroup grp, AbstractButton... buttons) {

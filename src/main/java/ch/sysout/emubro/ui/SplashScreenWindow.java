@@ -39,16 +39,23 @@ public class SplashScreenWindow extends JDialog {
 
 	private JPanel pnlMain;
 
+	protected boolean exitOnClose;
+
 	public SplashScreenWindow() {
 		this("");
 	}
 
 	public SplashScreenWindow(String message) {
+		this(message, true);
+	}
+
+	public SplashScreenWindow(String message, boolean exitOnClose) {
 		setLayout(new BorderLayout());
 		setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 		setUndecorated(true);
 		//		setAlwaysOnTop(true);
 		setText(message);
+		this.exitOnClose = exitOnClose;
 		initComponents();
 		createUI();
 		//		AWTUtilities.setWindowOpaque(this, false); // enable opacity
@@ -72,7 +79,8 @@ public class SplashScreenWindow extends JDialog {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				System.exit(0);
+				SplashScreenWindow.this.dispose();
+				checkExitApplication();
 			}
 		});
 
@@ -96,9 +104,15 @@ public class SplashScreenWindow extends JDialog {
 		addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(WindowEvent e) {
-				System.exit(0);
+				checkExitApplication();
 			}
 		});
+	}
+
+	private void checkExitApplication() {
+		if (exitOnClose) {
+			System.exit(0);
+		}
 	}
 
 	private void createUI() {
@@ -110,8 +124,9 @@ public class SplashScreenWindow extends JDialog {
 		//		pnlMain.setBackground(new Color(13, 35, 48));
 		pnlMain.add(btnCancel, cc.xy(2, 1));
 		pnlPixelatedBackground = new PixelatedBackgroundPanel();
-		pnlPixelatedBackground.setMaxLoops(20);
-		pnlPixelatedBackground.setFactor(0.9);
+		pnlPixelatedBackground.setMaxLoops(4);
+		pnlPixelatedBackground.repaint();
+		pnlPixelatedBackground.setFactor(0.95);
 		pnlMain.add(pnlPixelatedBackground, cc.xyw(1, 3, layout.getColumnCount()));
 		//		pnlMain.add(lbl, cc.xyw(1, 3, layout.getColumnCount()));
 
@@ -217,5 +232,9 @@ public class SplashScreenWindow extends JDialog {
 
 	public int getProgressBarValue() {
 		return prg.getValue();
+	}
+
+	public void setExitOnCloseEnabled(boolean exitOnClose) {
+		this.exitOnClose = exitOnClose;
 	}
 }

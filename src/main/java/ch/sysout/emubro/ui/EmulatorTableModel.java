@@ -16,6 +16,7 @@ import ch.sysout.emubro.api.model.Emulator;
 import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.impl.model.BroEmulator;
 import ch.sysout.emubro.impl.model.EmulatorConstants;
+import ch.sysout.emubro.ui.GameTableModel.LabelIcon;
 import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
@@ -102,7 +103,7 @@ public class EmulatorTableModel extends DefaultTableModel {
 		case 0:
 			return ImageIcon.class;
 		case 1:
-			return String.class;
+			return LabelIcon.class;
 		case 2:
 			return String.class;
 		default:
@@ -148,8 +149,8 @@ public class EmulatorTableModel extends DefaultTableModel {
 				}
 				icons.put(emulator.getId(), ico);
 			}
-
-			Object[] emulatorArr = new Object[] { null, emulator.getName(), emulator.getAbsolutePath() };
+			LabelIcon iconLabel = new LabelIcon(ico, emulator.getName());
+			Object[] emulatorArr = new Object[] { null, iconLabel, emulator.getAbsolutePath() };
 			super.addRow(emulatorArr);
 			// System.out.println((getRowCount()-1) + ", "+(getRowCount()-1));
 			fireTableRowsInserted(getRowCount() - 1, getRowCount() - 1);

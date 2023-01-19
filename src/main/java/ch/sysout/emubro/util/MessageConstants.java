@@ -263,10 +263,14 @@ public class MessageConstants {
 	public static final String EXPAND_ALL = "expandAll";
 	public static final String SEARCH_PROCESS_COMPLETED = "searchProcessCompleted";
 	public static final String ALREADY_BROWSING_COMPUTER = "alreadyBrowsingComputer";
+	public static final String COMMON_GAME_FOLDERS = "commonGameFolders";
+	public static final String COMMON_GAME_FOLDERS_NO_TEXT = "commonGameFoldersNoText";
+	public static final String COMMON_EMULATOR_FOLDERS = "commonEmulatorFolders";
+	public static final String COMMON_EMULATOR_FOLDERS_NO_TEXT = "commonEmulatorFoldersNoText";
 	public static final String ARCHIVES_AND_IMAGE_FILES = "archivesAndImageFiles";
-	public static final String ARCHIVES_AND_IMAGE_FILES_NOT_EXT = "archivesAndIMageFilesNotExt";
+	public static final String ARCHIVES_AND_IMAGE_FILES_NO_TEXT = "archivesAndIMageFilesNoText";
 	public static final String SETUP_FILES = "setupFiles";
-	public static final String SETUP_FILES_NOT_EXT = "setupFilesNotExt";
+	public static final String SETUP_FILES_NO_TEXT = "setupFilesNoText";
 	public static final String RUN_EXTERNAL_TOOLS = "runExternalTools";
 	public static final String POPULAR_EMULATORS = "popularEmulators";
 	public static final String CAPITAL_SMALL_LETTERS = "capitalSmallLetters";

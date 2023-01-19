@@ -64,7 +64,6 @@ import ch.sysout.emubro.impl.dao.BroExplorerDAO;
 import ch.sysout.emubro.impl.model.BroExplorer;
 import ch.sysout.emubro.impl.model.BroPlatform;
 import ch.sysout.emubro.impl.model.BroTag;
-import ch.sysout.emubro.themes.FlatDarhkmirLaf;
 import ch.sysout.emubro.ui.ColorStore;
 import ch.sysout.emubro.ui.IconStore;
 import ch.sysout.emubro.ui.MainFrame;
@@ -185,7 +184,6 @@ public class Main {
 					setLookAndFeel(shouldUseLightMode ? lastLightLnF : lastDarkLnF);
 				} else {
 					setLookAndFeel(currentLnF);
-					setLookAndFeel(new FlatDarhkmirLaf());
 				}
 			}
 		}
@@ -354,8 +352,7 @@ public class Main {
 							applyData = false;
 							controller.changeLanguage(Locale.getDefault());
 							setInitialWindowsSize();
-							System.err.println("unexpected exception occurred - using default settings instead. "
-									+ e.getMessage());
+							System.err.println("unexpected exception occurred - using default settings instead. " + e.getMessage());
 							e.printStackTrace();
 						}
 					} else {
@@ -409,38 +406,6 @@ public class Main {
 							e.printStackTrace();
 						}
 					}
-					// TODO check from database if a decision has already been made
-					// if (!explorer.isDiscordFeatureInstalled() &&
-					// !explorer.isDiscordFeatureDisabled()) {
-					// if (controller.isDiscordRunning()) {
-					// String discordMessage = "<html><strong>Oh you are running Discord,
-					// nice!</strong><br/><br/>"
-					// + "<p>Do you want to install the feature to show what you're playing with
-					// emuBro?</html>";
-					// Object[] options1 = { "Yes, install this feature!", "No thanks", "Maybe
-					// later, okay?" };
-					// FormLayout layout = new FormLayout("left:default:grow", "fill:pref, $rgap,
-					// fill:pref");
-					// JPanel panel = new JPanel(layout);
-					// CellConstraints cc = new CellConstraints();
-					// panel.add(new JLabel(discordMessage), cc.xy(1, 1));
-					// panel.add(new
-					// JLabel(ImageUtil.getImageIconFrom("/images/other/discord_rich_presence.png")),
-					// cc.xy(1, 3));
-					// int result = JOptionPane.showOptionDialog(mainFrame, panel, "Discord
-					// Feature",
-					// JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.INFORMATION_MESSAGE,
-					// null, options1, null);
-					// if (result == JOptionPane.YES_OPTION) {
-					// // TODO install discord feature
-					// } if (result == JOptionPane.NO_OPTION) {
-					// explorer.setDiscordFeatureDisabled(true);
-					// }
-					// } else {
-					//
-					// }
-					// }
-
 					if (controller.shouldCheckForUpdates()) {
 						Thread t = new Thread(new Runnable() {
 
@@ -485,12 +450,10 @@ public class Main {
 			e2.printStackTrace();
 			int expectedVersion = Integer.valueOf(e2.getExpectedVersion().replace(".", ""));
 			int currentVersion = Integer.valueOf(e2.getCurrentVersion().replace(".", ""));
-
 			if (expectedVersion > currentVersion) {
 				// update current db
 				System.out.println("update current db");
 				dlgSplashScreen.setText(Messages.get(MessageConstants.UPDATING_DATABASE));
-
 				try {
 					UpdateDatabaseBro updateBro = new UpdateDatabaseBro(conn);
 					updateBro.updateDatabaseFrom(e2.getCurrentVersion());
@@ -751,46 +714,6 @@ public class Main {
 				BufferedReader br = new BufferedReader(new InputStreamReader(is));
 				BroPlatform platform = (BroPlatform) gson.fromJson(br, collectionType);
 				platforms.add(platform);
-				try {
-					br.close();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			} catch (FileNotFoundException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
-		}
-		return platforms;
-	}
-
-	public static List<BroPlatform> initDefaultPlatformsOld() throws FileNotFoundException {
-		List<BroPlatform> platforms = new ArrayList<>();
-		String defaultPlatformsFilePath = explorer.getResourcesPath() + File.separator + "platforms";
-		File dir = new File(defaultPlatformsFilePath);
-		if (!dir.exists()) {
-			throw new FileNotFoundException("directory does not exist: " + defaultPlatformsFilePath);
-		}
-		FilenameFilter fileFilter = new FilenameFilter() {
-
-			@Override
-			public boolean accept(File dir, String name) {
-				if (dir.isDirectory() && !dir.getAbsolutePath().toLowerCase().equals(defaultPlatformsFilePath.toLowerCase())) {
-					return false;
-				}
-				return name.toLowerCase().endsWith(".json");
-			}
-		};
-		for (File fDir : dir.listFiles(fileFilter)) {
-			File file = fDir;
-			try {
-				InputStream is = new FileInputStream(file);
-				BufferedReader br = new BufferedReader(new InputStreamReader(is));
-				java.lang.reflect.Type collectionType = new TypeToken<BroPlatform>() {
-				}.getType();
-				Gson gson = new Gson();
-				platforms.add((BroPlatform) gson.fromJson(br, collectionType));
 				try {
 					br.close();
 				} catch (IOException e) {

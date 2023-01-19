@@ -255,10 +255,11 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		JScrollPane sp2 = new JCustomScrollPane(pnlBrowseComputer);
 		sp2.setBorder(BorderFactory.createEmptyBorder());
 		sp2.getVerticalScrollBar().setUnitIncrement(16);
-		tpDetailsPane.addTab(Messages.get(MessageConstants.NOTIFICATIONS), ImageUtil.getFlatSVGIconFrom(Icons.get("info"), 16, new Color(137, 207, 240)), createNotificationPanel());
-		tpDetailsPane.addTab(Messages.get(MessageConstants.BROWSE_COMPUTER), ImageUtil.getFlatSVGIconFrom(Icons.get("search"), 16, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)), sp2);
-		tpDetailsPane.addTab(Messages.get(MessageConstants.BROWSE_COVERS), ImageUtil.getFlatSVGIconFrom(Icons.get("picture"), 16, new Color(181, 201, 255)), pnlBrowseCovers);
-		tpDetailsPane.addTab(Messages.get(MessageConstants.BROWSE_TAGS), ImageUtil.getFlatSVGIconFrom(Icons.get("tag"), 16, new Color(168, 124, 160)), pnlBrowseTags);
+		Color noColor = ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR);
+		tpDetailsPane.addTab(Messages.get(MessageConstants.NOTIFICATIONS), ImageUtil.getFlatSVGIconFrom(Icons.get("info"), 16, noColor), createNotificationPanel());
+		tpDetailsPane.addTab(Messages.get(MessageConstants.BROWSE_COMPUTER), ImageUtil.getFlatSVGIconFrom(Icons.get("search"), 16, noColor), sp2);
+		tpDetailsPane.addTab(Messages.get(MessageConstants.BROWSE_COVERS), ImageUtil.getFlatSVGIconFrom(Icons.get("picture"), 16, noColor), pnlBrowseCovers);
+		tpDetailsPane.addTab(Messages.get(MessageConstants.BROWSE_TAGS), ImageUtil.getFlatSVGIconFrom(Icons.get("tag"), 16, noColor), pnlBrowseTags);
 
 		pnlTpInformationBar.add(tpDetailsPane);
 		JPanel pnl = new JPanel(new BorderLayout());
@@ -523,8 +524,11 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 			if (shouldScale) {
 				int new_width = imgWidth;
 				int new_height = imgHeight;
-				boolean scaleProportionally = currentBackground.isScaleProportionallyEnabled();
-				if (scaleProportionally) {
+				boolean stretchToView = currentBackground.isStretchToViewEnabled();
+				if (stretchToView) {
+					new_width = panelWidth;
+					new_height = panelHeight;
+				} else {
 					// first check if we need to scale width
 					if (imgWidth > panelWidth) {
 						//scale width to fit
@@ -547,9 +551,6 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 						y += (panelHeight-new_height) / 2; // image centered
 						//					y = panelHeight-new_height; // image bottom
 					}
-				} else {
-					new_width = panelWidth;
-					new_height = panelHeight;
 				}
 				g2d.drawImage(background, x, y, new_width, new_height, this);
 				//				boolean addTransparencyPane = true;
