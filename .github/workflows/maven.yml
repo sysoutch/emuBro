@@ -21,4 +21,4 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: emuBro
-        path: target/emuBro.jar
+        path: D:\a\emuBro\emuBro\target\emuBro-0.8.0-SNAPSHOT.jar
