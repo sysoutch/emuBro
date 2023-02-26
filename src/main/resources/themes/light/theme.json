@@ -1,4 +1,8 @@
 {
   "name":"Light Mode",
-  "color":"#dcebfa"
+  "color":"#dcebfa",
+  "view": {
+	"color":"#ffffff",
+	"image":"bg-only.jpg"
+  }
 }

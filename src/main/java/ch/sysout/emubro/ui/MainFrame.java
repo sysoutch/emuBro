@@ -5,7 +5,6 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
 import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -49,7 +48,6 @@ import javax.swing.ButtonGroup;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
@@ -69,6 +67,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.WindowConstants;
+import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.MenuEvent;
 import javax.swing.event.MenuListener;
@@ -103,11 +102,18 @@ import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.api.model.PlatformComparator;
 import ch.sysout.emubro.api.model.Tag;
 import ch.sysout.emubro.controller.DirectorySearchedListener;
+import ch.sysout.emubro.controller.ECMConverter;
 import ch.sysout.emubro.controller.GameSelectionListener;
 import ch.sysout.emubro.controller.ViewConstants;
 import ch.sysout.emubro.impl.event.BroFilterEvent;
 import ch.sysout.emubro.impl.event.NavigationEvent;
 import ch.sysout.emubro.impl.model.BroEmulator;
+import ch.sysout.emubro.ui.controller.CoverDownloaderController;
+import ch.sysout.emubro.ui.controller.CueMaker;
+import ch.sysout.emubro.ui.controller.ThemeManager;
+import ch.sysout.emubro.ui.event.ThemeChangeEvent;
+import ch.sysout.emubro.ui.listener.RateListener;
+import ch.sysout.emubro.ui.listener.ThemeListener;
 import ch.sysout.emubro.util.ColorConstants;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.ImageUtil;
@@ -123,7 +129,7 @@ import ch.sysout.util.ScreenSizeUtil;
  */
 public class MainFrame extends JFrame implements ActionListener, GameViewListener, GameListener, GameSelectionListener,
 PlatformListener, EmulatorListener, LanguageListener, DetailsFrameListener, MouseListener, PreviewPaneListener,
-UpdateGameCountListener, DirectorySearchedListener {
+UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 	private static final long serialVersionUID = 1L;
 	private static final String TITLE = Messages.get(MessageConstants.APPLICATION_TITLE);
 	private JMenuBar mnb;
@@ -132,11 +138,15 @@ UpdateGameCountListener, DirectorySearchedListener {
 	private JMenu mnuGames;
 	private JMenu mnuThemesOld;
 	private JMenuItem itmManageThemesOld;
-	private JMenu mnuChangeThemeOld;
-	private JMenuItem itmModifyTheme;
+	private JMenu mnuChangeBackgrounds;
+	private JMenuItem itmThemeManager;
+	private JMenuItem itmCoverDownloader;
+	private JMenuItem itmCueCreator;
+	private JMenuItem itmECMConverter;
 	// private JMenu mnuPlugins;
 	private JMenuItem itmRefreshPlugins;
 	private JMenu mnuThemes;
+	private JMenu mnuTools;
 	private JMenu mnuDarkLaFs;
 	private JMenu mnuLightLaFs;
 	private JCheckBoxMenuItem itmAutoSwitchTheme;
@@ -182,6 +192,8 @@ UpdateGameCountListener, DirectorySearchedListener {
 	private JCheckBoxMenuItem itmFullScreen;
 	private JRadioButtonMenuItem itmSetFilter;
 	private JCheckBoxMenuItem itmShowPlatformIconsInView;
+	private JCheckBoxMenuItem itmTransparentGameCovers;
+	private JMenuItem itmGameCoversTransparency;
 	private JCheckBoxMenuItem itmHideExtensions;
 	private JCheckBoxMenuItem itmShowGameNames;
 	private JCheckBoxMenuItem itmShowToolTipTexts;
@@ -250,6 +262,8 @@ UpdateGameCountListener, DirectorySearchedListener {
 	private ImageIcon iconChangeView;
 	private ImageIcon icoTrash;
 	private ImageIcon icoTrashRestore;
+	private Icon iconSortOrder;
+	private Icon iconGroupBy;
 	private Icon iconSearchGame;
 	private Icon iconSearchGameGreen;
 	private Icon iconSearchGameRed;
@@ -264,8 +278,10 @@ UpdateGameCountListener, DirectorySearchedListener {
 	private ButtonBarButton btnGameProperties;
 	private ButtonBarButton btnChangeView;
 	private ButtonBarButton btnMoreOptionsChangeView;
-	private ButtonBarButton btnPreviewPane;
+	private ButtonBarButton btnSetSortOrder;
+	private ButtonBarButton btnSetGroupBy;
 	private ButtonBarButton btnSetFilter;
+	private ButtonBarButton btnPreviewPane;
 	private JComponent[] buttonBarComponents;
 
 	private GameSettingsPopupMenu mnuGameSettings = new GameSettingsPopupMenu();
@@ -277,6 +293,11 @@ UpdateGameCountListener, DirectorySearchedListener {
 	private int minMenuBarWidthBeforeMinimize = 420;
 	private boolean changingLnFWarningDisplayed;
 	private int buttonBarIconSize = 24;
+	protected CoverDownloaderController coverDownloader;
+	private JSlider sliderGameCoversTransparency;
+	protected int lastGameCoversTransparency;
+	protected boolean dontSaveLastGameCoversTransparency;
+	protected ThemeManager themeManager;
 
 	public MainFrame(LookAndFeel defaultLookAndFeel, Explorer explorer) {
 		super(TITLE);
@@ -309,6 +330,10 @@ UpdateGameCountListener, DirectorySearchedListener {
 		iconPreviewPaneHide = ImageUtil
 				.getImageIconFrom(Icons.get("hidePreviewPane", buttonBarIconSize, buttonBarIconSize));
 		iconChangeView = ImageUtil.getFlatSVGIconFrom(Icons.get("viewTable"), buttonBarIconSize,
+				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR));
+		iconSortOrder= ImageUtil.getFlatSVGIconFrom(Icons.get("sortOrder"), buttonBarIconSize,
+				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR));
+		iconGroupBy = ImageUtil.getFlatSVGIconFrom(Icons.get("groupBy"), buttonBarIconSize,
 				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR));
 		iconSearchGame = ImageUtil.getFlatSVGIconFrom(Icons.get("setFilter"), buttonBarIconSize,
 				ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR));
@@ -401,6 +426,7 @@ UpdateGameCountListener, DirectorySearchedListener {
 
 	private void initMenuBar() {
 		mnb = new JMenuBar();
+
 		// mnb.setUI(new BasicMenuBarUI() {
 		//
 		// @Override
@@ -425,12 +451,45 @@ UpdateGameCountListener, DirectorySearchedListener {
 		mnuGames = new JMenu(Messages.get(MessageConstants.MNU_GAMES));
 		mnuThemesOld = new JMenu(Messages.get(MessageConstants.MNU_THEMES));
 		itmManageThemesOld = new JMenuItem(Messages.get(MessageConstants.ITM_MANAGE_THEMES));
-		mnuChangeThemeOld = new JMenu(Messages.get(MessageConstants.MNU_CHANGE_THEME));
-		itmModifyTheme = new JMenuItem(Messages.get(MessageConstants.ITM_MODIFY_THEME));
+		mnuChangeBackgrounds = new JMenu();
+		itmThemeManager = new JMenuItem(Messages.get(MessageConstants.THEME_MANAGER));
+		itmCoverDownloader = new JMenuItem("Cover Downloader");
+		itmCueCreator = new JMenuItem("CUE Maker");
+		itmCueCreator.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				CueMaker cueMaker = new CueMaker();
+				String path = explorer.getFiles(explorer.getCurrentGames().get(0)).get(0);
+				if (path == null) {
+					// show error
+					return;
+				}
+				if (!path.toLowerCase().endsWith(".bin")) {
+					UIUtil.showErrorMessage(MainFrame.this, "this file doesn't appear to be a .bin file", "no .bin file");
+					return;
+				}
+				cueMaker.createCueFile(new File(path));
+			}
+		});
+		itmECMConverter = new JMenuItem("ECM Converter");
+		itmECMConverter.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				String path = explorer.getFiles(explorer.getCurrentGames().get(0)).get(0);
+				if (!path.toLowerCase().endsWith(".ecm")) {
+					UIUtil.showErrorMessage(MainFrame.this, "this file doesn't appear to be a .cue file", "no .cue file");
+					return;
+				}
+				ECMConverter ecmConverter = new ECMConverter(path);
+			}
+		});
 		// mnuPlugins = new JMenu(Messages.get(MessageConstants.MNU_PLUGINS));
 		itmRefreshPlugins = new JMenuItem(Messages.get(MessageConstants.ITM_REFRESH_PLUGINS));
 		mnuGames.setEnabled(false);
 		mnuThemes = new JMenu();
+		mnuTools = new JMenu();
 		mnuDarkLaFs = new JMenu();
 		mnuLightLaFs = new JMenu();
 		itmAutoSwitchTheme = new JCheckBoxMenuItem("Auto Switch Dark/Light Theme");
@@ -463,6 +522,48 @@ UpdateGameCountListener, DirectorySearchedListener {
 		itmShowPlatformIconsInView = new JCheckBoxMenuItem();
 		itmHideExtensions = new JCheckBoxMenuItem();
 		itmTouchScreenOptimizedScroll = new JCheckBoxMenuItem();
+		itmTransparentGameCovers = new JCheckBoxMenuItem();
+		itmGameCoversTransparency = new JMenuItem();
+		sliderGameCoversTransparency = new JSlider(8, 255);
+		//		sliderGameCoversTrancparency.setPaintTicks(true);
+		sliderGameCoversTransparency.setMajorTickSpacing(8);
+		sliderGameCoversTransparency.setSnapToTicks(true);
+		sliderGameCoversTransparency.setEnabled(false);
+		sliderGameCoversTransparency.addChangeListener(new ChangeListener() {
+
+			@Override
+			public void stateChanged(ChangeEvent e) {
+				int value = sliderGameCoversTransparency.getValue();
+				IconStore.current().setGameCoverTransparencyValue(value);
+				pnlMain.repaint();
+				if (!dontSaveLastGameCoversTransparency) {
+					lastGameCoversTransparency = value;
+				}
+			}
+		});
+		itmTransparentGameCovers.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				boolean selected = itmTransparentGameCovers.isSelected();
+				if (!selected) {
+					lastGameCoversTransparency = sliderGameCoversTransparency.getValue();
+				}
+				dontSaveLastGameCoversTransparency = true;
+				sliderGameCoversTransparency.setValue(selected ? lastGameCoversTransparency : 255);
+				SwingUtilities.invokeLater(new Runnable() {
+
+					@Override
+					public void run() {
+						dontSaveLastGameCoversTransparency = false;
+					}
+				});
+				sliderGameCoversTransparency.setEnabled(selected);
+			}
+		});
+		sliderGameCoversTransparency.setToolTipText("Set the transparecy value");
+		itmGameCoversTransparency.add(sliderGameCoversTransparency);
+		itmGameCoversTransparency.setEnabled(false);
 		itmShowGameNames = new JCheckBoxMenuItem();
 		itmShowToolTipTexts = new JCheckBoxMenuItem();
 		itmRefresh = new JMenuItem();
@@ -516,97 +617,16 @@ UpdateGameCountListener, DirectorySearchedListener {
 		itmRenameGames = new JMenuItem(Messages.get("renameGames") + "...");
 		itmWebSearchSettings = new JMenuItem(Messages.get(MessageConstants.WEB_SEARCH_SETTINGS) + "...");
 
-		itmModifyTheme.addActionListener(new ActionListener() {
+		itmThemeManager.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				JDialog dlgModifyTheme = new JDialog();
-				dlgModifyTheme.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-				dlgModifyTheme.setAlwaysOnTop(true);
-				JCheckBox chkTransparentSelection = new JCheckBox("Transparent selection");
-				JCheckBox chkScaleToView = new JCheckBox("Scale to view");
-				JCheckBox chkStretchToView = new JCheckBox("Stretch to view");
-				JCheckBox chkHorizontalCenter = new JCheckBox("Horizontal Center");
-				JCheckBox chkVerticalCenter = new JCheckBox("Vertical Center");
-				JCheckBox chkAddTransparencyBackground = new JCheckBox("Add Transparency Background");
-				JCheckBox chkIgnoreDetailsPanel = new JCheckBox("ignore DP");
-				JCheckBox chkIgnorePreviewPanel = new JCheckBox("ignore PP");
-
-				dlgModifyTheme.setLayout(new FlowLayout());
-				dlgModifyTheme.add(chkTransparentSelection);
-				dlgModifyTheme.add(chkScaleToView);
-				dlgModifyTheme.add(chkStretchToView);
-				dlgModifyTheme.add(chkHorizontalCenter);
-				dlgModifyTheme.add(chkVerticalCenter);
-				dlgModifyTheme.add(chkAddTransparencyBackground);
-				dlgModifyTheme.add(chkIgnoreDetailsPanel);
-				dlgModifyTheme.add(chkIgnorePreviewPanel);
-				dlgModifyTheme.pack();
-				dlgModifyTheme.setVisible(true);
-
-				chkScaleToView.addActionListener(new ActionListener() {
-
-					@Override
-					public void actionPerformed(ActionEvent e) {
-						Theme currentTheme = IconStore.current().getCurrentTheme();
-						ThemeBackground currentBackground = currentTheme.getView();
-						currentBackground.setImageScaleEnabled(chkScaleToView.isSelected());
-						pnlMain.repaint();
-					}
-				});
-
-				chkStretchToView.addActionListener(new ActionListener() {
-
-					@Override
-					public void actionPerformed(ActionEvent e) {
-						Theme currentTheme = IconStore.current().getCurrentTheme();
-						ThemeBackground currentBackground = currentTheme.getView();
-						currentBackground.setStretchToViewEnabled(chkStretchToView.isSelected());
-						pnlMain.repaint();
-					}
-				});
-
-				chkHorizontalCenter.addActionListener(new ActionListener() {
-
-					@Override
-					public void actionPerformed(ActionEvent e) {
-						Theme currentTheme = IconStore.current().getCurrentTheme();
-						ThemeBackground currentBackground = currentTheme.getView();
-						currentBackground.setHorizontalCenterImageEnabled(chkHorizontalCenter.isSelected());
-						pnlMain.repaint();
-					}
-				});
-
-				chkVerticalCenter.addActionListener(new ActionListener() {
-
-					@Override
-					public void actionPerformed(ActionEvent e) {
-						Theme currentTheme = IconStore.current().getCurrentTheme();
-						ThemeBackground currentBackground = currentTheme.getView();
-						currentBackground.setVerticalCenterImageEnabled(chkVerticalCenter.isSelected());
-						pnlMain.repaint();
-					}
-				});
-
-				chkAddTransparencyBackground.addActionListener(new ActionListener() {
-
-					@Override
-					public void actionPerformed(ActionEvent e) {
-						Theme currentTheme = IconStore.current().getCurrentTheme();
-						ThemeBackground currentBackground = currentTheme.getView();
-						currentBackground.setAddTransparencyPaneEnabled(chkAddTransparencyBackground.isSelected());
-					}
-				});
-
-				chkTransparentSelection.addActionListener(new ActionListener() {
-
-					@Override
-					public void actionPerformed(ActionEvent e) {
-						Theme currentTheme = IconStore.current().getCurrentTheme();
-						ThemeBackground currentBackground = currentTheme.getView();
-						currentBackground.setTransparentSelectionEnabled(chkTransparentSelection.isSelected());
-					}
-				});
+				if (themeManager == null) {
+					themeManager = new ThemeManager();
+					themeManager.addThemeListener(MainFrame.this);
+				}
+				themeManager.setColorPickerColor(UIManager.getColor("Panel.background"));
+				themeManager.setWindowVisible(true);
 			}
 		});
 
@@ -635,6 +655,19 @@ UpdateGameCountListener, DirectorySearchedListener {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+
+		itmCoverDownloader.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if (coverDownloader == null) {
+					coverDownloader = new CoverDownloaderController();
+					coverDownloader.setRelativeTo(MainFrame.this);
+					coverDownloader.initPlatforms(explorer.getPlatforms());
+				}
+				coverDownloader.setWindowVisible(true);
+			}
+		});
 		// UIUtil.setForegroundDependOnBackground(colorMenuBar,
 		// mnuFile, mnuView, mnuGames, mnuLanguage, mnuHelp);
 	}
@@ -670,12 +703,14 @@ UpdateGameCountListener, DirectorySearchedListener {
 		btnMoreOptionsChangeView = new ButtonBarButton("",
 				ImageUtil.getImageIconFrom(Icons.get("arrowDownOtherWhite", 1)),
 				Messages.get(MessageConstants.MORE_OPTIONS));
+		btnSetSortOrder = new ButtonBarButton("", iconSortOrder, "");
+		btnSetGroupBy = new ButtonBarButton("", iconGroupBy, "");
 		btnSetFilter = new ButtonBarButton("", iconSearchGame, Messages.get(MessageConstants.SET_FILTER));
 		btnPreviewPane = new ButtonBarButton("", iconPreviewPaneHide, null);
 		btnPreviewPane.setActionCommand(GameViewConstants.HIDE_PREVIEW_PANE);
 		buttonBarComponents = new JComponent[] { btnShowHideNavigationPanel, btnOrganize, btnSettings, btnRunGame,
 				btnMoreOptionsRunGame, btnRemoveOrRestoreGame, btnRenameGame, btnGameProperties, btnChangeView,
-				btnMoreOptionsChangeView, btnSetFilter, btnPreviewPane };
+				btnMoreOptionsChangeView, btnSetSortOrder, btnSetGroupBy, btnSetFilter, btnPreviewPane };
 		setButtonBarToolTips();
 	}
 
@@ -717,14 +752,17 @@ UpdateGameCountListener, DirectorySearchedListener {
 		btnMoreOptionsRunGame.setToolTipText(Messages.get(MessageConstants.MORE_OPTIONS));
 		btnMoreOptionsChangeView.setToolTipText(Messages.get(MessageConstants.MORE_OPTIONS));
 		btnSetFilter.setToolTipText(Messages.get(MessageConstants.SEARCH_GAME));
+		btnSetSortOrder.setToolTipText(Messages.get(MessageConstants.SORT_BY));
+		btnSetGroupBy.setToolTipText(Messages.get(MessageConstants.GROUP_BY));
+
 	}
 
 	private void createButtonBar() {
 		FormLayout layout = new FormLayout("pref, min, pref, min, pref, min, pref, pref, min, pref, min, pref, "
-				+ "min, pref, min:grow, pref, pref, min, pref, min, pref", "fill:default");
+				+ "min, pref, min:grow, pref, pref, min, pref, min, pref, min, pref, min, pref", "fill:default");
 		pnlButtonBar.setLayout(layout);
 		// pnlButtonBar.setBorder(Paddings.DLU2);
-		int x[] = { 1, 3, 5, 7, 8, 10, 12, 14, 16, 17, 19, 21 };
+		int x[] = { 1, 3, 5, 7, 8, 10, 12, 14, 16, 17, 19, 21, 23, 25 };
 		int y = 1;
 		for (int i = 0; i < buttonBarComponents.length; i++) {
 			pnlButtonBar.add(buttonBarComponents[i], CC.xy(x[i], y));
@@ -822,7 +860,7 @@ UpdateGameCountListener, DirectorySearchedListener {
 		mnuGames.setMnemonic(mnemonicMnuGames);
 		mnuThemesOld.setMnemonic(mnemonicMnuThemes);
 		itmManageThemesOld.setMnemonic(mnemonicItmManageThemes);
-		mnuChangeThemeOld.setMnemonic(mnemonicMnuChangeTheme);
+		mnuChangeBackgrounds.setMnemonic(mnemonicMnuChangeTheme);
 		mnuThemes.setMnemonic(mnemonicMnuLookAndFeel);
 		mnuLanguage.setMnemonic(mnemonicMnuLanguage);
 		mnuHelp.setMnemonic(mnemonicMnuHelp);
@@ -948,6 +986,8 @@ UpdateGameCountListener, DirectorySearchedListener {
 		btnGameProperties.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("gameProperties"), buttonBarIconSize, svgNoColor));
 		btnChangeView.setIcon(iconChangeView);
 		btnMoreOptionsChangeView.setIcon(ImageUtil.getImageIconFrom(Icons.get("arrowDownOtherWhite", 1)));
+		btnSetSortOrder.setIcon(iconSortOrder);
+		btnSetGroupBy.setIcon(iconGroupBy);
 		btnSetFilter.setIcon(iconSearchGame);
 		btnPreviewPane.setIcon(iconPreviewPaneHide);
 	}
@@ -1207,6 +1247,11 @@ UpdateGameCountListener, DirectorySearchedListener {
 		pnlMain.addHideExtensionsListener(l);
 	}
 
+	public void addShowPlatformIconsListener(ActionListener l) {
+		itmShowPlatformIconsInView.addActionListener(l);
+		pnlMain.addShowPlatformIconsListener(l);
+	}
+
 	public void addShowGameNamesListener(ActionListener l) {
 		itmShowGameNames.addActionListener(l);
 		pnlMain.addShowGameNamesListener(l);
@@ -1428,7 +1473,7 @@ UpdateGameCountListener, DirectorySearchedListener {
 		pnlMain.addLoadDiscListener(l);
 	}
 
-	public void addRenameGameListener(Action l) {
+	public void addRenameGameListener(Action  l) {
 		btnRenameGame.addActionListener(l);
 		pnlMain.getPopupGame().addRenameGameListener(l);
 		viewManager.addRenameGameListener(l);
@@ -1478,8 +1523,8 @@ UpdateGameCountListener, DirectorySearchedListener {
 		pnlGameCount.addShowGameDetailsListener(l);
 	}
 
-	public void addOpenGameSettingsListener(ActionListener l) {
-		btnGameProperties.addActionListener(l);
+	public void addSetGameCodeListener(ActionListener l) {
+		pnlMain.getPopupGame().addSetGameCodeListener(l);
 	}
 
 	public void addOpenGamePropertiesListener(ActionListener l) {
@@ -1557,7 +1602,7 @@ UpdateGameCountListener, DirectorySearchedListener {
 		mnuUpdateAvailable.setVisible(false);
 		itmApplicationUpdateAvailable.setVisible(false);
 		itmSignatureUpdateAvailable.setVisible(false);
-		addComponentsToJComponent(false, mnb, mnuFile, mnuView, mnuThemes,
+		addComponentsToJComponent(false, mnb, mnuFile, mnuView, mnuThemes, mnuTools,
 				/* mnuThemes, mnuGames, mnuPlugins, */ Box.createHorizontalGlue(), mnuUpdateAvailable, mnuLanguage,
 				mnuHelp);
 		setJMenuBar(mnb);
@@ -1582,7 +1627,7 @@ UpdateGameCountListener, DirectorySearchedListener {
 				itmContentView, itmSliderView, itmCoverView, new JSeparator(), mnuSetCoverSize, new JSeparator(),
 				mnuSort, mnuGroup, new JSeparator(), itmRefresh, new JSeparator(), itmSetFilter, /* itmChooseDetails, */
 				/* new JSeparator(), */mnuChangeTo, new JSeparator(), itmSetColumnWidth, itmSetRowHeight,
-				new JSeparator(), itmShowPlatformIconsInView, itmShowGameNames, itmShowToolTipTexts,
+				new JSeparator(), itmShowPlatformIconsInView, itmTransparentGameCovers, itmGameCoversTransparency, itmShowGameNames, itmShowToolTipTexts,
 				itmTouchScreenOptimizedScroll, new JSeparator(), itmFullScreen);
 
 		addComponentsToJComponent(mnuManageTags, itmAutoSearchTags, itmManuallyAddTag);
@@ -1617,10 +1662,12 @@ UpdateGameCountListener, DirectorySearchedListener {
 		}
 
 		for (JRadioButtonMenuItem cmp : defaultThemesMenuItems) {
-			addComponentsToJComponent(mnuChangeThemeOld, cmp);
+			addComponentsToJComponent(mnuChangeBackgrounds, cmp);
 		}
-		addComponentsToJComponent(mnuThemes, itmModifyTheme, mnuChangeThemeOld, new JSeparator(), mnuDarkLaFs,
+		addComponentsToJComponent(mnuThemes, itmThemeManager, new JSeparator(), mnuChangeBackgrounds, new JSeparator(), mnuDarkLaFs,
 				mnuLightLaFs, new JSeparator(), itmAutoSwitchTheme);
+
+		addComponentsToJComponent(mnuTools, itmCoverDownloader, itmCueCreator, itmECMConverter, new JMenuItem("Game Renamer"));
 
 		Locale locale = Locale.getDefault();
 		String userLanguage = locale.getLanguage();
@@ -1665,6 +1712,8 @@ UpdateGameCountListener, DirectorySearchedListener {
 		Color svgNoColorLight = ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR_LIGHT);
 		ColorStore.current().setColor(ColorConstants.SVG_NO_COLOR, darkTheme ? svgNoColorLight : svgNoColorDark);
 		setIcons();
+		UIManager.put("List.selectionInactiveBackground", UIManager.getColor("List.selectionBackground"));
+		UIManager.put("TextField.background", UIManager.getColor("ComboBox.background"));
 		FlatLaf.updateUI();
 		pnlMain.addDividerDraggedListeners();
 		viewManager.themeChanged();
@@ -2632,21 +2681,19 @@ UpdateGameCountListener, DirectorySearchedListener {
 		mnuGames.setText(Messages.get(MessageConstants.MNU_GAMES));
 		mnuThemesOld.setText(Messages.get(MessageConstants.MNU_THEMES));
 		itmManageThemesOld.setText(Messages.get(MessageConstants.ITM_MANAGE_THEMES));
-		mnuChangeThemeOld.setText(Messages.get(MessageConstants.MNU_CHANGE_THEME));
+		mnuChangeBackgrounds.setText("Change background");
 		mnuThemes.setText(Messages.get(MessageConstants.MNU_THEMES));
+		mnuTools.setText(Messages.get(MessageConstants.MNU_TOOLS));
 		mnuDarkLaFs.setText(Messages.get(MessageConstants.MNU_DARK_THEMES));
 		mnuLightLaFs.setText(Messages.get(MessageConstants.MNU_LIGHT_THEMES));
 		boolean minimizeItems = mnb.getWidth() < minMenuBarWidthBeforeMinimize;
 		mnuLanguage.setText(minimizeItems ? "" : Messages.get(MessageConstants.MNU_LANGUAGE));
 		mnuHelp.setText(minimizeItems ? "" : Messages.get(MessageConstants.HELP));
-		mnuUpdateAvailable
-		.setText("<html><strong>" + Messages.get(MessageConstants.UPDATE_AVAILABLE) + "</strong></html>");
+		mnuUpdateAvailable.setText("<html><strong>" + Messages.get(MessageConstants.UPDATE_AVAILABLE) + "</strong></html>");
 		itmApplicationUpdateAvailable.setText(Messages.get(MessageConstants.APPLICATION_UPDATE_AVAILABLE));
 		itmSignatureUpdateAvailable.setText(Messages.get(MessageConstants.SIGNATURE_UPDATE_AVAILABLE));
 		mnuExportGameList.setText(Messages.get(MessageConstants.EXPORT_GAME_LIST));
-		itmExportApplicationData.setText(
-				Messages.get(MessageConstants.EXPORT_APPLICATION_DATA, Messages.get(MessageConstants.APPLICATION_TITLE))
-				+ "...");
+		itmExportApplicationData.setText(Messages.get(MessageConstants.EXPORT_APPLICATION_DATA, Messages.get(MessageConstants.APPLICATION_TITLE)) + "...");
 		mnuSort.setText(Messages.get(MessageConstants.SORT_BY));
 		mnuGroup.setText(Messages.get(MessageConstants.GROUP_BY));
 		itmSetColumnWidth.setText(Messages.get(MessageConstants.SET_COLUMN_WIDTH));
@@ -2679,6 +2726,8 @@ UpdateGameCountListener, DirectorySearchedListener {
 		itmHideExtensions.setText(Messages.get(MessageConstants.HIDE_EXTENSIONS));
 		itmHideExtensions.setToolTipText(Messages.get(MessageConstants.HIDE_EXTENSIONS_TOOL_TIP));
 		itmShowPlatformIconsInView.setText(Messages.get(MessageConstants.SHOW_PLATFORM_ICONS_IN_VIEW));
+		itmTransparentGameCovers.setText(Messages.get(MessageConstants.TRANSPARENT_GAME_COVERS));
+		itmTransparentGameCovers.setToolTipText(Messages.get(MessageConstants.TRANSPARENT_GAME_COVERS));
 		itmShowGameNames.setText(Messages.get(MessageConstants.SHOW_GAME_NAMES));
 		itmShowGameNames.setToolTipText(Messages.get(MessageConstants.SHOW_GAME_NAMES_TOOL_TIP));
 		itmTouchScreenOptimizedScroll.setText(Messages.get(MessageConstants.TOUCH_SCREEN_SCROLL));
@@ -2693,8 +2742,7 @@ UpdateGameCountListener, DirectorySearchedListener {
 		itmTroubleshoot.setText(Messages.get(MessageConstants.TROUBLESHOOT));
 		itmDiscord.setText(Messages.get(MessageConstants.EMUBRO_DISCORD));
 		itmGamePadTester.setText(Messages.get(MessageConstants.GAMEPAD_TESTER));
-		itmConfigWizard.setText(
-				Messages.get(MessageConstants.CONFIGURE_WIZARD, Messages.get(MessageConstants.APPLICATION_TITLE)));
+		itmConfigWizard.setText(Messages.get(MessageConstants.CONFIGURE_WIZARD, Messages.get(MessageConstants.APPLICATION_TITLE)));
 		itmCheckForUpdates.setText(Messages.get(MessageConstants.SEARCH_FOR_UPDATES));
 		itmAbout.setText(Messages.get(MessageConstants.ABOUT, Messages.get(MessageConstants.APPLICATION_TITLE)));
 		itmSettings.setText(Messages.get(MessageConstants.SETTINGS, "") + "...");
@@ -3127,5 +3175,10 @@ UpdateGameCountListener, DirectorySearchedListener {
 		pnlButtonBar.setVisible(showPanels);
 		pnlGameFilter.setVisible(showPanels);
 
+	}
+
+	@Override
+	public void themeChanged(ThemeChangeEvent e) {
+		pnlMain.repaint();
 	}
 }

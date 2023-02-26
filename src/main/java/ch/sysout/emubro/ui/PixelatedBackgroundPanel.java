@@ -2,6 +2,7 @@ package ch.sysout.emubro.ui;
 
 import java.awt.Color;
 import java.awt.Graphics;
+import java.awt.Image;
 import java.awt.LayoutManager;
 import java.util.Random;
 
@@ -24,6 +25,10 @@ public class PixelatedBackgroundPanel extends JPanel {
 	private CustomColor baseColor = new CustomColor(200, 50, 85); // red-ish
 	//	private CustomColor baseColor = new CustomColor(88, 200, 50); // green-ish
 	//	private CustomColor baseColor = new CustomColor(100, 140, 160); // blue-ish
+
+	private boolean drawImage;
+
+	private Image img;
 
 	public PixelatedBackgroundPanel() {
 		super();
@@ -63,6 +68,11 @@ public class PixelatedBackgroundPanel extends JPanel {
 				g.fillRect(pixelSizeW * x, pixelSizeH * y, pixelSizeW, pixelSizeH);
 			}
 		}
+		if (drawImage && img != null) {
+			int x = getWidth() / 2 - img.getWidth(null) / 2;
+			int y = getHeight() / 2 - img.getHeight(null) / 2;
+			g.drawImage(img, x, y, img.getWidth(null), img.getHeight(null), null);
+		}
 	}
 
 	public boolean isRandomColors() {
@@ -101,11 +111,11 @@ public class PixelatedBackgroundPanel extends JPanel {
 		this.maxLoops = maxLoops;
 	}
 
-	public double getFactor() {
+	public static double getFactor() {
 		return CustomColor.factor;
 	}
 
-	public void setFactor(double factor) {
+	public static void setFactor(double factor) {
 		CustomColor.factor = factor;
 	}
 
@@ -151,6 +161,18 @@ public class PixelatedBackgroundPanel extends JPanel {
 	public void setPixelSizeH(int pixelSizeH) {
 		this.pixelSizeH = pixelSizeH;
 		repaint();
+	}
+
+	public Image getImg() {
+		return img;
+	}
+
+	public void setImg(Image img) {
+		this.img = img;
+	}
+
+	public void setDrawImageEnabled(boolean drawImage) {
+		this.drawImage = drawImage;
 	}
 }
 

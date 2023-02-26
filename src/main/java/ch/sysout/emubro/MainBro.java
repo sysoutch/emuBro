@@ -80,7 +80,7 @@ import ch.sysout.util.Messages;
 /**
  * @author rainer
  */
-public class Main {
+public class MainBro {
 	public static Properties properties;
 	private static String currentLnF;
 	private static String lastDarkLnF;
@@ -101,7 +101,12 @@ public class Main {
 	private static final String currentApplicationVersion = "0.8.0";
 
 	public static void main(String[] args) {
-		Logger logger = Logger.getLogger(Main.class.getName());
+		System.out.println("epic games:");
+		getEpicGames();
+		System.out.println("steam games:");
+		getSteamGames();
+
+		Logger logger = Logger.getLogger(MainBro.class.getName());
 
 		//		System.setProperty("sun.java2d.uiScale", "1.0");
 		System.setProperty("java.util.Arrays.useLegacyMergeSort", "true");
@@ -115,11 +120,23 @@ public class Main {
 		// get back the smooth horizontal scroll feature when it was disabled by the
 		// look and feel (happens in WindowsLookAndFeel)
 		UIManager.put("List.lockToPositionOnScroll", Boolean.FALSE);
-		UIManager.put("Tree.rendererFillBackground", false);
+		//		UIManager.put("Tree.rendererFillBackground", false);
 		UIManager.put("Button.arc", 0);
 		UIManager.put("Component.arc", 0);
 		UIManager.put("CheckBox.arc", 0);
 		UIManager.put("ProgressBar.arc", 0);
+		UIManager.put("List.selectionInactiveBackground", UIManager.getColor("List.selectionBackground"));
+		UIManager.put("List.selectionInactiveForeground", UIManager.getColor("List.selectionForeground"));
+		UIManager.put("TextField.background", UIManager.getColor("ComboBox.background"));
+		UIManager.put("TextArea.background", UIManager.getColor("ComboBox.background"));
+		//		UIDefaults defaults = laf.getDefaults();
+		//		Enumeration<Object> keys = defaults.keys();
+		//		while (keys.asIterator().hasNext()) {
+		//			System.out.println(keys.nextElement());
+		//		}
+		//		FlatLaf.updateUI();
+		//		SwingUtilities.updateComponentTreeUI(MainFrame.this);
+
 		try {
 			initializeCustomTheme();
 		} catch (IOException e) {
@@ -139,6 +156,50 @@ public class Main {
 		} catch (AWTException e) {
 			logger.log(Level.ALL, e.getMessage());
 			e.printStackTrace();
+		}
+	}
+
+	private static void getSteamGames() {
+		// Identify the installation directory of the Epic Games Launcher
+		String gamesLauncherDir = "C:\\Program Files (x86)\\Steam\\steamapps\\common";
+
+		// Check the contents of the Epic Games installation directory to identify the installed games
+		File gamesDir = new File(gamesLauncherDir);
+		File[] gameFolders = gamesDir.listFiles();
+
+		// Loop through the games and check if they were installed through the Epic Games Launcher
+		for (File gameFolder : gameFolders) {
+			String gameFolderName = gameFolder.getName();
+			File[] gameFiles = gameFolder.listFiles();
+			//			String gameInstallationIdentifier = gameFolder.getAbsolutePath() + "\\.egstore";
+			for (File gameFile : gameFiles) {
+				String gameFileName = gameFile.getName();
+				if (gameFileName.toLowerCase().endsWith(".exe")) {
+					System.out.println(gameFolderName);
+				}
+			}
+		}
+	}
+
+	private static void getEpicGames() {
+		// Identify the installation directory of the Epic Games Launcher
+		String epicGamesLauncherDir = "C:\\Program Files\\Epic Games\\";
+
+		// Check the contents of the Epic Games installation directory to identify the installed games
+		File epicGamesDir = new File(epicGamesLauncherDir);
+		File[] gameFolders = epicGamesDir.listFiles();
+
+		// Loop through the games and check if they were installed through the Epic Games Launcher
+		for (File gameFolder : gameFolders) {
+			String gameFolderName = gameFolder.getName();
+			File[] gameFiles = gameFolder.listFiles();
+			//			String gameInstallationIdentifier = gameFolder.getAbsolutePath() + "\\.egstore";
+			for (File gameFile : gameFiles) {
+				String gameFileName = gameFile.getName();
+				if (gameFileName.toLowerCase().endsWith(".exe")) {
+					System.out.println(gameFolderName);
+				}
+			}
 		}
 	}
 

@@ -29,6 +29,7 @@ import ch.sysout.emubro.impl.event.BroFilterEvent;
 import ch.sysout.emubro.impl.event.NavigationEvent;
 import ch.sysout.emubro.impl.model.BroEmulator;
 import ch.sysout.emubro.impl.model.GameConstants;
+import ch.sysout.emubro.ui.listener.RateListener;
 import ch.sysout.util.ScreenSizeUtil;
 
 public class ViewPanelManager {
@@ -88,7 +89,7 @@ public class ViewPanelManager {
 			int platformId = p.getId();
 			initEmulatorIcons(explorer.getEmulatorsDirectory(p), p.getEmulators());
 			iconStore.addPlatformIcon(platformId, explorer.getLogosDirectoryFromPlatform(p), p.getIconFilename());
-			iconStore.addPlatformCover(platformId, explorer.getCoversDirectoryFromPlatform(p), p.getDefaultGameCover());
+			iconStore.addPlatformCover(platformId, explorer.getPlatformCoversDirectoryFromPlatform(p), p.getDefaultGameCover());
 		}
 	}
 
@@ -98,7 +99,8 @@ public class ViewPanelManager {
 			if (shortName == null) {
 				shortName = e.getName().toLowerCase().replaceAll("\\s+","");
 			}
-			String coverPath = emulatorIconDirectory + File.separator + shortName + File.separator + "default.png";
+			String coverPath = emulatorIconDirectory + File.separator + shortName + ".png";
+			System.out.println(coverPath);
 			iconStore.addEmulatorIconPath(e.getId(), coverPath);
 		}
 	}

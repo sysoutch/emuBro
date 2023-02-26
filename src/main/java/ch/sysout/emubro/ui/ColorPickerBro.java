@@ -18,15 +18,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.JComponent;
-import javax.swing.JFrame;
 import javax.swing.JPanel;
-import javax.swing.WindowConstants;
-
-import com.jgoodies.forms.factories.Paddings;
 
 import ch.sysout.emubro.controller.ColorPickerListener;
 
-public class TestColorPicker {
+public class ColorPickerBro {
 	private JPanel pnlColorPreview;
 	private JPanel pnlColorChooser;
 	private JPanel pnlColorChooserMore;
@@ -41,20 +37,12 @@ public class TestColorPicker {
 	private BufferedImage bi;
 	private List<ColorPickerListener> listeners = new ArrayList<>();
 
-	public TestColorPicker() {
-		JFrame frameColorTest = new JFrame();
-		frameColorTest.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-		frameColorTest.add(createPanel(), BorderLayout.NORTH);
-		frameColorTest.pack();
-		frameColorTest.setLocationRelativeTo(null);
-		frameColorTest.setVisible(true);
+	public ColorPickerBro() {
 	}
 
-	private JPanel createPanel() {
+	public JPanel createPanel() {
 		JPanel pnlColorTest = new JPanel(new BorderLayout());
 		pnlColorTest.setOpaque(false);
-		pnlColorTest.setBorder(Paddings.DIALOG);
-
 		pnlColorChooser = createColorChooserPanel();
 		pnlColorChooserMore = createColorChooserMorePanel();
 		pnlColorChooser.add(pnlColorChooserMore, BorderLayout.SOUTH);
@@ -97,7 +85,7 @@ public class TestColorPicker {
 		});
 
 		pnlColorPreview = (JPanel) createColorPreviewPanel();
-		pnlColorPreview.setPreferredSize(new Dimension(400, 0));
+		//		pnlColorPreview.setPreferredSize(new Dimension(400, 0));
 		pnl.add(pnlColorPreview, BorderLayout.WEST);
 
 		JPanel pnlDrawImage = new JPanel() {
@@ -126,7 +114,7 @@ public class TestColorPicker {
 			}
 		};
 		pnlDrawImage.setOpaque(false);
-		pnlDrawImage.setPreferredSize(new Dimension(1200, 600));
+		//		pnlDrawImage.setPreferredSize(new Dimension(1200, 600));
 		pnl.add(pnlDrawImage);
 		return pnl;
 	}
@@ -161,7 +149,7 @@ public class TestColorPicker {
 		}
 		int x = 0;
 		int y = 0;
-		int imgWidth = 1000;
+		int imgWidth = 512;
 		int imgHeight = (colors.size()/imgWidth)+1;
 		BufferedImage bi = new BufferedImage(imgWidth, imgHeight, BufferedImage.TYPE_INT_RGB);
 		for (Color c : colors) {

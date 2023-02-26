@@ -13,7 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import ch.sysout.emubro.Main;
+import ch.sysout.emubro.MainBro;
 import ch.sysout.emubro.api.dao.EmulatorDAO;
 import ch.sysout.emubro.api.dao.ExplorerDAO;
 import ch.sysout.emubro.api.dao.GameDAO;
@@ -61,7 +61,7 @@ public class BroExplorerDAO implements ExplorerDAO {
 			if (dbVersion.isEmpty()) {
 				updateDatabaseVersion();
 			} else if (!dbVersion.equals(expectedDbVersion)) {
-				Main.dlgSplashScreen.setText("checking database state...");
+				MainBro.dlgSplashScreen.setText("checking database state...");
 				throw new BroDatabaseVersionMismatchException("database version mismatch. expected: " + expectedDbVersion + " but is: " + dbVersion,
 						expectedDbVersion, dbVersion);
 			}

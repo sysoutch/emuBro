@@ -3,6 +3,7 @@ package ch.sysout.emubro.ui;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
@@ -61,7 +62,6 @@ public class SplashScreenWindow extends JDialog {
 		//		AWTUtilities.setWindowOpaque(this, false); // enable opacity
 		//		setBackground(new Color(0f, 0f, 0f, 0.9f));
 		pack();
-		pnlPixelatedBackground.setBaseColor(pnlMain.getBackground());
 		setSize(new Dimension(600, 400));
 		// btnCancel.setVisible(false);
 	}
@@ -124,9 +124,13 @@ public class SplashScreenWindow extends JDialog {
 		//		pnlMain.setBackground(new Color(13, 35, 48));
 		pnlMain.add(btnCancel, cc.xy(2, 1));
 		pnlPixelatedBackground = new PixelatedBackgroundPanel();
-		pnlPixelatedBackground.setMaxLoops(4);
-		pnlPixelatedBackground.repaint();
-		pnlPixelatedBackground.setFactor(0.95);
+		Image img = ImageUtil.getFlatSVGIconFrom(Icons.get("applicationBanner"), 512, 92, pnlMain.getBackground().brighter().brighter().brighter()).getImage();
+		//		Image img = ImageUtil.getFlatSVGIconFrom(Icons.get("applicationBanner"), 512, 92, pnlMain.getBackground().darker()).getImage();
+		pnlPixelatedBackground.setImg(img);
+		pnlPixelatedBackground.setDrawImageEnabled(true);
+		pnlPixelatedBackground.setBaseColor(pnlMain.getBackground().brighter());
+		pnlPixelatedBackground.setMaxLoops(5);
+		PixelatedBackgroundPanel.setFactor(0.955);
 		pnlMain.add(pnlPixelatedBackground, cc.xyw(1, 3, layout.getColumnCount()));
 		//		pnlMain.add(lbl, cc.xyw(1, 3, layout.getColumnCount()));
 

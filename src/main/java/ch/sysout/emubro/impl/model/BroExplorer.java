@@ -47,6 +47,7 @@ public class BroExplorer implements Explorer {
 	private List<FilterGroup> filterGroups;
 	private Map<Integer, Properties> gameTitles;
 
+	private boolean showPlatformIconsEnabled = false;
 	private boolean showGameNamesEnabled = true;
 
 	public BroExplorer(String currentApplicationVersion) {
@@ -838,13 +839,14 @@ public class BroExplorer implements Explorer {
 	}
 
 	@Override
-	public String getCoversDirectoryFromPlatform(Platform platform) {
+	public String getPlatformCoversDirectoryFromPlatform(Platform platform) {
 		return getPlatformsDirectory() + File.separator + platform.getShortName() + File.separator + "covers";
 	}
 
 	@Override
 	public String getEmulatorsDirectory(Platform platform) {
-		return getPlatformsDirectory() + File.separator + platform.getShortName() + File.separator + "emulators";
+		//		return getPlatformsDirectory() + File.separator + "emulators";
+		return getResourcesPath() + File.separator + "emulators";
 	}
 
 	@Override
@@ -868,6 +870,16 @@ public class BroExplorer implements Explorer {
 	@Override
 	public String getCoverDownloadSource(Game game) {
 		return "http://art.gametdb.com/";
+	}
+
+	@Override
+	public boolean isShowPlatformIconsEnabled() {
+		return showPlatformIconsEnabled;
+	}
+
+	@Override
+	public void setShowPlatformIconsEnabled(boolean showPlatformIconsEnabled) {
+		this.showPlatformIconsEnabled = showPlatformIconsEnabled;
 	}
 
 	@Override

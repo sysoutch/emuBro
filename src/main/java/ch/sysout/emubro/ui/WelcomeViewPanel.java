@@ -39,6 +39,7 @@ import ch.sysout.emubro.api.model.PlatformComparator;
 import ch.sysout.emubro.controller.GameSelectionListener;
 import ch.sysout.emubro.controller.ViewConstants;
 import ch.sysout.emubro.impl.event.NavigationEvent;
+import ch.sysout.emubro.ui.listener.RateListener;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.ui.util.UIUtil;
@@ -381,14 +382,10 @@ public class WelcomeViewPanel extends ViewPanel {
 
 	@Override
 	public void addOpenGameFolderListener1(MouseListener l) {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
 	public void addRateListener(RateListener l) {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
@@ -545,7 +542,11 @@ public class WelcomeViewPanel extends ViewPanel {
 		//			g2d.setColor(currentBackground.getColor());
 		//		}
 		//		g2d.fillRect(0, 0, panelWidth, panelHeight);
-
+		if (currentBackground.hasColor()) {
+			Color backgroundColor = currentBackground.getColor();
+			g2d.setColor(backgroundColor);
+			g2d.fillRect(0, 0, panelWidth, panelHeight);
+		}
 		BufferedImage background = currentBackground.getImage();
 		if (background != null) {
 			g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);

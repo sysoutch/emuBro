@@ -21,6 +21,8 @@ import javax.swing.JPanel;
 import ch.sysout.emubro.api.event.GameSelectionEvent;
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.controller.GameSelectionListener;
+import ch.sysout.emubro.ui.event.RateEvent;
+import ch.sysout.emubro.ui.listener.RateListener;
 import ch.sysout.emubro.util.ColorConstants;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.ImageUtil;
@@ -198,7 +200,7 @@ public class RatingBarPanel extends JPanel implements ActionListener, FocusListe
 				int rate = (g.getRate() == currentRate + 1) ? 0 : currentRate + 1;
 				g.setRate(rate);
 				showCurrentRate();
-				RateEvent ev = new BroRateEvent(g);
+				RateEvent ev = new RateEvent(g);
 				fireRateChangedEvent(ev);
 			}
 		}

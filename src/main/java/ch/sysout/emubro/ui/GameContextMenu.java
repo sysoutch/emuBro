@@ -38,6 +38,7 @@ import ch.sysout.emubro.controller.GameSelectionListener;
 import ch.sysout.emubro.impl.event.BroTagAddedEvent;
 import ch.sysout.emubro.impl.event.BroTagRemovedEvent;
 import ch.sysout.emubro.impl.model.BroEmulator;
+import ch.sysout.emubro.ui.listener.RateListener;
 import ch.sysout.emubro.util.ColorConstants;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.ImageUtil;
@@ -79,6 +80,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 	private JMenuItem itmGameProperties = new JMenuItem();
 	private RatingBarPanel pnlRatingBar = new RatingBarPanel(null, false);
 	private JMenuItem itmComment = new JMenuItem();
+	private JMenuItem itmSetGameCode = new JMenuItem();
 
 	private int size = ScreenSizeUtil.is3k() ? 24 : 16;
 	private Icon iconTag = ImageUtil.getFlatSVGIconFrom(Icons.get("tag"), size, new Color(168, 124, 160));
@@ -100,7 +102,8 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 				new JSeparator(), mnuRateGame, mnuManageTags, itmAddCoverComputer,
 				new JSeparator(), mnuShowTagsWeb, mnuShowCoverWeb, mnuShowTrailerWeb/*, itmWebSearchSettings*/,
 				new JSeparator(), itmRemoveGame, itmRenameGame,
-				new JSeparator(),  itmCopyGamePath,itmOpenGameFolder,
+				new JSeparator(), itmCopyGamePath, itmOpenGameFolder,
+				new JSeparator(), itmSetGameCode,
 				new JSeparator(), itmGameProperties);
 		addComponentsToJComponent(mnuRateGame, pnlRatingBar, new JSeparator(), itmComment);
 		addComponentsToJComponent(mnuShowTagsWeb, itmDefaultTagSource);
@@ -325,8 +328,12 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		itmRemoveGame.addActionListener(l);
 	}
 
-	public void addRenameGameListener(Action l) {
+	public void addRenameGameListener(ActionListener l) {
 		itmRenameGame.addActionListener(l);
+	}
+
+	public void addSetGameCodeListener(ActionListener l) {
+		itmSetGameCode.addActionListener(l);
 	}
 
 	public void addOpenGamePropertiesListener(ActionListener l) {
@@ -363,6 +370,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		itmRemoveGame.setText(Messages.get(MessageConstants.REMOVE));
 		itmCopyGamePath.setText(Messages.get(MessageConstants.COPY_GAME_PATH));
 		itmOpenGameFolder.setText(Messages.get(MessageConstants.OPEN_GAME_PATH));
+		itmSetGameCode.setText(Messages.get("Set game code"));
 		itmGameProperties.setText(Messages.get(MessageConstants.GAME_PROPERTIES));
 	}
 

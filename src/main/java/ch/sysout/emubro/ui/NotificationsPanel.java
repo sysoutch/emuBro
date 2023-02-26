@@ -31,7 +31,6 @@ import com.jgoodies.forms.factories.Paddings;
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 import com.jgoodies.forms.layout.RowSpec;
-import com.jgoodies.validation.view.ValidationComponentUtils;
 
 import ch.sysout.emubro.controller.NotificationElementListener;
 import ch.sysout.ui.util.ImageUtil;
@@ -203,20 +202,20 @@ public class NotificationsPanel extends JPanel {
 				warningIcons.put(size, ImageUtil.getFlatSVGIconFrom(Icons.get("warning"), size, Color.ORANGE));
 			}
 			lblIcon.setIcon(warningIcons.get(size));
-			textPane.setBackground(ValidationComponentUtils.getWarningBackground());
-			pnlIcon.setBackground(ValidationComponentUtils.getWarningBackground());
-			pnl2.setBackground(ValidationComponentUtils.getWarningBackground());
-			pnl3.setBackground(ValidationComponentUtils.getWarningBackground());
+			//			textPane.setBackground(ValidationComponentUtils.getWarningBackground());
+			//			pnlIcon.setBackground(ValidationComponentUtils.getWarningBackground());
+			//			pnl2.setBackground(ValidationComponentUtils.getWarningBackground());
+			//			pnl3.setBackground(ValidationComponentUtils.getWarningBackground());
 			break;
 		case NotificationElement.ERROR:
 			if (!errorIcons.containsKey(size)) {
 				errorIcons.put(size, ImageUtil.getFlatSVGIconFrom(Icons.get("error"), size, Color.RED));
 			}
 			lblIcon.setIcon(errorIcons.get(size));
-			textPane.setBackground(ValidationComponentUtils.getErrorBackground());
-			pnlIcon.setBackground(ValidationComponentUtils.getErrorBackground());
-			pnl2.setBackground(ValidationComponentUtils.getErrorBackground());
-			pnl3.setBackground(ValidationComponentUtils.getErrorBackground());
+			//			textPane.setBackground(ValidationComponentUtils.getErrorBackground());
+			//			pnlIcon.setBackground(ValidationComponentUtils.getErrorBackground());
+			//			pnl2.setBackground(ValidationComponentUtils.getErrorBackground());
+			//			pnl3.setBackground(ValidationComponentUtils.getErrorBackground());
 			break;
 		case NotificationElement.SUCCESS:
 			if (!successIcons.containsKey(size)) {

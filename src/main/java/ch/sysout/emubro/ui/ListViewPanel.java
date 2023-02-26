@@ -93,6 +93,7 @@ import ch.sysout.emubro.impl.model.BroGame;
 import ch.sysout.emubro.impl.model.EmulatorConstants;
 import ch.sysout.emubro.impl.model.GameConstants;
 import ch.sysout.emubro.impl.model.PlatformConstants;
+import ch.sysout.emubro.ui.listener.RateListener;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Messages;
@@ -542,16 +543,18 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				Icon gameIcon = null;
 				switch (viewStyle) {
 				case ViewPanel.LIST_VIEW:
-					gameIcon = IconStore.current().getGameIcon(game.getId());
+					gameIcon = (explorer.isShowPlatformIconsEnabled() ? IconStore.current().getGameIcon(game.getId()) : IconStore.current().getScaledTransparentPlatformCover(game.getPlatformId(), currentCoverSize, 90));
 					break;
 				case ViewPanel.ELEMENT_VIEW:
-					gameIcon = IconStore.current().getScaledPlatformCover(game.getPlatformId(), currentCoverSize);
+					gameIcon = (explorer.isShowPlatformIconsEnabled() ? IconStore.current().getGameIcon(game.getId()) : IconStore.current().getScaledTransparentPlatformCover(game.getPlatformId(), currentCoverSize, 90));
 					break;
 				case ViewPanel.CONTENT_VIEW:
-					gameIcon = IconStore.current().getScaledGameCover(game.getId(), currentCoverSize);
+					gameIcon = (explorer.isShowPlatformIconsEnabled() ? IconStore.current().getGameIcon(game.getId()) : IconStore.current().getScaledTransparentPlatformCover(game.getPlatformId(), currentCoverSize, 90));
+					//					gameIcon = IconStore.current().getScaledGameCover(game.getId(), currentCoverSize);
 					break;
 				case ViewPanel.SLIDER_VIEW:
-					gameIcon = IconStore.current().getScaledGameCover(game.getId(), currentCoverSize);
+					gameIcon = (explorer.isShowPlatformIconsEnabled() ? IconStore.current().getGameIcon(game.getId()) : IconStore.current().getScaledTransparentPlatformCover(game.getPlatformId(), currentCoverSize, 90));
+					//					gameIcon = IconStore.current().getScaledGameCover(game.getId(), currentCoverSize);
 					if (!explorer.isShowGameNamesEnabled())  {
 						label.setText("");
 					}
@@ -560,7 +563,8 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 					if (!explorer.isShowGameNamesEnabled())  {
 						label.setText("");
 					}
-					gameIcon = IconStore.current().getScaledGameCover(game.getId(), currentCoverSize);
+					gameIcon = (explorer.isShowPlatformIconsEnabled() ? IconStore.current().getGameIcon(game.getId()) : IconStore.current().getScaledTransparentPlatformCover(game.getPlatformId(), currentCoverSize, 90));
+					//					gameIcon = IconStore.current().getScaledGameCover(game.getId(), currentCoverSize);
 					break;
 				}
 				if (gameIcon != null) {
@@ -2167,7 +2171,16 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		//			g2d.setColor(currentBackground.getColor());
 		//		}
 		//		g2d.fillRect(0, 0, panelWidth, panelHeight);
-
+		if (currentBackground.hasColor()) {
+			Color backgroundColor = currentBackground.getColor();
+			g2d.setColor(backgroundColor);
+			g2d.fillRect(0, 0, panelWidth, panelHeight);
+		}
+		boolean addBehindBackgroundImage = false;
+		boolean addInFrontOfBackgroundImage = true;
+		if (addBehindBackgroundImage) {
+			addTransparencyPaneIfEnabled(g2d, currentBackground, panelWidth, panelHeight);
+		}
 		BufferedImage background = currentBackground.getImage();
 		if (background != null) {
 			g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
@@ -2210,6 +2223,9 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 					}
 				}
 				g2d.drawImage(background, x, y, new_width, new_height, this);
+				if (addInFrontOfBackgroundImage) {
+					addTransparencyPaneIfEnabled(g2d, currentBackground, panelWidth, panelHeight);
+				}
 				//				boolean addTransparencyPane = true;
 				//				if (addTransparencyPane) {
 				//					g2d.setColor(getTransparencyColor());
@@ -2235,29 +2251,40 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				//					g2d.fillRect(x, y, imgWidth, imgHeight);
 				//				}
 			}
-			boolean addTransparencyPane = currentBackground.isAddTransparencyPaneEnabled();
-			if (addTransparencyPane) {
-				g2d.setColor(currentBackground.getTransparencyColor());
-				g2d.fillRect(0, 0, panelWidth, panelHeight);
-			}
-			BufferedImage imgTransparentOverlay = currentTheme.getTransparentBackgroundOverlayImage();
-			if (imgTransparentOverlay != null) {
-				int width = imgTransparentOverlay.getWidth();
-				int height = imgTransparentOverlay.getHeight();
-
-				double factor = background.getWidth() / panelWidth;
-				if (factor != 0) {
-					int scaledWidth = (int) (width/factor);
-					int scaledHeight = (int) (height/factor);
-					width = scaledWidth;
-					height = scaledHeight;
-				}
-				x = panelWidth-width;
-				y = panelHeight-height;
-				g2d.drawImage(imgTransparentOverlay, x, y, width, height, this);
-			}
+			addTransparencyOverlayImage(g2d, true, panelWidth, panelHeight, currentTheme, background.getWidth(), x, y);
+		} else {
+			addTransparencyOverlayImage(g2d, false, panelWidth, panelHeight, currentTheme, 1, 0, 0);
 		}
+
 		g2d.dispose();
+	}
+
+	private void addTransparencyPaneIfEnabled(Graphics2D g2d, ThemeBackground currentBackground, int panelWidth,
+			int panelHeight) {
+		boolean addTransparencyPane = currentBackground.isAddTransparencyPaneEnabled();
+		if (addTransparencyPane) {
+			g2d.setColor(currentBackground.getTransparencyColor());
+			g2d.fillRect(0, 0, panelWidth, panelHeight);
+		}
+	}
+
+	private void addTransparencyOverlayImage(Graphics2D g2d, boolean overImageOnly, int panelWidth, int panelHeight, Theme currentTheme, int baseImageWidth, int posX, int posY) {
+		BufferedImage imgTransparentOverlay = currentTheme.getTransparentBackgroundOverlayImage();
+		if (imgTransparentOverlay != null) {
+			int width = imgTransparentOverlay.getWidth();
+			int height = imgTransparentOverlay.getHeight();
+
+			double factor = baseImageWidth / panelWidth;
+			if (factor != 0) {
+				int scaledWidth = (int) (width/factor);
+				int scaledHeight = (int) (height/factor);
+				width = scaledWidth;
+				height = scaledHeight;
+			}
+			posX = panelWidth-width;
+			posY = panelHeight-height;
+			g2d.drawImage(imgTransparentOverlay, posX, posY, width, height, this);
+		}
 	}
 
 	@Override
@@ -2273,5 +2300,6 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 	@Override
 	public void themeChanged() {
 		themeChanged = true;
+
 	}
 }

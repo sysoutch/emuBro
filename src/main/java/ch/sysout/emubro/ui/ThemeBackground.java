@@ -141,6 +141,17 @@ public class ThemeBackground {
 		this.addTransparencyPaneEnabled = addTransparencyPaneEnabled;
 	}
 
+	public int getTransparencyValue() {
+		return transparencyColor.getAlpha();
+	}
+
+	public void setTransparencyValue(int transparencyValue) {
+		int red = transparencyColor.getRed();
+		int green = transparencyColor.getGreen();
+		int blue = transparencyColor.getBlue();
+		transparencyColor = new Color(red, green, blue, transparencyValue);
+	}
+
 	public Color getTransparencyColor() {
 		return transparencyColor;
 	}

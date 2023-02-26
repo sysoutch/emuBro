@@ -72,7 +72,6 @@ import com.jgoodies.forms.factories.Paddings;
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 import com.jgoodies.forms.layout.RowSpec;
-import com.jgoodies.validation.view.ValidationComponentUtils;
 
 import ch.sysout.emubro.api.event.EmulatorEvent;
 import ch.sysout.emubro.api.event.PlatformEvent;
@@ -808,9 +807,9 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 												String comment = arr2[1].trim();
 												chkValue.setToolTipText(comment.trim());
 												String toolTip = chkValue.getToolTipText();
-												chkValue.setForeground(toolTip != null && !toolTip.isEmpty()
-														? ValidationComponentUtils.getMandatoryForeground()
-																: chkValue.getForeground());
+												//												chkValue.setForeground(toolTip != null && !toolTip.isEmpty()
+												//														? ValidationComponentUtils.getMandatoryForeground()
+												//																: chkValue.getForeground());
 											}
 										} else {
 											try {
@@ -822,9 +821,9 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 														String comment = arr2[1].trim();
 														spinner.setToolTipText(comment.trim());
 														String toolTip = spinner.getToolTipText();
-														spinner.setForeground(toolTip != null && !toolTip.isEmpty()
-																? ValidationComponentUtils.getMandatoryForeground()
-																		: spinner.getForeground());
+														//														spinner.setForeground(toolTip != null && !toolTip.isEmpty()
+														//																? ValidationComponentUtils.getMandatoryForeground()
+														//																		: spinner.getForeground());
 													}
 												} else {
 													txtValue = new JTextField(value.trim());
@@ -832,9 +831,9 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 														String comment = arr2[1].trim();
 														txtValue.setToolTipText(comment.trim());
 														String toolTip = txtValue.getToolTipText();
-														txtValue.setForeground(toolTip != null && !toolTip.isEmpty()
-																? ValidationComponentUtils.getMandatoryForeground()
-																		: txtValue.getForeground());
+														//														txtValue.setForeground(toolTip != null && !toolTip.isEmpty()
+														//																? ValidationComponentUtils.getMandatoryForeground()
+														//																		: txtValue.getForeground());
 													}
 												}
 											} catch (NumberFormatException e) {
@@ -843,9 +842,9 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 													String comment = arr2[1].trim();
 													txtValue.setToolTipText(comment.trim());
 													String toolTip = txtValue.getToolTipText();
-													txtValue.setForeground(toolTip != null && !toolTip.isEmpty()
-															? ValidationComponentUtils.getMandatoryForeground()
-																	: txtValue.getForeground());
+													//													txtValue.setForeground(toolTip != null && !toolTip.isEmpty()
+													//															? ValidationComponentUtils.getMandatoryForeground()
+													//																	: txtValue.getForeground());
 												}
 											}
 										}
@@ -1307,7 +1306,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 
 		public JTextComponent createInputTextField() {
 			final JTextField txt = new JTextField("Unassigned");
-			txt.setBackground(ValidationComponentUtils.getWarningBackground());
+			//			txt.setBackground(ValidationComponentUtils.getWarningBackground());
 			txt.setEditable(false);
 			txt.setHorizontalAlignment(SwingConstants.CENTER);
 			txt.addFocusListener(new FocusListener() {
@@ -1330,7 +1329,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 				return;
 			}
 			makeInput = true;
-			txt.setBackground(ValidationComponentUtils.getMandatoryBackground());
+			//			txt.setBackground(ValidationComponentUtils.getMandatoryBackground());
 			txt.addKeyListener(new KeyAdapter() {
 				@Override
 				public void keyPressed(KeyEvent e) {

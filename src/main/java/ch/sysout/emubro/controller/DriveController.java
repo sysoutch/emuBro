@@ -26,7 +26,7 @@ import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
 import com.google.api.services.drive.model.File;
 
-import ch.sysout.emubro.Main;
+import ch.sysout.emubro.MainBro;
 
 public class DriveController {
 
@@ -93,7 +93,7 @@ public class DriveController {
 	static Credential authorize() throws Exception {
 		// load client secrets
 		GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(JSON_FACTORY,
-				new InputStreamReader(Main.class.getResourceAsStream("/credentials.json")));
+				new InputStreamReader(MainBro.class.getResourceAsStream("/credentials.json")));
 		// set up authorization code flow
 		GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
 				httpTransport, JSON_FACTORY, clientSecrets,

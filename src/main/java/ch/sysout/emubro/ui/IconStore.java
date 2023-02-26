@@ -1,6 +1,7 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.Color;
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -25,6 +26,36 @@ import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.util.ScreenSizeUtil;
 
 public class IconStore {
+	public class TransparencyObjects {
+		private List<TransparencyObject> objects = new ArrayList<>();
+
+		public void addObject(TransparencyObject obj) {
+			objects.add(obj);
+		}
+
+		public boolean hasObjectWithValue(int value) {
+			for (TransparencyObject obj : objects) {
+				if (obj.getValue() == value) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		public List<TransparencyObject> getObjects() {
+			return objects;
+		}
+
+		public ImageIcon getIcoOfSize(int value) {
+			for (TransparencyObject obj : objects) {
+				if (obj.getValue() == value) {
+					return obj.getIco();
+				}
+			}
+			return null;
+		}
+	}
+
 	private static IconStore instance;
 
 	private Theme currentTheme;
@@ -48,6 +79,11 @@ public class IconStore {
 	private List<GameCoverListener> gameCoverListeners = new ArrayList<>();
 
 	private String coverType = "2d";
+
+	private int currentGameCoverTransparencyValue = 90; // 0 - 255
+
+	private Map<Integer, TransparencyObjects> transparentGameCovers = new HashMap<>();
+	private Map<Integer, TransparencyObjects> transparentPlatformCovers = new HashMap<>();
 
 	private IconStore() {
 		// prevent instantiation of this class
@@ -206,6 +242,37 @@ public class IconStore {
 		return platformCovers.get(platformId);
 	}
 
+	public ImageIcon getScaledTransparentPlatformCover(int platformId, int coverSize, int transparencyValue) {
+		ImageIcon cover = getScaledPlatformCover(platformId, coverSize);
+		return getTransparentPlatformCoverFrom(cover, platformId, transparencyValue);
+	}
+
+	public ImageIcon getTransparentPlatformCover(int platformId, int transparencyValue) {
+		ImageIcon cover = getPlatformCover(platformId);
+		return getTransparentPlatformCoverFrom(cover, platformId, transparencyValue);
+	}
+
+	private ImageIcon getTransparentPlatformCoverFrom(ImageIcon cover, int platformId, int transparencyValue) {
+		ImageIcon transparentCover = null;
+		if (cover != null) {
+			BufferedImage bi = ImageUtil.createTransparentImageFrom(cover.getImage(), currentGameCoverTransparencyValue);
+			if (bi != null) {
+				transparentCover = new ImageIcon(bi);
+				if (!transparentPlatformCovers.containsKey(platformId)) {
+					transparentPlatformCovers.put(platformId, new TransparencyObjects());
+					transparentCover = doTransparentThingsWithPlatformCover(platformId, transparentCover);
+				} else {
+					if (hasPlatformCoverOfThisTransparencyValue(platformId, currentGameCoverTransparencyValue)) {
+						transparentCover = transparentPlatformCovers.get(platformId).getIcoOfSize(currentGameCoverTransparencyValue);
+					} else {
+						transparentCover = doTransparentThingsWithPlatformCover(platformId, cover);
+					}
+				}
+			}
+		}
+		return transparentCover;
+	}
+
 	public ImageIcon getScaledPlatformCover(int platformId, int currentCoverSize) {
 		ImageIcon icon = getPlatformCover(platformId);
 		Map<Integer, ImageIcon> scaledIconMap = scaledPlatformCovers.get(platformId);
@@ -314,6 +381,10 @@ public class IconStore {
 		}
 	}
 
+	public void setGameCoverTransparencyValue(int value) {
+		currentGameCoverTransparencyValue = value;
+	}
+
 	public ImageIcon getGameCover(int gameId) {
 		if (!gameCovers.containsKey(gameId)) {
 			if (!gameCoverPaths.containsKey(gameId)) {
@@ -324,6 +395,52 @@ public class IconStore {
 			gameCovers.put(gameId, ico);
 		}
 		return gameCovers.get(gameId);
+	}
+
+	public ImageIcon getTransparentGameCover(int gameId, int transparencyValue) {
+		ImageIcon gameIcon = getGameCover(gameId);
+		ImageIcon transparentCover = doTransparentThingsWithGameCover(gameId, gameIcon);
+		if (gameIcon != null) {
+			BufferedImage bi = ImageUtil.createTransparentImageFrom(gameIcon.getImage(), currentGameCoverTransparencyValue);
+			transparentCover = new ImageIcon(bi);
+			if (!transparentGameCovers.containsKey(gameId)) {
+				transparentGameCovers.put(gameId, new TransparencyObjects());
+				transparentCover = doTransparentThingsWithGameCover(gameId, transparentCover);
+			} else {
+				if (hasGameCoverOfThisTransparencyValue(gameId, currentGameCoverTransparencyValue)) {
+					transparentCover = transparentGameCovers.get(gameId).getIcoOfSize(currentGameCoverTransparencyValue);
+				} else {
+					transparentCover = doTransparentThingsWithGameCover(gameId, gameIcon);
+				}
+			}
+		}
+		return transparentCover;
+	}
+
+	private ImageIcon doTransparentThingsWithGameCover(int gameId, ImageIcon ico) {
+		BufferedImage bi = ImageUtil.createTransparentImageFrom(ico.getImage(), currentGameCoverTransparencyValue);
+		ImageIcon ico2 = new ImageIcon(bi);
+		TransparencyObject transparencyObject = new TransparencyObject(currentGameCoverTransparencyValue, ico2);
+		transparentGameCovers.get(gameId).addObject(transparencyObject);
+		//		transparentGameCovers.put(gameId, trans)
+		return ico2;
+	}
+
+	private ImageIcon doTransparentThingsWithPlatformCover(int platformId, ImageIcon ico) {
+		BufferedImage bi = ImageUtil.createTransparentImageFrom(ico.getImage(), currentGameCoverTransparencyValue);
+		ImageIcon ico2 = new ImageIcon(bi);
+		TransparencyObject transparencyObject = new TransparencyObject(currentGameCoverTransparencyValue, ico2);
+		transparentPlatformCovers.get(platformId).addObject(transparencyObject);
+		//		transparentPlatformCovers.put(platformId, trans)
+		return ico2;
+	}
+
+	private boolean hasGameCoverOfThisTransparencyValue(int gameId, int currentGameCoverTransparencyValue) {
+		return transparentGameCovers.get(gameId).hasObjectWithValue(currentGameCoverTransparencyValue);
+	}
+
+	private boolean hasPlatformCoverOfThisTransparencyValue(int platformId, int currentGameCoverTransparencyValue) {
+		return transparentPlatformCovers.get(platformId).hasObjectWithValue(currentGameCoverTransparencyValue);
 	}
 
 	public ImageIcon getScaledGameCover(int gameId, int currentCoverSize) {
@@ -371,5 +488,23 @@ public class IconStore {
 
 	public void setCurrentTheme(String theme) {
 		currentTheme = new Theme(theme);
+	}
+
+	public class TransparencyObject {
+		private int value;
+		private ImageIcon ico;
+
+		public TransparencyObject(int value, ImageIcon ico) {
+			this.value = value;
+			this.ico = ico;
+		}
+
+		public int getValue() {
+			return value;
+		}
+
+		public ImageIcon getIco() {
+			return ico;
+		}
 	}
 }

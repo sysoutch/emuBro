@@ -50,11 +50,12 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 	public static final String MAXIMIZED = "maximized";
 
 	private JCustomToggleButton btnAllGames = new JCustomToggleButton(Messages.get(MessageConstants.ALL_GAMES));
+	private JCustomToggleButton btnGameFilterGroups = new JCustomToggleButton(Messages.get(MessageConstants.GAME_FILTER_GROUPS));
 	private JCustomToggleButton btnFavorites = new JCustomToggleButton(Messages.get(MessageConstants.FAVORITES));
 	private JCustomToggleButton btnRecentlyPlayed = new JCustomToggleButton(Messages.get(MessageConstants.RECENTLY_PLAYED));
 	private JCustomToggleButton btnRecycleBin = new JCustomToggleButton(Messages.get(MessageConstants.RECYCLE_BIN));
 	private List<JToggleButton> platformButtons = new ArrayList<>();
-	private AbstractButton[] buttons = new AbstractButton[] { btnAllGames, btnFavorites, btnRecentlyPlayed, btnRecycleBin };
+	private AbstractButton[] buttons = new AbstractButton[] { btnAllGames, btnGameFilterGroups, btnFavorites, btnRecentlyPlayed, btnRecycleBin };
 
 	private int oldWidth;
 	private boolean minimizing;
@@ -104,7 +105,7 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 	private void createUI() {
 		//		setBorder(BorderFactory.createEtchedBorder());
 		FormLayout layout = new FormLayout("default:grow",
-				"fill:default, min, fill:default, min, fill:default, min:grow, fill:default");
+				"fill:default, min, fill:default, min, fill:default, min, fill:default, min:grow, fill:default");
 		JPanel pnl = new JPanel(layout) {
 			private static final long serialVersionUID = 1L;
 
@@ -220,9 +221,10 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 
 		CellConstraints cc = new CellConstraints();
 		pnl.add(btnAllGames, cc.xy(1, 1));
-		pnl.add(btnFavorites, cc.xy(1, 3));
-		pnl.add(btnRecentlyPlayed, cc.xy(1, 5));
-		pnl.add(btnRecycleBin, cc.xy(1, 7));
+		pnl.add(btnGameFilterGroups, cc.xy(1, 3));
+		pnl.add(btnFavorites, cc.xy(1, 5));
+		pnl.add(btnRecentlyPlayed, cc.xy(1, 7));
+		pnl.add(btnRecycleBin, cc.xy(1, 9));
 
 		pnlPlatforms = new JPanel();
 		FormLayout layout2 = new FormLayout("default:grow", "");
@@ -241,6 +243,7 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 	private void setIcons() {
 		int size = ScreenSizeUtil.adjustValueToResolution(32);
 		btnAllGames.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("allGames"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		btnGameFilterGroups.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("bookmark"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		btnFavorites.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("favorites"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		btnRecentlyPlayed.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("recentlyPlayed"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		btnRecycleBin.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("trash"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
@@ -553,11 +556,11 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 	}
 
 	public int getMinimumButtonWidth() {
-		return btnAllGames.getIcon().getIconWidth();
+		return btnGameFilterGroups.getIcon().getIconWidth();
 	}
 
 	public int getButtonWidth() {
-		int width = btnAllGames.getWidth();
+		int width = btnGameFilterGroups.getWidth();
 		return width;
 	}
 
