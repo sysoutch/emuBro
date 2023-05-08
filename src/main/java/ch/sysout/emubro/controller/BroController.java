@@ -423,11 +423,14 @@ GameSelectionListener, BrowseComputerListener {
 		explorer.setSearchProcessComplete(explorerDAO.isSearchProcessComplete());
 		platformComparator = new PlatformComparator(explorer);
 		initSpark();
-		try {
-			initControllers();
-		} catch (XInputNotLoadedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		boolean shouldUseController = false;
+		if (shouldUseController) {
+			try {
+				initControllers();
+			} catch (XInputNotLoadedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		// pnlMain.initializeViewPanel();
 		// pnlMain.retrieveNewestAppVersion();

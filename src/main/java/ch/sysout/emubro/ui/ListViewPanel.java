@@ -7,6 +7,7 @@ import java.awt.Cursor;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.KeyboardFocusManager;
 import java.awt.Point;
 import java.awt.Rectangle;
@@ -2181,13 +2182,14 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		if (addBehindBackgroundImage) {
 			addTransparencyPaneIfEnabled(g2d, currentBackground, panelWidth, panelHeight);
 		}
-		BufferedImage background = currentBackground.getImage();
+		Image background = currentBackground.getImage();
+
 		if (background != null) {
 			g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
 			g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 			g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-			int imgWidth = background.getWidth();
-			int imgHeight = background.getHeight();
+			int imgWidth = background.getWidth(null);
+			int imgHeight = background.getHeight(null);
 			int x = 0;
 			int y = 0;
 			boolean shouldScale = currentBackground.isImageScaleEnabled();
@@ -2251,7 +2253,7 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 				//					g2d.fillRect(x, y, imgWidth, imgHeight);
 				//				}
 			}
-			addTransparencyOverlayImage(g2d, true, panelWidth, panelHeight, currentTheme, background.getWidth(), x, y);
+			addTransparencyOverlayImage(g2d, true, panelWidth, panelHeight, currentTheme, background.getWidth(null), x, y);
 		} else {
 			addTransparencyOverlayImage(g2d, false, panelWidth, panelHeight, currentTheme, 1, 0, 0);
 		}

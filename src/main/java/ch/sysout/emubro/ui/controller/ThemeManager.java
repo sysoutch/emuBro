@@ -55,15 +55,18 @@ public class ThemeManager implements ThemeListener {
 				String hexBaseColor = "#"+Integer.toHexString(baseColor.getRGB()).substring(2);
 				String hexAccentColor = "#"+Integer.toHexString(accentColor.getRGB()).substring(2);
 				//				defaultsMap.put("@foreground", hexBaseColor);
-				customizeTheme(baseColor, hexAccentColor, hexAccentColor, true, true);
+				customizeTheme(baseColor, hexBaseColor, hexAccentColor, true, true);
 			}
 
 			private void customizeTheme(Color baseColor, String hexBaseColor, String hexAccentColor, boolean autoSwitchDarkLightTheme, boolean updateTheme) {
+				System.out.println("base color: " + hexBaseColor);
+				System.out.println("accent color: " + hexAccentColor);
 				defaultsMap.put("@background", hexBaseColor);
 				defaultsMap.put("@selectionBackground", hexAccentColor);
 				defaultsMap.put("@selectionInactiveBackground", hexAccentColor);
 				defaultsMap.put("ComboBox.background", hexAccentColor);
-				defaultsMap.put("TextField.background", hexAccentColor);
+				defaultsMap.put("JTextField.background", hexAccentColor);
+				defaultsMap.put("JTextArea.background", hexAccentColor);
 
 				defaultsMap.put("TabbedPane.underlineColor", hexAccentColor);
 				defaultsMap.put("TabbedPane.inactiveUnderlineColor", hexAccentColor);

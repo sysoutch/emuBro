@@ -88,6 +88,11 @@ public class ImageUtil {
 		return (absolutePath) ? ImageIO.read(new File(filepath)) : ImageIO.read(url);
 	}
 
+	public static Image getImageFrom(String filepath) throws Exception {
+		URL url = ImageUtil.class.getResource(filepath);
+		return new ImageIcon(url).getImage();
+	}
+
 	/**
 	 * @param coverPath
 	 * @param coverSize

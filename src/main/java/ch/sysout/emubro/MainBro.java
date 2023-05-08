@@ -28,6 +28,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -46,7 +47,11 @@ import org.yaml.snakeyaml.Yaml;
 
 import com.formdev.flatlaf.FlatDarkLaf;
 import com.formdev.flatlaf.FlatLaf;
+import com.formdev.flatlaf.FlatLightLaf;
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 
 import ch.sysout.emubro.api.dao.ExplorerDAO;
@@ -101,10 +106,10 @@ public class MainBro {
 	private static final String currentApplicationVersion = "0.8.0";
 
 	public static void main(String[] args) {
-		System.out.println("epic games:");
-		getEpicGames();
-		System.out.println("steam games:");
-		getSteamGames();
+		//		System.out.println("epic games:");
+		//		getEpicGames();
+		//		System.out.println("steam games:");
+		//		getSteamGames();
 
 		Logger logger = Logger.getLogger(MainBro.class.getName());
 
@@ -113,7 +118,59 @@ public class MainBro {
 		System.setProperty("apple.laf.useScreenMenuBar", "true");
 		System.setProperty("flatlaf.menuBarEmbedded", "true");
 		if (loadAppDataFromLastSession()) {
-			applyAppDataFromLastSession();
+			boolean useCustomTheme = false;
+			boolean applyLastLookAndFeel = !useCustomTheme;
+			applyAppDataFromLastSession(applyLastLookAndFeel);
+			if (useCustomTheme) {
+				String hexBaseColor = "#401317";
+				String hexAccentColor = "#5b1b20";
+				Map<String, String> defaultsMap = new HashMap<>();
+				defaultsMap.put("@background", hexBaseColor);
+				defaultsMap.put("@selectionBackground", hexAccentColor);
+				defaultsMap.put("@selectionInactiveBackground", hexAccentColor);
+				//		defaultsMap.put("ProgressBar.background", hexAccentColor);
+				defaultsMap.put("ProgressBar.foreground", hexAccentColor);
+				//		defaultsMap.put("ProgressBar.selectionBackground", Color.RED);
+				//		defaultsMap.put("ProgressBar.selectionForeground", hexAccentColor);
+				defaultsMap.put("ComboBox.background", hexAccentColor);
+				defaultsMap.put("TextField.background", hexAccentColor);
+				defaultsMap.put("TextArea.background", hexAccentColor);
+
+				defaultsMap.put("TabbedPane.underlineColor", hexAccentColor);
+				defaultsMap.put("TabbedPane.inactiveUnderlineColor", hexAccentColor);
+				//				defaultsMap.put("TabbedPane.disabledUnderlineColor", hexAccentColor);
+
+				//				defaultsMap.put("TabbedPane.background", hexAccentColor);
+
+				//				defaultsMap.put("TabbedPane.buttonHoverBackground", hexAccentColor);
+				//				defaultsMap.put("TabbedPane.buttonPressedBackground", hexAccentColor);
+
+				//				defaultsMap.put("TabbedPane.closeHoverBackground", hexAccentColor);
+				//				defaultsMap.put("TabbedPane.closePressedBackground", hexAccentColor);
+
+				//				UIManager.put("List.selectionInactiveBackground", UIManager.getColor("List.selectionBackground"));
+				//				UIManager.put("List.selectionInactiveForeground", UIManager.getColor("List.selectionForeground"));
+				defaultsMap.put("TabbedPane.contentAreaColor", hexAccentColor);
+				defaultsMap.put("ComboBox.selectionBackground", hexBaseColor);
+				//				defaultsMap.put("Menu.background", hexBaseColor);
+				//				defaultsMap.put("Menu.selectionBackground", hexAccentColor);
+				//				defaultsMap.put("MenuItem.background", hexBaseColor);
+				//				defaultsMap.put("MenuItem.selectionBackground", hexAccentColor);
+
+
+				//				defaultsMap.put("TabbedPane.focusColor", hexAccentColor);
+				//				defaultsMap.put("TabbedPane.hoverColor", hexAccentColor);
+
+				FlatLaf laf = null;
+				boolean useDark = true;
+				if (useDark) {
+					laf = new FlatDarkLaf();
+				} else {
+					laf = new FlatLightLaf();
+				}
+				laf.setExtraDefaults(defaultsMap);
+				FlatLaf.setup(laf);
+			}
 		} else {
 			setDefaultLookAndFeel();
 		}
@@ -159,8 +216,7 @@ public class MainBro {
 		}
 	}
 
-	private static void getSteamGames() {
-		// Identify the installation directory of the Epic Games Launcher
+	private void getInstalledSteamGamesWithoutAPI() {
 		String gamesLauncherDir = "C:\\Program Files (x86)\\Steam\\steamapps\\common";
 
 		// Check the contents of the Epic Games installation directory to identify the installed games
@@ -177,6 +233,54 @@ public class MainBro {
 				if (gameFileName.toLowerCase().endsWith(".exe")) {
 					System.out.println(gameFolderName);
 				}
+			}
+		}
+	}
+
+	private static void getSteamGames() {
+		//		A312BB59DA2184205A316D1499133053
+		String steamId = "76561198112456996";
+		String apiKey = "A312BB59DA2184205A316D1499133053";
+
+		String url = "http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key="
+				+ apiKey + "&steamid=" + steamId + "&format=json&include_appinfo=1&include_played_free_games=1";
+
+		InputStreamReader reader = null;
+		try {
+			reader = new InputStreamReader(new URL(url).openStream());
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		if (reader != null) {
+			JsonObject jsonObject = new Gson().fromJson(reader, JsonObject.class);
+			JsonArray games = jsonObject.getAsJsonObject("response").getAsJsonArray("games");
+
+			List<String> notInstalledGames = new ArrayList<>();
+			List<String> installedGames = new ArrayList<>();
+			for (JsonElement gameElement : games) {
+				JsonObject game = gameElement.getAsJsonObject();
+				String name = game.get("name").getAsString();
+				boolean installed = game.get("playtime_forever").getAsInt() > 0;
+				if (!installed) {
+					notInstalledGames.add(name);
+				} else {
+					installedGames.add(name);
+				}
+			}
+
+			System.out.println("Not installed games:");
+			for (String game : notInstalledGames) {
+				System.out.println(game);
+			}System.out.println(" installed games:");
+			for (String game : installedGames) {
+				System.out.println(game);
+			}
+
+			try {
+				reader.close();
+			} catch (IOException e) {
+				e.printStackTrace();
 			}
 		}
 	}
@@ -229,7 +333,7 @@ public class MainBro {
 		return false;
 	}
 
-	private static void applyAppDataFromLastSession() {
+	private static void applyAppDataFromLastSession(boolean applyLastLookAndFeel) {
 		if (properties != null && properties.size() > 0) {
 			currentLnF = properties.getProperty(BroController.propertyKeys[9]);
 			lastDarkLnF = properties.getProperty(BroController.propertyKeys[35]);
@@ -238,13 +342,15 @@ public class MainBro {
 			if (language != null && !language.trim().isEmpty()) {
 				setLanguage(language);
 			}
-			if (currentLnF != null && !currentLnF.trim().isEmpty()) {
-				boolean useThemeBasedOnTimeOfDay = false;
-				if (useThemeBasedOnTimeOfDay) {
-					boolean shouldUseLightMode = shouldUseLightMode();
-					setLookAndFeel(shouldUseLightMode ? lastLightLnF : lastDarkLnF);
-				} else {
-					setLookAndFeel(currentLnF);
+			if (applyLastLookAndFeel) {
+				if (currentLnF != null && !currentLnF.trim().isEmpty()) {
+					boolean useThemeBasedOnTimeOfDay = false;
+					if (useThemeBasedOnTimeOfDay) {
+						boolean shouldUseLightMode = shouldUseLightMode();
+						setLookAndFeel(shouldUseLightMode ? lastLightLnF : lastDarkLnF);
+					} else {
+						setLookAndFeel(currentLnF);
+					}
 				}
 			}
 		}

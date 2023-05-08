@@ -8,6 +8,7 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -21,7 +22,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
 import java.awt.font.TextAttribute;
-import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -296,7 +296,7 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 				int h = getHeight();
 				//g2d.setColor(IconStore.current().getCurrentTheme().getGameFilterPane().getColor());
 				//g2d.fillRect(0, 0, w, h);
-				BufferedImage background = IconStore.current().getCurrentTheme().getGameFilterPane().getImage();
+				Image background = IconStore.current().getCurrentTheme().getGameFilterPane().getImage();
 				if (background != null) {
 					g2d.drawImage(background, 0, 0, w, h, this);
 				}
@@ -953,7 +953,7 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 		int h = getHeight();
 		//g2d.setColor(IconStore.current().getCurrentTheme().getGameFilterPane().getColor());
 		//g2d.fillRect(0, 0, w, h);
-		BufferedImage background = IconStore.current().getCurrentTheme().getGameFilterPane().getImage();
+		Image background = IconStore.current().getCurrentTheme().getGameFilterPane().getImage();
 		if (background != null) {
 			g2d.drawImage(background, 0, 0, w, h, this);
 		}

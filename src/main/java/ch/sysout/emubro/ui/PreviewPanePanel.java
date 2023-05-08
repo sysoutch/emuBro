@@ -452,13 +452,13 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		}
 		//g2d.fillRect(0, 0, panelWidth, panelHeight);
 
-		BufferedImage background = currentBackground.getImage();
+		Image background = currentBackground.getImage();
 		if (background != null) {
 			g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
 			g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 			g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-			int imgWidth = background.getWidth();
-			int imgHeight = background.getHeight();
+			int imgWidth = background.getWidth(null);
+			int imgHeight = background.getHeight(null);
 			int x = 0;
 			int y = 0;
 			boolean shouldScale = currentBackground.isImageScaleEnabled();
@@ -529,7 +529,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 				int width = imgTransparentOverlay.getWidth();
 				int height = imgTransparentOverlay.getHeight();
 
-				double factor = background.getWidth() / panelWidth;
+				double factor = background.getWidth(null) / panelWidth;
 				if (factor != 0) {
 					int scaledWidth = (int) (width/factor);
 					int scaledHeight = (int) (height/factor);
@@ -754,8 +754,10 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 
 			JPanel pnlCommentWrapper = new JPanel(new BorderLayout());
 			JExtendedTextArea txt = new JExtendedTextArea();
+			txt.setLineWrap(true);
+			txt.setWrapStyleWord(true);
+			txt.setRows(5);
 			//			txt.putClientProperty("FlatLaf.style", "showClearButton: true");
-			txt.putClientProperty("TextArea.placeholderText","Note to self");
 			FlatSVGIcon icoRename = ImageUtil.getFlatSVGIconFrom(Icons.get("rename"), 12, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR));
 			//			txt.putClientProperty("JTextArea.leadingIcon", icoRename);
 
@@ -902,12 +904,12 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 					&& currentGames.get(0) == game) {
 				//				pnlSelection.setGameTitle(game.getName(), null);
 				if (image == null) {
-					pnlSelection.pnlAutoScaleImage.setGameCover(null);
+					pnlSelection.pnlAutoScaleImage.setImage(null);
 				} else {
-					pnlSelection.pnlAutoScaleImage.setGameCover(image);
+					pnlSelection.pnlAutoScaleImage.setImage(image);
 				}
 			} else {
-				pnlSelection.pnlAutoScaleImage.setGameCover(null);
+				pnlSelection.pnlAutoScaleImage.setImage(null);
 			}
 		}
 

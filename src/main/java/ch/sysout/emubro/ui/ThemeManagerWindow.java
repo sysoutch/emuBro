@@ -17,8 +17,8 @@ import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JPanel;
 import javax.swing.JSlider;
-import javax.swing.UIManager;
 import javax.swing.WindowConstants;
+import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import com.bric.colorpicker.ColorPicker;
@@ -55,8 +55,9 @@ public class ThemeManagerWindow extends JDialog {
 	private List<ThemeListener> themeListeners = new ArrayList<>();
 
 	private ColorPicker colorPicker;
+	private ColorPickerPanel pnlColorPicker;
 
-	private ColorPickerPanel pnlColorPicker;;
+	private JSlider sliderBrigthness = new JSlider();
 
 	public ThemeManagerWindow() {
 		setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
@@ -104,7 +105,28 @@ public class ThemeManagerWindow extends JDialog {
 		expertControls.setVisible(true);
 		add(expertControls, BorderLayout.WEST);
 		//		add(pnlLayers, BorderLayout.EAST);
-		add(btn, BorderLayout.SOUTH);
+		//		add(btn, BorderLayout.SOUTH);
+		add(sliderBrigthness, BorderLayout.SOUTH);
+		sliderBrigthness.setMinimum(0);
+		sliderBrigthness.setMaximum(100);
+		sliderBrigthness.addChangeListener(new ChangeListener() {
+
+			@Override
+			public void stateChanged(ChangeEvent e) {
+				int value = sliderBrigthness.getValue();
+				if (value < 0) {
+					value = 0;
+				}
+				if (value > 100) {
+					value = 100;
+				}
+				System.out.println("brightness value " + value);
+				float h = pnlColorPicker.getHSB()[0];
+				float s = pnlColorPicker.getHSB()[1];
+				float b = pnlColorPicker.getHSB()[2];
+				pnlColorPicker.setHSB(h, s, value/100f);
+			}
+		});
 		pack();
 	}
 

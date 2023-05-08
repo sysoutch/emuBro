@@ -25,7 +25,6 @@ import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowFocusListener;
-import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.FileWriter;
@@ -104,6 +103,7 @@ import ch.sysout.emubro.api.model.Tag;
 import ch.sysout.emubro.controller.DirectorySearchedListener;
 import ch.sysout.emubro.controller.ECMConverter;
 import ch.sysout.emubro.controller.GameSelectionListener;
+import ch.sysout.emubro.controller.MCRReader;
 import ch.sysout.emubro.controller.ViewConstants;
 import ch.sysout.emubro.impl.event.BroFilterEvent;
 import ch.sysout.emubro.impl.event.NavigationEvent;
@@ -141,6 +141,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 	private JMenu mnuChangeBackgrounds;
 	private JMenuItem itmThemeManager;
 	private JMenuItem itmCoverDownloader;
+	private JMenuItem itmMemoryCardManager;
 	private JMenuItem itmCueCreator;
 	private JMenuItem itmECMConverter;
 	// private JMenu mnuPlugins;
@@ -196,6 +197,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 	private JMenuItem itmGameCoversTransparency;
 	private JCheckBoxMenuItem itmHideExtensions;
 	private JCheckBoxMenuItem itmShowGameNames;
+	private JMenu mnuGameNamePosition;
 	private JCheckBoxMenuItem itmShowToolTipTexts;
 	private JCheckBoxMenuItem itmTouchScreenOptimizedScroll;
 	private JRadioButtonMenuItem itmLanguageDe;
@@ -454,6 +456,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		mnuChangeBackgrounds = new JMenu();
 		itmThemeManager = new JMenuItem(Messages.get(MessageConstants.THEME_MANAGER));
 		itmCoverDownloader = new JMenuItem("Cover Downloader");
+		itmMemoryCardManager = new JMenuItem("Memory Card Manager");
 		itmCueCreator = new JMenuItem("CUE Maker");
 		itmCueCreator.addActionListener(new ActionListener() {
 
@@ -479,7 +482,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 			public void actionPerformed(ActionEvent e) {
 				String path = explorer.getFiles(explorer.getCurrentGames().get(0)).get(0);
 				if (!path.toLowerCase().endsWith(".ecm")) {
-					UIUtil.showErrorMessage(MainFrame.this, "this file doesn't appear to be a .cue file", "no .cue file");
+					UIUtil.showErrorMessage(MainFrame.this, "this file doesn't appear to be an .ecm file", "no .ecm file");
 					return;
 				}
 				ECMConverter ecmConverter = new ECMConverter(path);
@@ -565,6 +568,8 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		itmGameCoversTransparency.add(sliderGameCoversTransparency);
 		itmGameCoversTransparency.setEnabled(false);
 		itmShowGameNames = new JCheckBoxMenuItem();
+		mnuGameNamePosition = new JMenu();
+		addComponentsToJComponent(mnuGameNamePosition, new JMenuItem("Bottom"), new JMenuItem("Middle"), new JMenuItem("Top"), new JMenuItem("Left"), new JMenuItem("Right"));
 		itmShowToolTipTexts = new JCheckBoxMenuItem();
 		itmRefresh = new JMenuItem();
 		itmFullScreen = new JCheckBoxMenuItem();
@@ -666,6 +671,16 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 					coverDownloader.initPlatforms(explorer.getPlatforms());
 				}
 				coverDownloader.setWindowVisible(true);
+			}
+		});
+
+		itmMemoryCardManager.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				MemCardBro memCardBro = new MemCardBro();
+				String mcrFile = "C:\\emus\\ePSXe205\\memcards\\epsxe000.mcr";
+				MCRReader.readGames(mcrFile);
 			}
 		});
 		// UIUtil.setForegroundDependOnBackground(colorMenuBar,
@@ -1576,7 +1591,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 					Graphics2D g2d = (Graphics2D) g.create();
 					// g2d.setColor(color);
 					// g2d.fillRect(0, 0, panelWidth, panelHeight);
-					BufferedImage background = IconStore.current().getCurrentTheme().getStatusBar().getImage();
+					Image background = IconStore.current().getCurrentTheme().getStatusBar().getImage();
 					if (background != null) {
 						g2d.drawImage(background, 0, 0, panelWidth, panelHeight, this);
 					}
@@ -1627,7 +1642,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 				itmContentView, itmSliderView, itmCoverView, new JSeparator(), mnuSetCoverSize, new JSeparator(),
 				mnuSort, mnuGroup, new JSeparator(), itmRefresh, new JSeparator(), itmSetFilter, /* itmChooseDetails, */
 				/* new JSeparator(), */mnuChangeTo, new JSeparator(), itmSetColumnWidth, itmSetRowHeight,
-				new JSeparator(), itmShowPlatformIconsInView, itmTransparentGameCovers, itmGameCoversTransparency, itmShowGameNames, itmShowToolTipTexts,
+				new JSeparator(), itmShowPlatformIconsInView, itmTransparentGameCovers, itmGameCoversTransparency, itmShowGameNames, mnuGameNamePosition, itmShowToolTipTexts,
 				itmTouchScreenOptimizedScroll, new JSeparator(), itmFullScreen);
 
 		addComponentsToJComponent(mnuManageTags, itmAutoSearchTags, itmManuallyAddTag);
@@ -1667,7 +1682,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		addComponentsToJComponent(mnuThemes, itmThemeManager, new JSeparator(), mnuChangeBackgrounds, new JSeparator(), mnuDarkLaFs,
 				mnuLightLaFs, new JSeparator(), itmAutoSwitchTheme);
 
-		addComponentsToJComponent(mnuTools, itmCoverDownloader, itmCueCreator, itmECMConverter, new JMenuItem("Game Renamer"));
+		addComponentsToJComponent(mnuTools, itmCoverDownloader, itmMemoryCardManager, itmCueCreator, itmECMConverter, new JMenuItem("Game Renamer"));
 
 		Locale locale = Locale.getDefault();
 		String userLanguage = locale.getLanguage();
@@ -2730,6 +2745,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		itmTransparentGameCovers.setToolTipText(Messages.get(MessageConstants.TRANSPARENT_GAME_COVERS));
 		itmShowGameNames.setText(Messages.get(MessageConstants.SHOW_GAME_NAMES));
 		itmShowGameNames.setToolTipText(Messages.get(MessageConstants.SHOW_GAME_NAMES_TOOL_TIP));
+		mnuGameNamePosition.setText("Game name Position");
 		itmTouchScreenOptimizedScroll.setText(Messages.get(MessageConstants.TOUCH_SCREEN_SCROLL));
 		itmTouchScreenOptimizedScroll.setToolTipText(Messages.get(MessageConstants.TOUCH_SCREEN_SCROLL_TOOL_TIP));
 		itmShowToolTipTexts.setText(Messages.get(MessageConstants.SHOW_TOOL_TIP_TEXTS));

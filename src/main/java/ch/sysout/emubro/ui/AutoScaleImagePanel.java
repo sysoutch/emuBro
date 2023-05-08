@@ -44,7 +44,7 @@ public class AutoScaleImagePanel extends JPanel {
 		}
 	}
 
-	public void setGameCover(Image icon) {
+	public void setImage(Image icon) {
 		bi = icon;
 		if (bi != null) {
 			bi.flush();

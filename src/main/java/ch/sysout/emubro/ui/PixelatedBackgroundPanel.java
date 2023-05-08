@@ -8,6 +8,8 @@ import java.util.Random;
 
 import javax.swing.JPanel;
 
+import ch.sysout.ui.util.ColorLerper;
+
 public class PixelatedBackgroundPanel extends JPanel {
 	private static final long serialVersionUID = 1L;
 
@@ -30,8 +32,18 @@ public class PixelatedBackgroundPanel extends JPanel {
 
 	private Image img;
 
+	ColorLerper lerper;
+
 	public PixelatedBackgroundPanel() {
 		super();
+		//		Timer timer = new Timer(2000, new ActionListener() {
+		//
+		//			@Override
+		//			public void actionPerformed(ActionEvent e) {
+		//				repaint();
+		//			}
+		//		});
+		//		timer.start();
 	}
 
 	public PixelatedBackgroundPanel(LayoutManager layout) {
@@ -41,6 +53,7 @@ public class PixelatedBackgroundPanel extends JPanel {
 	@Override
 	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
+		System.out.println("painting...");
 		//        g.setColor(Color.BLACK);
 		//        g.fillOval(x, y, 50, 50);
 		//
@@ -64,6 +77,14 @@ public class PixelatedBackgroundPanel extends JPanel {
 						color = brighter ? color.brighter() : color.darker();
 					}
 				}
+				//				if (lerper == null) {
+				//					lerper = new ColorLerper(color, color.darker().darker().darker(), 5000);
+				//				}
+				//				boolean useLerpColor = x == 0 && y == 0;
+				//				Color colorToUse = color;
+				//				if (useLerpColor) {
+				//					colorToUse = lerper.getCurrentColor();
+				//				}
 				g.setColor(color);
 				g.fillRect(pixelSizeW * x, pixelSizeH * y, pixelSizeW, pixelSizeH);
 			}

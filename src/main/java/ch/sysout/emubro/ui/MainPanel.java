@@ -22,7 +22,6 @@ import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.awt.font.FontRenderContext;
 import java.awt.geom.AffineTransform;
-import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
@@ -196,7 +195,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				int h = getHeight();
 				//g2d.setColor(IconStore.current().getCurrentTheme().getGameFilterPane().getColor());
 				//g2d.fillRect(0, 0, w, h);
-				BufferedImage background = IconStore.current().getCurrentTheme().getGameFilterPane().getImage();
+				Image background = IconStore.current().getCurrentTheme().getGameFilterPane().getImage();
 				if (background != null) {
 					g2d.drawImage(background, 0, 0, w, h, this);
 				}
@@ -1909,13 +1908,13 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 	@Override
 	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
-		BufferedImage background = IconStore.current().getCurrentTheme().getView().getImage();
+		Image background = IconStore.current().getCurrentTheme().getView().getImage();
 		if (background != null) {
 			Graphics2D g2d = (Graphics2D) g.create();
 			int panelWidth = getWidth();
 			int panelHeight = getHeight();
-			int imgWidth = background.getWidth();
-			int imgHeight = background.getHeight();
+			int imgWidth = background.getWidth(null);
+			int imgHeight = background.getHeight(null);
 			boolean shouldScale = false;
 			if (shouldScale) {
 				g2d.drawImage(background, 0, 0, panelWidth, panelHeight, this);

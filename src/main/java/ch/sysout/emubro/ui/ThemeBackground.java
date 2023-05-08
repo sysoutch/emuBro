@@ -2,13 +2,14 @@ package ch.sysout.emubro.ui;
 
 import java.awt.Color;
 import java.awt.GradientPaint;
+import java.awt.Image;
 import java.awt.Point;
-import java.awt.image.BufferedImage;
 
 public class ThemeBackground {
 	private boolean autoPickColorFromImageEnabled;
 
-	private BufferedImage image;
+	private Image image;
+	private Image animatedGif;
 
 	private boolean verticalCenterImageEnabled = true;
 	private boolean horizontalCenterImageEnabled = false;
@@ -29,11 +30,11 @@ public class ThemeBackground {
 
 	private boolean transparentSelection;
 
-	public ThemeBackground(BufferedImage image, Color color) {
+	public ThemeBackground(Image image, Color color) {
 		this(image, color, false, 0, 0);
 	}
 
-	public ThemeBackground(BufferedImage image, Color color, boolean autoPickColorFromImageEnabled, int x, int y) {
+	public ThemeBackground(Image image, Color color, boolean autoPickColorFromImageEnabled, int x, int y) {
 		this.image = image;
 		this.color = color;
 		this.autoPickColorFromImageEnabled = autoPickColorFromImageEnabled;
@@ -44,11 +45,11 @@ public class ThemeBackground {
 		this.gradientPaint = gradientPaint;
 	}
 
-	public BufferedImage getImage() {
+	public Image getImage() {
 		return image;
 	}
 
-	public void setImage(BufferedImage image) {
+	public void setImage(Image image) {
 		this.image = image;
 	}
 
@@ -62,7 +63,7 @@ public class ThemeBackground {
 				pickColorFromPoint = new Point(0, 0);
 			}
 			if (colorFromImage == null) {
-				colorFromImage = new Color(image.getRGB(pickColorFromPoint.x, pickColorFromPoint.y));
+				//				colorFromImage = new Color(image.getRGB(pickColorFromPoint.x, pickColorFromPoint.y));
 			}
 			return colorFromImage;
 		}

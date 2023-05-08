@@ -5,6 +5,7 @@ import java.awt.Dimension;
 import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.Insets;
 import java.awt.Point;
 import java.awt.Rectangle;
@@ -50,8 +51,8 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 	public static final String MAXIMIZED = "maximized";
 
 	private JCustomToggleButton btnAllGames = new JCustomToggleButton(Messages.get(MessageConstants.ALL_GAMES));
-	private JCustomToggleButton btnGameFilterGroups = new JCustomToggleButton(Messages.get(MessageConstants.GAME_FILTER_GROUPS));
 	private JCustomToggleButton btnFavorites = new JCustomToggleButton(Messages.get(MessageConstants.FAVORITES));
+	private JCustomToggleButton btnGameFilterGroups = new JCustomToggleButton(Messages.get(MessageConstants.GAME_FILTER_GROUPS));
 	private JCustomToggleButton btnRecentlyPlayed = new JCustomToggleButton(Messages.get(MessageConstants.RECENTLY_PLAYED));
 	private JCustomToggleButton btnRecycleBin = new JCustomToggleButton(Messages.get(MessageConstants.RECYCLE_BIN));
 	private List<JToggleButton> platformButtons = new ArrayList<>();
@@ -125,13 +126,13 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 				}
 				//g2d.fillRect(0, 0, panelWidth, panelHeight);
 
-				BufferedImage background = currentBackground.getImage();
+				Image background = currentBackground.getImage();
 				if (background != null) {
 					g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
 					g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 					g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-					int imgWidth = background.getWidth();
-					int imgHeight = background.getHeight();
+					int imgWidth = background.getWidth(null);
+					int imgHeight = background.getHeight(null);
 					int x = 0;
 					int y = 0;
 					boolean shouldScale = currentBackground.isImageScaleEnabled();
@@ -202,7 +203,7 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 						int width = imgTransparentOverlay.getWidth();
 						int height = imgTransparentOverlay.getHeight();
 
-						double factor = background.getWidth() / panelWidth;
+						double factor = background.getWidth(null) / panelWidth;
 						if (factor != 0) {
 							int scaledWidth = (int) (width/factor);
 							int scaledHeight = (int) (height/factor);
@@ -221,8 +222,8 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 
 		CellConstraints cc = new CellConstraints();
 		pnl.add(btnAllGames, cc.xy(1, 1));
-		pnl.add(btnGameFilterGroups, cc.xy(1, 3));
-		pnl.add(btnFavorites, cc.xy(1, 5));
+		pnl.add(btnFavorites, cc.xy(1, 3));
+		pnl.add(btnGameFilterGroups, cc.xy(1, 5));
 		pnl.add(btnRecentlyPlayed, cc.xy(1, 7));
 		pnl.add(btnRecycleBin, cc.xy(1, 9));
 
@@ -243,8 +244,8 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 	private void setIcons() {
 		int size = ScreenSizeUtil.adjustValueToResolution(32);
 		btnAllGames.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("allGames"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		btnGameFilterGroups.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("bookmark"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		btnFavorites.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("favorites"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		btnGameFilterGroups.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("filterSquare"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		btnRecentlyPlayed.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("recentlyPlayed"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		btnRecycleBin.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("trash"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 	}

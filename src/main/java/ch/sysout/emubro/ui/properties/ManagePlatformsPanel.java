@@ -443,6 +443,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 		protected JPanel pnlSelectedEmulatorMinimized;
 		private Map<Integer, EmulatorTableModel> emulatorModels = new HashMap<>();
 		private JLinkButton lnkRunEmulator = new JLinkButton("Start emulator");
+		private JLinkButton lnkOpenFolder = new JLinkButton("Open Folder");
 		private JLinkButton lnkWebsite = new JLinkButton("Visit website");
 		public JScrollPane spConfigurationFile;
 		private JScrollPane spEmulators;
@@ -532,14 +533,16 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 			JPanel pnl = new JPanel();
 			pnl.setOpaque(false);
 			// pnl.setBorder(Paddings.TABBED_DIALOG);
-			FormLayout layout = new FormLayout("pref, $ugap, pref, min:grow, $rgap, pref",
+			FormLayout layout = new FormLayout("pref, $ugap, pref, $ugap, pref, min:grow, $rgap, pref",
 					"fill:pref, $rgap");
 			pnl.setLayout(layout);
 			CellConstraints cc = new CellConstraints();
 			//			pnl.add(lblSelectedEmulator, cc.xyw(1, 1, layout.getColumnCount() - 2));
 			//			lblSelectedEmulator.setMinimumSize(new Dimension(0, 0));
+
 			pnl.add(lnkRunEmulator, cc.xy(1, 1));
-			pnl.add(lnkWebsite, cc.xy(3, 1));
+			pnl.add(lnkOpenFolder, cc.xy(3, 1));
+			pnl.add(lnkWebsite, cc.xy(5, 1));
 			pnl.add(btnEmulatorProperties2, cc.xy(layout.getColumnCount(), 1));
 			return pnl;
 		}
