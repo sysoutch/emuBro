@@ -1,7 +1,6 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
@@ -14,7 +13,6 @@ import java.awt.event.WindowEvent;
 
 import javax.swing.BorderFactory;
 import javax.swing.JDialog;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.WindowConstants;
@@ -30,7 +28,6 @@ public class SplashScreenWindow extends JDialog {
 	private static final long serialVersionUID = 1L;
 
 	private JProgressBar prg = new JProgressBar();
-	private JLabel lbl = new JLabel();
 	private JCustomButtonNew btnCancel = new JCustomButtonNew();
 
 	protected int pressedX;
@@ -69,7 +66,6 @@ public class SplashScreenWindow extends JDialog {
 	private void initComponents() {
 		getRootPane().setBorder(BorderFactory.createEmptyBorder());
 		//		lbl.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("applicationBanner"), 200, 200, Color.LIGHT_GRAY));
-		lbl.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("allGames"), 200, 200, Color.BLUE));
 		//		prg.setOpaque(false);
 		prg.setStringPainted(true);
 		//		prg.setIndeterminate(true);

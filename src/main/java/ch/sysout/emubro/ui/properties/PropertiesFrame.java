@@ -15,7 +15,6 @@ import javax.swing.Action;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultListModel;
-import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFrame;
@@ -51,9 +50,13 @@ import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.controller.BroController.EmulatorListCellRenderer;
 import ch.sysout.emubro.controller.BroController.PlatformListCellRenderer;
 import ch.sysout.emubro.impl.model.BroEmulator;
+import ch.sysout.emubro.ui.ColorStore;
 import ch.sysout.emubro.ui.JCustomScrollPane;
 import ch.sysout.emubro.ui.WrapLayout;
+import ch.sysout.emubro.util.ColorConstants;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.ImageUtil;
+import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 
@@ -100,9 +103,9 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 
 	private List<Image> getIcons() {
 		List<Image> icons = new ArrayList<>();
-		String[] dimensions = { "48x48", "32x32", "24x24", "16x16" };
-		for (String d : dimensions) {
-			icons.add(new ImageIcon(getClass().getResource("/images/logo/" + d + "/logo.png")).getImage());
+		int[] dimensions = { 48, 32, 24, 16 };
+		for (int size : dimensions) {
+			icons.add(ImageUtil.getFlatSVGIconFrom(Icons.get("applicationIcon"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)).getImage());
 		}
 		return icons;
 	}

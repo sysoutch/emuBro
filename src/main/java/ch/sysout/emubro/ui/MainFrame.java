@@ -103,7 +103,6 @@ import ch.sysout.emubro.api.model.Tag;
 import ch.sysout.emubro.controller.DirectorySearchedListener;
 import ch.sysout.emubro.controller.ECMConverter;
 import ch.sysout.emubro.controller.GameSelectionListener;
-import ch.sysout.emubro.controller.MCRReader;
 import ch.sysout.emubro.controller.ViewConstants;
 import ch.sysout.emubro.impl.event.BroFilterEvent;
 import ch.sysout.emubro.impl.event.NavigationEvent;
@@ -180,6 +179,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 	private JMenuItem itmExportGameListToCsv;
 	private JMenuItem itmExportGameListToJson;
 	private JMenuItem itmExportGameListToXml;
+	private JMenuItem itmExportGameListToTsv;
 	private JMenuItem itmExportGameListOptions;
 	private JMenuItem itmExportApplicationData;
 	private JMenuItem itmSettings;
@@ -306,7 +306,6 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		this.defaultLookAndFeel = defaultLookAndFeel;
 		this.explorer = explorer;
 		setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
-		setIconImages(getIcons());
 		// setUndecorated(true);
 		initComponents();
 		createUI();
@@ -315,10 +314,11 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 
 	private List<Image> getIcons() {
 		List<Image> icons = new ArrayList<>();
-		String[] dimensions = { "48x48", "32x32", "24x24", "16x16" };
-		for (String d : dimensions) {
+		int[] dimensions = { 48, 32, 24, 16 };
+		for (int size : dimensions) {
 			try {
-				icons.add(new ImageIcon(getClass().getResource("/images/logo/" + d + "/logo.png")).getImage());
+				ImageIcon img = ImageUtil.getFlatSVGIconFrom(Icons.get("applicationIcon"), size, UIManager.getColor("Panel.background").brighter().brighter().brighter());
+				icons.add(img.getImage());
 			} catch (Exception e) {
 				// ignore
 			}
@@ -475,7 +475,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 				cueMaker.createCueFile(new File(path));
 			}
 		});
-		itmECMConverter = new JMenuItem("ECM Converter");
+		itmECMConverter = new JMenuItem("ECM2BIN Converter");
 		itmECMConverter.addActionListener(new ActionListener() {
 
 			@Override
@@ -519,6 +519,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		itmExportGameListToCsv = new JMenuItem();
 		itmExportGameListToJson = new JMenuItem();
 		itmExportGameListToXml = new JMenuItem();
+		itmExportGameListToTsv = new JMenuItem();
 		itmExportGameListOptions = new JMenuItem();
 		itmSetFilter = new JRadioButtonMenuItem();
 		itmChooseDetails = new JMenuItem();
@@ -679,8 +680,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				MemCardBro memCardBro = new MemCardBro();
-				String mcrFile = "C:\\emus\\ePSXe205\\memcards\\epsxe000.mcr";
-				MCRReader.readGames(mcrFile);
+				memCardBro.setLocationRelativeTo(MainFrame.this);
 			}
 		});
 		// UIUtil.setForegroundDependOnBackground(colorMenuBar,
@@ -925,6 +925,8 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 	}
 
 	private void setIcons() {
+		setIconImages(getIcons());
+
 		int size = ScreenSizeUtil.is3k() ? 24 : 16;
 		Color svgNoColor = ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR);
 		itmAddFiles.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("addFile"), size, svgNoColor));
@@ -1634,7 +1636,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 				itmAddFilesFromClipboard);
 
 		addComponentsToJComponent(mnuExportGameList, itmExportGameListToTxt, itmExportGameListToCsv,
-				itmExportGameListToJson, itmExportGameListToXml, new JSeparator(), itmExportGameListOptions);
+				itmExportGameListToJson, itmExportGameListToXml, itmExportGameListToTsv, new JSeparator(), itmExportGameListOptions);
 
 		addComponentsToJComponent(mnuSetCoverSize, sliderCoverSize);
 
@@ -1682,12 +1684,12 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		addComponentsToJComponent(mnuThemes, itmThemeManager, new JSeparator(), mnuChangeBackgrounds, new JSeparator(), mnuDarkLaFs,
 				mnuLightLaFs, new JSeparator(), itmAutoSwitchTheme);
 
-		addComponentsToJComponent(mnuTools, itmCoverDownloader, itmMemoryCardManager, itmCueCreator, itmECMConverter, new JMenuItem("Game Renamer"));
+		addComponentsToJComponent(mnuTools, itmCoverDownloader, itmCueCreator, itmECMConverter, new JMenuItem("Game Renamer"), itmMemoryCardManager);
 
 		Locale locale = Locale.getDefault();
 		String userLanguage = locale.getLanguage();
 		List<JMenuItem> languageItems = new ArrayList<JMenuItem>();
-		Collections.addAll(languageItems, itmLanguageEn, itmLanguageDe, itmLanguageFr, itmLanguagePr, itmLanguageEs, itmLanguageAfr);
+		Collections.addAll(languageItems, itmLanguageEn, itmLanguageDe, itmLanguageFr/*, itmLanguagePr, itmLanguageEs, itmLanguageAfr*/);
 		if (userLanguage.equals(Locale.ENGLISH.getLanguage())) {
 			addComponentsToJComponent(mnuLanguage, itmLanguageEn);
 			languageItems.remove(itmLanguageEn);
@@ -2725,6 +2727,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		itmExportGameListToTxt.setText(Messages.get(MessageConstants.EXPORT_TO_TXT));
 		itmExportGameListToCsv.setText(Messages.get(MessageConstants.EXPORT_TO_CSV));
 		itmExportGameListToJson.setText(Messages.get(MessageConstants.EXPORT_TO_JSON));
+		itmExportGameListToTsv.setText(Messages.get(MessageConstants.EXPORT_TO_TSV));
 		itmExportGameListToXml.setText(Messages.get(MessageConstants.EXPORT_TO_XML));
 		itmExportGameListOptions.setText(Messages.get(MessageConstants.EXPORT_SETTINGS));
 		itmSetFilter.setText(Messages.get(MessageConstants.SET_FILTER));
@@ -3190,11 +3193,11 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		mnb.setVisible(showPanels);
 		pnlButtonBar.setVisible(showPanels);
 		pnlGameFilter.setVisible(showPanels);
-
 	}
 
 	@Override
 	public void themeChanged(ThemeChangeEvent e) {
+		setIconImages(getIcons());
 		pnlMain.repaint();
 	}
 }

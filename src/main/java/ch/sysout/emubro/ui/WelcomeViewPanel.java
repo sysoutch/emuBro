@@ -147,8 +147,16 @@ public class WelcomeViewPanel extends ViewPanel {
 		pnlWrapper.setOpaque(false);
 		pnlWrapper.add(pnlAction);
 		pnlWrapper.add(pnlHelp, BorderLayout.SOUTH);
+		pnlWrapper.add(pnlView, BorderLayout.WEST);
 		pnl.add(pnlWrapper, BorderLayout.EAST);
-		pnl.add(pnlView);
+
+		JPanel pnlMain = new JPanel(new BorderLayout());
+		pnlMain.add(new JButton("DO THIS"));
+		pnlMain.add(new JButton("DO THIS"), BorderLayout.WEST);
+		pnlMain.add(new JButton("DO THIS"), BorderLayout.EAST);
+		pnlMain.add(new JButton("DO THIS"), BorderLayout.SOUTH);
+		pnlMain.add(new JButton("DO THIS"), BorderLayout.NORTH);
+		pnl.add(pnlMain);
 
 		JScrollPane sp = new JCustomScrollPane(pnl);
 		sp.setOpaque(false);
@@ -165,7 +173,7 @@ public class WelcomeViewPanel extends ViewPanel {
 		lnkBrowseComputer.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("search"), size, Color.LIGHT_GRAY));
 		lnkConfigure.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("settings"), size, Color.LIGHT_GRAY));
 		lnkAddFiles.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("addFile"), size, Color.LIGHT_GRAY));
-		lnkAddFolders.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("addFolder"), size, Color.ORANGE));
+		lnkAddFolders.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("addFolder"), size, Color.LIGHT_GRAY));
 
 		lnkListView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewList"), size, Color.LIGHT_GRAY));
 		lnkElementView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewList"), size, Color.LIGHT_GRAY));

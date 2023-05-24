@@ -43,8 +43,8 @@ public class AddEmulatorPanel extends JPanel {
 	private SupportedEmulatorsPanel pnlDownloadEmulators;
 	private ReadyToInstallEmulatorsPanel pnlReadyToInstallEmulators;
 
-	private AbstractButton btnDownloadEmulators = new JCustomButtonNew("<html><strong>Step 1:</strong> Download an emulator</html>", ImageUtil.getImageIconFrom(Icons.get("fromWeb", 32, 32)));
-	private AbstractButton btnReadyToInstallEmulators = new JCustomButtonNew("<html><strong>Step 2:</strong> Add your emulator</html>", ImageUtil.getImageIconFrom(Icons.get("fromComputer", 32, 32)));
+	private AbstractButton btnDownloadEmulators = new JButton("<html><strong>Step 1:</strong> Download an emulator</html>", ImageUtil.getImageIconFrom(Icons.get("fromWeb", 32, 32)));
+	private AbstractButton btnReadyToInstallEmulators = new JButton("<html><strong>Step 2:</strong> Add your emulator</html>", ImageUtil.getImageIconFrom(Icons.get("fromComputer", 32, 32)));
 
 	protected int minimumDividerLocation = -1;
 	protected int maximumDividerLocation = -1;
@@ -53,7 +53,7 @@ public class AddEmulatorPanel extends JPanel {
 		super(new BorderLayout(0, 10));
 		int size = ScreenSizeUtil.is3k() ? 24 : 16;
 		JPanel pnlTop = new JPanel(new BorderLayout());
-		btnBack = new JCustomButton("Back to overview", ImageUtil.getImageIconFrom(Icons.get("previous2", size, size)));
+		btnBack = new JButton("Back to overview", ImageUtil.getImageIconFrom(Icons.get("previous2", size, size)));
 		pnlTop.add(btnBack, BorderLayout.WEST);
 		add(pnlTop, BorderLayout.NORTH);
 		pnlDownloadEmulators = new SupportedEmulatorsPanel();
@@ -153,8 +153,8 @@ public class AddEmulatorPanel extends JPanel {
 
 		private void initComponents() {
 			lstSupportedEmulators.addListSelectionListener(this);
-			btnDownloadEmulator = new JCustomButton("Download emulator");
-			btnDownloadEmulatorAptGet = new JCustomButton("apt-get install");
+			btnDownloadEmulator = new JButton("Download emulator");
+			btnDownloadEmulatorAptGet = new JButton("apt-get install");
 			btnDownloadEmulator.setHorizontalAlignment(SwingConstants.LEFT);
 			btnDownloadEmulator.setEnabled(false);
 
@@ -252,11 +252,11 @@ public class AddEmulatorPanel extends JPanel {
 			int rowHeight = ScreenSizeUtil.adjustValueToResolution(32);
 			lstReadyToAddEmulators.setFixedCellHeight(rowHeight);
 			spReadyToAddEmulators = new JScrollPane(lstReadyToAddEmulators);
-			btnAddEmulator = new JCustomButton("Add emulator", ImageUtil.getImageIconFrom(Icons.get("add", 24, 24)));
+			btnAddEmulator = new JButton("Add emulator", ImageUtil.getImageIconFrom(Icons.get("add", 24, 24)));
 			lblSearchForEmulator = new JLabel("Scan folder for emulators:");
 			String userHome = System.getProperty("user.home");
 			txtSearchForEmulator = new JTextField(userHome + File.separator + "Downloads");
-			btnSearchForEmulator = new JCustomButton("Scan now");
+			btnSearchForEmulator = new JButton("Scan now");
 			btnSearchForEmulator.setHorizontalAlignment(SwingConstants.LEFT);
 			btnAddEmulator.setHorizontalAlignment(SwingConstants.RIGHT);
 			btnAddEmulator.setEnabled(false);

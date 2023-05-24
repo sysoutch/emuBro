@@ -32,6 +32,7 @@ import com.jgoodies.forms.factories.Paddings;
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 
+import ch.sysout.emubro.util.ColorConstants;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.ui.util.UIUtil;
@@ -42,7 +43,8 @@ import ch.sysout.util.ScreenSizeUtil;
 public class AboutDialog extends JDialog implements ActionListener {
 	private static final long serialVersionUID = 1L;
 
-	private AbstractButton lblIcon = new JButton(ImageUtil.getImageIconFrom(Icons.get("applicationIcon", 96, 96)));
+	private AbstractButton btnLogo = new JButton(ImageUtil.getFlatSVGIconFrom(Icons.get("applicationIcon"), 96, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+
 	private JTextPane lblHeader = new JTextPane();
 	private JTextPane txtDescription = new JTextPane();
 	private JTextPane lblCopyright = new JTextPane();
@@ -57,7 +59,7 @@ public class AboutDialog extends JDialog implements ActionListener {
 	private JButton btnGitHub = new JButton(ImageUtil.getFlatSVGIconFrom(Icons.get("github"), size, Color.LIGHT_GRAY));
 	private AbstractButton[] socialMediaButtons = new JButton[] { btnFacebook, btnTwitter, btnYoutube, btnDiscord, btnReddit, btnGitHub };
 
-	private JButton btnClose = new JCustomButton(Messages.get(MessageConstants.CLOSE));
+	private JButton btnClose = new JButton(Messages.get(MessageConstants.CLOSE));
 
 	private String applicationVersion;
 
@@ -69,7 +71,7 @@ public class AboutDialog extends JDialog implements ActionListener {
 		setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 		setModalityType(ModalityType.APPLICATION_MODAL);
 		setIconImages(getIcons());
-		// setResizable(false);
+		setResizable(false);
 		initComponents();
 		createUI();
 
@@ -86,7 +88,7 @@ public class AboutDialog extends JDialog implements ActionListener {
 				// + lblHeader.getHeight()
 				// + lblCopyright.getHeight()
 				+ btnFacebook.getHeight() * 2));
-		setMinimumSize(getSize());
+		//		setMinimumSize(getSize());
 		btnClose.requestFocusInWindow();
 	}
 
@@ -100,9 +102,9 @@ public class AboutDialog extends JDialog implements ActionListener {
 	}
 
 	private void initComponents() {
-		lblIcon.setFocusable(false);
-		lblIcon.setBorderPainted(false);
-		lblIcon.setContentAreaFilled(false);
+		btnLogo.setFocusable(false);
+		btnLogo.setBorderPainted(false);
+		btnLogo.setContentAreaFilled(false);
 		setActionCommands();
 		setOpaque(false, lblHeader, lblCopyright, txtDescription, lnkWebsite);
 		initTexts();
@@ -166,7 +168,7 @@ public class AboutDialog extends JDialog implements ActionListener {
 	}
 
 	private void setToolTipTexts() {
-		lblIcon.setToolTipText("Don't click this button! (Yes this is a button)");
+		btnLogo.setToolTipText("Don't click this button! (Yes this is a button)");
 		lnkWebsite.setToolTipText("Visit our fancy website, yayy!");
 		btnReddit.setToolTipText("Become a Subscribro on Reddit");
 		btnDiscord.setToolTipText("Chat with us in our Discord");
@@ -178,7 +180,7 @@ public class AboutDialog extends JDialog implements ActionListener {
 
 	private void addListeners() {
 		UIUtil.installEscapeCloseOperation(this);
-		addActionListeners(lblIcon, lnkWebsite, btnClose);
+		addActionListeners(btnLogo, lnkWebsite, btnClose);
 
 		ColorStore colorStore = ColorStore.current();
 		colorStore.setColor("facebook", new Color(66, 103, 178));
@@ -262,7 +264,7 @@ public class AboutDialog extends JDialog implements ActionListener {
 		pnl.setBorder(Paddings.DIALOG);
 		//		getRootPane().setBorder(Paddings.DIALOG);
 		CellConstraints cc = new CellConstraints();
-		pnl.add(lblIcon, cc.xyw(1, 1, layout.getColumnCount()));
+		pnl.add(btnLogo, cc.xyw(1, 1, layout.getColumnCount()));
 		pnl.add(lblHeader, cc.xyw(1, 3, layout.getColumnCount()));
 		pnl.add(txtDescription, cc.xyw(1, 5, layout.getColumnCount()));
 		pnl.add(lblCopyright, cc.xyw(1, 9, layout.getColumnCount()));
@@ -306,7 +308,7 @@ public class AboutDialog extends JDialog implements ActionListener {
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		Object source = e.getSource();
-		if (source == lblIcon) {
+		if (source == btnLogo) {
 			fancyClickCounter++;
 			if (fancyClickCounter == 1) {
 				UIUtil.showWarningMessage(this, "Yes this is a button."
