@@ -22,7 +22,6 @@ import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.awt.font.FontRenderContext;
 import java.awt.geom.AffineTransform;
-import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
@@ -36,7 +35,6 @@ import javax.swing.ImageIcon;
 import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
 import javax.swing.JScrollBar;
 import javax.swing.JSplitPane;
 import javax.swing.SwingUtilities;
@@ -70,7 +68,9 @@ import ch.sysout.emubro.controller.GameSelectionListener;
 import ch.sysout.emubro.impl.event.BroGameSelectionEvent;
 import ch.sysout.emubro.impl.event.NavigationEvent;
 import ch.sysout.emubro.impl.model.GameConstants;
+import ch.sysout.emubro.ui.listener.RateListener;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.ExtendedPopupMenu;
 import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Icons;
@@ -145,7 +145,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 
 	private GameFilterPanel pnlGameFilter;
 
-	private JPopupMenu popupNavigation;
+	private ExtendedPopupMenu popupNavigation;
 	private JPanel pnlNavigationPopup;
 
 	public MainPanel(Explorer explorer, ViewPanelManager viewManager, GameSettingsPopupMenu mnuGameSettings, GameFilterPanel pnlGameFilter) {
@@ -184,7 +184,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 		};
 
 		pnlNavigationPopup = new JPanel();
-		popupNavigation = new JPopupMenu() {
+		popupNavigation = new ExtendedPopupMenu() {
 			private static final long serialVersionUID = 1L;
 
 			@Override
@@ -195,7 +195,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				int h = getHeight();
 				//g2d.setColor(IconStore.current().getCurrentTheme().getGameFilterPane().getColor());
 				//g2d.fillRect(0, 0, w, h);
-				BufferedImage background = IconStore.current().getCurrentTheme().getGameFilterPane().getImage();
+				Image background = IconStore.current().getCurrentTheme().getGameFilterPane().getImage();
 				if (background != null) {
 					g2d.drawImage(background, 0, 0, w, h, this);
 				}
@@ -811,6 +811,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 
 		if (b) {
 			popupNavigation.setBorder(BorderFactory.createEmptyBorder());
+			popupNavigation.putClientProperty("Popup.dropShadowPainted", false);
 			popupNavigation.add(pnlNavigation);
 			int y = pnlGameFilter.isVisible() ? pnlGameFilter.getHeight() : 0;
 			popupNavigation.setPreferredSize(new Dimension(pnlNavigation.getButtonWidth(), splNavigationAndCurrentViewWithPreviewPane.getHeight() - y));
@@ -1080,7 +1081,6 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 	@Override
 	public void gameSelected(GameSelectionEvent e) {
 		List<Game> games = e.getGames();
-		boolean b = !games.isEmpty();
 		pnlPreviewPane.gameSelected(e);
 		pnlDetails.gameSelected(e);
 		//		popupGame.gameSelected(e);
@@ -1908,13 +1908,13 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 	@Override
 	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
-		BufferedImage background = IconStore.current().getCurrentTheme().getView().getImage();
+		Image background = IconStore.current().getCurrentTheme().getView().getImage();
 		if (background != null) {
 			Graphics2D g2d = (Graphics2D) g.create();
 			int panelWidth = getWidth();
 			int panelHeight = getHeight();
-			int imgWidth = background.getWidth();
-			int imgHeight = background.getHeight();
+			int imgWidth = background.getWidth(null);
+			int imgHeight = background.getHeight(null);
 			boolean shouldScale = false;
 			if (shouldScale) {
 				g2d.drawImage(background, 0, 0, panelWidth, panelHeight, this);
@@ -1927,6 +1927,9 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 
 	public void gameRenamed(GameRenamedEvent event) {
 		pnlPreviewPane.gameRenamed(event);
+	}
+
+	public void addShowPlatformIconsListener(ActionListener l) {
 	}
 
 	public void addShowGameNamesListener(ActionListener l) {

@@ -82,6 +82,7 @@ import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.api.model.Tag;
 import ch.sysout.emubro.controller.GameSelectionListener;
 import ch.sysout.emubro.impl.event.BroTagAddedEvent;
+import ch.sysout.emubro.ui.listener.RateListener;
 import ch.sysout.emubro.util.ColorConstants;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.FontUtil;
@@ -439,6 +440,9 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
 		Graphics2D g2d = (Graphics2D) g.create();
+		g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+		g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+		g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		int panelWidth = getWidth();
 		int panelHeight = getHeight();
 		Theme currentTheme = IconStore.current().getCurrentTheme();
@@ -451,13 +455,10 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		}
 		//g2d.fillRect(0, 0, panelWidth, panelHeight);
 
-		BufferedImage background = currentBackground.getImage();
+		Image background = currentBackground.getImage();
 		if (background != null) {
-			g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-			g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-			g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-			int imgWidth = background.getWidth();
-			int imgHeight = background.getHeight();
+			int imgWidth = background.getWidth(null);
+			int imgHeight = background.getHeight(null);
 			int x = 0;
 			int y = 0;
 			boolean shouldScale = currentBackground.isImageScaleEnabled();
@@ -528,7 +529,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 				int width = imgTransparentOverlay.getWidth();
 				int height = imgTransparentOverlay.getHeight();
 
-				double factor = background.getWidth() / panelWidth;
+				double factor = background.getWidth(null) / panelWidth;
 				if (factor != 0) {
 					int scaledWidth = (int) (width/factor);
 					int scaledHeight = (int) (height/factor);
@@ -610,8 +611,10 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 					}
 				}
 			}
-			g2d.dispose();
 		}
+//		g2d.setColor(Color.PINK);
+//		g2d.fillOval(50, 50, 20, 20);
+		g2d.dispose();
 	}
 
 	class SelectionPanel extends ScrollablePanel {
@@ -641,9 +644,9 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		private String description;
 		private List<ScrollToCurrentGamesListener> evs = new ArrayList<>();
 
-		private ImageIcon icoRunGame = ImageUtil.getFlatSVGIconFrom(Icons.get("runGame"), 24, new Color(40, 167, 69));
+		private ImageIcon icoRunGame = ImageUtil.getFlatSVGIconFrom(Icons.get("runGame"), 24, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR));
 		private ImageIcon icoMoreOptionsRunGame = ImageUtil.getImageIconFrom(Icons.get("arrowDownOtherWhite", 1));
-		private JButton btnRunGame = new JCustomButtonNew(Messages.get(MessageConstants.RUN_GAME));
+		private JButton btnRunGame = new JButton(Messages.get(MessageConstants.RUN_GAME));
 		private JButton lblMoreOptionsRunGame = new JCustomButtonNew("");
 
 		public SelectionPanel() {
@@ -670,6 +673,8 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		private void initComponents() {
 			initGameTitle();
 			initPlatformTitle();
+			
+			btnRunGame.setBackground(new Color(40, 167, 69));
 
 			addMouseListener(new MouseAdapter() {
 				@Override
@@ -752,11 +757,13 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			btnComment.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("checkMark"),  22, new Color(40, 167, 69)));
 
 			JPanel pnlCommentWrapper = new JPanel(new BorderLayout());
-			JExtendedTextField txt = new JExtendedTextField();
-			txt.putClientProperty("FlatLaf.style", "showClearButton: true");
-			txt.putClientProperty("JTextField.placeholderText","Note to self");
+			JExtendedTextArea txt = new JExtendedTextArea();
+			txt.setLineWrap(true);
+			txt.setWrapStyleWord(true);
+			txt.setRows(5);
+			//			txt.putClientProperty("FlatLaf.style", "showClearButton: true");
 			FlatSVGIcon icoRename = ImageUtil.getFlatSVGIconFrom(Icons.get("rename"), 12, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR));
-			txt.putClientProperty("JTextField.leadingIcon", icoRename);
+			//			txt.putClientProperty("JTextArea.leadingIcon", icoRename);
 
 			pnlCommentWrapper.add(txt);
 			pnlCommentWrapper.add(btnComment, BorderLayout.EAST);
@@ -769,25 +776,25 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			FormLayout layoutTop = new FormLayout("default:grow",
 					"default, $rgap, default, $ugap, default, $ugap, default");
 			JPanel pnl = new JPanel();
-			pnl.setLayout(new FormLayout("min, min:grow",
+			pnl.setLayout(new FormLayout("default:grow",
 					"fill:default, $lgap, fill:default, $rgap, default, $rgap, fill:default, $ugap, fill:default, $ugap, fill:default, $lgap, fill:default, $lgap, fill:default, $ugap, fill:default, $rgap, fill:default, $rgap, fill:default, $ugap, fill:default, $rgap, fill:default, $ugap, fill:default"));
-			pnl.add(lblGameTitle, CC.xyw(1, 1, 2));
-			pnl.add(lnkPlatformTitle, CC.xyw(1, 3, 2));
-			pnl.add(pnlAutoScaleImage, CC.xyw (1, 5, 2));
+			pnl.add(lblGameTitle, CC.xyw(1, 1, 1));
+			pnl.add(lnkPlatformTitle, CC.xyw(1, 3, 1));
+			pnl.add(pnlAutoScaleImage, CC.xyw (1, 5, 1));
 			JPanel pnlRunGameWrapper = new JPanel(new BorderLayout());
 			pnlRunGameWrapper.add(btnRunGame);
 			pnlRunGameWrapper.add(lblMoreOptionsRunGame, BorderLayout.EAST);
 			pnl.add(pnlRunGameWrapper, CC.xy(1, 7));
-			pnl.add(pnlGameData, CC.xyw(1, 9, 2));
-			pnl.add(pnlRatingBar, CC.xyw(1, 11, 2));
-			pnl.add(pnlCommentWrapper, CC.xyw(1, 13, 2));
-			pnl.add(pnlTags, CC.xyw(1, 15, 2));
-			pnl.add(pnlPlayCount, CC.xyw(1, 17, 2));
-			pnl.add(pnlLastPlayed, CC.xyw(1, 19, 2));
-			pnl.add(pnlDateAdded, CC.xyw(1, 21, 2));
-			pnl.add(pnlPublisher, CC.xyw(1, 23, 2));
-			pnl.add(pnlDeveloper, CC.xyw(1, 25, 2));
-			pnl.add(pnlTags, CC.xyw(1, 27, 2));
+			pnl.add(pnlGameData, CC.xyw(1, 9, 1));
+			pnl.add(pnlRatingBar, CC.xyw(1, 11, 1));
+			pnl.add(pnlCommentWrapper, CC.xyw(1, 13, 1));
+			pnl.add(pnlTags, CC.xyw(1, 15, 1));
+			pnl.add(pnlPlayCount, CC.xyw(1, 17, 1));
+			pnl.add(pnlLastPlayed, CC.xyw(1, 19, 1));
+			pnl.add(pnlDateAdded, CC.xyw(1, 21, 1));
+			pnl.add(pnlPublisher, CC.xyw(1, 23, 1));
+			pnl.add(pnlDeveloper, CC.xyw(1, 25, 1));
+			pnl.add(pnlTags, CC.xyw(1, 27, 1));
 			//						pnl.add(pnlAutoScaleImage, ccSelection.xy(1, 5));
 			//						pnl.add(pnlRatingBar, ccSelection.xyw(1, 9, columnCount));
 			//						pnl.add(pnlCommentWrapper, ccSelection.xyw(1, 11, columnCount));
@@ -901,12 +908,12 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 					&& currentGames.get(0) == game) {
 				//				pnlSelection.setGameTitle(game.getName(), null);
 				if (image == null) {
-					pnlSelection.pnlAutoScaleImage.setGameCover(null);
+					pnlSelection.pnlAutoScaleImage.setImage(null);
 				} else {
-					pnlSelection.pnlAutoScaleImage.setGameCover(image);
+					pnlSelection.pnlAutoScaleImage.setImage(image);
 				}
 			} else {
-				pnlSelection.pnlAutoScaleImage.setGameCover(null);
+				pnlSelection.pnlAutoScaleImage.setImage(null);
 			}
 		}
 

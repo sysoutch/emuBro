@@ -8,6 +8,7 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -21,7 +22,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
 import java.awt.font.TextAttribute;
-import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -97,6 +97,7 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 	private ImageIcon icoFilterGroups;
 	private ImageIcon iconRemove;
 	private AbstractButton btnTags;
+	private AbstractButton btnRegions;
 	private JButton btnFilterGroups;
 
 	private int size = ScreenSizeUtil.is3k() ? 24 : 16;
@@ -166,6 +167,7 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 			}
 		});
 		btnTags = new JCustomToggleButton("Tags", ImageUtil.getFlatSVGIconFrom(Icons.get("tag"), size, new Color(168, 124, 160)));
+		btnRegions = new JCustomToggleButton("Regions", ImageUtil.getFlatSVGIconFrom(Icons.get("tag"), size, new Color(168, 124, 160)));
 		btnTags.addActionListener(new ActionListener() {
 
 			@Override
@@ -296,7 +298,7 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 				int h = getHeight();
 				//g2d.setColor(IconStore.current().getCurrentTheme().getGameFilterPane().getColor());
 				//g2d.fillRect(0, 0, w, h);
-				BufferedImage background = IconStore.current().getCurrentTheme().getGameFilterPane().getImage();
+				Image background = IconStore.current().getCurrentTheme().getGameFilterPane().getImage();
 				if (background != null) {
 					g2d.drawImage(background, 0, 0, w, h, this);
 				}
@@ -450,7 +452,10 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 		splFilterTextAndTag.setBorder(BorderFactory.createEmptyBorder());
 		splFilterTextAndTag.setContinuousLayout(true);
 		splFilterTextAndTag.setLeftComponent(splFilterPlatformAndGame);
-		splFilterTextAndTag.setRightComponent(btnTags);
+		JPanel pnlTagAndRegionWrapper = new JPanel(new BorderLayout());
+		pnlTagAndRegionWrapper.add(btnTags, BorderLayout.WEST);
+		pnlTagAndRegionWrapper.add(btnRegions);
+		splFilterTextAndTag.setRightComponent(pnlTagAndRegionWrapper);
 		pnlFilter.add(splFilterTextAndTag, cc.xy(1, 1));
 
 		add(pnlFilter, BorderLayout.NORTH);
@@ -953,7 +958,7 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 		int h = getHeight();
 		//g2d.setColor(IconStore.current().getCurrentTheme().getGameFilterPane().getColor());
 		//g2d.fillRect(0, 0, w, h);
-		BufferedImage background = IconStore.current().getCurrentTheme().getGameFilterPane().getImage();
+		Image background = IconStore.current().getCurrentTheme().getGameFilterPane().getImage();
 		if (background != null) {
 			g2d.drawImage(background, 0, 0, w, h, this);
 		}

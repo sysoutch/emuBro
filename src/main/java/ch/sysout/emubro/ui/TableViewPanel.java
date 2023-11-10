@@ -8,6 +8,7 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
@@ -29,6 +30,7 @@ import java.util.List;
 
 import javax.swing.Action;
 import javax.swing.BorderFactory;
+import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -76,6 +78,7 @@ import ch.sysout.emubro.impl.model.EmulatorConstants;
 import ch.sysout.emubro.impl.model.GameConstants;
 import ch.sysout.emubro.ui.GameTableModel.LabelIcon;
 import ch.sysout.emubro.ui.GameTableModel.LabelIconRenderer;
+import ch.sysout.emubro.ui.listener.RateListener;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Messages;
@@ -223,14 +226,18 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 				//					g2d.setColor(currentBackground.getColor());
 				//				}
 				//				g2d.fillRect(0, 0, panelWidth, panelHeight);
-
-				BufferedImage background = currentBackground.getImage();
+				if (currentBackground.hasColor()) {
+					Color backgroundColor = currentBackground.getColor();
+					g2d.setColor(backgroundColor);
+					g2d.fillRect(0, 0, panelWidth, panelHeight);
+				}
+				Image background = currentBackground.getImage();
 				if (background != null) {
 					g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
 					g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 					g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-					int imgWidth = background.getWidth();
-					int imgHeight = background.getHeight();
+					int imgWidth = background.getWidth(null);
+					int imgHeight = background.getHeight(null);
 					int x = 0;
 					int y = 0;
 					boolean shouldScale = currentBackground.isImageScaleEnabled();
@@ -301,7 +308,7 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 						int width = imgTransparentOverlay.getWidth();
 						int height = imgTransparentOverlay.getHeight();
 
-						double factor = background.getWidth() / panelWidth;
+						double factor = background.getWidth(null) / panelWidth;
 						if (factor != 0) {
 							int scaledWidth = (int) (width/factor);
 							int scaledHeight = (int) (height/factor);
@@ -351,7 +358,18 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 				int row = tblGames.getSelectedRow();
 				int column = tblGames.getSelectedColumn();
 				if (column == GameTableModel.RATING_COLUMN_INDEX) {
-					System.out.println("clicked in rating cell");
+
+					Rectangle cellRect = tblGames.getCellRect(row, column, false);
+					int x = e.getX() - cellRect.x;
+					int y = e.getY() - cellRect.y;
+					Icon[] icons = ((CompoundIcon)tblGames.getValueAt(row, column)).getIcons();
+					for (Icon ico : icons) {
+						if (x > ico.getIconWidth() && x < ico.getIconWidth() + ico.getIconWidth() &&
+								y > 0 && y < ico.getIconHeight()) {
+							System.out.println("clicked in rating cell. mouse x pos: " + ico.toString());
+							break;
+						}
+					}
 				}
 
 				//				if ((e.getModifiers() & InputEvent.BUTTON3_MASK) == InputEvent.BUTTON3_MASK) {
@@ -961,20 +979,14 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 
 	@Override
 	public void addCommentListener(ActionListener l) {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
 	public void addOpenGameFolderListener1(MouseListener l) {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
 	public void addRateListener(RateListener l) {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override

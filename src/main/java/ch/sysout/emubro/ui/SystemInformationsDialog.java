@@ -1,6 +1,7 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.awt.event.ActionListener;
 
 import javax.swing.DefaultListModel;
@@ -28,6 +29,7 @@ public class SystemInformationsDialog extends JDialog {
 		setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 		initComponents();
 		createUI();
+		setPreferredSize(new Dimension(400, 350));
 		pack();
 	}
 

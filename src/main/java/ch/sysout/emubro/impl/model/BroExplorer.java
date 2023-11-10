@@ -12,6 +12,8 @@ import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
 
+import javax.swing.filechooser.FileSystemView;
+
 import org.apache.commons.io.FilenameUtils;
 
 import ch.sysout.emubro.api.filter.FilterGroup;
@@ -47,10 +49,13 @@ public class BroExplorer implements Explorer {
 	private List<FilterGroup> filterGroups;
 	private Map<Integer, Properties> gameTitles;
 
+	private boolean showPlatformIconsEnabled = false;
 	private boolean showGameNamesEnabled = true;
+	private String resourcesPath;
 
 	public BroExplorer(String currentApplicationVersion) {
 		this.currentApplicationVersion = currentApplicationVersion;
+		resourcesPath = FileSystemView.getFileSystemView().getDefaultDirectory().getPath() + File.separator + "emuBro";
 	}
 
 	@Override
@@ -809,7 +814,8 @@ public class BroExplorer implements Explorer {
 
 	@Override
 	public String getResourcesPath() {
-		return System.getProperty("user.dir") + File.separator + "emubro-resources";
+//		return System.getProperty("user.dir") + File.separator + "emubro-resources";
+		return resourcesPath;
 	}
 
 	@Override
@@ -838,13 +844,14 @@ public class BroExplorer implements Explorer {
 	}
 
 	@Override
-	public String getCoversDirectoryFromPlatform(Platform platform) {
+	public String getPlatformCoversDirectoryFromPlatform(Platform platform) {
 		return getPlatformsDirectory() + File.separator + platform.getShortName() + File.separator + "covers";
 	}
 
 	@Override
 	public String getEmulatorsDirectory(Platform platform) {
-		return getPlatformsDirectory() + File.separator + platform.getShortName() + File.separator + "emulators";
+		//		return getPlatformsDirectory() + File.separator + "emulators";
+		return getResourcesPath() + File.separator + "emulators";
 	}
 
 	@Override
@@ -868,6 +875,16 @@ public class BroExplorer implements Explorer {
 	@Override
 	public String getCoverDownloadSource(Game game) {
 		return "http://art.gametdb.com/";
+	}
+
+	@Override
+	public boolean isShowPlatformIconsEnabled() {
+		return showPlatformIconsEnabled;
+	}
+
+	@Override
+	public void setShowPlatformIconsEnabled(boolean showPlatformIconsEnabled) {
+		this.showPlatformIconsEnabled = showPlatformIconsEnabled;
 	}
 
 	@Override

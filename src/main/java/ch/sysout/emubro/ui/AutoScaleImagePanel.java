@@ -24,7 +24,9 @@ public class AutoScaleImagePanel extends JPanel {
 			double scaleFactor = (double) bi.getWidth(null) / (double) bi.getHeight(null);
 			int height = getHeight();
 			int width = (int) (height * scaleFactor);
-			int x = AutoScaleImagePanel.this.getWidth()/2-bi.getWidth(this)/2;
+			int panelWidth = AutoScaleImagePanel.this.getWidth();
+			int imageWidth = bi.getWidth(this);
+			int x = panelWidth/2-imageWidth/2;
 			int y = 0;
 			if (width <= getWidth()) {
 				//				int x = 0;
@@ -34,14 +36,15 @@ public class AutoScaleImagePanel extends JPanel {
 			} else {
 				//				int x = 0;
 				//				int y = (int) (getHeight() / 2 - ((getWidth() / scaleFactor) / 2));
-				g2d.drawImage(bi, x, y, getWidth(), (int) (getWidth() / scaleFactor), this);
+				System.out.println("x: " + x + " y: " + y);
+				g2d.drawImage(bi, 0, y, getWidth(), (int) (getWidth() / scaleFactor), this);
 				// setSize(getWidth(), (int) (getWidth() / scaleFactor));
 			}
 			g2d.dispose();
 		}
 	}
 
-	public void setGameCover(Image icon) {
+	public void setImage(Image icon) {
 		bi = icon;
 		if (bi != null) {
 			bi.flush();

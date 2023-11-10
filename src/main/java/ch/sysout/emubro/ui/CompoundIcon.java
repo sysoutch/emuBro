@@ -56,4 +56,8 @@ public class CompoundIcon implements Icon {
 	public int getIconHeight() {
 		return highestIconHeight;
 	}
+
+	public Icon[] getIcons() {
+		return icons;
+	}
 }

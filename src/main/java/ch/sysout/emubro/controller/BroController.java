@@ -1,5 +1,6 @@
 package ch.sysout.emubro.controller;
 
+import java.awt.AWTException;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -7,9 +8,7 @@ import java.awt.Container;
 import java.awt.Desktop;
 import java.awt.Dialog.ModalityType;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
 import java.awt.Frame;
-import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
 import java.awt.HeadlessException;
@@ -18,8 +17,8 @@ import java.awt.Insets;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.awt.Robot;
 import java.awt.Toolkit;
-import java.awt.Window;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.FlavorEvent;
@@ -33,8 +32,6 @@ import java.awt.dnd.DropTargetEvent;
 import java.awt.dnd.DropTargetListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.AdjustmentEvent;
-import java.awt.event.AdjustmentListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.InputEvent;
@@ -42,7 +39,6 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseWheelEvent;
@@ -62,7 +58,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
@@ -127,7 +122,6 @@ import java.util.zip.ZipFile;
 import javax.imageio.ImageIO;
 import javax.servlet.MultipartConfigElement;
 import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.Part;
 import javax.swing.AbstractButton;
 import javax.swing.Action;
@@ -137,8 +131,6 @@ import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
-import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JColorChooser;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
@@ -157,12 +149,10 @@ import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.JToggleButton;
-import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.UIManager;
 import javax.swing.WindowConstants;
-import javax.swing.border.TitledBorder;
 import javax.swing.colorchooser.AbstractColorChooserPanel;
 import javax.swing.colorchooser.ColorSelectionModel;
 import javax.swing.event.ChangeEvent;
@@ -198,6 +188,11 @@ import com.formdev.flatlaf.FlatLightLaf;
 import com.github.junrar.Archive;
 import com.github.junrar.exception.RarException;
 import com.github.junrar.rarfile.FileHeader;
+import com.github.strikerx3.jxinput.XInputDevice;
+import com.github.strikerx3.jxinput.enums.XInputButton;
+import com.github.strikerx3.jxinput.exceptions.XInputNotLoadedException;
+import com.github.strikerx3.jxinput.listener.SimpleXInputDeviceListener;
+import com.github.strikerx3.jxinput.listener.XInputDeviceListener;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
@@ -206,11 +201,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 import com.jgoodies.forms.factories.Paddings;
-import com.jgoodies.forms.layout.CellConstraints;
-import com.jgoodies.forms.layout.FormLayout;
-import com.jgoodies.validation.view.ValidationComponentUtils;
 
-import ch.sysout.emubro.Main;
+import ch.sysout.emubro.MainBro;
 import ch.sysout.emubro.api.EmulatorListener;
 import ch.sysout.emubro.api.FilterListener;
 import ch.sysout.emubro.api.PlatformListener;
@@ -238,7 +230,6 @@ import ch.sysout.emubro.impl.event.BroEmulatorRemovedEvent;
 import ch.sysout.emubro.impl.event.BroFilterEvent;
 import ch.sysout.emubro.impl.event.BroGameAddedEvent;
 import ch.sysout.emubro.impl.event.BroGameRemovedEvent;
-import ch.sysout.emubro.impl.event.BroGameRenamedEvent;
 import ch.sysout.emubro.impl.event.BroGameSelectionEvent;
 import ch.sysout.emubro.impl.event.BroPlatformAddedEvent;
 import ch.sysout.emubro.impl.event.BroTagAddedEvent;
@@ -265,15 +256,10 @@ import ch.sysout.emubro.ui.GamePropertiesDialog;
 import ch.sysout.emubro.ui.GameViewConstants;
 import ch.sysout.emubro.ui.HelpFrame;
 import ch.sysout.emubro.ui.IconStore;
-import ch.sysout.emubro.ui.JCustomButtonNew;
-import ch.sysout.emubro.ui.JExtendedComboBox;
-import ch.sysout.emubro.ui.JExtendedTextField;
 import ch.sysout.emubro.ui.JLinkButton;
 import ch.sysout.emubro.ui.MainFrame;
 import ch.sysout.emubro.ui.NavigationPanel;
 import ch.sysout.emubro.ui.NotificationElement;
-import ch.sysout.emubro.ui.RateEvent;
-import ch.sysout.emubro.ui.RateListener;
 import ch.sysout.emubro.ui.RatingBarPanel;
 import ch.sysout.emubro.ui.SortedListModel;
 import ch.sysout.emubro.ui.SplashScreenWindow;
@@ -282,13 +268,14 @@ import ch.sysout.emubro.ui.TroubleshootFrame;
 import ch.sysout.emubro.ui.UpdateDialog;
 import ch.sysout.emubro.ui.ViewPanel;
 import ch.sysout.emubro.ui.ViewPanelManager;
+import ch.sysout.emubro.ui.event.RateEvent;
+import ch.sysout.emubro.ui.listener.RateListener;
 import ch.sysout.emubro.ui.properties.DefaultEmulatorListener;
 import ch.sysout.emubro.ui.properties.PropertiesFrame;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.FileUtil;
-import ch.sysout.util.Icons;
 import ch.sysout.util.LinkParser;
 import ch.sysout.util.Messages;
 import ch.sysout.util.RegistryUtil;
@@ -298,13 +285,10 @@ import ch.sysout.util.SevenZipUtils;
 import ch.sysout.util.SystemUtil;
 import ch.sysout.util.ValidationUtil;
 import spark.Request;
-import spark.Response;
-import spark.Route;
-import spark.Spark;
 
 public class BroController implements ActionListener, PlatformListener, EmulatorListener, TagListener,
 GameSelectionListener, BrowseComputerListener {
-	private Explorer explorer;
+	Explorer explorer;
 	private MainFrame view;
 	private PropertiesFrame frameProperties;
 	private HelpFrame dlgHelp;
@@ -313,7 +297,7 @@ GameSelectionListener, BrowseComputerListener {
 	private UpdateDialog dlgUpdates;
 
 	private ExplorerDAO explorerDAO;
-	private Properties properties = Main.properties;
+	private Properties properties = MainBro.properties;
 
 	private Map<Game, Map<Process, Integer>> processes = new HashMap<>();
 
@@ -424,6 +408,12 @@ GameSelectionListener, BrowseComputerListener {
 	private Map<String, File> xmlFiles;
 
 	private ExecutorService executorServiceDownloadGameCover;
+	private ExecutorService executorServiceGameController;
+
+	private JList<Game> lstMatches;
+	private JList<String> lstPreviews;
+	protected boolean dontChangeMatchesIndex;
+	protected boolean dontChangePreviewIndex;
 
 	public BroController(SplashScreenWindow dlgSplashScreen, ExplorerDAO explorerDAO, Explorer model, MainFrame view) {
 		this.dlgSplashScreen = dlgSplashScreen;
@@ -433,131 +423,125 @@ GameSelectionListener, BrowseComputerListener {
 		explorer.setSearchProcessComplete(explorerDAO.isSearchProcessComplete());
 		platformComparator = new PlatformComparator(explorer);
 		initSpark();
+		boolean shouldUseController = false;
+		if (shouldUseController) {
+			try {
+				initControllers();
+			} catch (XInputNotLoadedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 		// pnlMain.initializeViewPanel();
 		// pnlMain.retrieveNewestAppVersion();
 	}
 
-	private void initSpark() {
-		storageDirectory = System.getProperty("user.dir") + File.separator + "emuBro-resources";
-		Spark.staticFileLocation("/webapp");
-		//		Spark.staticFiles.expireTime(600); // ten minutes
+	private void initControllers() throws XInputNotLoadedException {
+		// Retrieve all devices
+		XInputDevice[] devices = XInputDevice.getAllDevices();
 
-		File storageDir = new File(storageDirectory);
-		if (!storageDir.isDirectory()) {
-			return;
+		// Retrieve the device for player 1
+		XInputDevice device = XInputDevice.getDeviceFor(0); // or devices[0]
+
+		// The SimpleXInputDeviceListener allows us to implement only the methods we actually need
+		XInputDeviceListener listener = new SimpleXInputDeviceListener() {
+			private Robot robot;
+
+			@Override
+			public void connected() {
+				System.out.println("gamepad connected");
+			}
+
+			@Override
+			public void disconnected() {
+				System.out.println("gamepad disconnected");
+			}
+
+			@Override
+			public void buttonChanged(final XInputButton button, final boolean pressed) {
+				System.out.println("button changed  "+ button.name() + " pressed? " + pressed);
+				if (button.name().equals("DPAD_DOWN")) {
+					initRobotIfNeeded();
+					if (pressed) {
+						robot.keyPress(KeyEvent.VK_DOWN);
+					} else {
+						robot.keyRelease(KeyEvent.VK_DOWN);
+					}
+				}
+				if (button.name().equals("DPAD_RIGHT")) {
+					initRobotIfNeeded();
+					if (pressed) {
+						robot.keyPress(KeyEvent.VK_RIGHT);
+					} else {
+						robot.keyRelease(KeyEvent.VK_RIGHT);
+					}
+				}
+				if (button.name().equals("DPAD_UP")) {
+					initRobotIfNeeded();
+					if (pressed) {
+						robot.keyPress(KeyEvent.VK_UP);
+					} else {
+						robot.keyRelease(KeyEvent.VK_UP);
+					}
+				}
+				if (button.name().equals("DPAD_LEFT")) {
+					initRobotIfNeeded();
+					if (pressed) {
+						robot.keyPress(KeyEvent.VK_LEFT);
+					} else {
+						robot.keyRelease(KeyEvent.VK_LEFT);
+					}
+				}
+				if (button.name().equals("A")) {
+					if (pressed) {
+						runGame();
+					}
+				}
+			}
+
+			private void initRobotIfNeeded() {
+				if (robot == null) {
+					try {
+						robot = new Robot();
+					} catch (AWTException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+		};
+		device.addListener(listener);
+		if (executorServiceGameController == null) {
+			executorServiceGameController = Executors.newSingleThreadExecutor();
 		}
-		Spark.post("/upload", new Route() {
-			@Override
-			public Object handle(Request req, Response res) throws Exception {
-				return uploadFile(req);
-			}
-		});
-		Spark.post("/game/:id/run", new Route() {
-			@Override
-			public Object handle(Request req, Response res) throws Exception {
-				return runGame(req.params(":id"));
-			}
-		});
-		Spark.post("/game/:id/select", new Route() {
-			@Override
-			public Object handle(Request req, Response res) throws Exception {
-				return selectGame(req.params(":id"));
-			}
-		});
-		Spark.get("/download/:file", new Route() {
-			@Override
-			public Object handle(Request req, Response res) throws Exception {
-				return downloadFile(req.params(":file"));
-			}
-		});
-		Spark.get("/gameCover/:gameId", new Route() {
-			@Override
-			public Object handle(Request req, Response res) throws Exception {
-				int gameId = Integer.valueOf(req.params(":gameId"));
+		executorServiceGameController.submit(new Runnable() {
 
-				HttpServletResponse raw = res.raw();
-				raw.setHeader("Content-Disposition", "attachment; filename=gamecover.png");
-
-				ImageIcon icon = IconStore.current().getGameCover(gameId);
-				BufferedImage bi = new BufferedImage(icon.getIconWidth(), icon.getIconHeight(),
-						BufferedImage.TYPE_INT_ARGB);
-				Graphics g = bi.createGraphics();
-				icon.paintIcon(null, g, 0, 0);
-				g.dispose();
-				try (OutputStream out = res.raw().getOutputStream()) {
-					ImageIO.write(bi, "png", out);
-					bi.flush();
-					out.close();
-					return raw;
+			@Override
+			public void run() {
+				while (true) {
+					// Whenever the device is polled, listener events will be fired as long as there are changes
+					device.poll();
+					try {
+						TimeUnit.MILLISECONDS.sleep(100);
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 				}
 			}
 		});
-		Spark.get("/platformIcon/:platformId", new Route() {
-			@Override
-			public Object handle(Request req, Response res) throws Exception {
-				int platformId = Integer.valueOf(req.params(":platformId"));
+	}
 
-				HttpServletResponse raw = res.raw();
-				raw.setHeader("Content-Disposition", "attachment; filename="+explorer.getPlatform(platformId).getName()+".png");
-
-				ImageIcon icon = IconStore.current().getPlatformIcon(platformId);
-				BufferedImage bi = new BufferedImage(icon.getIconWidth(), icon.getIconHeight(),
-						BufferedImage.TYPE_INT_ARGB);
-				Graphics g = bi.createGraphics();
-				icon.paintIcon(null, g, 0, 0);
-				g.dispose();
-				try (OutputStream out = res.raw().getOutputStream()) {
-					ImageIO.write(bi, "png", out);
-					bi.flush();
-					out.close();
-					return raw;
-				}
-			}
-		});
-		Spark.get("/games", new Route() {
-			@Override
-			public Object handle(Request req, Response res) throws Exception {
-				return listGames();
-			}
-		});
-		Spark.get("/current_games", new Route() {
-			@Override
-			public Object handle(Request req, Response res) throws Exception {
-				return listGames(true);
-			}
-		});
-		Spark.get("/platforms", new Route() {
-			@Override
-			public Object handle(Request req, Response res) throws Exception {
-				return listPlatforms();
-			}
-		});
-		Spark.get("/platforms/:id", new Route() {
-			@Override
-			public Object handle(Request req, Response res) throws Exception {
-				return listPlatform(req.params(":id"));
-			}
-		});
-		Spark.get("/currentGames", new Route() {
-			@Override
-			public Object handle(Request req, Response res) throws Exception {
-				return listGames(true);
-			}
-		});
-
-		Spark.delete("/delete/:file", new Route() {
-			@Override
-			public Object handle(Request req, Response res) throws Exception {
-				return deleteFile(req.params(":file"));
-			}
-		});
+	private void initSpark() {
+		storageDirectory = explorer.getResourcesPath();
+		WebAppBro sparkBro = new WebAppBro();
+		sparkBro.initWebApp(this, explorer);
 	}
 
 	private Object getPlatformIcon(String params) {
 		return null;
 	}
 
-	private String runGame(String id) {
+	String runGame(String id) {
 		final int gameId = Integer.valueOf(id);
 		explorer.setCurrentGames(explorer.getGame(gameId));
 		SwingUtilities.invokeLater(new Runnable() {
@@ -571,7 +555,7 @@ GameSelectionListener, BrowseComputerListener {
 		return "game with id " + id + " has been started";
 	}
 
-	private String selectGame(String id) {
+	String selectGame(String id) {
 		final int gameId = Integer.valueOf(id);
 		explorer.setCurrentGames(explorer.getGame(gameId));
 		SwingUtilities.invokeLater(new Runnable() {
@@ -584,7 +568,7 @@ GameSelectionListener, BrowseComputerListener {
 		return "game with id " + id + " has been selected";
 	}
 
-	private String uploadFile(Request request) {
+	String uploadFile(Request request) {
 		// TO allow for multipart file uploads
 		request.attribute("org.eclipse.jetty.multipartConfig", new MultipartConfigElement(""));
 
@@ -605,7 +589,7 @@ GameSelectionListener, BrowseComputerListener {
 		return "File successfully uploaded";
 	}
 
-	private String downloadFile(String fileName) {
+	String downloadFile(String fileName) {
 		Path filePath = Paths.get(storageDirectory).resolve(fileName);
 		File file = filePath.toFile();
 		if (file.exists()) {
@@ -620,11 +604,11 @@ GameSelectionListener, BrowseComputerListener {
 		return "File doesn't exist. Cannot download";
 	}
 
-	private String listGames() {
+	String listGames() {
 		return listGames(false);
 	}
 
-	private String listGames(boolean currentGamesOnly) {
+	String listGames(boolean currentGamesOnly) {
 		Gson gson = new GsonBuilder().setPrettyPrinting().create();
 		Type listType = new TypeToken<List<Game>>() {}.getType();
 		List<Game> games = (currentGamesOnly) ? explorer.getCurrentGames() : explorer.getGames();
@@ -632,7 +616,7 @@ GameSelectionListener, BrowseComputerListener {
 		return json;
 	}
 
-	private String listPlatforms() {
+	String listPlatforms() {
 		Gson gson = new GsonBuilder().setPrettyPrinting().create();
 		Type listType = new TypeToken<List<Platform>>() {}.getType();
 		List<Platform> platforms = explorer.getPlatforms();
@@ -640,7 +624,7 @@ GameSelectionListener, BrowseComputerListener {
 		return json;
 	}
 
-	private String listPlatform(String id) {
+	String listPlatform(String id) {
 		int platformId = Integer.valueOf(id);
 		Gson gson = new GsonBuilder().setPrettyPrinting().create();
 		Platform platform = explorer.getPlatform(platformId);
@@ -648,7 +632,7 @@ GameSelectionListener, BrowseComputerListener {
 		return json;
 	}
 
-	private String deleteFile(String fileName) {
+	String deleteFile(String fileName) {
 		Path filePath = Paths.get(storageDirectory).resolve(fileName);
 		File file = filePath.toFile();
 		if (file.exists()) {
@@ -993,7 +977,6 @@ GameSelectionListener, BrowseComputerListener {
 		view.addCoverDownloadListener(new CoverDownloadListener());
 		view.addTrailerFromWebListener(new TrailerFromWebListener());
 		view.addSearchNetworkListener(new SearchNetworkListener());
-		view.addRenameGameListener(renameGameListener = new RenameGameListener());
 		view.addTagsFromGamesListener();
 		view.addAddGameListener(new AddGameListener());
 		view.addRemoveGameListener(new RemoveGameListener());
@@ -1005,6 +988,18 @@ GameSelectionListener, BrowseComputerListener {
 		view.addShowNavigationPaneListener(new ShowNavigationPaneListener());
 		view.addShowPreviewPaneListener(new ShowPreviewPaneListener());
 		view.addShowGameDetailsListener(new ShowGameDetailsListener());
+		view.addSetGameCodeListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				String text = UIUtil.showInputMessage(dlgDownloadCovers, "Set Game Code", "Set Game Code");
+				if (text != null && !text.trim().isEmpty()) {
+					String gameCode = text.toUpperCase();
+					explorer.getCurrentGames().get(0).setGameCode(gameCode);
+					//				explorerDAO.setGameCode(lastDetailsPreferredWidth, applicationVersion);
+				}
+			}
+		});
 		view.addOpenGamePropertiesListener(new OpenGamePropertiesListener());
 		view.addOpenGamePropertiesListener1(new OpenGamePropertiesListener());
 		view.addAddFilesListener(new AddFilesListener());
@@ -1045,6 +1040,7 @@ GameSelectionListener, BrowseComputerListener {
 		view.addShowContextMenuListener(new ShowContextMenuListener());
 		//		view.addSetFilterListener(new AddFilterListener());
 		view.addHideExtensionsListener(new HideExtensionsListener());
+		view.addShowPlatformIconsListener(new ShowPlatformIconsListener());
 		view.addShowGameNamesListener(new ShowGameNamesListener());
 		view.addTouchScreenOptimizedScrollListener(new TouchScreenOptimizedScrollListener());
 		view.addOpenHelpListener(new OpenHelpListener());
@@ -2136,9 +2132,6 @@ GameSelectionListener, BrowseComputerListener {
 				if (dlgGameProperties != null) {
 					dlgGameProperties.languageChanged();
 				}
-				if (renameGameListener != null) {
-					renameGameListener.languageChanged();
-				}
 				if (frameCoverBro != null) {
 					frameCoverBro.languageChanged();
 				}
@@ -2610,22 +2603,16 @@ GameSelectionListener, BrowseComputerListener {
 					dlgSplashScreen.dispose();
 					runGame2(game, startParametersList, emulatorFile.getParentFile());
 				} catch (final IOException e) {
-					SwingUtilities.invokeLater(new Runnable() {
-
-						@Override
-						public void run() {
-							frameEmulationOverlay.dispose();
-							view.setState(Frame.NORMAL);
-							view.toFront();
-							view.repaint();
-							JOptionPane op = new GameOptionsPane();
-							op.setMessage(Messages.get(MessageConstants.ERR_STARTING_GAME_CONFIG_ERROR) + e.getMessage());
-							op.setMessageType(JOptionPane.ERROR_MESSAGE | JOptionPane.OK_OPTION);
-							JDialog dlg = op.createDialog(view, Messages.get(MessageConstants.ERR_STARTING_GAME));
-							dlg.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-							dlg.setVisible(true);
-						}
-					});
+					frameEmulationOverlay.dispose();
+					view.setState(Frame.NORMAL);
+					view.toFront();
+					view.repaint();
+					JOptionPane op = new GameOptionsPane();
+					op.setMessage(Messages.get(MessageConstants.ERR_STARTING_GAME_CONFIG_ERROR) + e.getMessage());
+					op.setMessageType(JOptionPane.ERROR_MESSAGE | JOptionPane.OK_OPTION);
+					JDialog dlg = op.createDialog(view, Messages.get(MessageConstants.ERR_STARTING_GAME));
+					dlg.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+					dlg.setVisible(true);
 				}
 			}
 		});
@@ -3851,34 +3838,34 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	private void showImageEditDialog() {
-		if (frameCoverBro == null) {
-			frameCoverBro = new CoverBroFrame(explorer, explorerDAO);
-			frameCoverBro.addSetAsCoverListener(new ActionListener() {
+		//		if (frameCoverBro == null) {
+		frameCoverBro = new CoverBroFrame(explorer, explorerDAO);
+		frameCoverBro.addSetAsCoverListener(new ActionListener() {
 
-				@Override
-				public void actionPerformed(ActionEvent e) {
-					Dimension coverSize = frameCoverBro.getCurrentCoverSize();
-					boolean addCover = true;
-					if (coverSize.width > 200) {
-						int request = JOptionPane.showConfirmDialog(frameCoverBro, "cover width is maybe too large. Continue?");
-						addCover = request == JOptionPane.OK_OPTION;
-					} else if (coverSize.height > 200) {
-						int request = JOptionPane.showConfirmDialog(frameCoverBro, "cover height is maybe too large. Continue?");
-						addCover = request == JOptionPane.OK_OPTION;
-					}
-					if (addCover) {
-						try {
-							Image resized = frameCoverBro.getResizedImage();
-							setCoverForGame(explorer.getCurrentGames().get(0), resized, ".jpg");
-							//					publish(resized);
-						} catch (Exception e1) {
-							UIUtil.showErrorMessage(frameCoverBro, "Oops. Please make a selection", "no selection");
-							e1.printStackTrace();
-						}
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				Dimension coverSize = frameCoverBro.getCurrentCoverSize();
+				boolean addCover = true;
+				if (coverSize.width > 200) {
+					int request = JOptionPane.showConfirmDialog(frameCoverBro, "cover width is maybe too large. Continue?");
+					addCover = request == JOptionPane.OK_OPTION;
+				} else if (coverSize.height > 200) {
+					int request = JOptionPane.showConfirmDialog(frameCoverBro, "cover height is maybe too large. Continue?");
+					addCover = request == JOptionPane.OK_OPTION;
+				}
+				if (addCover) {
+					try {
+						Image resized = frameCoverBro.getResizedImage();
+						setCoverForGame(explorer.getCurrentGames().get(0), resized, ".jpg");
+						//					publish(resized);
+					} catch (Exception e1) {
+						UIUtil.showErrorMessage(frameCoverBro, "Oops. Please make a selection", "no selection");
+						e1.printStackTrace();
 					}
 				}
-			});
-		}
+			}
+		});
+		//		}
 		frameCoverBro.setLocationRelativeTo(view);
 		frameCoverBro.setVisible(true);
 		//		frameCoverBro.setImage(bi);
@@ -4021,6 +4008,10 @@ GameSelectionListener, BrowseComputerListener {
 				e2.printStackTrace();
 			}
 		}
+	}
+
+	public String getStorageDirectory() {
+		return storageDirectory;
 	}
 
 	class AutoSearchListener implements ActionListener {
@@ -4698,6 +4689,7 @@ GameSelectionListener, BrowseComputerListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			downloadGameCovers(explorer.getCurrentGames());
+			view.repaint();
 		}
 	}
 
@@ -4751,667 +4743,6 @@ GameSelectionListener, BrowseComputerListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			JOptionPane.showInputDialog("Enter network share:");
-		}
-	}
-
-	class RenameGameListener implements Action {
-		private JButton btnAutoSetLetterCase = new JButton(Messages.get(MessageConstants.CAPITAL_SMALL_LETTERS));
-		private JLabel lblSpaces = new JLabel(Messages.get(MessageConstants.REPLACE));
-		private JLabel lblBrackets = new JLabel(Messages.get(MessageConstants.REMOVE_BRACKETS));
-		private JLabel lblOr = new JLabel(Messages.get(MessageConstants.OR));
-		private JLabel lblOr2 = new JLabel(Messages.get(MessageConstants.OR));
-		private JButton btnSpacesDots = new JButton(Messages.get(MessageConstants.DOTS));
-		private JButton btnSpacesUnderlines = new JButton(Messages.get(MessageConstants.UNDERLINES));
-		private JButton btnSpacesHyphens = new JButton(Messages.get(MessageConstants.HYPHENS));
-		private JButton btnSpacesCamelCase = new JButton(Messages.get(MessageConstants.SPLIT_CAMEL_CASE));
-		//		private JButton btnBracket1 = new JButton("(PAL), (Europe), ...");
-		private JButton btnBracket1 = new JButton("(  )");
-		//		private JButton btnBracket2 = new JButton("[SCES-12345], [!], ...");
-		private JButton btnBracket2 = new JButton("[  ]");
-		private JComboBox<Object> cmbParentFolders;
-		private JList<Game> lstMatches;
-		private JList<String> lstPreviews;
-		protected boolean dontChangeMatchesIndex;
-		protected boolean dontChangePreviewIndex;
-		private ListSelectionListener listener;
-		private ListSelectionListener listener2;
-		private AdjustmentListener listener3;
-		private AdjustmentListener listener4;
-		private JCheckBox chkRenameFile = new JCheckBox(Messages.get(MessageConstants.RENAME_FILE_ON_DISK));
-		private JExtendedTextField txtRenameFile = new JExtendedTextField("");
-		private JLabel lblBracketsExample = new JLabel(Messages.get(MessageConstants.BRACKETS_EXAMPLE));
-		private JLabel lblWithSpaces = new JLabel(Messages.get(MessageConstants.WITH_SPACES));
-		private JCheckBox chkDots = new JCheckBox(Messages.get(MessageConstants.REMOVE_DOTS));
-		private JCheckBox chkUnderlines = new JCheckBox(Messages.get(MessageConstants.REMOVE_UNDERLINES));
-		protected boolean showMoreOptions;
-
-		{
-			btnAutoSetLetterCase.addActionListener(this);
-			btnSpacesDots.addActionListener(this);
-			btnSpacesUnderlines.addActionListener(this);
-			btnSpacesHyphens.addActionListener(this);
-			btnSpacesCamelCase.addActionListener(this);
-			btnBracket1.addActionListener(this);
-			btnBracket2.addActionListener(this);
-		}
-
-		public void languageChanged() {
-			txtRenameFile.languageChanged();
-			btnAutoSetLetterCase = new JButton(Messages.get(MessageConstants.CAPITAL_SMALL_LETTERS));
-			lblSpaces.setText(Messages.get(MessageConstants.REPLACE));
-			lblBrackets.setText(Messages.get(MessageConstants.REMOVE_BRACKETS));
-			lblOr.setText(Messages.get(MessageConstants.OR));
-			lblOr2.setText(Messages.get(MessageConstants.OR));
-			btnSpacesDots.setText(Messages.get(MessageConstants.DOTS));
-			btnSpacesUnderlines.setText(Messages.get(MessageConstants.UNDERLINES));
-			btnSpacesHyphens.setText(Messages.get(MessageConstants.HYPHENS));
-			btnSpacesCamelCase.setText(Messages.get(MessageConstants.SPLIT_CAMEL_CASE));
-			chkRenameFile.setText(Messages.get(MessageConstants.RENAME_FILE_ON_DISK));
-			lblBracketsExample.setText(Messages.get(MessageConstants.BRACKETS_EXAMPLE));
-			lblWithSpaces.setText(Messages.get(MessageConstants.WITH_SPACES));
-			chkDots.setText(Messages.get(MessageConstants.REMOVE_DOTS));
-			chkUnderlines.setText(Messages.get(MessageConstants.REMOVE_UNDERLINES));
-		}
-
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			if (e.getSource() == btnSpacesDots) {
-				String item = cmbParentFolders.getEditor().getItem().toString();
-				cmbParentFolders.getEditor().setItem(removeUnnecessarySpaces(item.replace(".", " ")));
-			} else if (e.getSource() == btnSpacesUnderlines) {
-				String item = cmbParentFolders.getEditor().getItem().toString();
-				cmbParentFolders.getEditor().setItem(removeUnnecessarySpaces(item.replace("_", " ")));
-			} else if (e.getSource() == btnSpacesHyphens) {
-				String item = cmbParentFolders.getEditor().getItem().toString();
-				cmbParentFolders.getEditor().setItem(removeUnnecessarySpaces(item.replace("-", " ")));
-			} else if (e.getSource() == btnSpacesCamelCase) {
-				String item = cmbParentFolders.getEditor().getItem().toString();
-				String undoCamelCase = "";
-				for (String w : item.split("(?<!(^|[A-Z]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])")) {
-					undoCamelCase += w + " ";
-				}
-				cmbParentFolders.getEditor().setItem(removeUnnecessarySpaces(undoCamelCase));
-			} else if (e.getSource() == btnAutoSetLetterCase) {
-				String source = cmbParentFolders.getEditor().getItem().toString();
-				StringBuffer res = new StringBuffer();
-				String[] strArr = source.split(" ");
-				for (String str : strArr) {
-					char[] stringArray = str.trim().toCharArray();
-					if (stringArray.length > 0) {
-						stringArray[0] = Character.toUpperCase(stringArray[0]);
-						for (int i = 1; i < stringArray.length; i++) {
-							stringArray[i] = Character.toLowerCase(stringArray[i]);
-						}
-						str = new String(stringArray);
-						res.append(str).append(" ");
-					}
-				}
-				cmbParentFolders.getEditor().setItem(res.toString().trim());
-			} else if (e.getSource() == btnBracket1) {
-				boolean hasBrackets = false;
-				do {
-					hasBrackets = removeBrackets('(',')');
-				} while (hasBrackets);
-			} else if (e.getSource() == btnBracket2) {
-				boolean hasBrackets = false;
-				do {
-					hasBrackets = removeBrackets('[',']');
-				} while (hasBrackets);
-			} else {
-				renameGame();
-			}
-		}
-
-		private String removeUnnecessarySpaces(String item) {
-			String tmp = item;
-			while (tmp.contains("  ")) {
-				tmp = tmp.replace("  ", " ");
-			}
-			return tmp;
-		}
-
-		private boolean removeBrackets(char bracketType1, char bracketType2) {
-			String source = cmbParentFolders.getEditor().getItem().toString();
-			String withoutBrackets = source.replaceAll("^.*(\\"+bracketType1+".*\\"+bracketType2+").*$", "$1");
-			boolean hasBrackets = withoutBrackets.contains(""+bracketType1) && withoutBrackets.contains(""+bracketType2);
-			if (hasBrackets) {
-				cmbParentFolders.getEditor().setItem(source.replace(withoutBrackets, "").trim().replaceAll("\\s+"," "));
-			}
-			return hasBrackets;
-		}
-
-		private void renameGame() {
-			List<Game> currentGames = explorer.getCurrentGames();
-			if (currentGames != null && !currentGames.isEmpty()) {
-				Game game = explorer.getCurrentGames().get(0);
-				if (game == null) {
-					return;
-				}
-				String oldName = game.getName();
-				String pathWithoutFileName = FilenameUtils.getPath(explorer.getFiles(game).get(0));
-				String[] folderNames = pathWithoutFileName.split(getSeparatorBackslashed());
-				List<String> reverseList = new ArrayList<>();
-				reverseList.add(oldName);
-				for (int i = folderNames.length-1; i >= 0; i--) {
-					if (!folderNames[i].trim().isEmpty()) {
-						reverseList.add(folderNames[i]);
-					}
-				}
-				String lblEnterNewName = Messages.get(MessageConstants.ENTER_NEW_NAME);
-				String[] arrReverseList = reverseList.toArray(new String[reverseList.size()]);
-				cmbParentFolders = new JExtendedComboBox<Object>(arrReverseList);
-				txtRenameFile.setEnabled(false);
-				chkRenameFile.setOpaque(false);
-				chkRenameFile.addActionListener(new ActionListener() {
-
-					@Override
-					public void actionPerformed(ActionEvent e) {
-						txtRenameFile.setEnabled(chkRenameFile.isSelected());
-						UIUtil.revalidateAndRepaint(txtRenameFile.getParent());
-					}
-				});
-				String toolTipParentFolders = Messages.get(MessageConstants.CHOOSE_NAME_FROM_PARENT_FOLDER);
-				cmbParentFolders.setToolTipText(toolTipParentFolders);
-				cmbParentFolders.setEditable(true);
-				FormLayout layoutWrapper = new FormLayout("pref, $ugap, pref, min:grow, min",
-						"min, $rgap, min, $rgap, min, $rgap, min");
-				layoutWrapper.setRowGroup(1, 3, 5, 7);
-				//			layoutWrapper.setRowGroup(1, 3, 5);
-				CellConstraints cc = new CellConstraints();
-				JPanel pnlWrapWrapper = new JPanel(new BorderLayout());
-				TitledBorder titledBorder = new TitledBorder(null, Messages.get(MessageConstants.RENAMING_OPTIONS), 0, TitledBorder.TOP);
-				final JButton btn = new JButton();
-				btn.setFocusPainted(false);
-				btn.setContentAreaFilled(false);
-				btn.setBorder(titledBorder);
-				btn.add(pnlWrapWrapper);
-				btn.addMouseListener(new MouseAdapter() {
-					@Override
-					public void mouseEntered(MouseEvent e) {
-						super.mouseEntered(e);
-						btn.setContentAreaFilled(true);
-					}
-					@Override
-					public void mouseExited(MouseEvent e) {
-						super.mouseExited(e);
-						btn.setContentAreaFilled(false);
-					}
-				});
-				btn.addActionListener(new ActionListener() {
-
-					@Override
-					public void actionPerformed(ActionEvent e) {
-						showMoreOptions = false;
-					}
-				});
-
-				JPanel pnlWrapper = new JPanel(layoutWrapper);
-				pnlWrapper.addMouseListener(new MouseAdapter() {
-					@Override
-					public void mouseEntered(MouseEvent e) {
-						super.mouseEntered(e);
-						btn.setContentAreaFilled(false);
-					}
-					@Override
-					public void mouseExited(MouseEvent e) {
-						super.mouseExited(e);
-						btn.setContentAreaFilled(false);
-					}
-				});
-				//			pnlWrapper.setBackground(ValidationComponentUtils.getMandatoryBackground());
-				pnlWrapper.setBorder(Paddings.TABBED_DIALOG);
-				JPanel pnlBrackets = new JPanel(new FlowLayout(FlowLayout.LEFT));
-				pnlBrackets.add(lblBrackets);
-				pnlBrackets.add(btnBracket1);
-				pnlBrackets.add(lblOr);
-				pnlBrackets.add(btnBracket2);
-				pnlBrackets.add(lblBracketsExample);
-				pnlWrapper.add(pnlBrackets, cc.xyw(1, 1, layoutWrapper.getColumnCount()-1));
-
-				JPanel pnlSpaces = new JPanel(new FlowLayout(FlowLayout.LEFT));
-				pnlSpaces.add(lblSpaces);
-				pnlSpaces.add(btnSpacesDots);
-				pnlSpaces.add(new JLabel(", "));
-				pnlSpaces.add(btnSpacesUnderlines);
-				pnlSpaces.add(lblOr2);
-				pnlSpaces.add(btnSpacesHyphens);
-				pnlSpaces.add(lblWithSpaces);
-				pnlWrapper.add(pnlSpaces, cc.xyw(1, 3, layoutWrapper.getColumnCount()-1));
-
-				JPanel pnlAutoCase = new JPanel(new FlowLayout(FlowLayout.LEFT));
-				JPanel pnlCamelCase = new JPanel(new FlowLayout(FlowLayout.LEFT));
-				//			pnlAutoCase.setBackground(ValidationComponentUtils.getMandatoryBackground());
-				//			pnlCamelCase.setBackground(ValidationComponentUtils.getMandatoryBackground());
-
-				pnlAutoCase.add(btnAutoSetLetterCase);
-				pnlCamelCase.add(btnSpacesCamelCase);
-				pnlWrapper.add(pnlAutoCase, cc.xyw(1, 5, layoutWrapper.getColumnCount()));
-				pnlWrapper.add(pnlCamelCase, cc.xyw(1, 7, layoutWrapper.getColumnCount()));
-
-				pnlWrapWrapper.add(pnlWrapper);
-
-				//			btnBracket1.setBackground(Color.RED);
-				//			btnBracket2.setBackground(Color.RED);
-				//			btnSpacesDots.setBackground(Color.ORANGE);
-				//			btnSpacesUnderlines.setBackground(Color.ORANGE);
-				pnlBrackets.setBackground(ValidationComponentUtils.getErrorBackground());
-				pnlSpaces.setBackground(ValidationComponentUtils.getWarningBackground());
-				//			pnlAutoCase.setBackground(ValidationComponentUtils.getMandatoryBackground());
-				//			pnlCamelCase.setBackground(ValidationComponentUtils.getMandatoryBackground());
-
-				final JButton btnMoreRenamingOptions = new JCustomButtonNew(Messages.get(MessageConstants.RENAMING_OPTIONS));
-				int size = ScreenSizeUtil.is3k() ? 24 : 16;
-				btnMoreRenamingOptions.setIcon(ImageUtil.getImageIconFrom(Icons.get("arrowDown", size, size)));
-				btnMoreRenamingOptions.setHorizontalAlignment(SwingConstants.LEFT);
-				btnMoreRenamingOptions.addFocusListener(UIUtil.getFocusAdapterKeepHoverWhenSelected());
-				btnMoreRenamingOptions.addActionListener(new ActionListener() {
-
-					@Override
-					public void actionPerformed(ActionEvent evt) {
-						Window w = SwingUtilities.getWindowAncestor(btnMoreRenamingOptions);
-						if (w != null) {
-							showMoreOptions = true;
-							w.dispose();
-						}
-					}
-				});
-				Object[] message = {
-						lblEnterNewName + "\n",
-						cmbParentFolders,
-						toolTipParentFolders,
-						"\n",
-						btnMoreRenamingOptions
-				};
-				Object[] messageEnlarged = {
-						lblEnterNewName + "\n",
-						cmbParentFolders,
-						toolTipParentFolders,
-						"\n",
-						btn/*,
-						"\n",
-						chkRenameFile,
-						txtRenameFile*/
-				};
-				cmbParentFolders.addAncestorListener(new RequestFocusListener());
-				cmbParentFolders.getEditor().selectAll();
-
-				int resp = JOptionPane.CANCEL_OPTION;
-				if (!showMoreOptions) {
-					resp = JOptionPane.showConfirmDialog(view, message, Messages.get(MessageConstants.RENAME_GAME),
-							JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
-					if (resp == JOptionPane.CANCEL_OPTION) {
-						return;
-					}
-				}
-				if (resp != JOptionPane.OK_OPTION) {
-					if (showMoreOptions) {
-						resp = JOptionPane.showConfirmDialog(view, messageEnlarged, Messages.get(MessageConstants.RENAME_GAME),
-								JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
-					}
-				}
-				if (resp == JOptionPane.OK_OPTION) {
-					String newName = cmbParentFolders.getEditor().getItem().toString();
-					renameGameNow(game, oldName, newName);
-				}
-			}
-		}
-
-		private void renameGameNow(Game game, String oldName, String newName) {
-			if (!oldName.equals(newName)) {
-				explorer.renameGame(game.getId(), newName);
-				try {
-					explorerDAO.renameGame(game.getId(), newName);
-				} catch (SQLException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				view.gameRenamed(new BroGameRenamedEvent(game, newName));
-				// it makes no sense make use of the advanced renaming feature
-				// when there are no other games in the list
-				if (explorer.getGameCount() > 1) {
-					final String oldNameDef = oldName;
-					final String newNameDef = newName;
-					SwingUtilities.invokeLater(new Runnable() {
-
-						@Override
-						public void run() {
-							boolean brackets1 = false;
-							boolean brackets2 = false;
-							boolean dots = false;
-							boolean underlines = false;
-							String regexBracket1 = "^(.*)\\(.*\\)(.*)$";
-							String regexBracket2 = "^(.*)\\[.*\\](.*)$";
-							String regexDots = "^.*(\\.+).*$";
-							String regexUnderlines = "^.*(\\_+).*$";
-							String tempOldName = oldNameDef;
-							String source;
-							List<String> bracketsList1 = new ArrayList<>();
-							List<String> bracketsList2 = new ArrayList<>();
-
-							do {
-								source = getBrackets(tempOldName, '(', ')');
-								if (source != null && !source.isEmpty()) {
-									tempOldName = tempOldName.replace(source, "").trim();
-									bracketsList1.add(source);
-								}
-							} while (source != null && !source.isEmpty());
-
-							do {
-								source = getBrackets(tempOldName, '[', ']');
-								if (source != null && !source.isEmpty()) {
-									tempOldName = tempOldName.replace(source, "").trim();
-									bracketsList2.add(source);
-								}
-							} while (source != null && !source.isEmpty());
-
-							if (oldNameDef.matches(regexBracket1)) {
-								if (!newNameDef.matches(regexBracket1)) {
-									brackets1 = true;
-								} else {
-									// FIXME change implementation
-									//									int countOld = StringUtils.countMatches(oldNameDef, "(");
-									//									int countNew = StringUtils.countMatches(newNameDef, "(");
-									//									if (countOld > countNew) {
-									//										brackets1 = true;
-									//									}
-								}
-							}
-							if (oldNameDef.matches(regexBracket2)) {
-								if (!newNameDef.matches(regexBracket2)) {
-									brackets2 = true;
-								} else {
-									// FIXME change implementation
-									//									int countOld = StringUtils.countMatches(oldNameDef, "[");
-									//									int countNew = StringUtils.countMatches(newNameDef, "[");
-									//									if (countOld > countNew) {
-									//										brackets2 = true;
-									//									}
-								}
-							}
-							if (oldNameDef.matches(regexDots) && !newNameDef.matches(regexDots)) {
-								dots = true;
-							}
-							if (oldNameDef.matches(regexUnderlines) && !newNameDef.matches(regexUnderlines)) {
-								underlines = true;
-							}
-							if (brackets1 || brackets2 || dots || underlines) {
-								chkDots.setVisible(dots);
-								chkUnderlines.setVisible(underlines);
-								chkDots.setSelected(dots);
-								chkUnderlines.setSelected(underlines);
-								JCheckBox chkNeverShowThisAgain = new JCheckBox(Messages.get(MessageConstants.RENAME_WITHOUT_ASK));
-								String msg = Messages.get(MessageConstants.RENAME_OTHER_GAMES)+"\n";
-								List<Object> messageList = new ArrayList<>();
-								messageList.add(msg);
-								List<JCheckBox> dynamicCheckBoxes = new ArrayList<>();
-								JCheckBox chkBrackets = new JCheckBox(Messages.get(MessageConstants.REMOVE_BRACKETS));
-								chkBrackets.setSelected(true);
-								messageList.add(chkBrackets);
-								for (String brack : bracketsList1) {
-									JCheckBox chk = new JCheckBox(brack);
-									dynamicCheckBoxes.add(chk);
-									chk.setSelected(true);
-									messageList.add(chk);
-								}
-								for (String brack : bracketsList2) {
-									JCheckBox chk = new JCheckBox(brack);
-									dynamicCheckBoxes.add(chk);
-									chk.setSelected(true);
-									messageList.add(chk);
-								}
-								// this has been done for putting a line wrap only when the brackets checkboxes were added
-								//									if (messageList.size() > 1) {
-								//										if (dots || underlines) {
-								//											JLabel lineWrap = new JLabel(" ");
-								//											messageList.add(lineWrap);
-								//										}
-								//									}
-								messageList.add(chkDots);
-								messageList.add(chkUnderlines);
-								messageList.add(new JLabel(" "));
-								messageList.add(chkNeverShowThisAgain);
-								Object[] stockArr = new Object[messageList.size()];
-								stockArr = messageList.toArray(stockArr);
-								String title = Messages.get(MessageConstants.SHOW_RENAME_GAMES_DIALOG);
-								int request = JOptionPane.showConfirmDialog(view, stockArr, title, JOptionPane.YES_NO_OPTION);
-								if (request == JOptionPane.YES_OPTION) {
-									dots = chkDots.isSelected();
-									underlines = chkUnderlines.isSelected();
-									showRenameGamesDialog(dynamicCheckBoxes, dots, underlines);
-								}
-							}
-						}
-					});
-				}
-			}
-		}
-
-		private String getBrackets(String string, char bracketType1, char bracketType2) {
-			String withoutBrackets = string.replaceAll("^.*(\\"+bracketType1+".*\\"+bracketType2+").*$", "$1");
-			boolean hasBrackets = withoutBrackets.contains(""+bracketType1) && withoutBrackets.contains(""+bracketType2);
-			if (hasBrackets) {
-				return withoutBrackets;
-			}
-			return null;
-		}
-
-		protected void showRenameGamesDialog(List<JCheckBox> dynamicCheckBoxes, boolean dots, boolean underlines) {
-			final JDialog dlg = new JDialog();
-			dlg.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-			dlg.setModalityType(ModalityType.APPLICATION_MODAL);
-			dlg.setTitle("Rename games");
-			FormLayout layout = new FormLayout("min:grow, $rgap, min:grow",
-					"fill:default, $rgap, fill:default:grow, $rgap, fill:default");
-			CellConstraints cc = new CellConstraints();
-			JPanel pnl = new JPanel();
-			pnl.setLayout(layout);
-			pnl.setBorder(Paddings.DIALOG);
-			lstMatches = new JList<>();
-			lstPreviews = new JList<>();
-			listener = new ListSelectionListener() {
-
-				@Override
-				public void valueChanged(ListSelectionEvent e) {
-					if (listener2 != null) {
-						lstPreviews.removeListSelectionListener(listener2);
-					}
-					lstPreviews.setSelectedIndex(lstMatches.getSelectedIndex());
-					if (listener2 != null) {
-						lstPreviews.addListSelectionListener(listener2);
-					}
-					lstPreviews.repaint();
-				}
-			};
-			listener2 = new ListSelectionListener() {
-
-				@Override
-				public void valueChanged(ListSelectionEvent e) {
-					if (listener != null) {
-						lstMatches.removeListSelectionListener(listener);
-					}
-					lstMatches.setSelectedIndex(lstPreviews.getSelectedIndex());
-					if (listener != null) {
-						lstMatches.addListSelectionListener(listener);
-					}
-					lstMatches.repaint();
-				}
-			};
-			lstMatches.addListSelectionListener(listener);
-			lstPreviews.addListSelectionListener(listener2);
-
-			JPanel pnlOptions = new JPanel();
-			FormLayout layoutWrapper = new FormLayout("pref, $ugap, pref, min:grow, min",
-					"min, $rgap, min, $rgap, min, $rgap, min");
-			layoutWrapper.setRowGroup(1, 3, 5, 7);
-			//			layoutWrapper.setRowGroup(1, 3, 5);
-			CellConstraints cc2 = new CellConstraints();
-			JPanel pnlWrapWrapper = new JPanel(new BorderLayout());
-			JPanel pnlWrapper = new JPanel(layoutWrapper);
-			JPanel pnlBrackets = new JPanel(new FlowLayout(FlowLayout.LEFT));
-			pnlBrackets.add(lblBrackets);
-			pnlBrackets.add(btnBracket1);
-			pnlBrackets.add(lblOr);
-			pnlBrackets.add(btnBracket2);
-			pnlBrackets.add(lblBracketsExample);
-			pnlWrapper.add(pnlBrackets, cc2.xyw(1, 1, layoutWrapper.getColumnCount()-1));
-
-			JPanel pnlSpaces = new JPanel(new FlowLayout(FlowLayout.LEFT));
-			pnlSpaces.add(lblSpaces);
-			pnlSpaces.add(btnSpacesDots);
-			pnlSpaces.add(new JLabel(", "));
-			pnlSpaces.add(btnSpacesUnderlines);
-			pnlSpaces.add(lblOr2);
-			pnlSpaces.add(btnSpacesHyphens);
-			pnlSpaces.add(lblWithSpaces);
-			pnlWrapper.add(pnlSpaces, cc2.xyw(1, 3, layoutWrapper.getColumnCount()-1));
-
-			JPanel pnlAutoCase = new JPanel(new FlowLayout(FlowLayout.LEFT));
-			JPanel pnlCamelCase = new JPanel(new FlowLayout(FlowLayout.LEFT));
-			//			pnlAutoCase.setBackground(ValidationComponentUtils.getMandatoryBackground());
-			//			pnlCamelCase.setBackground(ValidationComponentUtils.getMandatoryBackground());
-
-			pnlAutoCase.add(btnAutoSetLetterCase);
-			pnlCamelCase.add(btnSpacesCamelCase);
-			pnlWrapper.add(pnlAutoCase, cc2.xyw(1, 5, layoutWrapper.getColumnCount()));
-			pnlWrapper.add(pnlCamelCase, cc2.xyw(1, 7, layoutWrapper.getColumnCount()));
-
-			pnlWrapWrapper.add(pnlWrapper);
-			pnlOptions.add(pnlWrapWrapper);
-
-
-			final JScrollPane spMatches = new JScrollPane(lstMatches);
-			final JScrollPane spPreview = new JScrollPane(lstPreviews);
-			spMatches.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener() {
-
-				@Override
-				public void adjustmentValueChanged(AdjustmentEvent e) {
-					spPreview.getVerticalScrollBar().setValue(e.getValue());
-				}
-			});
-			spPreview.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener() {
-
-				@Override
-				public void adjustmentValueChanged(AdjustmentEvent e) {
-					spMatches.getVerticalScrollBar().setValue(e.getValue());
-				}
-			});
-			listener3 = new AdjustmentListener() {
-
-				@Override
-				public void adjustmentValueChanged(AdjustmentEvent e) {
-					spMatches.getHorizontalScrollBar().removeAdjustmentListener(listener4);
-					spPreview.getHorizontalScrollBar().setValue(e.getValue());
-					spPreview.getHorizontalScrollBar().addAdjustmentListener(listener4);
-				}
-			};
-			spMatches.getHorizontalScrollBar().addAdjustmentListener(listener3);
-			listener4 = new AdjustmentListener() {
-
-				@Override
-				public void adjustmentValueChanged(AdjustmentEvent e) {
-					spMatches.getHorizontalScrollBar().removeAdjustmentListener(listener3);
-					spMatches.getHorizontalScrollBar().setValue(e.getValue());
-					spMatches.getHorizontalScrollBar().addAdjustmentListener(listener3);
-				}
-			};
-			spPreview.getHorizontalScrollBar().addAdjustmentListener(listener4);
-			JButton btnRenameGames = new JButton("rename now");
-			btnRenameGames.addActionListener(new ActionListener() {
-
-				@Override
-				public void actionPerformed(ActionEvent e) {
-					for (int i = 0; i < lstMatches.getModel().getSize(); i++) {
-						Game g = lstMatches.getModel().getElementAt(i);
-						String newName = lstPreviews.getModel().getElementAt(i);
-						explorer.renameGame(g.getId(), newName);
-						try {
-							explorerDAO.renameGame(g.getId(), newName);
-						} catch (SQLException e1) {
-							// TODO Auto-generated catch block
-							e1.printStackTrace();
-						}
-					}
-					dlg.dispose();
-				}
-			});
-			//			pnl.add(pnlOptions, cc.xyw(1, 1, layout.getColumnCount()));
-			pnl.add(spMatches, cc.xy(1, 3));
-			pnl.add(spPreview, cc.xy(3, 3));
-			pnl.add(btnRenameGames, cc.xyw(1, 5, layout.getColumnCount()));
-			dlg.add(pnl);
-			checkForRenamingGames(dynamicCheckBoxes, dots, underlines);
-			dlg.pack();
-			dlg.setLocationRelativeTo(view);
-			dlg.setVisible(true);
-		}
-
-		private void checkForRenamingGames(List<JCheckBox> dynamicCheckBoxes, boolean dots, boolean underlines) {
-			DefaultListModel<Game> mdlLstMatches = new DefaultListModel<>();
-			DefaultListModel<String> mdlLstPreviews = new DefaultListModel<>();
-			for (Game g : explorer.getGames()) {
-				String gameName = g.getName();
-				for (JCheckBox chk : dynamicCheckBoxes) {
-					if (chk.isSelected()) {
-						if (g.getName().toLowerCase().contains(chk.getText().trim().replaceAll("\\s+"," ").toLowerCase())) {
-							if (!mdlLstMatches.contains(g)) {
-								mdlLstMatches.addElement(g);
-							}
-							gameName = gameName.replace(chk.getText(), "").trim().replaceAll("\\s+"," ");
-						}
-					}
-				}
-				if (dots && gameName.contains(".")) {
-					if (!mdlLstMatches.contains(g)) {
-						mdlLstMatches.addElement(g);
-					}
-					gameName = gameName.replace(".", " ").trim().replaceAll("\\s+"," ");
-				}
-				if (underlines && gameName.contains("_")) {
-					if (!mdlLstMatches.contains(g)) {
-						mdlLstMatches.addElement(g);
-					}
-					gameName = gameName.replace("_", " ").trim().replaceAll("\\s+"," ");
-				}
-				if (mdlLstMatches.contains(g)) {
-					mdlLstPreviews.addElement(gameName);
-				}
-			}
-			lstMatches.setModel(mdlLstMatches);
-			lstPreviews.setModel(mdlLstPreviews);
-		}
-
-		@Override
-		public void setEnabled(boolean b) {
-		}
-
-		@Override
-		public void addPropertyChangeListener(PropertyChangeListener arg0) {
-			// TODO Auto-generated method stub
-
-		}
-
-		@Override
-		public Object getValue(String arg0) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public void putValue(String arg0, Object arg1) {
-			// TODO Auto-generated method stub
-
-		}
-
-		@Override
-		public void removePropertyChangeListener(PropertyChangeListener arg0) {
-			// TODO Auto-generated method stub
-
-		}
-
-		@Override
-		public boolean isEnabled() {
-			renameGame();
-			return false;
 		}
 	}
 
@@ -5941,41 +5272,77 @@ GameSelectionListener, BrowseComputerListener {
 		//				progress.setString("request missing covers");
 		//			}
 		//		});
-		String gameCode = game.getGameCode();
-		if (gameCode == null || gameCode.isEmpty()) {
-			System.out.println("no game code set");
-		} else {
-			String platformShortName = explorer.getPlatform(game.getPlatformId()).getShortName();
-			if (platformShortName == null || platformShortName.trim().isEmpty()) {
-				System.out.println("game has no coversource");
-				return;
-			}
-			if (executorServiceDownloadGameCover == null) {
-				executorServiceDownloadGameCover = Executors.newSingleThreadExecutor();
-			}
-			System.out.println("runnable submitted...");
-			executorServiceDownloadGameCover.submit(new Runnable() {
-
-				@Override
-				public void run() {
-					System.out.println("download game cover now...");
-					downloadGameCoverNow(game);
-				}
-			}); //start download and place on queue once completed
-			//			new Thread(() -> {
-			//				try {
-			//					BufferedImage image = queue.take();
-			//					setCoverForGame(game, image, coverFileTypes[l]);
-			//				} catch (InterruptedException e) {
-			//					// TODO Auto-generated catch block
-			//					e.printStackTrace();
-			//				}
-			//			}).start();
+		String platformShortName = explorer.getPlatform(game.getPlatformId()).getShortName();
+		if (platformShortName == null || platformShortName.trim().isEmpty()) {
+			System.out.println("platform has no short name");
+			return;
 		}
+		if (executorServiceDownloadGameCover == null) {
+			executorServiceDownloadGameCover = Executors.newSingleThreadExecutor();
+		}
+		System.out.println("runnable submitted...");
+		executorServiceDownloadGameCover.submit(new Runnable() {
+
+			@Override
+			public void run() {
+				System.out.println("download game cover now...");
+				downloadGameCoverNow(game);
+			}
+		}); //start download and place on queue once completed
+		//			new Thread(() -> {
+		//				try {
+		//					BufferedImage image = queue.take();
+		//					setCoverForGame(game, image, coverFileTypes[l]);
+		//				} catch (InterruptedException e) {
+		//					// TODO Auto-generated catch block
+		//					e.printStackTrace();
+		//				}
+		//			}).start();
 		//		dlgDownloadCovers.dispose();
 	}
 
 	protected void downloadGameCoverNow(Game game) {
+		String gameCode = game.getGameCode();
+		if (gameCode == null || gameCode.isEmpty()) {
+			System.out.println("no game code set");
+			return;
+		}
+		String platform = explorer.getPlatform(game.getPlatformId()).getShortName();
+		String link = null;
+		if (platform.equals("ps1") || platform.equals("psx") ) {
+			link = "https://raw.githubusercontent.com/xlenore/psx-covers/main/covers/";
+		}
+		if (platform.equals("ps2") ) {
+			link = "https://raw.githubusercontent.com/xlenore/ps2-covers/main/covers/";
+		}
+		if (link == null || link.trim().isEmpty()) {
+			System.out.println("no link");
+			return;
+		}
+		try {
+			URL url = new URL(link+gameCode.toUpperCase()+".jpg");
+			if (url != null) {
+				System.out.println("setting cover for game: " + game.getName() + " url: " + url);
+				try {
+					setCoverForGame(game, ImageIO.read(url), ".jpg");
+				} catch (IOException e) {
+					System.out.println("cannot set cover on given url, continue loop.." + url);
+					try {
+						TimeUnit.MICROSECONDS.sleep(1);
+					} catch (InterruptedException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+				}
+				System.out.println("cover set for game:"+game.getName()+": " + (game.hasCover()));
+			}
+		} catch (MalformedURLException e2) {
+			// TODO Auto-generated catch block
+			e2.printStackTrace();
+		}
+	}
+
+	protected void downloadGameCoverNowOld(Game game) {
 		String platformShortName = explorer.getPlatform(game.getPlatformId()).getShortName();
 		String coverSource = explorer.getCoverDownloadSource(game);
 		String coverTypes[] = {
@@ -8142,7 +7509,7 @@ GameSelectionListener, BrowseComputerListener {
 		Game element = new BroGame(GameConstants.NO_GAME, fileName, "", defaultFileId, explorerDAO.getChecksumId(checksum), null, null, 0, dateAdded, null, 0,
 				EmulatorConstants.NO_EMULATOR, platformId, platformIconFileName);
 		String defaultGameCover = p0.getDefaultGameCover();
-		IconStore.current().addPlatformCover(platformId, explorer.getCoversDirectoryFromPlatform(p0), defaultGameCover);
+		IconStore.current().addPlatformCover(platformId, explorer.getPlatformCoversDirectoryFromPlatform(p0), defaultGameCover);
 		if (favorite) {
 			element.setRate(RatingBarPanel.MAXIMUM_RATE);
 		}
@@ -8177,21 +7544,8 @@ GameSelectionListener, BrowseComputerListener {
 					return;
 				}
 			}
-			FileChannel fileChannel = null;
-			String gameCode = null;
-			if (p0.hasGameCodeRegexes()) {
-				fileChannel = FileChannel.open(path, StandardOpenOption.READ);
-				gameCode = retrieveGameCode(p0, path, fileChannel);
-			}
 			Properties gameTitles = explorer.getGameTitlesFromPlatform(p0);
-			if (gameCode == null || gameCode.isEmpty()) {
-				gameCode = getGameCodeFromGameTitles(gameTitles, fileChannel, path);
-			}
-			if (fileChannel != null) {
-				try {
-					fileChannel.close();
-				} catch (Exception e) { }
-			}
+			String gameCode = retrieveGameCodePreparations(p0, path, gameTitles);
 			if (gameCode != null && !gameCode.isEmpty()) {
 				String gameName = null;
 				if (gameTitles != null) {
@@ -8376,6 +7730,25 @@ GameSelectionListener, BrowseComputerListener {
 		}
 	}
 
+	private String retrieveGameCodePreparations(Platform p0, Path path, Properties gameTitles) throws IOException {
+		//		https://raw.githubusercontent.com/sysoutch/gamelist/master/psx.json
+		FileChannel fileChannel = null;
+		String gameCode = null;
+		if (p0.hasGameCodeRegexes()) {
+			fileChannel = FileChannel.open(path, StandardOpenOption.READ);
+			gameCode = retrieveGameCodeFromFile(p0, path, fileChannel);
+		}
+		if (gameCode == null || gameCode.isEmpty()) {
+			gameCode = getGameCodeFromGameTitles(gameTitles, fileChannel, path);
+		}
+		if (fileChannel != null) {
+			try {
+				fileChannel.close();
+			} catch (Exception e) { }
+		}
+		return gameCode;
+	}
+
 	private String getGameCodeFromGameTitles(Properties gameTitles, FileChannel fileChannel, Path path) {
 		String gameCode = null;
 		if (gameTitles != null) {
@@ -8433,7 +7806,8 @@ GameSelectionListener, BrowseComputerListener {
 		return gameCode;
 	}
 
-	private String retrieveGameCode(Platform platform, Path path, FileChannel fileChannel) throws IOException {
+	private String retrieveGameCodeFromFile(Platform platform, Path path, FileChannel fileChannel) throws IOException {
+		System.out.println("retrieving game code...");
 		//			RandomAccessFile raf = new RandomAccessFile(file, "r");
 		String gameCode = null;
 		long fileChannelSize = fileChannel.size();
@@ -8620,6 +7994,14 @@ GameSelectionListener, BrowseComputerListener {
 		}
 	}
 
+	public class ShowPlatformIconsListener implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			explorer.setShowPlatformIconsEnabled(!explorer.isShowPlatformIconsEnabled());
+		}
+	}
+
 	public class ShowGameNamesListener implements ActionListener {
 
 		@Override
@@ -8729,7 +8111,7 @@ GameSelectionListener, BrowseComputerListener {
 			//			label.setForeground((hasDefaultEmulator) ? Color.BLUE : UIManager.getColor("Label.foregroundColor"));
 			label.setText((hasDefaultEmulator) ? "<html><strong>"+platform.getName()+"</strong></html>" : platform.getName());
 			label.setForeground((hasNoEmulators) ? UIManager.getColor("Label.disabledForeground") : UIManager.getColor("Label.foreground"));
-			ImageIcon icon = platformIcons.get(platform.getShortName());
+			ImageIcon icon = IconStore.current().getPlatformIcon(platform.getId());
 			label.setIcon(icon);
 			label.setDisabledIcon(icon);
 			return label;
@@ -8743,18 +8125,8 @@ GameSelectionListener, BrowseComputerListener {
 		public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected,
 				boolean cellHasFocus) {
 			JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-
-			// String iconPath = value ==
-			// pnlPlatforms.lstPlatforms.getSelectedValue().getDefaultEmulatorId()
-			// ? "/images/"+resolution+"/dialog-ok-apply-5.png"
-			// : "/images/"+resolution+"/empty.png";
-
-			// File svgFile = new
-			// File("D:/files/workspace/JGameExplorer/res/images/dialog-ok-apply-5.svg");
-			// ImageIcon icon = ImageUtil.getImageIconFrom(svgFile);
-			// label.setIcon(icon);
 			BroEmulator emulator = ((BroEmulator) value);
-			Icon icon = emulatorIcons.get(emulator.getIconFilename());
+			Icon icon = IconStore.current().getEmulatorIcon(emulator.getId());
 			label.setIcon(icon);
 			return label;
 		}
@@ -9080,5 +8452,31 @@ GameSelectionListener, BrowseComputerListener {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+
+	void renameGame(final RenameGameListener renameGameListener) {
+		List<Game> currentGames = explorer.getCurrentGames();
+		if (currentGames != null && !currentGames.isEmpty()) {
+			Game game = explorer.getCurrentGames().get(0);
+			if (game == null) {
+				return;
+			}
+			String oldName = game.getName();
+			String pathWithoutFileName = FilenameUtils.getPath(explorer.getFiles(game).get(0));
+			String[] folderNames = pathWithoutFileName.split(getSeparatorBackslashed());
+			List<String> reverseList = new ArrayList<>();
+			reverseList.add(oldName);
+			for (int i = folderNames.length-1; i >= 0; i--) {
+				if (!folderNames[i].trim().isEmpty()) {
+					reverseList.add(folderNames[i]);
+				}
+			}
+			showRenameWindow(reverseList);
+		}
+	}
+
+	private void showRenameWindow(List<String> reverseList) {
+		//		RenameWindow renameWindow = new RenameWindow(reverseList);
+		//		view.addRenameGameListener(renameWindow);
 	}
 }

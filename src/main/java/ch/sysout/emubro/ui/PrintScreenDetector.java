@@ -155,7 +155,7 @@ public class PrintScreenDetector extends JFrame {
 
 			@Override
 			public void run() {
-				pnlAutoScaleImage.setGameCover(capture);
+				pnlAutoScaleImage.setImage(capture);
 			}
 		});
 	}

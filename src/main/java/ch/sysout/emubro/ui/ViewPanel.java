@@ -21,6 +21,7 @@ import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.PlatformComparator;
 import ch.sysout.emubro.controller.GameSelectionListener;
 import ch.sysout.emubro.impl.event.NavigationEvent;
+import ch.sysout.emubro.ui.listener.RateListener;
 
 public abstract class ViewPanel extends JPanel implements GameSelectionListener {
 	private static final long serialVersionUID = 1L;

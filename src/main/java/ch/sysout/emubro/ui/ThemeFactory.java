@@ -2,7 +2,7 @@ package ch.sysout.emubro.ui;
 
 import java.awt.Color;
 import java.awt.GradientPaint;
-import java.awt.image.BufferedImage;
+import java.awt.Image;
 
 import ch.sysout.ui.util.ImageUtil;
 
@@ -18,9 +18,12 @@ public class ThemeFactory {
 	}
 
 	public static ThemeBackground createThemeBackground(String string, boolean autoPickColorFromImage, int pickColorFromPoint) {
-		BufferedImage img = null;
+		Image img = null;
 		try {
-			img = ImageUtil.getBufferedImageFrom(string);
+			if (!string.startsWith("/")) {
+				string = "/"+string;
+			}
+			img = ImageUtil.getImageFrom(string);
 		} catch (Exception e) {
 			img = null;
 		}
@@ -32,8 +35,8 @@ public class ThemeFactory {
 			y = 0;
 			break;
 		case Theme.BOTTOM_RIGHT:
-			x = (img != null) ? img.getWidth()-1 : 0;
-			y = (img != null) ? img.getHeight()-1 : 0;
+			x = (img != null) ? img.getWidth(null)-1 : 0;
+			y = (img != null) ? img.getHeight(null)-1 : 0;
 			break;
 		default:
 			x = 0;

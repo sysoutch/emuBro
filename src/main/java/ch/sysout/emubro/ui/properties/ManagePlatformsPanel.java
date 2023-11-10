@@ -72,7 +72,6 @@ import com.jgoodies.forms.factories.Paddings;
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 import com.jgoodies.forms.layout.RowSpec;
-import com.jgoodies.validation.view.ValidationComponentUtils;
 
 import ch.sysout.emubro.api.event.EmulatorEvent;
 import ch.sysout.emubro.api.event.PlatformEvent;
@@ -444,6 +443,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 		protected JPanel pnlSelectedEmulatorMinimized;
 		private Map<Integer, EmulatorTableModel> emulatorModels = new HashMap<>();
 		private JLinkButton lnkRunEmulator = new JLinkButton("Start emulator");
+		private JLinkButton lnkOpenFolder = new JLinkButton("Open Folder");
 		private JLinkButton lnkWebsite = new JLinkButton("Visit website");
 		public JScrollPane spConfigurationFile;
 		private JScrollPane spEmulators;
@@ -533,14 +533,16 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 			JPanel pnl = new JPanel();
 			pnl.setOpaque(false);
 			// pnl.setBorder(Paddings.TABBED_DIALOG);
-			FormLayout layout = new FormLayout("pref, $ugap, pref, min:grow, $rgap, pref",
+			FormLayout layout = new FormLayout("pref, $ugap, pref, $ugap, pref, min:grow, $rgap, pref",
 					"fill:pref, $rgap");
 			pnl.setLayout(layout);
 			CellConstraints cc = new CellConstraints();
 			//			pnl.add(lblSelectedEmulator, cc.xyw(1, 1, layout.getColumnCount() - 2));
 			//			lblSelectedEmulator.setMinimumSize(new Dimension(0, 0));
+
 			pnl.add(lnkRunEmulator, cc.xy(1, 1));
-			pnl.add(lnkWebsite, cc.xy(3, 1));
+			pnl.add(lnkOpenFolder, cc.xy(3, 1));
+			pnl.add(lnkWebsite, cc.xy(5, 1));
 			pnl.add(btnEmulatorProperties2, cc.xy(layout.getColumnCount(), 1));
 			return pnl;
 		}
@@ -808,9 +810,9 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 												String comment = arr2[1].trim();
 												chkValue.setToolTipText(comment.trim());
 												String toolTip = chkValue.getToolTipText();
-												chkValue.setForeground(toolTip != null && !toolTip.isEmpty()
-														? ValidationComponentUtils.getMandatoryForeground()
-																: chkValue.getForeground());
+												//												chkValue.setForeground(toolTip != null && !toolTip.isEmpty()
+												//														? ValidationComponentUtils.getMandatoryForeground()
+												//																: chkValue.getForeground());
 											}
 										} else {
 											try {
@@ -822,9 +824,9 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 														String comment = arr2[1].trim();
 														spinner.setToolTipText(comment.trim());
 														String toolTip = spinner.getToolTipText();
-														spinner.setForeground(toolTip != null && !toolTip.isEmpty()
-																? ValidationComponentUtils.getMandatoryForeground()
-																		: spinner.getForeground());
+														//														spinner.setForeground(toolTip != null && !toolTip.isEmpty()
+														//																? ValidationComponentUtils.getMandatoryForeground()
+														//																		: spinner.getForeground());
 													}
 												} else {
 													txtValue = new JTextField(value.trim());
@@ -832,9 +834,9 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 														String comment = arr2[1].trim();
 														txtValue.setToolTipText(comment.trim());
 														String toolTip = txtValue.getToolTipText();
-														txtValue.setForeground(toolTip != null && !toolTip.isEmpty()
-																? ValidationComponentUtils.getMandatoryForeground()
-																		: txtValue.getForeground());
+														//														txtValue.setForeground(toolTip != null && !toolTip.isEmpty()
+														//																? ValidationComponentUtils.getMandatoryForeground()
+														//																		: txtValue.getForeground());
 													}
 												}
 											} catch (NumberFormatException e) {
@@ -843,9 +845,9 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 													String comment = arr2[1].trim();
 													txtValue.setToolTipText(comment.trim());
 													String toolTip = txtValue.getToolTipText();
-													txtValue.setForeground(toolTip != null && !toolTip.isEmpty()
-															? ValidationComponentUtils.getMandatoryForeground()
-																	: txtValue.getForeground());
+													//													txtValue.setForeground(toolTip != null && !toolTip.isEmpty()
+													//															? ValidationComponentUtils.getMandatoryForeground()
+													//																	: txtValue.getForeground());
 												}
 											}
 										}
@@ -1307,7 +1309,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 
 		public JTextComponent createInputTextField() {
 			final JTextField txt = new JTextField("Unassigned");
-			txt.setBackground(ValidationComponentUtils.getWarningBackground());
+			//			txt.setBackground(ValidationComponentUtils.getWarningBackground());
 			txt.setEditable(false);
 			txt.setHorizontalAlignment(SwingConstants.CENTER);
 			txt.addFocusListener(new FocusListener() {
@@ -1330,7 +1332,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 				return;
 			}
 			makeInput = true;
-			txt.setBackground(ValidationComponentUtils.getMandatoryBackground());
+			//			txt.setBackground(ValidationComponentUtils.getMandatoryBackground());
 			txt.addKeyListener(new KeyAdapter() {
 				@Override
 				public void keyPressed(KeyEvent e) {

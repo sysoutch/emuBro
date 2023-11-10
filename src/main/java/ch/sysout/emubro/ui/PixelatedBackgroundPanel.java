@@ -2,10 +2,13 @@ package ch.sysout.emubro.ui;
 
 import java.awt.Color;
 import java.awt.Graphics;
+import java.awt.Image;
 import java.awt.LayoutManager;
 import java.util.Random;
 
 import javax.swing.JPanel;
+
+import ch.sysout.ui.util.ColorLerper;
 
 public class PixelatedBackgroundPanel extends JPanel {
 	private static final long serialVersionUID = 1L;
@@ -25,8 +28,22 @@ public class PixelatedBackgroundPanel extends JPanel {
 	//	private CustomColor baseColor = new CustomColor(88, 200, 50); // green-ish
 	//	private CustomColor baseColor = new CustomColor(100, 140, 160); // blue-ish
 
+	private boolean drawImage;
+
+	private Image img;
+
+	ColorLerper lerper;
+
 	public PixelatedBackgroundPanel() {
 		super();
+		//		Timer timer = new Timer(2000, new ActionListener() {
+		//
+		//			@Override
+		//			public void actionPerformed(ActionEvent e) {
+		//				repaint();
+		//			}
+		//		});
+		//		timer.start();
 	}
 
 	public PixelatedBackgroundPanel(LayoutManager layout) {
@@ -36,6 +53,7 @@ public class PixelatedBackgroundPanel extends JPanel {
 	@Override
 	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
+		System.out.println("painting...");
 		//        g.setColor(Color.BLACK);
 		//        g.fillOval(x, y, 50, 50);
 		//
@@ -59,9 +77,22 @@ public class PixelatedBackgroundPanel extends JPanel {
 						color = brighter ? color.brighter() : color.darker();
 					}
 				}
+				//				if (lerper == null) {
+				//					lerper = new ColorLerper(color, color.darker().darker().darker(), 5000);
+				//				}
+				//				boolean useLerpColor = x == 0 && y == 0;
+				//				Color colorToUse = color;
+				//				if (useLerpColor) {
+				//					colorToUse = lerper.getCurrentColor();
+				//				}
 				g.setColor(color);
 				g.fillRect(pixelSizeW * x, pixelSizeH * y, pixelSizeW, pixelSizeH);
 			}
+		}
+		if (drawImage && img != null) {
+			int x = getWidth() / 2 - img.getWidth(null) / 2;
+			int y = getHeight() / 2 - img.getHeight(null) / 2;
+			g.drawImage(img, x, y, img.getWidth(null), img.getHeight(null), null);
 		}
 	}
 
@@ -101,11 +132,11 @@ public class PixelatedBackgroundPanel extends JPanel {
 		this.maxLoops = maxLoops;
 	}
 
-	public double getFactor() {
+	public static double getFactor() {
 		return CustomColor.factor;
 	}
 
-	public void setFactor(double factor) {
+	public static void setFactor(double factor) {
 		CustomColor.factor = factor;
 	}
 
@@ -151,6 +182,18 @@ public class PixelatedBackgroundPanel extends JPanel {
 	public void setPixelSizeH(int pixelSizeH) {
 		this.pixelSizeH = pixelSizeH;
 		repaint();
+	}
+
+	public Image getImg() {
+		return img;
+	}
+
+	public void setImg(Image img) {
+		this.img = img;
+	}
+
+	public void setDrawImageEnabled(boolean drawImage) {
+		this.drawImage = drawImage;
 	}
 }
 

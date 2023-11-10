@@ -1,6 +1,7 @@
 package ch.sysout.ui.util;
 
 import java.awt.Color;
+import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Toolkit;
@@ -87,6 +88,11 @@ public class ImageUtil {
 		return (absolutePath) ? ImageIO.read(new File(filepath)) : ImageIO.read(url);
 	}
 
+	public static Image getImageFrom(String filepath) throws Exception {
+		URL url = ImageUtil.class.getResource(filepath);
+		return new ImageIcon(url).getImage();
+	}
+
 	/**
 	 * @param coverPath
 	 * @param coverSize
@@ -157,7 +163,6 @@ public class ImageUtil {
 			Image image = icon.getImage().getScaledInstance((int) scaledWidth, (int) scaledHeight, Image.SCALE_SMOOTH);
 			icon = new ImageIcon(image);
 		}
-
 		return icon;
 	}
 
@@ -268,5 +273,34 @@ public class ImageUtil {
 			}
 		}
 		return false;
+	}
+
+	public static BufferedImage makeBufferedImageFrom(ImageIcon ico) {
+		BufferedImage bi = new BufferedImage(ico.getIconWidth(), ico.getIconHeight(), BufferedImage.TYPE_INT_RGB);
+		Graphics g = bi.createGraphics();
+		ico.paintIcon(null, g, 0,0);
+		g.dispose();
+		return bi;
+	}
+
+	public static BufferedImage createTransparentImageFrom(Image image, int alpha) {
+		int width = image.getWidth(null);
+		int height = image.getHeight(null);
+		if (width < 0 || height < 0) {
+			return null;
+		}
+		BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_4BYTE_ABGR);
+		img.getGraphics().drawImage(image, 0, 0, null);
+		for (int x = img.getWidth() - 1; x >= 0; x--) {
+			for (int y = img.getHeight() - 1; y >= 0; y--) {
+				Color c = new Color(img.getRGB(x, y));
+				int r = c.getRed();
+				int g = c.getGreen();
+				int b = c.getBlue();
+				Color transparentColor = new Color(r, g, b, alpha);
+				img.setRGB(x, y, transparentColor.getRGB());
+			}
+		}
+		return img;
 	}
 }

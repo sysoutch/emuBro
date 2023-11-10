@@ -6,6 +6,7 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.RenderingHints;
 import java.awt.dnd.DropTargetListener;
 import java.awt.event.ActionListener;
@@ -39,6 +40,7 @@ import ch.sysout.emubro.api.model.PlatformComparator;
 import ch.sysout.emubro.controller.GameSelectionListener;
 import ch.sysout.emubro.controller.ViewConstants;
 import ch.sysout.emubro.impl.event.NavigationEvent;
+import ch.sysout.emubro.ui.listener.RateListener;
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.ui.util.UIUtil;
@@ -381,14 +383,10 @@ public class WelcomeViewPanel extends ViewPanel {
 
 	@Override
 	public void addOpenGameFolderListener1(MouseListener l) {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
 	public void addRateListener(RateListener l) {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
@@ -545,14 +543,18 @@ public class WelcomeViewPanel extends ViewPanel {
 		//			g2d.setColor(currentBackground.getColor());
 		//		}
 		//		g2d.fillRect(0, 0, panelWidth, panelHeight);
-
-		BufferedImage background = currentBackground.getImage();
+		if (currentBackground.hasColor()) {
+			Color backgroundColor = currentBackground.getColor();
+			g2d.setColor(backgroundColor);
+			g2d.fillRect(0, 0, panelWidth, panelHeight);
+		}
+		Image background = currentBackground.getImage();
 		if (background != null) {
 			g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
 			g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 			g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-			int imgWidth = background.getWidth();
-			int imgHeight = background.getHeight();
+			int imgWidth = background.getWidth(null);
+			int imgHeight = background.getHeight(null);
 			int x = 0;
 			int y = 0;
 			boolean shouldScale = currentBackground.isImageScaleEnabled();
@@ -623,7 +625,7 @@ public class WelcomeViewPanel extends ViewPanel {
 				int width = imgTransparentOverlay.getWidth();
 				int height = imgTransparentOverlay.getHeight();
 
-				double factor = background.getWidth() / panelWidth;
+				double factor = background.getWidth(null) / panelWidth;
 				if (factor != 0) {
 					int scaledWidth = (int) (width/factor);
 					int scaledHeight = (int) (height/factor);

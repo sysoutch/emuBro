@@ -304,4 +304,8 @@ public class UIUtil {
 		dlg.pack();
 		return dlg;
 	}
+
+	public static String showInputMessage(Component parentComponent, Object message, String title) {
+		return JOptionPane.showInputDialog(parentComponent, message, title);
+	}
 }

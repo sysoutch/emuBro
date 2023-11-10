@@ -1,4 +1,6 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>ch.sysout</groupId>
 	<artifactId>emuBro</artifactId>
@@ -13,13 +15,75 @@
 	</properties>
 
 	<dependencies>
-		<!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-compiler-plugin -->
+		<!-- https://mvnrepository.com/artifact/org.hsqldb/hsqldb -->
+		<dependency>
+			<groupId>org.hsqldb</groupId>
+			<artifactId>hsqldb</artifactId>
+			<version>2.7.2</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/com.formdev/flatlaf -->
+		<dependency>
+			<groupId>com.formdev</groupId>
+			<artifactId>flatlaf</artifactId>
+			<version>3.2.5</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/com.formdev/flatlaf-extras -->
+		<dependency>
+			<groupId>com.formdev</groupId>
+			<artifactId>flatlaf-extras</artifactId>
+			<version>3.2.5</version>
+		</dependency>
+		<!--
+		https://mvnrepository.com/artifact/com.formdev/flatlaf-intellij-themes -->
+		<dependency>
+			<groupId>com.formdev</groupId>
+			<artifactId>flatlaf-intellij-themes</artifactId>
+			<version>3.2.5</version>
+		</dependency>
+		<dependency>
+			<groupId>com.jgoodies</groupId>
+			<artifactId>jgoodies-common</artifactId>
+			<version>1.8.1</version>
+		</dependency>
+		<dependency>
+			<groupId>com.jgoodies</groupId>
+			<artifactId>jgoodies-forms</artifactId>
+			<version>1.9.0</version>
+		</dependency>
+		<!--
+		https://mvnrepository.com/artifact/com.akathist.maven.plugins.launch4j/launch4j-maven-plugin -->
+		<dependency>
+			<groupId>com.akathist.maven.plugins.launch4j</groupId>
+			<artifactId>launch4j-maven-plugin</artifactId>
+			<version>2.4.1</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.drjekyll/colorpicker -->
+		<dependency>
+			<groupId>org.drjekyll</groupId>
+			<artifactId>colorpicker</artifactId>
+			<version>1.4.5</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/com.xenoamess/JXInput -->
+		<dependency>
+			<groupId>com.xenoamess</groupId>
+			<artifactId>JXInput</artifactId>
+			<version>1.0.1</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/net.sourceforge.tess4j/tess4j -->
+		<dependency>
+			<groupId>net.sourceforge.tess4j</groupId>
+			<artifactId>tess4j</artifactId>
+			<version>5.4.0</version>
+		</dependency>
+		<!--
+		https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-compiler-plugin -->
 		<dependency>
 			<groupId>org.apache.maven.plugins</groupId>
 			<artifactId>maven-compiler-plugin</artifactId>
 			<version>3.10.1</version>
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/org.apache.maven.shared/maven-shared-utils -->
+		<!--
+		https://mvnrepository.com/artifact/org.apache.maven.shared/maven-shared-utils -->
 		<dependency>
 			<groupId>org.apache.maven.shared</groupId>
 			<artifactId>maven-shared-utils</artifactId>
@@ -31,19 +95,22 @@
 			<artifactId>plexus-java</artifactId>
 			<version>1.1.1</version>
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/org.codehaus.plexus/plexus-compiler-javac -->
+		<!--
+		https://mvnrepository.com/artifact/org.codehaus.plexus/plexus-compiler-javac -->
 		<dependency>
 			<groupId>org.codehaus.plexus</groupId>
 			<artifactId>plexus-compiler-javac</artifactId>
 			<version>2.12.1</version>
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/org.codehaus.plexus/plexus-compiler-manager -->
+		<!--
+		https://mvnrepository.com/artifact/org.codehaus.plexus/plexus-compiler-manager -->
 		<dependency>
 			<groupId>org.codehaus.plexus</groupId>
 			<artifactId>plexus-compiler-manager</artifactId>
 			<version>2.12.1</version>
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/org.codehaus.plexus/plexus-compiler-api -->
+		<!--
+		https://mvnrepository.com/artifact/org.codehaus.plexus/plexus-compiler-api -->
 		<dependency>
 			<groupId>org.codehaus.plexus</groupId>
 			<artifactId>plexus-compiler-api</artifactId>
@@ -61,7 +128,8 @@
 			<artifactId>commons-logging</artifactId>
 			<version>1.2</version>
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/org.apache.httpcomponents/httpclient -->
+		<!--
+		https://mvnrepository.com/artifact/org.apache.httpcomponents/httpclient -->
 		<dependency>
 			<groupId>org.apache.httpcomponents</groupId>
 			<artifactId>httpclient</artifactId>
@@ -71,13 +139,13 @@
 		<dependency>
 			<groupId>com.google.code.gson</groupId>
 			<artifactId>gson</artifactId>
-			<version>2.9.1</version>
+			<version>2.10.1</version>
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/org.yaml/snakeyaml -->
 		<dependency>
 			<groupId>org.yaml</groupId>
 			<artifactId>snakeyaml</artifactId>
-			<version>1.33</version>
+			<version>2.2</version>
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/com.github.junrar/junrar -->
 		<dependency>
@@ -91,52 +159,10 @@
 			<artifactId>opencsv</artifactId>
 			<version>5.6</version>
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/org.hsqldb/hsqldb -->
-		<dependency>
-			<groupId>org.hsqldb</groupId>
-			<artifactId>hsqldb</artifactId>
-			<version>2.7.1</version>
-		</dependency>
-		<dependency>
-			<groupId>com.formdev</groupId>
-			<artifactId>flatlaf</artifactId>
-			<version>2.4</version>
-		</dependency>
-		<!-- https://mvnrepository.com/artifact/com.formdev/flatlaf-extras -->
-		<dependency>
-			<groupId>com.formdev</groupId>
-			<artifactId>flatlaf-extras</artifactId>
-			<version>2.4</version>
-		</dependency>
-		<dependency>
-			<groupId>com.formdev</groupId>
-			<artifactId>flatlaf-intellij-themes</artifactId>
-			<version>2.4</version>
-		</dependency>
-		<dependency>
-			<groupId>com.jgoodies</groupId>
-			<artifactId>jgoodies-common</artifactId>
-			<version>1.8.1</version>
-		</dependency>
-		<dependency>
-			<groupId>com.jgoodies</groupId>
-			<artifactId>jgoodies-forms</artifactId>
-			<version>1.9.0</version>
-		</dependency>
-		<dependency>
-			<groupId>com.jgoodies</groupId>
-			<artifactId>jgoodies-looks</artifactId>
-			<version>2.7.0</version>
-		</dependency>
-		<dependency>
-			<groupId>com.jgoodies</groupId>
-			<artifactId>jgoodies-validation</artifactId>
-			<version>2.5.1</version>
-		</dependency>
 		<!-- https://mvnrepository.com/artifact/club.minnced/java-discord-rpc -->
 		<!-- <dependency>
 			<groupId>club.minnced</groupId>
-			<artifactId>java-discord-rpc</artifactId>
+		<artifactId>java-discord-rpc</artifactId>
 			<version>2.0.2</version>
 		</dependency>-->
 		<dependency>
@@ -162,19 +188,22 @@
 			<artifactId>spark-core</artifactId>
 			<version>2.9.4</version>
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/com.google.oauth-client/google-oauth-client-jetty -->
+		<!--
+		https://mvnrepository.com/artifact/com.google.oauth-client/google-oauth-client-jetty -->
 		<dependency>
 			<groupId>com.google.oauth-client</groupId>
 			<artifactId>google-oauth-client-jetty</artifactId>
 			<version>1.34.1</version>
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/com.google.apis/google-api-services-drive -->
+		<!--
+		https://mvnrepository.com/artifact/com.google.apis/google-api-services-drive -->
 		<dependency>
 			<groupId>com.google.apis</groupId>
 			<artifactId>google-api-services-drive</artifactId>
 			<version>v3-rev197-1.25.0</version>
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/org.apache.commons/commons-compress -->
+		<!--
+		https://mvnrepository.com/artifact/org.apache.commons/commons-compress -->
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-compress</artifactId>

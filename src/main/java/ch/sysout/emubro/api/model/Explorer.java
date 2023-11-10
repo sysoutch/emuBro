@@ -179,7 +179,7 @@ public interface Explorer {
 
 	String getPlatformsDirectory();
 
-	String getCoversDirectoryFromPlatform(Platform platform);
+	String getPlatformCoversDirectoryFromPlatform(Platform platform);
 
 	String getLogosDirectoryFromPlatform(Platform platform);
 
@@ -190,6 +190,10 @@ public interface Explorer {
 	String getRelativeTitlesSourceFilePath(Platform platform);
 
 	String getEmulatorsDirectory(Platform platform);
+
+	boolean isShowPlatformIconsEnabled();
+
+	void setShowPlatformIconsEnabled(boolean showPlatformIconsEnabled);
 
 	boolean isShowGameNamesEnabled();
 
