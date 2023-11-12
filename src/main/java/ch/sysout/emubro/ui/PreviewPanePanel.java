@@ -420,12 +420,11 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 	}
 
 	public void addCoverFromWebListener(ActionListener l) {
-		pnlSelection.pnlGameData.addCoverFromWebListener(l);
+		pnlSelection.btnSearchCover.addActionListener(l);
 	}
 
 	public void addTrailerFromWebListener(ActionListener l) {
-		pnlSelection.pnlGameData.addTrailerFromWebListener(l);
-
+		pnlSelection.btnSearchTrailer.addActionListener(l);
 	}
 
 	public void addTagToGameFilterListener(GameFilterPanel pnlGameFilter) {
@@ -621,7 +620,6 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		private static final long serialVersionUID = 1L;
 		private JLabel lblGameTitle = new JLabel("Game Title");
 		private JLinkButton lnkPlatformTitle = new JLinkButton("Platform Title");
-		private GameDataPanel pnlGameData = new GameDataPanel();
 		private AutoScaleImagePanel pnlAutoScaleImage = new AutoScaleImagePanel();
 		private RatingBarPanel pnlRatingBar = new RatingBarPanel(Messages.get(MessageConstants.RATE_GAME), false);
 		private DateAddedPanel pnlDateAdded = new DateAddedPanel();
@@ -647,8 +645,10 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		private ImageIcon icoRunGame = ImageUtil.getFlatSVGIconFrom(Icons.get("runGame"), 24, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR));
 		private ImageIcon icoMoreOptionsRunGame = ImageUtil.getImageIconFrom(Icons.get("arrowDownOtherWhite", 1));
 		private JButton btnRunGame = new JButton(Messages.get(MessageConstants.RUN_GAME));
-		private JButton lblMoreOptionsRunGame = new JCustomButtonNew("");
-
+		private JButton btnMoreOptionsRunGame = new JButton("");
+		private JButton btnSearchCover = new JCustomButtonNew();
+		private JButton btnSearchTrailer = new JCustomButtonNew();
+		
 		public SelectionPanel() {
 			initComponents();
 			setIcons();
@@ -673,9 +673,6 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		private void initComponents() {
 			initGameTitle();
 			initPlatformTitle();
-			
-			btnRunGame.setBackground(new Color(40, 167, 69));
-
 			addMouseListener(new MouseAdapter() {
 				@Override
 				public void mouseReleased(MouseEvent e) {
@@ -707,7 +704,9 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			itmAddCoverFromWeb.setIcon(ImageUtil.getImageIconFrom(Icons.get("fromWeb", size, size)));
 			itmRemoveCover.setIcon(ImageUtil.getImageIconFrom(Icons.get("remove2", size, size)));
 			btnRunGame.setIcon(icoRunGame);
-			lblMoreOptionsRunGame.setIcon(icoMoreOptionsRunGame);
+			btnMoreOptionsRunGame.setIcon(icoMoreOptionsRunGame);
+			btnSearchCover.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("google"), size));
+			btnSearchTrailer.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("youtube"), size));
 		}
 
 		private void createUI() {
@@ -776,25 +775,30 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			FormLayout layoutTop = new FormLayout("default:grow",
 					"default, $rgap, default, $ugap, default, $ugap, default");
 			JPanel pnl = new JPanel();
-			pnl.setLayout(new FormLayout("default:grow",
-					"fill:default, $lgap, fill:default, $rgap, default, $rgap, fill:default, $ugap, fill:default, $ugap, fill:default, $lgap, fill:default, $lgap, fill:default, $ugap, fill:default, $rgap, fill:default, $rgap, fill:default, $ugap, fill:default, $rgap, fill:default, $ugap, fill:default"));
-			pnl.add(lblGameTitle, CC.xyw(1, 1, 1));
-			pnl.add(lnkPlatformTitle, CC.xyw(1, 3, 1));
-			pnl.add(pnlAutoScaleImage, CC.xyw (1, 5, 1));
+			FormLayout layoutMain;
+			pnl.setLayout(layoutMain = new FormLayout("default, $ugap, default, min, default, min:grow",
+					"default, $lgap, fill:default, $rgap, fill:default, $ugap, fill:default, $ugap, fill:default, $ugap, fill:default, $lgap, fill:default, $lgap, fill:default, $ugap, fill:default, $rgap, fill:default, $rgap, fill:default, $ugap, fill:default, $rgap, fill:default, $ugap, fill:default"));
+			int defaultSpanWidth = layoutMain.getColumnCount();
+			pnl.add(lnkPlatformTitle, CC.xyw(1, 5, defaultSpanWidth));
+			pnl.add(lblGameTitle, CC.xyw(1, 3, defaultSpanWidth));
+			pnl.add(pnlAutoScaleImage, CC.xyw (1, 1, defaultSpanWidth));
 			JPanel pnlRunGameWrapper = new JPanel(new BorderLayout());
 			pnlRunGameWrapper.add(btnRunGame);
-			pnlRunGameWrapper.add(lblMoreOptionsRunGame, BorderLayout.EAST);
+			pnlRunGameWrapper.add(btnMoreOptionsRunGame, BorderLayout.EAST);
 			pnl.add(pnlRunGameWrapper, CC.xy(1, 7));
-			pnl.add(pnlGameData, CC.xyw(1, 9, 1));
-			pnl.add(pnlRatingBar, CC.xyw(1, 11, 1));
-			pnl.add(pnlCommentWrapper, CC.xyw(1, 13, 1));
-			pnl.add(pnlTags, CC.xyw(1, 15, 1));
-			pnl.add(pnlPlayCount, CC.xyw(1, 17, 1));
-			pnl.add(pnlLastPlayed, CC.xyw(1, 19, 1));
-			pnl.add(pnlDateAdded, CC.xyw(1, 21, 1));
-			pnl.add(pnlPublisher, CC.xyw(1, 23, 1));
-			pnl.add(pnlDeveloper, CC.xyw(1, 25, 1));
-			pnl.add(pnlTags, CC.xyw(1, 27, 1));
+			pnl.add(btnSearchCover, CC.xy(3, 7));
+			pnl.add(btnSearchTrailer, CC.xy(5, 7));
+			
+//			pnl.add(pnlGameData, CC.xyw(1, 9, defaultSpanWidth));
+			pnl.add(pnlRatingBar, CC.xyw(1, 11, defaultSpanWidth));
+			pnl.add(pnlCommentWrapper, CC.xyw(1, 13, defaultSpanWidth));
+			pnl.add(pnlTags, CC.xyw(1, 15, defaultSpanWidth));
+			pnl.add(pnlPlayCount, CC.xyw(1, 17, defaultSpanWidth));
+			pnl.add(pnlLastPlayed, CC.xyw(1, 19, defaultSpanWidth));
+			pnl.add(pnlDateAdded, CC.xyw(1, 21, defaultSpanWidth));
+			pnl.add(pnlPublisher, CC.xyw(1, 23, defaultSpanWidth));
+			pnl.add(pnlDeveloper, CC.xyw(1, 25, defaultSpanWidth));
+			pnl.add(pnlTags, CC.xyw(1, 27, defaultSpanWidth));
 			//						pnl.add(pnlAutoScaleImage, ccSelection.xy(1, 5));
 			//						pnl.add(pnlRatingBar, ccSelection.xyw(1, 9, columnCount));
 			//						pnl.add(pnlCommentWrapper, ccSelection.xyw(1, 11, columnCount));
@@ -807,7 +811,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 
 		private void initGameTitle() {
 			lblGameTitle.setToolTipText("Click to scroll to selected game");
-			lblGameTitle.setHorizontalAlignment(SwingConstants.CENTER);
+			lblGameTitle.setHorizontalAlignment(SwingConstants.LEFT);
 			lblGameTitle.setHorizontalTextPosition(SwingConstants.LEFT);
 			lblGameTitle.setVerticalTextPosition(SwingConstants.TOP);
 			lblGameTitle.addMouseListener(new MouseAdapter() {
@@ -843,7 +847,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			lnkPlatformTitle.setToolTipText("Click to set the filter to this platform");
 			lnkPlatformTitle.setBorder(Paddings.EMPTY);
 			lnkPlatformTitle.setBackground(getBackground());
-			lnkPlatformTitle.setHorizontalAlignment(SwingConstants.CENTER);
+			lnkPlatformTitle.setHorizontalAlignment(SwingConstants.LEFT);
 			lnkPlatformTitle.addActionListener(new ActionListener() {
 
 				@Override
@@ -878,7 +882,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		protected void setCurrentPlatform(Platform platform, Icon icon) {
 			this.platform = platform;
 			String name = (platform == null) ? "" : platform.getName();
-			lnkPlatformTitle.setFont(FontUtil.getCustomFont(18));
+			lnkPlatformTitle.setFont(FontUtil.getCustomFont(12));
 			lnkPlatformTitle.setText(name);
 			lnkPlatformTitle.setIcon(icon);
 		}
@@ -939,7 +943,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			pnlLastPlayed.languageChanged();
 			//			pnlPath.languageChanged();
 			pnlTags.languageChanged();
-			pnlGameData.setToolTipTexts();
+			setToolTipTexts();
 		}
 
 		class DateAddedPanel extends JPanel {
@@ -1302,96 +1306,10 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 				txtPath.addMouseListener(l);
 			}
 		}
-
-		public class GameDataPanel extends ScrollablePanel implements MouseListener {
-			private static final long serialVersionUID = 1L;
-
-			int size = ScreenSizeUtil.is3k() ? 32 : 32;
-			Color colorUnderlay = new Color(0f, 0f, 0f, 0.25f);
-
-			private JButton btnSearchCover = new JCustomButtonNew();
-			private JButton btnSearchTrailer = new JCustomButtonNew();
-
-			private JPanel pnlRunGameWrapper;
-			CellConstraints cc = new CellConstraints();
-
-			private FormLayout layout;
-
-			public GameDataPanel() {
-				initComponents();
-				createUI();
-			}
-
-			private void initComponents() {
-				btnSearchCover.setHorizontalAlignment(SwingConstants.LEFT);
-				btnSearchTrailer.setHorizontalAlignment(SwingConstants.LEFT);
-				setToolTipTexts();
-				setIcons();
-				addListeners();
-			}
-
-			private void setToolTipTexts() {
-				btnSearchCover.setToolTipText(Messages.get(MessageConstants.COVER_FROM_WEB));
-				btnSearchTrailer.setToolTipText(Messages.get(MessageConstants.SHOW_TRAILER));
-			}
-
-			private void setIcons() {
-				int size = ScreenSizeUtil.is3k() ? 32 : 24;
-				btnSearchCover.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("google"), size));
-				btnSearchTrailer.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("youtube"), size));
-			}
-
-			private void addListeners() {
-				//				lblRunGame.addMouseListener(this);
-				//				lblMoreOptionsRunGame.addMouseListener(this);
-				btnSearchCover.addMouseListener(this);
-				btnSearchTrailer.addMouseListener(this);
-			}
-
-			private void createUI() {
-				setLayout(layout = new FormLayout("min, min, min",
-						"fill:min, $rgap, fill:min"));
-				add(btnSearchCover, cc.xy(1, 1));
-				add(btnSearchTrailer, cc.xy(3, 1));
-			}
-
-			@Override
-			public void mouseClicked(MouseEvent e) {
-			}
-
-			@Override
-			public void mousePressed(MouseEvent e) {
-			}
-
-			@Override
-			public void mouseReleased(MouseEvent e) {
-			}
-
-			@Override
-			public void mouseEntered(MouseEvent e) {
-				JComponent source = (JComponent) e.getSource();
-				if (source == btnSearchCover) {
-					((AbstractButton) source).setText("Google");
-				} else if (source == btnSearchTrailer) {
-					((AbstractButton) source).setText("YouTube");
-				}
-			}
-
-			@Override
-			public void mouseExited(MouseEvent e) {
-				JComponent source = (JComponent) e.getSource();
-				if (source == btnSearchCover || source == btnSearchTrailer) {
-					((AbstractButton) source).setText("");
-				}
-			}
-
-			public void addCoverFromWebListener(ActionListener l) {
-				btnSearchCover.addActionListener(l);
-			}
-
-			public void addTrailerFromWebListener(ActionListener l) {
-				btnSearchTrailer.addActionListener(l);
-			}
+		
+		private void setToolTipTexts() {
+			btnSearchCover.setToolTipText(Messages.get(MessageConstants.COVER_FROM_WEB));
+			btnSearchTrailer.setToolTipText(Messages.get(MessageConstants.SHOW_TRAILER));
 		}
 
 		class TagsPanel extends ScrollablePanel {

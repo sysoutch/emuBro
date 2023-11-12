@@ -138,6 +138,7 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 	private JPanel pnlFilter;
 
 	private JPopupMenu popupTags;
+	private JPopupMenu popupRegions;
 
 	private AbstractButton btnPinUnpinTagsPanel = new JCustomToggleButton("Pin");
 
@@ -167,7 +168,7 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 			}
 		});
 		btnTags = new JCustomToggleButton("Tags", ImageUtil.getFlatSVGIconFrom(Icons.get("tag"), size, new Color(168, 124, 160)));
-		btnRegions = new JCustomToggleButton("Regions", ImageUtil.getFlatSVGIconFrom(Icons.get("tag"), size, new Color(168, 124, 160)));
+		btnRegions = new JCustomToggleButton("Regions", ImageUtil.getFlatSVGIconFrom(Icons.get("globe"), size, new Color(109, 132, 171)));
 		btnTags.addActionListener(new ActionListener() {
 
 			@Override
@@ -175,6 +176,18 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 				popupTags.setPreferredSize(new Dimension(pnlFilter.getWidth(), 220));
 				//				popup.setPreferredSize(new Dimension(220, getParent().getHeight()));
 				popupTags.show(pnlFilter, -1, pnlFilter.getHeight());
+				//				popup.show(pnlFilter, pnlFilter.getWidth()-220, pnlFilter.getHeight());
+
+				//				showAdvancedSearchSettingsPopupMenu(btnTags);
+			}
+		});
+		btnRegions.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+//				popupRegions.setPreferredSize(new Dimension(pnlFilter.getWidth(), 220));
+				//				popup.setPreferredSize(new Dimension(220, getParent().getHeight()));
+				popupRegions.show(btnRegions, 0, pnlFilter.getHeight());
 				//				popup.show(pnlFilter, pnlFilter.getWidth()-220, pnlFilter.getHeight());
 
 				//				showAdvancedSearchSettingsPopupMenu(btnTags);
@@ -316,6 +329,38 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 
 			}
 		});
+		
+		popupRegions = new JPopupMenu() {
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			protected void paintComponent(Graphics g) {
+				super.paintComponent(g);
+				Graphics2D g2d = (Graphics2D) g.create();
+				int w = getWidth();
+				int h = getHeight();
+				//g2d.setColor(IconStore.current().getCurrentTheme().getGameFilterPane().getColor());
+				//g2d.fillRect(0, 0, w, h);
+				Image background = IconStore.current().getCurrentTheme().getGameFilterPane().getImage();
+				if (background != null) {
+					g2d.drawImage(background, 0, 0, w, h, this);
+				}
+				g2d.dispose();
+			}
+		};
+		popupRegions.setLightWeightPopupEnabled(false);
+		popupRegions.setOpaque(false);
+		JCheckBoxMenuItem chk1;
+		JCheckBoxMenuItem chk2;
+		JCheckBoxMenuItem chk3;
+		popupRegions.add(chk1 = new JCheckBoxMenuItem("Europe"));
+		popupRegions.add(chk2 = new JCheckBoxMenuItem("USA"));
+		popupRegions.add(chk3 = new JCheckBoxMenuItem("Japan"));
+		chk1.setSelected(true);
+		chk2.setSelected(true);
+		chk3.setSelected(true);
+		
+//		popupRegions.add(pnlTags);
 	}
 
 	private void setIcons() {

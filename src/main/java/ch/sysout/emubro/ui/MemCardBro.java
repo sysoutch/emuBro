@@ -10,7 +10,7 @@ public class MemCardBro extends JFrame {
 
 	public MemCardBro() {
 		super("Memory Card Manager");
-		setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+		setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 		pack();
 		setPreferredSize(new Dimension(600, 400));
 		setLocationRelativeTo(null);

@@ -3360,7 +3360,41 @@ GameSelectionListener, BrowseComputerListener {
 					}
 				} else {
 					if (isZipFile(filePath)) {
+						String extractToDirectory = FilenameUtils.getFullPath(filePath);
+						
+						// TODO ask user what to do with the zip file...
 						checkZipForGame(filePath, file, downloadCover);
+						int selectedOption = JOptionPane.showConfirmDialog(dlgAbout, "Want to unzip?");
+						if (selectedOption == JOptionPane.YES_OPTION) {
+							String[] cmdArray = { "tar", "-xf", filePath };
+							String[] cmdArray7z = { "7z", "e", "-y", filePath };
+							String[] cmdArrayNanaZip = { "nanazipc", "e", "-y", filePath };
+							String[] cmdArray7zFallBack = { "%programfiles%\7-Zip\7z.exe", "e", "-y", filePath };
+							String[] cmdToUse;
+							if (file.toString().toLowerCase().endsWith(".zip")) {
+								cmdToUse = cmdArray;
+							} else if (file.toString().toLowerCase().endsWith(".rar")) {
+								cmdToUse = cmdArray;
+							} else if (file.toString().toLowerCase().endsWith(".tar")) {
+								cmdToUse = cmdArray;
+							} else if (file.toString().toLowerCase().endsWith(".7z")) {
+								cmdToUse = cmdArray7z;
+							} else {
+								cmdToUse = cmdArray7z;
+							}
+							// "%programfiles%\7-Zip\7z.exe" e -y test.zip
+							// tar -xf archive.zip
+							
+							ProcessBuilder builder = new ProcessBuilder();
+//							if (isWindows) {
+							    builder.command(cmdToUse);
+//							} else {
+//							    builder.command("sh", "-c", "ls");
+//							}
+							builder.directory(new File(extractToDirectory));
+							Process process = builder.start();
+						}
+
 					} else if (is7ZipFile(filePath)) {
 						check7Zip(filePath, file, downloadCover);
 					} else if (isRarFile(filePath)) {
