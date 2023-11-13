@@ -629,8 +629,8 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 
 		try {
 			for (String theme : IconStore.current().getDefaultThemes()) {
-				JRadioButtonMenuItem rdb;
-				defaultThemesMenuItems.add(rdb = new JRadioButtonMenuItem(theme));
+				JRadioButtonMenuItem rdb = new JRadioButtonMenuItem(theme);
+				defaultThemesMenuItems.add(rdb);
 				rdb.addActionListener(new ActionListener() {
 
 					@Override

@@ -8,10 +8,24 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.JarURLConnection;
+import java.net.URI;
+import java.net.URL;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
+import java.util.stream.Stream;
 
 import javax.swing.ImageIcon;
 
@@ -90,84 +104,83 @@ public class IconStore {
 	}
 
 	public void loadDefaultTheme(String themeNameToLoad) throws IOException, JsonIOException, JsonSyntaxException {
-		System.err.println(getResourceFiles("/themes/"));
-		String themeDirectory = "themes/"+themeNameToLoad;
-		File file = new File(getClass().getClassLoader().getResource(themeDirectory+"/theme.json").getFile());
-		if (file.exists()) {
-			Theme theme = new Theme(themeNameToLoad);
-			Color backgroundColor = null;
-			Color menuBarColor = null;
-			Color viewColor = null;
-			String viewImage = null;
-			Color previewPaneColor = null;
-			String previewPaneImage = null;
-			try (JsonReader reader = new JsonReader(new InputStreamReader(new FileInputStream(file)))) {
-				JsonObject json;
-				json = JsonParser.parseReader(reader).getAsJsonObject();
-				System.out.println(json);
-				JsonElement colorElement = json.get("color");
-				backgroundColor = (colorElement == null) ? Color.WHITE
-						: Color.decode(colorElement.getAsString());
-				JsonElement menuBar = json.get("menuBar");
-				if (menuBar != null) {
-					JsonObject jsonObject = menuBar.getAsJsonObject();
-					menuBarColor = Color.decode(jsonObject.get("color").getAsString());
-				}
+		//System.err.println(getResourceFiles("/themes/"));
+		String themeDirectory = "/themes/" + themeNameToLoad;
+		InputStream in = getClass().getResourceAsStream(themeDirectory + "/theme.json");
+		Theme theme = new Theme(themeNameToLoad);
+		Color backgroundColor = null;
+		Color menuBarColor = null;
+		Color viewColor = null;
+		String viewImage = null;
+		Color previewPaneColor = null;
+		String previewPaneImage = null;
+		try (JsonReader jsonReader = new JsonReader(new InputStreamReader(in))) {
+			JsonObject json;
+			json = JsonParser.parseReader(jsonReader).getAsJsonObject();
+			System.out.println(json);
+			JsonElement colorElement = json.get("color");
+			backgroundColor = (colorElement == null) ? Color.WHITE : Color.decode(colorElement.getAsString());
+			JsonElement menuBar = json.get("menuBar");
+			if (menuBar != null) {
+				JsonObject jsonObject = menuBar.getAsJsonObject();
+				menuBarColor = Color.decode(jsonObject.get("color").getAsString());
+			}
 
-				JsonElement view = json.get("view");
-				if (view != null) {
-					JsonObject jsonObject = view.getAsJsonObject();
-					viewColor = Color.decode(jsonObject.get("color").getAsString());
-					viewImage = jsonObject.get("image").getAsString();
-				}
+			JsonElement view = json.get("view");
+			if (view != null) {
+				JsonObject jsonObject = view.getAsJsonObject();
+				viewColor = Color.decode(jsonObject.get("color").getAsString());
+				viewImage = jsonObject.get("image").getAsString();
+			}
 
-				JsonElement previewpane = json.get("previewpane");
-				if (previewpane != null) {
-					JsonObject jsonObject = previewpane.getAsJsonObject();
-					previewPaneColor = Color.decode(jsonObject.get("color").getAsString());
-					previewPaneImage = jsonObject.get("image").getAsString();
-				}
+			JsonElement previewpane = json.get("previewpane");
+			if (previewpane != null) {
+				JsonObject jsonObject = previewpane.getAsJsonObject();
+				previewPaneColor = Color.decode(jsonObject.get("color").getAsString());
+				previewPaneImage = jsonObject.get("image").getAsString();
 			}
-			if (menuBarColor == null) {
-				menuBarColor = backgroundColor.darker();
-			}
-			if (viewColor == null) {
-				viewColor = backgroundColor.brighter();
-			}
-			if (previewPaneColor == null) {
-				previewPaneColor = backgroundColor;
-			}
-			Color buttonBarColor = backgroundColor;
-			Color gameFilterPaneColor = backgroundColor;
-			Color navigationColor = backgroundColor;
-			Color detailsPaneColor = backgroundColor;
-			Color tabsColor = backgroundColor.brighter();
-			Color statusBarColor = backgroundColor.darker();
-			theme.setBackground(ThemeFactory.createThemeBackground(backgroundColor));
-			theme.setMenuBar(ThemeFactory.createThemeBackground(menuBarColor));
-			theme.setButtonBar(ThemeFactory.createThemeBackground(buttonBarColor));
-			theme.setGameFilterPane(ThemeFactory.createThemeBackground(gameFilterPaneColor));
-
-			if (viewImage != null) {
-				ThemeBackground themeBackGround = ThemeFactory.createThemeBackground(themeDirectory + File.separator + "images" + File.separator + viewImage);
-				themeBackGround.setColor(viewColor);
-				theme.setView(themeBackGround);
-			} else {
-				theme.setView(ThemeFactory.createThemeBackground(viewColor));
-			}
-			theme.setNavigationPane(ThemeFactory.createThemeBackground(navigationColor));
-			theme.setDetailsPane(ThemeFactory.createThemeBackground(detailsPaneColor));
-			theme.setTabs(ThemeFactory.createThemeBackground(tabsColor));
-			if (previewPaneImage != null) {
-				ThemeBackground themeBackGround = ThemeFactory.createThemeBackground(themeDirectory + File.separator + "images" + File.separator + previewPaneImage);
-				themeBackGround.setColor(previewPaneColor);
-				theme.setPreviewPane(themeBackGround);
-			} else {
-				theme.setPreviewPane(ThemeFactory.createThemeBackground(previewPaneColor));
-			}
-			theme.setStatusBar(ThemeFactory.createThemeBackground(statusBarColor));
-			currentTheme = theme;
 		}
+		if (menuBarColor == null) {
+			menuBarColor = backgroundColor.darker();
+		}
+		if (viewColor == null) {
+			viewColor = backgroundColor.brighter();
+		}
+		if (previewPaneColor == null) {
+			previewPaneColor = backgroundColor;
+		}
+		Color buttonBarColor = backgroundColor;
+		Color gameFilterPaneColor = backgroundColor;
+		Color navigationColor = backgroundColor;
+		Color detailsPaneColor = backgroundColor;
+		Color tabsColor = backgroundColor.brighter();
+		Color statusBarColor = backgroundColor.darker();
+		theme.setBackground(ThemeFactory.createThemeBackground(backgroundColor));
+		theme.setMenuBar(ThemeFactory.createThemeBackground(menuBarColor));
+		theme.setButtonBar(ThemeFactory.createThemeBackground(buttonBarColor));
+		theme.setGameFilterPane(ThemeFactory.createThemeBackground(gameFilterPaneColor));
+
+		if (viewImage != null) {
+			ThemeBackground themeBackGround = ThemeFactory
+					.createThemeBackground(themeDirectory + File.separator + "images" + File.separator + viewImage);
+			themeBackGround.setColor(viewColor);
+			theme.setView(themeBackGround);
+		} else {
+			theme.setView(ThemeFactory.createThemeBackground(viewColor));
+		}
+		theme.setNavigationPane(ThemeFactory.createThemeBackground(navigationColor));
+		theme.setDetailsPane(ThemeFactory.createThemeBackground(detailsPaneColor));
+		theme.setTabs(ThemeFactory.createThemeBackground(tabsColor));
+		if (previewPaneImage != null) {
+			ThemeBackground themeBackGround = ThemeFactory.createThemeBackground(
+					themeDirectory + File.separator + "images" + File.separator + previewPaneImage);
+			themeBackGround.setColor(previewPaneColor);
+			theme.setPreviewPane(themeBackGround);
+		} else {
+			theme.setPreviewPane(ThemeFactory.createThemeBackground(previewPaneColor));
+		}
+		theme.setStatusBar(ThemeFactory.createThemeBackground(statusBarColor));
+		currentTheme = theme;
 	}
 
 	public List<String> getDefaultThemes() throws IOException {
@@ -176,25 +189,8 @@ public class IconStore {
 
 	private List<String> getResourceFiles(String path) throws IOException {
 		List<String> filenames = new ArrayList<>();
-		try (InputStream in = getResourceAsStream(path);
-				BufferedReader br = new BufferedReader(new InputStreamReader(in))) {
-			String resource;
-			while ((resource = br.readLine()) != null) {
-				filenames.add(resource);
-			}
-		}
 		return filenames;
 	}
-
-	private InputStream getResourceAsStream(String resource) {
-		final InputStream in = getContextClassLoader().getResourceAsStream(resource);
-		return in == null ? getClass().getResourceAsStream(resource) : in;
-	}
-
-	private ClassLoader getContextClassLoader() {
-		return Thread.currentThread().getContextClassLoader();
-	}
-
 	public static final IconStore current() {
 		return instance == null ? instance = new IconStore() : instance;
 	}
@@ -207,7 +203,8 @@ public class IconStore {
 		if (coverFileName == null || coverFileName.isEmpty()) {
 			coverFileName = "default.jpg";
 		}
-		//		String coverFilePath = platformCoversDirectory + File.separator + coverType + File.separator + coverFileName;
+		// String coverFilePath = platformCoversDirectory + File.separator + coverType +
+		// File.separator + coverFileName;
 		String coverFilePath = platformCoversDirectory + File.separator + coverFileName;
 		if (!platformCovers.containsKey(platformId)) {
 			int size = ScreenSizeUtil.adjustValueToResolution(200);
@@ -255,7 +252,8 @@ public class IconStore {
 	private ImageIcon getTransparentPlatformCoverFrom(ImageIcon cover, int platformId, int transparencyValue) {
 		ImageIcon transparentCover = null;
 		if (cover != null) {
-			BufferedImage bi = ImageUtil.createTransparentImageFrom(cover.getImage(), currentGameCoverTransparencyValue);
+			BufferedImage bi = ImageUtil.createTransparentImageFrom(cover.getImage(),
+					currentGameCoverTransparencyValue);
 			if (bi != null) {
 				transparentCover = new ImageIcon(bi);
 				if (!transparentPlatformCovers.containsKey(platformId)) {
@@ -263,7 +261,8 @@ public class IconStore {
 					transparentCover = doTransparentThingsWithPlatformCover(platformId, transparentCover);
 				} else {
 					if (hasPlatformCoverOfThisTransparencyValue(platformId, currentGameCoverTransparencyValue)) {
-						transparentCover = transparentPlatformCovers.get(platformId).getIcoOfSize(currentGameCoverTransparencyValue);
+						transparentCover = transparentPlatformCovers.get(platformId)
+								.getIcoOfSize(currentGameCoverTransparencyValue);
 					} else {
 						transparentCover = doTransparentThingsWithPlatformCover(platformId, cover);
 					}
@@ -279,8 +278,7 @@ public class IconStore {
 		if (scaledIconMap != null) {
 			if (scaledIconMap.containsKey(currentCoverSize)) {
 				icon = scaledIconMap.get(currentCoverSize);
-			}
-			else {
+			} else {
 				int scaleOption = CoverConstants.SCALE_AUTO_OPTION;
 				if (icon.getIconWidth() >= icon.getIconHeight()) {
 					scaleOption = CoverConstants.SCALE_WIDTH_OPTION;
@@ -401,14 +399,16 @@ public class IconStore {
 		ImageIcon gameIcon = getGameCover(gameId);
 		ImageIcon transparentCover = doTransparentThingsWithGameCover(gameId, gameIcon);
 		if (gameIcon != null) {
-			BufferedImage bi = ImageUtil.createTransparentImageFrom(gameIcon.getImage(), currentGameCoverTransparencyValue);
+			BufferedImage bi = ImageUtil.createTransparentImageFrom(gameIcon.getImage(),
+					currentGameCoverTransparencyValue);
 			transparentCover = new ImageIcon(bi);
 			if (!transparentGameCovers.containsKey(gameId)) {
 				transparentGameCovers.put(gameId, new TransparencyObjects());
 				transparentCover = doTransparentThingsWithGameCover(gameId, transparentCover);
 			} else {
 				if (hasGameCoverOfThisTransparencyValue(gameId, currentGameCoverTransparencyValue)) {
-					transparentCover = transparentGameCovers.get(gameId).getIcoOfSize(currentGameCoverTransparencyValue);
+					transparentCover = transparentGameCovers.get(gameId)
+							.getIcoOfSize(currentGameCoverTransparencyValue);
 				} else {
 					transparentCover = doTransparentThingsWithGameCover(gameId, gameIcon);
 				}
@@ -422,7 +422,7 @@ public class IconStore {
 		ImageIcon ico2 = new ImageIcon(bi);
 		TransparencyObject transparencyObject = new TransparencyObject(currentGameCoverTransparencyValue, ico2);
 		transparentGameCovers.get(gameId).addObject(transparencyObject);
-		//		transparentGameCovers.put(gameId, trans)
+		// transparentGameCovers.put(gameId, trans)
 		return ico2;
 	}
 
@@ -431,7 +431,7 @@ public class IconStore {
 		ImageIcon ico2 = new ImageIcon(bi);
 		TransparencyObject transparencyObject = new TransparencyObject(currentGameCoverTransparencyValue, ico2);
 		transparentPlatformCovers.get(platformId).addObject(transparencyObject);
-		//		transparentPlatformCovers.put(platformId, trans)
+		// transparentPlatformCovers.put(platformId, trans)
 		return ico2;
 	}
 
@@ -449,8 +449,7 @@ public class IconStore {
 		if (scaledIconMap != null) {
 			if (scaledIconMap.containsKey(currentCoverSize)) {
 				gameCover = scaledIconMap.get(currentCoverSize);
-			}
-			else {
+			} else {
 				int scaleOption = CoverConstants.SCALE_AUTO_OPTION;
 				if (gameCover.getIconWidth() >= gameCover.getIconHeight()) {
 					scaleOption = CoverConstants.SCALE_WIDTH_OPTION;

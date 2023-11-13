@@ -383,7 +383,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				pnlDetails.setPreferredSize(new Dimension(width, height));
 				frameDetailsPane = new JFrame();
 				frameDetailsPane.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-				frameDetailsPane.setIconImages(getIcons());
+				frameDetailsPane.setIconImages(UIUtil.getIcons());
 				frameDetailsPane.addWindowListener(frameDetailsWindowAdapter);
 
 				JPanel pnlRemember = new JPanel(new GridLayout(1, 1));
@@ -441,20 +441,6 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 			}
 			SwingUtilities.invokeLater(runnableDetailsPane);
 		}
-	}
-
-	private List<Image> getIcons() {
-		List<Image> icons = new ArrayList<>();
-		String[] dimensions = { "256x256", "192x192", "128x128", "96x96", "72x72", "64x64", "48x48", "32x32", "24x24",
-		"16x16" };
-		for (String d : dimensions) {
-			try {
-				icons.add(new ImageIcon(getClass().getResource("/images/" + d + "/logo.png")).getImage());
-			} catch (Exception e) {
-				// ignore
-			}
-		}
-		return icons;
 	}
 
 	private void initializeCurrentViewAndPreviewPane() {
