@@ -105,6 +105,8 @@ public class ThemeManager implements ThemeListener {
 				if (updateTheme) {
 					FlatLaf.updateUI();
 				}
+				ThemeChangeEvent event = new ThemeChangeEvent(getCurrentTheme());
+				fireThemeChangeEvent(event);
 			}
 		});
 

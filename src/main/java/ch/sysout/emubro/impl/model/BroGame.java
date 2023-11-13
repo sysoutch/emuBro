@@ -19,9 +19,9 @@ public class BroGame implements Game {
 	private String iconPath;
 	private String coverPath;
 	private int rate;
-	private ZonedDateTime dateAdded;
+	private transient ZonedDateTime dateAdded;
 	private String formattedDateAdded;
-	private ZonedDateTime lastPlayed;
+	private transient ZonedDateTime lastPlayed;
 	private String formattedLastPlayedDate;
 	private int playCount;
 	private int emulatorId;
@@ -32,7 +32,7 @@ public class BroGame implements Game {
 	private String description;
 	private String developer;
 	private String publisher;
-	private Image bannerImage;
+	private transient Image bannerImage;
 
 	public BroGame(int id, String name, String gameCode, int defaultFileId, int defaultChecksumId, String iconPath, String coverPath, int rate, ZonedDateTime dateAdded,
 			ZonedDateTime lastPlayed, int playCount, int emulatorId, int platformId, String platformIconFileName) {

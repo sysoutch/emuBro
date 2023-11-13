@@ -125,7 +125,7 @@ public class HelpFrame extends JFrame implements ActionListener {
 		setTitle("Help");
 		setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 		// setModalityType(ModalityType.APPLICATION_MODAL);
-		setIconImages(getIcons());
+		setIconImages(UIUtil.getIcons());
 		// setResizable(false);
 		initComponents();
 		createUI();
@@ -139,15 +139,6 @@ public class HelpFrame extends JFrame implements ActionListener {
 		int width = getWidth();
 		int height = getHeight();
 		setSize(width * 2, (int) (height * 1.25));
-	}
-
-	private List<Image> getIcons() {
-		List<Image> icons = new ArrayList<>();
-		String[] dimensions = { "48x48", "32x32", "24x24", "16x16" };
-		for (String d : dimensions) {
-			icons.add(new ImageIcon(getClass().getResource("/images/logo/" + d + "/logo.png")).getImage());
-		}
-		return icons;
 	}
 
 	private void initComponents() {

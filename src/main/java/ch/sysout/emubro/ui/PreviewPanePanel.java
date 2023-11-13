@@ -646,8 +646,8 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		private ImageIcon icoMoreOptionsRunGame = ImageUtil.getImageIconFrom(Icons.get("arrowDownOtherWhite", 1));
 		private JButton btnRunGame = new JButton(Messages.get(MessageConstants.RUN_GAME));
 		private JButton btnMoreOptionsRunGame = new JButton("");
-		private JButton btnSearchCover = new JCustomButtonNew();
-		private JButton btnSearchTrailer = new JCustomButtonNew();
+		private JButton btnSearchCover = new JCustomButtonNew("");
+		private JButton btnSearchTrailer = new JCustomButtonNew("");
 		
 		public SelectionPanel() {
 			initComponents();

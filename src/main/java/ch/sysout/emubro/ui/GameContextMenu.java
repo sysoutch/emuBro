@@ -271,7 +271,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		itmOpenGameFolder.setIcon(ImageUtil.getImageIconFrom(Icons.get("openFolder", size, size)));
 		itmRemoveGame.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("trash"), size, new Color(237, 67, 55)));
 		itmRenameGame.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rename"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		itmDefaultTagSource.setIcon(ImageUtil.getImageIconFrom(Icons.get("applicationIcon", size, size)));
+		itmDefaultTagSource.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("applicationIcon"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		//		itmCoverDownload.setIcon(ImageUtil.getImageIconFrom(Icons.get("applicationIcon", size, size)));
 		itmDefaultCoverSource.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("google"), size));
 		itmDefaultTrailerSource.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("youtube"), size));

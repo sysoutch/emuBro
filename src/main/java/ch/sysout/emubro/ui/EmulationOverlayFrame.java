@@ -333,7 +333,8 @@ public class EmulationOverlayFrame extends JFrame {
 
 		// btnShowProcessManager.setIcon(ImageUtil.getImageIconFrom(Icons.get("showProcessManager",
 		// size, size)));
-		btnMenu.setIcon(ImageUtil.getImageIconFrom(Icons.get("applicationIconOther", size, size)));
+		ImageIcon appIcon = ImageUtil.getFlatSVGIconFrom(Icons.get("applicationIcon"), size);
+		btnMenu.setIcon(appIcon);
 		btnMenu.setToolTipText("<html><strong>emulation overlay panel</strong>" + "<br>* Click to show options"
 				+ "<br>* Drag to move panel" + "</html>");
 
@@ -351,7 +352,7 @@ public class EmulationOverlayFrame extends JFrame {
 				+ "Most of the emulators and games listen to that hot key.</html>");
 		btnStopEmulation.setIcon(ImageUtil.getImageIconFrom(Icons.get("stopProcess", size2, size2)));
 		btnStopEmulation.setToolTipText("Stop emulation");
-		btnShowApplication.setIcon(ImageUtil.getImageIconFrom(Icons.get("applicationIcon", size2, size2)));
+		btnShowApplication.setIcon(appIcon);
 		btnShowApplication.setToolTipText("Show emuBro");
 		btnEmulationOverlayPanelSettings.setIcon(new FlatSVGIcon(Icons.get("settings"), size3, size3));
 		btnHideEmulationOverlayPanel.setIcon(ImageUtil.getImageIconFrom(Icons.get("close3", size3, size3)));

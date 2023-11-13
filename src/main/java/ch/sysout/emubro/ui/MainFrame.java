@@ -182,6 +182,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 	private JMenuItem itmExportGameListToCsv;
 	private JMenuItem itmExportGameListToJson;
 	private JMenuItem itmExportGameListToXml;
+	private JMenuItem itmExportGameListToTsv;
 	private JMenuItem itmExportGameListOptions;
 	private JMenuItem itmExportApplicationData;
 	private JMenuItem itmSettings;
@@ -308,24 +309,11 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		this.defaultLookAndFeel = defaultLookAndFeel;
 		this.explorer = explorer;
 		setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
-		setIconImages(getIcons());
+		setIconImages(UIUtil.getIcons());
 		// setUndecorated(true);
 		initComponents();
 		createUI();
 		pnlMain.addDetailsFrameListener(this);
-	}
-
-	private List<Image> getIcons() {
-		List<Image> icons = new ArrayList<>();
-		String[] dimensions = { "48x48", "32x32", "24x24", "16x16" };
-		for (String d : dimensions) {
-			try {
-				icons.add(new ImageIcon(getClass().getResource("/images/logo/" + d + "/logo.png")).getImage());
-			} catch (Exception e) {
-				// ignore
-			}
-		}
-		return icons;
 	}
 
 	private void initComponents() {
@@ -478,7 +466,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 				cueMaker.createCueFile(new File(path));
 			}
 		});
-		itmECMConverter = new JMenuItem("ECM Converter");
+		itmECMConverter = new JMenuItem("ECM2BIN Converter");
 		itmECMConverter.addActionListener(new ActionListener() {
 
 			@Override
@@ -522,6 +510,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		itmExportGameListToCsv = new JMenuItem();
 		itmExportGameListToJson = new JMenuItem();
 		itmExportGameListToXml = new JMenuItem();
+		itmExportGameListToTsv = new JMenuItem();
 		itmExportGameListOptions = new JMenuItem();
 		itmSetFilter = new JRadioButtonMenuItem();
 		itmChooseDetails = new JMenuItem();
@@ -941,6 +930,8 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 	}
 
 	private void setIcons() {
+		setIconImages(UIUtil.getIcons());
+
 		int size = ScreenSizeUtil.is3k() ? 24 : 16;
 		Color svgNoColor = ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR);
 		itmAddFiles.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("addFile"), size, svgNoColor));
@@ -1650,7 +1641,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 				itmAddFilesFromClipboard);
 
 		addComponentsToJComponent(mnuExportGameList, itmExportGameListToTxt, itmExportGameListToCsv,
-				itmExportGameListToJson, itmExportGameListToXml, new JSeparator(), itmExportGameListOptions);
+				itmExportGameListToJson, itmExportGameListToXml, itmExportGameListToTsv, new JSeparator(), itmExportGameListOptions);
 
 		addComponentsToJComponent(mnuSetCoverSize, sliderCoverSize);
 
@@ -1703,7 +1694,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		Locale locale = Locale.getDefault();
 		String userLanguage = locale.getLanguage();
 		List<JMenuItem> languageItems = new ArrayList<JMenuItem>();
-		Collections.addAll(languageItems, itmLanguageEn, itmLanguageDe, itmLanguageFr, itmLanguagePr, itmLanguageEs, itmLanguageAfr);
+		Collections.addAll(languageItems, itmLanguageEn, itmLanguageDe, itmLanguageFr/*, itmLanguagePr, itmLanguageEs, itmLanguageAfr*/);
 		if (userLanguage.equals(Locale.ENGLISH.getLanguage())) {
 			addComponentsToJComponent(mnuLanguage, itmLanguageEn);
 			languageItems.remove(itmLanguageEn);
@@ -2741,6 +2732,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		itmExportGameListToTxt.setText(Messages.get(MessageConstants.EXPORT_TO_TXT));
 		itmExportGameListToCsv.setText(Messages.get(MessageConstants.EXPORT_TO_CSV));
 		itmExportGameListToJson.setText(Messages.get(MessageConstants.EXPORT_TO_JSON));
+		itmExportGameListToTsv.setText(Messages.get(MessageConstants.EXPORT_TO_TSV));
 		itmExportGameListToXml.setText(Messages.get(MessageConstants.EXPORT_TO_XML));
 		itmExportGameListOptions.setText(Messages.get(MessageConstants.EXPORT_SETTINGS));
 		itmSetFilter.setText(Messages.get(MessageConstants.SET_FILTER));
@@ -3206,11 +3198,11 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		mnb.setVisible(showPanels);
 		pnlButtonBar.setVisible(showPanels);
 		pnlGameFilter.setVisible(showPanels);
-
 	}
 
 	@Override
 	public void themeChanged(ThemeChangeEvent e) {
+		setIconImages(UIUtil.getIcons());
 		pnlMain.repaint();
 	}
 }

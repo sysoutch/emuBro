@@ -15,7 +15,6 @@ import javax.swing.Action;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultListModel;
-import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFrame;
@@ -51,13 +50,20 @@ import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.controller.BroController.EmulatorListCellRenderer;
 import ch.sysout.emubro.controller.BroController.PlatformListCellRenderer;
 import ch.sysout.emubro.impl.model.BroEmulator;
+import ch.sysout.emubro.ui.ColorStore;
 import ch.sysout.emubro.ui.JCustomScrollPane;
 import ch.sysout.emubro.ui.WrapLayout;
+import ch.sysout.emubro.ui.event.ThemeChangeEvent;
+import ch.sysout.emubro.ui.listener.ThemeListener;
+import ch.sysout.emubro.util.ColorConstants;
 import ch.sysout.emubro.util.MessageConstants;
+import ch.sysout.ui.util.ImageUtil;
+import ch.sysout.ui.util.UIUtil;
+import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 
-public class PropertiesFrame extends JFrame implements PlatformListener, EmulatorListener, TagListener {
+public class PropertiesFrame extends JFrame implements PlatformListener, EmulatorListener, TagListener, ThemeListener {
 	private static final long serialVersionUID = 1L;
 
 	private JTabbedPane tpMain = new JTabbedPane();
@@ -76,7 +82,7 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 		super();
 		this.explorer = explorer;
 		setTitle(Messages.get(MessageConstants.SETTINGS));
-		setIconImages(getIcons());
+		setIconImages(UIUtil.getIcons());
 		setLayout(new BorderLayout());
 		setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 		initComponents();
@@ -96,15 +102,6 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 	public void adjustSizeWhenNeeded() {
 		int width = getWidth();
 		setSize(width * 3, (int) (width * 1.75));
-	}
-
-	private List<Image> getIcons() {
-		List<Image> icons = new ArrayList<>();
-		String[] dimensions = { "48x48", "32x32", "24x24", "16x16" };
-		for (String d : dimensions) {
-			icons.add(new ImageIcon(getClass().getResource("/images/logo/" + d + "/logo.png")).getImage());
-		}
-		return icons;
 	}
 
 	private void initComponents() {
@@ -777,5 +774,10 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 
 	public JPanel getMainPanel() {
 		return pnlMain;
+	}
+
+	@Override
+	public void themeChanged(ThemeChangeEvent e) {
+		setIconImages(UIUtil.getIcons());
 	}
 }

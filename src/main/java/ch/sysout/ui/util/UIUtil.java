@@ -27,11 +27,14 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.swing.AbstractAction;
 import javax.swing.AbstractButton;
 import javax.swing.Action;
 import javax.swing.ActionMap;
+import javax.swing.ImageIcon;
 import javax.swing.InputMap;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
@@ -45,6 +48,7 @@ import javax.swing.WindowConstants;
 import javax.swing.text.JTextComponent;
 
 import ch.sysout.emubro.ui.AboutDialog;
+import ch.sysout.util.Icons;
 
 public class UIUtil {
 	private static MouseAdapter mouseAdapter;
@@ -307,5 +311,19 @@ public class UIUtil {
 
 	public static String showInputMessage(Component parentComponent, Object message, String title) {
 		return JOptionPane.showInputDialog(parentComponent, message, title);
+	}
+	
+	public static List<Image> getIcons() {
+		List<Image> icons = new ArrayList<>();
+		int[] dimensions = { 48, 32, 24, 16 };
+		for (int size : dimensions) {
+			try {
+				ImageIcon img = ImageUtil.getFlatSVGIconFrom(Icons.get("applicationIcon"), size, UIManager.getColor("Panel.background").brighter().brighter().brighter());
+				icons.add(img.getImage());
+			} catch (Exception e) {
+				// ignore
+			}
+		}
+		return icons;
 	}
 }

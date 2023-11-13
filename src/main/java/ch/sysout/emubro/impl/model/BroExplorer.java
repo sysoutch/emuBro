@@ -97,7 +97,8 @@ public class BroExplorer implements Explorer {
 
 	@Override
 	public List<Game> getGames() {
-		return new ArrayList<>(games.values());
+		List<Game> list = new ArrayList<>(games.values());
+		return list;
 	}
 
 	@Override

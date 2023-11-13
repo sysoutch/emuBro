@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.lang.reflect.Type;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Path;
@@ -27,6 +28,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalTime;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -49,10 +51,14 @@ import com.formdev.flatlaf.FlatDarkLaf;
 import com.formdev.flatlaf.FlatLaf;
 import com.formdev.flatlaf.FlatLightLaf;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.TypeAdapter;
 import com.google.gson.reflect.TypeToken;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
 
 import ch.sysout.emubro.api.dao.ExplorerDAO;
 import ch.sysout.emubro.api.filter.FilterGroup;
@@ -311,7 +317,7 @@ public class MainBro {
 		properties = new Properties();
 		String homePath = System.getProperty("user.home");
 		String path = homePath += homePath.endsWith(File.separator) ? ""
-				: File.separator + "." + Messages.get("applicationTitle").toLowerCase();
+				: File.separator + ".emuBro";
 		new File(path).mkdir();
 		File file = new File(path + File.separator + "window" + ".properties");
 		if (file.exists()) {

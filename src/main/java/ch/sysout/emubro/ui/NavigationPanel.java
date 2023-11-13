@@ -75,7 +75,7 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 	}
 
 	private void initComponents() {
-		int size = ScreenSizeUtil.is3k() ? 10 : 5;
+		int size = 10;
 		Insets insets = new Insets(size, size, size, size);
 		for (AbstractButton btn : buttons) {
 			btn.setHorizontalAlignment(SwingConstants.LEFT);
@@ -247,7 +247,7 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 		btnFavorites.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("favorites"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		btnGameFilterGroups.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("filterSquare"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		btnRecentlyPlayed.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("recentlyPlayed"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
-		btnRecycleBin.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("trash"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		btnRecycleBin.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("recycle"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 	}
 
 	private void addToButtonGroup(ButtonGroup grp, AbstractButton... buttons) {

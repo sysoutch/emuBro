@@ -64,6 +64,7 @@ public class MessageConstants {
 	public static final String EXPORT_TO_TXT = "exportToTxt";
 	public static final String EXPORT_TO_CSV = "exportToCsv";
 	public static final String EXPORT_TO_JSON = "exportToJson";
+	public static final String EXPORT_TO_TSV = "exportToTsv";
 	public static final String EXPORT_TO_XML = "exportToXml";
 	public static final String EXPORT_SETTINGS = "exportSettings";
 	public static final String SET_FILTER = "setFilter";
