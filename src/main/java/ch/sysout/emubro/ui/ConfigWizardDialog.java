@@ -170,7 +170,7 @@ public class ConfigWizardDialog extends JDialog implements ActionListener {
 		pnlHeader.setLayout(layout);
 
 		CellConstraints cc = new CellConstraints();
-		JLabel lblIcon = new JLabel(ImageUtil.getImageIconFrom(Icons.get("applicationIcon", 48, 48)));
+		JLabel lblIcon = new JLabel(UIUtil.getIconBySize(48));
 		pnlHeader.add(lblIcon, cc.xy(1, 1));
 
 		pnlHeader.add(new JLabel(HEADER_TITLE), cc.xy(3, 1));

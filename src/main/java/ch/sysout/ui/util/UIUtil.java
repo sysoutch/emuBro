@@ -318,12 +318,17 @@ public class UIUtil {
 		int[] dimensions = { 48, 32, 24, 16 };
 		for (int size : dimensions) {
 			try {
-				ImageIcon img = ImageUtil.getFlatSVGIconFrom(Icons.get("applicationIcon"), size, UIManager.getColor("Panel.background").brighter().brighter().brighter());
+				ImageIcon img = getIconBySize(size);
 				icons.add(img.getImage());
 			} catch (Exception e) {
 				// ignore
 			}
 		}
 		return icons;
+	}
+
+	public static ImageIcon getIconBySize(int size) {
+		ImageIcon img = ImageUtil.getFlatSVGIconFrom(Icons.get("applicationIcon"), size, UIManager.getColor("Panel.background").brighter().brighter().brighter());
+		return img;
 	}
 }
