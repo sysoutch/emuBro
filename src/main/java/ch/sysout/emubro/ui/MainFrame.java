@@ -1,15 +1,6 @@
 package ch.sysout.emubro.ui;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.Cursor;
-import java.awt.Dimension;
-import java.awt.Frame;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.Image;
-import java.awt.Point;
+import java.awt.*;
 import java.awt.dnd.DropTargetListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -250,6 +241,12 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 	private JDialog dlgRowHeight;
 	private JSlider sliderColumnWidth = new JSlider();
 	private JSlider sliderRowHeight = new JSlider();
+
+	@Override
+	public void setLayout(LayoutManager manager) {
+		super.setLayout(manager);
+	}
+
 	private Explorer explorer;
 	private JButton btnColumnWidthSlider;
 	private JButton btnRowHeightSlider;
@@ -309,14 +306,19 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		this.defaultLookAndFeel = defaultLookAndFeel;
 		this.explorer = explorer;
 		setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
-		setIconImages(UIUtil.getIcons());
+		setIconImages(UIUtil.getApplicationIcons());
 		// setUndecorated(true);
 		initComponents();
 		createUI();
 		pnlMain.addDetailsFrameListener(this);
+
+		TestFrame frameTest = new TestFrame();
 	}
 
 	private void initComponents() {
+		themeManager = new ThemeManager();
+		themeManager.addThemeListener(this);
+
 		iconPreviewPaneShow = ImageUtil
 				.getImageIconFrom(Icons.get("showPreviewPane", buttonBarIconSize, buttonBarIconSize));
 		iconPreviewPaneHide = ImageUtil
@@ -618,10 +620,6 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				if (themeManager == null) {
-					themeManager = new ThemeManager();
-					themeManager.addThemeListener(MainFrame.this);
-				}
 				themeManager.setColorPickerColor(UIManager.getColor("Panel.background"));
 				themeManager.setWindowVisible(true);
 			}
@@ -930,7 +928,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 	}
 
 	private void setIcons() {
-		setIconImages(UIUtil.getIcons());
+		setIconImages(UIUtil.getApplicationIcons());
 
 		int size = ScreenSizeUtil.is3k() ? 24 : 16;
 		Color svgNoColor = ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR);
@@ -1736,6 +1734,9 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		setIcons();
 		UIManager.put("List.selectionInactiveBackground", UIManager.getColor("List.selectionBackground"));
 		UIManager.put("TextField.background", UIManager.getColor("ComboBox.background"));
+		//themeManager.getCurrentTheme().getView().setColor(UIManager.getColor("Panel.background").brighter());
+		themeManager.getCurrentTheme().getView().setColor(UIManager.getColor("List.background"));
+		themeManager.getCurrentTheme().getView().setImage(null);
 		FlatLaf.updateUI();
 		pnlMain.addDividerDraggedListeners();
 		viewManager.themeChanged();
@@ -3202,7 +3203,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 
 	@Override
 	public void themeChanged(ThemeChangeEvent e) {
-		setIconImages(UIUtil.getIcons());
+		setIconImages(UIUtil.getApplicationIcons());
 		pnlMain.repaint();
 	}
 }

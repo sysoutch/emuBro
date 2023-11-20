@@ -188,7 +188,10 @@ import com.formdev.flatlaf.FlatLightLaf;
 import com.github.junrar.Archive;
 import com.github.junrar.exception.RarException;
 import com.github.junrar.rarfile.FileHeader;
+import com.github.strikerx3.jxinput.XInputAxesDelta;
 import com.github.strikerx3.jxinput.XInputDevice;
+import com.github.strikerx3.jxinput.XInputDevice14;
+import com.github.strikerx3.jxinput.enums.XInputAxis;
 import com.github.strikerx3.jxinput.enums.XInputButton;
 import com.github.strikerx3.jxinput.exceptions.XInputNotLoadedException;
 import com.github.strikerx3.jxinput.listener.SimpleXInputDeviceListener;
@@ -284,7 +287,10 @@ import ch.sysout.util.ScreenSizeUtil;
 import ch.sysout.util.SevenZipUtils;
 import ch.sysout.util.SystemUtil;
 import ch.sysout.util.ValidationUtil;
+import de.ralleytn.wrapper.microsoft.xinput.XInput;
+import de.ralleytn.wrapper.microsoft.xinput.XInputGamepad;
 import spark.Request;
+import spark.Spark;
 
 public class BroController implements ActionListener, PlatformListener, EmulatorListener, TagListener,
 GameSelectionListener, BrowseComputerListener {
@@ -438,10 +444,11 @@ GameSelectionListener, BrowseComputerListener {
 
 	private void initControllers() throws XInputNotLoadedException {
 		// Retrieve all devices
-		XInputDevice[] devices = XInputDevice.getAllDevices();
+		
+		XInputDevice14[] devices = XInputDevice14.getAllDevices();
 
 		// Retrieve the device for player 1
-		XInputDevice device = XInputDevice.getDeviceFor(0); // or devices[0]
+		XInputDevice14 device = XInputDevice14.getDeviceFor(0); // or devices[0]
 
 		// The SimpleXInputDeviceListener allows us to implement only the methods we actually need
 		XInputDeviceListener listener = new SimpleXInputDeviceListener() {
@@ -456,9 +463,13 @@ GameSelectionListener, BrowseComputerListener {
 			public void disconnected() {
 				System.out.println("gamepad disconnected");
 			}
-
+			
 			@Override
 			public void buttonChanged(final XInputButton button, final boolean pressed) {
+
+				XInputAxesDelta axes = device.getDelta().getAxes();
+				System.out.println(axes.getDelta(XInputAxis.LEFT_THUMBSTICK_X));
+				
 				System.out.println("button changed  "+ button.name() + " pressed? " + pressed);
 				if (button.name().equals("DPAD_DOWN")) {
 					initRobotIfNeeded();
@@ -532,7 +543,7 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	private void initSpark() {
-		storageDirectory = explorer.getResourcesPath();
+		storageDirectory = "webapp";
 		WebAppBro sparkBro = new WebAppBro();
 		sparkBro.initWebApp(this, explorer);
 	}

@@ -47,6 +47,8 @@ import javax.swing.UIManager;
 import javax.swing.WindowConstants;
 import javax.swing.text.JTextComponent;
 
+import com.formdev.flatlaf.FlatLaf;
+
 import ch.sysout.emubro.ui.AboutDialog;
 import ch.sysout.util.Icons;
 
@@ -313,12 +315,12 @@ public class UIUtil {
 		return JOptionPane.showInputDialog(parentComponent, message, title);
 	}
 	
-	public static List<Image> getIcons() {
+	public static List<Image> getApplicationIcons() {
 		List<Image> icons = new ArrayList<>();
 		int[] dimensions = { 48, 32, 24, 16 };
 		for (int size : dimensions) {
 			try {
-				ImageIcon img = getIconBySize(size);
+				ImageIcon img = getApplicationIconBySize(size);
 				icons.add(img.getImage());
 			} catch (Exception e) {
 				// ignore
@@ -327,8 +329,23 @@ public class UIUtil {
 		return icons;
 	}
 
-	public static ImageIcon getIconBySize(int size) {
-		ImageIcon img = ImageUtil.getFlatSVGIconFrom(Icons.get("applicationIcon"), size, UIManager.getColor("Panel.background").brighter().brighter().brighter());
+	public static ImageIcon getApplicationIconBySize(int size) {
+		return getApplicationIconBySize(size, size);
+	}
+
+	public static ImageIcon getApplicationIconBySize(int w, int h) {
+		Color iconColor = FlatLaf.isLafDark() ? UIManager.getColor("Panel.background").brighter().brighter().brighter() : UIManager.getColor("Panel.background").darker().darker();
+		ImageIcon img = ImageUtil.getFlatSVGIconFrom(Icons.get("applicationIcon"), w, h, iconColor);
+		return img;
+	}
+
+	public static ImageIcon getApplicationBannerBySize(int size) {
+		return getApplicationIconBySize(size, size);
+	}
+
+	public static ImageIcon getApplicationBannerBySize(int w, int h) {
+		Color iconColor = FlatLaf.isLafDark() ? UIManager.getColor("Panel.background").brighter().brighter().brighter() : UIManager.getColor("Panel.background").darker().darker();
+		ImageIcon img = ImageUtil.getFlatSVGIconFrom(Icons.get("applicationBanner"), w, h, iconColor);
 		return img;
 	}
 }

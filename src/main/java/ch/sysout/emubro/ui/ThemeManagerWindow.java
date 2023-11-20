@@ -2,11 +2,14 @@ package ch.sysout.emubro.ui;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.FlowLayout;
+import java.awt.LayoutManager;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import javax.swing.BorderFactory;
@@ -17,6 +20,7 @@ import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JPanel;
 import javax.swing.JSlider;
+import javax.swing.UIManager;
 import javax.swing.WindowConstants;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -24,9 +28,12 @@ import javax.swing.event.ChangeListener;
 import com.bric.colorpicker.ColorPicker;
 import com.bric.colorpicker.ColorPickerPanel;
 import com.bric.colorpicker.listeners.ColorListener;
+import com.jgoodies.forms.factories.CC;
+import com.jgoodies.forms.layout.FormLayout;
 
 import ch.sysout.emubro.ui.listener.ThemeListener;
 import ch.sysout.emubro.util.ColorConstants;
+import ch.sysout.ui.util.ColorLerper;
 import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.util.Icons;
 
@@ -49,6 +56,7 @@ public class ThemeManagerWindow extends JDialog {
 	private JSlider sliderTransparency = new JSlider();
 	private JCheckBox chkIgnoreDetailsPanel = new JCheckBox("ignore DP");
 	private JCheckBox chkIgnorePreviewPanel = new JCheckBox("ignore PP");
+	private JSlider sliderBrigthness = new JSlider();
 
 	private JPanel pnlLayers = new JPanel(new FlowLayout());
 
@@ -57,7 +65,6 @@ public class ThemeManagerWindow extends JDialog {
 	private ColorPicker colorPicker;
 	private ColorPickerPanel pnlColorPicker;
 
-	private JSlider sliderBrigthness = new JSlider();
 
 	public ThemeManagerWindow() {
 		setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
@@ -70,17 +77,19 @@ public class ThemeManagerWindow extends JDialog {
 		sliderTransparency.setMinimum(0);
 		sliderTransparency.setMaximum(255);
 
-		setLayout(new BorderLayout());
+		FormLayout layout = new FormLayout("min, min, min, min, min:grow",
+				"fill:min, min, fill:min:grow, min, fill:min, min, fill:min, min, fill:min");
+		setLayout(layout);
 
-		JPanel pnl = new JPanel();
-		pnl.add(chkTransparentSelection);
-		pnl.add(chkTransparentCovers);
-		pnl.add(cmbBackgroundOptions);
-		add(pnl, BorderLayout.NORTH);
+		JPanel pnlHeader = new JPanel();
+		pnlHeader.add(chkTransparentSelection);
+		pnlHeader.add(chkTransparentCovers);
+		pnlHeader.add(cmbBackgroundOptions);
+		add(pnlHeader, CC.xywh(1, 1, layout.getColumnCount(), 1));
 
 		pnlLayers.add(addNewLayer());
-		JButton btn = new JButton("+ Add Layer");
-		btn.addActionListener(new ActionListener() {
+		JButton btnAddLayer = new JButton("+ Add Layer");
+		btnAddLayer.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -100,13 +109,41 @@ public class ThemeManagerWindow extends JDialog {
 		pnlColorPicker = colorPicker.getColorPanel();
 
 		pnlCurrentLayer.add(pnlColorPicker);
-		add(pnlCurrentLayer);
+		add(pnlCurrentLayer, CC.xywh(3, 3, layout.getColumnCount()-2, 1));
 		JPanel expertControls = colorPicker.getExpertControls();
 		expertControls.setVisible(true);
-		add(expertControls, BorderLayout.WEST);
-		//		add(pnlLayers, BorderLayout.EAST);
-		//		add(btn, BorderLayout.SOUTH);
-		add(sliderBrigthness, BorderLayout.SOUTH);
+		add(expertControls, CC.xywh(1, 3, 1, layout.getRowCount()-4));
+		add(pnlLayers, CC.xywh(3, 7, layout.getColumnCount()-2, 1));
+		//add(btnAddLayer, CC.xy(1, 7));
+		
+		
+		JPanel pnlBrightness = new JPanel(new FlowLayout());
+		int darkestColor = Color.BLACK.getRGB();
+		int brightestColor = Color.WHITE.getRGB();
+		Color tmpColor = UIManager.getColor("Panel.background");
+		List<JButton> btnList = new ArrayList<>();
+		while ((tmpColor = tmpColor.brighter()).getRGB() != brightestColor) {
+			JButton btn = new JButton(" ");
+			btn.setBackground(tmpColor);
+			btnList.add(btn);
+		}
+		Collections.reverse(btnList);
+		
+		JButton btn2 = new JButton(" ");
+		btn2.setBackground(UIManager.getColor("Panel.background"));
+		btnList.add(btn2);
+		
+		Color tmpColor2 = UIManager.getColor("Panel.background");
+		while ((tmpColor2 = tmpColor2.darker()).getRGB() != darkestColor) {
+			JButton btn = new JButton(" ");
+			btn.setBackground(tmpColor2);
+			btnList.add(btn);
+		}
+		for (Component btnTmp : btnList) {
+			pnlBrightness.add(btnTmp);
+		}
+		add(pnlBrightness, CC.xywh(3, 9, layout.getColumnCount()-2, 1));
+		//add(sliderBrigthness, CC.xywh(3, 9, layout.getColumnCount()-2, 1));
 		sliderBrigthness.setMinimum(0);
 		sliderBrigthness.setMaximum(100);
 		sliderBrigthness.addChangeListener(new ChangeListener() {
@@ -133,16 +170,6 @@ public class ThemeManagerWindow extends JDialog {
 	private JPanel addNewLayer() {
 		JPanel pnl = new JPanel(new FlowLayout());
 		pnl.setBorder(BorderFactory.createTitledBorder("Layer"));
-		JCheckBox chkTransparentSelection = new JCheckBox("Transparent selection");
-		JCheckBox chkScaleToView = new JCheckBox("Scale to view");
-		JCheckBox chkStretchToView = new JCheckBox("Stretch to view");
-		JCheckBox chkHorizontalCenter = new JCheckBox("Horizontal Center");
-		JCheckBox chkVerticalCenter = new JCheckBox("Vertical Center");
-		JButton btnBackgroundColor = new JButton("background color");
-		JCheckBox chkAddTransparencyBackground = new JCheckBox("Add Transparency Background");
-		JSlider sliderTransparency = new JSlider();
-		JCheckBox chkIgnoreDetailsPanel = new JCheckBox("ignore DP");
-		JCheckBox chkIgnorePreviewPanel = new JCheckBox("ignore PP");
 		JCustomButtonNew btnDragLayer = new JCustomButtonNew(ImageUtil.getFlatSVGIconFrom(Icons.get("bars"), 24, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		btnDragLayer.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
 		pnl.add(btnDragLayer);

@@ -86,7 +86,7 @@ public class RatingBarPanel extends JPanel implements ActionListener, FocusListe
 
 	private void createUI() {
 		setLayout(new BorderLayout());
-		add(lblRate, BorderLayout.NORTH);
+		//add(lblRate, BorderLayout.NORTH);
 
 		WrapLayout layout = new WrapLayout();
 		JPanel pnl = new JPanel();

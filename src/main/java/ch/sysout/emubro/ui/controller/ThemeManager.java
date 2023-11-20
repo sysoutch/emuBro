@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.swing.UIManager;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
@@ -23,6 +24,7 @@ import ch.sysout.emubro.ui.ThemeBackground;
 import ch.sysout.emubro.ui.ThemeManagerWindow;
 import ch.sysout.emubro.ui.event.ThemeChangeEvent;
 import ch.sysout.emubro.ui.listener.ThemeListener;
+import ch.sysout.ui.util.ColorLerper;
 import ch.sysout.ui.util.ColorUtil;
 
 public class ThemeManager implements ThemeListener {
@@ -34,6 +36,7 @@ public class ThemeManager implements ThemeListener {
 		dlgModifyTheme.addThemeListener(this);
 
 		dlgModifyTheme.addColorPickerListener(new ColorListener() {
+			//ColorLerper colorLerper = new ColorLerper(Color.pink, Color.BLUE, 10000);
 
 			private FlatDarkLaf darkLaf;
 			private FlatLightLaf lightLaf;
@@ -43,6 +46,8 @@ public class ThemeManager implements ThemeListener {
 			@Override
 			public void colorChanged(ColorModel colorModel) {
 				Color baseColor = colorModel.getColor();
+				//Color baseColor = colorLerper.getCurrentColor();
+				
 				Color brighterColor = baseColor.brighter();
 
 				Color darkerColor = baseColor.darker();
@@ -56,6 +61,7 @@ public class ThemeManager implements ThemeListener {
 				String hexAccentColor = "#"+Integer.toHexString(accentColor.getRGB()).substring(2);
 				//				defaultsMap.put("@foreground", hexBaseColor);
 				customizeTheme(baseColor, hexBaseColor, hexAccentColor, true, true);
+				getCurrentTheme().getView().setColor(UIManager.getColor("List.background"));
 			}
 
 			private void customizeTheme(Color baseColor, String hexBaseColor, String hexAccentColor, boolean autoSwitchDarkLightTheme, boolean updateTheme) {
@@ -194,11 +200,11 @@ public class ThemeManager implements ThemeListener {
 		});
 	}
 
-	protected Theme getCurrentTheme() {
+	public Theme getCurrentTheme() {
 		return IconStore.current().getCurrentTheme();
 	}
 
-	protected ThemeBackground getCurrentBackground() {
+	public ThemeBackground getCurrentBackground() {
 		return getCurrentTheme().getView();
 	}
 

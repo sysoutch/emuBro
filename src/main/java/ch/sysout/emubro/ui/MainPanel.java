@@ -383,7 +383,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				pnlDetails.setPreferredSize(new Dimension(width, height));
 				frameDetailsPane = new JFrame();
 				frameDetailsPane.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-				frameDetailsPane.setIconImages(UIUtil.getIcons());
+				frameDetailsPane.setIconImages(UIUtil.getApplicationIcons());
 				frameDetailsPane.addWindowListener(frameDetailsWindowAdapter);
 
 				JPanel pnlRemember = new JPanel(new GridLayout(1, 1));

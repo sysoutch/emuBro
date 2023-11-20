@@ -50,6 +50,7 @@ import org.yaml.snakeyaml.Yaml;
 import com.formdev.flatlaf.FlatDarkLaf;
 import com.formdev.flatlaf.FlatLaf;
 import com.formdev.flatlaf.FlatLightLaf;
+import com.google.common.io.Files;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
@@ -87,6 +88,7 @@ import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.FileUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
+import spark.Spark;
 
 /**
  * @author rainer
@@ -116,7 +118,6 @@ public class MainBro {
 		//		getEpicGames();
 		//		System.out.println("steam games:");
 		//		getSteamGames();
-
 		Logger logger = Logger.getLogger(MainBro.class.getName());
 
 		//		System.setProperty("sun.java2d.uiScale", "1.0");
@@ -214,16 +215,16 @@ public class MainBro {
 		initDiscord(clientId);
 		initializeApplication(args);
 		//		initializeDriveServices();
-		try {
-			UIUtil.displayTray("We hope you like it!", "Welcome to emuBro");
-		} catch (AWTException e) {
-			logger.log(Level.ALL, e.getMessage());
-			e.printStackTrace();
-		}
+//		try {
+//			UIUtil.displayTray("We hope you like it!", "Welcome to emuBro");
+//		} catch (AWTException e) {
+//			logger.log(Level.ALL, e.getMessage());
+//			e.printStackTrace();
+//		}
 	}
 
 	private void getInstalledSteamGamesWithoutAPI() {
-		String gamesLauncherDir = "C:\\Program Files (x86)\\Steam\\steamapps\\common";
+		String gamesLauncherDir = System.getenv("%programfiles(x86)%") + "\\Steam\\steamapps\\common";
 
 		// Check the contents of the Epic Games installation directory to identify the installed games
 		File gamesDir = new File(gamesLauncherDir);
@@ -243,57 +244,9 @@ public class MainBro {
 		}
 	}
 
-	private static void getSteamGames() {
-		//		A312BB59DA2184205A316D1499133053
-		String steamId = "76561198112456996";
-		String apiKey = "A312BB59DA2184205A316D1499133053";
-
-		String url = "http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key="
-				+ apiKey + "&steamid=" + steamId + "&format=json&include_appinfo=1&include_played_free_games=1";
-
-		InputStreamReader reader = null;
-		try {
-			reader = new InputStreamReader(new URL(url).openStream());
-		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-		if (reader != null) {
-			JsonObject jsonObject = new Gson().fromJson(reader, JsonObject.class);
-			JsonArray games = jsonObject.getAsJsonObject("response").getAsJsonArray("games");
-
-			List<String> notInstalledGames = new ArrayList<>();
-			List<String> installedGames = new ArrayList<>();
-			for (JsonElement gameElement : games) {
-				JsonObject game = gameElement.getAsJsonObject();
-				String name = game.get("name").getAsString();
-				boolean installed = game.get("playtime_forever").getAsInt() > 0;
-				if (!installed) {
-					notInstalledGames.add(name);
-				} else {
-					installedGames.add(name);
-				}
-			}
-
-			System.out.println("Not installed games:");
-			for (String game : notInstalledGames) {
-				System.out.println(game);
-			}System.out.println(" installed games:");
-			for (String game : installedGames) {
-				System.out.println(game);
-			}
-
-			try {
-				reader.close();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-	}
-
 	private static void getEpicGames() {
 		// Identify the installation directory of the Epic Games Launcher
-		String epicGamesLauncherDir = "C:\\Program Files\\Epic Games\\";
+		String epicGamesLauncherDir = System.getenv("%programfiles(x86)%") + "\\Epic Games";
 
 		// Check the contents of the Epic Games installation directory to identify the installed games
 		File epicGamesDir = new File(epicGamesLauncherDir);
@@ -669,7 +622,7 @@ public class MainBro {
 
 	private static void initializeCustomTheme() throws IOException {
 		boolean darkTheme = FlatLaf.isLafDark();
-		IconStore.current().loadDefaultTheme(darkTheme ? "dark" : "light");
+		IconStore.current().loadDefaultTheme(darkTheme ? "luigi" : "light");
 		ColorStore.current().setColor(ColorConstants.SVG_NO_COLOR_DARK, Color.GRAY);
 		ColorStore.current().setColor(ColorConstants.SVG_NO_COLOR_LIGHT, Color.LIGHT_GRAY);
 		Color svgNoColorDark = ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR_DARK);
@@ -778,15 +731,27 @@ public class MainBro {
 
 	private static void downloadResourceFolder(String version) throws IOException {
 		String zipFileName = "emubro-resources.zip";
-		String urlPath = "https://github.com/sysoutch/emuBro/releases/download/v" + version + "/" + zipFileName;
+		String urlPath = "https://github.com/sysoutch/emubro-resources/archive/refs/heads/dev-master.zip";
 		URL url = new URL(urlPath);
 		URLConnection con;
 		con = url.openConnection();
 		con.setReadTimeout(20000);
-		File resourcesFile = new File(explorer.getResourcesPath() + File.separator + zipFileName);
+		String unzipToDir = explorer.getResourcesPath() + File.separator + ".tmp";
+		File resourcesFile = new File(unzipToDir + File.separator + zipFileName);
 		FileUtils.copyURLToFile(url, resourcesFile);
-		FileUtil.unzipArchive(resourcesFile, explorer.getResourcesPath(), true);
+		FileUtil.unzipArchive(resourcesFile, unzipToDir, true);
 		System.out.println("resources folder has been downloaded");
+		
+		String folderNameDev = "emubro-resources-dev-master";
+		String folderName = "emubro-resources-master";
+		File dir1 = new File(unzipToDir + File.separator + folderNameDev);
+		if (dir1.isDirectory()) {
+		    File[] content = dir1.listFiles();
+		    for (File f : content) {
+				Files.move(f, new File(explorer.getResourcesPath() + File.separator + f.getName()));
+		    }
+		    dir1.delete();
+		}
 	}
 
 	private static void updateDatabaseVersion(Connection conn, String expectedDbVersion) {

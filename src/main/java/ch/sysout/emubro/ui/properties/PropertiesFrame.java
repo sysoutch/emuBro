@@ -82,7 +82,7 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 		super();
 		this.explorer = explorer;
 		setTitle(Messages.get(MessageConstants.SETTINGS));
-		setIconImages(UIUtil.getIcons());
+		setIconImages(UIUtil.getApplicationIcons());
 		setLayout(new BorderLayout());
 		setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 		initComponents();
@@ -778,6 +778,6 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 
 	@Override
 	public void themeChanged(ThemeChangeEvent e) {
-		setIconImages(UIUtil.getIcons());
+		setIconImages(UIUtil.getApplicationIcons());
 	}
 }

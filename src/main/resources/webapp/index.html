@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" type="image/png" href="./favicon.png" />
+
+    <title>emuBro - Web Client</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+    <link href="/css/all.css" rel="stylesheet">
+    <!--load all styles -->
+</head>
+
+<body>
+    <div class="container">
+        <template class="d-none">
+            <div class="grid-item">
+                <div class="card" data-id="">
+                    <input type="file" id="imgupload'+val.id+'" style="display:none" />
+                    <img data-update="cover" class="game-cover mx-auto d-block" src="" alt="Game Cover">
+                    <div class="card-body">
+                        <h4 data-update="name" class="card-title"></h4>
+                        <p class="card-text"><img data-update="icon" data-get="/platformIcon/:platformId" src="" alt="platform icon"> <span data-update="platformName"></span>
+                            <p><span data-update="rate1" class="fa fa-star"></span>
+                                <span data-update="rate2" class="fa fa-star"></span>
+                                <span data-update="rate3" class="fa fa-star"></span>
+                                <span data-update="rate4" class="fa fa-star"></span>
+                                <span data-update="rate5" class="fa fa-star"></span>
+                            </p>
+                            <p class="mb-0">
+								<a data-post="/game/:gameId/run" href="#" class="btn btn-success btn-sm">Run game</a>
+								<a href="#" class="btn btn-sm" style="background-color:#444;"><span class="fab fa-google" style="color:#fff;"></span></a>
+								<a href="#" class="btn btn-sm" style="background-color:#fff;"><span class="fab fa-youtube" style="color:#f00;"></span></a>
+								<a href="#" class="btn btn-link btn-sm"><i class="fas fa-ellipsis-v"></i></a>
+                            </p>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </template>
+        <div id="games" class="card-columns">
+
+        </div>
+    </div>
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script type="text/javascript" src="/js/jquery-3.4.1.min.js"></script>
+    <script type="text/javascript">
+		var mapPlatforms = {};
+		var mapGames = {};
+		
+        $(document).ready(function() {
+            $(document).on('click', 'a[data-action="update"]', function() {
+                //var game_id = $(this).parent('.card').first().attr('data-id')
+                var game_id = $(this).parent().parent().parent().attr('data-id')
+            });
+			
+			$.getJSON("/platforms", function(data) {
+				$.each(data, function(key, val) {
+					mapPlatforms[val.id] = val;
+				});
+			});
+			
+            $.getJSON("/games", function(data) {
+                $.each(data, function(key, val) {
+					mapGames[val.id] = val;
+                });
+				
+				var games_container = $("#games")
+				Object.keys(mapGames).forEach(function(element, index, array) {
+					var game = $(games_container.parent().find('template').html())
+					var val = mapGames[element];
+					$("[data-id]", game).attr('data-id', val.id)
+					$("[data-update='name']", game).html(val.name)
+					$("[data-update='cover']", game).attr('src', "/gameCover/" + val.id)
+					$("[data-update='icon']", game).attr('src', "/platformIcon/" + val.platformId)
+					//$("[data-update='platformName']", game).html(mapPlatforms[val.platformId].name);
+					
+					if (val.rate >= 1) {
+						$("[data-update='rate1']", game).addClass("checked");
+					} else {
+						$("[data-update='rate1']", game).removeClass("checked");
+					}
+					if (val.rate >= 2) {
+						$("[data-update='rate2']", game).addClass("checked");
+					} else {
+						$("[data-update='rate2']", game).removeClass("checked");
+					}
+					if (val.rate >= 3) {
+						$("[data-update='rate3']", game).addClass("checked");
+					} else {
+						$("[data-update='rate3']", game).removeClass("checked");
+					}
+					if (val.rate >= 4) {
+						$("[data-update='rate4']", game).addClass("checked");
+					} else {
+						$("[data-update='rate4']", game).removeClass("checked");
+					}
+					if (val.rate >= 5) {
+						$("[data-update='rate5']", game).addClass("checked");
+					} else {
+						$("[data-update='rate5']", game).removeClass("checked");
+					}
+					
+					$("[data-post]", game).each(function() {
+						$(this).attr('data-post', $(this).attr('data-post').replace(":gameId", val.id))
+						$(this).attr('data-post', $(this).attr('data-post').replace(":platformId", val.platformId))
+					});
+					$("[data-get]", game).each(function() {
+						$(this).attr('data-get', $(this).attr('data-get').replace(":gameId", val.id))
+						$(this).attr('data-get', $(this).attr('data-get').replace(":platformId", val.platformId))
+					});
+					games_container.append(game)
+				});
+            });			
+		});			
+
+        $(document).on('click', 'a[data-post]', function(e) {
+            var target = $(this).attr('data-post');
+            $.ajax({
+                type: "POST",
+                url: target,
+                data: {},
+                success: function(data) {
+                    console.log(data)
+                }
+            });
+            e.preventDefault();
+        });
+    </script>
+</body>
+
+</html>

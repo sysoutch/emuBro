@@ -19,11 +19,13 @@ import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.WindowConstants;
 
+import com.formdev.flatlaf.FlatLaf;
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 
 import ch.sysout.emubro.util.ColorConstants;
 import ch.sysout.ui.util.ImageUtil;
+import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Icons;
 
 public class SplashScreenWindow extends JDialog {
@@ -69,7 +71,7 @@ public class SplashScreenWindow extends JDialog {
 	private void initComponents() {
 		getRootPane().setBorder(BorderFactory.createEmptyBorder());
 		//		lbl.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("applicationBanner"), 200, 200, Color.LIGHT_GRAY));
-		lbl.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("allGames"), 200, 200, Color.BLUE));
+		//lbl.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("allGames"), 200, 200, Color.BLUE));
 		//		prg.setOpaque(false);
 		prg.setStringPainted(true);
 		//		prg.setIndeterminate(true);
@@ -124,8 +126,7 @@ public class SplashScreenWindow extends JDialog {
 		//		pnlMain.setBackground(new Color(13, 35, 48));
 		pnlMain.add(btnCancel, cc.xy(2, 1));
 		pnlPixelatedBackground = new PixelatedBackgroundPanel();
-		Image img = ImageUtil.getFlatSVGIconFrom(Icons.get("applicationBanner"), 512, 92, pnlMain.getBackground().brighter().brighter().brighter()).getImage();
-		//		Image img = ImageUtil.getFlatSVGIconFrom(Icons.get("applicationBanner"), 512, 92, pnlMain.getBackground().darker()).getImage();
+		Image img = UIUtil.getApplicationBannerBySize(512, 92).getImage();
 		pnlPixelatedBackground.setImg(img);
 		pnlPixelatedBackground.setDrawImageEnabled(true);
 		pnlPixelatedBackground.setBaseColor(pnlMain.getBackground().brighter());

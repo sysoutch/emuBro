@@ -170,7 +170,7 @@ public class ConfigWizardDialog extends JDialog implements ActionListener {
 		pnlHeader.setLayout(layout);
 
 		CellConstraints cc = new CellConstraints();
-		JLabel lblIcon = new JLabel(UIUtil.getIconBySize(48));
+		JLabel lblIcon = new JLabel(UIUtil.getApplicationIconBySize(48));
 		pnlHeader.add(lblIcon, cc.xy(1, 1));
 
 		pnlHeader.add(new JLabel(HEADER_TITLE), cc.xy(3, 1));
@@ -260,8 +260,8 @@ public class ConfigWizardDialog extends JDialog implements ActionListener {
 
 	class GeneralConfigPanel extends JPanel {
 		private static final long serialVersionUID = 1L;
-		private String message = "<html>" + "<h3>Willkommen im " + Messages.get("applicationTitle")
-		+ " Konfigurations-Assistenten</h3><p>"
+		private String message = "<html>" + "<h3>Herzlich willkommen im " + Messages.get("applicationTitle")
+		+ " Konfigurations-Assistent</h3><p>"
 		+ "Dieser Assistent führt dich durch die Konfiguration von " + Messages.get("applicationTitle")+"<p>"
 		+ "<p><p>Wenn du Fragen, Probleme oder sonst was hast was du uns mitteilen willst, joine unseren <strong>Discord Server</strong> oder schau auf <strong>Reddit</strong> vorbei."
 		+ "</html>";
