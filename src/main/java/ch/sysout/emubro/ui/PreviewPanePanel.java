@@ -17,14 +17,7 @@ import java.awt.RadialGradientPaint;
 import java.awt.RenderingHints;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetListener;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.FocusAdapter;
-import java.awt.event.FocusEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
-import java.awt.event.MouseMotionListener;
+import java.awt.event.*;
 import java.awt.font.TextAttribute;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
@@ -38,25 +31,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import javax.swing.AbstractButton;
-import javax.swing.BorderFactory;
-import javax.swing.BoxLayout;
-import javax.swing.Icon;
-import javax.swing.ImageIcon;
-import javax.swing.JButton;
-import javax.swing.JComponent;
-import javax.swing.JLabel;
-import javax.swing.JMenu;
-import javax.swing.JMenuItem;
-import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
-import javax.swing.JTextPane;
-import javax.swing.ScrollPaneConstants;
-import javax.swing.SwingConstants;
-import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
+import javax.swing.*;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
@@ -276,7 +251,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		setLayout(layout);
 
 		spSelection.setBorder(BorderFactory.createEmptyBorder());
-		pnlSelection.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 16));
+		pnlSelection.setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 16));
 		pnlNoSelection.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 16));
 
 		//		add(spSelection, BorderLayout.NORTH);
@@ -616,7 +591,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		g2d.dispose();
 	}
 
-	class SelectionPanel extends ScrollablePanel {
+	class SelectionPanel extends JPanel {
 		private static final long serialVersionUID = 1L;
 		private JLabel lblGameTitle = new JLabel("Game Title");
 		private JLinkButton lnkPlatformTitle = new JLinkButton("Platform Title");
@@ -719,16 +694,6 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 
 			JPanel pnl = createPanel();
 			add(pnl, BorderLayout.CENTER);
-
-			FormLayout layoutGameInfo = new FormLayout("default:grow, $rgap, default:grow, $rgap, default:grow, $rgap, default:grow",
-					"fill:pref");
-			JPanel pnlGameInfo = new JPanel(layoutGameInfo);
-			pnlGameInfo.add(pnlPlayCount, CC.xy(1, 1));
-			//pnl.add(pnlLastPlayed, CC.xyw(1, 22, defaultSpanWidth));
-			pnlGameInfo.add(pnlDateAdded, CC.xy(3, 1));
-			pnlGameInfo.add(pnlPublisher, CC.xy(5, 1));
-			pnlGameInfo.add(pnlDeveloper, CC.xy(7, 1));
-			add(pnlGameInfo, BorderLayout.SOUTH);
 			//			pnlAccordion = new AccordionPanel(AccordionPanel.VERTICAL_ACCORDION);
 			//			pnlAccordion.setOpaque(false);
 			//
@@ -769,8 +734,8 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 					"default, $rgap, default, $ugap, default, $ugap, default");
 			JPanel pnl = new JPanel();
 			FormLayout layoutMain;
-			pnl.setLayout(layoutMain = new FormLayout("default, $ugap, default, min, default, min:grow",
-					"fill:default, $lgap, fill:default, $rgap, fill:default, $ugap, fill:default, $ugap, fill:default, $ugap, fill:default, $lgap, fill:default, $lgap, fill:default, $ugap, fill:default, $rgap, min:grow, fill:default"
+			pnl.setLayout(layoutMain = new FormLayout("default, $ugap, default, min, default, min, min:grow",
+					"fill:default, $lgap, fill:default, $rgap, fill:default, $ugap, fill:default, $ugap, fill:default, $ugap, fill:default, $lgap, fill:default, $lgap, fill:default, $ugap, fill:default, $pgap:grow, min, fill:default"
 							+ ", $rgap, fill:default, $ugap, fill:default, $rgap, fill:default, $ugap, fill:default"
 			));
 			int defaultSpanWidth = layoutMain.getColumnCount();
@@ -788,7 +753,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			pnl.add(btnSearchTrailer, CC.xy(5, 9));
 //			pnl.add(pnlGameData, CC.xyw(1, 9, defaultSpanWidth));
 			pnl.add(pnlRatingBar, CC.xyw(1, 13, defaultSpanWidth));
-			pnl.add(pnlCommentWrapper, CC.xyw(1, 15, defaultSpanWidth));
+			pnl.add(pnlCommentWrapper, CC.xyw(1, 15, defaultSpanWidth-1));
 
 			// 17 description
 //			txtDescription.setHorizontalAlignment(SwingConstants.CENTER);
@@ -806,7 +771,29 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 					}
 				}
 			});
-			pnl.add(txtDescription, CC.xyw(1, 17, defaultSpanWidth)); // don't use scrollpane if not needed, otherwise there might be scroll issues
+			pnl.add(txtDescription, CC.xyw(1, 17, defaultSpanWidth-1)); // don't use scrollpane if not needed, otherwise there might be scroll issues
+
+
+			FormLayout layoutGameInfo = new FormLayout("min, $rgap, min, $rgap, min, $rgap, min, min:grow",
+					"fill:pref");
+			JPanel pnlGameInfo = new JPanel(layoutGameInfo);
+			pnlGameInfo.add(pnlPlayCount, CC.xy(1, 1));
+			//pnl.add(pnlLastPlayed, CC.xyw(1, 22, defaultSpanWidth));
+			pnlGameInfo.add(pnlDateAdded, CC.xy(3, 1));
+			pnlGameInfo.add(pnlPublisher, CC.xy(5, 1));
+			pnlGameInfo.add(pnlDeveloper, CC.xy(7, 1));
+			pnl.add(pnlGameInfo, CC.xyw(1, 19, defaultSpanWidth));
+			pnlGameInfo.addComponentListener(new ComponentAdapter() {
+				@Override
+				public void componentResized(ComponentEvent e) {
+
+					boolean makeResponsive = pnlGameInfo.getWidth() <= pnlGameInfo.getMinimumSize().width;
+					pnlPublisher.setVisible(!makeResponsive);
+					pnlDeveloper.setVisible(!makeResponsive);
+				}
+			});
+
+
 			//						pnl.add(pnlAutoScaleImage, ccSelection.xy(1, 5));
 			//						pnl.add(pnlRatingBar, ccSelection.xyw(1, 9, columnCount));
 			//						pnl.add(pnlCommentWrapper, ccSelection.xyw(1, 11, columnCount));

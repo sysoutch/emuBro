@@ -42,6 +42,7 @@ import javax.swing.BorderFactory;
 import javax.swing.JOptionPane;
 import javax.swing.LookAndFeel;
 import javax.swing.UIManager;
+import javax.swing.filechooser.FileSystemView;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -622,7 +623,8 @@ public class MainBro {
 
 	private static void initializeCustomTheme() throws IOException {
 		boolean darkTheme = FlatLaf.isLafDark();
-		IconStore.current().loadDefaultTheme(darkTheme ? "luigi" : "light");
+		String resourcesFolder = FileSystemView.getFileSystemView().getDefaultDirectory().getPath() + File.separator + "emuBro";
+		IconStore.current().loadDefaultTheme(resourcesFolder + "/themes", (darkTheme ? "dark" : "light"));
 		ColorStore.current().setColor(ColorConstants.SVG_NO_COLOR_DARK, Color.GRAY);
 		ColorStore.current().setColor(ColorConstants.SVG_NO_COLOR_LIGHT, Color.LIGHT_GRAY);
 		Color svgNoColorDark = ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR_DARK);

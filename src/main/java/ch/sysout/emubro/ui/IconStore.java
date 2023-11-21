@@ -103,10 +103,10 @@ public class IconStore {
 		// prevent instantiation of this class
 	}
 
-	public void loadDefaultTheme(String themeNameToLoad) throws IOException, JsonIOException, JsonSyntaxException {
+	public void loadDefaultTheme(String themeDirectory, String themeNameToLoad) throws IOException, JsonIOException, JsonSyntaxException {
 		//System.err.println(getResourceFiles("/themes/"));
-		String themeDirectory = "/themes/" + themeNameToLoad;
-		InputStream in = getClass().getResourceAsStream(themeDirectory + "/theme.json");
+		String themeDirectory2 = themeDirectory + "/" + themeNameToLoad;
+		InputStream in = new FileInputStream(themeDirectory2 + "/theme.json");
 		Theme theme = new Theme(themeNameToLoad);
 		Color backgroundColor = null;
 		Color menuBarColor = null;

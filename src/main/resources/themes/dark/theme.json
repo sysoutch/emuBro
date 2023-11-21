@@ -1,8 +1,0 @@
-{
-  "name":"Dark Mode",
-  "color":"#045e1b",
-  "view": {
-	"color":"#000000",
-	"image":"bg-only.jpg"
-  }
-}

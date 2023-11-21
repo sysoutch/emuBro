@@ -635,7 +635,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 					public void actionPerformed(ActionEvent e) {
 						String themeName = ((AbstractButton) e.getSource()).getText();
 						try {
-							IconStore.current().loadDefaultTheme(themeName);
+							IconStore.current().loadDefaultTheme(explorer.getResourcesPath()+"/themes", themeName);
 							// Main.initializeCustomColors();
 							// SwingUtilities.updateComponentTreeUI(MainFrame.this);
 							MainFrame.this.repaint();

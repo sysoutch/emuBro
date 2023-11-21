@@ -1,8 +1,0 @@
-{
-  "name":"Crash Bandicoot",
-  "color":"#3562a5",
-  "view": {
-    "color":"#3562a5",
-	"image":"bg-overlay.png"
-  }
-}
