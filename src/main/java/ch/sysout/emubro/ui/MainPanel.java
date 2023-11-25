@@ -1062,6 +1062,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				}
 			});
 		}
+		popupNavigation.setVisible(false);
 	}
 
 	@Override

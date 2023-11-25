@@ -62,6 +62,8 @@ public class ThemeManager implements ThemeListener {
 				//				defaultsMap.put("@foreground", hexBaseColor);
 				customizeTheme(baseColor, hexBaseColor, hexAccentColor, true, true);
 				getCurrentTheme().getView().setColor(UIManager.getColor("List.background"));
+
+				dlgModifyTheme.createCustomBrightnessComponents(baseColor);
 			}
 
 			private void customizeTheme(Color baseColor, String hexBaseColor, String hexAccentColor, boolean autoSwitchDarkLightTheme, boolean updateTheme) {

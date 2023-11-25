@@ -2,12 +2,7 @@ package ch.sysout.emubro.ui;
 
 import java.awt.Color;
 import java.awt.image.BufferedImage;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.JarURLConnection;
 import java.net.URI;
 import java.net.URL;
@@ -16,19 +11,14 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.stream.Stream;
 
 import javax.swing.ImageIcon;
 
+import ch.sysout.emubro.util.EmuBroUtil;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonObject;
@@ -162,7 +152,7 @@ public class IconStore {
 
 		if (viewImage != null) {
 			ThemeBackground themeBackGround = ThemeFactory
-					.createThemeBackground(themeDirectory + File.separator + "images" + File.separator + viewImage);
+					.createThemeBackground(themeDirectory2 + File.separator + "images" + File.separator + viewImage);
 			themeBackGround.setColor(viewColor);
 			theme.setView(themeBackGround);
 		} else {
@@ -173,7 +163,7 @@ public class IconStore {
 		theme.setTabs(ThemeFactory.createThemeBackground(tabsColor));
 		if (previewPaneImage != null) {
 			ThemeBackground themeBackGround = ThemeFactory.createThemeBackground(
-					themeDirectory + File.separator + "images" + File.separator + previewPaneImage);
+					themeDirectory2 + File.separator + "images" + File.separator + previewPaneImage);
 			themeBackGround.setColor(previewPaneColor);
 			theme.setPreviewPane(themeBackGround);
 		} else {
@@ -183,14 +173,16 @@ public class IconStore {
 		currentTheme = theme;
 	}
 
-	public List<String> getDefaultThemes() throws IOException {
-		return getResourceFiles("/themes/");
+	public String[] getDefaultThemes() throws IOException {
+		File themeDirectory = new File(EmuBroUtil.getResourceDirectory() + "/themes/");
+		return themeDirectory.list(new FilenameFilter() {
+			@Override
+			public boolean accept(File current, String name) {
+				return new File(current, name).isDirectory();
+			}
+		});
 	}
 
-	private List<String> getResourceFiles(String path) throws IOException {
-		List<String> filenames = new ArrayList<>();
-		return filenames;
-	}
 	public static final IconStore current() {
 		return instance == null ? instance = new IconStore() : instance;
 	}
@@ -236,7 +228,7 @@ public class IconStore {
 	}
 
 	public ImageIcon getPlatformCover(int platformId) {
-		return platformCovers.get(platformId);
+		return getTransparentPlatformCover(platformId, 1);
 	}
 
 	public ImageIcon getScaledTransparentPlatformCover(int platformId, int coverSize, int transparencyValue) {
@@ -245,7 +237,10 @@ public class IconStore {
 	}
 
 	public ImageIcon getTransparentPlatformCover(int platformId, int transparencyValue) {
-		ImageIcon cover = getPlatformCover(platformId);
+		ImageIcon cover = platformCovers.get(platformId);
+		if (transparencyValue == 1) {
+			return cover;
+		}
 		return getTransparentPlatformCoverFrom(cover, platformId, transparencyValue);
 	}
 
@@ -384,6 +379,10 @@ public class IconStore {
 	}
 
 	public ImageIcon getGameCover(int gameId) {
+		return getTransparentGameCover(gameId, 1);
+	}
+
+	public ImageIcon getTransparentGameCover(int gameId, int transparencyValue) {
 		if (!gameCovers.containsKey(gameId)) {
 			if (!gameCoverPaths.containsKey(gameId)) {
 				return null;
@@ -392,14 +391,13 @@ public class IconStore {
 			ImageIcon ico = ImageUtil.getImageIconFrom(coverFilePath, true);
 			gameCovers.put(gameId, ico);
 		}
-		return gameCovers.get(gameId);
-	}
-
-	public ImageIcon getTransparentGameCover(int gameId, int transparencyValue) {
-		ImageIcon gameIcon = getGameCover(gameId);
-		ImageIcon transparentCover = doTransparentThingsWithGameCover(gameId, gameIcon);
-		if (gameIcon != null) {
-			BufferedImage bi = ImageUtil.createTransparentImageFrom(gameIcon.getImage(),
+		ImageIcon gameCover = gameCovers.get(gameId);
+		if (transparencyValue == 1) {
+			return gameCover;
+		}
+		ImageIcon transparentCover = doTransparentThingsWithGameCover(gameId, gameCover);
+		if (gameCover != null) {
+			BufferedImage bi = ImageUtil.createTransparentImageFrom(gameCover.getImage(),
 					currentGameCoverTransparencyValue);
 			transparentCover = new ImageIcon(bi);
 			if (!transparentGameCovers.containsKey(gameId)) {
@@ -410,7 +408,7 @@ public class IconStore {
 					transparentCover = transparentGameCovers.get(gameId)
 							.getIcoOfSize(currentGameCoverTransparencyValue);
 				} else {
-					transparentCover = doTransparentThingsWithGameCover(gameId, gameIcon);
+					transparentCover = doTransparentThingsWithGameCover(gameId, gameCover);
 				}
 			}
 		}

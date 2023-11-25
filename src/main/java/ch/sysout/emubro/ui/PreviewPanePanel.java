@@ -1,20 +1,7 @@
 package ch.sysout.emubro.ui;
 
-import java.awt.AlphaComposite;
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.Cursor;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.Font;
-import java.awt.GradientPaint;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.Image;
+import java.awt.*;
 import java.awt.MultipleGradientPaint.CycleMethod;
-import java.awt.RadialGradientPaint;
-import java.awt.RenderingHints;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetListener;
 import java.awt.event.*;
@@ -36,6 +23,7 @@ import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
 
+import com.jgoodies.forms.layout.ColumnSpec;
 import org.apache.commons.io.FilenameUtils;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
@@ -623,7 +611,8 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		private JButton btnMoreOptionsRunGame = new JButton("");
 		private JButton btnSearchCover = new JCustomButtonNew("");
 		private JButton btnSearchTrailer = new JCustomButtonNew("");
-		
+		private int lastMinWidth = -1;
+
 		public SelectionPanel() {
 			initComponents();
 			setIcons();
@@ -775,7 +764,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 
 
 			FormLayout layoutGameInfo = new FormLayout("min, $rgap, min, $rgap, min, $rgap, min, min:grow",
-					"fill:pref");
+					"fill:min, min, fill:min, min, fill:min, min, fill:min, min");
 			JPanel pnlGameInfo = new JPanel(layoutGameInfo);
 			pnlGameInfo.add(pnlPlayCount, CC.xy(1, 1));
 			//pnl.add(pnlLastPlayed, CC.xyw(1, 22, defaultSpanWidth));
@@ -786,10 +775,30 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			pnlGameInfo.addComponentListener(new ComponentAdapter() {
 				@Override
 				public void componentResized(ComponentEvent e) {
-
-					boolean makeResponsive = pnlGameInfo.getWidth() <= pnlGameInfo.getMinimumSize().width;
-					pnlPublisher.setVisible(!makeResponsive);
-					pnlDeveloper.setVisible(!makeResponsive);
+					boolean shrinkComponents = pnlGameInfo.getWidth() <= pnlGameInfo.getMinimumSize().width;
+					if (shrinkComponents) {
+						if (lastMinWidth != -1) {
+							boolean rlyShrinkComponents = pnlGameInfo.getWidth() <= lastMinWidth;
+							if (rlyShrinkComponents) {
+								lastMinWidth = pnlGameInfo.getMinimumSize().width;
+								shrinkComponents(pnlGameInfo);
+							}
+						} else {
+							lastMinWidth = pnlGameInfo.getMinimumSize().width;
+							shrinkComponents(pnlGameInfo);
+						}
+					} else {
+						if (lastMinWidth != -1) {
+							boolean rlyExtendComponents = pnlGameInfo.getWidth() > lastMinWidth;
+							if (rlyExtendComponents) {
+								lastMinWidth = pnlGameInfo.getMinimumSize().width;
+								extendComponents(pnlGameInfo);
+							}
+						} else {
+							lastMinWidth = pnlGameInfo.getMinimumSize().width;
+							extendComponents(pnlGameInfo);
+						}
+					}
 				}
 			});
 
@@ -802,6 +811,54 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			//						pnl.add(pnlLastPlayed, ccSelection.xyw(1, 17, columnCount));
 			//						pnl.add(pnlDateAdded, ccSelection.xyw(1, 19, columnCount));
 			return pnl;
+		}
+
+		private void shrinkComponents(JPanel pnl) {
+			LayoutManager layout = pnl.getLayout();
+			if (layout instanceof FormLayout) {
+				FormLayout formLayout = (FormLayout) layout;
+				if (formLayout.getColumnCount() == 8) {
+					pnl.add(pnlPlayCount, CC.xy(1, 1));
+					pnl.add(pnlDateAdded, CC.xy(3, 1));
+					pnl.add(pnlPublisher, CC.xy(1, 3));
+					pnl.add(pnlDeveloper, CC.xy(3, 3));
+					formLayout.removeColumn(formLayout.getColumnCount());
+					formLayout.removeColumn(formLayout.getColumnCount());
+					formLayout.removeColumn(formLayout.getColumnCount());
+					formLayout.removeColumn(formLayout.getColumnCount());
+				} else if (formLayout.getColumnCount() == 4) {
+					pnl.add(pnlPlayCount, CC.xy(1, 1));
+					pnl.add(pnlDateAdded, CC.xy(1, 3));
+					pnl.add(pnlPublisher, CC.xy(1, 5));
+					pnl.add(pnlDeveloper, CC.xy(1, 7));
+					formLayout.removeColumn(formLayout.getColumnCount());
+					formLayout.removeColumn(formLayout.getColumnCount());
+				}
+			}
+		}
+
+		private void extendComponents(JPanel pnl) {
+			LayoutManager layout = pnl.getLayout();
+			if (layout instanceof FormLayout) {
+				FormLayout formLayout = (FormLayout) layout;
+				if (formLayout.getColumnCount() == 2) {
+					formLayout.appendColumn(ColumnSpec.decode("min"));
+					formLayout.appendColumn(ColumnSpec.decode("min"));
+					pnl.add(pnlPlayCount, CC.xy(1, 1));
+					pnl.add(pnlDateAdded, CC.xy(3, 1));
+					pnl.add(pnlPublisher, CC.xy(1, 3));
+					pnl.add(pnlDeveloper, CC.xy(3, 3));
+				} else if (formLayout.getColumnCount() == 4) {
+					formLayout.appendColumn(ColumnSpec.decode("min"));
+					formLayout.appendColumn(ColumnSpec.decode("min"));
+					formLayout.appendColumn(ColumnSpec.decode("min"));
+					formLayout.appendColumn(ColumnSpec.decode("min"));
+					pnl.add(pnlPlayCount, CC.xy(1, 1));
+					pnl.add(pnlDateAdded, CC.xy(3, 1));
+					pnl.add(pnlPublisher, CC.xy(5, 1));
+					pnl.add(pnlDeveloper, CC.xy(7, 1));
+				}
+			}
 		}
 
 		private void initGameTitle() {

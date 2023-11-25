@@ -14,6 +14,7 @@ import java.util.Set;
 
 import javax.swing.filechooser.FileSystemView;
 
+import ch.sysout.emubro.util.EmuBroUtil;
 import org.apache.commons.io.FilenameUtils;
 
 import ch.sysout.emubro.api.filter.FilterGroup;
@@ -55,7 +56,7 @@ public class BroExplorer implements Explorer {
 
 	public BroExplorer(String currentApplicationVersion) {
 		this.currentApplicationVersion = currentApplicationVersion;
-		resourcesPath = FileSystemView.getFileSystemView().getDefaultDirectory().getPath() + File.separator + "emuBro";
+		resourcesPath = EmuBroUtil.getResourceDirectory();
 	}
 
 	@Override

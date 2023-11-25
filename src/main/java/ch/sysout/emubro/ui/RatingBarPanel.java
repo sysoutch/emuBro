@@ -134,7 +134,7 @@ public class RatingBarPanel extends JPanel implements ActionListener, FocusListe
 				currentRate = i;
 				int k = 0;
 				while (k <= i) {
-					buttons.get(k++).setIcon(getCurrentGames().get(0).getRate() == 0 || k <= getCurrentGames().get(0).getRate() ? icoRating
+					buttons.get(k++).setIcon(/*getCurrentGames().get(0).getRate() == 0 || */k <= getCurrentGames().get(0).getRate() ? icoRating
 							: icoRatingAdd);
 				}
 				while (k < getCurrentGames().get(0).getRate()) {

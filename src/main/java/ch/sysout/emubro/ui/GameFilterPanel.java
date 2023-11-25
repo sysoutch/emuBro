@@ -90,7 +90,7 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 
 	private JComboBox<Platform> cmbPlatforms;
 	private JPanel pnlSearchField = new JPanel(new BorderLayout());
-	private JExtendedTextField txtSearchGame = new JExtendedTextField();
+	public JExtendedTextField txtSearchGame = new JExtendedTextField();
 	private ImageIcon icoSearch;
 	private ImageIcon icoFilterGroupsSettings;
 	private ImageIcon icoSaveFilterGroup;

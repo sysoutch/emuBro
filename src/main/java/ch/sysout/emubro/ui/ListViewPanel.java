@@ -2257,7 +2257,6 @@ public class ListViewPanel extends ViewPanel implements ListSelectionListener {
 		} else {
 			addTransparencyOverlayImage(g2d, false, panelWidth, panelHeight, currentTheme, 1, 0, 0);
 		}
-
 		g2d.dispose();
 	}
 

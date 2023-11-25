@@ -1,4 +1,4 @@
-package ch.sysout.emubro.ui.controller;
+package ch.sysout.emubro.controller;
 
 import java.io.BufferedWriter;
 import java.io.File;

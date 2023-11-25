@@ -63,6 +63,7 @@ import javax.swing.event.ChangeListener;
 import javax.swing.event.MenuEvent;
 import javax.swing.event.MenuListener;
 
+import ch.sysout.emubro.controller.*;
 import com.formdev.flatlaf.FlatLaf;
 import com.formdev.flatlaf.intellijthemes.FlatAllIJThemes;
 import com.formdev.flatlaf.intellijthemes.FlatAllIJThemes.FlatIJLookAndFeelInfo;
@@ -92,16 +93,10 @@ import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.api.model.PlatformComparator;
 import ch.sysout.emubro.api.model.Tag;
-import ch.sysout.emubro.controller.DirectorySearchedListener;
-import ch.sysout.emubro.controller.ECMConverter;
-import ch.sysout.emubro.controller.GameSelectionListener;
-import ch.sysout.emubro.controller.MCRReader;
-import ch.sysout.emubro.controller.ViewConstants;
 import ch.sysout.emubro.impl.event.BroFilterEvent;
 import ch.sysout.emubro.impl.event.NavigationEvent;
 import ch.sysout.emubro.impl.model.BroEmulator;
 import ch.sysout.emubro.ui.controller.CoverDownloaderController;
-import ch.sysout.emubro.ui.controller.CueMaker;
 import ch.sysout.emubro.ui.controller.ThemeManager;
 import ch.sysout.emubro.ui.event.ThemeChangeEvent;
 import ch.sysout.emubro.ui.listener.RateListener;
@@ -311,8 +306,6 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		initComponents();
 		createUI();
 		pnlMain.addDetailsFrameListener(this);
-
-		TestFrame frameTest = new TestFrame();
 	}
 
 	private void initComponents() {
@@ -462,6 +455,10 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 					return;
 				}
 				if (!path.toLowerCase().endsWith(".bin")) {
+					if (path.toLowerCase().toLowerCase().endsWith(".bin.ecm")) {
+						UIUtil.showErrorMessage(MainFrame.this, "this file looks like this bin file is in an Error Code Modeler format (.ecm). you probably want to convert it to a .bin file first.", ".ecm file detected");
+						return;
+					}
 					UIUtil.showErrorMessage(MainFrame.this, "this file doesn't appear to be a .bin file", "no .bin file");
 					return;
 				}
@@ -708,6 +705,9 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 				Messages.get(MessageConstants.RUN_GAME));
 		btnMoreOptionsRunGame = new ButtonBarButton("", ImageUtil.getImageIconFrom(Icons.get("arrowDownOtherWhite", 1)),
 				"");
+		btnRunGame.linkWith(btnMoreOptionsRunGame);
+		btnMoreOptionsRunGame.linkWith(btnRunGame);
+
 		btnRemoveOrRestoreGame = new ButtonBarButton("", icoTrash, Messages.get(MessageConstants.REMOVE));
 		btnRenameGame = new ButtonBarButton("",
 				ImageUtil.getFlatSVGIconFrom(Icons.get("rename"), buttonBarIconSize,
@@ -721,6 +721,9 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		btnMoreOptionsChangeView = new ButtonBarButton("",
 				ImageUtil.getImageIconFrom(Icons.get("arrowDownOtherWhite", 1)),
 				Messages.get(MessageConstants.MORE_OPTIONS));
+		btnChangeView.linkWith(btnMoreOptionsChangeView);
+		btnMoreOptionsChangeView.linkWith(btnChangeView);
+
 		btnSetSortOrder = new ButtonBarButton("", iconSortOrder, "");
 		btnSetGroupBy = new ButtonBarButton("", iconGroupBy, "");
 		btnSetFilter = new ButtonBarButton("", iconSearchGame, Messages.get(MessageConstants.SET_FILTER));
@@ -3204,6 +3207,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 	@Override
 	public void themeChanged(ThemeChangeEvent e) {
 		setIconImages(UIUtil.getApplicationIcons());
+		pnlGameFilter.txtSearchGame.setBackground(UIManager.getColor("Panel.background").brighter());
 		pnlMain.repaint();
 	}
 }

@@ -1,0 +1,440 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="ch.sysout.emubro.ui.ThemeManagerNewWindow">
+  <grid id="27dc6" binding="panel1" default-binding="true" layout-manager="FormLayout">
+    <rowspec value="center:max(d;4px):noGrow"/>
+    <rowspec value="top:4dlu:noGrow"/>
+    <rowspec value="center:36px:noGrow"/>
+    <rowspec value="top:d:noGrow"/>
+    <rowspec value="top:44px:noGrow"/>
+    <rowspec value="top:4dlu:noGrow"/>
+    <rowspec value="center:d:noGrow"/>
+    <rowspec value="center:d:noGrow"/>
+    <rowspec value="fill:d:grow"/>
+    <rowspec value="top:4dlu:noGrow"/>
+    <rowspec value="center:d:noGrow"/>
+    <rowspec value="top:4dlu:noGrow"/>
+    <rowspec value="center:max(d;4px):noGrow"/>
+    <rowspec value="top:4dlu:noGrow"/>
+    <rowspec value="center:32px:noGrow"/>
+    <rowspec value="center:max(d;4px):noGrow"/>
+    <rowspec value="top:p:noGrow"/>
+    <rowspec value="top:4dlu:noGrow"/>
+    <rowspec value="bottom:m:noGrow"/>
+    <colspec value="fill:d:noGrow"/>
+    <colspec value="left:4dlu:noGrow"/>
+    <colspec value="fill:max(d;4px):noGrow"/>
+    <colspec value="left:4dlu:noGrow"/>
+    <colspec value="fill:max(d;4px):noGrow"/>
+    <colspec value="left:4dlu:noGrow"/>
+    <colspec value="fill:max(d;4px):noGrow"/>
+    <colspec value="left:4dlu:noGrow"/>
+    <colspec value="fill:max(d;4px):noGrow"/>
+    <colspec value="left:4dlu:noGrow"/>
+    <colspec value="fill:120px:noGrow"/>
+    <colspec value="left:5dlu:noGrow"/>
+    <colspec value="fill:max(d;4px):grow"/>
+    <constraints>
+      <xy x="20" y="20" width="1077" height="491"/>
+    </constraints>
+    <properties/>
+    <border type="empty">
+      <size top="5" left="5" bottom="5" right="5"/>
+    </border>
+    <children>
+      <component id="35044" class="javax.swing.JButton" binding="button1" custom-create="true" default-binding="true">
+        <constraints>
+          <grid row="18" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+          <forms/>
+        </constraints>
+        <properties>
+          <background color="-2561"/>
+          <hideActionText value="false"/>
+          <text value=""/>
+        </properties>
+      </component>
+      <component id="48c0b" class="javax.swing.JButton" binding="button2" default-binding="true">
+        <constraints>
+          <grid row="18" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+          <forms/>
+        </constraints>
+        <properties>
+          <background color="-1508865"/>
+          <text value="Button"/>
+        </properties>
+      </component>
+      <component id="c29dc" class="javax.swing.JButton" binding="button3" default-binding="true">
+        <constraints>
+          <grid row="18" column="4" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+          <forms/>
+        </constraints>
+        <properties>
+          <background color="-1508865"/>
+          <text value="Button"/>
+        </properties>
+      </component>
+      <component id="1d673" class="javax.swing.JButton" binding="button4" default-binding="true">
+        <constraints>
+          <grid row="18" column="6" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+          <forms/>
+        </constraints>
+        <properties>
+          <background color="-1508865"/>
+          <text value="Button"/>
+        </properties>
+      </component>
+      <component id="2891c" class="javax.swing.JButton" binding="button5" default-binding="true">
+        <constraints>
+          <grid row="18" column="8" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+          <forms/>
+        </constraints>
+        <properties>
+          <background color="-1508865"/>
+          <text value="Button"/>
+        </properties>
+      </component>
+      <component id="8ab4f" class="javax.swing.JButton" binding="button6" default-binding="true">
+        <constraints>
+          <grid row="18" column="10" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+          <forms/>
+        </constraints>
+        <properties>
+          <background color="-1508865"/>
+          <text value="Button"/>
+        </properties>
+      </component>
+      <component id="b8711" class="javax.swing.JButton" binding="baseLookButton" default-binding="true">
+        <constraints>
+          <grid row="2" column="0" row-span="1" col-span="13" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+          <forms/>
+        </constraints>
+        <properties>
+          <text value="Base Look"/>
+        </properties>
+      </component>
+      <component id="697a4" class="javax.swing.JButton" binding="backgroundButton" default-binding="true">
+        <constraints>
+          <grid row="7" column="0" row-span="1" col-span="13" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+          <forms/>
+        </constraints>
+        <properties>
+          <text value="Background"/>
+        </properties>
+      </component>
+      <component id="5252c" class="javax.swing.JButton" binding="textButton" default-binding="true">
+        <constraints>
+          <grid row="10" column="0" row-span="1" col-span="13" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+          <forms/>
+        </constraints>
+        <properties>
+          <text value="Text"/>
+        </properties>
+      </component>
+      <component id="15b6c" class="javax.swing.JButton" binding="iconsButton" default-binding="true">
+        <constraints>
+          <grid row="14" column="0" row-span="1" col-span="13" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+          <forms/>
+        </constraints>
+        <properties>
+          <text value="Icons"/>
+        </properties>
+      </component>
+      <grid id="af585" layout-manager="FormLayout">
+        <rowspec value="center:max(d;4px):noGrow"/>
+        <rowspec value="top:4dlu:noGrow"/>
+        <rowspec value="fill:d:grow"/>
+        <colspec value="fill:d:noGrow"/>
+        <colspec value="left:4dlu:noGrow"/>
+        <colspec value="fill:max(d;4px):noGrow"/>
+        <colspec value="left:4dlu:noGrow"/>
+        <colspec value="fill:max(d;4px):noGrow"/>
+        <constraints>
+          <grid row="4" column="0" row-span="3" col-span="13" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+          <forms/>
+        </constraints>
+        <properties/>
+        <border type="none"/>
+        <children>
+          <component id="b2953" class="javax.swing.JButton" binding="button7" default-binding="true">
+            <constraints>
+              <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <text value="Button"/>
+            </properties>
+          </component>
+          <component id="3a1b0" class="javax.swing.JButton" binding="button8" default-binding="true">
+            <constraints>
+              <grid row="2" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <text value="Button"/>
+            </properties>
+          </component>
+          <component id="77f18" class="javax.swing.JButton" binding="button9" default-binding="true">
+            <constraints>
+              <grid row="2" column="4" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <text value="Button"/>
+            </properties>
+          </component>
+        </children>
+      </grid>
+      <component id="d43a2" class="javax.swing.JCheckBox" binding="transparentCoversCheckBox" default-binding="true">
+        <constraints>
+          <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+          <forms/>
+        </constraints>
+        <properties>
+          <text value="Transparent covers"/>
+        </properties>
+      </component>
+      <component id="b3e21" class="javax.swing.JCheckBox" binding="transparentSelectionCheckBox" default-binding="true">
+        <constraints>
+          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+          <forms/>
+        </constraints>
+        <properties>
+          <text value="Transparent selection"/>
+        </properties>
+      </component>
+      <grid id="bcdd1" layout-manager="FormLayout">
+        <rowspec value="fill:d:noGrow"/>
+        <rowspec value="top:4dlu:noGrow"/>
+        <rowspec value="center:max(d;4px):noGrow"/>
+        <rowspec value="top:4dlu:noGrow"/>
+        <rowspec value="center:max(d;4px):noGrow"/>
+        <rowspec value="top:4dlu:noGrow"/>
+        <rowspec value="fill:d:noGrow"/>
+        <rowspec value="top:4dlu:noGrow"/>
+        <rowspec value="fill:max(d;4px):grow"/>
+        <colspec value="fill:d:noGrow"/>
+        <colspec value="left:4dlu:noGrow"/>
+        <colspec value="fill:max(d;4px):noGrow"/>
+        <colspec value="left:4dlu:noGrow"/>
+        <colspec value="fill:max(d;4px):noGrow"/>
+        <colspec value="left:4dlu:noGrow"/>
+        <colspec value="fill:max(d;4px):noGrow"/>
+        <colspec value="left:4dlu:noGrow"/>
+        <colspec value="fill:max(d;4px):noGrow"/>
+        <colspec value="left:4dlu:noGrow"/>
+        <colspec value="fill:max(d;4px):noGrow"/>
+        <colspec value="left:4dlu:noGrow"/>
+        <colspec value="fill:max(d;4px):noGrow"/>
+        <colspec value="left:4dlu:noGrow"/>
+        <colspec value="fill:max(d;4px):noGrow"/>
+        <colspec value="left:4dlu:noGrow"/>
+        <colspec value="fill:max(d;4px):noGrow"/>
+        <constraints>
+          <grid row="8" column="0" row-span="1" col-span="13" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+          <forms/>
+        </constraints>
+        <properties/>
+        <border type="none"/>
+        <children>
+          <component id="7d620" class="javax.swing.JButton" binding="button10" default-binding="true">
+            <constraints>
+              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <text value="Button"/>
+            </properties>
+          </component>
+          <component id="d982f" class="javax.swing.JCheckBox" binding="scaleToViewCheckBox" default-binding="true">
+            <constraints>
+              <grid row="0" column="6" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <text value="Scale to view"/>
+            </properties>
+          </component>
+          <component id="1e21f" class="javax.swing.JCheckBox" binding="stretchToViewCheckBox" default-binding="true">
+            <constraints>
+              <grid row="0" column="8" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <text value="Stretch to view"/>
+            </properties>
+          </component>
+          <component id="aa5f2" class="javax.swing.JCheckBox" binding="horizontalCenterCheckBox" default-binding="true">
+            <constraints>
+              <grid row="0" column="10" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <text value="Horizontal Center"/>
+            </properties>
+          </component>
+          <component id="d14f1" class="javax.swing.JCheckBox" binding="verticalCenterCheckBox" default-binding="true">
+            <constraints>
+              <grid row="0" column="12" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <text value="Vertical Center"/>
+            </properties>
+          </component>
+          <component id="99e7c" class="javax.swing.JButton" binding="backgroundColorButton" default-binding="true">
+            <constraints>
+              <grid row="0" column="14" row-span="1" col-span="3" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <text value="background color"/>
+            </properties>
+          </component>
+          <component id="6cc7e" class="javax.swing.JCheckBox" binding="addTransparencyBackgroundCheckBox" default-binding="true">
+            <constraints>
+              <grid row="6" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <text value="Add Transparency Background"/>
+            </properties>
+          </component>
+          <component id="28541" class="javax.swing.JSlider" binding="slider1" default-binding="true">
+            <constraints>
+              <grid row="6" column="6" row-span="1" col-span="3" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false"/>
+              <forms defaultalign-horz="false"/>
+            </constraints>
+            <properties/>
+          </component>
+          <component id="bbbac" class="javax.swing.JCheckBox" binding="checkBox1" default-binding="true">
+            <constraints>
+              <grid row="6" column="10" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <text value="CheckBox"/>
+            </properties>
+          </component>
+          <component id="ca201" class="javax.swing.JCheckBox" binding="checkBox2" default-binding="true">
+            <constraints>
+              <grid row="6" column="12" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <text value="CheckBox"/>
+            </properties>
+          </component>
+          <component id="80ddf" class="javax.swing.JButton" binding="button11" default-binding="true">
+            <constraints>
+              <grid row="6" column="14" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="0" indent="0" use-parent-layout="false"/>
+              <forms defaultalign-horz="false"/>
+            </constraints>
+            <properties>
+              <horizontalAlignment value="0"/>
+              <text value="Button"/>
+            </properties>
+          </component>
+          <component id="4a9e9" class="javax.swing.JButton" binding="button12" default-binding="true">
+            <constraints>
+              <grid row="6" column="16" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <text value="Button"/>
+            </properties>
+          </component>
+          <component id="159ff" class="javax.swing.JButton" binding="selectAnImageButton" default-binding="true">
+            <constraints>
+              <grid row="8" column="0" row-span="1" col-span="17" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <text value="Select an Image ..."/>
+              <visible value="true"/>
+            </properties>
+          </component>
+          <component id="d9457" class="javax.swing.JButton" binding="button13" default-binding="true">
+            <constraints>
+              <grid row="0" column="4" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <text value="Button"/>
+            </properties>
+          </component>
+          <component id="fb802" class="javax.swing.JButton" binding="button14" default-binding="true">
+            <constraints>
+              <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <text value="Button"/>
+            </properties>
+          </component>
+          <component id="14959" class="javax.swing.JButton" binding="button15" default-binding="true">
+            <constraints>
+              <grid row="2" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <text value="Button"/>
+            </properties>
+          </component>
+          <component id="3bb63" class="javax.swing.JButton" binding="button16" default-binding="true">
+            <constraints>
+              <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <text value="Button"/>
+            </properties>
+          </component>
+          <component id="d78be" class="javax.swing.JButton" binding="button17" default-binding="true">
+            <constraints>
+              <grid row="2" column="4" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <text value="Button"/>
+            </properties>
+          </component>
+          <component id="ef64d" class="javax.swing.JButton" binding="button18" default-binding="true">
+            <constraints>
+              <grid row="4" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <text value="Button"/>
+            </properties>
+          </component>
+          <component id="d7124" class="javax.swing.JButton" binding="button19" default-binding="true">
+            <constraints>
+              <grid row="4" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <text value="Button"/>
+            </properties>
+          </component>
+          <component id="89ccf" class="javax.swing.JButton" binding="button20" default-binding="true">
+            <constraints>
+              <grid row="4" column="4" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <text value="Button"/>
+            </properties>
+          </component>
+        </children>
+      </grid>
+      <component id="1164" class="javax.swing.JButton" binding="selectionButton" default-binding="true">
+        <constraints>
+          <grid row="12" column="0" row-span="1" col-span="13" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+          <forms/>
+        </constraints>
+        <properties>
+          <text value="Selection"/>
+        </properties>
+      </component>
+    </children>
+  </grid>
+</form>

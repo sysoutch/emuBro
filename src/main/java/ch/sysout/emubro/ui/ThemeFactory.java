@@ -23,7 +23,7 @@ public class ThemeFactory {
 			if (!string.startsWith("/")) {
 				string = "/"+string;
 			}
-			img = ImageUtil.getImageFrom(string);
+			img = ImageUtil.getImageIconFrom(string, true).getImage();
 		} catch (Exception e) {
 			img = null;
 		}

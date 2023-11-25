@@ -39,6 +39,7 @@ import ch.sysout.util.Icons;
 
 public class ThemeManagerWindow extends JDialog {
 	private static final long serialVersionUID = 1L;
+	private final JPanel pnlBrightness;
 
 	private JCheckBox chkTransparentSelection = new JCheckBox("Transparent selection");
 	private JCheckBox chkTransparentCovers = new JCheckBox("Transparent covers");
@@ -117,31 +118,8 @@ public class ThemeManagerWindow extends JDialog {
 		//add(btnAddLayer, CC.xy(1, 7));
 		
 		
-		JPanel pnlBrightness = new JPanel(new FlowLayout());
-		int darkestColor = Color.BLACK.getRGB();
-		int brightestColor = Color.WHITE.getRGB();
-		Color tmpColor = UIManager.getColor("Panel.background");
-		List<JButton> btnList = new ArrayList<>();
-		while ((tmpColor = tmpColor.brighter()).getRGB() != brightestColor) {
-			JButton btn = new JButton(" ");
-			btn.setBackground(tmpColor);
-			btnList.add(btn);
-		}
-		Collections.reverse(btnList);
-		
-		JButton btn2 = new JButton(" ");
-		btn2.setBackground(UIManager.getColor("Panel.background"));
-		btnList.add(btn2);
-		
-		Color tmpColor2 = UIManager.getColor("Panel.background");
-		while ((tmpColor2 = tmpColor2.darker()).getRGB() != darkestColor) {
-			JButton btn = new JButton(" ");
-			btn.setBackground(tmpColor2);
-			btnList.add(btn);
-		}
-		for (Component btnTmp : btnList) {
-			pnlBrightness.add(btnTmp);
-		}
+		pnlBrightness = new JPanel(new FlowLayout());
+		createCustomBrightnessComponents(UIManager.getColor("Panel.background"));
 		add(pnlBrightness, CC.xywh(3, 9, layout.getColumnCount()-2, 1));
 		//add(sliderBrigthness, CC.xywh(3, 9, layout.getColumnCount()-2, 1));
 		sliderBrigthness.setMinimum(0);
@@ -165,6 +143,60 @@ public class ThemeManagerWindow extends JDialog {
 			}
 		});
 		pack();
+	}
+
+	public void createCustomBrightnessComponents(Color baseColor) {
+		pnlBrightness.removeAll();
+		int darkestColor = Color.BLACK.getRGB();
+		int brightestColor = Color.WHITE.getRGB();
+		List<JCustomButton> btnList = new ArrayList<>();
+		while ((baseColor = baseColor.brighter()).getRGB() != brightestColor) {
+			boolean colorStillSame = baseColor.getRGB() == baseColor.brighter().getRGB();
+			if (colorStillSame) {
+				break;
+			}
+			JCustomButton btn = new JCustomButton(" ");
+			btn.setBackground(baseColor);
+			btnList.add(btn);
+			btn.addActionListener(new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					setColorPickerColor(btn.getBackground());
+				}
+			});
+			System.out.println(baseColor.getRGB() + " == " + baseColor.darker().getRGB());
+		}
+		Collections.reverse(btnList);
+
+		JCustomButton btn2 = new JCustomButton(" ");
+		btn2.setBackground(UIManager.getColor("Panel.background"));
+		btnList.add(btn2);
+		btn2.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				setColorPickerColor(btn2.getBackground());
+			}
+		});
+
+		Color tmpColor2 = btn2.getBackground();
+		while ((tmpColor2 = tmpColor2.darker()).getRGB() != darkestColor) {
+			boolean colorStillSame = tmpColor2.getRGB() == tmpColor2.darker().getRGB();
+			if (colorStillSame) {
+				break;
+			}
+			JCustomButton btn = new JCustomButton(" ");
+			btn.setBackground(tmpColor2);
+			btnList.add(btn);
+			btn.addActionListener(new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					setColorPickerColor(btn.getBackground());
+				}
+			});
+		}
+		for (Component btnTmp : btnList) {
+			pnlBrightness.add(btnTmp);
+		}
 	}
 
 	private JPanel addNewLayer() {
