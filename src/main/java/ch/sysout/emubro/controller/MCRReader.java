@@ -13,6 +13,10 @@ public class MCRReader {
 
 	public static List<SaveBlock> readGames(String path) {
 		File file = new File(path);
+		return readGames(file);
+	}
+
+	public static List<SaveBlock> readGames(File file) {
 		try (FileInputStream fis = new FileInputStream(file)) {
 			byte[] header = new byte[HEADER_SIZE];
 			fis.read(header);

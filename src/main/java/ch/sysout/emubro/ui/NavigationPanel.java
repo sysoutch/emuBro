@@ -44,8 +44,9 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 	public static final long serialVersionUID = 1L;
 	public static final int ALL_GAMES = 0;
 	public static final int FAVORITES = 1;
-	public static final int RECENTLY_PLAYED = 2;
-	public static final int RECYCLE_BIN = 3;
+	public static final int GAME_FILTER_GROUPS = 2;
+	public static final int RECENTLY_PLAYED = 3;
+	public static final int RECYCLE_BIN = 4;
 	public static final String MINIMIZED = "min";
 	public static final String CENTERED = "centered";
 	public static final String MAXIMIZED = "maximized";
@@ -314,6 +315,9 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 		if (btn.equals(btnFavorites)) {
 			baseText = Messages.get(MessageConstants.FAVORITES);
 		}
+		if (btn.equals(btnGameFilterGroups)) {
+			baseText = Messages.get(MessageConstants.GAME_FILTER_GROUPS);
+		}
 		if (btn.equals(btnRecentlyPlayed)) {
 			baseText = Messages.get(MessageConstants.RECENTLY_PLAYED);
 		}
@@ -443,6 +447,9 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 			if (!btnFavorites.getText().isEmpty()) {
 				btnFavorites.setText(Messages.get(MessageConstants.FAVORITES));
 			}
+			if (!btnGameFilterGroups.getText().isEmpty()) {
+				btnGameFilterGroups.setText(Messages.get(MessageConstants.GAME_FILTER_GROUPS));
+			}
 			if (!btnRecentlyPlayed.getText().isEmpty()) {
 				btnRecentlyPlayed.setText(Messages.get(MessageConstants.RECENTLY_PLAYED));
 			}
@@ -451,6 +458,7 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 			}
 			btnAllGames.setSelected(true);
 			btnFavorites.setButtonDecorationEnabled(false);
+			btnGameFilterGroups.setButtonDecorationEnabled(false);
 			btnRecentlyPlayed.setButtonDecorationEnabled(false);
 			btnRecycleBin.setButtonDecorationEnabled(false);
 
@@ -464,6 +472,9 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 			if (!btnFavorites.getText().isEmpty()) {
 				btnFavorites.setText(prefix + Messages.get(MessageConstants.FAVORITES) + postfix);
 			}
+			if (!btnGameFilterGroups.getText().isEmpty()) {
+				btnGameFilterGroups.setText(prefix + Messages.get(MessageConstants.GAME_FILTER_GROUPS) + postfix);
+			}
 			if (!btnRecentlyPlayed.getText().isEmpty()) {
 				btnRecentlyPlayed.setText(Messages.get(MessageConstants.RECENTLY_PLAYED));
 			}
@@ -472,6 +483,7 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 			}
 			btnFavorites.setSelected(true);
 			btnAllGames.setButtonDecorationEnabled(false);
+			btnGameFilterGroups.setButtonDecorationEnabled(false);
 			btnRecentlyPlayed.setButtonDecorationEnabled(false);
 			btnRecycleBin.setButtonDecorationEnabled(false);
 
@@ -488,6 +500,9 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 			if (!btnFavorites.getText().isEmpty()) {
 				btnFavorites.setText(Messages.get(MessageConstants.FAVORITES));
 			}
+			if (!btnGameFilterGroups.getText().isEmpty()) {
+				btnGameFilterGroups.setText(Messages.get(MessageConstants.GAME_FILTER_GROUPS));
+			}
 			if (!btnRecentlyPlayed.getText().isEmpty()) {
 				btnRecentlyPlayed.setText(prefix + Messages.get(MessageConstants.RECENTLY_PLAYED) + postfix);
 			}
@@ -497,6 +512,7 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 			btnRecentlyPlayed.setSelected(true);
 			btnAllGames.setButtonDecorationEnabled(false);
 			btnFavorites.setButtonDecorationEnabled(false);
+			btnGameFilterGroups.setButtonDecorationEnabled(false);
 			btnRecycleBin.setButtonDecorationEnabled(false);
 
 			spNavigationButtons.getVerticalScrollBar().setValue(spNavigationButtons.getVerticalScrollBar()
@@ -509,6 +525,9 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 			if (!btnFavorites.getText().isEmpty()) {
 				btnFavorites.setText(Messages.get(MessageConstants.FAVORITES));
 			}
+			if (!btnGameFilterGroups.getText().isEmpty()) {
+				btnGameFilterGroups.setText(Messages.get(MessageConstants.GAME_FILTER_GROUPS));
+			}
 			if (!btnRecentlyPlayed.getText().isEmpty()) {
 				btnRecentlyPlayed.setText(Messages.get(MessageConstants.RECENTLY_PLAYED));
 			}
@@ -518,6 +537,7 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 			btnRecycleBin.setSelected(true);
 			btnAllGames.setButtonDecorationEnabled(false);
 			btnFavorites.setButtonDecorationEnabled(false);
+			btnGameFilterGroups.setButtonDecorationEnabled(false);
 			btnRecentlyPlayed.setButtonDecorationEnabled(false);
 
 			spNavigationButtons.getVerticalScrollBar().setValue(spNavigationButtons.getVerticalScrollBar()
@@ -605,6 +625,9 @@ public class NavigationPanel extends JPanel implements ActionListener, GameViewL
 		}
 		if (btnFavorites.isSelected()) {
 			return FAVORITES;
+		}
+		if (btnGameFilterGroups.isSelected()) {
+			return GAME_FILTER_GROUPS;
 		}
 		if (btnRecentlyPlayed.isSelected()) {
 			return RECENTLY_PLAYED;

@@ -127,6 +127,7 @@ public class SplashScreenWindow extends JDialog {
 		pnlMain.add(btnCancel, cc.xy(2, 1));
 		pnlPixelatedBackground = new PixelatedBackgroundPanel();
 		Image img = UIUtil.getApplicationBannerBySize(512, 92).getImage();
+		//img = ImageUtil.getNonTransparentBufferedImageVersionOf(img, Color.WHITE);
 		pnlPixelatedBackground.setImg(img);
 		pnlPixelatedBackground.setDrawImageEnabled(true);
 		pnlPixelatedBackground.setBaseColor(pnlMain.getBackground().brighter());

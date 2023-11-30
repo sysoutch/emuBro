@@ -52,11 +52,9 @@ public class BroExplorer implements Explorer {
 
 	private boolean showPlatformIconsEnabled = false;
 	private boolean showGameNamesEnabled = true;
-	private String resourcesPath;
 
 	public BroExplorer(String currentApplicationVersion) {
 		this.currentApplicationVersion = currentApplicationVersion;
-		resourcesPath = EmuBroUtil.getResourceDirectory();
 	}
 
 	@Override
@@ -816,8 +814,7 @@ public class BroExplorer implements Explorer {
 
 	@Override
 	public String getResourcesPath() {
-//		return System.getProperty("user.dir") + File.separator + "emubro-resources";
-		return resourcesPath;
+		return EmuBroUtil.getResourceDirectory();
 	}
 
 	@Override

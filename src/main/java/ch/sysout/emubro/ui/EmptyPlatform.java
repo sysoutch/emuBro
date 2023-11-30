@@ -45,7 +45,15 @@ public class EmptyPlatform implements Platform {
 
 	@Override
 	public void setShortName(String shortName) {
+	}
 
+	@Override
+	public String getCompanyName() {
+		return null;
+	}
+
+	@Override
+	public void setCompanyName(String companyName) {
 	}
 
 	@Override

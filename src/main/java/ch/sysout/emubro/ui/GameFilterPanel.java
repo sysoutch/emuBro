@@ -167,8 +167,8 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 				fireEvent(new BroFilterEvent(getSelectedPlatformId(), getCriteria()));
 			}
 		});
-		btnTags = new JCustomToggleButton("Tags", ImageUtil.getFlatSVGIconFrom(Icons.get("tag"), size, new Color(168, 124, 160)));
-		btnRegions = new JCustomToggleButton("Regions", ImageUtil.getFlatSVGIconFrom(Icons.get("globe"), size, new Color(109, 132, 171)));
+		btnTags = new JCustomToggleButton(Messages.get(MessageConstants.TAGS), ImageUtil.getFlatSVGIconFrom(Icons.get("tag"), size, new Color(168, 124, 160)));
+		btnRegions = new JCustomToggleButton(Messages.get(MessageConstants.REGIONS), ImageUtil.getFlatSVGIconFrom(Icons.get("globe"), size, new Color(109, 132, 171)));
 		btnTags.addActionListener(new ActionListener() {
 
 			@Override

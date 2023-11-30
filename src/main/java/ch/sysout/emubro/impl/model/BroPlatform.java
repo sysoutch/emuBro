@@ -13,6 +13,7 @@ public class BroPlatform implements Platform {
 	private int id;
 	private String name;
 	private String shortName;
+	private String companyName;
 	private String iconFilename;
 	private String defaultGameCover;
 	private List<String> gameSearchModes;
@@ -137,6 +138,16 @@ public class BroPlatform implements Platform {
 	@Override
 	public void setShortName(String shortName) {
 		this.shortName = shortName;
+	}
+
+	@Override
+	public String getCompanyName() {
+		return companyName;
+	}
+
+	@Override
+	public void setCompanyName(String companyName) {
+		this.companyName = companyName;
 	}
 
 	/**

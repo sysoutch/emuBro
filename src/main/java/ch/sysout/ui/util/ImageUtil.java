@@ -1,10 +1,6 @@
 package ch.sysout.ui.util;
 
-import java.awt.Color;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.Image;
-import java.awt.Toolkit;
+import java.awt.*;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
@@ -42,7 +38,6 @@ public class ImageUtil {
 		FlatSVGIcon svg = new FlatSVGIcon(filepath, width, height);
 		return svg;
 	}
-
 
 	/**
 	 * @param filepath
@@ -91,6 +86,41 @@ public class ImageUtil {
 	public static Image getImageFrom(String filepath) throws Exception {
 		URL url = ImageUtil.class.getResource(filepath);
 		return new ImageIcon(url).getImage();
+	}
+
+	public static BufferedImage getCombinedBufferedImages(Image baseImage, Image... overlayImages) {
+		BufferedImage combinedImage = new BufferedImage(
+				baseImage.getWidth(null),
+				baseImage.getHeight(null),
+				BufferedImage.TYPE_INT_ARGB
+		);
+		Graphics2D g2d = combinedImage.createGraphics();
+		RenderingHints rh = new RenderingHints(
+				RenderingHints.KEY_TEXT_ANTIALIASING,
+				RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+		g2d.setRenderingHints(rh);
+		g2d.drawImage(baseImage, 0, 0, null);
+		for (Image overlayImage : overlayImages) {
+			g2d.drawImage(overlayImage, 0, 0, null);
+		}
+		g2d.dispose();
+		return combinedImage;
+	}
+
+	public static BufferedImage getNonTransparentBufferedImageVersionOf(Image originalImage, Color backgroundColor) {
+		BufferedImage newImage = new BufferedImage(
+				originalImage.getWidth(null),
+				originalImage.getHeight(null),
+				BufferedImage.TYPE_INT_RGB
+		);
+		Graphics2D g2d = newImage.createGraphics();
+		g2d.setColor(backgroundColor);
+		g2d.fillRect(0, 0, newImage.getWidth(), newImage.getHeight());
+		g2d.drawImage(originalImage, 0, 0, null);
+		g2d.dispose();
+		//			// Save the new image
+		//			ImageIO.write(newImage, "png", new File("path/to/your/new_image.png"));
+		return newImage;
 	}
 
 	/**

@@ -14,7 +14,11 @@ public interface Platform extends Comparable<Platform> {
 
 	String getShortName();
 
-	void setShortName(String shortName);
+	void setShortName(String companyName);
+
+	String getCompanyName();
+
+	void setCompanyName(String companyName);
 
 	String getSearchFor();
 

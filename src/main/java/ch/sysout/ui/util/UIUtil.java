@@ -322,6 +322,8 @@ public class UIUtil {
 			try {
 				ImageIcon img = getApplicationIconBySize(size);
 				icons.add(img.getImage());
+				//ImageIcon img2 = getApplicationIcon2BySize(size);
+				//icons.add(ImageUtil.getCombinedBufferedImages(img2.getImage(), img.getImage()));
 			} catch (Exception e) {
 				// ignore
 			}
@@ -333,10 +335,18 @@ public class UIUtil {
 		return getApplicationIconBySize(size, size);
 	}
 
+	public static ImageIcon getApplicationIcon2BySize(int size) {
+		return getApplicationIcon2BySize(size, size);
+	}
+
 	public static ImageIcon getApplicationIconBySize(int w, int h) {
 		Color iconColor = FlatLaf.isLafDark() ? UIManager.getColor("Panel.background").brighter().brighter().brighter() : UIManager.getColor("Panel.background").darker().darker();
-		ImageIcon img = ImageUtil.getFlatSVGIconFrom(Icons.get("applicationIcon"), w, h, iconColor);
-		return img;
+        return ImageUtil.getFlatSVGIconFrom(Icons.get("applicationIcon"), w, h, iconColor);
+	}
+
+	public static ImageIcon getApplicationIcon2BySize(int w, int h) {
+		Color iconColor = Color.WHITE;
+        return ImageUtil.getFlatSVGIconFrom(Icons.get("applicationIcon2"), w, h, iconColor);
 	}
 
 	public static ImageIcon getApplicationBannerBySize(int size) {
@@ -345,7 +355,6 @@ public class UIUtil {
 
 	public static ImageIcon getApplicationBannerBySize(int w, int h) {
 		Color iconColor = FlatLaf.isLafDark() ? UIManager.getColor("Panel.background").brighter().brighter().brighter() : UIManager.getColor("Panel.background").darker().darker();
-		ImageIcon img = ImageUtil.getFlatSVGIconFrom(Icons.get("applicationBanner"), w, h, iconColor);
-		return img;
+        return ImageUtil.getFlatSVGIconFrom(Icons.get("applicationBanner"), w, h, iconColor);
 	}
 }

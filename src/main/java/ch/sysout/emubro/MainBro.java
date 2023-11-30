@@ -350,7 +350,7 @@ public class MainBro {
 		String userHome = System.getProperty("user.home");
 		String applicationHome = userHome += userHome.endsWith(File.separator) ? "" : File.separator + ".emubro";
 		String databasePath = applicationHome += applicationHome.endsWith(File.separator) ? "" : File.separator + "db";
-		String databaseName = Messages.get(MessageConstants.APPLICATION_TITLE).toLowerCase();
+		String databaseName = Messages.get("emuBro").toLowerCase();
 		HSQLDBConnection hsqldbConnection = null;
 		try {
 			hsqldbConnection = new HSQLDBConnection(databasePath, databaseName);

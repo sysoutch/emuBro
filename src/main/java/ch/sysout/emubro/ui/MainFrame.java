@@ -17,9 +17,7 @@ import java.awt.event.MouseWheelListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowFocusListener;
 import java.beans.PropertyChangeListener;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -30,34 +28,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 
-import javax.swing.AbstractAction;
-import javax.swing.AbstractButton;
-import javax.swing.Action;
-import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.ButtonGroup;
-import javax.swing.Icon;
-import javax.swing.ImageIcon;
-import javax.swing.JButton;
-import javax.swing.JCheckBoxMenuItem;
-import javax.swing.JComponent;
-import javax.swing.JDialog;
-import javax.swing.JFrame;
-import javax.swing.JMenu;
-import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
-import javax.swing.JPanel;
-import javax.swing.JRadioButtonMenuItem;
-import javax.swing.JSeparator;
-import javax.swing.JSlider;
-import javax.swing.JSplitPane;
-import javax.swing.KeyStroke;
-import javax.swing.LookAndFeel;
-import javax.swing.SwingConstants;
-import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
-import javax.swing.UnsupportedLookAndFeelException;
-import javax.swing.WindowConstants;
+import javax.swing.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.MenuEvent;
@@ -140,6 +111,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 	private JMenu mnuLightLaFs;
 	private JCheckBoxMenuItem itmAutoSwitchTheme;
 	private JMenu mnuLanguage;
+	private JMenuItem itmManageLanguages;
 	private JMenu mnuHelp;
 	private JMenu mnuUpdateAvailable;
 	private JMenu mnuExportGameList;
@@ -192,9 +164,10 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 	private JRadioButtonMenuItem itmLanguageDe;
 	private JRadioButtonMenuItem itmLanguageEn;
 	private JRadioButtonMenuItem itmLanguageFr;
-	private JRadioButtonMenuItem itmLanguagePr;
+	private JRadioButtonMenuItem itmLanguageIt;
+	private JRadioButtonMenuItem itmLanguagePt;
 	private JRadioButtonMenuItem itmLanguageEs;
-	private JRadioButtonMenuItem itmLanguageAfr;
+	private JRadioButtonMenuItem itmLanguageAf;
 	private JMenuItem itmHelp;
 	private JMenuItem itmTroubleshoot;
 	private JMenuItem itmGamePadTester;
@@ -236,6 +209,11 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 	private JDialog dlgRowHeight;
 	private JSlider sliderColumnWidth = new JSlider();
 	private JSlider sliderRowHeight = new JSlider();
+
+	private JFileChooser fcOpenMemCard;
+	private File lastMemoryCardPath;
+	private ManageLanguagesWindow manageLanguagesWindow;
+	private List<JMenuItem> unmodifiedLanguageItems;
 
 	@Override
 	public void setLayout(LayoutManager manager) {
@@ -336,7 +314,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		createButtonBar();
 		viewManager = new ViewPanelManager();
 		initializeGameFilter();
-		pnlMain = new MainPanel(explorer, viewManager, mnuGameSettings, pnlGameFilter);
+		pnlMain = new MainPanel(explorer, viewManager, mnuGameSettings);
 
 		pnlMain.getPreviewPane().addTagToGameFilterListener(pnlGameFilter);
 		// try {
@@ -487,6 +465,23 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		mnuLightLaFs = new JMenu();
 		itmAutoSwitchTheme = new JCheckBoxMenuItem("Auto Switch Dark/Light Theme");
 		mnuLanguage = new JMenu();
+		itmManageLanguages = new JMenuItem(Messages.get(MessageConstants.MAKE_TRANSLATIONS));
+		itmManageLanguages.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if (manageLanguagesWindow == null) {
+					manageLanguagesWindow = new ManageLanguagesWindow();
+					List<String> languages = new ArrayList<>();
+					for (JMenuItem itm : unmodifiedLanguageItems) {
+						languages.add(itm.getText());
+					}
+					manageLanguagesWindow.initializeLanguages(languages);
+				}
+				manageLanguagesWindow.setLocationRelativeTo(MainFrame.this);
+				manageLanguagesWindow.setVisible(true);
+				manageLanguagesWindow.initializeTranslations(explorer);
+			}
+		});
 		mnuHelp = new JMenu();
 		mnuUpdateAvailable = new JMenu();
 		mnuExportGameList = new JMenu();
@@ -567,9 +562,10 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		itmLanguageDe = new JRadioButtonMenuItem();
 		itmLanguageEn = new JRadioButtonMenuItem();
 		itmLanguageFr = new JRadioButtonMenuItem();
-		itmLanguagePr = new JRadioButtonMenuItem();
+		itmLanguageIt = new JRadioButtonMenuItem();
+		itmLanguagePt = new JRadioButtonMenuItem();
 		itmLanguageEs = new JRadioButtonMenuItem();
-		itmLanguageAfr = new JRadioButtonMenuItem();
+		itmLanguageAf = new JRadioButtonMenuItem();
 		itmHelp = new JMenuItem();
 		itmTroubleshoot = new JMenuItem();
 		itmDiscord = new JMenuItem();
@@ -666,8 +662,24 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				MemCardBro memCardBro = new MemCardBro();
-				String mcrFile = "C:\\emus\\ePSXe205\\memcards\\epsxe000.mcr";
-				MCRReader.readGames(mcrFile);
+				memCardBro.addOpenMemCardListener(new ActionListener() {
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						if (fcOpenMemCard == null) {
+							fcOpenMemCard = new JFileChooser();
+						}
+						if (lastMemoryCardPath != null) {
+							fcOpenMemCard.setCurrentDirectory(lastMemoryCardPath);
+						}
+						int result = fcOpenMemCard.showOpenDialog(memCardBro);
+						if (result == JFileChooser.APPROVE_OPTION) {
+							File selectedFile = fcOpenMemCard.getSelectedFile();
+							String selectedFileString = selectedFile.getAbsolutePath();
+							lastMemoryCardPath = selectedFile;
+							memCardBro.initMemCard(selectedFileString);
+						}
+					}
+				});
 			}
 		});
 		
@@ -775,7 +787,6 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		btnSetFilter.setToolTipText(Messages.get(MessageConstants.SEARCH_GAME));
 		btnSetSortOrder.setToolTipText(Messages.get(MessageConstants.SORT_BY));
 		btnSetGroupBy.setToolTipText(Messages.get(MessageConstants.GROUP_BY));
-
 	}
 
 	private void createButtonBar() {
@@ -927,7 +938,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		addToButtonGroup(new ButtonGroup(), itmGroupTitle, itmGroupPlatform, itmGroupBlank);
 		addToButtonGroup(new ButtonGroup(), itmGroupAscending, itmGroupDescending);
 		addToButtonGroup(new ButtonGroup(), itmChangeToAll, itmChangeToFavorites, itmChangeToRecentlyPlayed, itmChangeToRecycleBin);
-		addToButtonGroup(new ButtonGroup(), itmLanguageDe, itmLanguageEn, itmLanguageFr, itmLanguagePr, itmLanguageEs, itmLanguageAfr);
+		addToButtonGroup(new ButtonGroup(), itmLanguageDe, itmLanguageEn, itmLanguageFr, itmLanguageIt, itmLanguagePt, itmLanguageEs, itmLanguageAf);
 	}
 
 	private void setIcons() {
@@ -968,12 +979,20 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		itmSetRowHeight.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rowHeight"), size, svgNoColor));
 		itmRefresh.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("refresh"), size, svgNoColor));
 		itmFullScreen.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("fullscreen"), size, svgNoColor));
-		Icon iconLanguageDe = ImageUtil.getImageIconFrom(Icons.get("languageDe", size, size));
-		Icon iconLanguageEn = ImageUtil.getImageIconFrom(Icons.get("languageEn", size, size));
-		Icon iconLanguageFr = ImageUtil.getImageIconFrom(Icons.get("languageFr", size, size));
+		Icon iconLanguageDe = ImageUtil.getFlatSVGIconFrom(Icons.get("languageDe"), size);
+		Icon iconLanguageEn = ImageUtil.getFlatSVGIconFrom(Icons.get("languageEn"), size);
+		Icon iconLanguageFr = ImageUtil.getFlatSVGIconFrom(Icons.get("languageFr"), size);
+		Icon iconLanguageIt = ImageUtil.getFlatSVGIconFrom(Icons.get("languageIt"), size);
+		Icon iconLanguageEs = ImageUtil.getFlatSVGIconFrom(Icons.get("languageEs"), size);
+		Icon iconLanguagePt = ImageUtil.getFlatSVGIconFrom(Icons.get("languagePt"), size);
+		Icon iconLanguageAfr = ImageUtil.getFlatSVGIconFrom(Icons.get("languageAfr"), size);
 		itmLanguageDe.setIcon(iconLanguageDe);
 		itmLanguageEn.setIcon(iconLanguageEn);
 		itmLanguageFr.setIcon(iconLanguageFr);
+		itmLanguageIt.setIcon(iconLanguageIt);
+		itmLanguageEs.setIcon(iconLanguageEs);
+		itmLanguagePt.setIcon(iconLanguagePt);
+		itmLanguageAf.setIcon(iconLanguageAfr);
 		mnuHelp.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("help"), size, svgNoColor));
 		itmHelp.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("help"), size, svgNoColor));
 		itmDiscord.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("discord"), size, new Color(114, 137, 218)));
@@ -993,6 +1012,10 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		if (language.equals(Locale.FRENCH.getLanguage())) {
 			itmLanguageFr.setSelected(true);
 			mnuLanguage.setIcon(iconLanguageFr);
+		}
+		if (language.equals(Locale.ITALIAN.getLanguage())) {
+			itmLanguageIt.setSelected(true);
+			mnuLanguage.setIcon(iconLanguageIt);
 		}
 		setButtonBarIcons();
 	}
@@ -1119,11 +1142,11 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 				System.setProperty("flatlaf.menuBarEmbedded", Boolean.toString(System.getProperty("flatlaf.menuBarEmbedded").equals("false")));
 			}
 		});
-		addSetFilterListener(new ActionListener() {
+		addShowGameFilterPanelListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				showFilterPanel(!isGameFilterPanelVisible());
+				showGameFilterPanel(!isGameFilterPanelVisible());
 			}
 		});
 		mnuAdd.addMenuListener(new MenuListener() {
@@ -1142,8 +1165,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 			public void menuCanceled(MenuEvent e) {
 			}
 		});
-		addActionListeners(this, itmChooseDetails, itmSetColumnWidth, itmSetRowHeight, itmLanguageDe, itmLanguageEn,
-				itmLanguageFr);
+		addActionListeners(this, itmChooseDetails, itmSetColumnWidth, itmSetRowHeight);
 		addActionListeners(btnOrganize, btnChangeView, btnMoreOptionsChangeView, btnSetFilter);
 		pnlMain.addNavigationSplitPaneListener();
 		viewManager.addUpdateGameCountListener(this);
@@ -1256,7 +1278,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		btnMoreOptionsRunGame.addActionListener(l);
 	}
 
-	public void addSetFilterListener(ActionListener l) {
+	public void addShowGameFilterPanelListener(ActionListener l) {
 		itmSetFilter.addActionListener(l);
 		pnlMain.addSetFilterListener(l);
 	}
@@ -1417,6 +1439,22 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		itmLanguageFr.addActionListener(l);
 	}
 
+	public void addLanguageItalianListener(ActionListener l) {
+		itmLanguageIt.addActionListener(l);
+	}
+
+	public void addLanguageSpanishListener(ActionListener l) {
+		itmLanguageEs.addActionListener(l);
+	}
+
+	public void addLanguagePortugueseListener(ActionListener l) {
+		itmLanguagePt.addActionListener(l);
+	}
+
+	public void addLanguageAfrikaansListener(ActionListener l) {
+		itmLanguageAf.addActionListener(l);
+	}
+
 	public void addRunGameListener(ActionListener l) {
 		btnRunGame.addActionListener(l);
 		pnlMain.getPreviewPane().addRunGameListener(l);
@@ -1569,13 +1607,12 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 
 	private void createUI() {
 		createMenuBar();
-		// FormLayout layout = new FormLayout("min:grow",
-		// "fill:pref, fill:pref");
-		// JPanel pnlWrapperTop = new JPanel(layout);
-		// CellConstraints cc = new CellConstraints();
-		// pnlWrapperTop.add(pnlButtonBar, cc.xy(1, 1));
-		// pnlWrapperTop.add(pnlGameFilter, cc.xy(1, 2));
-		add(pnlButtonBar, BorderLayout.NORTH);
+		FormLayout layout = new FormLayout("min:grow",
+		"fill:pref, fill:pref");
+		JPanel pnlWrapperTop = new JPanel(layout);
+		pnlWrapperTop.add(pnlButtonBar, CC.xy(1, 1));
+		pnlWrapperTop.add(pnlGameFilter, CC.xy(1, 2));
+		add(pnlWrapperTop, BorderLayout.NORTH);
 		add(pnlMain);
 		pnlGameCount.setMinimumSize(new Dimension(0, 0));
 
@@ -1694,8 +1731,10 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 
 		Locale locale = Locale.getDefault();
 		String userLanguage = locale.getLanguage();
-		List<JMenuItem> languageItems = new ArrayList<JMenuItem>();
-		Collections.addAll(languageItems, itmLanguageEn, itmLanguageDe, itmLanguageFr/*, itmLanguagePr, itmLanguageEs, itmLanguageAfr*/);
+		List<JMenuItem> languageItems = new ArrayList<>();
+		Collections.addAll(languageItems, itmLanguageAf, itmLanguageDe, itmLanguageEn, itmLanguageEs, itmLanguageFr, itmLanguageIt, itmLanguagePt);
+		unmodifiedLanguageItems = new ArrayList<>();
+		unmodifiedLanguageItems.addAll(languageItems);
 		if (userLanguage.equals(Locale.ENGLISH.getLanguage())) {
 			addComponentsToJComponent(mnuLanguage, itmLanguageEn);
 			languageItems.remove(itmLanguageEn);
@@ -1705,6 +1744,18 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		} else if (userLanguage.equals(Locale.FRENCH.getLanguage())) {
 			addComponentsToJComponent(mnuLanguage, itmLanguageFr);
 			languageItems.remove(itmLanguageFr);
+		} else if (userLanguage.equals(Locale.ITALIAN.getLanguage())) {
+			addComponentsToJComponent(mnuLanguage, itmLanguageIt);
+			languageItems.remove(itmLanguageIt);
+		} else if (userLanguage.equals("es")) {
+			addComponentsToJComponent(mnuLanguage, itmLanguageEs);
+			languageItems.remove(itmLanguageEs);
+		} else if (userLanguage.equals("pt")) {
+			addComponentsToJComponent(mnuLanguage, itmLanguagePt);
+			languageItems.remove(itmLanguagePt);
+		} else if (userLanguage.equals("af")) {
+			addComponentsToJComponent(mnuLanguage, itmLanguageAf);
+			languageItems.remove(itmLanguageAf);
 		} else {
 			addComponentsToJComponent(mnuLanguage, itmLanguageEn);
 			languageItems.remove(itmLanguageEn);
@@ -1713,7 +1764,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		for (JMenuItem itm : languageItems) {
 			mnuLanguage.add(itm);
 		}
-
+		addComponentsToJComponent(mnuLanguage, new JSeparator(), itmManageLanguages);
 		addComponentsToJComponent(mnuHelp, itmHelp, itmTroubleshoot, new JSeparator(), itmConfigWizard,
 				itmGamePadTester, new JSeparator(), itmCheckForUpdates, itmDiscord, itmAbout);
 		addComponentsToJComponent(mnuUpdateAvailable, itmApplicationUpdateAvailable, itmSignatureUpdateAvailable);
@@ -1817,13 +1868,13 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		} else if (source == btnMoreOptionsChangeView) {
 			pnlMain.showViewSettingsPopupMenu(btnChangeView);
 		} else if (source == btnSetFilter) {
-			showFilterPanel(!isGameFilterPanelVisible());
+			showGameFilterPanel(!isGameFilterPanelVisible());
 		}
 	}
 
-	public void showFilterPanel(boolean b) {
+	public void showGameFilterPanel(boolean b) {
 		itmSetFilter.setSelected(b);
-		pnlMain.showFilterPanel(b);
+		pnlMain.showGameFilterPanel(b);
 		pnlGameFilter.setVisible(b);
 		if (pnlGameFilter.isVisible()) {
 			pnlGameFilter.setFocusInTextField();
@@ -2344,8 +2395,8 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		pnlMain.showNavigationPane(b);
 	}
 
-	public void showNavigationPane(boolean b, int dividerLocation, String navigationPaneState) {
-		pnlMain.showNavigationPane(b, dividerLocation, navigationPaneState);
+	public void showNavigationPane(boolean b, int dividerLocation, String navigationPaneState, int y) {
+		pnlMain.showNavigationPane(b, dividerLocation, navigationPaneState, y);
 	}
 
 	public void showPreviewPane(boolean b) {
@@ -2365,10 +2416,6 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		pnlMain.showDetailsPane(b);
 		pnlGameCount.showShowDetailsPaneButton(!b);
 		// UIUtil.revalidateAndRepaint(this);
-	}
-
-	public void showDetailsPane(boolean b, int detailsPaneHeight) {
-		showDetailsPane(b, detailsPaneHeight, false, 0, 0, 0, 0);
 	}
 
 	public void showDetailsPane(boolean b, int detailsPaneHeight, boolean detailsPaneUnpinned, int x, int y, int width,
@@ -2447,6 +2494,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		mnuLanguage.setText(minimizeItems ? "" : Messages.get(MessageConstants.MNU_LANGUAGE));
 		mnuHelp.setText(minimizeItems ? "" : Messages.get(MessageConstants.HELP));
 		pnlButtonBar.checkMinimizeMaximizeButtons();
+		pnlGameFilter.checkMinimizeGameFilterPanel();
 		pnlMain.showHidePanels();
 		toFront();
 	}
@@ -2676,32 +2724,45 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 
 	@Override
 	public void languageChanged() {
+		setTitle(Messages.get(MessageConstants.APPLICATION_TITLE));
 		pnlMain.languageChanged();
 		pnlGameFilter.languageChanged();
 		pnlGameCount.languageChanged();
 		Locale locale = Locale.getDefault();
 		String language = locale.getLanguage();
+		Icon icon = itmLanguageEn.getIcon();
 		if (language.equals(Locale.GERMAN.getLanguage())) {
 			itmLanguageDe.setSelected(true);
-			Icon icon;
-			if ((icon = itmLanguageDe.getIcon()) != null) {
-				mnuLanguage.setIcon(icon);
-			}
+			icon = itmLanguageDe.getIcon();
 		}
 		if (language.equals(Locale.ENGLISH.getLanguage())) {
 			itmLanguageEn.setSelected(true);
-			Icon icon;
-			if ((icon = itmLanguageEn.getIcon()) != null) {
-				mnuLanguage.setIcon(icon);
-			}
+			icon = itmLanguageEn.getIcon();
 		}
 		if (language.equals(Locale.FRENCH.getLanguage())) {
 			itmLanguageFr.setSelected(true);
-			Icon icon;
-			if ((icon = itmLanguageFr.getIcon()) != null) {
-				mnuLanguage.setIcon(icon);
-			}
+			icon = itmLanguageFr.getIcon();
 		}
+		if (language.equals(Locale.ITALIAN.getLanguage())) {
+			itmLanguageIt.setSelected(true);
+			icon = itmLanguageIt.getIcon();
+		}
+		if (language.equals("es")) {
+			itmLanguageEs.setSelected(true);
+			icon = itmLanguageEs.getIcon();
+		}
+		if (language.equals("pt")) {
+			itmLanguagePt.setSelected(true);
+			icon = itmLanguagePt.getIcon();
+		}
+		if (language.equals("af")) {
+			itmLanguageAf.setSelected(true);
+			icon = itmLanguageAf.getIcon();
+		}
+		if (icon != null) {
+			mnuLanguage.setIcon(icon);
+		}
+		itmManageLanguages.setText(Messages.get(MessageConstants.MAKE_TRANSLATIONS));
 		mnuFile.setText(Messages.get(MessageConstants.MNU_FILE, Messages.get(MessageConstants.APPLICATION_TITLE)));
 		mnuView.setText(Messages.get(MessageConstants.MNU_VIEW));
 		mnuGames.setText(Messages.get(MessageConstants.MNU_GAMES));
@@ -2766,6 +2827,10 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		itmLanguageDe.setText(Messages.get(MessageConstants.LANGUAGE_DE));
 		itmLanguageEn.setText(Messages.get(MessageConstants.LANGUAGE_EN));
 		itmLanguageFr.setText(Messages.get(MessageConstants.LANGUAGE_FR));
+		itmLanguageIt.setText(Messages.get(MessageConstants.LANGUAGE_IT));
+		itmLanguageEs.setText(Messages.get(MessageConstants.LANGUAGE_ES));
+		itmLanguagePt.setText(Messages.get(MessageConstants.LANGUAGE_PT));
+		itmLanguageAf.setText(Messages.get(MessageConstants.LANGUAGE_AFR));
 		itmHelp.setText(Messages.get(MessageConstants.HELP));
 		itmTroubleshoot.setText(Messages.get(MessageConstants.TROUBLESHOOT));
 		itmDiscord.setText(Messages.get(MessageConstants.EMUBRO_DISCORD));
@@ -3209,5 +3274,16 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		setIconImages(UIUtil.getApplicationIcons());
 		pnlGameFilter.txtSearchGame.setBackground(UIManager.getColor("Panel.background").brighter());
 		pnlMain.repaint();
+	}
+
+	@Override
+	public void toFront() {
+		int state = super.getExtendedState();
+		state &= ~JFrame.ICONIFIED;
+		super.setExtendedState(state);
+		super.setAlwaysOnTop(true);
+		super.toFront();
+		super.requestFocus();
+		super.setAlwaysOnTop(false);
 	}
 }

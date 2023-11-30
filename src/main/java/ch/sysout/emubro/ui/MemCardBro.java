@@ -1,6 +1,7 @@
 package ch.sysout.emubro.ui;
 
 import java.awt.Container;
+import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -71,7 +72,6 @@ public class MemCardBro extends JFrame {
 
 	public MemCardBro() {
 		initializeGameCodes();
-		initMemCard();
 
 		initComponents();
 		setTitle("Memory Card Manager");
@@ -122,8 +122,8 @@ public class MemCardBro extends JFrame {
 		setVisible(true);
 	}
 
-	private void initMemCard() {
-		String mcrFile = "C:\\emus\\ePSXe205\\memcards\\epsxe000.mcr";
+	public void initMemCard(String mcrFile) {
+		mdlLstSaveBlocks1.clear();
 		if (mcrFile.endsWith(".mcr") || mcrFile.endsWith(".mcd")) {
 			File file = Paths.get(mcrFile).toFile();
 			float fileSizeInKiloBytes = file.length() / 1024f;
@@ -192,6 +192,10 @@ public class MemCardBro extends JFrame {
 		btnImportFileForCard2 = new JButton("Import File");
 		btnSaveCard1 = new JButton("Save");
 		btnSaveCard2 = new JButton("Save");
+	}
+
+	public void addOpenMemCardListener(ActionListener l) {
+		btnOpenMemCard1.addActionListener(l);
 	}
 	
 	private void initializeGameCodes() {

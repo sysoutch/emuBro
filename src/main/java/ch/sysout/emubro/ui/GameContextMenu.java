@@ -125,6 +125,10 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		});
 	}
 
+	public void addRunEmulatorListener(ActionListener l) {
+		itmRunEmulator.addActionListener(l);
+	}
+
 	public void initDefaultTags(List<Tag> tags) {
 		for (Tag tag : tags) {
 			addNewTag(tag);

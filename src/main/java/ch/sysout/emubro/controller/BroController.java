@@ -175,6 +175,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import ch.sysout.emubro.util.EmuBroUtil;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.filefilter.IOFileFilter;
@@ -189,7 +190,6 @@ import com.github.junrar.Archive;
 import com.github.junrar.exception.RarException;
 import com.github.junrar.rarfile.FileHeader;
 import com.github.strikerx3.jxinput.XInputAxesDelta;
-import com.github.strikerx3.jxinput.XInputDevice;
 import com.github.strikerx3.jxinput.XInputDevice14;
 import com.github.strikerx3.jxinput.enums.XInputAxis;
 import com.github.strikerx3.jxinput.enums.XInputButton;
@@ -287,10 +287,7 @@ import ch.sysout.util.ScreenSizeUtil;
 import ch.sysout.util.SevenZipUtils;
 import ch.sysout.util.SystemUtil;
 import ch.sysout.util.ValidationUtil;
-import de.ralleytn.wrapper.microsoft.xinput.XInput;
-import de.ralleytn.wrapper.microsoft.xinput.XInputGamepad;
 import spark.Request;
-import spark.Spark;
 
 public class BroController implements ActionListener, PlatformListener, EmulatorListener, TagListener,
 GameSelectionListener, BrowseComputerListener {
@@ -876,11 +873,12 @@ GameSelectionListener, BrowseComputerListener {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				int y = view.pnlGameFilter.isVisible() ? view.pnlGameFilter.getHeight() : 0;
 				if (view.getNavigationPaneState().equals(NavigationPanel.CENTERED)
 						|| view.getNavigationPaneState().equals(NavigationPanel.MAXIMIZED)) {
-					view.showNavigationPane(true, 32, NavigationPanel.MINIMIZED);
+					view.showNavigationPane(true, 32, NavigationPanel.MINIMIZED, 0);
 				} else {
-					view.showNavigationPane(true, 220, NavigationPanel.MAXIMIZED);
+					view.showNavigationPane(true, 220, NavigationPanel.MAXIMIZED, 0);
 				}
 				// don't remove this invokeLater, otherwise Tags-Button in GameFilterPanel will
 				// get the old panel width values and button would not minimize correctly
@@ -917,6 +915,10 @@ GameSelectionListener, BrowseComputerListener {
 		view.addLanguageGermanListener(new LanguageGermanListener());
 		view.addLanguageEnglishListener(new LanguageEnglishListener());
 		view.addLanguageFrenchListener(new LanguageFrenchListener());
+		view.addLanguageItalianListener(new LanguageItalianListener());
+		view.addLanguageSpanishListener(new LanguageSpanishListener());
+		view.addLanguagePortugueseListener(new LanguagePortugueseListener());
+		view.addLanguageAfrikaansListener(new LanguageAfrikaansListener());
 		view.addChangeToAllGamesListener(new ChangeToAllGamesListener());
 		view.addChangeToFavoritesListener(new ChangeToFavoritesListener());
 		view.addChangeToRecentlyPlayedListener(new ChangeToRecentlyPlayedListener());
@@ -1307,7 +1309,7 @@ GameSelectionListener, BrowseComputerListener {
 						con = url.openConnection();
 						con.setReadTimeout(20000);
 						String userTmp = System.getProperty("java.io.tmpdir");
-						String pathname = userTmp + Messages.get(MessageConstants.APPLICATION_TITLE) + ".jar";
+						String pathname = userTmp + "emuBro.jar";
 						File applicationFile = new File(pathname);
 						try {
 							FileUtils.copyURLToFile(url, applicationFile);
@@ -1722,6 +1724,7 @@ GameSelectionListener, BrowseComputerListener {
 					}
 				});
 				view.setVisible(true);
+				view.toFront();
 				// invoke later has been done here, because otherwise different things
 				// doesnt update like
 				// vertical scrollbar and navigationpane
@@ -1734,12 +1737,10 @@ GameSelectionListener, BrowseComputerListener {
 				if (applyData) {
 					showOrHideMenuBarAndPanels();
 					setLastViewState();
-					view.toFront();
 				} else {
 					int minWidth = ScreenSizeUtil.adjustValueToResolution(256);
 					view.showPreviewPane(true, minWidth);
 					view.showGameDetailsPane(true);
-					view.showNavigationPane(true);
 					view.navigationChanged(new NavigationEvent(NavigationPanel.ALL_GAMES));
 				}
 
@@ -1809,7 +1810,7 @@ GameSelectionListener, BrowseComputerListener {
 
 	private void showView2() {
 		boolean gameFilterPanelVisible = getGameFilterPanelVisibleFromProperties();
-		view.showFilterPanel(gameFilterPanelVisible);
+		view.showGameFilterPanel(gameFilterPanelVisible);
 
 		int sortOrder = getSortOrderFromProperties();
 		sortGameList(sortOrder);
@@ -1888,7 +1889,8 @@ GameSelectionListener, BrowseComputerListener {
 		previewPaneVisible = Boolean.parseBoolean(properties.getProperty(propertyKeys[7]));
 		detailsPaneVisible = Boolean.parseBoolean(properties.getProperty(propertyKeys[8]));
 		view.showMenuBar(menuBarVisible);
-		view.showNavigationPane(navigationPaneVisible, navigationPaneDividerLocation, navigationPaneState);
+		int y = view.pnlGameFilter.isVisible() ? view.pnlGameFilter.getHeight() : 0;
+		view.showNavigationPane(navigationPaneVisible, navigationPaneDividerLocation, navigationPaneState, y);
 		view.showDetailsPane(detailsPaneVisible, gameDetailsPanelHeight,
 				detailsPaneUnpinned, lastDetailsPaneX, lastDetailsPaneY, lastDetailsPreferredWidth, lastDetailsPreferredHeight);
 		view.showPreviewPane(previewPaneVisible, previewPanelWidth);
@@ -1960,7 +1962,7 @@ GameSelectionListener, BrowseComputerListener {
 		try {
 			String homePath = System.getProperty("user.home");
 			String path = homePath + (homePath.endsWith(File.separator) ? ""
-					: File.separator + "." + Messages.get(MessageConstants.APPLICATION_TITLE).toLowerCase());
+					: File.separator + ".emuBro");
 			new File(path).mkdir();
 
 			String fullPath = path += File.separator + "window" + ".properties";
@@ -1969,7 +1971,7 @@ GameSelectionListener, BrowseComputerListener {
 
 			boolean maximized = view.getExtendedState() == Frame.MAXIMIZED_BOTH;
 			FileWriter fw = new FileWriter(file, false);
-			fw.append("# window properties output by " + Messages.get(MessageConstants.APPLICATION_TITLE) + "\r\n" + "# " + new Date()
+			fw.append("# window properties output by emuBro\r\n" + "# " + new Date()
 					+ "\r\n\r\n");
 			fw.append(propertyKeys[0] + "=" + view.getLocation().x + "\r\n"); // x
 			fw.append(propertyKeys[1] + "=" + view.getLocation().y + "\r\n"); // y
@@ -3241,17 +3243,17 @@ GameSelectionListener, BrowseComputerListener {
 		if (installUpdate) {
 			try {
 				String userTmp = System.getProperty("java.io.tmpdir");
-				String pathname = userTmp + Messages.get(MessageConstants.APPLICATION_TITLE) + ".tmp";
+				String pathname = userTmp + Messages.get("emuBro") + ".tmp";
 				String userDir = System.getProperty("user.dir");
 				String command = "";
 				if (ValidationUtil.isWindows()) {
 					command = "cmd /c ping localhost -n 2 > nul"
-							+ " && move /Y \""+pathname+"\" \""+userDir+"/"+Messages.get(MessageConstants.APPLICATION_TITLE)+".jar\""
-							+ " && java -jar "+Messages.get(MessageConstants.APPLICATION_TITLE)+".jar --changelog";
+							+ " && move /Y \""+pathname+"\" \""+userDir+"/emuBro.jar\""
+							+ " && java -jar emuBro.jar --changelog";
 				} else {
 					command = "sleep 2"
-							+ " && mv -f \""+pathname+"\" \""+userDir+"/"+Messages.get(MessageConstants.APPLICATION_TITLE)+".jar\""
-							+ " && java -jar "+Messages.get(MessageConstants.APPLICATION_TITLE)+".jar --changelog";
+							+ " && mv -f \""+pathname+"\" \""+userDir+"/emuBro.jar\""
+							+ " && java -jar emuBro.jar --changelog";
 				}
 				Runtime.getRuntime().exec(command);
 			} catch (IOException e) {
@@ -3573,6 +3575,16 @@ GameSelectionListener, BrowseComputerListener {
 		Platform p2 = addOrGetPlatform(selected);
 		if (p2 != null) {
 			addGame(p2, file, true, view.getViewManager().isFilterFavoriteActive(), downloadCover);
+
+			boolean binFile = filePath.toLowerCase().endsWith(".bin");
+			if (binFile) {
+				File cueFile = new File(FilenameUtils.removeExtension(file.toFile().getAbsolutePath()) + ".cue");
+				if (!cueFile.exists()) {
+					UIUtil.showQuestionMessage(null, "wanna make a cue file?", "yoo");
+					CueMaker cueMaker = new CueMaker();
+					cueMaker.createCueFile(file.toFile());
+				}
+			}
 		}
 	}
 
@@ -3805,10 +3817,7 @@ GameSelectionListener, BrowseComputerListener {
 	}
 
 	private Platform[] getObjectsForPlatformChooserDialog(String filePath) {
-		List<Platform> objects = new ArrayList<>();
-		for (Platform p : getPlatformMatches(FilenameUtils.getExtension(filePath.toLowerCase()))) {
-			objects.add(p);
-		}
+        List<Platform> objects = new ArrayList<>(getPlatformMatches(FilenameUtils.getExtension(filePath.toLowerCase())));
 		return objects.toArray(new Platform[objects.size()]);
 	}
 
@@ -6312,14 +6321,7 @@ GameSelectionListener, BrowseComputerListener {
 				@Override
 				public void actionPerformed(ActionEvent e) {
 					Emulator emulator = frameProperties.getSelectedEmulator();
-					ProcessBuilder pb = new ProcessBuilder(emulator.getAbsolutePath());
-					pb.directory(new File(emulator.getPath()));
-					try {
-						Process process = pb.start();
-					} catch (IOException e1) {
-						UIUtil.showErrorMessage(frameProperties, "couldn't run emulator.\n\n"
-								+ e1.getMessage(), "error starting emulator");
-					}
+					EmuBroUtil.runEmulator(emulator, frameProperties);
 				}
 			});
 			frameProperties.adjustSplitPaneDividerSizes();
@@ -8140,6 +8142,38 @@ GameSelectionListener, BrowseComputerListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			changeLanguage(Locale.FRENCH);
+		}
+	}
+
+	public class LanguageItalianListener implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			System.out.println(Locale.ITALIAN); changeLanguage(Locale.ITALIAN);
+		}
+	}
+
+	public class LanguageSpanishListener implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			changeLanguage(new Locale("es"));
+		}
+	}
+
+	public class LanguagePortugueseListener implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			changeLanguage(new Locale("pt"));
+		}
+	}
+
+	public class LanguageAfrikaansListener implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			changeLanguage(new Locale("af"));
 		}
 	}
 

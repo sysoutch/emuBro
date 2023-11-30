@@ -2,7 +2,7 @@ package ch.sysout.emubro.util;
 
 public class MessageConstants {
 	public static final String APPLICATION_TITLE = "applicationTitle";
-	public static final String WEBSITE = "website";
+	public static final String WEBSITE = "https://emubro.net/";
 	public static final String GAME_ALREADY_RUNNING = "gameAlreadyRunning";
 	public static final String GAME_ALREADY_RUNNING_TITLE = "gameAlreadyRunningTitle";
 	public static final String ERR_STARTING_GAME = "err_startingGame";
@@ -43,6 +43,10 @@ public class MessageConstants {
 	public static final String LANGUAGE_DE = "languageDe";
 	public static final String LANGUAGE_EN = "languageEn";
 	public static final String LANGUAGE_FR = "languageFr";
+	public static final String LANGUAGE_IT = "languageIt";
+	public static final String LANGUAGE_ES = "languageEs";
+	public static final String LANGUAGE_PT = "languagePt";
+	public static final String LANGUAGE_AFR = "languageAfr";
 	public static final String RUN_ACTION = "runAction";
 	public static final String CHOOSE_VIEW = "chooseView";
 	public static final String HELP = "help";
@@ -336,6 +340,7 @@ public class MessageConstants {
 	public static final String ALWAYS_ON_TOP = "alwaysOnTop";
 	public static final String EMULATORS = "emulators";
 	public static final String TAGS = "tags";
+	public static final String REGIONS = "regions";
 	public static final String IMPORT_TAGS = "importTags";
 	public static final String MANAGE_TAGS = "manageTags";
 	public static final String NEW_TAG = "newTag";
@@ -390,5 +395,6 @@ public class MessageConstants {
 	public static final String QUICK_LOAD = "quickLoad";
 	public static final String QUICK_SAVE = "quickSave";
 	public static final String TRANSPARENT_GAME_COVERS = "transparentGameCovers";
-	public static final String GAME_FILTER_GROUPS = "Game Filter Groups";
+	public static final String GAME_FILTER_GROUPS = "gameFilterGroups";
+	public static final String MAKE_TRANSLATIONS = "makeTranslations";
 }
