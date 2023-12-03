@@ -46,7 +46,7 @@ public class BroExplorerDAO implements ExplorerDAO {
 	private GameDAO gameDAO;
 	private EmulatorDAO emulatorDAO;
 	private final int explorer_id;
-	private String expectedDbVersion = "0.3.0";
+	private final String expectedDbVersion = "0.3.0";
 
 	public BroExplorerDAO(int explorer_id, Connection conn) throws IOException, SQLException, BroDatabaseVersionMismatchException {
 		this.explorer_id = explorer_id;

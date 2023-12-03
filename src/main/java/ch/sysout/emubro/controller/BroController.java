@@ -8173,7 +8173,7 @@ GameSelectionListener, BrowseComputerListener {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			changeLanguage(new Locale("af"));
+			changeLanguage(new Locale("za"));
 		}
 	}
 

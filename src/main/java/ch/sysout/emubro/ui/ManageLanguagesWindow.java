@@ -14,6 +14,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
 
@@ -86,7 +87,7 @@ public class ManageLanguagesWindow extends JFrame {
         InputStream is = ManageLanguagesWindow.class.getResourceAsStream("/messages_"+ Locale.getDefault()+".properties");
         if (is != null) {
             try {
-                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(is));
+                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
                 String line = "";
                 int messageCount = 0;
                 int notTranslatedYet = 0;

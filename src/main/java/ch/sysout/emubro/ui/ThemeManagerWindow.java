@@ -69,7 +69,6 @@ public class ThemeManagerWindow extends JDialog {
 
 	public ThemeManagerWindow() {
 		setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-		setAlwaysOnTop(true);
 
 		for (String option : backgroundOptions) {
 			mdlCmbBackgroundOptions.addElement(option);

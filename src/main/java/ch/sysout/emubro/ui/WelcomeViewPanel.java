@@ -64,7 +64,7 @@ public class WelcomeViewPanel extends ViewPanel {
 	private JButton lnkCoverView = new JCustomButtonNew(Messages.get(MessageConstants.VIEW_COVERS));
 
 	private JButton lnkHelp = new JCustomButtonNew(Messages.get(MessageConstants.HELP));
-	private JButton lnkTroubleshoot = new JCustomButtonNew(Messages.get(MessageConstants.TROUBLESHOOT));
+	private JButton lnkTroubleshoot = new JCustomButtonNew(Messages.get(MessageConstants.QUICK_ACTIONS));
 	private JButton lnkGamepadTester = new JCustomButtonNew(Messages.get(MessageConstants.GAMEPAD_TESTER));
 	private JButton lnkConfigWizard = new JCustomButtonNew(Messages.get(MessageConstants.CONFIGURE_WIZARD, Messages.get(MessageConstants.APPLICATION_TITLE)));
 	private JButton lnkUpdateEmubro = new JCustomButtonNew(Messages.get(MessageConstants.SEARCH_FOR_UPDATES));
@@ -217,7 +217,7 @@ public class WelcomeViewPanel extends ViewPanel {
 		lnkSliderView.setText(Messages.get(MessageConstants.VIEW_SLIDER));
 		lnkCoverView.setText(Messages.get(MessageConstants.VIEW_COVERS));
 		lnkHelp.setText(Messages.get(MessageConstants.HELP));
-		lnkTroubleshoot.setText(Messages.get(MessageConstants.TROUBLESHOOT));
+		lnkTroubleshoot.setText(Messages.get(MessageConstants.QUICK_ACTIONS));
 		lnkDiscord.setText(Messages.get(MessageConstants.EMUBRO_DISCORD));
 		lnkGamepadTester.setText(Messages.get(MessageConstants.GAMEPAD_TESTER));
 		lnkConfigWizard.setText(Messages.get(MessageConstants.CONFIGURE_WIZARD, Messages.get(MessageConstants.APPLICATION_TITLE)));

@@ -166,7 +166,7 @@ public class TranslationsTableModel extends DefaultTableModel {
 
 	public void addRow(Translation translation) {
 		translations.add(translation);
-		Object[] translationRow = new Object[] { translation.getKeyName(), translation.getValue(), translation.getNewValue(), translation.getComment() };
+		Object[] translationRow = new Object[] { translation.getKeyName(), translation.getValue(), translation.getNewValue(), translation.getOkCheckBox(), translation.getComment() };
 		super.addRow(translationRow);
 		//		fireTableRowsInserted(getRowCount() - 1, getRowCount() - 1);
 	}

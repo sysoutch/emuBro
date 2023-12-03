@@ -50,7 +50,7 @@ public class MessageConstants {
 	public static final String RUN_ACTION = "runAction";
 	public static final String CHOOSE_VIEW = "chooseView";
 	public static final String HELP = "help";
-	public static final String TROUBLESHOOT = "troubleshoot";
+	public static final String QUICK_ACTIONS = "quickActions";
 	public static final String EXPORT_GAME_LIST = "exportGameList";
 	public static final String EXPORT_APPLICATION_DATA = "exportApplicationData";
 	public static final String SORT_BY = "sortBy";

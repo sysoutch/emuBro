@@ -103,6 +103,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 	private JMenuItem itmMemoryCardManager;
 	private JMenuItem itmCueCreator;
 	private JMenuItem itmECMConverter;
+	private JMenuItem itmWebapp;
 	// private JMenu mnuPlugins;
 	private JMenuItem itmRefreshPlugins;
 	private JMenu mnuThemes;
@@ -167,7 +168,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 	private JRadioButtonMenuItem itmLanguageIt;
 	private JRadioButtonMenuItem itmLanguagePt;
 	private JRadioButtonMenuItem itmLanguageEs;
-	private JRadioButtonMenuItem itmLanguageAf;
+	private JRadioButtonMenuItem itmLanguageZa;
 	private JMenuItem itmHelp;
 	private JMenuItem itmTroubleshoot;
 	private JMenuItem itmGamePadTester;
@@ -456,6 +457,13 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 				ECMConverter ecmConverter = new ECMConverter(path);
 			}
 		});
+		itmWebapp = new JMenuItem("Webapp");
+		itmWebapp.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				UIUtil.openWebsite("http://localhost:4567", MainFrame.this);
+			}
+		});
 		// mnuPlugins = new JMenu(Messages.get(MessageConstants.MNU_PLUGINS));
 		itmRefreshPlugins = new JMenuItem(Messages.get(MessageConstants.ITM_REFRESH_PLUGINS));
 		mnuGames.setEnabled(false);
@@ -565,7 +573,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		itmLanguageIt = new JRadioButtonMenuItem();
 		itmLanguagePt = new JRadioButtonMenuItem();
 		itmLanguageEs = new JRadioButtonMenuItem();
-		itmLanguageAf = new JRadioButtonMenuItem();
+		itmLanguageZa = new JRadioButtonMenuItem();
 		itmHelp = new JMenuItem();
 		itmTroubleshoot = new JMenuItem();
 		itmDiscord = new JMenuItem();
@@ -938,7 +946,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		addToButtonGroup(new ButtonGroup(), itmGroupTitle, itmGroupPlatform, itmGroupBlank);
 		addToButtonGroup(new ButtonGroup(), itmGroupAscending, itmGroupDescending);
 		addToButtonGroup(new ButtonGroup(), itmChangeToAll, itmChangeToFavorites, itmChangeToRecentlyPlayed, itmChangeToRecycleBin);
-		addToButtonGroup(new ButtonGroup(), itmLanguageDe, itmLanguageEn, itmLanguageFr, itmLanguageIt, itmLanguagePt, itmLanguageEs, itmLanguageAf);
+		addToButtonGroup(new ButtonGroup(), itmLanguageDe, itmLanguageEn, itmLanguageFr, itmLanguageIt, itmLanguagePt, itmLanguageEs, itmLanguageZa);
 	}
 
 	private void setIcons() {
@@ -985,14 +993,14 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		Icon iconLanguageIt = ImageUtil.getFlatSVGIconFrom(Icons.get("languageIt"), size);
 		Icon iconLanguageEs = ImageUtil.getFlatSVGIconFrom(Icons.get("languageEs"), size);
 		Icon iconLanguagePt = ImageUtil.getFlatSVGIconFrom(Icons.get("languagePt"), size);
-		Icon iconLanguageAfr = ImageUtil.getFlatSVGIconFrom(Icons.get("languageAfr"), size);
+		Icon iconLanguageZa = ImageUtil.getFlatSVGIconFrom(Icons.get("languageZa"), size);
 		itmLanguageDe.setIcon(iconLanguageDe);
 		itmLanguageEn.setIcon(iconLanguageEn);
 		itmLanguageFr.setIcon(iconLanguageFr);
 		itmLanguageIt.setIcon(iconLanguageIt);
 		itmLanguageEs.setIcon(iconLanguageEs);
 		itmLanguagePt.setIcon(iconLanguagePt);
-		itmLanguageAf.setIcon(iconLanguageAfr);
+		itmLanguageZa.setIcon(iconLanguageZa);
 		mnuHelp.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("help"), size, svgNoColor));
 		itmHelp.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("help"), size, svgNoColor));
 		itmDiscord.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("discord"), size, new Color(114, 137, 218)));
@@ -1001,6 +1009,10 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		itmConfigWizard.setIcon(ImageUtil.getImageIconFrom(Icons.get("configWizard", size, size)));
 		Locale locale = Locale.getDefault();
 		String language = locale.getLanguage();
+		if (language.equals("za")) {
+			itmLanguageZa.setSelected(true);
+			mnuLanguage.setIcon(iconLanguageZa);
+		}
 		if (language.equals(Locale.GERMAN.getLanguage())) {
 			itmLanguageDe.setSelected(true);
 			mnuLanguage.setIcon(iconLanguageDe);
@@ -1016,6 +1028,14 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		if (language.equals(Locale.ITALIAN.getLanguage())) {
 			itmLanguageIt.setSelected(true);
 			mnuLanguage.setIcon(iconLanguageIt);
+		}
+		if (language.equals("es")) {
+			itmLanguageEs.setSelected(true);
+			mnuLanguage.setIcon(iconLanguageEs);
+		}
+		if (language.equals("pt")) {
+			itmLanguageIt.setSelected(true);
+			mnuLanguage.setIcon(iconLanguagePt);
 		}
 		setButtonBarIcons();
 	}
@@ -1452,7 +1472,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 	}
 
 	public void addLanguageAfrikaansListener(ActionListener l) {
-		itmLanguageAf.addActionListener(l);
+		itmLanguageZa.addActionListener(l);
 	}
 
 	public void addRunGameListener(ActionListener l) {
@@ -1606,14 +1626,17 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 	}
 
 	private void createUI() {
+		FormLayout layoutMain = new FormLayout("min:grow",
+				"fill:min, fill:min:grow, fill:min");
+		setLayout(layoutMain);
 		createMenuBar();
 		FormLayout layout = new FormLayout("min:grow",
 		"fill:pref, fill:pref");
 		JPanel pnlWrapperTop = new JPanel(layout);
 		pnlWrapperTop.add(pnlButtonBar, CC.xy(1, 1));
 		pnlWrapperTop.add(pnlGameFilter, CC.xy(1, 2));
-		add(pnlWrapperTop, BorderLayout.NORTH);
-		add(pnlMain);
+		add(pnlWrapperTop, CC.xy(1, 1));
+		add(pnlMain, CC.xy(1, 2));
 		pnlGameCount.setMinimumSize(new Dimension(0, 0));
 
 		JPanel pnlGameCountSpecial = new JPanel(new BorderLayout());
@@ -1649,7 +1672,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		pnlGameCountWrapper.add(pnlGameCount);
 		pnlGameCountWrapper.add(pnlGameCountSpecial, BorderLayout.EAST);
 
-		add(pnlGameCountWrapper, BorderLayout.SOUTH);
+		add(pnlGameCountWrapper, CC.xy(1, 3));
 		pack();
 	}
 
@@ -1727,12 +1750,12 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		addComponentsToJComponent(mnuThemes, itmThemeManager, new JSeparator(), mnuChangeBackgrounds, new JSeparator(), mnuDarkLaFs,
 				mnuLightLaFs, new JSeparator(), itmAutoSwitchTheme);
 
-		addComponentsToJComponent(mnuTools, itmBase64DecodeEncode, itmCoverDownloader, itmMemoryCardManager, itmCueCreator, itmECMConverter, new JMenuItem("Game Renamer"));
+		addComponentsToJComponent(mnuTools, itmBase64DecodeEncode, itmCoverDownloader, itmMemoryCardManager, itmCueCreator, itmECMConverter, new JMenuItem("Game Renamer"), itmWebapp);
 
 		Locale locale = Locale.getDefault();
 		String userLanguage = locale.getLanguage();
 		List<JMenuItem> languageItems = new ArrayList<>();
-		Collections.addAll(languageItems, itmLanguageAf, itmLanguageDe, itmLanguageEn, itmLanguageEs, itmLanguageFr, itmLanguageIt, itmLanguagePt);
+		Collections.addAll(languageItems, itmLanguageZa, itmLanguageDe, itmLanguageEn, itmLanguageEs, itmLanguageFr, itmLanguageIt, itmLanguagePt);
 		unmodifiedLanguageItems = new ArrayList<>();
 		unmodifiedLanguageItems.addAll(languageItems);
 		if (userLanguage.equals(Locale.ENGLISH.getLanguage())) {
@@ -1754,8 +1777,8 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 			addComponentsToJComponent(mnuLanguage, itmLanguagePt);
 			languageItems.remove(itmLanguagePt);
 		} else if (userLanguage.equals("af")) {
-			addComponentsToJComponent(mnuLanguage, itmLanguageAf);
-			languageItems.remove(itmLanguageAf);
+			addComponentsToJComponent(mnuLanguage, itmLanguageZa);
+			languageItems.remove(itmLanguageZa);
 		} else {
 			addComponentsToJComponent(mnuLanguage, itmLanguageEn);
 			languageItems.remove(itmLanguageEn);
@@ -2755,9 +2778,9 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 			itmLanguagePt.setSelected(true);
 			icon = itmLanguagePt.getIcon();
 		}
-		if (language.equals("af")) {
-			itmLanguageAf.setSelected(true);
-			icon = itmLanguageAf.getIcon();
+		if (language.equals("za")) {
+			itmLanguageZa.setSelected(true);
+			icon = itmLanguageZa.getIcon();
 		}
 		if (icon != null) {
 			mnuLanguage.setIcon(icon);
@@ -2830,9 +2853,9 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		itmLanguageIt.setText(Messages.get(MessageConstants.LANGUAGE_IT));
 		itmLanguageEs.setText(Messages.get(MessageConstants.LANGUAGE_ES));
 		itmLanguagePt.setText(Messages.get(MessageConstants.LANGUAGE_PT));
-		itmLanguageAf.setText(Messages.get(MessageConstants.LANGUAGE_AFR));
+		itmLanguageZa.setText(Messages.get(MessageConstants.LANGUAGE_AFR));
 		itmHelp.setText(Messages.get(MessageConstants.HELP));
-		itmTroubleshoot.setText(Messages.get(MessageConstants.TROUBLESHOOT));
+		itmTroubleshoot.setText(Messages.get(MessageConstants.QUICK_ACTIONS));
 		itmDiscord.setText(Messages.get(MessageConstants.EMUBRO_DISCORD));
 		itmGamePadTester.setText(Messages.get(MessageConstants.GAMEPAD_TESTER));
 		itmConfigWizard.setText(Messages.get(MessageConstants.CONFIGURE_WIZARD, Messages.get(MessageConstants.APPLICATION_TITLE)));
@@ -3246,21 +3269,6 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 
 	public void setSplPreviewPaneDividerLocation(int divLocation) {
 		pnlMain.setSplPreviewPaneDividerLocation(divLocation);
-	}
-
-	public void dockPropertiesFrame(JPanel pnlProperties) {
-		showViewSpecificPanels(false);
-		this.pnlProperties = pnlProperties;
-		remove(pnlMain);
-		add(pnlProperties);
-		UIUtil.revalidateAndRepaint(this);
-	}
-
-	public void undockPropertiesFrame() {
-		showViewSpecificPanels(true);
-		remove(pnlProperties);
-		add(pnlMain);
-		UIUtil.revalidateAndRepaint(this);
 	}
 
 	private void showViewSpecificPanels(boolean showPanels) {

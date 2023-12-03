@@ -57,7 +57,7 @@ public class AboutDialog extends JDialog implements ActionListener {
 	private JButton btnDiscord = new JButton(ImageUtil.getFlatSVGIconFrom(Icons.get("discord"), size, Color.LIGHT_GRAY));
 	private JButton btnReddit = new JButton(ImageUtil.getFlatSVGIconFrom(Icons.get("reddit"), size, Color.LIGHT_GRAY));
 	private JButton btnGitHub = new JButton(ImageUtil.getFlatSVGIconFrom(Icons.get("github"), size, Color.LIGHT_GRAY));
-	private AbstractButton[] socialMediaButtons = new JButton[] { btnFacebook, btnTwitter, btnYoutube, btnDiscord, btnReddit, btnGitHub };
+	private AbstractButton[] socialMediaButtons = new JButton[] { btnDiscord, btnReddit, btnGitHub, btnYoutube, btnFacebook, btnTwitter };
 
 	private JButton btnClose = new JButton(Messages.get(MessageConstants.CLOSE));
 
@@ -173,7 +173,7 @@ public class AboutDialog extends JDialog implements ActionListener {
 		btnReddit.setToolTipText("Become a Subscribro on Reddit");
 		btnDiscord.setToolTipText("Chat with us in our Discord");
 		btnFacebook.setToolTipText("Hate us on Facebook");
-		btnTwitter.setToolTipText("Follow us on Twitter");
+		btnTwitter.setToolTipText("Follow us on Twitter (Pretends to be X)");
 		btnYoutube.setToolTipText("Subscribe on YouTube");
 		btnGitHub.setToolTipText("Help develop emuBro at GitHub");
 	}
