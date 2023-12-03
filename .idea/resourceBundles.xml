@@ -21,23 +21,5 @@
       <file value="file://$PROJECT_DIR$/src/main/resources/messages_za.properties" />
       <base-name>messages</base-name>
     </custom-resource-bundle>
-    <custom-resource-bundle>
-      <file value="file://$PROJECT_DIR$/src/main/resources/messages.properties" />
-      <file value="file://$PROJECT_DIR$/src/main/resources/messages_de.properties" />
-      <file value="file://$PROJECT_DIR$/src/main/resources/messages_es.properties" />
-      <file value="file://$PROJECT_DIR$/src/main/resources/messages_fr.properties" />
-      <file value="file://$PROJECT_DIR$/src/main/resources/messages_it.properties" />
-      <base-name>messages</base-name>
-    </custom-resource-bundle>
-    <custom-resource-bundle>
-      <file value="file://$PROJECT_DIR$/src/main/resources/messages.properties" />
-      <file value="file://$PROJECT_DIR$/src/main/resources/messages_de.properties" />
-      <file value="file://$PROJECT_DIR$/src/main/resources/messages_es.properties" />
-      <file value="file://$PROJECT_DIR$/src/main/resources/messages_fr.properties" />
-      <file value="file://$PROJECT_DIR$/src/main/resources/messages_it.properties" />
-      <file value="file://$PROJECT_DIR$/src/main/resources/messages_pt.properties" />
-      <file value="file://$PROJECT_DIR$/src/main/resources/messages_za.properties" />
-      <base-name>messages</base-name>
-    </custom-resource-bundle>
   </component>
 </project>

@@ -46,7 +46,7 @@ public class MessageConstants {
 	public static final String LANGUAGE_IT = "languageIt";
 	public static final String LANGUAGE_ES = "languageEs";
 	public static final String LANGUAGE_PT = "languagePt";
-	public static final String LANGUAGE_AFR = "languageAfr";
+	public static final String LANGUAGE_ZA = "languageZa";
 	public static final String RUN_ACTION = "runAction";
 	public static final String CHOOSE_VIEW = "chooseView";
 	public static final String HELP = "help";

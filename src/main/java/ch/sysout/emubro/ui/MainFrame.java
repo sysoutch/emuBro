@@ -2853,7 +2853,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		itmLanguageIt.setText(Messages.get(MessageConstants.LANGUAGE_IT));
 		itmLanguageEs.setText(Messages.get(MessageConstants.LANGUAGE_ES));
 		itmLanguagePt.setText(Messages.get(MessageConstants.LANGUAGE_PT));
-		itmLanguageZa.setText(Messages.get(MessageConstants.LANGUAGE_AFR));
+		itmLanguageZa.setText(Messages.get(MessageConstants.LANGUAGE_ZA));
 		itmHelp.setText(Messages.get(MessageConstants.HELP));
 		itmTroubleshoot.setText(Messages.get(MessageConstants.QUICK_ACTIONS));
 		itmDiscord.setText(Messages.get(MessageConstants.EMUBRO_DISCORD));
