@@ -2791,6 +2791,7 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		mnuGames.setText(Messages.get(MessageConstants.MNU_GAMES));
 		mnuThemesOld.setText(Messages.get(MessageConstants.MNU_THEMES));
 		itmManageThemesOld.setText(Messages.get(MessageConstants.ITM_MANAGE_THEMES));
+		itmThemeManager.setText(Messages.get(MessageConstants.THEME_MANAGER));
 		mnuChangeBackgrounds.setText("Change background");
 		mnuThemes.setText(Messages.get(MessageConstants.MNU_THEMES));
 		mnuTools.setText(Messages.get(MessageConstants.MNU_TOOLS));
