@@ -59,22 +59,22 @@ jobs:
           name: emuBro-linux-${project.version}-x64.jar
           path: target/emuBro-${project.version}.jar
 
-  build-linux-x86:
+  build-linux-arm32:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Set up JDK 11 for Linux x86
+      - name: Set up JDK 11 for Linux arm32
         uses: actions/setup-java@v3
         with:
           java-version: '11'
           distribution: 'adopt'
-          architecture: x86
+          architecture: arm32
       - name: Build with Maven
         run: mvn --batch-mode --update-snapshots verify
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: emuBro-linux-${project.version}-x86.jar
+          name: emuBro-linux-${project.version}-arm32.jar
           path: target/emuBro-${project.version}.jar
 
   build-macos-x64:
@@ -93,22 +93,4 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: emuBro-macos-${project.version}-x64.jar
-          path: target/emuBro-${project.version}.jar
-
-  build-macos-x86:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up JDK 11 for macOS x86
-        uses: actions/setup-java@v3
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-          architecture: x86
-      - name: Build with Maven
-        run: mvn --batch-mode --update-snapshots verify
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: emuBro-macos-${project.version}-x86.jar
           path: target/emuBro-${project.version}.jar
