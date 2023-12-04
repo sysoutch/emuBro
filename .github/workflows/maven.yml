@@ -20,8 +20,8 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: emuBro-windows-${project.version}-x64.jar
-          path: D:\a\emuBro\emuBro\target\emuBro-${project.version}.jar
+          name: emuBro-windows-x64.jar
+          path: D:\a\emuBro\emuBro\target\emuBro-windows-x64.jar
 
   build-windows-x86:
     runs-on: windows-latest
@@ -38,8 +38,8 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: emuBro-windows-${project.version}-x86.jar
-          path: D:\a\emuBro\emuBro\target\emuBro-${project.version}.jar
+          name: emuBro-windows-x86.jar
+          path: D:\a\emuBro\emuBro\target\emuBro-windows-x86.jar
 
   build-linux-x64:
     runs-on: ubuntu-latest
@@ -56,8 +56,8 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: emuBro-linux-${project.version}-x64.jar
-          path: target/emuBro-${project.version}.jar
+          name: emuBro-linux-x64.jar
+          path: target/emuBro-linux-x64.jar
 
   build-macos-x64:
     runs-on: macos-latest
@@ -74,5 +74,5 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: emuBro-macos-${project.version}-x64.jar
-          path: target/emuBro-${project.version}.jar
+          name: emuBro-macos-x64.jar
+          path: target/emuBro-macos-x64.jar
