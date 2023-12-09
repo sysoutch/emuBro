@@ -72,8 +72,6 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 	private JPanel pnlInput = new JPanel();
 	private AdvancedPropertiesPanel pnlAdvancedProperties;
 
-	private JButton btnClose;
-
 	private Explorer explorer;
 
 	private JPanel pnlMain;
@@ -158,12 +156,6 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 		tpMain.addTab(Messages.get(MessageConstants.ADVANCED), spTab2);
 		//		tpMain.setEnabledAt(1, false);
 		pnlMain.add(tpMain);
-
-		JPanel pnl = new JPanel(new BorderLayout());
-		pnl.setOpaque(false);
-		pnl.setBorder(new EmptyBorder(10, 0, 0, 0));
-		pnl.add(btnClose = new JButton(Messages.get(MessageConstants.CLOSE)), BorderLayout.EAST);
-		pnlMain.add(pnl, BorderLayout.SOUTH);
 		add(pnlMain);
 		pack();
 	}
@@ -202,10 +194,6 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 
 	public Platform getSelectedPlatform() {
 		return pnlManagePlatforms.getSelectedPlatform();
-	}
-
-	public void setSaveAndExitConfigurationListener(ActionListener l) {
-		btnClose.addActionListener(l);
 	}
 
 	class AdvancedPropertiesPanel extends JPanel implements ActionListener {

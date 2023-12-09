@@ -28,6 +28,10 @@ public class AccordionPanel extends JPanel implements ActionListener {
 
 	private JComponent visibleComponent = null;
 
+	public AccordionPanel() {
+		this(0);
+	}
+
 	public AccordionPanel(int verticalAccordion) {
 		setLayout(new BorderLayout());
 		topPanel.setOpaque(false);

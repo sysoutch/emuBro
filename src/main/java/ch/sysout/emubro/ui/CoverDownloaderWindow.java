@@ -25,8 +25,7 @@ public class CoverDownloaderWindow extends JDialog {
 	private JTextArea txtCoverUrl = new JTextArea();
 	private JScrollPane spTxtCoverUrl = new JScrollPane(txtCoverUrl);
 
-	private DefaultListModel<Platform> mdlLstPlatforms = new DefaultListModel<>();
-	private JList<Platform> lstPlatforms = new JList<Platform>(mdlLstPlatforms);
+	private JList<Platform> lstPlatforms = new JList<>();
 	private JScrollPane spPlatforms = new JScrollPane(lstPlatforms);
 
 	private List<CoverDownloaderListener> listeners = new ArrayList<>();
@@ -62,7 +61,7 @@ public class CoverDownloaderWindow extends JDialog {
 		}
 	}
 
-	public void initPlatforms(List<Platform> platforms) {
-		mdlLstPlatforms.addAll(platforms);
+	public void setPlatformListModel(SortedListModel<Platform> platformListModel) {
+		lstPlatforms.setModel(platformListModel);
 	}
 }

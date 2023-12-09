@@ -269,7 +269,6 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 	private int minMenuBarWidthBeforeMinimize = 420;
 	private boolean changingLnFWarningDisplayed;
 	private int buttonBarIconSize = 24;
-	protected CoverDownloaderController coverDownloader;
 	private JSlider sliderGameCoversTransparency;
 	protected int lastGameCoversTransparency;
 	protected boolean dontSaveLastGameCoversTransparency;
@@ -652,19 +651,6 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 			e.printStackTrace();
 		}
 
-		itmCoverDownloader.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				if (coverDownloader == null) {
-					coverDownloader = new CoverDownloaderController();
-					coverDownloader.setRelativeTo(MainFrame.this);
-					coverDownloader.initPlatforms(explorer.getPlatforms());
-				}
-				coverDownloader.setWindowVisible(true);
-			}
-		});
-
 		itmMemoryCardManager.addActionListener(new ActionListener() {
 
 			@Override
@@ -705,6 +691,10 @@ UpdateGameCountListener, DirectorySearchedListener, ThemeListener {
 		});
 		// UIUtil.setForegroundDependOnBackground(colorMenuBar,
 		// mnuFile, mnuView, mnuGames, mnuLanguage, mnuHelp);
+	}
+
+	public void addOpenCoverDownloaderListener(ActionListener l) {
+		itmCoverDownloader.addActionListener(l);
 	}
 
 	private void initializeButtonBar() {

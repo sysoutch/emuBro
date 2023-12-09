@@ -8,9 +8,11 @@ import java.net.URL;
 import java.util.List;
 
 import javax.imageio.ImageIO;
+import javax.swing.*;
 
 import ch.sysout.emubro.api.model.Platform;
 import ch.sysout.emubro.ui.CoverDownloaderWindow;
+import ch.sysout.emubro.ui.SortedListModel;
 import ch.sysout.emubro.ui.event.CoverDownloaderEvent;
 import ch.sysout.emubro.ui.listener.CoverDownloaderListener;
 
@@ -49,7 +51,7 @@ public class CoverDownloaderController implements CoverDownloaderListener {
 		coverDownloaderWindow.setVisible(b);
 	}
 
-	public void initPlatforms(List<Platform> platforms) {
-		coverDownloaderWindow.initPlatforms(platforms);
+	public void setPlatformListModel(SortedListModel<Platform> platformListModel) {
+		coverDownloaderWindow.setPlatformListModel(platformListModel);
 	}
 }

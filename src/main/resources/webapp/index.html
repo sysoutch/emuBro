@@ -75,49 +75,51 @@
 				
 				var games_container = $("#games")
 				Object.keys(mapGames).forEach(function(element, index, array) {
-					var game = $(games_container.parent().find('template').html())
-					var val = mapGames[element];
-					$("[data-id]", game).attr('data-id', val.id)
-					$("[data-update='name']", game).html(val.name)
-					$("[data-update='cover']", game).attr('src', "/gameCover/" + val.id)
-					$("[data-update='icon']", game).attr('src', "/platformIcon/" + val.platformId)
-					//$("[data-update='platformName']", game).html(mapPlatforms[val.platformId].name);
-					
-					if (val.rate >= 1) {
-						$("[data-update='rate1']", game).addClass("checked");
-					} else {
-						$("[data-update='rate1']", game).removeClass("checked");
+				    if (index <= 100) {
+                        var game = $(games_container.parent().find('template').html())
+                        var val = mapGames[element];
+                        $("[data-id]", game).attr('data-id', val.id)
+                        $("[data-update='name']", game).html(val.name)
+                        $("[data-update='cover']", game).attr('src', "/gameCover/" + val.id)
+                        $("[data-update='icon']", game).attr('src', "/platformIcon/" + val.platformId)
+                        //$("[data-update='platformName']", game).html(mapPlatforms[val.platformId].name);
+
+                        if (val.rate >= 1) {
+                            $("[data-update='rate1']", game).addClass("checked");
+                        } else {
+                            $("[data-update='rate1']", game).removeClass("checked");
+                        }
+                        if (val.rate >= 2) {
+                            $("[data-update='rate2']", game).addClass("checked");
+                        } else {
+                            $("[data-update='rate2']", game).removeClass("checked");
+                        }
+                        if (val.rate >= 3) {
+                            $("[data-update='rate3']", game).addClass("checked");
+                        } else {
+                            $("[data-update='rate3']", game).removeClass("checked");
+                        }
+                        if (val.rate >= 4) {
+                            $("[data-update='rate4']", game).addClass("checked");
+                        } else {
+                            $("[data-update='rate4']", game).removeClass("checked");
+                        }
+                        if (val.rate >= 5) {
+                            $("[data-update='rate5']", game).addClass("checked");
+                        } else {
+                            $("[data-update='rate5']", game).removeClass("checked");
+                        }
+
+                        $("[data-post]", game).each(function() {
+                            $(this).attr('data-post', $(this).attr('data-post').replace(":gameId", val.id))
+                            $(this).attr('data-post', $(this).attr('data-post').replace(":platformId", val.platformId))
+                        });
+                        $("[data-get]", game).each(function() {
+                            $(this).attr('data-get', $(this).attr('data-get').replace(":gameId", val.id))
+                            $(this).attr('data-get', $(this).attr('data-get').replace(":platformId", val.platformId))
+                        });
+                        games_container.append(game)
 					}
-					if (val.rate >= 2) {
-						$("[data-update='rate2']", game).addClass("checked");
-					} else {
-						$("[data-update='rate2']", game).removeClass("checked");
-					}
-					if (val.rate >= 3) {
-						$("[data-update='rate3']", game).addClass("checked");
-					} else {
-						$("[data-update='rate3']", game).removeClass("checked");
-					}
-					if (val.rate >= 4) {
-						$("[data-update='rate4']", game).addClass("checked");
-					} else {
-						$("[data-update='rate4']", game).removeClass("checked");
-					}
-					if (val.rate >= 5) {
-						$("[data-update='rate5']", game).addClass("checked");
-					} else {
-						$("[data-update='rate5']", game).removeClass("checked");
-					}
-					
-					$("[data-post]", game).each(function() {
-						$(this).attr('data-post', $(this).attr('data-post').replace(":gameId", val.id))
-						$(this).attr('data-post', $(this).attr('data-post').replace(":platformId", val.platformId))
-					});
-					$("[data-get]", game).each(function() {
-						$(this).attr('data-get', $(this).attr('data-get').replace(":gameId", val.id))
-						$(this).attr('data-get', $(this).attr('data-get').replace(":platformId", val.platformId))
-					});
-					games_container.append(game)
 				});
             });			
 		});			

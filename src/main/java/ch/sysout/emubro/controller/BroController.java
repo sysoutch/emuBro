@@ -175,6 +175,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import ch.sysout.emubro.ui.controller.CoverDownloaderController;
 import ch.sysout.emubro.util.EmuBroUtil;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -360,7 +361,7 @@ GameSelectionListener, BrowseComputerListener {
 			"lastLightLnF"
 	};
 
-	private SortedListModel<Platform> mdlPropertiesLstPlatforms = new SortedListModel<>();
+	private SortedListModel<Platform> mdlLstPlatforms = new SortedListModel<>();
 	private Map<String, ImageIcon> platformIcons = new HashMap<>();
 	private Map<String, ImageIcon> emulatorIcons = new HashMap<>();
 	private List<String> encryptedFiles = new ArrayList<>();
@@ -417,6 +418,7 @@ GameSelectionListener, BrowseComputerListener {
 	private JList<String> lstPreviews;
 	protected boolean dontChangeMatchesIndex;
 	protected boolean dontChangePreviewIndex;
+	private CoverDownloaderController coverDownloader;
 
 	public BroController(SplashScreenWindow dlgSplashScreen, ExplorerDAO explorerDAO, Explorer model, MainFrame view) {
 		this.dlgSplashScreen = dlgSplashScreen;
@@ -425,7 +427,9 @@ GameSelectionListener, BrowseComputerListener {
 		this.view = view;
 		explorer.setSearchProcessComplete(explorerDAO.isSearchProcessComplete());
 		platformComparator = new PlatformComparator(explorer);
+		initPlatformListModel(explorer.getPlatforms());
 		initSpark();
+
 		boolean shouldUseController = false;
 		if (shouldUseController) {
 			try {
@@ -869,6 +873,18 @@ GameSelectionListener, BrowseComputerListener {
 		addEmulatorListener(this);
 		addTagListener(this);
 		view.addListeners();
+		view.addOpenCoverDownloaderListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if (coverDownloader == null) {
+					coverDownloader = new CoverDownloaderController();
+					coverDownloader.setRelativeTo(view);
+					coverDownloader.setPlatformListModel(mdlLstPlatforms);
+				}
+				coverDownloader.setWindowVisible(true);
+			}
+		});
 		view.addShowHideNavigationPaneListener(new ActionListener() {
 
 			@Override
@@ -6267,9 +6283,9 @@ GameSelectionListener, BrowseComputerListener {
 		}
 	}
 
-	public void initPropertiesPlatforms(List<Platform> list) {
+	public void initPlatformListModel(List<Platform> list) {
 		for (Platform p : list) {
-			mdlPropertiesLstPlatforms.add(p);
+			mdlLstPlatforms.add(p);
 			if (!platformIcons.containsKey(p.getShortName())) {
 				String iconFilename = p.getShortName();
 				if (iconFilename != null && !iconFilename.trim().isEmpty()) {
@@ -6326,12 +6342,10 @@ GameSelectionListener, BrowseComputerListener {
 			});
 			frameProperties.adjustSplitPaneDividerSizes();
 			frameProperties.adjustSplitPaneDividerLocations();
-			frameProperties.setPlatformListModel(mdlPropertiesLstPlatforms);
-			frameProperties.setSaveAndExitConfigurationListener(new SaveAndExitConfigurationListener());
+			frameProperties.setPlatformListModel(mdlLstPlatforms);
 			addPlatformListener(frameProperties);
 			addEmulatorListener(frameProperties);
 			addTagListener(frameProperties);
-			initPropertiesPlatforms(explorer.getPlatforms());
 			frameProperties.setPlatformListCellRenderer(new PlatformListCellRenderer());
 			frameProperties.setEmulatorListCellRenderer(new EmulatorListCellRenderer());
 			frameProperties.addDefaultEmulatorListener(new DefaultEmulatorListener() {
