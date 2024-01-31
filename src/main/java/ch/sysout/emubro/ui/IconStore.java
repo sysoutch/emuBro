@@ -108,19 +108,27 @@ public class IconStore {
 			JsonObject json;
 			json = JsonParser.parseReader(jsonReader).getAsJsonObject();
 			System.out.println(json);
-			JsonElement colorElement = json.get("color");
+			JsonElement colorElement = null;
+			if (json.has("color")) {
+				colorElement = json.get("color");
+			}
 			backgroundColor = (colorElement == null) ? Color.WHITE : Color.decode(colorElement.getAsString());
 			JsonElement menuBar = json.get("menuBar");
 			if (menuBar != null) {
 				JsonObject jsonObject = menuBar.getAsJsonObject();
-				menuBarColor = Color.decode(jsonObject.get("color").getAsString());
+				if (jsonObject.has("color")) {
+					menuBarColor = Color.decode(jsonObject.get("color").getAsString());
+				}
 			}
-
 			JsonElement view = json.get("view");
 			if (view != null) {
 				JsonObject jsonObject = view.getAsJsonObject();
-				viewColor = Color.decode(jsonObject.get("color").getAsString());
-				viewImage = jsonObject.get("image").getAsString();
+				if (jsonObject.has("color")) {
+					viewColor = Color.decode(jsonObject.get("color").getAsString());
+				}
+				if (jsonObject.has("image")) {
+					viewImage = jsonObject.get("image").getAsString();
+				}
 			}
 
 			JsonElement previewpane = json.get("previewpane");
@@ -200,7 +208,7 @@ public class IconStore {
 		String coverFilePath = platformCoversDirectory + File.separator + coverFileName;
 		if (!platformCovers.containsKey(platformId)) {
 			int size = ScreenSizeUtil.adjustValueToResolution(200);
-			ImageIcon ii = ImageUtil.getImageIconFrom(coverFilePath, true);
+			ImageIcon ii = ImageUtil.getImageIconFrom(coverFilePath);
 			int scaleOption = CoverConstants.SCALE_AUTO_OPTION;
 			ImageIcon cover = null;
 			if (ii != null) {
@@ -214,6 +222,7 @@ public class IconStore {
 					return;
 				}
 				cover = ImageUtil.scaleCover(ii, size, scaleOption);
+				cover = ImageUtil.get3dVersionOf(cover, platformId);
 			}
 			platformCovers.put(platformId, cover);
 		}
@@ -311,10 +320,16 @@ public class IconStore {
 		}
 		if (!platformIcons.containsKey(platformId)) {
 			int size = ScreenSizeUtil.adjustValueToResolution(24);
-			String iconFilePath = currentPlatformLogosDirectory + File.separator + iconFileName;
-			ImageIcon ii = ImageUtil.getImageIconFrom(iconFilePath, true);
-			ImageIcon ico = ImageUtil.scaleCover(ii, size, CoverConstants.SCALE_WIDTH_OPTION);
-			platformIcons.put(platformId, ico);
+			String iconFilePath = currentPlatformLogosDirectory + "/" + iconFileName;
+			System.err.println("icon file path: " +iconFilePath);
+			ImageIcon ii = ImageUtil.getImageIconFrom(iconFilePath);
+			System.err.println("ii null? " + (ii == null));
+			if (ii != null) {
+				ImageIcon ico = ImageUtil.scaleCover(ii, size, CoverConstants.SCALE_WIDTH_OPTION);
+				platformIcons.put(platformId, ico);
+			} else {
+				platformIcons.put(platformId, null);
+			}
 		}
 	}
 
@@ -335,7 +350,7 @@ public class IconStore {
 	public ImageIcon getEmulatorIcon(int emulatorId) {
 		if (emulatorIconPaths.containsKey(emulatorId) && !emulatorIcons.containsKey(emulatorId)) {
 			String iconFilePath = emulatorIconPaths.get(emulatorId);
-			ImageIcon ico = ImageUtil.getImageIconFrom(iconFilePath, true);
+			ImageIcon ico = ImageUtil.getImageIconFrom(iconFilePath);
 			emulatorIcons.put(emulatorId, ico);
 		}
 		return emulatorIcons.get(emulatorId);

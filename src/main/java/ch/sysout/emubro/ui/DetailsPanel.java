@@ -234,7 +234,7 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 	private void createUI() {
 		pnlTpInformationBar = new JPanel(new BorderLayout());
 		pnlTpInformationBar.setOpaque(false);
-		tpDetailsPane = new JTabbedPane(SwingConstants.BOTTOM) {
+		tpDetailsPane = new JTabbedPane() {
 			private static final long serialVersionUID = 1L;
 
 			@Override
@@ -257,6 +257,7 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 		sp2.setBorder(BorderFactory.createEmptyBorder());
 		sp2.getVerticalScrollBar().setUnitIncrement(16);
 		Color noColor = ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR);
+		tpDetailsPane.addTab(Messages.get(MessageConstants.DASHBOARD), ImageUtil.getFlatSVGIconFrom(Icons.get("tag"), 16, noColor), createDashboardPanel());
 		tpDetailsPane.addTab(Messages.get(MessageConstants.NOTIFICATIONS), ImageUtil.getFlatSVGIconFrom(Icons.get("info"), 16, noColor), createNotificationPanel());
 		tpDetailsPane.addTab(Messages.get(MessageConstants.BROWSE_COMPUTER), ImageUtil.getFlatSVGIconFrom(Icons.get("search"), 16, noColor), sp2);
 		tpDetailsPane.addTab(Messages.get(MessageConstants.BROWSE_COVERS), ImageUtil.getFlatSVGIconFrom(Icons.get("picture"), 16, noColor), pnlBrowseCovers);
@@ -300,6 +301,11 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 
 	public void addShowGameDetailsListener(ActionListener l) {
 		btnHideDetailsPane.addActionListener(l);
+	}
+
+	private JPanel createDashboardPanel() {
+		JPanel pnlDashboard = new WelcomeViewPanel();
+		return pnlDashboard;
 	}
 
 	private JPanel createNotificationPanel() {
@@ -421,10 +427,11 @@ public class DetailsPanel extends JPanel implements NotificationElementListener 
 	public void languageChanged() {
 		pnlBrowseComputer.languageChanged();
 		pnlBrowseCovers.languageChanged();
-		tpDetailsPane.setTitleAt(0, Messages.get(MessageConstants.NOTIFICATIONS));
-		tpDetailsPane.setTitleAt(1, Messages.get(MessageConstants.BROWSE_COMPUTER));
-		tpDetailsPane.setTitleAt(2, Messages.get(MessageConstants.BROWSE_COVERS));
-		tpDetailsPane.setTitleAt(3, Messages.get(MessageConstants.BROWSE_TAGS));
+		tpDetailsPane.setTitleAt(0, Messages.get(MessageConstants.DASHBOARD));
+		tpDetailsPane.setTitleAt(1, Messages.get(MessageConstants.NOTIFICATIONS));
+		tpDetailsPane.setTitleAt(2, Messages.get(MessageConstants.BROWSE_COMPUTER));
+		tpDetailsPane.setTitleAt(3, Messages.get(MessageConstants.BROWSE_COVERS));
+		tpDetailsPane.setTitleAt(4, Messages.get(MessageConstants.BROWSE_TAGS));
 		//		String style = (b) ? "underline" : "none";
 		String style = "none";
 		int elementCountInformations = pnlInformations.getElementCount();

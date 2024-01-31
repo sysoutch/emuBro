@@ -316,11 +316,11 @@ public class AboutDialog extends JDialog implements ActionListener {
 						+ "\n\nPls do not click it again, thanks.", "I forgive you");
 			} else if (fancyClickCounter > 1) {
 				UIUtil.showQuestionMessage(this, "Noooooooo why did you press the button again?!", "Destroy world");
-				UIUtil.showInformationMessage(this, "Every time when i ask people not to click my buttons, they click my buttons.", "Destroy world now");
+				UIUtil.showInformationMessage(this, "Every time I ask people not to click my buttons, they click my buttons.", "Destroy world now");
 				UIUtil.showQuestionMessage(this, "How would you feel if I click your buttons?", "Destroy world maybe now");
-				UIUtil.showWarningMessage(this, "Now you have to live with the consequences", "Destruction is incoming");
+				UIUtil.showWarningMessage(this, "Now you have to live with the consequences...", "Destruction is incoming");
 				try {
-					String url = "https://www.youtube.com/watch?v=5wb5HWVh6Fs";
+					String url = "https://www.youtube.com/watch?v=qRC4Vk6kisY";
 					Desktop.getDesktop().browse(new URI(url));
 				} catch (IOException | URISyntaxException e1) {
 					// TODO Auto-generated catch block

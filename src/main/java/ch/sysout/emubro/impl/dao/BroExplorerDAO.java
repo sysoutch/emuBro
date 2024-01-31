@@ -20,10 +20,7 @@ import ch.sysout.emubro.api.dao.GameDAO;
 import ch.sysout.emubro.api.dao.PlatformDAO;
 import ch.sysout.emubro.api.dao.TagDAO;
 import ch.sysout.emubro.api.filter.FilterGroup;
-import ch.sysout.emubro.api.model.Emulator;
-import ch.sysout.emubro.api.model.Game;
-import ch.sysout.emubro.api.model.Platform;
-import ch.sysout.emubro.api.model.Tag;
+import ch.sysout.emubro.api.model.*;
 import ch.sysout.emubro.impl.BroDatabaseVersionMismatchException;
 import ch.sysout.emubro.impl.BroEmulatorDeletedException;
 import ch.sysout.emubro.impl.BroGameAlreadyExistsException;
@@ -46,7 +43,7 @@ public class BroExplorerDAO implements ExplorerDAO {
 	private GameDAO gameDAO;
 	private EmulatorDAO emulatorDAO;
 	private final int explorer_id;
-	private final String expectedDbVersion = "0.3.0";
+	private final String expectedDbVersion = "0.5.0";
 
 	public BroExplorerDAO(int explorer_id, Connection conn) throws IOException, SQLException, BroDatabaseVersionMismatchException {
 		this.explorer_id = explorer_id;
@@ -199,10 +196,6 @@ public class BroExplorerDAO implements ExplorerDAO {
 		platformDAO.addPlatform(platform);
 	}
 
-	/**
-	 * @param index
-	 * @throws SQLException
-	 */
 	@Override
 	public void removePlatform(int platformId) throws SQLException {
 		platformDAO.removePlatform(platformId);
@@ -238,7 +231,6 @@ public class BroExplorerDAO implements ExplorerDAO {
 			try {
 				stmt.executeQuery(sql);
 			} catch (SQLException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			conn.commit();
@@ -378,13 +370,6 @@ public class BroExplorerDAO implements ExplorerDAO {
 		}
 	}
 
-	/**
-	 * FIXME check emulator only for specified platform
-	 *
-	 * @param path
-	 * @return
-	 * @throws SQLException
-	 */
 	public boolean hasEmulator(final int platformId, String path) throws SQLException {
 		return emulatorDAO.hasEmulator(platformId, path);
 	}
@@ -520,6 +505,7 @@ public class BroExplorerDAO implements ExplorerDAO {
 			int id = rset.getInt("platform_id");
 			String name = rset.getString("platform_name");
 			String shortName = rset.getString("platform_shortName");
+			String companyName = rset.getString("platform_companyName");
 			String iconFilename = rset.getString("platform_iconFilename");
 			String defaultGameCover = rset.getString("platform_defaultGameCover");
 			String[] gameSearchModes = rset.getString("platform_gameSearchModes").split(" ");
@@ -531,7 +517,7 @@ public class BroExplorerDAO implements ExplorerDAO {
 			int defaultEmulatorId = rset.getInt("platform_defaultEmulatorId");
 			boolean autoSearchEnabled = rset.getBoolean("platform_autoSearchEnabled");
 			String[] gameCodeRegexes = rset.getString("platform_gameCodeRegexes").split(" ");
-			Platform platform = new BroPlatform(id, name, shortName, iconFilename, defaultGameCover, gameSearchModes, searchFor,
+			Platform platform = new BroPlatform(id, name, shortName, companyName, iconFilename, defaultGameCover, gameSearchModes, searchFor,
 					fileStructure, supportedArchiveTypes, supportedImageTypes, emulators, defaultEmulatorId,
 					autoSearchEnabled, gameCodeRegexes);
 			platforms.add(platform);
@@ -593,11 +579,6 @@ public class BroExplorerDAO implements ExplorerDAO {
 	}
 
 	@Override
-	public void setSelectedGameId(int gameId) throws SQLException {
-		doExplorerUpdate("explorer_lastSelectedGameId", gameId);
-	}
-
-	@Override
 	public void setGameIconPath(int gameId, String iconPath) throws SQLException {
 		gameDAO.setIconPath(gameId, iconPath);
 	}
@@ -611,13 +592,18 @@ public class BroExplorerDAO implements ExplorerDAO {
 	public int getSelectedGameId() throws SQLException {
 		Statement stmt = conn.createStatement();
 		int gameId = GameConstants.NO_GAME;
-		String sql = "select explorer_lastSelectedGameId from explorer where explorer_id = " + 0;
+		String sql = "select explorer_lastSelectedGameId from explorer where explorer_id = " + explorer_id;
 		ResultSet rset = stmt.executeQuery(sql);
 		if (rset.next()) {
 			gameId = rset.getInt("explorer_lastSelectedGameId");
 		}
 		stmt.close();
 		return gameId;
+	}
+
+	@Override
+	public void setSelectedGameId(int gameId) throws SQLException {
+		doExplorerUpdate("explorer_lastSelectedGameId", gameId);
 	}
 
 	@Override
@@ -774,7 +760,7 @@ public class BroExplorerDAO implements ExplorerDAO {
 	public boolean isGreetingNotificationActive() throws SQLException {
 		boolean greetingNotificationActive = true;
 		try {
-			String sql = "select explorer_showGreetingNotification from explorer where explorer_id=0";
+			String sql = "select explorer_showGreetingNotification from explorer where explorer_id = "+explorer_id;
 			Statement stmt = conn.createStatement();
 			ResultSet rset = stmt.executeQuery(sql);
 			if (rset.next()) {
@@ -790,14 +776,14 @@ public class BroExplorerDAO implements ExplorerDAO {
 
 	@Override
 	public void showGreetingNotification(boolean b) throws SQLException {
-		doUpdate("explorer", "explorer_showGreetingNotification", b, "explorer_id=0");
+		doUpdate("explorer", "explorer_showGreetingNotification", b, "explorer_id = "+explorer_id);
 	}
 
 	@Override
 	public boolean isBrowseComputerNotificationActive() throws SQLException {
 		boolean browseComputerNotificationActive = true;
 		try {
-			String sql = "select explorer_showBrowseComputerNotification from explorer where explorer_id=0";
+			String sql = "select explorer_showBrowseComputerNotification from explorer where explorer_id = "+explorer_id;
 			Statement stmt = conn.createStatement();
 			ResultSet rset = stmt.executeQuery(sql);
 			if (rset.next()) {
@@ -812,7 +798,7 @@ public class BroExplorerDAO implements ExplorerDAO {
 	}
 	@Override
 	public void showBrowseComputerNotification(boolean b) throws SQLException {
-		doUpdate("explorer", "explorer_showBrowseComputerNotification", b, "explorer_id=0");
+		doUpdate("explorer", "explorer_showBrowseComputerNotification", b, "explorer_id = "+explorer_id);
 	}
 
 	@Override
@@ -824,7 +810,7 @@ public class BroExplorerDAO implements ExplorerDAO {
 	public String getLastDirFromFileChooser() throws SQLException {
 		Statement stmt = conn.createStatement();
 		stmt = conn.createStatement();
-		String sql = "select explorer_lastDirFromFileChooser from explorer where explorer_id=0";
+		String sql = "select explorer_lastDirFromFileChooser from explorer where explorer_id = "+explorer_id;
 		ResultSet rset = stmt.executeQuery(sql);
 		String lastDirFromFileChooser = null;
 		if (rset.next()) {
@@ -837,14 +823,14 @@ public class BroExplorerDAO implements ExplorerDAO {
 
 	@Override
 	public void setLastDirFromFileChooser(String lastDirFromFileChooser) throws SQLException {
-		doUpdate("explorer", "explorer_lastDirFromFileChooser", lastDirFromFileChooser, "explorer_id=0");
+		doUpdate("explorer", "explorer_lastDirFromFileChooser", lastDirFromFileChooser, "explorer_id = "+explorer_id);
 	}
 
 	@Override
 	public String getLastDirFromFolderChooser() throws SQLException {
 		Statement stmt = conn.createStatement();
 		stmt = conn.createStatement();
-		String sql = "select explorer_lastDirFromFolderChooser from explorer where explorer_id=0";
+		String sql = "select explorer_lastDirFromFolderChooser from explorer where explorer_id = "+explorer_id;
 		ResultSet rset = stmt.executeQuery(sql);
 		String lastDirFromFileChooser = null;
 		if (rset.next()) {
@@ -857,7 +843,7 @@ public class BroExplorerDAO implements ExplorerDAO {
 
 	@Override
 	public void setLastDirFromFolderChooser(String lastDirFromFolderChooser) throws SQLException {
-		doUpdate("explorer", "explorer_lastDirFromFolderChooser", lastDirFromFolderChooser, "explorer_id=0");
+		doUpdate("explorer", "explorer_lastDirFromFolderChooser", lastDirFromFolderChooser, "explorer_id = "+explorer_id);
 	}
 
 	@Override

@@ -1,0 +1,61 @@
+{  
+  "name":"Sega Dreamcast",
+  "shortName":"dreamcast",
+  "companyName":"Sega",
+  "iconFilename":"",
+  "defaultGameCover":"",
+  "recommendedEmulators":[
+	 "redream"
+  ],
+  "plugins":[
+	{
+	  "covers":"",
+	  "titles":""
+	}
+  ],
+  "gameSearchModes":[  
+	 "FILE_FILE_NAME_MATCH",
+	 "IMAGE_FILE_CONTENT_MATCH"
+  ],
+  "searchFor":"^(.*)\\.gdi$|^(.*)\\.chd$|^(.*)\\.cdi$",
+  "fileStructure":[  
+
+  ],
+  "supportedArchiveTypes":[  
+
+  ],
+  "supportedImageTypes":[  
+	 ".bin"
+  ],
+  "emulators":[  
+	 {  
+		"name":"nullDC",
+		"os":[
+
+		],
+		"path":"",
+		"iconFilename":"nulldc.jpg",
+		"configFilePath":"nulldc.cfg",
+		"website":"https://code.google.com/archive/p/nulldc/downloads",
+		"startParameters":"%emupath% -loadbin %gamepath%",
+		"supportedFileTypes":[  
+		   ".bin",
+		   ".elf"
+		],
+		"searchString":"^(nulldc.*)\\.exe$",
+		"archiveFileMatchWin":"^(nulldc-(.*)-win_x64)\\.zip$",
+		"archiveFileMatchLinux":"^(nulldc-(.*)-linux_x64)\\.tar$",
+		"archiveFileMatchMac":"^(nulldc-(.*)-osx_x64)\\.zip$",
+		"setupFileMatchWin":"",
+		"setupFileMatchLinux":"",
+		"setupFileMatchMac":"",
+		"autoSearchEnabled":true,
+		"biosRequired":false,
+		"runCommandsBefore":[
+		 
+		]
+	 }
+  ],
+  "directExecutionMode":"none",
+  "autoSearchEnabled":true
+}

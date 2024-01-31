@@ -73,8 +73,9 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 	private JMenuItem itmDefaultCoverSource = new JMenuItem();
 	private JMenuItem itmDefaultTrailerSource = new JMenuItem();
 	private JMenuItem itmWebSearchSettings = new JMenuItem();
-	private JMenuItem itmRenameGame = new JMenuItem();
+	private JMenuItem itmCreateShortcutFile = new JMenuItem();
 	private JMenuItem itmRemoveGame = new JMenuItem();
+	private JMenuItem itmRenameGame = new JMenuItem();
 	private JMenuItem itmCopyGamePath = new JMenuItem();
 	private JMenuItem itmOpenGameFolder = new JMenuItem();
 	private JMenuItem itmGameProperties = new JMenuItem();
@@ -101,6 +102,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 				new JSeparator(), itmRunEmulator, itmConfigureEmulator, itmChangePlatform,
 				new JSeparator(), mnuRateGame, mnuManageTags, itmAddCoverComputer,
 				new JSeparator(), mnuShowTagsWeb, mnuShowCoverWeb, mnuShowTrailerWeb/*, itmWebSearchSettings*/,
+				new JSeparator(), itmCreateShortcutFile,
 				new JSeparator(), itmRemoveGame, itmRenameGame,
 				new JSeparator(), itmCopyGamePath, itmOpenGameFolder,
 				new JSeparator(), itmSetGameCode,
@@ -111,9 +113,6 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		addComponentsToJComponent(mnuShowTrailerWeb, itmDefaultTrailerSource);
 
 		int size = ScreenSizeUtil.is3k() ? 24 : 16;
-		itmCreateNewTag.setIcon(ImageUtil.getImageIconFrom(Icons.get("add", size, size)));
-		itmAutoSearchTags.setIcon(ImageUtil.getImageIconFrom(Icons.get("searchFile", size, size)));
-		mnuShowTagsWeb.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("tag"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		addComponentsToJComponent(mnuImportTags, itmDefaultImportTagSource, new JSeparator());
 		addComponentsToJComponent(mnuAvailableTags, itmCreateNewTag, new JSeparator());
 		addComponentsToJComponent(mnuManageTags, itmAutoSearchTags, mnuAvailableTags, new JSeparator());
@@ -264,8 +263,13 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 
 	private void setIcons() {
 		int size = ScreenSizeUtil.is3k() ? 24 : 16;
+
+		itmCreateNewTag.setIcon(ImageUtil.getImageIconFrom(Icons.get("add", size, size)));
+		itmAutoSearchTags.setIcon(ImageUtil.getImageIconFrom(Icons.get("searchFile", size, size)));
+		mnuShowTagsWeb.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("tag"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		itmCreateShortcutFile.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("shortcut"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		mnuShowTrailerWeb.setIcon(ImageUtil.getImageIconFrom(Icons.get("video", size, size)));
-		mnuShowCoverWeb.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("picture"), size, new Color(181, 201, 255)));
+		mnuShowCoverWeb.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("picture"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		itmRunGame.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("runGame"), size, new Color(40, 167, 69)));
 		itmRunEmulator.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("runGame"), size, new Color(181, 201, 255)));
 		itmConfigureEmulator.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("settings"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
@@ -273,7 +277,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		itmComment.setIcon(ImageUtil.getImageIconFrom(Icons.get("gameComment", size, size)));
 		itmCopyGamePath.setIcon(ImageUtil.getImageIconFrom(Icons.get("copy", size, size)));
 		itmOpenGameFolder.setIcon(ImageUtil.getImageIconFrom(Icons.get("openFolder", size, size)));
-		itmRemoveGame.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("trash"), size, new Color(237, 67, 55)));
+		itmRemoveGame.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("trash"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		itmRenameGame.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("rename"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		itmDefaultTagSource.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("applicationIcon"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 		//		itmCoverDownload.setIcon(ImageUtil.getImageIconFrom(Icons.get("applicationIcon", size, size)));
@@ -332,6 +336,10 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		itmRemoveGame.addActionListener(l);
 	}
 
+	public void addCreateShortcutListener(ActionListener l) {
+		itmCreateShortcutFile.addActionListener(l);
+	}
+
 	public void addRenameGameListener(ActionListener l) {
 		itmRenameGame.addActionListener(l);
 	}
@@ -370,6 +378,7 @@ public class GameContextMenu extends JPopupMenu implements GameSelectionListener
 		itmDefaultTagSource.setText(Messages.get(MessageConstants.DEFAULT_TAG_SOURCE));
 		itmDefaultCoverSource.setText(Messages.get(MessageConstants.DEFAULT_COVER_SOURCE));
 		itmDefaultTrailerSource.setText(Messages.get(MessageConstants.DEFAULT_TRAILER_SOURCE));
+		itmCreateShortcutFile.setText(Messages.get(MessageConstants.CREATE_SHORTCUT_FILE));
 		itmRenameGame.setText(Messages.get(MessageConstants.RENAME));
 		itmRemoveGame.setText(Messages.get(MessageConstants.REMOVE));
 		itmCopyGamePath.setText(Messages.get(MessageConstants.COPY_GAME_PATH));

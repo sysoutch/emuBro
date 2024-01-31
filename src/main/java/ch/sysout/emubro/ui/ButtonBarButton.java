@@ -1,8 +1,10 @@
 package ch.sysout.emubro.ui;
 
-import javax.swing.Action;
-import javax.swing.DefaultButtonModel;
-import javax.swing.Icon;
+import com.jgoodies.forms.factories.Paddings;
+
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import java.awt.*;
 
 public class ButtonBarButton extends JCustomButtonNew {
 	private static final long serialVersionUID = 1L;
@@ -16,6 +18,7 @@ public class ButtonBarButton extends JCustomButtonNew {
 		setToolTipText(toolTipText);
 		setModel(new DefaultButtonModel());
 		init(label, icon);
+//		setBorder(new EmptyBorder(getBorder().getBorderInsets(this).top, Paddings.DLU4.getBorderInsets().left,getBorder().getBorderInsets(this).bottom, Paddings.DLU4.getBorderInsets().right));
 	}
 
 	/**

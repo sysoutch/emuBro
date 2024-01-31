@@ -2,9 +2,9 @@ package ch.sysout.emubro.ui;
 
 import java.awt.dnd.DropTargetListener;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyListener;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseWheelListener;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -43,8 +43,7 @@ public class ViewPanelManager {
 	private int columnWidth = ScreenSizeUtil.adjustValueToResolution(250);
 	private int fontSize;
 
-	private WelcomeViewPanel pnlBlankView = new WelcomeViewPanel();
-	private ViewPanel currentViewPanel = pnlBlankView;
+	private ViewPanel currentViewPanel;
 	private int selectedGameId = GameConstants.NO_GAME;
 
 	private List<GameSelectionListener> selectGameListeners = new ArrayList<>();
@@ -52,6 +51,7 @@ public class ViewPanelManager {
 	private List<MouseListener> runGameListeners2 = new ArrayList<>();
 	private List<Action> renameGameListeners = new ArrayList<>();
 	private List<Action> removeGameListeners = new ArrayList<>();
+	private List<KeyListener> superImportantKeyListeners = new ArrayList<>();
 	private List<Action> increaseFontListeners = new ArrayList<>();
 	private List<MouseWheelListener> increaseFontListeners2 = new ArrayList<>();
 	private List<Action> decreaseFontListeners = new ArrayList<>();
@@ -80,26 +80,26 @@ public class ViewPanelManager {
 
 	public ViewPanelManager() {
 		iconStore = IconStore.current();
-		panels.add(pnlBlankView);
+		panels.add(currentViewPanel);
 	}
 
 	public void initPlatforms(List<Platform> platforms, Explorer explorer) {
 		this.platforms = platforms;
 		for (Platform p : platforms) {
 			int platformId = p.getId();
-			initEmulatorIcons(explorer.getEmulatorsDirectory(p), p.getEmulators());
+			initEmulatorIcons(p.getEmulators());
 			iconStore.addPlatformIcon(platformId, explorer.getLogosDirectoryFromPlatform(p), p.getIconFilename());
 			iconStore.addPlatformCover(platformId, explorer.getPlatformCoversDirectoryFromPlatform(p), p.getDefaultGameCover());
 		}
 	}
 
-	private void initEmulatorIcons(String emulatorIconDirectory, List<BroEmulator> list) {
+	private void initEmulatorIcons(List<BroEmulator> list) {
 		for (Emulator e : list) {
 			String shortName = e.getShortName();
 			if (shortName == null) {
 				shortName = e.getName().toLowerCase().replaceAll("\\s+","");
 			}
-			String coverPath = emulatorIconDirectory + File.separator + shortName + ".png";
+			String coverPath = "/emulators/"+shortName+".png";
 			System.out.println(coverPath);
 			iconStore.addEmulatorIconPath(e.getId(), coverPath);
 		}
@@ -137,8 +137,11 @@ public class ViewPanelManager {
 		for (Action l : removeGameListeners) {
 			pnlView.addRemoveGameListener(l);
 		}
+		for (KeyListener l : superImportantKeyListeners) {
+			pnlView.addSuperImportantKeyListener(l);
+		}
 		for (MouseWheelListener l : increaseFontListeners2) {
-			pnlView.addIncreaseFontListener2(l);
+			pnlView.addSwitchViewByMouseWheelListener(l);
 		}
 		for (Action l : openGamePropertiesListeners) {
 			pnlView.addOpenGamePropertiesListener(l);
@@ -228,6 +231,15 @@ public class ViewPanelManager {
 		}
 	}
 
+	public void addSuperImportantKeyListener(KeyListener l) {
+		superImportantKeyListeners.add(l);
+		for (ViewPanel pnl : panels) {
+			if (pnl != null) {
+				pnl.addSuperImportantKeyListener(l);
+			}
+		}
+	}
+
 	public void addIncreaseFontListener(Action l) {
 		increaseFontListeners.add(l);
 		for (ViewPanel pnl : panels) {
@@ -237,11 +249,11 @@ public class ViewPanelManager {
 		}
 	}
 
-	public void addIncreaseFontListener2(MouseWheelListener l) {
+	public void addSwitchViewByMouseWheelListener(MouseWheelListener l) {
 		increaseFontListeners2.add(l);
 		for (ViewPanel pnl : panels) {
 			if (pnl != null) {
-				pnl.addIncreaseFontListener2(l);
+				pnl.addSwitchViewByMouseWheelListener(l);
 			}
 		}
 	}
@@ -610,10 +622,6 @@ public class ViewPanelManager {
 			}
 		}
 		return null;
-	}
-
-	public WelcomeViewPanel getBlankViewPanel() {
-		return pnlBlankView;
 	}
 
 	public void scrollToSelectedGames() {

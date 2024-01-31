@@ -1,0 +1,67 @@
+{
+  "name": "Sony Playstation Portable",
+  "shortName": "psp",
+  "companyName": "Sony",
+  "iconFilename": "",
+  "defaultGameCover": "",
+  "recommendedEmulators": [
+    "PPSSPP"
+  ],
+  "plugins": [
+    {
+      "covers": "",
+      "titles": ""
+    }
+  ],
+  "gameSearchModes": [
+    "FILE_FILE_NAME_MATCH",
+    "ARCHIVE_FILE_NAME_MATCH",
+    "IMAGE_FILE_NAME_MATCH"
+  ],
+  "searchFor": "^(.+)\\.pbp$",
+  "fileStructure": [
+  ],
+  "supportedArchiveTypes": [
+    ".zip"
+  ],
+  "supportedImageTypes": [
+    ".iso",
+    ".cso"
+  ],
+  "emulators": [
+    {
+      "name": "PPSSPP",
+      "os": [
+      ],
+      "path": "",
+      "iconFilename": "ppsspp.png",
+      "configFilePath": "",
+      "website": "http://www.ppsspp.org/downloads.html",
+      "startParameters": "%emupath% %gamepath%",
+      "supportedFileTypes": [
+        ".iso",
+        ".cso",
+        ".pbp",
+        ".elf",
+        ".prx",
+        ".zip"
+      ],
+      "searchString": "^(ppsspp.*)\\.exe$",
+      "archiveFileMatchWin": "^(ppsspp-(.*)-win_x64)\\.zip$",
+      "archiveFileMatchLinux": "^(ppsspp-(.*)-linux_x64)\\.tar$",
+      "archiveFileMatchMac": "^(ppsspp-(.*)-osx_x64)\\.zip$",
+      "setupFileMatchWin": "",
+      "setupFileMatchLinux": "",
+      "setupFileMatchMac": "",
+      "autoSearchEnabled": true,
+      "biosRequired": false,
+      "runCommandsBefore": [
+      ]
+    }
+  ],
+  "directExecutionMode": "none",
+  "autoSearchEnabled": true,
+  "gameCodeRegexes": [
+    "(UL(A|E|J|K|U)S|UC(A|E|J|K|U)S|UCJ(B|M|S)|NP(E|U)X|NP(E|H|U)Z|NP(E|H|J|U)H|NP(E|H|J|U)G|NPUF|ULJM|NPJJ)(-[0-9]{5}|_[0-9]{3}\\.[0-9]{2})"
+  ]
+}

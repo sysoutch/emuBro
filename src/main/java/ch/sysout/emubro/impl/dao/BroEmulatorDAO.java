@@ -44,8 +44,10 @@ public class BroEmulatorDAO implements EmulatorDAO {
 				String setupFileMatch = rset.getString("emulator_setupFileMatch");
 				String[] supportedFileTypes = rset.getString("emulator_supportedFileTypes").split(" ");
 				boolean autoSearchEnabled = rset.getBoolean("emulator_autoSearchEnabled");
+				boolean biosRequired = rset.getBoolean("emulator_biosRequired");
+				String[] runCommandsBefore = rset.getString("emulator_runCommandsBefore").split(" ");
 				emulator = new BroEmulator(emulatorId, name, shortName, path, iconFilename, configFilePath, website,
-						startParameter, supportedFileTypes, searchString, setupFileMatch, autoSearchEnabled);
+						startParameter, supportedFileTypes, searchString, setupFileMatch, autoSearchEnabled, biosRequired, runCommandsBefore);
 			} catch (SQLException e) {
 				e.printStackTrace();
 			}
@@ -67,10 +69,21 @@ public class BroEmulatorDAO implements EmulatorDAO {
 			for (String type : emulator.getSupportedFileTypes()) {
 				supportedFileTypesString += type + " ";
 			}
+
+			String runCommandsBeforeString = "";
+			var runCommandsBefore = emulator.getRunCommandsBefore();
+			if (runCommandsBefore != null) {
+				for (String type : runCommandsBefore) {
+					runCommandsBeforeString += type + " ";
+				}
+			}
 			String startParameter = emulator.getStartParameters();
+			/**
+			 * TODO implement runCommandsBefore
+			 */
 			String sql = SqlUtil.insertIntoWithColumnsString("emulator", "emulator_name", "emulator_path",
 					"emulator_iconFileName", "emulator_configFilePath", "emulator_website", "emulator_startParameters",
-					"emulator_searchString", "emulator_supportedFileTypes", "emulator_autoSearchEnabled",
+					"emulator_searchString", "emulator_supportedFileTypes", "emulator_autoSearchEnabled", "emulator_biosRequired", "emulator_runCommandsBefore",
 					"emulator_deleted",
 					SqlUtil.getQuotedString(emulator.getName()),
 					SqlUtil.getQuotedString(emulator.getAbsolutePath()),
@@ -81,6 +94,8 @@ public class BroEmulatorDAO implements EmulatorDAO {
 					SqlUtil.getQuotedString(emulator.getSearchString()),
 					SqlUtil.getQuotedString(supportedFileTypesString),
 					emulator.isAutoSearchEnabled(),
+					emulator.isBiosRequired(),
+					SqlUtil.getQuotedString(runCommandsBeforeString),
 					false);
 			try {
 				stmt.executeQuery(sql);

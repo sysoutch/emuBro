@@ -1,0 +1,163 @@
+{  
+  "name":"Atari 5200",
+  "shortName":"atari5200",
+  "companyName":"Atari",
+  "iconFilename":"",
+  "defaultGameCover":"",
+  "recommendedEmulators":[
+  ],
+  "plugins":[
+	{
+	  "covers":"",
+	  "titles":""
+	}
+  ],
+  "gameSearchModes":[  
+	 "FILE_FILE_NAME_MATCH",
+	 "ARCHIVE_FILE_NAME_MATCH"
+  ],
+  "searchFor":"",
+  "fileStructure":[  
+
+  ],
+  "supportedArchiveTypes":[  
+
+  ],
+  "supportedImageTypes":[  
+
+  ],
+  "emulators":[  
+	 {  
+		"name":"Atari++",
+		"os":[
+
+		],
+		"path":"",
+		"iconFilename":"atariplusplus.png",
+		"configFilePath":"",
+		"website":"http://www.xl-project.com/downloads.html",
+		"startParameters":"%emupath% %gamepath%",
+		"supportedFileTypes":[  
+
+		],
+		"searchString":"^(atari++)\\.exe$",
+		"archiveFileMatchWin":"^(atari++_win_(.*))\\.zip$",
+		"archiveFileMatchLinux":"",
+		"archiveFileMatchMac":"",
+		"setupFileMatchWin":"",
+		"setupFileMatchLinux":"",
+		"setupFileMatchMac":"",
+		"autoSearchEnabled":true,
+		"biosRequired":false,
+		"runCommandsBefore":[
+		 
+		]
+	 },
+	 {  
+		"name":"Atari800",
+		"os":[
+
+		],
+		"path":"",
+		"iconFilename":"atari800.png",
+		"configFilePath":"",
+		"website":"https://atari800.github.io/download.html",
+		"startParameters":"%emupath% %gamepath%",
+		"supportedFileTypes":[  
+
+		],
+		"searchString":"^(atari800)\\.exe$",
+		"archiveFileMatchWin":"^(atari800-(.*)-win_x64)\\.zip$",
+		"archiveFileMatchLinux":"^(atari800-(.*)-linux_x64)\\.tar$",
+		"archiveFileMatchMac":"^(atari800-(.*)-osx_x64)\\.zip$",
+		"setupFileMatchWin":"",
+		"setupFileMatchLinux":"",
+		"setupFileMatchMac":"",
+		"autoSearchEnabled":true,
+		"biosRequired":false,
+		"runCommandsBefore":[
+		 
+		]
+	 },
+	 {  
+		"name":"kat5200",
+		"os":[
+
+		],
+		"path":"",
+		"iconFilename":"kat5200.png",
+		"configFilePath":"",
+		"website":"http://kat5200.jillybunch.com/downloads.html",
+		"startParameters":"%emupath% %gamepath%",
+		"supportedFileTypes":[  
+
+		],
+		"searchString":"^(kat5200)\\.exe$",
+		"archiveFileMatchWin":"^(kat5200-(.*)-win_x64)\\.zip$",
+		"archiveFileMatchLinux":"^(kat5200-(.*)-linux_x64)\\.tar$",
+		"archiveFileMatchMac":"^(kat5200-(.*)-osx_x64)\\.zip$",
+		"setupFileMatchWin":"",
+		"setupFileMatchLinux":"",
+		"setupFileMatchMac":"",
+		"autoSearchEnabled":true,
+		"biosRequired":false,
+		"runCommandsBefore":[
+		 
+		]
+	 },
+	 {  
+		"name":"MESS",
+		"os":[
+
+		],
+		"path":"",
+		"iconFilename":"atariplusplus.png",
+		"configFilePath":"",
+		"website":"http://www.mamedev.org/release.html",
+		"startParameters":"%emupath% %gamepath%",
+		"supportedFileTypes":[  
+
+		],
+		"searchString":"^(mess)\\.exe$",
+		"archiveFileMatchWin":"^(mess-(.*)-win_x64)\\.zip$",
+		"archiveFileMatchLinux":"^(mess-(.*)-linux_x64)\\.tar$",
+		"archiveFileMatchMac":"^(mess-(.*)-osx_x64)\\.zip$",
+		"setupFileMatchWin":"",
+		"setupFileMatchLinux":"",
+		"setupFileMatchMac":"",
+		"autoSearchEnabled":true,
+		"biosRequired":false,
+		"runCommandsBefore":[
+		 
+		]
+	 },
+	 {  
+		"name":"VSS",
+		"os":[
+
+		],
+		"path":"",
+		"iconFilename":"vss.png",
+		"configFilePath":"",
+		"website":"http://atarihq.com/danb/a5200.shtml",
+		"startParameters":"%emupath% %gamepath%",
+		"supportedFileTypes":[  
+
+		],
+		"searchString":"^(vss)\\.exe$",
+		"archiveFileMatchWin":"^(vss-(.*)-win_x64)\\.zip$",
+		"archiveFileMatchLinux":"^(vss-(.*)-linux_x64)\\.tar$",
+		"archiveFileMatchMac":"^(vss-(.*)-osx_x64)\\.zip$",
+		"setupFileMatchWin":"",
+		"setupFileMatchLinux":"",
+		"setupFileMatchMac":"",
+		"autoSearchEnabled":true,
+		"biosRequired":false,
+		"runCommandsBefore":[
+		 
+		]
+	 }
+  ],
+  "directExecutionMode":"none",
+  "autoSearchEnabled":true
+}

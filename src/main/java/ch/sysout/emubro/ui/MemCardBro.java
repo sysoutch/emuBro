@@ -1,22 +1,9 @@
 package ch.sysout.emubro.ui;
 
-import java.awt.Container;
 import java.awt.event.ActionListener;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.lang.reflect.Type;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URL;
-import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
@@ -28,10 +15,6 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.WindowConstants;
 
-import org.apache.commons.io.FileUtils;
-
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import com.jgoodies.forms.factories.CC;
 import com.jgoodies.forms.factories.Paddings;
 import com.jgoodies.forms.layout.FormLayout;
@@ -67,12 +50,9 @@ public class MemCardBro extends JFrame {
 	private JButton btnSaveCard1;
 	private JButton btnSaveCard2;
 
-	private Map<String, String> gameCodes = new HashMap<>();
-
+	private Properties gameCodes;
 
 	public MemCardBro() {
-		initializeGameCodes();
-
 		initComponents();
 		setTitle("Memory Card Manager");
 		setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
@@ -119,12 +99,11 @@ public class MemCardBro extends JFrame {
 		add(pnl);
 		pack();
 		setMinimumSize(getSize());
-		setVisible(true);
 	}
 
 	public void initMemCard(String mcrFile) {
 		mdlLstSaveBlocks1.clear();
-		if (mcrFile.endsWith(".mcr") || mcrFile.endsWith(".mcd")) {
+		if (mcrFile.endsWith(".mcr") || mcrFile.endsWith(".mcd") || mcrFile.endsWith(".ps2")) {
 			File file = Paths.get(mcrFile).toFile();
 			float fileSizeInKiloBytes = file.length() / 1024f;
 			String pathToMemCard = file.getAbsolutePath();
@@ -197,61 +176,12 @@ public class MemCardBro extends JFrame {
 	public void addOpenMemCardListener(ActionListener l) {
 		btnOpenMemCard1.addActionListener(l);
 	}
-	
-	private void initializeGameCodes() {
-		File f = new File(System.getProperty("user.dir") + "\\psx.json");
-		URI jsonFile = f.toURI();
-		try {
-			String allLines = new String(Files.readAllBytes(Paths.get(jsonFile)));
-//				try (Stream<String> stream = Files.lines(Paths.get(jsonFile))) {
-//			        stream.forEach(System.out::println);
-//				}
-			
-			Gson gson = new Gson();
-			java.lang.reflect.Type collectionType = new TypeToken<List<JsonDummyClass>>(){}.getType();
-			List<JsonDummyClass> enums = gson.fromJson(allLines, collectionType);
-			for (int i = 0; i < enums.size(); i++) {
-				JsonDummyClass obj = enums.get(i);
-				System.out.println(obj.getGame_gameCode());
-				gameCodes.put(obj.getGame_gameCode().toUpperCase(), obj.getGame_name());
-			}
-//			JSONArray arr = new JSONArray(allLines);
-//			System.out.println(arr.length());
-//			for (int i = 0; i < arr.length(); i++) {
-//				System.out.println(arr.getString(1));
-//			}
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 
-//		JSONArray arr = obj.getJSONArray("posts"); // notice that `"posts": [...]`
-//		for (int i = 0; i < arr.length(); i++)
-//		{
-//		    String post_id = arr.getJSONObject(i).getString("post_id");
-//		    ......
-//		}
+	public void setGameCodes(Properties gameCodes) {
+		this.gameCodes = gameCodes;
 	}
 
 	private String getRealGameName(String gameCode) {
-		return gameCodes.get(gameCode.toUpperCase());
-	}
-
-	public class JsonDummyClass {
-		private String game_name;
-		private String game_gameCode;
-		
-		public JsonDummyClass(String game_name, String game_gameCode) {
-			this.game_name = game_name;
-			this.game_gameCode = game_gameCode;
-		}
-		
-		public String getGame_name() {
-			return game_name;
-		}
-		
-		public String getGame_gameCode() {
-			return game_gameCode;
-		}
+		return gameCodes.getProperty(gameCode.toUpperCase());
 	}
 }

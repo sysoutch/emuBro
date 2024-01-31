@@ -15,14 +15,9 @@ import java.awt.event.MouseMotionAdapter;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import javax.swing.Icon;
-import javax.swing.ImageIcon;
-import javax.swing.JButton;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JSeparator;
-import javax.swing.SwingUtilities;
+import javax.swing.*;
 
+import com.jgoodies.forms.factories.CC;
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 
@@ -39,7 +34,7 @@ import ch.sysout.util.ScreenSizeUtil;
 public class GameCountPanel extends JPanel implements GameListener, DetailsPaneListener, LanguageListener {
 	private static final long serialVersionUID = 1L;
 	private JLabel lblGameCount = new JLabel("");
-	private JLinkButton lnkSystemInformations = new JLinkButton("retrieve system informations...");
+	private JLinkButton lnkSystemInformations = new JLinkButton();
 	private ProgressPanel pnlProgress;
 	private JButton btnShowDetailsPane = new JCustomButtonNew();
 	private JLabel btnResize = new JLabel();
@@ -53,6 +48,7 @@ public class GameCountPanel extends JPanel implements GameListener, DetailsPaneL
 	protected boolean copySystemInformationsLocked = true;
 	private SystemInformationsDialog dlgSystemInformations;
 	private Component systemInformationsDialogRelativeToComponent;
+	private JProgressBar pbGettingSystemInformation;
 
 	public GameCountPanel() {
 		super();
@@ -170,12 +166,15 @@ public class GameCountPanel extends JPanel implements GameListener, DetailsPaneL
 		FormLayout layout = new FormLayout("min, $rgap, min, $rgap, min:grow, $ugap, default",
 				"fill:min");
 		setLayout(layout);
-		CellConstraints cc = new CellConstraints();
 		lnkSystemInformations.setMinimumSize(new Dimension(0, 0));
-		add(lblGameCount, cc.xy(1, 1));
-		add(new JSeparator(JSeparator.VERTICAL), cc.xy(3, 1));
-		add(lnkSystemInformations, cc.xy(5, 1));
-		add(pnlProgress, cc.xy(7, 1));
+		add(lblGameCount, CC.xy(1, 1));
+		add(new JSeparator(JSeparator.VERTICAL), CC.xy(3, 1));
+		pbGettingSystemInformation = new JProgressBar();
+		pbGettingSystemInformation.setIndeterminate(true);
+		pbGettingSystemInformation.setStringPainted(true);
+		pbGettingSystemInformation.setString("retrieving system information...");
+		add(pbGettingSystemInformation, CC.xy(5, 1));
+		add(pnlProgress, CC.xy(7, 1));
 	}
 
 	public void updateGameCount(int gameCount) {
@@ -236,12 +235,16 @@ public class GameCountPanel extends JPanel implements GameListener, DetailsPaneL
 
 	public void showSystemInformations(String[] informations) {
 		systemInformations = informations;
-		String string = "";
-		for (String s : informations) {
-			string += s +"\t\r\n";
+		StringBuilder string = new StringBuilder();
+		for (int i = 0; i < informations.length; i++) {
+			boolean notLast = (i < informations.length-1);
+			string.append(informations[i]).append(notLast ? " | " : "");
 		}
-		lnkSystemInformations.setText(string);
+		lnkSystemInformations.setText(string.toString());
 		copySystemInformationsLocked = false;
+		remove(pbGettingSystemInformation);
+		add(lnkSystemInformations, CC.xy(5, 1));
+		UIUtil.revalidateAndRepaint(this);
 	}
 
 	public void showShowDetailsPaneButton(boolean b) {

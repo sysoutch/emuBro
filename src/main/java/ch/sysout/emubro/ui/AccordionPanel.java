@@ -147,6 +147,7 @@ public class AccordionPanel extends JPanel implements ActionListener {
 		public AccordionTab(String name, Icon icon, JComponent component) {
 			this.name = name;
 			this.component = component;
+			component.setOpaque(false);
 			button = new JCustomButton(name, icon);
 			button.setHorizontalAlignment(SwingConstants.LEFT);
 		}

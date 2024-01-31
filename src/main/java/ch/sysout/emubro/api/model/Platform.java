@@ -71,4 +71,6 @@ public interface Platform extends Comparable<Platform> {
 	boolean hasGameCodeRegexes();
 
 	List<String> getGameCodeRegexes();
+
+    void setGameCodeRegexes(List<String> gameCodeRegexes);
 }

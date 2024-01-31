@@ -1,0 +1,111 @@
+{  
+  "name":"Microsoft Xbox",
+  "shortName":"xbox",
+  "companyName":"Microsoft",
+  "iconFilename":"",
+  "defaultGameCover":"",
+  "recommendedEmulators":[
+	 "Qemu"
+  ],
+  "plugins":[
+	{
+	  "covers":"",
+	  "titles":""
+	}
+  ],
+  "gameSearchModes":[  
+	 "FILE_FILE_NAME_MATCH"
+  ],
+  "searchFor":"",
+  "fileStructure":[  
+
+  ],
+  "supportedArchiveTypes":[  
+
+  ],
+  "supportedImageTypes":[  
+
+  ],
+  "emulators":[  
+	 {  
+		"name":"Qemu",
+		"os":[
+
+		],
+		"path":"",
+		"iconFilename":"blank.png",
+		"configFilePath":"",
+		"website":"http://wiki.qemu.org/Download",
+		"startParameters":"%gamepath%",
+		"supportedFileTypes":[  
+
+		],
+		"searchString":"^(qemu)\\.exe$",
+		"archiveFileMatchWin":"^(qemu-(.*)-win_x64)\\.zip$",
+		"archiveFileMatchLinux":"^(qemu-(.*)-linux_x64)\\.tar$",
+		"archiveFileMatchMac":"^(qemu-(.*)-osx_x64)\\.zip$",
+		"setupFileMatchWin":"",
+		"setupFileMatchLinux":"",
+		"setupFileMatchMac":"",
+		"autoSearchEnabled":true,
+		"biosRequired":false,
+		"runCommandsBefore":[
+		 
+		]
+	 },
+	 {  
+		"name":"XQEMU",
+		"os":[
+
+		],
+		"path":"",
+		"iconFilename":"blank.png",
+		"configFilePath":"",
+		"website":"https://github.com/xqemu/xqemu",
+		"startParameters":"%gamepath%",
+		"supportedFileTypes":[  
+
+		],
+		"searchString":"^(xqemu)\\.exe$",
+		"archiveFileMatchWin":"^(xqemu-(.*)-win_x64)\\.zip$",
+		"archiveFileMatchLinux":"^(xqemu-(.*)-linux_x64)\\.tar$",
+		"archiveFileMatchMac":"^(xqemu-(.*)-osx_x64)\\.zip$",
+		"setupFileMatchWin":"",
+		"setupFileMatchLinux":"",
+		"setupFileMatchMac":"",
+		"autoSearchEnabled":true,
+		"biosRequired":false,
+		"runCommandsBefore":[
+		 
+		]
+	 },
+	 {  
+		"name":"Xeon",
+		"os":[
+
+		],
+		"path":"",
+		"iconFilename":"xeon.png",
+		"configFilePath":"",
+		"website":"http://www.emulator-zone.com/doc.php/xbox/xeon.html",
+		"startParameters":"%gamepath%",
+		"supportedFileTypes":[  
+
+		],
+		"searchString":"^(xeon)\\.exe$",
+		"archiveFileMatchWin":"^(xeon-(.*)-win_x64)\\.zip$",
+		"archiveFileMatchLinux":"^(xeon-(.*)-linux_x64)\\.tar$",
+		"archiveFileMatchMac":"^(xeon-(.*)-osx_x64)\\.zip$",
+		"setupFileMatchWin":"",
+		"setupFileMatchLinux":"",
+		"setupFileMatchMac":"",
+		"autoSearchEnabled":true,
+		"biosRequired":false,
+		"runCommandsBefore":[
+		 
+		]
+	 }
+  ],
+  "directExecutionMode":"none",
+  "autoSearchEnabled":true
+}

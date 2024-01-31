@@ -45,7 +45,7 @@ public interface Explorer {
 
 	boolean hasPlatform(String name);
 
-	Platform getPlatform(String name);
+	Platform getPlatform(String shortName);
 
 	// void addEmulator(Emulator emulator);
 	//
@@ -173,6 +173,8 @@ public interface Explorer {
 
 	void addFilterGroup(FilterGroup filterGroup);
 
+	Properties getGameTitlesFromPlatform(String shortName);
+
 	Properties getGameTitlesFromPlatform(Platform platform);
 
 	void setGameTitlesForPlatform(Platform platform, Properties prop);
@@ -188,8 +190,6 @@ public interface Explorer {
 	String getCoverDownloadSource(Game game);
 
 	String getRelativeTitlesSourceFilePath(Platform platform);
-
-	String getEmulatorsDirectory(Platform platform);
 
 	boolean isShowPlatformIconsEnabled();
 

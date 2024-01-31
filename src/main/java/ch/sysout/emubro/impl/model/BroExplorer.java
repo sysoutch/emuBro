@@ -48,7 +48,7 @@ public class BroExplorer implements Explorer {
 	private String currentApplicationVersion;
 	private boolean discordFeatureDisabled = false; // this is intended to be false per default until user decides to disable it
 	private List<FilterGroup> filterGroups;
-	private Map<Integer, Properties> gameTitles;
+	private Map<String, Properties> gameTitles;
 
 	private boolean showPlatformIconsEnabled = false;
 	private boolean showGameNamesEnabled = true;
@@ -394,9 +394,9 @@ public class BroExplorer implements Explorer {
 	}
 
 	@Override
-	public Platform getPlatform(String name) {
-		if (platforms2.containsKey(name)) {
-			int platformId = platforms2.get(name);
+	public Platform getPlatform(String shortName) {
+		if (platforms2.containsKey(shortName)) {
+			int platformId = platforms2.get(shortName);
 			return platforms.get(platformId);
 		}
 		return null;
@@ -404,8 +404,7 @@ public class BroExplorer implements Explorer {
 
 	@Override
 	public Platform getPlatform(int platformId) {
-		Platform p = platforms.get(platformId);
-		return p;
+		return platforms.get(platformId);
 	}
 
 	@Override
@@ -819,7 +818,7 @@ public class BroExplorer implements Explorer {
 
 	@Override
 	public String getGameCoversPath() {
-		return getResourcesPath() + File.separator + "games" + File.separator + "covers";
+		return getResourcesPath() + File.separator + "covers";
 	}
 
 	@Override
@@ -834,7 +833,7 @@ public class BroExplorer implements Explorer {
 
 	@Override
 	public String getPlatformsDirectory() {
-		return getResourcesPath() + File.separator + "platforms";
+		return "/platforms";
 	}
 
 	@Override
@@ -848,14 +847,13 @@ public class BroExplorer implements Explorer {
 	}
 
 	@Override
-	public String getEmulatorsDirectory(Platform platform) {
-		//		return getPlatformsDirectory() + File.separator + "emulators";
-		return getResourcesPath() + File.separator + "emulators";
+	public Properties getGameTitlesFromPlatform(String shortName) {
+		return gameTitles != null ? gameTitles.get(shortName) : null;
 	}
 
 	@Override
 	public Properties getGameTitlesFromPlatform(Platform platform) {
-		return gameTitles != null ? gameTitles.get(platform.getId()) : null;
+		return getGameTitlesFromPlatform(platform.getShortName());
 	}
 
 	@Override
@@ -863,7 +861,7 @@ public class BroExplorer implements Explorer {
 		if (gameTitles == null) {
 			gameTitles = new HashMap<>();
 		}
-		gameTitles.put(platform.getId(), prop);
+		gameTitles.put(platform.getShortName(), prop);
 	}
 
 	@Override

@@ -1,0 +1,60 @@
+{  
+  "name":"Amiga",
+  "shortName":"amiga",
+  "companyName":"Commodore",
+  "iconFilename":"",
+  "defaultGameCover":"",
+  "recommendedEmulators":[
+	 "WinFellow"
+  ],
+  "plugins":[
+	{
+	  "covers":"",
+	  "titles":""
+	}
+  ],
+  "gameSearchModes":[  
+	 "FILE_FILE_NAME_MATCH",
+	 "ARCHIVE_FILE_NAME_MATCH"
+  ],
+  "searchFor":"",
+  "fileStructure":[  
+
+  ],
+  "supportedArchiveTypes":[  
+
+  ],
+  "supportedImageTypes":[  
+
+  ],
+  "emulators":[  
+	 {  
+		"name":"WinFellow",
+		"os":[
+
+		],
+		"path":"",
+		"iconFilename":"winfellow.png",
+		"configFilePath":"",
+		"website":"https://github.com/petschau/WinFellow/releases",
+		"startParameters":"%emupath% %gamepath%",
+		"supportedFileTypes":[  
+
+		],
+		"searchString":"^(winfellow)\\.exe$",
+		"archiveFileMatchWin":"^(WinFellow_(.*)-master-(.*))\\.zip$",
+		"archiveFileMatchLinux":"^(WinFellow_(.*)-master-(.*))\\.tar$",
+		"archiveFileMatchMac":"^(WinFellow_(.*)-master-(.*))\\.zip$",
+		"setupFileMatchWin":"^(WinFellow_(.*)-master-(.*))\\.exe$",
+		"setupFileMatchLinux":"",
+		"setupFileMatchMac":"",
+		"autoSearchEnabled":true,
+		"biosRequired":false,
+		"runCommandsBefore":[
+		 
+		]
+	 }
+  ],
+  "directExecutionMode":"none",
+  "autoSearchEnabled":true
+}

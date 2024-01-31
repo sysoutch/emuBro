@@ -14,15 +14,7 @@ import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetListener;
-import java.awt.event.ActionListener;
-import java.awt.event.InputEvent;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
-import java.awt.event.MouseMotionAdapter;
-import java.awt.event.MouseWheelListener;
+import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -163,21 +155,28 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 
 	protected void showGamePopupMenu(Component relativeTo, int x, int y) {
 		popupGame.show(relativeTo, x, y);
-		List<Game> currentGame = explorer.getCurrentGames();
-		int platformId = currentGame.get(0).getPlatformId();
+		List<Game> currentGames = explorer.getCurrentGames();
+		int platformId = currentGames.get(0).getPlatformId();
 		Platform platform = explorer.getPlatform(platformId);
 		List<BroEmulator> emulators = platform.getEmulators();
 		int defaultEmulatorId = EmulatorConstants.NO_EMULATOR;
-		for (int i = 0; i < emulators.size(); i++) {
-			Emulator emulator = emulators.get(i);
-			if (!emulator.isInstalled()) {
-				continue;
+        for (Emulator emulator : emulators) {
+            if (!emulator.isInstalled()) {
+                continue;
+            }
+			int defaultGameEmulatorId = currentGames.get(0).getDefaultEmulatorId();
+			if (defaultGameEmulatorId == EmulatorConstants.NO_EMULATOR) {
+				if (emulator.getId() == platform.getDefaultEmulatorId()) {
+					defaultEmulatorId = emulator.getId();
+					break;
+				}
+			} else {
+				if (emulator.getId() == defaultGameEmulatorId) {
+					defaultEmulatorId = emulator.getId();
+					break;
+				}
 			}
-			if (emulator.getId() == platform.getDefaultEmulatorId()) {
-				defaultEmulatorId = emulator.getId();
-				break;
-			}
-		}
+        }
 		popupGame.initEmulators(emulators, defaultEmulatorId);
 	}
 
@@ -186,9 +185,14 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 	}
 
 	private void initComponents() {
-		tblGames = new JTableDoubleClickOnHeaderFix();
+		tblGames = new JTableDoubleClickOnHeaderFix() {
+			@Override
+			public void scrollRectToVisible(Rectangle aRect) {
+				aRect.x = getVisibleRect().x;
+				super.scrollRectToVisible(aRect);
+			}
+		};
 		tblGames.setDefaultRenderer(LabelIcon.class, new LabelIconRenderer());
-
 		tblGames.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
@@ -329,7 +333,7 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 		tblGames.setIntercellSpacing(new Dimension());
 		tblGames.setShowGrid(false);
 		tblGames.getColumnModel().setColumnMargin(0);
-		tblGames.setAutoscrolls(false);
+		tblGames.setAutoscrolls(true);
 		tblGames.getTableHeader().setReorderingAllowed(false);
 		tblGames.setFillsViewportHeight(true);
 		tblGames.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
@@ -568,11 +572,13 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 			// BroGameSelectionEvent event = new BroGameSelectionEvent(game);
 			// fireEvent(event);
 		}
-		spTblGames.getHorizontalScrollBar().setValue(lastHorizontalScrollBarValue);
+		lastVerticalScrollBarValue = spTblGames.getVerticalScrollBar().getValue();
+//		spTblGames.getHorizontalScrollBar().setValue(lastHorizontalScrollBarValue);
 		lastHorizontalScrollBarValue = spTblGames.getHorizontalScrollBar().getValue();
-		int selectedRow = tblGames.getSelectedRow();
-		tblGames.getSelectionModel().setSelectionInterval(selectedRow, selectedRow);
-		tblGames.scrollRectToVisible(new Rectangle(tblGames.getCellRect(selectedRow, 0, true)));
+//		int selectedRow = tblGames.getSelectedRow();
+//		tblGames.getSelectionModel().setSelectionInterval(selectedRow, selectedRow);
+//		int scrollToCol = 0;
+//		tblGames.scrollRectToVisible(tblGames.getCellRect(selectedRow, scrollToCol, true));
 	}
 
 	private void fireGameSelectedEvent(GameSelectionEvent event) {
@@ -755,6 +761,11 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 	@Override
 	public void hideExtensions(boolean hideExtensions) {
 		this.hideExtensions = hideExtensions;
+	}
+
+	@Override
+	public void addSuperImportantKeyListener(KeyListener l) {
+		tblGames.addKeyListener(l);
 	}
 
 	public int getfontSize() {
@@ -959,7 +970,7 @@ public class TableViewPanel extends ViewPanel implements ListSelectionListener, 
 	}
 
 	@Override
-	public void addIncreaseFontListener2(MouseWheelListener l) {
+	public void addSwitchViewByMouseWheelListener(MouseWheelListener l) {
 		// TODO Auto-generated method stub
 
 	}

@@ -9,7 +9,7 @@ import java.util.Map;
 
 public class RegistryUtil {
 
-	public static String readValueFromKey(String key, String valueName) throws IOException, InterruptedException {
+	public static String readValue(String key, String valueName) throws IOException, InterruptedException {
 		String execString[] = { "reg", "query", key, "/v", valueName };
 		Process process = Runtime.getRuntime().exec(execString);
 		StreamReader reader = new StreamReader(process.getInputStream());

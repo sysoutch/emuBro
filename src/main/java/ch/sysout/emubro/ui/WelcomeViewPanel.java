@@ -10,6 +10,7 @@ import java.awt.Image;
 import java.awt.RenderingHints;
 import java.awt.dnd.DropTargetListener;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyListener;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseWheelListener;
 import java.awt.image.BufferedImage;
@@ -48,7 +49,7 @@ import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 
-public class WelcomeViewPanel extends ViewPanel {
+public class WelcomeViewPanel extends JPanel {
 	private static final long serialVersionUID = 1L;
 
 	private JButton lnkBrowseComputer = new JCustomButtonNew(Messages.get(MessageConstants.BROWSE_COMPUTER));
@@ -62,7 +63,6 @@ public class WelcomeViewPanel extends ViewPanel {
 	private JButton lnkContentView = new JCustomButtonNew(Messages.get(MessageConstants.VIEW_CONTENT));
 	private JButton lnkSliderView = new JCustomButtonNew(Messages.get(MessageConstants.VIEW_SLIDER));
 	private JButton lnkCoverView = new JCustomButtonNew(Messages.get(MessageConstants.VIEW_COVERS));
-
 	private JButton lnkHelp = new JCustomButtonNew(Messages.get(MessageConstants.HELP));
 	private JButton lnkTroubleshoot = new JCustomButtonNew(Messages.get(MessageConstants.QUICK_ACTIONS));
 	private JButton lnkGamepadTester = new JCustomButtonNew(Messages.get(MessageConstants.GAMEPAD_TESTER));
@@ -74,8 +74,6 @@ public class WelcomeViewPanel extends ViewPanel {
 	private Border titledBorderAction = BorderFactory.createTitledBorder(Messages.get(MessageConstants.RUN_ACTION));
 	private Border titledBorderView = BorderFactory.createTitledBorder(Messages.get(MessageConstants.CHOOSE_VIEW));
 	private Border titledBorderHelp = BorderFactory.createTitledBorder(Messages.get(MessageConstants.HELP));
-
-	private boolean themeChanged;
 
 	public WelcomeViewPanel() {
 		super(new BorderLayout());
@@ -145,10 +143,10 @@ public class WelcomeViewPanel extends ViewPanel {
 
 		JPanel pnlWrapper = new JPanel(new BorderLayout());
 		pnlWrapper.setOpaque(false);
-		pnlWrapper.add(pnlAction);
-		pnlWrapper.add(pnlHelp, BorderLayout.SOUTH);
-		pnl.add(pnlWrapper, BorderLayout.EAST);
-		pnl.add(pnlView);
+		pnlWrapper.add(pnlAction, BorderLayout.WEST);
+		pnlWrapper.add(pnlHelp);
+		pnl.add(pnlWrapper);
+		pnl.add(pnlView, BorderLayout.WEST);
 
 		JScrollPane sp = new JCustomScrollPane(pnl);
 		sp.setOpaque(false);
@@ -172,8 +170,10 @@ public class WelcomeViewPanel extends ViewPanel {
 		lnkContentView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewList"), size, Color.LIGHT_GRAY));
 		lnkTableView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewTable"), size, Color.LIGHT_GRAY));
 		lnkCoverView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewCovers"), size, Color.LIGHT_GRAY));
+		lnkSliderView.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("viewSlider"), size, Color.LIGHT_GRAY));
 
 		lnkHelp.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("help"), size, Color.LIGHT_GRAY));
+		lnkTroubleshoot.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("quickActions"), size, Color.LIGHT_GRAY));
 		lnkDiscord.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("discord"), size, new Color(114,137,218)));
 		lnkGamepadTester.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("allGames"), size, Color.LIGHT_GRAY));
 		lnkConfigWizard.setIcon(ImageUtil.getImageIconFrom(Icons.get("configWizard", size, size)));
@@ -181,27 +181,6 @@ public class WelcomeViewPanel extends ViewPanel {
 		lnkAbout.setIcon(ImageUtil.getImageIconFrom(Icons.get("about", size, size)));
 	}
 
-	@Override
-	public void initGameList(List<Game> games, int currentNavView) {
-	}
-
-	@Override
-	public void addGameDragDropListener(DropTargetListener l) {
-	}
-
-	@Override
-	public void groupByNone() {
-	}
-
-	@Override
-	public void groupByPlatform() {
-	}
-
-	@Override
-	public void groupByTitle() {
-	}
-
-	@Override
 	public void languageChanged() {
 		((TitledBorder) titledBorderAction).setTitle(Messages.get(MessageConstants.RUN_ACTION));
 		((TitledBorder) titledBorderView).setTitle(Messages.get(MessageConstants.CHOOSE_VIEW));
@@ -223,245 +202,6 @@ public class WelcomeViewPanel extends ViewPanel {
 		lnkConfigWizard.setText(Messages.get(MessageConstants.CONFIGURE_WIZARD, Messages.get(MessageConstants.APPLICATION_TITLE)));
 		lnkUpdateEmubro.setText(Messages.get(MessageConstants.SEARCH_FOR_UPDATES));
 		lnkAbout.setText(Messages.get(MessageConstants.ABOUT, Messages.get(MessageConstants.APPLICATION_TITLE)));
-	}
-
-	@Override
-	public int getGroupBy() {
-		return ViewConstants.GROUP_BY_NONE;
-	}
-
-	@Override
-	public void sortOrder(int sortOrder) {
-	}
-
-	@Override
-	public void sortBy(int sortBy, PlatformComparator platformComparator) {
-	}
-
-	@Override
-	public void setFontSize(int fontSize) {
-	}
-
-	@Override
-	public void navigationChanged(NavigationEvent e, FilterEvent filterEvent) {
-	}
-
-	@Override
-	public void increaseFontSize() {
-	}
-
-	@Override
-	public void decreaseFontSize() {
-	}
-
-	@Override
-	public void pinColumnWidthSliderPanel(JPanel pnlColumnWidthSlider) {
-		add(pnlColumnWidthSlider, BorderLayout.SOUTH);
-		pnlColumnWidthSlider.setVisible(true);
-		UIUtil.revalidateAndRepaint(this);
-	}
-
-	@Override
-	public void unpinColumnWidthSliderPanel(JPanel pnlColumnWidthSlider) {
-		remove(pnlColumnWidthSlider);
-		UIUtil.revalidateAndRepaint(this);
-	}
-
-	@Override
-	public void pinRowHeightSliderPanel(JPanel pnlRowHeightSlider) {
-		add(pnlRowHeightSlider, BorderLayout.EAST);
-		pnlRowHeightSlider.setVisible(true);
-		UIUtil.revalidateAndRepaint(this);
-	}
-
-	@Override
-	public void unpinRowHeightSliderPanel(JPanel pnlRowHeightSlider) {
-		remove(pnlRowHeightSlider);
-		UIUtil.revalidateAndRepaint(this);
-	}
-
-	@Override
-	public void selectGame(int gameId) {
-
-	}
-
-	@Override
-	public void gameSelected(GameSelectionEvent e) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void addSelectGameListener(GameSelectionListener l) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void gameRated(Game game) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void hideExtensions(boolean shouldHide) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void addRunGameListener(Action l) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void addRunGameListener(MouseListener l) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void addDecreaseFontListener(Action l) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void addIncreaseFontListener(Action l) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void addIncreaseFontListener2(MouseWheelListener l) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void addOpenGamePropertiesListener(Action l) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void addRemoveGameListener(Action l) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public int getColumnWidth() {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	@Override
-	public void setColumnWidth(int value) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public int getRowHeight() {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	@Override
-	public void setRowHeight(int value) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void addCommentListener(ActionListener l) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void addOpenGameFolderListener1(MouseListener l) {
-	}
-
-	@Override
-	public void addRateListener(RateListener l) {
-	}
-
-	@Override
-	public void addRenameGameListener(Action l) {
-	}
-
-	@Override
-	public void gameAdded(GameAddedEvent e, FilterEvent event) {
-	}
-
-	@Override
-	public void gameRemoved(GameRemovedEvent e) {
-	}
-
-	@Override
-	public void selectNextGame() {
-	}
-
-	@Override
-	public void selectPreviousGame() {
-	}
-
-	@Override
-	public boolean isTouchScreenScrollEnabled() {
-		return false;
-	}
-
-	@Override
-	public void setTouchScreenScrollEnabled(boolean touchScreenScrollEnabled) {
-	}
-
-	@Override
-	public void setViewStyle(int viewStyle) {
-	}
-
-	@Override
-	public void addUpdateGameCountListener(UpdateGameCountListener l) {
-	}
-
-	@Override
-	public void addAddGameOrEmulatorFromClipboardListener(Action l) {
-	}
-
-	@Override
-	public void filterSet(FilterEvent event) {
-	}
-
-	@Override
-	public void gameRenamed(GameRenamedEvent event) {
-	}
-
-	@Override
-	public void addCoverDragDropListener(DropTargetListener l) {
-	}
-
-	@Override
-	public Component getDefaultFocusableComponent() {
-		return lnkBrowseComputer;
-	}
-
-	@Override
-	public void addTagListener(TagListener l) {
-	}
-
-	@Override
-	public void addTagsFromGamesListener(TagsFromGamesListener l) {
-	}
-
-	@Override
-	public List<Game> getGames() {
-		return null;
-	}
-
-	@Override
-	public void coverSizeChanged(int currentCoverSize) {
 	}
 
 	public void addOpenPropertiesListener(ActionListener l) {
@@ -526,127 +266,5 @@ public class WelcomeViewPanel extends ViewPanel {
 
 	public void addAddFoldersListener(ActionListener l) {
 		lnkAddFolders.addActionListener(l);
-	}
-
-	@Override
-	protected void paintComponent(Graphics g) {
-		super.paintComponent(g);
-		Graphics2D g2d = (Graphics2D) g.create();
-		int panelWidth = getWidth();
-		int panelHeight = getHeight();
-		Theme currentTheme = IconStore.current().getCurrentTheme();
-		ThemeBackground currentBackground = currentTheme.getView();
-		//		if (currentBackground.hasGradientPaint()) {
-		//			GradientPaint p = currentBackground.getGradientPaint();
-		//			g2d.setPaint(p);
-		//		} else if (currentBackground.hasColor()) {
-		//			g2d.setColor(currentBackground.getColor());
-		//		}
-		//		g2d.fillRect(0, 0, panelWidth, panelHeight);
-		if (currentBackground.hasColor()) {
-			Color backgroundColor = currentBackground.getColor();
-			g2d.setColor(backgroundColor);
-			g2d.fillRect(0, 0, panelWidth, panelHeight);
-		}
-		Image background = currentBackground.getImage();
-		if (background != null) {
-			g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-			g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-			g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-			int imgWidth = background.getWidth(null);
-			int imgHeight = background.getHeight(null);
-			int x = 0;
-			int y = 0;
-			boolean shouldScale = currentBackground.isImageScaleEnabled();
-			if (shouldScale) {
-				int new_width = imgWidth;
-				int new_height = imgHeight;
-				boolean stretchToView = currentBackground.isStretchToViewEnabled();
-				if (stretchToView) {
-					new_width = panelWidth;
-					new_height = panelHeight;
-				} else {
-					// first check if we need to scale width
-					if (imgWidth > panelWidth) {
-						//scale width to fit
-						new_width = panelWidth;
-						//scale height to maintain aspect ratio
-						new_height = (new_width * imgHeight) / imgWidth;
-					}
-
-					// then check if we need to scale even with the new height
-					if (new_height > panelHeight) {
-						//scale height to fit instead
-						new_height = panelHeight;
-						//scale width to maintain aspect ratio
-						new_width = (new_height * imgWidth) / imgHeight;
-					}
-					if (new_width < panelWidth) {
-						x += (panelWidth-new_width) / 2;
-					}
-					if (new_height < panelHeight) {
-						y += (panelHeight-new_height) / 2; // image centered
-						//					y = panelHeight-new_height; // image bottom
-					}
-				}
-				g2d.drawImage(background, x, y, new_width, new_height, this);
-				//				boolean addTransparencyPane = true;
-				//				if (addTransparencyPane) {
-				//					g2d.setColor(getTransparencyColor());
-				//					g2d.fillRect(x, y, new_width, new_height);
-				//				}
-			} else {
-				boolean shouldVerticalCenterImage = currentBackground.isVerticalCenterImageEnabled();
-				boolean shouldHorizontalCenterImage = currentBackground.isHorizontalCenterImageEnabled();
-				if (shouldVerticalCenterImage) {
-					if (imgWidth > panelWidth) {
-						x -= (imgWidth-panelWidth) / 2;
-					}
-				}
-				if (shouldHorizontalCenterImage) {
-					if (imgHeight > panelHeight) {
-						y -= (imgHeight-panelHeight) / 2;
-					}
-				}
-				g2d.drawImage(background, x, y, imgWidth, imgHeight, this);
-				//				boolean addTransparencyPane = true;
-				//				if (addTransparencyPane) {
-				//					g2d.setColor(getTransparencyColor());
-				//					g2d.fillRect(x, y, imgWidth, imgHeight);
-				//				}
-			}
-			boolean addTransparencyPane = currentBackground.isAddTransparencyPaneEnabled();
-			if (addTransparencyPane) {
-				g2d.setColor(currentBackground.getTransparencyColor());
-				g2d.fillRect(0, 0, panelWidth, panelHeight);
-			}
-			BufferedImage imgTransparentOverlay = currentTheme.getTransparentBackgroundOverlayImage();
-			if (imgTransparentOverlay != null) {
-				int width = imgTransparentOverlay.getWidth();
-				int height = imgTransparentOverlay.getHeight();
-
-				double factor = background.getWidth(null) / panelWidth;
-				if (factor != 0) {
-					int scaledWidth = (int) (width/factor);
-					int scaledHeight = (int) (height/factor);
-					width = scaledWidth;
-					height = scaledHeight;
-				}
-				x = panelWidth-width;
-				y = panelHeight-height;
-				g2d.drawImage(imgTransparentOverlay, x, y, width, height, this);
-			}
-		}
-		g2d.dispose();
-	}
-
-	@Override
-	public void scrollToSelectedGames() {
-
-	}
-
-	@Override
-	public void themeChanged() {
-		themeChanged = true;
 	}
 }

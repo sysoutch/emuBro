@@ -14,13 +14,10 @@ import org.apache.commons.compress.utils.FileNameUtils;
 
 public class CueMaker {
 
-	public CueMaker() {
-	}
-
-	public void createCueFile(File binFile) {
+	public static void createCueFile(File binFile) throws IOException {
 		String binFileName = binFile.getName();
 		if (!binFileName.toLowerCase().endsWith(".bin")) {
-			throw new IllegalArgumentException("the file " + binFileName + " doesn't appear to be a .bin file");
+			throw new IllegalArgumentException("the file " + binFileName + " doesn't appear to be a .bin file. Only .bin files can have .cue files");
 		}
 		String binFileNameWithoutExtension = FileNameUtils.getBaseName(binFileName);
 		Path p = Paths.get(binFile.getAbsolutePath());
@@ -36,7 +33,7 @@ public class CueMaker {
 		createCueFileNow(binFile);
 	}
 
-	private void createCueFileNow(File binFile) {
+	private static void createCueFileNow(File binFile) throws IOException {
 		String binFileName = binFile.getName();
 		String binFileNameWithoutExtension = FileNameUtils.getBaseName(binFileName);
 		Path p = Paths.get(binFile.getAbsolutePath());
@@ -50,12 +47,11 @@ public class CueMaker {
 			bw.newLine();
 			bw.write("    INDEX 01 00:00:00");
 		} catch (IOException e) {
-			System.out.println("An error occurred while creating the .cue file");
-			e.printStackTrace();
+			throw e;
 		}
 	}
 
-	private List<Integer> findAudioOffsets(File binFile) {
+	private static List<Integer> findAudioOffsets(File binFile) {
 		List<Integer> audioOffsets = new ArrayList<>();
 		try {
 			byte[] data = Files.readAllBytes(binFile.toPath());
@@ -71,7 +67,7 @@ public class CueMaker {
 		return audioOffsets;
 	}
 
-	private List<String> convertOffsetsToTime(List<Integer> offsets) {
+	private static List<String> convertOffsetsToTime(List<Integer> offsets) {
 		List<String> trackStartTimes = new ArrayList<>();
 		int sectorSize = 2352;
 		for (int offset : offsets) {

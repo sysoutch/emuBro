@@ -180,6 +180,10 @@ public class EmptyPlatform implements Platform {
 	}
 
 	@Override
+	public void setGameCodeRegexes(List<String> gameCodeRegexes) {
+	}
+
+	@Override
 	public String toString() {
 		return Messages.get("emptyPlatform");
 	}

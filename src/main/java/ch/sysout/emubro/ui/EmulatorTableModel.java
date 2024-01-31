@@ -121,7 +121,9 @@ public class EmulatorTableModel extends DefaultTableModel {
 		if (emulator.isInstalled()) {
 			emulators.add((BroEmulator) emulator);
 			ImageIcon ico = null;
-			if (!icons.containsKey(emulator.getId())) {
+			if (icons.containsKey(emulator.getId())) {
+				ico = icons.get(emulator.getId());
+			} else {
 				int size = ScreenSizeUtil.adjustValueToResolution(16);
 				String iconFilename = emulator.getIconFilename();
 				if (iconFilename.trim().isEmpty() || iconFilename.equalsIgnoreCase("blank.png")) {

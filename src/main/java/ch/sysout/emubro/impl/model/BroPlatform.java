@@ -30,13 +30,14 @@ public class BroPlatform implements Platform {
 	private boolean autoSearchEnabled = true;
 	private List<String> gameCodeRegexes;
 
-	public BroPlatform(int id, String name, String shortName, String iconFilename, String defaultGameCover, String[] gameSearchModes,
+	public BroPlatform(int id, String name, String shortName, String companyName, String iconFilename, String defaultGameCover, String[] gameSearchModes,
 			String searchFor, FileStructure fileStructure[], String supportedArchiveTypes[],
 			String supportedImageTypes[], BroEmulator[] emulators, int defaultEmulatorId, boolean autoSearchEnabled, String[] gameCodeRegexes) {
 		ValidationUtil.checkNullOrEmpty(name, "name");
 		this.id = id;
 		this.name = name;
 		this.shortName = shortName;
+		this.companyName = companyName;
 		this.iconFilename = (iconFilename == null) ? "" : iconFilename;
 		this.defaultGameCover = (iconFilename == null) ? "" : defaultGameCover;
 		this.gameSearchModes = new ArrayList<>(Arrays.asList(gameSearchModes));
@@ -50,7 +51,7 @@ public class BroPlatform implements Platform {
 		this.gameCodeRegexes = new ArrayList<>(Arrays.asList(gameCodeRegexes));
 	}
 
-	public BroPlatform(int id, String name, String shortName, String iconFilename, String defaultGameCover, String[] gameSearchModes,
+	public BroPlatform(int id, String name, String shortName, String companyName, String iconFilename, String defaultGameCover, String[] gameSearchModes,
 			String searchFor, FileStructure fileStructure[], String supportedArchiveTypes[],
 			String supportedImageTypes[], List<BroEmulator> emulators, int defaultEmulatorId,
 			boolean autoSearchEnabled, String[] gameCodeRegexes) {
@@ -58,6 +59,7 @@ public class BroPlatform implements Platform {
 		this.id = id;
 		this.name = name;
 		this.shortName = shortName;
+		this.companyName = companyName;
 		this.iconFilename = (iconFilename == null) ? "" : iconFilename;
 		this.defaultGameCover = (iconFilename == null) ? "" : defaultGameCover;
 		this.gameSearchModes = new ArrayList<>(Arrays.asList(gameSearchModes));
@@ -195,7 +197,6 @@ public class BroPlatform implements Platform {
 
 	@Override
 	public boolean hasGameSearchMode(String searchMode) {
-		// TODO Auto-generated method stub
 		return gameSearchModes.contains(searchMode);
 	}
 
@@ -261,7 +262,7 @@ public class BroPlatform implements Platform {
 	@Override
 	public boolean hasEmulator(String emulatorPath) {
 		for (Emulator emu : emulators) {
-			if (emu.getAbsolutePath().equals(emulatorPath)) {
+			if (emu.isInstalled() && emu.getAbsolutePath().equals(emulatorPath)) {
 				return true;
 			}
 		}
@@ -300,12 +301,18 @@ public class BroPlatform implements Platform {
 
 	@Override
 	public boolean hasGameCodeRegexes() {
+		System.out.println("game code regexes of platform " + name + ": " + gameCodeRegexes);
 		return !gameCodeRegexes.isEmpty() && gameCodeRegexes.get(0) != null && !gameCodeRegexes.get(0).isEmpty();
 	}
 
 	@Override
 	public List<String> getGameCodeRegexes() {
 		return gameCodeRegexes;
+	}
+
+	@Override
+	public void setGameCodeRegexes(List<String> gameCodeRegexes) {
+		this.gameCodeRegexes = gameCodeRegexes;
 	}
 
 	@Override

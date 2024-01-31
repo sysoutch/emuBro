@@ -1,0 +1,62 @@
+{  
+  "name":"Sony Playstation 3",
+  "shortName":"ps3",
+  "companyName":"Sony",
+  "iconFilename":"",
+  "defaultGameCover":"",
+  "recommendedEmulators":[
+	 "RPCS3"
+  ],
+  "gameSearchModes":[  
+	 "FILE_FILE_NAME_MATCH",
+	 "IMAGE_FILE_NAME_MATCH"
+  ],
+  "searchFor":"",
+  "fileStructure":[  
+
+  ],
+  "supportedArchiveTypes":[  
+
+  ],
+  "supportedImageTypes":[  
+	 ".iso",
+	 ".bin",
+	 ".img",
+	 ".mdf",
+	 ".nrg"
+  ],
+  "emulators":[  
+	 {  
+		"name":"RPCS3",
+		"os":[
+
+		],
+		"path":"",
+		"iconFilename":"rpcs3.png",
+		"configFilePath":"",
+		"website":"https://rpcs3.net/download",
+		"startParameters":"%emupath% -loadbin %gamepath%",
+		"supportedFileTypes":[  
+		   ".iso",
+		   ".bin",
+		   ".img",
+		   ".mdf",
+		   ".nrg"
+		],
+		"searchString":"^(rpcs3)\\.exe$",
+		"archiveFileMatchWin":"^(rpcs3-(.*)-win_x64)\\.zip$",
+		"archiveFileMatchLinux":"^(rpcs3-(.*)-linux_x64)\\.tar$",
+		"archiveFileMatchMac":"^(rpcs3-(.*)-osx_x64)\\.zip$",
+		"setupFileMatchWin":"",
+		"setupFileMatchLinux":"",
+		"setupFileMatchMac":"",
+		"autoSearchEnabled":true,
+		"biosRequired":false,
+		"runCommandsBefore":[
+		 
+		]
+	 }
+  ],
+  "directExecutionMode":"none",
+  "autoSearchEnabled":true
+}

@@ -1,0 +1,60 @@
+{  
+  "name":"Nintendo Entertainment System",
+  "shortName":"nes",
+  "companyName":"Nintendo",
+  "iconFilename":"",
+  "defaultGameCover":"",
+  "recommendedEmulators":[
+	 "FCEUX"
+  ],
+  "plugins":[
+	{
+	  "covers":"",
+	  "titles":""
+	}
+  ],
+  "gameSearchModes":[  
+	 "FILE_FILE_NAME_MATCH",
+	 "ARCHIVE_FILE_NAME_MATCH"
+  ],
+  "searchFor":"^(.+)\\.nes$|^(.+)\\.nsf$|^(.+)\\.fds$|^(.+)\\.unf$",
+  "fileStructure":[  
+
+  ],
+  "supportedArchiveTypes":[  
+	 ".zip"
+  ],
+  "supportedImageTypes":[  
+	 ""
+  ],
+  "emulators":[  
+	 {  
+		"name":"FCEUX",
+		"os":[
+
+		],
+		"path":"",
+		"iconFilename":"fceux.png",
+		"configFilePath":"fceux.cfg",
+		"website":"http://www.fceux.com/web/download.html",
+		"startParameters":"%emupath% %gamepath%",
+		"supportedFileTypes":[  
+		   ".zip"
+		],
+		"searchString":"^(fceux)\\.exe$",
+		"archiveFileMatchWin":"^(fceux-(.*)-win_x64)\\.zip$",
+		"archiveFileMatchLinux":"^(fceux-(.*)-linux_x64)\\.tar$",
+		"archiveFileMatchMac":"^(fceux-(.*)-osx_x64)\\.zip$",
+		"setupFileMatchWin":"",
+		"setupFileMatchLinux":"",
+		"setupFileMatchMac":"",
+		"autoSearchEnabled":true,
+		"biosRequired":false,
+		"runCommandsBefore":[
+		 
+		]
+	 }
+  ],
+  "directExecutionMode":"none",
+  "autoSearchEnabled":true
+}

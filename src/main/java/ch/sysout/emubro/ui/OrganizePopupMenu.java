@@ -9,6 +9,7 @@ import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
 import javax.swing.JSeparator;
 
+import ch.sysout.emubro.util.ColorConstants;
 import ch.sysout.ui.util.ImageUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
@@ -54,7 +55,7 @@ class OrganizePopupMenu extends JPopupMenu {
 
 	private void setIcons() {
 		int size = ScreenSizeUtil.is3k() ? 24 : 16;
-		itmExit.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("exit"), size, new Color(237, 67, 55)));
+		itmExit.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("exit"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 
 		// setIcon(mnuLayout, "/images/"+size+"/edit-layout.png");
 		// setIcon(mnuLayout, "/images/"+size+"/layout-content.png");

@@ -1,0 +1,59 @@
+{  
+  "name":"Android",
+  "shortName":"android",
+  "companyName":"Android",
+  "iconFilename":"",
+  "defaultGameCover":"",
+  "recommendedEmulators":[
+	 "BlueStacks"
+  ],
+  "plugins":[
+	{
+	  "covers":"",
+	  "titles":""
+	}
+  ],
+  "gameSearchModes":[  
+	 "FILE_FILE_NAME_MATCH"
+  ],
+  "searchFor":"^(.+)\\.apk$",
+  "fileStructure":[  
+
+  ],
+  "supportedArchiveTypes":[  
+
+  ],
+  "supportedImageTypes":[  
+
+  ],
+  "emulators":[  
+	 {  
+		"name":"Andy",
+		"os":[
+
+		],
+		"path":"",
+		"iconFilename":"andy.png",
+		"configFilePath":"",
+		"website":"http://www.andyroid.net/",
+		"startParameters":"%emupath% %gamepath%",
+		"supportedFileTypes":[  
+		   ".apk"
+		],
+		"searchString":"^(andy)\\.exe$",
+		"archiveFileMatchWin":"^(andy-(.*)-win_x64)\\.zip$",
+		"archiveFileMatchLinux":"^(andy-(.*)-linux_x64)\\.tar$",
+		"archiveFileMatchMac":"^(andy-(.*)-osx_x64)\\.zip$",
+		"setupFileMatchWin":"",
+		"setupFileMatchLinux":"",
+		"setupFileMatchMac":"",
+		"autoSearchEnabled":true,
+		"biosRequired":false,
+		"runCommandsBefore":[
+		 
+		]
+	 }
+  ],
+  "directExecutionMode":"none",
+  "autoSearchEnabled":true
+}

@@ -71,6 +71,8 @@ public interface Game extends Comparable<Game> {
 
 	Tag getTag(int tagId);
 
+	boolean hasGameCode();
+
 	String getGameCode();
 
 	void setGameCode(String gameCode);

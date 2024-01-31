@@ -1,0 +1,58 @@
+{  
+  "name":"Nintendo 3DS",
+  "shortName":"3ds",
+  "companyName":"Nintendo",
+  "iconFilename":"",
+  "defaultGameCover":"",
+  "recommendedEmulators":[
+	 "citra"
+  ],
+  "gameSearchModes":[  
+	 "FILE_FILE_NAME_MATCH",
+	 "ARCHIVE_FILE_NAME_MATCH"
+  ],
+  "searchFor":"^(.+)\\.3ds$|^(.+)\\.3dsx$",
+  "fileStructure":[  
+
+  ],
+  "supportedArchiveTypes":[  
+
+  ],
+  "supportedImageTypes":[  
+
+  ],
+  "emulators":[  
+	 {  
+		"name":"citra",
+		"os":[
+
+		],
+		"path":"",
+		"iconFilename":"citra.png",
+		"configFilePath":"",
+		"website":"https://citra-emu.org/download/",
+		"startParameters":"%emupath% %gamepath%",
+		"supportedFileTypes":[  
+		   ".3ds",
+		   ".3dsx"
+		],
+		"searchString":"^(citra-qt)\\.exe$",
+		"archiveFileMatchWin":"^(citra-(.*)-win_x64)\\.zip$",
+		"archiveFileMatchLinux":"^(citra-(.*)-linux_x64)\\.tar$",
+		"archiveFileMatchMac":"^(citra-(.*)-osx_x64)\\.zip$",
+		"setupFileMatchWin":"",
+		"setupFileMatchLinux":"",
+		"setupFileMatchMac":"",
+		"autoSearchEnabled":true,
+		"biosRequired":false,
+		"runCommandsBefore":[
+		 
+		]
+	 }
+  ],
+  "directExecutionMode":"none",
+  "autoSearchEnabled":true,
+  "gameCodeRegexes":[
+	"CTR-(P|M|U)-[A-Z]{4}"
+  ]
+}

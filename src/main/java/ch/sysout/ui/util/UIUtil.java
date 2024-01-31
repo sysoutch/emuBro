@@ -22,6 +22,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -47,6 +48,8 @@ import javax.swing.UIManager;
 import javax.swing.WindowConstants;
 import javax.swing.text.JTextComponent;
 
+import ch.sysout.emubro.ui.IconStore;
+import ch.sysout.emubro.ui.controller.ThemeManager;
 import com.formdev.flatlaf.FlatLaf;
 
 import ch.sysout.emubro.ui.AboutDialog;
@@ -160,8 +163,8 @@ public class UIUtil {
 		JOptionPane.showMessageDialog(component, message, title, JOptionPane.INFORMATION_MESSAGE);
 	}
 
-	public static void showQuestionMessage(AboutDialog component, String message, String title) {
-		JOptionPane.showConfirmDialog(component, message, title, JOptionPane.YES_NO_CANCEL_OPTION);
+	public static int showQuestionMessage(AboutDialog component, String message, String title) {
+		return JOptionPane.showConfirmDialog(component, message, title, JOptionPane.YES_NO_CANCEL_OPTION);
 	}
 
 	public static void showWarningMessage(Component component, String message, String title) {
@@ -226,8 +229,27 @@ public class UIUtil {
 	}
 
 	public static void openWebsite(String url, Component parent) {
+		openWebsite(url, parent, false);
+	}
+
+	public static void openWebsite(String url, Component parent, boolean localFile) {
+		URI uriToUse = null;
+		if (localFile) {
+			File f = new File(url);
+			uriToUse = f.toURI();
+		} else {
+			try {
+				uriToUse = new URI(url);
+			} catch (URISyntaxException e) {
+				throw new RuntimeException(e);
+			}
+		}
+		openWebsite(uriToUse, parent);
+	}
+
+	public static void openWebsite(URI url, Component parent) {
 		try {
-			Desktop.getDesktop().browse(new URI(url));
+			Desktop.getDesktop().browse(url);
 		} catch (IOException e1) {
 			UIUtil.showWarningMessage(parent, "Maybe there is a conflict with your default web browser and you have to set it again."
 					+ "\n\nThe default program page in control panel will be opened now..", "default web browser");
@@ -236,8 +258,6 @@ public class UIUtil {
 			} catch (IOException e2) {
 				UIUtil.showErrorMessage(parent, "The default program page couldn't be opened.", "oops");
 			}
-		} catch (URISyntaxException e1) {
-			UIUtil.showErrorMessage(parent, "The url couldn't be opened.", "oops");
 		}
 	}
 
@@ -340,7 +360,7 @@ public class UIUtil {
 	}
 
 	public static ImageIcon getApplicationIconBySize(int w, int h) {
-		Color iconColor = FlatLaf.isLafDark() ? UIManager.getColor("Panel.background").brighter().brighter().brighter() : UIManager.getColor("Panel.background").darker().darker();
+		Color iconColor = IconStore.current().getCurrentTheme().getLogoColor();
         return ImageUtil.getFlatSVGIconFrom(Icons.get("applicationIcon"), w, h, iconColor);
 	}
 
@@ -356,5 +376,13 @@ public class UIUtil {
 	public static ImageIcon getApplicationBannerBySize(int w, int h) {
 		Color iconColor = FlatLaf.isLafDark() ? UIManager.getColor("Panel.background").brighter().brighter().brighter() : UIManager.getColor("Panel.background").darker().darker();
         return ImageUtil.getFlatSVGIconFrom(Icons.get("applicationBanner"), w, h, iconColor);
+	}
+
+	public static void openInExplorer(String absolutePath) throws IOException {
+		openInExplorer(new File(absolutePath));
+	}
+
+	public static void openInExplorer(File absolutePath) throws IOException {
+		Desktop.getDesktop().open(absolutePath);
 	}
 }

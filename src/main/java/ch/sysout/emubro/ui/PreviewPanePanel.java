@@ -23,6 +23,9 @@ import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
 
+import ch.sysout.emubro.api.model.*;
+import ch.sysout.emubro.impl.model.BroEmulator;
+import ch.sysout.emubro.impl.model.EmulatorConstants;
 import com.jgoodies.forms.layout.ColumnSpec;
 import org.apache.commons.io.FilenameUtils;
 
@@ -39,10 +42,6 @@ import ch.sysout.emubro.api.TagListener;
 import ch.sysout.emubro.api.event.GameRenamedEvent;
 import ch.sysout.emubro.api.event.GameSelectionEvent;
 import ch.sysout.emubro.api.event.TagEvent;
-import ch.sysout.emubro.api.model.Explorer;
-import ch.sysout.emubro.api.model.Game;
-import ch.sysout.emubro.api.model.Platform;
-import ch.sysout.emubro.api.model.Tag;
 import ch.sysout.emubro.controller.GameSelectionListener;
 import ch.sysout.emubro.impl.event.BroTagAddedEvent;
 import ch.sysout.emubro.ui.listener.RateListener;
@@ -137,7 +136,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			}
 		});
 		pnlNoSelection = new NoSelectionPanel();
-		spSelection = new JCustomScrollPane(pnlSelection, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+		spSelection = new JScrollPane(pnlSelection, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
 				ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 		pnlNoSelection.setMinimumSize(new Dimension(0, 0));
 		spSelection.setVisible(false);
@@ -579,6 +578,14 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		g2d.dispose();
 	}
 
+	public void addShowRunGameContextMenuListener(ActionListener l) {
+		pnlSelection.btnMoreOptionsRunGame.addActionListener(l);
+	}
+
+	public void themeChanged() {
+		pnlSelection.txtComment.setBackground(UIManager.getColor("JTextField.background").brighter());
+	}
+
 	class SelectionPanel extends JPanel {
 		private static final long serialVersionUID = 1L;
 		private JLabel lblGameTitle = new JLabel("Game Title");
@@ -612,6 +619,8 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		private JButton btnSearchCover = new JCustomButtonNew("");
 		private JButton btnSearchTrailer = new JCustomButtonNew("");
 		private int lastMinWidth = -1;
+		private Color colorFavorites = new Color(244, 187, 68);
+		private JExtendedTextField txtComment;
 
 		public SelectionPanel() {
 			initComponents();
@@ -653,6 +662,28 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 
 		protected void showGamePopupMenu(Component component, int x, int y) {
 			popupGame.show(component, x, y);
+			int platformId = currentGames.get(0).getPlatformId();
+			Platform platform = explorer.getPlatform(platformId);
+			List<BroEmulator> emulators = platform.getEmulators();
+			int defaultEmulatorId = EmulatorConstants.NO_EMULATOR;
+            for (Emulator emulator : emulators) {
+                if (!emulator.isInstalled()) {
+                    continue;
+                }
+                int defaultGameEmulatorId = currentGames.get(0).getDefaultEmulatorId();
+                if (defaultGameEmulatorId == EmulatorConstants.NO_EMULATOR) {
+                    if (emulator.getId() == platform.getDefaultEmulatorId()) {
+                        defaultEmulatorId = emulator.getId();
+                        break;
+                    }
+                } else {
+                    if (emulator.getId() == defaultGameEmulatorId) {
+                        defaultEmulatorId = emulator.getId();
+                        break;
+                    }
+                }
+            }
+			popupGame.initEmulators(emulators, defaultEmulatorId);
 		}
 
 		protected void showViewPopupMenu(Component component, int x, int y) {
@@ -700,18 +731,18 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			});
 			btnComment.setMinimumSize(new Dimension(0, 0));
 			btnComment.setHorizontalAlignment(SwingConstants.LEFT);
-			btnComment.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("checkMark"),  22, new Color(40, 167, 69)));
+			btnComment.setIcon(ImageUtil.getFlatSVGIconFrom(Icons.get("checkMark"),22, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
 
 			JPanel pnlCommentWrapper = new JPanel(new BorderLayout());
-			JExtendedTextArea txt = new JExtendedTextArea();
-			txt.setLineWrap(true);
-			txt.setWrapStyleWord(true);
+			txtComment = new JExtendedTextField();
+//			txt.setLineWrap(true);
+//			txt.setWrapStyleWord(true);
 			//txt.setRows(5);
-			//			txt.putClientProperty("FlatLaf.style", "showClearButton: true");
-			FlatSVGIcon icoRename = ImageUtil.getFlatSVGIconFrom(Icons.get("rename"), 12, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR));
-			//			txt.putClientProperty("JTextArea.leadingIcon", icoRename);
+			txtComment.putClientProperty("FlatLaf.style", "showClearButton: true");
+			FlatSVGIcon icoRename = ImageUtil.getFlatSVGIconFrom(Icons.get("rename"),12, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR));
+			txtComment.putClientProperty("JTextField.leadingIcon", icoRename);
 
-			pnlCommentWrapper.add(txt);
+			pnlCommentWrapper.add(txtComment);
 			pnlCommentWrapper.add(btnComment, BorderLayout.EAST);
 
 			Color colorUnderlay = new Color(0f, 0f, 0f, 0.25f);
@@ -724,24 +755,23 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			JPanel pnl = new JPanel();
 			FormLayout layoutMain;
 			pnl.setLayout(layoutMain = new FormLayout("default, $ugap, default, min, default, min, min:grow",
-					"fill:default, $lgap, fill:default, $rgap, fill:default, $ugap, fill:default, $ugap, fill:default, $ugap, fill:default, $lgap, fill:default, $lgap, fill:default, $ugap, fill:default, $pgap:grow, min, fill:default"
+					"fill:default, $lgap, fill:default, $rgap, fill:default, $lgap, fill:default, $ugap, fill:default, $rgap, fill:default, $lgap, fill:default, $lgap, fill:default, $ugap, fill:default, $pgap:grow, min, fill:default"
 							+ ", $rgap, fill:default, $ugap, fill:default, $rgap, fill:default, $ugap, fill:default"
 			));
 			int defaultSpanWidth = layoutMain.getColumnCount();
 
-			pnl.add(pnlTags, CC.xyw(1, 1, defaultSpanWidth));
-
-			pnl.add(pnlAutoScaleImage, CC.xyw (1, 3, defaultSpanWidth));
-			pnl.add(lblGameTitle, CC.xyw(1, 5, defaultSpanWidth));
-			pnl.add(lnkPlatformTitle, CC.xyw(1, 7, defaultSpanWidth));
+			pnl.add(pnlAutoScaleImage, CC.xyw (1, 1, defaultSpanWidth));
+			pnl.add(lblGameTitle, CC.xyw(1, 3, defaultSpanWidth));
+			pnl.add(lnkPlatformTitle, CC.xyw(1, 5, defaultSpanWidth));
 			JPanel pnlRunGameWrapper = new JPanel(new BorderLayout());
 			pnlRunGameWrapper.add(btnRunGame);
 			pnlRunGameWrapper.add(btnMoreOptionsRunGame, BorderLayout.EAST);
-			pnl.add(pnlRunGameWrapper, CC.xy(1, 9));
-			pnl.add(btnSearchCover, CC.xy(3, 9));
-			pnl.add(btnSearchTrailer, CC.xy(5, 9));
+			pnl.add(pnlRunGameWrapper, CC.xy(1, 7));
+			pnl.add(btnSearchCover, CC.xy(3, 7));
+			pnl.add(btnSearchTrailer, CC.xy(5, 7));
 //			pnl.add(pnlGameData, CC.xyw(1, 9, defaultSpanWidth));
-			pnl.add(pnlRatingBar, CC.xyw(1, 13, defaultSpanWidth));
+			pnl.add(pnlRatingBar, CC.xyw(1, 11, defaultSpanWidth));
+			pnl.add(pnlTags, CC.xyw(1, 13, defaultSpanWidth));
 			pnl.add(pnlCommentWrapper, CC.xyw(1, 15, defaultSpanWidth-1));
 
 			// 17 description
@@ -763,8 +793,8 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 			pnl.add(txtDescription, CC.xyw(1, 17, defaultSpanWidth-1)); // don't use scrollpane if not needed, otherwise there might be scroll issues
 
 
-			FormLayout layoutGameInfo = new FormLayout("min, $rgap, min, $rgap, min, $rgap, min, min:grow",
-					"fill:min, min, fill:min, min, fill:min, min, fill:min, min");
+			FormLayout layoutGameInfo = new FormLayout("min, $rgap:grow, min, $rgap:grow, min, $rgap:grow, min, $rgap:grow",
+					"fill:min, $rgap, fill:min, $rgap, fill:min, $rgap, fill:min, min");
 			JPanel pnlGameInfo = new JPanel(layoutGameInfo);
 			pnlGameInfo.add(pnlPlayCount, CC.xy(1, 1));
 			//pnl.add(pnlLastPlayed, CC.xyw(1, 22, defaultSpanWidth));
@@ -843,16 +873,16 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 				FormLayout formLayout = (FormLayout) layout;
 				if (formLayout.getColumnCount() == 2) {
 					formLayout.appendColumn(ColumnSpec.decode("min"));
-					formLayout.appendColumn(ColumnSpec.decode("min"));
+					formLayout.appendColumn(ColumnSpec.decode("$rgap:grow"));
 					pnl.add(pnlPlayCount, CC.xy(1, 1));
 					pnl.add(pnlDateAdded, CC.xy(3, 1));
 					pnl.add(pnlPublisher, CC.xy(1, 3));
 					pnl.add(pnlDeveloper, CC.xy(3, 3));
 				} else if (formLayout.getColumnCount() == 4) {
 					formLayout.appendColumn(ColumnSpec.decode("min"));
+					formLayout.appendColumn(ColumnSpec.decode("$rgap:grow"));
 					formLayout.appendColumn(ColumnSpec.decode("min"));
-					formLayout.appendColumn(ColumnSpec.decode("min"));
-					formLayout.appendColumn(ColumnSpec.decode("min"));
+					formLayout.appendColumn(ColumnSpec.decode("$rgap:grow"));
 					pnl.add(pnlPlayCount, CC.xy(1, 1));
 					pnl.add(pnlDateAdded, CC.xy(3, 1));
 					pnl.add(pnlPublisher, CC.xy(5, 1));
@@ -925,7 +955,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 		protected void setGameTitle(String s, Icon icon, boolean favorite) {
 			setGameTitle(s, icon);
 			if (favorite) {
-				lblGameTitle.setForeground(Color.orange);
+				lblGameTitle.setForeground(colorFavorites);
 			} else {
 				lblGameTitle.setForeground(UIManager.getColor("Label.foregroundColor"));
 			}
@@ -1499,7 +1529,7 @@ public class PreviewPanePanel extends JPanel implements GameSelectionListener {
 
 			public void languageChanged() {
 				lblTags.setText(Messages.get(MessageConstants.MANAGE_TAGS));
-				//btnAddTag.setText(Messages.get(MessageConstants.ADD_TAG));
+				btnAddTag.setText(Messages.get(MessageConstants.ADD_TAG));
 				itmAddToFilter.setText(Messages.get(MessageConstants.ADD_TO_FILTER));
 				itmRemoveTagFromCurrentGames.setText(Messages.get(MessageConstants.REMOVE_TAG));
 			}

@@ -15,6 +15,11 @@
 	</properties>
 
 	<dependencies>
+		<dependency>
+			<groupId>image4j</groupId>
+			<artifactId>image4j</artifactId>
+			<version>0.7.2</version>
+		</dependency>
 		<!-- https://mvnrepository.com/artifact/org.hsqldb/hsqldb -->
 		<dependency>
 			<groupId>org.hsqldb</groupId>
@@ -25,20 +30,19 @@
 		<dependency>
 			<groupId>com.formdev</groupId>
 			<artifactId>flatlaf</artifactId>
-			<version>3.2.5</version>
+			<version>3.3</version>
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/com.formdev/flatlaf-extras -->
 		<dependency>
 			<groupId>com.formdev</groupId>
 			<artifactId>flatlaf-extras</artifactId>
-			<version>3.2.5</version>
+			<version>3.3</version>
 		</dependency>
-		<!--
-		https://mvnrepository.com/artifact/com.formdev/flatlaf-intellij-themes -->
+		<!-- https://mvnrepository.com/artifact/com.formdev/flatlaf-intellij-themes -->
 		<dependency>
 			<groupId>com.formdev</groupId>
 			<artifactId>flatlaf-intellij-themes</artifactId>
-			<version>3.2.5</version>
+			<version>3.3</version>
 		</dependency>
 		<dependency>
 			<groupId>com.jgoodies</groupId>
@@ -49,6 +53,12 @@
 			<groupId>com.jgoodies</groupId>
 			<artifactId>jgoodies-forms</artifactId>
 			<version>1.9.0</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.openpnp/opencv -->
+		<dependency>
+			<groupId>org.openpnp</groupId>
+			<artifactId>opencv</artifactId>
+			<version>4.9.0-0</version>
 		</dependency>
 		<!--
 		https://mvnrepository.com/artifact/com.akathist.maven.plugins.launch4j/launch4j-maven-plugin -->
@@ -163,7 +173,7 @@
 		<dependency>
 			<groupId>com.opencsv</groupId>
 			<artifactId>opencsv</artifactId>
-			<version>5.6</version>
+			<version>5.9</version>
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/club.minnced/java-discord-rpc -->
 		<!-- <dependency>

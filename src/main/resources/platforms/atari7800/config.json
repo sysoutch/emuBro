@@ -1,0 +1,60 @@
+{  
+  "name":"Atari 7800",
+  "shortName":"atari7800",
+  "companyName":"Atari",
+  "iconFilename":"",
+  "defaultGameCover":"",
+  "recommendedEmulators":[
+	 "MESS"
+  ],
+  "plugins":[
+	{
+	  "covers":"",
+	  "titles":""
+	}
+  ],
+  "gameSearchModes":[  
+	 "FILE_FILE_NAME_MATCH",
+	 "ARCHIVE_FILE_NAME_MATCH"
+  ],
+  "searchFor":"",
+  "fileStructure":[  
+
+  ],
+  "supportedArchiveTypes":[  
+
+  ],
+  "supportedImageTypes":[  
+
+  ],
+  "emulators":[  
+	 {  
+		"name":"MESS",
+		"os":[
+
+		],
+		"path":"",
+		"iconFilename":"atariplusplus.png",
+		"configFilePath":"",
+		"website":"http://www.mamedev.org/release.html",
+		"startParameters":"%emupath% %gamepath%",
+		"supportedFileTypes":[  
+
+		],
+		"searchString":"^(mess)\\.exe$",
+		"archiveFileMatchWin":"^(mess-(.*)-win_x64)\\.zip$",
+		"archiveFileMatchLinux":"^(mess-(.*)-linux_x64)\\.tar$",
+		"archiveFileMatchMac":"^(mess-(.*)-osx_x64)\\.zip$",
+		"setupFileMatchWin":"",
+		"setupFileMatchLinux":"",
+		"setupFileMatchMac":"",
+		"autoSearchEnabled":true,
+		"biosRequired":false,
+		"runCommandsBefore":[
+		 
+		]
+	 }
+  ],
+  "directExecutionMode":"none",
+  "autoSearchEnabled":true
+}

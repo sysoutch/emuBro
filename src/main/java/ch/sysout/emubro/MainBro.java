@@ -1,13 +1,6 @@
 package ch.sysout.emubro;
 
-import java.awt.AWTException;
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.Image;
-import java.awt.Point;
-import java.awt.SystemTray;
-import java.awt.Toolkit;
-import java.awt.TrayIcon;
+import java.awt.*;
 import java.awt.TrayIcon.MessageType;
 import java.io.BufferedReader;
 import java.io.File;
@@ -20,30 +13,29 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.lang.reflect.Type;
-import java.net.URL;
-import java.net.URLConnection;
+import java.net.*;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.CodeSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalTime;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.*;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
-import javax.swing.BorderFactory;
-import javax.swing.JOptionPane;
-import javax.swing.LookAndFeel;
-import javax.swing.UIManager;
+import javax.swing.*;
 import javax.swing.filechooser.FileSystemView;
 
+import ch.sysout.emubro.util.EmuBroUtil;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.yaml.snakeyaml.Yaml;
@@ -89,7 +81,6 @@ import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.FileUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
-import spark.Spark;
 
 /**
  * @author rainer
@@ -108,18 +99,42 @@ public class MainBro {
 	private static ExplorerDAO explorerDAO = null;
 	private static MainFrame mainFrame = null;
 
-	private static int explorerId = 0;
+	private static final int explorerId = 1;
 	private static LookAndFeel defaultLookAndFeel;
 	private static BroExplorer explorer;
 	private static String language;
-	private static final String currentApplicationVersion = "0.7.1";
+	private static final String currentApplicationVersion = "0.8.0";
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
 		//		System.out.println("epic games:");
 		//		getEpicGames();
 		//		System.out.println("steam games:");
 		//		getSteamGames();
 		Logger logger = Logger.getLogger(MainBro.class.getName());
+
+
+//		int status = -1;
+//		HttpURLConnection con = null;
+//		try {
+//			URL url = new URL("http://localhost:4567/ping");
+//			con = (HttpURLConnection) url.openConnection();
+//			con.setRequestMethod("GET");
+//			status = con.getResponseCode();
+//		} catch (IOException e) {
+//			// connection refused if emuBro isn't running. exactly what we want to check. do nothing here and run emuBro as usual
+//		} finally {
+//			if (con != null) {
+//				con.disconnect();
+//			}
+//		}
+//		System.out.println("GET status: " + status);
+//		if (status == 200) {
+//			// this means emuBro is already running and we could silently close the new instance and instead set the other window active by using GET request
+////			System.exit(0);
+////			return;
+//		}
+
+        ToolTipManager.sharedInstance().setDismissDelay(60000);
 
 		//		System.setProperty("sun.java2d.uiScale", "1.0");
 		System.setProperty("java.util.Arrays.useLegacyMergeSort", "true");
@@ -168,7 +183,6 @@ public class MainBro {
 
 				//				defaultsMap.put("TabbedPane.focusColor", hexAccentColor);
 				//				defaultsMap.put("TabbedPane.hoverColor", hexAccentColor);
-
 				FlatLaf laf = null;
 				boolean useDark = true;
 				if (useDark) {
@@ -194,13 +208,14 @@ public class MainBro {
 		UIManager.put("List.selectionInactiveForeground", UIManager.getColor("List.selectionForeground"));
 		UIManager.put("TextField.background", UIManager.getColor("ComboBox.background"));
 		UIManager.put("TextArea.background", UIManager.getColor("ComboBox.background"));
-		//		UIDefaults defaults = laf.getDefaults();
-		//		Enumeration<Object> keys = defaults.keys();
-		//		while (keys.asIterator().hasNext()) {
-		//			System.out.println(keys.nextElement());
-		//		}
-		//		FlatLaf.updateUI();
-		//		SwingUtilities.updateComponentTreeUI(MainFrame.this);
+
+//				UIDefaults defaults = laf.getDefaults();
+//				Enumeration<Object> keys = defaults.keys();
+//				while (keys.asIterator().hasNext()) {
+//					System.out.println(keys.nextElement());
+//				}
+//		FlatLaf.updateUI();
+//		SwingUtilities.updateComponentTreeUI(MainFrame.this);
 
 		try {
 			initializeCustomTheme();
@@ -215,6 +230,11 @@ public class MainBro {
 		String clientId = "560036334744371200";
 		initDiscord(clientId);
 		initializeApplication(args);
+		try {
+			updateEnvironmentVariableForShortcutFiles();
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
 		//		initializeDriveServices();
 //		try {
 //			UIUtil.displayTray("We hope you like it!", "Welcome to emuBro");
@@ -222,6 +242,20 @@ public class MainBro {
 //			logger.log(Level.ALL, e.getMessage());
 //			e.printStackTrace();
 //		}
+	}
+
+	private static void updateEnvironmentVariableForShortcutFiles() throws IOException {
+		String path = MainBro.class.getProtectionDomain().getCodeSource().getLocation().getPath();
+		File jarFile = new File(path);
+		String jarDir = jarFile.getAbsolutePath();
+		System.out.println("Jar location: " + jarDir);
+		if (jarDir.toLowerCase().endsWith(".jar")
+		|| jarDir.toLowerCase().endsWith(".exe")) {
+			String[] cmd = { "cmd.exe", "/c", "setx", "EMUBRO_LOCATION", jarDir };
+			ProcessBuilder pb = new ProcessBuilder();
+			pb.command(cmd);
+			pb.start();
+		}
 	}
 
 	private void getInstalledSteamGamesWithoutAPI() {
@@ -341,11 +375,11 @@ public class MainBro {
 		//		DiscordRPC.discordUpdatePresence(presence.build());
 	}
 
-	public static void initializeApplication() {
+	public static void initializeApplication() throws IOException {
 		initializeApplication("");
 	}
 
-	public static void initializeApplication(String... args) {
+	public static void initializeApplication(String... args) throws IOException {
 		final Point defaultDlgSplashScreenLocation = dlgSplashScreen.getLocation();
 		String userHome = System.getProperty("user.home");
 		String applicationHome = userHome += userHome.endsWith(File.separator) ? "" : File.separator + ".emubro";
@@ -449,6 +483,9 @@ public class MainBro {
 					final BroController controller = new BroController(dlgSplashScreen, explorerDAO, explorer, mainFrame/*, presence*/);
 					controller.addOrGetPlatformsAndEmulators(defaultPlatforms);
 					controller.addOrChangeTags(explorer.getUpdatedTags());
+
+					controller.setGameTitlesForPlatforms();
+
 					File dir1 = new File(defaultTagsDir);
 					if (dir1.isDirectory()) {
 						File destDir = dir1.getParentFile();
@@ -525,16 +562,26 @@ public class MainBro {
 					mainFrame.activateQuickSearchButton(gamesFound || emulatorsFound);
 					hideSplashScreen();
 
-					if (args.length > 0 && args[0].equals("--changelog")) {
-						SystemTray tray = SystemTray.getSystemTray();
-						Image image = Toolkit.getDefaultToolkit().getImage("tray.gif");
-						TrayIcon trayIcon = new TrayIcon(image, "emuBro tray message");
-						try {
-							tray.add(trayIcon);
-							trayIcon.displayMessage("update installed",
-									"\"--- emuBro v\" + currentApplicationVersion + \" ---\\n\" + \"\\nUpdate successful!\"", MessageType.INFO);
-						} catch (AWTException e) {
-							e.printStackTrace();
+					if (args.length > 0) {
+						if (args[0].equals("--run-game")) {
+							int gameId = Integer.parseInt(args[1]);
+							if (explorer.getGame(gameId) != null) {
+								controller.runGame(gameId);
+							} else {
+								// handle wrong game id scenario
+							}
+						}
+						if (args[0].equals("--changelog")) {
+							SystemTray tray = SystemTray.getSystemTray();
+							Image image = Toolkit.getDefaultToolkit().getImage("tray.gif");
+							TrayIcon trayIcon = new TrayIcon(image, "emuBro tray message");
+							try {
+								tray.add(trayIcon);
+								trayIcon.displayMessage("update installed",
+										"\"--- emuBro v\" + currentApplicationVersion + \" ---\\n\" + \"\\nUpdate successful!\"", MessageType.INFO);
+							} catch (AWTException e) {
+								e.printStackTrace();
+							}
 						}
 					}
 					if (controller.shouldCheckForUpdates()) {
@@ -578,7 +625,6 @@ public class MainBro {
 				}
 			}
 		} catch (BroDatabaseVersionMismatchException e2) {
-			e2.printStackTrace();
 			int expectedVersion = Integer.valueOf(e2.getExpectedVersion().replace(".", ""));
 			int currentVersion = Integer.valueOf(e2.getCurrentVersion().replace(".", ""));
 			if (expectedVersion > currentVersion) {
@@ -830,30 +876,34 @@ public class MainBro {
 		defaultLookAndFeel = UIManager.getLookAndFeel();
 	}
 
-	public static List<BroPlatform> initDefaultPlatforms() throws FileNotFoundException {
+	public static List<BroPlatform> initDefaultPlatforms() throws IOException, URISyntaxException {
 		List<BroPlatform> platforms = new ArrayList<>();
-		String defaultPlatformsFilePath = explorer.getResourcesPath() + File.separator + "platforms";
-		File defaultPlatformsDirectory = new File(defaultPlatformsFilePath);
-		if (!defaultPlatformsDirectory.exists()) {
-			throw new FileNotFoundException("directory does not exist: " + defaultPlatformsFilePath);
-		}
-		FilenameFilter directoryFilter = new FilenameFilter() {
-
-			@Override
-			public boolean accept(File dir, String name) {
-				return dir.isDirectory();
-			}
-		};
-		Gson gson = new Gson();
-		java.lang.reflect.Type collectionType = new TypeToken<BroPlatform>() {}.getType();
-		for (File dir : defaultPlatformsDirectory.listFiles(directoryFilter)) {
-			File platformConfigFile = new File(dir + File.separator + "config.json");
-			if (!platformConfigFile.exists()) {
-				System.err.println("no config file found for platform: " + dir.getName());
-				continue;
-			}
+		String defaultPlatformsFilePath = explorer.getPlatformsDirectory();
+//		URI url = EmuBroUtil.getFileFromInternalResources("platforms");
+		URI url = MainBro.class.getResource("/platforms").toURI();
+		Path myPath = null;
+		/* !!! I rly tried to refactor this into EmuBroUtil class but the FileSystem needs to be open for doing the File walk and we couldn't close the FileSystem nicely yet, that's why we keep it here for now !!! */
+		FileSystem fileSystem = null;
+		System.out.println("URI scheme: "+url.getScheme());
+		if (url.getScheme().equals("jar")) {
 			try {
-				InputStream is = new FileInputStream(platformConfigFile);
+				fileSystem = FileSystems.newFileSystem(url, Collections.<String, Object>emptyMap());
+				myPath = fileSystem.getPath("platforms");
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		} else {
+			myPath = Paths.get(url);
+		}
+		/* !!! unrefactorable code ends here !!! */
+		System.out.println("myPath: " + myPath.toString());
+		Gson gson = new Gson();
+		Stream<Path> walk = java.nio.file.Files.walk(myPath, 1);
+		for (Iterator<Path> it = walk.iterator(); it.hasNext(); ) {
+			Type collectionType = new TypeToken<BroPlatform>() {}.getType();
+			String platformShortName = it.next().getFileName().toString();
+			InputStream is = MainBro.class.getResourceAsStream("/platforms/" + platformShortName + "/config.json");
+			if (is != null) {
 				BufferedReader br = new BufferedReader(new InputStreamReader(is));
 				BroPlatform platform = (BroPlatform) gson.fromJson(br, collectionType);
 				platforms.add(platform);
@@ -863,10 +913,10 @@ public class MainBro {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-			} catch (FileNotFoundException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
 			}
+		}
+		if (fileSystem != null) {
+			fileSystem.close();
 		}
 		return platforms;
 	}

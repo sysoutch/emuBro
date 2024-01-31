@@ -19,6 +19,7 @@ public class Theme {
 	private ThemeBackground detailsPane;
 	private ThemeBackground tabs;
 	private ThemeBackground statusBar;
+	private Color logoColor;
 
 	public Theme(String name, Color defaultBackgroundColor) {
 		this.name = name;
@@ -118,5 +119,13 @@ public class Theme {
 
 	public void setStatusBar(ThemeBackground statusBar) {
 		this.statusBar = statusBar;
+	}
+
+    public Color getLogoColor() {
+		return logoColor;
+    }
+
+	public void setLogoColor(Color color) {
+		this.logoColor = color;
 	}
 }

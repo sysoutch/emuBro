@@ -6,6 +6,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.beans.ConstructorProperties;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import javax.swing.*;
@@ -114,8 +115,8 @@ public class JCustomButtonNew extends JButton {
 		});
 	}
 
-	public void linkWith(JButton otherButton) {
-		linkedWith.add(otherButton);
+	public void linkWith(JButton... otherButtons) {
+        linkedWith.addAll(Arrays.asList(otherButtons));
 	}
 
 	//	@Override

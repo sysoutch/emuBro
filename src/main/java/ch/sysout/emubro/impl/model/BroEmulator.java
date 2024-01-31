@@ -23,9 +23,11 @@ public class BroEmulator implements Emulator {
 	private String searchString;
 	private String setupFileMatch;
 	private boolean autoSearchEnabled = true;
+	private boolean biosRequired;
+	private List<String> runCommandsBefore;
 
 	public BroEmulator(int id, String name, String shortName, String fullPath, String iconFilename, String configFilePath, String website,
-			String startParameters, String[] supportedFileTypes, String searchString, String setupFileMatch, boolean autoSearchEnabled) {
+			String startParameters, String[] supportedFileTypes, String searchString, String setupFileMatch, boolean autoSearchEnabled, boolean biosRequired, String[] runCommandsBefore) {
 		ValidationUtil.checkNullOrEmpty(name, "name");
 		this.id = id;
 		this.name = name;
@@ -39,10 +41,12 @@ public class BroEmulator implements Emulator {
 		this.searchString = (searchString == null) ? "" : searchString;
 		this.setupFileMatch = (setupFileMatch == null) ? "" : setupFileMatch;
 		this.autoSearchEnabled = autoSearchEnabled;
+		this.biosRequired = biosRequired;
+		this.runCommandsBefore = new ArrayList<>(Arrays.asList(runCommandsBefore));
 	}
 
 	public BroEmulator(int id, String name, String shortName, String path, String iconFilename, String configFilePath, String website,
-			String startParameters, List<String> supportedFileTypes, String searchString, String setupFileMatch, boolean autoSearchEnabled) {
+			String startParameters, List<String> supportedFileTypes, String searchString, String setupFileMatch, boolean autoSearchEnabled, boolean biosRequired, List<String> runCommandsBefore) {
 		ValidationUtil.checkNullOrEmpty(name, "name");
 		ValidationUtil.checkNullOrEmpty(name, "shortName");
 		ValidationUtil.checkNull(iconFilename, "iconFilename");
@@ -61,6 +65,8 @@ public class BroEmulator implements Emulator {
 		this.searchString = (searchString == null) ? "" : searchString;
 		this.setupFileMatch = (setupFileMatch == null) ? "" : setupFileMatch;
 		this.autoSearchEnabled = autoSearchEnabled;
+		this.biosRequired = biosRequired;
+		this.runCommandsBefore = runCommandsBefore;
 	}
 
 	public BroEmulator(BroEmulator e) {
@@ -74,6 +80,10 @@ public class BroEmulator implements Emulator {
 		startParameters = e.getStartParameters();
 		supportedFileTypes = e.supportedFileTypes;
 		searchString = e.searchString;
+		setupFileMatch = e.setupFileMatch;
+		autoSearchEnabled = e.autoSearchEnabled;
+		biosRequired = e.biosRequired;
+		runCommandsBefore = e.getRunCommandsBefore();
 	}
 
 	@Override
@@ -197,6 +207,16 @@ public class BroEmulator implements Emulator {
 	@Override
 	public boolean isInstalled() {
 		return fullPath != null && !fullPath.trim().isEmpty();
+	}
+
+	@Override
+	public boolean isBiosRequired() {
+		return biosRequired;
+	}
+
+	@Override
+	public List<String> getRunCommandsBefore() {
+		return runCommandsBefore;
 	}
 
 	@Override

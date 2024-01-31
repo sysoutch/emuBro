@@ -2,15 +2,17 @@ package ch.sysout.emubro.controller;
 
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.OutputStream;
+import java.util.Date;
 
 import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletResponse;
-import javax.swing.ImageIcon;
+import javax.swing.*;
 
 import ch.sysout.emubro.api.model.Explorer;
 import ch.sysout.emubro.ui.IconStore;
+import ch.sysout.emubro.util.EmuBroUtil;
+import ch.sysout.ui.util.UIUtil;
 import spark.Request;
 import spark.Response;
 import spark.Route;
@@ -20,14 +22,22 @@ public class WebAppBro {
 	private BroController controller;
 	private Explorer explorer;
 
+	private String getSomeData() {
+		// This is a simple example. Replace this logic with your actual data retrieval/generation.
+		return "Current Time: " + new Date().toString();
+	}
+
 	public void initWebApp(BroController controller, Explorer explorer) {
 		this.controller = controller;
 		Spark.staticFileLocation("/webapp");
+		Spark.externalStaticFileLocation(EmuBroUtil.getResourceDirectory()+"/uploads");
 		//		Spark.staticFiles.expireTime(600); // ten minutes
 //		File storageDir = new File(controller.getStorageDirectory());
 //		if (!storageDir.isDirectory()) {
 //			return;
 //		}
+
+
 		Spark.get("/hello", (request, response) ->
 	        "<!DOCTYPE html>" +
 	         "<html>" +
@@ -47,28 +57,68 @@ public class WebAppBro {
 	         "</body>" +
 	       "</html>"
 	    );
+
+		Spark.get("/ping", new Route() {
+				@Override
+				public Object handle(Request request, Response response) throws Exception {
+					return "pong";
+				}
+			}
+		);
+
 		Spark.post("/upload", new Route() {
 			@Override
 			public Object handle(Request req, Response res) throws Exception {
-				return controller.uploadFile(req);
+				return controller.uploadFile(req, res);
 			}
 		});
-		Spark.post("/game/:id/run", new Route() {
+
+		Spark.post("/game/:gameId/run", new Route() {
 			@Override
 			public Object handle(Request req, Response res) throws Exception {
-				return controller.runGame(req.params(":id"));
+				System.out.println(req.host() + " ("+req.ip()+") wants to run game: " + req.params(":gameId"));
+				int confirmDownload;
+				boolean accessingFromLocalHost = req.ip().equals("127.0.0.1") || req.ip().equals("[0:0:0:0:0:0:0:1]");
+				if (accessingFromLocalHost) {
+					confirmDownload = JOptionPane.YES_OPTION;
+				} else {
+					confirmDownload = UIUtil.showQuestionMessage(null, req.host() + " (" + req.ip() + ") wants to run a game: " + req.params(":gameId") +
+							"\nWant to allow?", "confirm");
+				}
+				if (confirmDownload == JOptionPane.YES_OPTION) {
+					return controller.runCurrentGames(req.params(":gameId"));
+				} else {
+					res.status(-1);
+					return res.status();
+				}
 			}
 		});
-		Spark.post("/game/:id/select", new Route() {
+		Spark.post("/game/:gameId/select", new Route() {
 			@Override
 			public Object handle(Request req, Response res) throws Exception {
-				return controller.selectGame(req.params(":id"));
+				System.out.println(req.host() + " ("+req.ip()+") wants to select game..." + req.params(":gameId"));
+				return controller.selectGame(req.params(":gameId"));
 			}
 		});
-		Spark.get("/download/:file", new Route() {
+		Spark.get("/game/:gameId/download", new Route() {
 			@Override
 			public Object handle(Request req, Response res) throws Exception {
-				return controller.downloadFile(req.params(":file"));
+				System.out.println(req.host() + " ("+req.ip()+") wants to download file from game..." + req.params(":gameId"));
+				// http://www.java2s.com/Code/Java/Network-Protocol/AnnslookupcloneinJava.htm
+				int confirmDownload;
+				boolean accessingFromLocalHost = req.ip().equals("127.0.0.1") || req.ip().equals("[0:0:0:0:0:0:0:1]");
+				if (accessingFromLocalHost) {
+					confirmDownload = JOptionPane.YES_OPTION;
+				} else {
+					confirmDownload = UIUtil.showQuestionMessage(null, req.host() + " (" + req.ip() + ") is downloading file..." + req.params(":gameId") +
+							"\nWant to allow?", "confirm");
+				}
+				if (confirmDownload == JOptionPane.YES_OPTION) {
+					return controller.downloadFile(req.params(":gameId"), res);
+				} else {
+					res.status(-1);
+					return res.status();
+				}
 			}
 		});
 		Spark.get("/gameCover/:gameId", new Route() {
@@ -80,6 +130,9 @@ public class WebAppBro {
 				raw.setHeader("Content-Disposition", "attachment; filename=gamecover.png");
 
 				ImageIcon icon = IconStore.current().getGameCover(gameId);
+				if (icon == null) {
+					icon = IconStore.current().getPlatformCover(explorer.getGame(gameId).getPlatformId());
+				}
 				BufferedImage bi = new BufferedImage(icon.getIconWidth(), icon.getIconHeight(),
 						BufferedImage.TYPE_INT_ARGB);
 				Graphics g = bi.createGraphics();

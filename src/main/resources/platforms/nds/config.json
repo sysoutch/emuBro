@@ -1,0 +1,69 @@
+{  
+  "name":"Nintendo DS",
+  "shortName":"nds",
+  "companyName":"Nintendo",
+  "iconFilename":"",
+  "defaultGameCover":"",
+  "recommendedEmulators":[
+	 "melonDS"
+  ],
+  "plugins":[
+	{
+	  "covers":"",
+	  "titles":""
+	}
+  ],
+  "gameSearchModes":[  
+	 "FILE_FILE_NAME_MATCH",
+	 "ARCHIVE_FILE_NAME_MATCH"
+  ],
+  "searchFor":"^(.+)\\.nds$|^(.+)\\.srl$",
+  "fileStructure":[  
+
+  ],
+  "supportedArchiveTypes":[  
+	 ".zip",
+	 ".rar",
+	 ".7z",
+	 ".gz"
+  ],
+  "supportedImageTypes":[  
+
+  ],
+  "emulators":[  
+	 {
+		"name":"DeSmuME",
+		"os":[
+
+		],
+		"path":"",
+		"iconFilename":"desmume.png",
+		"configFilePath":"",
+		"website":"http://desmume.org/download/",
+		"startParameters":"%emupath% %gamepath%",
+		"supportedFileTypes":[  
+		   ".nds",
+		   ".ds",
+		   ".srl",
+		   ".zip",
+		   ".7z",
+		   ".rar",
+		   ".gz"
+		],
+		"searchString":"^(desmume.*)\\.exe$",
+		"archiveFileMatchWin":"^(desmume-(.*)-win_x64)\\.zip$",
+		"archiveFileMatchLinux":"^(desmume-(.*)-linux_x64)\\.tar$",
+		"archiveFileMatchMac":"^(desmume-(.*)-osx_x64)\\.zip$",
+		"setupFileMatchWin":"",
+		"setupFileMatchLinux":"",
+		"setupFileMatchMac":"",
+		"autoSearchEnabled":true,
+		"biosRequired":false,
+		"runCommandsBefore":[
+		 
+		]
+	 }
+  ],
+  "directExecutionMode":"none",
+  "autoSearchEnabled":true
+}

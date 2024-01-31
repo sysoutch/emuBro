@@ -65,10 +65,10 @@ public class RatingBarPanel extends JPanel implements ActionListener, FocusListe
 			buttons.add(btn);
 		}
 		int size = ScreenSizeUtil.is3k() ? 32 : 16;
-		ColorStore.current().setColor("rating", new Color(255, 195, 0));
+		ColorStore.current().setColor("rating", new Color(244, 187, 68));
 		ColorStore.current().setColor("ratingBlank", ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR));
-		ColorStore.current().setColor("ratingAdd", new Color(40, 167, 69));
-		ColorStore.current().setColor("ratingRemove", new Color(237, 67, 55));
+		ColorStore.current().setColor("ratingAdd", new Color(175, 225, 175));
+		ColorStore.current().setColor("ratingRemove", new Color(250, 160, 160));
 		for (AbstractButton btn : buttons) {
 			icoRating = ImageUtil.getFlatSVGIconFrom(Icons.get("rating"), size, ColorStore.current().getColor("rating"));
 			icoRatingBlank = ImageUtil.getFlatSVGIconFrom(Icons.get("rating"), size, ColorStore.current().getColor("ratingBlank"));

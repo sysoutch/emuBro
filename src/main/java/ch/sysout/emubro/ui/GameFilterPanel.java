@@ -28,35 +28,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.swing.AbstractButton;
-import javax.swing.BorderFactory;
-import javax.swing.DefaultListCellRenderer;
-import javax.swing.DefaultListModel;
-import javax.swing.DefaultListSelectionModel;
-import javax.swing.ImageIcon;
-import javax.swing.JButton;
-import javax.swing.JCheckBoxMenuItem;
-import javax.swing.JComboBox;
-import javax.swing.JComponent;
-import javax.swing.JLabel;
-import javax.swing.JList;
-import javax.swing.JMenuItem;
-import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
-import javax.swing.JScrollPane;
-import javax.swing.JSeparator;
-import javax.swing.JSplitPane;
-import javax.swing.ListCellRenderer;
-import javax.swing.MenuElement;
-import javax.swing.MenuSelectionManager;
-import javax.swing.SwingConstants;
-import javax.swing.UIManager;
+import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
+import ch.sysout.emubro.util.ColorConstants;
 import com.jgoodies.forms.factories.Paddings;
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
@@ -88,7 +67,7 @@ import ch.sysout.util.ScreenSizeUtil;
 public class GameFilterPanel extends JPanel implements GameListener, TagsFromGamesListener, PlatformFromGameListener {
 	private static final long serialVersionUID = 1L;
 
-	private JComboBox<Platform> cmbPlatforms;
+	public JComboBox<Platform> cmbPlatforms;
 	private JPanel pnlSearchField = new JPanel(new BorderLayout());
 	public JExtendedTextField txtSearchGame = new JExtendedTextField();
 	private ImageIcon icoSearch;
@@ -141,6 +120,7 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 	private JPopupMenu popupRegions;
 
 	private AbstractButton btnPinUnpinTagsPanel = new JCustomToggleButton("Pin");
+	private JPanel pnlTextTagAndRegionWrapper;
 
 	public GameFilterPanel(Explorer explorer) {
 		super(new BorderLayout());
@@ -167,13 +147,13 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 				fireEvent(new BroFilterEvent(getSelectedPlatformId(), getCriteria()));
 			}
 		});
-		btnTags = new JCustomToggleButton(Messages.get(MessageConstants.TAGS), ImageUtil.getFlatSVGIconFrom(Icons.get("tag"), size, new Color(168, 124, 160)));
-		btnRegions = new JCustomToggleButton(Messages.get(MessageConstants.REGIONS), ImageUtil.getFlatSVGIconFrom(Icons.get("globe"), size, new Color(109, 132, 171)));
+		btnTags = new JCustomButtonNew(Messages.get(MessageConstants.TAGS), ImageUtil.getFlatSVGIconFrom(Icons.get("tag"), size, new Color(168, 124, 160)));
+		btnRegions = new JCustomButtonNew(Messages.get(MessageConstants.REGIONS), ImageUtil.getFlatSVGIconFrom(Icons.get("globe"), size, new Color(109, 132, 171)));
 		btnTags.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				popupTags.setPreferredSize(new Dimension(pnlFilter.getWidth(), 220));
+				popupTags.setPreferredSize(new Dimension(pnlTextTagAndRegionWrapper.getWidth(), 220));
 				//				popup.setPreferredSize(new Dimension(220, getParent().getHeight()));
 				popupTags.show(pnlFilter, -1, pnlFilter.getHeight());
 				//				popup.show(pnlFilter, pnlFilter.getWidth()-220, pnlFilter.getHeight());
@@ -487,23 +467,53 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 
 		JSplitPane splFilterPlatformAndGame = new JSplitPane();
 		splFilterPlatformAndGame.setResizeWeight(0);
+		splFilterPlatformAndGame.setOpaque(false);
 		splFilterPlatformAndGame.setBorder(BorderFactory.createEmptyBorder());
 		splFilterPlatformAndGame.setContinuousLayout(true);
-		splFilterPlatformAndGame.setLeftComponent(cmbPlatforms);
-		splFilterPlatformAndGame.setRightComponent(txtSearchGame);
 
-		JSplitPane splFilterTextAndTag = new JSplitPane();
-		splFilterTextAndTag.setResizeWeight(1);
-		splFilterTextAndTag.setBorder(BorderFactory.createEmptyBorder());
-		splFilterTextAndTag.setContinuousLayout(true);
-		splFilterTextAndTag.setLeftComponent(splFilterPlatformAndGame);
+		JPanel pnlWrapperPlatforms = new JPanel(new BorderLayout());
+		pnlWrapperPlatforms.add(cmbPlatforms);
+		JButton btn1;
+		pnlWrapperPlatforms.add(btn1 = new JButton(ImageUtil.getFlatSVGIconFrom(Icons.get("settings"), 16, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR))), BorderLayout.EAST);
+		splFilterPlatformAndGame.setLeftComponent(pnlWrapperPlatforms);
+		btn1.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				JPopupMenu popupPlatformFilterSettings = new JPopupMenu();
+				popupPlatformFilterSettings.add(new JCheckBoxMenuItem("Multi Platform Filter"));
+				popupPlatformFilterSettings.setVisible(true);
+				popupPlatformFilterSettings.show(btn1, 0-popupPlatformFilterSettings.getWidth()+btn1.getWidth(), btn1.getHeight());
+			}
+		});
+
+		JPanel pnlWrapperSearchGame = new JPanel(new BorderLayout());
+		pnlWrapperSearchGame.add(txtSearchGame);
+		JButton btn2;
+		pnlWrapperSearchGame.add(btn2 = new JButton(ImageUtil.getFlatSVGIconFrom(Icons.get("settings"), 16, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR))), BorderLayout.EAST);
+		splFilterPlatformAndGame.setRightComponent(pnlWrapperSearchGame);
+		pnlFilter.add(splFilterPlatformAndGame, cc.xy(1, 1));
+		btn2.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				JPopupMenu popupGameFilterSettings = new JPopupMenu();
+				popupGameFilterSettings.add(new JCheckBoxMenuItem("Case Sensitive"));
+				popupGameFilterSettings.add(new JCheckBoxMenuItem("Search in Filenames"));
+				popupGameFilterSettings.add(new JRadioButtonMenuItem("Wildcards"));
+				popupGameFilterSettings.add(new JRadioButtonMenuItem("Regex Search"));
+				popupGameFilterSettings.setVisible(true);
+				popupGameFilterSettings.show(btn2, 0-popupGameFilterSettings.getWidth()+btn2.getWidth(), btn2.getHeight());
+			}
+		});
+
 		JPanel pnlTagAndRegionWrapper = new JPanel(new BorderLayout());
 		pnlTagAndRegionWrapper.add(btnTags, BorderLayout.WEST);
 		pnlTagAndRegionWrapper.add(btnRegions);
-		splFilterTextAndTag.setRightComponent(pnlTagAndRegionWrapper);
-		pnlFilter.add(splFilterTextAndTag, cc.xy(1, 1));
 
-		add(pnlFilter, BorderLayout.NORTH);
+		pnlTextTagAndRegionWrapper = new JPanel(new BorderLayout());
+		pnlTextTagAndRegionWrapper.add(pnlFilter);
+		pnlTextTagAndRegionWrapper.add(pnlTagAndRegionWrapper, BorderLayout.EAST);
+		add(pnlTextTagAndRegionWrapper, BorderLayout.NORTH);
+
 		//		add(pnlTags);
 		//		add(btnResizeGameFilterPane, BorderLayout.SOUTH);
 
@@ -706,8 +716,8 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 	}
 
 	public void setFocusInTextField() {
-		txtSearchGame.selectAll();
 		txtSearchGame.requestFocusInWindow();
+		txtSearchGame.selectAll();
 	}
 
 	public void initTags(List<Tag> tags) {
@@ -1010,11 +1020,13 @@ public class GameFilterPanel extends JPanel implements GameListener, TagsFromGam
 		g2d.dispose();
 	}
 
-	public void checkMinimizeGameFilterPanel() {
-		minimizeTagsButton(getWidth() < 360);
+	public void minimizeTagsAndRegionsButton(boolean minimizeButtons) {
+		btnTags.setText(minimizeButtons ? "" : Messages.get(MessageConstants.TAGS));
+		btnRegions.setText(minimizeButtons ? "" : Messages.get(MessageConstants.REGIONS));
 	}
 
-	public void minimizeTagsButton(boolean unPinDetailsPane) {
-		btnTags.setText(unPinDetailsPane ? "" : Messages.get(MessageConstants.TAGS));
+	@Override
+	public void setVisible(boolean aFlag) {
+		super.setVisible(aFlag);
 	}
 }

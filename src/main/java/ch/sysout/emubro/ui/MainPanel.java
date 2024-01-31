@@ -28,28 +28,20 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.swing.AbstractButton;
-import javax.swing.Action;
-import javax.swing.BorderFactory;
-import javax.swing.ImageIcon;
-import javax.swing.JCheckBox;
-import javax.swing.JFrame;
-import javax.swing.JPanel;
-import javax.swing.JScrollBar;
-import javax.swing.JSplitPane;
-import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
-import javax.swing.WindowConstants;
+import javax.swing.*;
+import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.plaf.SplitPaneUI;
 import javax.swing.plaf.basic.BasicSplitPaneDivider;
 import javax.swing.plaf.basic.BasicSplitPaneUI;
 
 import ch.sysout.emubro.api.model.*;
+import ch.sysout.emubro.ui.event.ThemeChangeEvent;
+import ch.sysout.emubro.ui.listener.ThemeListener;
+import ch.sysout.emubro.util.ColorConstants;
 import ch.sysout.emubro.util.EmuBroUtil;
+import com.formdev.flatlaf.ui.FlatUIUtils;
 import com.jgoodies.forms.factories.Paddings;
-import com.jgoodies.forms.layout.CellConstraints;
-import com.jgoodies.forms.layout.FormLayout;
 
 import ch.sysout.emubro.api.PlatformListener;
 import ch.sysout.emubro.api.RunGameWithListener;
@@ -75,7 +67,7 @@ import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 
-public class MainPanel extends JPanel implements PlatformListener, GameSelectionListener, LanguageListener {
+public class MainPanel extends JPanel implements PlatformListener, GameSelectionListener, LanguageListener, ThemeListener {
 	private static final long serialVersionUID = 1L;
 
 	private OrganizePopupMenu mnuOrganizeOptions = new OrganizePopupMenu();
@@ -83,10 +75,8 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 	private WelcomeViewPanel pnlBlankView;
 	private ListViewPanel pnlListView;
 	private TableViewPanel pnlTableView;
-	private NavigationPanel pnlNavigation;
 	private PreviewPanePanel pnlPreviewPane;
-	private JSplitPane splNavigationAndCurrentViewWithPreviewPane;
-	private JSplitPane splGameFilterWithCurrentViewAndPreviewPane;
+	private JSplitPane splCurrentViewAndPreviewPane;
 	private JSplitPane splDetailsPane;
 	private DetailsPanel pnlDetails;
 	private int lastNavigationPaneWidth;
@@ -99,8 +89,6 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 	protected JFrame frameDetailsPane;
 	protected WindowListener frameDetailsWindowAdapter;
 	private List<DetailsFrameListener> detailsFrameListeners = new ArrayList<>();
-
-	private CellConstraints ccMainPanel;
 
 	private int lastUserDefinedPreviewWidth = -1;
 	private int lastUserDefinedDetailsHeight = -1;
@@ -139,8 +127,14 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 	protected int minimumPreviewPaneWidth = 128;
 
 	protected BasicSplitPaneDivider basicSplitPaneDivider;
-	private ExtendedPopupMenu popupNavigation;
-	private JPanel pnlNavigationPopup;
+	private JTabbedPane tpNavigation = new JTabbedPane(SwingConstants.LEFT, JTabbedPane.SCROLL_TAB_LAYOUT);
+
+	final String MAXIMIZED_NAVBAR = "max";
+	final String MINIMIZED_NAVBAR = "min";
+	final String CENTER_NAVBAR = "center";
+
+	private String navigationPaneState = MINIMIZED_NAVBAR;
+	private String[] navStringsArr = { "All Games", "Favorites", "Filter Groups", "Recently Played", "Recycle Bin" };
 
 	public MainPanel(Explorer explorer, ViewPanelManager viewManager, GameSettingsPopupMenu mnuGameSettings) {
 		super(new BorderLayout());
@@ -162,7 +156,6 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 		popupView = new ViewContextMenu();
 		viewManager.addSelectGameListener(popupGame);
 		/** 2 */ initializeCurrentViewAndPreviewPane();
-		/** 3 */ initializeNavigationAndCurrentViewAndPreviewPane();
 		/** 5 */ initializeDetailsPanel();
 
 		frameDetailsWindowAdapter = new WindowAdapter() {
@@ -183,29 +176,6 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 			};
 		};
 
-		pnlNavigationPopup = new JPanel();
-		popupNavigation = new ExtendedPopupMenu() {
-			private static final long serialVersionUID = 1L;
-
-			@Override
-			protected void paintComponent(Graphics g) {
-				super.paintComponent(g);
-				Graphics2D g2d = (Graphics2D) g.create();
-				int w = getWidth();
-				int h = getHeight();
-				//g2d.setColor(IconStore.current().getCurrentTheme().getGameFilterPane().getColor());
-				//g2d.fillRect(0, 0, w, h);
-				Image background = IconStore.current().getCurrentTheme().getGameFilterPane().getImage();
-				if (background != null) {
-					g2d.drawImage(background, 0, 0, w, h, this);
-				}
-				g2d.dispose();
-			}
-		};
-		popupNavigation.setLightWeightPopupEnabled(false);
-		popupNavigation.setOpaque(false);
-		popupNavigation.add(pnlNavigationPopup);
-
 		pnlPreviewPane.addScrollToCurrentGamesListener(new ScrollToCurrentGamesListener() {
 
 			@Override
@@ -218,33 +188,32 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 
 			@Override
 			public void mouseDragged(MouseEvent e) {
-				int loc = splNavigationAndCurrentViewWithPreviewPane.getDividerLocation();
-				int divLocation = splGameFilterWithCurrentViewAndPreviewPane.getDividerLocation();
-				splGameFilterWithCurrentViewAndPreviewPane.setDividerLocation(divLocation + e.getX());
+				int divLocation = splCurrentViewAndPreviewPane.getDividerLocation();
+				splCurrentViewAndPreviewPane.setDividerLocation(divLocation + e.getX());
 
-				if (splGameFilterWithCurrentViewAndPreviewPane.getDividerLocation() <= splGameFilterWithCurrentViewAndPreviewPane.getMinimumDividerLocation()) {
-					lastUserDefinedPreviewWidth = getParent().getWidth() - splGameFilterWithCurrentViewAndPreviewPane.getMinimumDividerLocation() + loc;
-					splGameFilterWithCurrentViewAndPreviewPane.setDividerLocation(splGameFilterWithCurrentViewAndPreviewPane.getMinimumDividerLocation());
+				if (splCurrentViewAndPreviewPane.getDividerLocation() <= splCurrentViewAndPreviewPane.getMinimumDividerLocation()) {
+					lastUserDefinedPreviewWidth = getParent().getWidth() - splCurrentViewAndPreviewPane.getMinimumDividerLocation();
+					splCurrentViewAndPreviewPane.setDividerLocation(splCurrentViewAndPreviewPane.getMinimumDividerLocation());
 					return;
-				} else if (splGameFilterWithCurrentViewAndPreviewPane.getDividerLocation() >= splGameFilterWithCurrentViewAndPreviewPane.getMaximumDividerLocation()) {
-					lastUserDefinedPreviewWidth = getParent().getWidth() - splGameFilterWithCurrentViewAndPreviewPane.getMaximumDividerLocation() + loc;
-					splGameFilterWithCurrentViewAndPreviewPane.setDividerLocation(splGameFilterWithCurrentViewAndPreviewPane.getMaximumDividerLocation());
+				} else if (splCurrentViewAndPreviewPane.getDividerLocation() >= splCurrentViewAndPreviewPane.getMaximumDividerLocation()) {
+					lastUserDefinedPreviewWidth = getParent().getWidth() - splCurrentViewAndPreviewPane.getMaximumDividerLocation();
+					splCurrentViewAndPreviewPane.setDividerLocation(splCurrentViewAndPreviewPane.getMaximumDividerLocation());
 					return;
 				}
 				setPreviewPaneMovingWeight();
-				lastUserDefinedPreviewWidth = getParent().getWidth() - splGameFilterWithCurrentViewAndPreviewPane.getDividerLocation() + loc;
+				lastUserDefinedPreviewWidth = getParent().getWidth() - splCurrentViewAndPreviewPane.getDividerLocation();
 				lastPreviewPaneWidth = lastUserDefinedPreviewWidth;
 
 				//				int divLocation = pnlPreviewPane.getWidth();
-				int dividerSize = splGameFilterWithCurrentViewAndPreviewPane.getDividerSize();
+				int dividerSize = splCurrentViewAndPreviewPane.getDividerSize();
 				int scrollBarSize = pnlPreviewPane.getScrollBarSize();
 				int limit = ScreenSizeUtil.adjustValueToResolution(minimumPreviewPaneWidth) + dividerSize
 						+ (pnlPreviewPane.isScrollBarVisible() ? scrollBarSize : 0);
 				if (divLocation > 0 && limit > 0 && divLocation <= limit) {
-					if (splGameFilterWithCurrentViewAndPreviewPane.getLastDividerLocation() > 0 && splGameFilterWithCurrentViewAndPreviewPane
-							.getDividerLocation() > splGameFilterWithCurrentViewAndPreviewPane.getLastDividerLocation()) {
-						splGameFilterWithCurrentViewAndPreviewPane.setDividerLocation(splGameFilterWithCurrentViewAndPreviewPane.getMaximumDividerLocation() - limit);
-						lastUserDefinedPreviewWidth = getParent().getWidth() - splGameFilterWithCurrentViewAndPreviewPane.getDividerLocation();
+					if (splCurrentViewAndPreviewPane.getLastDividerLocation() > 0 && splCurrentViewAndPreviewPane
+							.getDividerLocation() > splCurrentViewAndPreviewPane.getLastDividerLocation()) {
+						splCurrentViewAndPreviewPane.setDividerLocation(splCurrentViewAndPreviewPane.getMaximumDividerLocation() - limit);
+						lastUserDefinedPreviewWidth = getParent().getWidth() - splCurrentViewAndPreviewPane.getDividerLocation();
 						if (e.getX() >= (limit / 2)) {
 							showPreviewPane(false);
 							firePreviewPaneHiddenEvent();
@@ -288,7 +257,6 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 					pinDetailsPane(true);
 				}
 			}
-
 		});
 
 		pnlDetails.addSetCoverForGameListener(new ActionListener() {
@@ -348,11 +316,12 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 	}
 
 	void pinDetailsPane(boolean b, int x2, int y2, int width2, int height2) {
+		((BasicSplitPaneUI) splDetailsPane.getUI()).getDivider().setVisible(b);
 		if (b) {
 			detailsPaneTemporaryUnpinned = false; // dont add this in else case
 			frameDetailsPaneResized = chkRememberDetailsFrameSizeAndLocation.isSelected();
 			frameDetailsPane.removeComponentListener(frameDetailsComponentListener);
-			addSplDetailsPane();
+			splDetailsPane.setBottomComponent(pnlDetails);
 			if (isDetailsPaneUnpinned()) {
 				lastPnlDetailsPreferredSize = pnlDetails.getSize();
 				lastFrameDetailsPaneLocation = frameDetailsPane.getLocationOnScreen();
@@ -396,7 +365,6 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				frameDetailsPane.add(pnlRemember, BorderLayout.SOUTH);
 			}
 			frameDetailsPane.setTitle(Messages.get(MessageConstants.INFORMATION_PANEL));
-			removeSplDetailsPane();
 			frameDetailsPane.add(pnlDetails);
 			pnlDetails.btnResizeDetailsPane.setVisible(false);
 			pnlDetails.btnHideDetailsPane.setVisible(false);
@@ -423,8 +391,9 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				frameDetailsPane.setLocation(lastFrameDetailsPaneLocation.x, lastFrameDetailsPaneLocation.y);
 			} else {
 				if (x2 == -1 || y2 == -1) {
-					frameDetailsPane.setLocation(parent.getLocationOnScreen().x - frameDetailsPane.getInsets().left + 1,
-							detailsPanelLocationOnScreen.y - frameDetailsPane.getInsets().top);
+					System.out.println("border is: " + frameDetailsPane.getInsets().top);
+					frameDetailsPane.setLocation(parent.getLocationOnScreen().x - frameDetailsPane.getInsets().left,
+							detailsPanelLocationOnScreen.y - (frameDetailsPane.getHeight() - frameDetailsPane.getContentPane().getSize().height) + frameDetailsPane.getInsets().top + frameDetailsPane.getInsets().bottom);
 				} else {
 					frameDetailsPane.setLocation(x2, y2);
 				}
@@ -450,7 +419,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 		//		splGameFilterAndCurrentView.setBorder(BorderFactory.createEmptyBorder());
 
 		//		pnlPreviewPane.setMinimumSize(new Dimension(0, 0));
-		splGameFilterWithCurrentViewAndPreviewPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, true,
+		splCurrentViewAndPreviewPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, true,
 				viewManager.getCurrentViewPanel(), pnlPreviewPane) {
 			private static final long serialVersionUID = 1L;
 
@@ -463,121 +432,25 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 			public int getMaximumDividerLocation() {
 				return getWidth() - ScreenSizeUtil.adjustValueToResolution(128);
 			}
+
+			@Override
+			public int getDividerLocation() {
+				return getWidth() - ScreenSizeUtil.adjustValueToResolution(256);
+			}
+			@Override
+			public int getLastDividerLocation() {
+				return getWidth() - ScreenSizeUtil.adjustValueToResolution(256);
+			}
 		};
 		//		splGameFilterCurrentViewAndPreviewPane.setDividerSize(0);
-		splGameFilterWithCurrentViewAndPreviewPane.getRightComponent().setVisible(false);
-		splGameFilterWithCurrentViewAndPreviewPane.setBorder(BorderFactory.createEmptyBorder());
-		splGameFilterWithCurrentViewAndPreviewPane.setResizeWeight(1);
-	}
-
-	private void initializeNavigationAndCurrentViewAndPreviewPane() {
-		pnlNavigation = new NavigationPanel();
-		splNavigationAndCurrentViewWithPreviewPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, true, pnlNavigation,
-				splGameFilterWithCurrentViewAndPreviewPane) {
-			private static final long serialVersionUID = 1L;
-
-			@Override
-			public int getMinimumDividerLocation() {
-				JScrollBar navigationVerticalScrollBar = pnlNavigation.getSpNavigationButtons().getVerticalScrollBar();
-				int scrollBarWidth = navigationVerticalScrollBar.getWidth();
-				if (scrollBarWidth == 0) {
-					scrollBarWidth = ((Integer)UIManager.get("ScrollBar.width")).intValue();
-				}
-				int dividerSize = splNavigationAndCurrentViewWithPreviewPane.getDividerSize();
-				int border = pnlNavigation.getButtonBorderSize() + scrollBarWidth + dividerSize;
-				return ScreenSizeUtil.adjustValueToResolution(ScreenSizeUtil.adjustValueToResolution(32) + border);
-			}
-		};
-		splNavigationAndCurrentViewWithPreviewPane.setDividerSize(0);
-		splNavigationAndCurrentViewWithPreviewPane.getLeftComponent().setVisible(false);
-		splNavigationAndCurrentViewWithPreviewPane.setBorder(BorderFactory.createEmptyBorder());
-		splNavigationAndCurrentViewWithPreviewPane.setResizeWeight(0);
-
-		//		BasicSplitPaneDivider divider = (BasicSplitPaneDivider) splNavigationAndCurrentViewAndPreviewPane.getComponent(2);
-		//		divider.setBorder(BorderFactory.createEmptyBorder());
-	}
-
-	public void addNavigationSplitPaneListener() {
-		currentNavMode = "oneLine";
-		PropertyChangeListener listener = new PropertyChangeListener() {
-
-			@Override
-			public void propertyChange(PropertyChangeEvent e) {
-				if (pnlNavigation != null) {
-					e.getOldValue();
-					int newValue = (int) e.getNewValue();
-
-					AbstractButton button = pnlNavigation.getButtons()[1];
-					String text = pnlNavigation.getLongestLabel();
-
-					AffineTransform affinetransform = new AffineTransform();
-					FontRenderContext frc = new FontRenderContext(affinetransform, true, false);
-					Font font = button.getFont().deriveFont(Font.BOLD);
-					int textWidth = (int) (font.getStringBounds(text, frc).getWidth());
-					int iconWidth = button.getIcon().getIconWidth();
-					JScrollBar navigationVerticalScrollBar = pnlNavigation.getSpNavigationButtons().getVerticalScrollBar();
-					int scrollBarWidth = navigationVerticalScrollBar.getWidth();
-					if (scrollBarWidth == 0) {
-						scrollBarWidth = ((Integer)UIManager.get("ScrollBar.width")).intValue();
-					}
-					int dividerSize = splNavigationAndCurrentViewWithPreviewPane.getDividerSize();
-					int border = pnlNavigation.getButtonBorderSize() + scrollBarWidth + dividerSize;
-					int widthWithTextOnOneLine = textWidth + iconWidth + border + button.getIconTextGap();
-					int widthWithTextBottom = ((textWidth >= iconWidth) ? textWidth : iconWidth) + border;
-					if (newValue < iconWidth + border) {
-						splNavigationAndCurrentViewWithPreviewPane.setDividerLocation(iconWidth + border);
-						if (currentNavMode != null && !currentNavMode.equals("min")) {
-							currentNavMode = "min";
-							pnlNavigation.minimizeContentWidth();
-						}
-					} else if (newValue > widthWithTextOnOneLine) {
-						splNavigationAndCurrentViewWithPreviewPane.setDividerLocation(widthWithTextOnOneLine);
-						if (currentNavMode != null && !currentNavMode.equals("oneLine")) {
-							currentNavMode = "oneLine";
-							pnlNavigation.maximizeContentWidth();
-						}
-					} else {
-						if (newValue <= iconWidth + border) {
-							splNavigationAndCurrentViewWithPreviewPane.setDividerLocation(iconWidth + border);
-							if (currentNavMode != null && !currentNavMode.equals("min")) {
-								currentNavMode = "min";
-								pnlNavigation.minimizeContentWidth();
-							}
-							return;
-						}
-						if (newValue <= widthWithTextBottom) {
-							splNavigationAndCurrentViewWithPreviewPane.setDividerLocation(widthWithTextBottom);
-							if (currentNavMode != null && !currentNavMode.equals("centered")) {
-								currentNavMode = "centered";
-								pnlNavigation.centerContentWidth();
-							}
-							return;
-						}
-						if (newValue <= widthWithTextOnOneLine) {
-							splNavigationAndCurrentViewWithPreviewPane.setDividerLocation(widthWithTextOnOneLine);
-							if (currentNavMode != null && !currentNavMode.equals("oneLine")) {
-								currentNavMode = "oneLine";
-								pnlNavigation.maximizeContentWidth();
-							}
-							return;
-						}
-					}
-				}
-			}
-		};
-
-		splNavigationAndCurrentViewWithPreviewPane.addPropertyChangeListener(
-				JSplitPane.DIVIDER_LOCATION_PROPERTY, listener);
+		splCurrentViewAndPreviewPane.getRightComponent().setVisible(false);
+		splCurrentViewAndPreviewPane.setBorder(BorderFactory.createEmptyBorder());
+		splCurrentViewAndPreviewPane.setResizeWeight(1);
 	}
 
 	void setCurrentViewPanel(int defaultViewPanel, List<Game> games) {
+		System.out.println("set current view panel: " + defaultViewPanel);
 		switch (defaultViewPanel) {
-		case ViewPanel.BLANK_VIEW:
-			if (pnlBlankView == null) {
-				pnlBlankView = viewManager.getBlankViewPanel();
-			}
-			viewManager.setCurrentViewPanel(pnlBlankView);
-			break;
 		case ViewPanel.LIST_VIEW:
 			if (pnlListView == null) {
 				pnlListView = new ListViewPanel(explorer, viewManager, popupGame, popupView);
@@ -629,28 +502,31 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 			setViewStyle(ViewPanel.COVER_VIEW);
 			break;
 		}
-		changeViewPanelTo(viewManager.getCurrentViewPanel());
-		viewManager.getCurrentViewPanel().requestFocusInWindow();
-		SwingUtilities.invokeLater(new Runnable() {
-
-			@Override
-			public void run() {
-				if (explorer.hasCurrentGame()) {
-					viewManager.selectGame(explorer.getCurrentGames().get(0).getId());
-				} else {
-					viewManager.selectGame(GameConstants.NO_GAME);
-				}
-			}
-		});
+		splCurrentViewAndPreviewPane.setLeftComponent(viewManager.getCurrentViewPanel());
 	}
 
 	private void createUI() {
+		int size = 24;
+		int tabHeight = (int) (size*1.5f);
+		tabHeight = tabHeight < 36 ? 36 : tabHeight;
 		//		setBorder(BorderFactory.createLoweredSoftBevelBorder());
-		FormLayout layout = new FormLayout("min:grow",
-				"fill:min:grow");
-		setLayout(layout);
-		ccMainPanel = new CellConstraints();
-		splDetailsPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, splNavigationAndCurrentViewWithPreviewPane,
+		tpNavigation.putClientProperty("JTabbedPane.tabsPopupPolicy", "never");
+		tpNavigation.putClientProperty("JTabbedPane.tabHeight", tabHeight);
+		tpNavigation.putClientProperty("JTabbedPane.tabRotation", "auto");
+//		tpNavigation.putClientProperty("JTabbedPane.leadingComponent", new JCustomButtonNew(ImageUtil.getFlatSVGIconFrom(Icons.get("bars"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR))));
+
+		tpNavigation.addTab("", splCurrentViewAndPreviewPane);
+		tpNavigation.addTab("", new JPanel());
+		tpNavigation.addTab("", new JPanel());
+		tpNavigation.addTab("", new JPanel());
+		tpNavigation.addTab("", new JPanel());
+		tpNavigation.setIconAt(0, ImageUtil.getFlatSVGIconFrom(Icons.get("allGames"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		tpNavigation.setIconAt(1, ImageUtil.getFlatSVGIconFrom(Icons.get("favorites"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		tpNavigation.setIconAt(2, ImageUtil.getFlatSVGIconFrom(Icons.get("filterSquare"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		tpNavigation.setIconAt(3, ImageUtil.getFlatSVGIconFrom(Icons.get("recentlyPlayed"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+		tpNavigation.setIconAt(4, ImageUtil.getFlatSVGIconFrom(Icons.get("recycle"), size, ColorStore.current().getColor(ColorConstants.SVG_NO_COLOR)));
+
+		splDetailsPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, tpNavigation,
 				pnlDetails) {
 			private static final long serialVersionUID = 1L;
 
@@ -659,41 +535,18 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				return ScreenSizeUtil.adjustValueToResolution(128);
 			}
 		};
-		//		splDetailsPane.setDividerSize(0);
-		//		splDetailsPane.setUI(new BasicSplitPaneUI() {
-		//			@Override
-		//			public BasicSplitPaneDivider createDefaultDivider() {
-		//				return basicSplitPaneDivider = new BasicSplitPaneDivider(this) {
-		//					private static final long serialVersionUID = 1L;
-		//
-		//					@Override
-		//					public void setBorder(Border b) {
-		//						super.setBorder(b);
-		//					}
-		//				};
-		//			}
-		//		});
-		//		BasicSplitPaneDivider divider = ((BasicSplitPaneUI) splDetailsPane.getUI()).getDivider();
-		//		TitledBorder titled = BorderFactory.createTitledBorder("\u2630");
-		//		titled.setTitleJustification(TitledBorder.CENTER);
-		//		titled.setTitlePosition(TitledBorder.TOP);
-		//		titled.setTitleFont(new Font(Font.DIALOG, Font.PLAIN, 12));
-		//		titled.setTitleColor(Color.BLACK);
-		//		divider.setBorder(titled);
-
 		addDividerDraggedListeners();
-		//		splDetailsPane.setBorder(BorderFactory.createEmptyBorder());
-		splDetailsPane.getBottomComponent().setVisible(false);
 		splDetailsPane.setContinuousLayout(true);
 		splDetailsPane.setResizeWeight(1);
-		add(splDetailsPane, ccMainPanel.xy(1, 1));
+
+		add(splDetailsPane);
 	}
 
 	/**
 	 * this method must be called when look and feel changes
 	 */
 	public void addDividerDraggedListeners() {
-		SplitPaneUI spui = splGameFilterWithCurrentViewAndPreviewPane.getUI();
+		SplitPaneUI spui = splCurrentViewAndPreviewPane.getUI();
 		if (spui instanceof BasicSplitPaneUI) {
 			// Setting a mouse listener directly on split pane does not work, because no events are being received.
 			//			((BasicSplitPaneUI) spui).getDivider().addMouseMotionListener(new MouseMotionAdapter() {
@@ -775,181 +628,10 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 		mnuOrganizeOptions.show(source, 0, source.getHeight());
 	}
 
-	void showNavigationPane(boolean b) {
-		pnlNavigation.setVisible(b);
-		mnuOrganizeOptions.showNavigationPane(b);
-		if (b) {
-			addSplNavigationPane();
-		} else {
-			removeSplNavigationPane();
-		}
-	}
-
-	void showNavigationPane(boolean b, int dividerLocation, String navigationPaneState, int y) {
-		lastNavigationPaneWidth = dividerLocation;
-		pnlNavigation.setVisible(b);
-		//		pnlNavigation.setNavigationPaneState(navigationPaneState);
-		//		splNavigationAndCurrentViewWithPreviewPane.setDividerLocation(dividerLocation);
-		//		mnuOrganizeOptions.showNavigationPane(b);
-
-		if (b) {
-			popupNavigation.setBorder(BorderFactory.createEmptyBorder());
-			popupNavigation.putClientProperty("Popup.dropShadowPainted", false);
-			popupNavigation.add(pnlNavigation);
-
-			popupNavigation.setPreferredSize(new Dimension(pnlNavigation.getButtonWidth(), splNavigationAndCurrentViewWithPreviewPane.getHeight() - y));
-			popupNavigation.show(this, 0, 0+y);
-		} else {
-			splNavigationAndCurrentViewWithPreviewPane.setLeftComponent(pnlNavigation);
-		}
-	}
-
 	void showPreviewPane(boolean b) {
+		((BasicSplitPaneUI) splCurrentViewAndPreviewPane.getUI()).getDivider().setVisible(b);
 		mnuOrganizeOptions.showPreviewPane(b);
 		pnlPreviewPane.setVisible(b);
-		if (b) {
-			addSplPreviewPane();
-		} else {
-			removeSplPreviewPane();
-		}
-	}
-
-	private void addSplNavigationPane() {
-		pnlNavigation.setVisible(true);
-		int divLocation = splDetailsPane.getDividerLocation();
-		splNavigationAndCurrentViewWithPreviewPane.setRightComponent(splGameFilterWithCurrentViewAndPreviewPane);
-		if (isPreviewPaneVisible()) {
-			if (isDetailsPanePinned() && isDetailsPaneVisible()) {
-				splDetailsPane.setTopComponent(splNavigationAndCurrentViewWithPreviewPane);
-				splDetailsPane.setDividerLocation(divLocation);
-			} else {
-				add(splNavigationAndCurrentViewWithPreviewPane, ccMainPanel.xy(1, 1));
-			}
-		} else {
-			if (isDetailsPanePinned() && isDetailsPaneVisible()) {
-				splNavigationAndCurrentViewWithPreviewPane.setRightComponent(viewManager.getCurrentViewPanel());
-				splDetailsPane.setTopComponent(splNavigationAndCurrentViewWithPreviewPane);
-				splDetailsPane.setDividerLocation(divLocation);
-			} else {
-				splNavigationAndCurrentViewWithPreviewPane.setLeftComponent(pnlNavigation);
-				splNavigationAndCurrentViewWithPreviewPane.setRightComponent(viewManager.getCurrentViewPanel());
-				add(splNavigationAndCurrentViewWithPreviewPane, ccMainPanel.xy(1, 1));
-			}
-		}
-		SwingUtilities.invokeLater(new Runnable() {
-
-			@Override
-			public void run() {
-				setLastNavigationPaneDividerLocation();
-			}
-		});
-		UIUtil.revalidateAndRepaint(this);
-	}
-
-	private void removeSplNavigationPane() {
-		int lastLoc = splDetailsPane.getDividerLocation();
-		int navDivLoc = splNavigationAndCurrentViewWithPreviewPane.getDividerLocation();
-		lastNavigationPaneWidth = (isNavigationPaneVisible() ? navDivLoc : 0);
-		pnlNavigation.setVisible(false);
-		splNavigationAndCurrentViewWithPreviewPane.remove(splGameFilterWithCurrentViewAndPreviewPane);
-
-		if (isDetailsPanePinned() && isDetailsPaneVisible()) {
-			if (isPreviewPaneVisible()) {
-				splDetailsPane.setTopComponent(splGameFilterWithCurrentViewAndPreviewPane);
-			} else {
-				splDetailsPane.setTopComponent(viewManager.getCurrentViewPanel());
-			}
-			splDetailsPane.setDividerLocation(lastLoc);
-
-			//		SwingUtilities.invokeLater(new Runnable() {
-			//
-			//			@Override
-			//			public void run() {
-			//				setLastNavigationDividerLocation();
-			//			}
-			//		});
-		} else {
-			remove(splNavigationAndCurrentViewWithPreviewPane);
-			if (isPreviewPaneVisible()) {
-				add(splGameFilterWithCurrentViewAndPreviewPane, ccMainPanel.xy(1, 1));
-			} else {
-				add(viewManager.getCurrentViewPanel(), ccMainPanel.xy(1, 1));
-			}
-		}
-		UIUtil.revalidateAndRepaint(this);
-	}
-
-	private void addSplPreviewPane() {
-		pnlPreviewPane.setVisible(true);
-		// this has been done cause of a bug which changes navigations divider
-		// location after adding/removing splitpane components
-		int lastNavigationDividerLocation = splNavigationAndCurrentViewWithPreviewPane.getDividerLocation();
-		splGameFilterWithCurrentViewAndPreviewPane.setRightComponent(pnlPreviewPane);
-		if (isNavigationPaneVisible()) {
-			splGameFilterWithCurrentViewAndPreviewPane.setVisible(true);
-			//			splNavigationAndCurrentViewAndPreviewPane.setRightComponent(splGameFilterCurrentViewAndPreviewPane);
-			if (isDetailsPanePinned() && isDetailsPaneVisible()) {
-				int loc = splDetailsPane.getDividerLocation();
-				splDetailsPane.setTopComponent(splNavigationAndCurrentViewWithPreviewPane);
-				splDetailsPane.setDividerLocation(loc);
-			} else {
-				add(splNavigationAndCurrentViewWithPreviewPane, ccMainPanel.xy(1, 1));
-			}
-			// this has been done cause of a bug which changes navigations divider
-			// location after adding/removing splitpane components
-			splNavigationAndCurrentViewWithPreviewPane.setDividerLocation(lastNavigationDividerLocation);
-		} else {
-			splGameFilterWithCurrentViewAndPreviewPane.setVisible(true);
-			splGameFilterWithCurrentViewAndPreviewPane.setLeftComponent(viewManager.getCurrentViewPanel());
-			if (isDetailsPanePinned() && isDetailsPaneVisible()) {
-				int loc = splDetailsPane.getDividerLocation();
-				splDetailsPane.setTopComponent(splGameFilterWithCurrentViewAndPreviewPane);
-				splDetailsPane.setDividerLocation(loc);
-			} else {
-				remove(splNavigationAndCurrentViewWithPreviewPane);
-				add(splGameFilterWithCurrentViewAndPreviewPane, ccMainPanel.xy(1, 1));
-			}
-		}
-		UIUtil.revalidateAndRepaint(this);
-
-		SwingUtilities.invokeLater(new Runnable() {
-
-			@Override
-			public void run() {
-				setLastPreviewPaneDividerLocation();
-			}
-		});
-	}
-
-	private void removeSplPreviewPane() {
-		pnlPreviewPane.setVisible(false);
-		// this has been done cause of a bug which changes navigations divider
-		// location after adding/removing splitpane components
-		int lastNavigationDividerLocation = splNavigationAndCurrentViewWithPreviewPane.getDividerLocation();
-		lastPreviewPaneWidth = getParent().getWidth() - splGameFilterWithCurrentViewAndPreviewPane.getDividerLocation();
-		if (isNavigationPaneVisible()) {
-			if (isDetailsPanePinned() && isDetailsPaneVisible()) {
-				int loc = splDetailsPane.getDividerLocation();
-				splDetailsPane.setTopComponent(splNavigationAndCurrentViewWithPreviewPane);
-				splDetailsPane.setDividerLocation(loc);
-			} else {
-				remove(splDetailsPane);
-				add(splNavigationAndCurrentViewWithPreviewPane, ccMainPanel.xy(1, 1));
-			}
-			// this has been done cause of a bug which changes navigations divider
-			// location after adding/removing splitpane components
-			splNavigationAndCurrentViewWithPreviewPane.setDividerLocation(lastNavigationDividerLocation);
-		} else {
-			if (isDetailsPanePinned() && isDetailsPaneVisible()) {
-				int loc = splDetailsPane.getDividerLocation();
-				splDetailsPane.setTopComponent(viewManager.getCurrentViewPanel());
-				splDetailsPane.setDividerLocation(loc);
-			} else {
-				remove(splGameFilterWithCurrentViewAndPreviewPane);
-				add(viewManager.getCurrentViewPanel(), ccMainPanel.xy(1, 1));
-			}
-		}
-		UIUtil.revalidateAndRepaint(this);
 	}
 
 	void showPreviewPane(boolean b, int previewPaneWidth) {
@@ -965,77 +647,16 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 		pnlDetails.pnlTpInformationBar.setVisible(b);
 		mnuOrganizeOptions.showDetailsPane(b);
 		if (b) {
-			addSplDetailsPane();
+			((BasicSplitPaneUI) splDetailsPane.getUI()).getDivider().setVisible(true);
 		} else {
 			if (isDetailsPaneUnpinned()) {
 				fireDetailsFrameClosingEvent();
 				frameDetailsPane.dispose();
 			} else {
-				removeSplDetailsPane();
+				((BasicSplitPaneUI) splDetailsPane.getUI()).getDivider().setVisible(false);
 			}
 		}
 		viewManager.setDetailsPanelHeight(lastDetailsHeight);
-	}
-
-	private void addSplDetailsPane() {
-		boolean navVisible = isNavigationPaneVisible();
-		boolean prevVisible = isPreviewPaneVisible();
-		if (navVisible) {
-			splDetailsPane.setTopComponent(splNavigationAndCurrentViewWithPreviewPane);
-		} else {
-			if (prevVisible) {
-				splDetailsPane.setTopComponent(splGameFilterWithCurrentViewAndPreviewPane);
-			} else {
-				remove(viewManager.getCurrentViewPanel());
-				splDetailsPane.setTopComponent(viewManager.getCurrentViewPanel());
-			}
-		}
-		splDetailsPane.setBottomComponent(pnlDetails);
-		add(splDetailsPane, ccMainPanel.xy(1, 1));
-		splDetailsPane.setVisible(true);
-		UIUtil.revalidateAndRepaint(this);
-
-		SwingUtilities.invokeLater(new Runnable() {
-
-			@Override
-			public void run() {
-				setLastDetailsPaneDividerLocation();
-			}
-		});
-	}
-
-	private void removeSplDetailsPane() {
-		if (isDetailsPanePinned()) {
-			boolean navigationAndPreviewPaneHidden = splDetailsPane.getTopComponent() == viewManager.getCurrentViewPanel();
-			boolean navigationPaneHidden = splDetailsPane.getTopComponent() == splGameFilterWithCurrentViewAndPreviewPane;
-			boolean navigationAndPreviewPaneVisible = splDetailsPane.getTopComponent() == splNavigationAndCurrentViewWithPreviewPane;
-			boolean detailsPaneVisible = splDetailsPane.getBottomComponent() == pnlDetails;
-			if (navigationAndPreviewPaneVisible && detailsPaneVisible) {
-				lastDetailsHeight = getHeight() - splDetailsPane.getDividerLocation();
-				remove(splDetailsPane);
-				splDetailsPane.remove(splNavigationAndCurrentViewWithPreviewPane);
-				splDetailsPane.remove(pnlDetails);
-				splDetailsPane.setVisible(false);
-				add(splNavigationAndCurrentViewWithPreviewPane, ccMainPanel.xy(1, 1));
-				UIUtil.revalidateAndRepaint(this);
-			} else if (navigationPaneHidden && detailsPaneVisible) {
-				lastDetailsHeight = getHeight() - splDetailsPane.getDividerLocation();
-				remove(splDetailsPane);
-				splDetailsPane.remove(splGameFilterWithCurrentViewAndPreviewPane);
-				splDetailsPane.remove(pnlDetails);
-				splDetailsPane.setVisible(false);
-				add(splGameFilterWithCurrentViewAndPreviewPane, ccMainPanel.xy(1, 1));
-				UIUtil.revalidateAndRepaint(this);
-			} else if (navigationAndPreviewPaneHidden && detailsPaneVisible) {
-				lastDetailsHeight = getHeight() - splDetailsPane.getDividerLocation();
-				remove(splDetailsPane);
-				splDetailsPane.remove(viewManager.getCurrentViewPanel());
-				splDetailsPane.remove(pnlDetails);
-				splDetailsPane.setVisible(false);
-				add(viewManager.getCurrentViewPanel(), ccMainPanel.xy(1, 1));
-				UIUtil.revalidateAndRepaint(this);
-			}
-		}
 	}
 
 	public void showDetailsPane(boolean b, int detailsPaneHeight) {
@@ -1048,7 +669,6 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 	}
 
 	public void navigationChanged(NavigationEvent e) {
-		pnlNavigation.navigationChanged(e);
 		if (pnlTableView != null) {
 			SwingUtilities.invokeLater(new Runnable() {
 
@@ -1059,7 +679,6 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				}
 			});
 		}
-		popupNavigation.setVisible(false);
 	}
 
 	@Override
@@ -1074,7 +693,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 				ImageIcon img;
 				if (gameCoverPath != null && !gameCoverPath.trim().isEmpty()) {
 					int gameId = game.getId();
-					viewManager.addGameCoverPath(gameId, gameCoverPath);
+					//viewManager.addGameCoverPath(gameId, gameCoverPath);
 					img = IconStore.current().getGameCover(gameId);
 				} else {
 					int platformId = game.getPlatformId();
@@ -1090,55 +709,6 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 	}
 
 	public void emulatorRemoved(EmulatorEvent e) {
-	}
-
-	public void changeViewPanelTo(ViewPanel pnl) {
-		viewManager.setCurrentViewPanel(pnl);
-		if (isPreviewPaneVisible()) {
-			int lastDiv = splGameFilterWithCurrentViewAndPreviewPane.getDividerLocation();
-			splGameFilterWithCurrentViewAndPreviewPane.setDividerLocation(lastDiv);
-		} else {
-			if (isNavigationPaneVisible()) {
-				int lastDivNav = splNavigationAndCurrentViewWithPreviewPane.getDividerLocation();
-				splNavigationAndCurrentViewWithPreviewPane.setRightComponent(viewManager.getCurrentViewPanel());
-				splNavigationAndCurrentViewWithPreviewPane.setDividerLocation(lastDivNav);
-			} else {
-				if (isDetailsPanePinned() && isDetailsPaneVisible()) {
-					if (splDetailsPane != null) {
-						int lastDiv = splDetailsPane.getDividerLocation();
-						splDetailsPane.setTopComponent(viewManager.getCurrentViewPanel());
-						splDetailsPane.setDividerLocation(lastDiv);
-					}
-				} else {
-					removeAll();
-					add(viewManager.getCurrentViewPanel(), ccMainPanel.xy(1, 1));
-				}
-			}
-		}
-	}
-
-	public void addChangeToAllGamesListener(ActionListener l) {
-		pnlNavigation.addChangeToAllGamesListener(l);
-	}
-
-	public void addChangeToFavoritesListener(ActionListener l) {
-		pnlNavigation.addChangeToFavoritesListener(l);
-	}
-
-	public void addChangeToRecentlyListener(ActionListener l) {
-		pnlNavigation.addChangeToRecentlyPlayedListener(l);
-	}
-
-	public void addChangeToRecycleBinListener(ActionListener l) {
-		pnlNavigation.addChangeToRecycleBinListener(l);
-	}
-
-	public void addChangeToTagsListener(ActionListener l) {
-		pnlNavigation.addChangeToTagsListener(l);
-	}
-
-	public boolean isNavigationPaneVisible() {
-		return pnlNavigation.isVisible();
 	}
 
 	public boolean isPreviewPaneVisible() {
@@ -1157,26 +727,26 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 	}
 
 	private void setPreviewPaneResizeWeight() {
-		splGameFilterWithCurrentViewAndPreviewPane.setResizeWeight(0);
+		splCurrentViewAndPreviewPane.setResizeWeight(0);
 	}
 
 	private void setPreviewPaneMovingWeight() {
-		splGameFilterWithCurrentViewAndPreviewPane.setResizeWeight(1);
+		splCurrentViewAndPreviewPane.setResizeWeight(1);
 	}
 
 	private boolean isPreviewPaneMovingWeight() {
-		return splGameFilterWithCurrentViewAndPreviewPane.getResizeWeight() == 1;
+		return splCurrentViewAndPreviewPane.getResizeWeight() == 1;
 	}
 
 	private boolean isPreviewPaneResizeWeight() {
-		return splGameFilterWithCurrentViewAndPreviewPane.getResizeWeight() == 0;
+		return splCurrentViewAndPreviewPane.getResizeWeight() == 0;
 	}
 
 	private void checkMinimizePreviewPane() {
 		if (isPreviewPaneVisible()) {
-			int newPreviewWidth = getParent().getWidth() - splGameFilterWithCurrentViewAndPreviewPane.getDividerLocation();
-			int previewDividerLocation = splGameFilterWithCurrentViewAndPreviewPane.getDividerLocation();
-			int minimumPreviewDividerLocation = splGameFilterWithCurrentViewAndPreviewPane.getMinimumDividerLocation();
+			int newPreviewWidth = getParent().getWidth() - splCurrentViewAndPreviewPane.getDividerLocation();
+			int previewDividerLocation = splCurrentViewAndPreviewPane.getDividerLocation();
+			int minimumPreviewDividerLocation = splCurrentViewAndPreviewPane.getMinimumDividerLocation();
 			boolean previewDividerEqualOrLessThanMinimum = previewDividerLocation <= minimumPreviewDividerLocation;
 			if (previewDividerEqualOrLessThanMinimum) {
 				boolean lastUserSettingsNotInitialized = lastUserDefinedPreviewWidth < 0;
@@ -1188,19 +758,19 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 					if (newPreviewWidth <= lastUserDefinedPreviewWidth) {
 						setPreviewPaneResizeWeight();
 					} else {
-						splGameFilterWithCurrentViewAndPreviewPane.setDividerLocation(getWidth() - lastUserDefinedPreviewWidth);
+						splCurrentViewAndPreviewPane.setDividerLocation(getWidth() - lastUserDefinedPreviewWidth);
 					}
 				} else if (isPreviewPaneResizeWeight()) {
 					boolean previewDividerLesserThanUserDefined = newPreviewWidth < lastUserDefinedPreviewWidth;
 					boolean previewDividerGreaterThanUserDefined = newPreviewWidth > lastUserDefinedPreviewWidth;
 					if (previewDividerLesserThanUserDefined) {
 						setLastPreviewPaneDividerLocation();
-						int divLocation = splGameFilterWithCurrentViewAndPreviewPane.getDividerLocation();
-						int dividerSize = splGameFilterWithCurrentViewAndPreviewPane.getDividerSize();
+						int divLocation = splCurrentViewAndPreviewPane.getDividerLocation();
+						int dividerSize = splCurrentViewAndPreviewPane.getDividerSize();
 						int scrollBarSize = pnlPreviewPane.getScrollBarSize();
 						int limit = ScreenSizeUtil.adjustValueToResolution(minimumPreviewPaneWidth) + dividerSize
 								+ (pnlPreviewPane.isScrollBarVisible() ? scrollBarSize : 0);
-						int minimumPreviewPaneWidth = splGameFilterWithCurrentViewAndPreviewPane.getMaximumDividerLocation() - limit;
+						int minimumPreviewPaneWidth = splCurrentViewAndPreviewPane.getMaximumDividerLocation() - limit;
 						if (divLocation >= minimumPreviewPaneWidth) {
 							showPreviewPane(false);
 							firePreviewPaneHiddenEvent();
@@ -1345,26 +915,6 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 
 	public void setInformationBarPanelVisible(boolean visible) {
 		pnlDetails.setInformationBarPanelVisible(visible);
-	}
-
-	public JPanel getNavigationPanel() {
-		return pnlNavigation;
-	}
-
-	public JPanel getPreviewPanel() {
-		return pnlPreviewPane;
-	}
-
-	public JPanel getDetailsPanel() {
-		return pnlDetails;
-	}
-
-	public JSplitPane getSplNavigationPane() {
-		return splNavigationAndCurrentViewWithPreviewPane;
-	}
-
-	public JSplitPane getSplGameDetailsPane() {
-		return splDetailsPane;
 	}
 
 	public void addAddGameListener(Action l) {
@@ -1523,6 +1073,7 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 		String gameCoverPath = game.getCoverPath();
 		viewManager.addGameCoverPath(game.getId(), gameCoverPath);
 		pnlPreviewPane.gameCoverChanged(game, image);
+		UIUtil.revalidateAndRepaint(this);
 	}
 
 	public int getDetailsPaneNotificationTab() {
@@ -1549,10 +1100,11 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 
 	@Override
 	public void languageChanged() {
-		pnlNavigation.languageChanged();
 		pnlPreviewPane.languageChanged();
 		pnlDetails.languageChanged();
-		viewManager.getCurrentViewPanel().languageChanged();
+		if (viewManager.getCurrentViewPanel() != null) {
+			viewManager.getCurrentViewPanel().languageChanged();
+		}
 		mnuOrganizeOptions.languageChanged();
 		mnuViewSettings.languageChanged();
 		if (frameDetailsPane != null) {
@@ -1634,28 +1186,16 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 		setLastDetailsPaneDividerLocation();
 	}
 
-	public void setLastNavigationPaneDividerLocation() {
-		int lastNavigationPaneDividerLocation = lastNavigationPaneWidth;
-		int minimumDivLocation = splNavigationAndCurrentViewWithPreviewPane.getMinimumDividerLocation();
-		int maximumDivLocation = splNavigationAndCurrentViewWithPreviewPane.getMaximumDividerLocation();
-		if (lastNavigationPaneDividerLocation <= minimumDivLocation) {
-			lastNavigationPaneDividerLocation = minimumDivLocation;
-		} else if (lastNavigationPaneDividerLocation >= maximumDivLocation) {
-			lastNavigationPaneDividerLocation = maximumDivLocation;
-		}
-		splNavigationAndCurrentViewWithPreviewPane.setDividerLocation(lastNavigationPaneDividerLocation);
-	}
-
 	public void setLastPreviewPaneDividerLocation() {
 		int lastPreviewPaneDividerLocation = getParent().getWidth() - lastPreviewPaneWidth;
-		int minimumDivLocation = splGameFilterWithCurrentViewAndPreviewPane.getMinimumDividerLocation();
-		int maximumDivLocation = splGameFilterWithCurrentViewAndPreviewPane.getMaximumDividerLocation();
+		int minimumDivLocation = splCurrentViewAndPreviewPane.getMinimumDividerLocation();
+		int maximumDivLocation = splCurrentViewAndPreviewPane.getMaximumDividerLocation();
 		if (lastPreviewPaneDividerLocation <= minimumDivLocation) {
 			lastPreviewPaneDividerLocation = minimumDivLocation;
 		} else if (lastPreviewPaneDividerLocation >= maximumDivLocation) {
 			lastPreviewPaneDividerLocation = maximumDivLocation;
 		}
-		splGameFilterWithCurrentViewAndPreviewPane.setDividerLocation(lastPreviewPaneDividerLocation);
+		splCurrentViewAndPreviewPane.setDividerLocation(lastPreviewPaneDividerLocation);
 	}
 
 	public void setLastDetailsPaneDividerLocation() {
@@ -1684,14 +1224,6 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 
 	public void addDetailsPaneListener(DetailsPaneListener l) {
 		detailsPaneListeners.add(l);
-	}
-
-	public String getNavigationPaneState() {
-		return pnlNavigation.getNavigationPaneState();
-	}
-
-	public int getSelectedNavigationItem() {
-		return pnlNavigation.getSelectedNavigationItem();
 	}
 
 	public void setTouchScreenOpimizedScrollEnabled(boolean selected) {
@@ -1855,16 +1387,13 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 	}
 
 	public int getCurrentView() {
-		if (viewManager.getCurrentViewPanel() == pnlBlankView) {
-			return ViewPanel.BLANK_VIEW;
-		}
 		if (viewManager.getCurrentViewPanel() == pnlListView) {
 			return viewManager.getViewStyle();
 		}
 		if (viewManager.getCurrentViewPanel() == pnlTableView) {
 			return ViewPanel.TABLE_VIEW;
 		}
-		return ViewPanel.BLANK_VIEW;
+		return -1;
 	}
 
 	public void addOpenGameFolderListener(ActionListener l) {
@@ -1876,11 +1405,11 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 	}
 
 	public int getSplPreviewPaneDividerLocation() {
-		return splGameFilterWithCurrentViewAndPreviewPane.getDividerLocation();
+		return splCurrentViewAndPreviewPane.getDividerLocation();
 	}
 
 	public void setSplPreviewPaneDividerLocation(int divLocation) {
-		splGameFilterWithCurrentViewAndPreviewPane.setDividerLocation(divLocation);
+		splCurrentViewAndPreviewPane.setDividerLocation(divLocation);
 	}
 
 	@Override
@@ -1911,5 +1440,59 @@ public class MainPanel extends JPanel implements PlatformListener, GameSelection
 	}
 
 	public void addShowGameNamesListener(ActionListener l) {
+	}
+
+	public int getDetailsPaneDividerLocation() {
+		return (splDetailsPane == null) ? 0 : splDetailsPane.getDividerLocation();
+	}
+
+	public void showNavigationButtonStrings(boolean b) {
+		b = tpNavigation.getTitleAt(0).isEmpty();
+		System.out.println("show navbutton strings: " + b);
+
+		tpNavigation.putClientProperty("JTabbedPane.tabRotation", getNavigationPaneState().equals("min") ? "auto" : "none");
+		tpNavigation.putClientProperty("JTabbedPane.tabAlignment", getNavigationPaneState().equals("min") ? SwingConstants.CENTER : SwingConstants.LEFT);
+
+		tpNavigation.setTitleAt(0, b ? "All Games" : "All Games");
+		tpNavigation.setTitleAt(1, "");
+		tpNavigation.setTitleAt(2, "");
+		tpNavigation.setTitleAt(3, "");
+		tpNavigation.setTitleAt(4, "");
+		tpNavigation.addChangeListener(new ChangeListener() {
+			@Override
+			public void stateChanged(ChangeEvent e) {
+				int selectedTabIndex = tpNavigation.getSelectedIndex();
+				tpNavigation.setTitleAt(0, "");
+				tpNavigation.setTitleAt(1, "");
+				tpNavigation.setTitleAt(2, "");
+				tpNavigation.setTitleAt(3, "");
+				tpNavigation.setTitleAt(4, "");
+				tpNavigation.setTitleAt(selectedTabIndex, navStringsArr[selectedTabIndex]);
+			}
+		});
+//		tpNavigation.setTitleAt(1, b ? "Favorites" : "Favorites");
+//		tpNavigation.setTitleAt(2, b ? "Filter Groups" : "Filter Groups");
+//		tpNavigation.setTitleAt(3, b ? "Recently Played" : "Recently Played");
+//		tpNavigation.setTitleAt(4, b ? "Recycle Bin" : "Recycle Bin");
+	}
+
+	@Override
+	public void themeChanged(ThemeChangeEvent e) {
+		((BasicSplitPaneUI) splCurrentViewAndPreviewPane.getUI()).getDivider().setVisible(isPreviewPaneVisible());
+		((BasicSplitPaneUI) splDetailsPane.getUI()).getDivider().setVisible(isDetailsPanePinned() && isDetailsPaneVisible());
+		pnlPreviewPane.themeChanged();
+		viewManager.themeChanged();
+	}
+
+	public String getNavigationPaneState() {
+		return navigationPaneState;
+	}
+
+	public void setNavigationPaneState(String navigationPaneState) {
+		this.navigationPaneState = navigationPaneState;
+	}
+
+	public int getSelectedNavigationItem() {
+		return tpNavigation.getSelectedIndex();
 	}
 }

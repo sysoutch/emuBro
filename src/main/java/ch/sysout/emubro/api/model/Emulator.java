@@ -36,4 +36,8 @@ public interface Emulator extends Comparable<Emulator> {
 	boolean isInstalled();
 
 	String getParentFolder();
+
+	boolean isBiosRequired();
+
+	List<String> getRunCommandsBefore();
 }

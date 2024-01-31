@@ -1,0 +1,59 @@
+{  
+  "name":"Microsoft Xbox 360",
+  "shortName":"xbox360",
+  "companyName":"Microsoft",
+  "iconFilename":"",
+  "defaultGameCover":"",
+  "recommendedEmulators":[
+	 "Xenia"
+  ],
+  "plugins":[
+	{
+	  "covers":"",
+	  "titles":""
+	}
+  ],
+  "gameSearchModes":[  
+	 "FILE_FILE_NAME_MATCH"
+  ],
+  "searchFor":"",
+  "fileStructure":[  
+
+  ],
+  "supportedArchiveTypes":[  
+
+  ],
+  "supportedImageTypes":[  
+
+  ],
+  "emulators":[  
+	 {  
+		"name":"Xenia",
+		"os":[
+
+		],
+		"path":"",
+		"iconFilename":"xenia.png",
+		"configFilePath":"",
+		"website":"http://xenia.jp/download/",
+		"startParameters":"%gamepath%",
+		"supportedFileTypes":[  
+
+		],
+		"searchString":"^(xenia)\\.exe$",
+		"archiveFileMatchWin":"^(xenia-(.*)-win_x64)\\.zip$",
+		"archiveFileMatchLinux":"^(xenia-(.*)-linux_x64)\\.tar$",
+		"archiveFileMatchMac":"^(xenia-(.*)-osx_x64)\\.zip$",
+		"setupFileMatchWin":"",
+		"setupFileMatchLinux":"",
+		"setupFileMatchMac":"",
+		"autoSearchEnabled":true,
+		"biosRequired":false,
+		"runCommandsBefore":[
+		 
+		]
+	 }
+  ],
+  "directExecutionMode":"none",
+  "autoSearchEnabled":true
+}

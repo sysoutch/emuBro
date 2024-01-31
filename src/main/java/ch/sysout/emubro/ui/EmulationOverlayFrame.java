@@ -56,6 +56,7 @@ public class EmulationOverlayFrame extends JFrame {
 	final JPopupMenu popup = new JPopupMenu();
 	private JMenuItem btnSendEsc = new JMenuItem(Messages.get(MessageConstants.SEND_ESC));
 	private JMenuItem btnSendAltEnter = new JMenuItem(Messages.get(MessageConstants.SEND_ALT_ENTER));
+	private JMenuItem btnSendF11 = new JMenuItem(Messages.get(MessageConstants.SEND_F11));
 	private JMenuItem btnQuickLoad = new JMenuItem(Messages.get(MessageConstants.QUICK_LOAD));
 	private JMenuItem btnQuickSave = new JMenuItem(Messages.get(MessageConstants.QUICK_SAVE));
 	private JMenuItem btnScreenshot = new JMenuItem("Screenshot");
@@ -155,6 +156,40 @@ public class EmulationOverlayFrame extends JFrame {
 							robot.keyPress(KeyEvent.VK_ENTER);
 							robot.keyRelease(KeyEvent.VK_ENTER);
 							robot.keyRelease(KeyEvent.VK_ALT);
+						} catch (AWTException e1) {
+						}
+					}
+				};
+				Timer timer = new Timer();
+				timer.schedule(task, 100);
+
+				TimerTask task2 = new TimerTask() {
+
+					@Override
+					public void run() {
+						EmulationOverlayFrame.this.setState(Frame.NORMAL);
+						EmulationOverlayFrame.this.setVisible(true);
+					}
+				};
+				Timer timer2 = new Timer();
+				timer2.schedule(task2, 1000);
+			}
+		});
+
+		btnSendF11.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				EmulationOverlayFrame.this.setVisible(false);
+				EmulationOverlayFrame.this.setState(Frame.ICONIFIED);
+				TimerTask task = new TimerTask() {
+
+					@Override
+					public void run() {
+						try {
+							Robot robot = new Robot();
+							robot.keyPress(KeyEvent.VK_F11);
+							robot.keyRelease(KeyEvent.VK_F11);
 						} catch (AWTException e1) {
 						}
 					}
@@ -350,6 +385,7 @@ public class EmulationOverlayFrame extends JFrame {
 				+ "This can be useful when you dont have a keyboard right now and you want to<br>"
 				+ "go/leave fullscreen mode in the currently running emulator or game.<br>"
 				+ "Most of the emulators and games listen to that hot key.</html>");
+		btnSendF11.setIcon(ImageUtil.getImageIconFrom(Icons.get("sendKeyCommand", size2, size2)));
 		btnStopEmulation.setIcon(ImageUtil.getImageIconFrom(Icons.get("stopProcess", size2, size2)));
 		btnStopEmulation.setToolTipText("Stop emulation");
 		btnShowApplication.setIcon(appIcon);
@@ -357,7 +393,7 @@ public class EmulationOverlayFrame extends JFrame {
 		btnEmulationOverlayPanelSettings.setIcon(new FlatSVGIcon(Icons.get("settings"), size3, size3));
 		btnHideEmulationOverlayPanel.setIcon(ImageUtil.getImageIconFrom(Icons.get("close3", size3, size3)));
 		addComponentsToPopup(popup, btnShowApplication, new JSeparator(), btnStopEmulation, new JSeparator(),
-				btnSendEsc, btnSendAltEnter, new JSeparator(), btnQuickLoad, btnQuickSave, new JSeparator(), btnScreenshot, new JSeparator(), btnEmulationOverlayPanelSettings, new JSeparator(),
+				btnSendEsc, btnSendAltEnter, btnSendF11, new JSeparator(), btnQuickLoad, btnQuickSave, new JSeparator(), btnScreenshot, new JSeparator(), btnEmulationOverlayPanelSettings, new JSeparator(),
 				btnHideEmulationOverlayPanel);
 		add(pnl);
 		pack();

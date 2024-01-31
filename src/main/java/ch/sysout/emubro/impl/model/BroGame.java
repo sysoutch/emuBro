@@ -1,12 +1,14 @@
 package ch.sysout.emubro.impl.model;
 
 import java.awt.Image;
+import java.io.File;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 import ch.sysout.emubro.api.model.Game;
 import ch.sysout.emubro.api.model.Tag;
+import ch.sysout.emubro.util.EmuBroUtil;
 import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.ValidationUtil;
 
@@ -65,13 +67,18 @@ public class BroGame implements Game {
 	}
 
 	@Override
+	public boolean hasGameCode() {
+		return gameCode != null && !gameCode.isEmpty();
+	}
+
+	@Override
 	public String getGameCode() {
 		return gameCode;
 	}
 
 	@Override
 	public void setGameCode(String gameCode) {
-		this.gameCode = (gameCode == null) ? "" : gameCode;
+		this.gameCode = (gameCode == null) ? "" : gameCode.trim();
 	}
 
 	@Override

@@ -6,6 +6,8 @@ import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferByte;
+import java.awt.image.DataBufferInt;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -14,9 +16,15 @@ import java.net.URL;
 import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
 
+import ch.sysout.emubro.api.model.Platform;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 
 import ch.sysout.emubro.ui.CoverConstants;
+import nu.pattern.OpenCV;
+import org.opencv.core.*;
+import org.opencv.core.Point;
+import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.imgproc.Imgproc;
 
 public class ImageUtil {
 
@@ -53,14 +61,22 @@ public class ImageUtil {
 	 * @return
 	 */
 	public static ImageIcon getImageIconFrom(String filepath, boolean absolutePath) {
-		URL url = ImageUtil.class.getResource(filepath);
-		if (!absolutePath && url == null) {
-			// this happens when the requested url is not in the class path
-			throw new NullPointerException("picture file not found in jar: " + filepath);
+		if (absolutePath) {
+			return new ImageIcon(filepath);
 		}
-		ImageIcon icon = (absolutePath) ? new ImageIcon(filepath)
-				: new ImageIcon(url);
-		return icon;
+		try {
+			URL url = ImageUtil.class.getResource(filepath.replace("\\", "/"));
+			System.err.println("filepath: " + filepath);
+			if (url == null) {
+				System.err.println("oh null");
+				// this happens when the requested url is not in the class path
+				throw new NullPointerException("picture file not found in jar: " + filepath);
+			}
+            return new ImageIcon(url);
+		} catch (NullPointerException e) {
+			System.err.println("null pointer expection" + e.getMessage());
+			return null;
+		}
 	}
 
 	/**
@@ -169,21 +185,20 @@ public class ImageUtil {
 			scaledHeight = coverSize;
 		} else {
 			float scaleFactor = 0;
-
 			switch (option) {
-			case CoverConstants.SCALE_AUTO_OPTION:
-				scaleFactor = (width < height) ? (float) width / (float) coverSize : (float) height / (float) coverSize;
-				break;
-			case CoverConstants.SCALE_WIDTH_OPTION:
-				scaleFactor = (float) width / (float) coverSize;
-				break;
-			case CoverConstants.SCALE_HEIGHT_OPTION:
-				scaleFactor = (float) height / (float) coverSize;
-				break;
-			default:
-				throw new IllegalArgumentException("option must be one of " + "CoverConstants.SCALE_AUTO_OPTION, "
-						+ "CoverConstants.SCALE_WIDTH_OPTION, " + "CoverConstants.SCALE_HEIGHT_OPTION, "
-						+ "CoverConstants.SCALE_BOTH_OPTION");
+				case CoverConstants.SCALE_AUTO_OPTION:
+					scaleFactor = (width < height) ? (float) width / (float) coverSize : (float) height / (float) coverSize;
+					break;
+				case CoverConstants.SCALE_WIDTH_OPTION:
+					scaleFactor = (float) width / (float) coverSize;
+					break;
+				case CoverConstants.SCALE_HEIGHT_OPTION:
+					scaleFactor = (float) height / (float) coverSize;
+					break;
+				default:
+					throw new IllegalArgumentException("option must be one of " + "CoverConstants.SCALE_AUTO_OPTION, "
+							+ "CoverConstants.SCALE_WIDTH_OPTION, " + "CoverConstants.SCALE_HEIGHT_OPTION, "
+							+ "CoverConstants.SCALE_BOTH_OPTION");
 			}
 			scaledWidth = width / scaleFactor;
 			scaledHeight = height / scaleFactor;
@@ -233,6 +248,105 @@ public class ImageUtil {
 		}
 
 		return image;
+	}
+
+	static {
+//		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+		OpenCV.loadShared();
+	}
+
+	public static ImageIcon get3dVersionOf(ImageIcon icon, int platformId) {
+		int width = icon.getIconWidth();
+		int height = icon.getIconHeight();
+
+		BufferedImage bufferedImage = ImageUtil.makeBufferedImageFrom(icon);
+
+		// Convert BufferedImage to Mat with alpha channel (CV_8UC4)
+		Mat source = new Mat(bufferedImage.getHeight(), bufferedImage.getWidth(), CvType.CV_8UC4);
+		int[] pixels = ((DataBufferInt) bufferedImage.getRaster().getDataBuffer()).getData();
+		source.put(0, 0, intToByteArray(pixels));
+
+		// Apply the perspective transformation
+		// Define points for perspective transformation
+		MatOfPoint2f srcPoints = new MatOfPoint2f(
+				new Point(0, 0),
+				new Point(source.cols() - 1, 0),
+				new Point(source.cols() - 1, source.rows() - 1),
+				new Point(0, source.rows() - 1));
+
+		MatOfPoint2f dstPoints = new MatOfPoint2f(
+				new Point(0, 0),
+				new Point(source.cols() * 0.75, source.rows() * 0.05), // Move top-right point left and down
+				new Point(source.cols() * 0.75, source.rows() * 0.95), // Move bottom-right point left and up
+				new Point(0, source.rows() - 1));
+
+		// Calculate the perspective transformation matrix
+		Mat perspectiveTransform = Imgproc.getPerspectiveTransform(srcPoints, dstPoints);
+
+		// Apply the perspective transformation
+		Mat transformed = new Mat();
+		Size size = new Size(source.cols(), source.rows());
+		Imgproc.warpPerspective(source, transformed, perspectiveTransform, size);
+
+		// Create an output Mat with the same size as the transformed Mat, but with 4 channels (RGBA)
+		Mat output = new Mat(transformed.rows(), transformed.cols(), CvType.CV_8UC4);
+
+		// Iterate over transformed Mat, copy RGB values and add alpha channel
+		for (int y = 0; y < transformed.rows(); y++) {
+			for (int x = 0; x < transformed.cols(); x++) {
+				double[] pixelData = transformed.get(y, x);
+				if (pixelData != null) {
+					// Assuming the transformed image has 3 channels (BGR format)
+					double[] newData = new double[]{
+							pixelData[0], // Blue
+							pixelData[1], // Green
+							pixelData[2], // Red
+							255          // Alpha (fully opaque)
+					};
+					output.put(y, x, newData);
+				}
+			}
+		}
+		// Convert the transformed Mat back to BufferedImage
+		BufferedImage outputImage = new BufferedImage(transformed.cols(), transformed.rows(), BufferedImage.TYPE_INT_ARGB);
+
+		// Iterate over each pixel to manually convert BGRA to ARGB
+		for (int y = 0; y < transformed.rows(); y++) {
+			for (int x = 0; x < transformed.cols(); x++) {
+				double[] pixelData = transformed.get(y, x);
+				if (pixelData != null) {
+					int alpha = (pixelData.length == 4) ? (int)(pixelData[3]) : 255; // Use existing alpha if available, else fully opaque
+					int argb = alpha << 24 | // Alpha
+							(int) (pixelData[0]) << 16 | // Red
+							(int) (pixelData[1]) << 8  | // Green
+							(int) (pixelData[2]);      // Blue
+					outputImage.setRGB(x, y, argb);
+				}
+			}
+		}
+
+		// Save the BufferedImage as a PNG
+        try {
+            ImageIO.write(outputImage, "png", new File("C:/temp/transformed_image"+platformId+".png"));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        // Save the result as a PNG to preserve transparency
+		//		Imgcodecs.imwrite("C:/temp/transformed_image.png", output);
+
+		return new ImageIcon(outputImage);
+	}
+
+	private static byte[] intToByteArray(int[] pixels) {
+		byte[] bytes = new byte[pixels.length * 4];
+		for (int i = 0; i < pixels.length; i++) {
+			bytes[i * 4] = (byte) (pixels[i] >> 16); // Red
+			bytes[i * 4 + 1] = (byte) (pixels[i] >> 8); // Green
+			bytes[i * 4 + 2] = (byte) (pixels[i]); // Blue
+			bytes[i * 4 + 3] = (byte) (pixels[i] >> 24); // Alpha
+		}
+		return bytes;
 	}
 
 	/**
@@ -305,10 +419,10 @@ public class ImageUtil {
 		return false;
 	}
 
-	public static BufferedImage makeBufferedImageFrom(ImageIcon ico) {
-		BufferedImage bi = new BufferedImage(ico.getIconWidth(), ico.getIconHeight(), BufferedImage.TYPE_INT_RGB);
+	public static BufferedImage makeBufferedImageFrom(ImageIcon icon) {
+		BufferedImage bi = new BufferedImage(icon.getIconWidth(), icon.getIconHeight(), BufferedImage.TYPE_INT_ARGB);
 		Graphics g = bi.createGraphics();
-		ico.paintIcon(null, g, 0,0);
+		g.drawImage(icon.getImage(), 0, 0, null);
 		g.dispose();
 		return bi;
 	}

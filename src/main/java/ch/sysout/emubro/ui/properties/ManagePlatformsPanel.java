@@ -66,6 +66,7 @@ import javax.swing.text.JTextComponent;
 import javax.swing.tree.TreeModel;
 import javax.swing.tree.TreePath;
 
+import com.jgoodies.forms.factories.CC;
 import org.apache.commons.io.FilenameUtils;
 
 import com.jgoodies.forms.factories.Paddings;
@@ -103,7 +104,7 @@ import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
 import net.tomahawk.XFileDialog;
 
-public class ManagePlatformsPanel extends JPanel implements ActionListener {
+public class ManagePlatformsPanel extends JPanel {
 	private static final long serialVersionUID = 1L;
 
 	private PlatformsPanel pnlPlatforms = new PlatformsPanel();
@@ -146,7 +147,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 		CellConstraints cc = new CellConstraints();
 		pnlPlatformsEmulatorsComboWrapper = new JPanel(new BorderLayout());
 		pnlPlatformsEmulatorsComboWrapper.setOpaque(false);
-		pnlPlatformsEmulatorsComboWrapper.setBorder(Paddings.TABBED_DIALOG);
+		//pnlPlatformsEmulatorsComboWrapper.setBorder(Paddings.TABBED_DIALOG);
 		pnlPlatformsEmulatorsComboWrapper.add(pnlPlatforms, BorderLayout.CENTER);
 		spl00 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, pnlPlatformsEmulatorsComboWrapper, pnlEmulators);
 		spl00.setBorder(BorderFactory.createEmptyBorder());
@@ -161,11 +162,6 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 	public void setEmulatorListCellRenderer(EmulatorListCellRenderer l) {
 		// pnlEmulators.lstEmulators.setCellRenderer(l);
 		pnlEmulators.pnlAddEmulator.setEmulatorListCellRenderer(l);
-	}
-
-	@Override
-	public void actionPerformed(ActionEvent e) {
-		e.getSource();
 	}
 
 	public void addPlatformSelectedListener(ListSelectionListener l) {
@@ -358,7 +354,9 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 							model.removeElement(model.getElementAt(i));
 						}
 					}
-					lstPlatforms.setSelectedValue(selectedPlatform, true);
+					if (selectedPlatform != null) {
+						lstPlatforms.setSelectedValue(selectedPlatform, true);
+					}
 				} else {
 					for (Platform platform : explorer.getPlatforms()) {
 						int platformId = platform.getId();
@@ -366,10 +364,12 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 							model.add(platform);
 						}
 					}
-					if (explorer.hasGamesOrEmulators(selectedPlatform.getId())) {
-						lstPlatforms.setSelectedValue(selectedPlatform, true);
-					} else {
-						lstPlatforms.setSelectedValue(null, false);
+					if (selectedPlatform != null) {
+						if (explorer.hasGamesOrEmulators(selectedPlatform.getId())) {
+							lstPlatforms.setSelectedValue(selectedPlatform, true);
+						} else {
+							lstPlatforms.setSelectedValue(null, false);
+						}
 					}
 				}
 			}
@@ -692,6 +692,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 					JTable tbl = pnlEmulators.tblEmulators;
 					lst.ensureIndexIsVisible(pnlPlatforms.lstPlatforms.getSelectedIndex());
 					tbl.scrollRectToVisible(tbl.getCellRect(tbl.getSelectedRow(), 0, true));
+
 				}
 			});
 		}
@@ -699,10 +700,14 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 		class EmulatorConfigurationPanel extends JPanel {
 			private static final long serialVersionUID = 1L;
 			private JTabbedPane tpMain = new JTabbedPane();
-			private JTextArea lblCommandLineArguments = new JTextArea();
+			private JTextArea txtCommandLineArguments = new JTextArea();
+			private JTextArea txtRunCommandsBefore = new JTextArea();
+			private JTextArea txtGameCodeRegexes = new JTextArea();
 			private JTextArea txtConfigurationFile = new JTextArea();
 			private JPanel pnlGeneralSettings;
 			private JPanel pnlCommandLineArguments = new JPanel(new BorderLayout());
+			private JPanel pnlRunCommandsBefore = new JPanel(new BorderLayout());
+			private JPanel pnlGameCodeRegexes = new JPanel(new BorderLayout());
 			private JPanel pnlConfigurationFile = new JPanel();
 			private JPanel pnlSupportedFileTypes = new JPanel(new BorderLayout());
 			private DefaultListModel<String> mdlLstSupportedFileTypes = new DefaultListModel<>();
@@ -713,6 +718,8 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 			private JScrollPane spGeneralSettings;
 			private JScrollPane spEmulatorConfiguration;
 			private JScrollPane spCommandLineArguments;
+			private JScrollPane spRunCommandsBefore;
+			private JScrollPane spGameCodeRegexes;
 			private JLabel lblName = new JLabel();
 			private JLabel txtPath = new JLabel();
 			private ArrayList<String> buttonsTop;
@@ -744,13 +751,27 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 			}
 
 			public void showCommandLineArguments(String startParameters) {
-				lblCommandLineArguments.setText(startParameters);
+				txtCommandLineArguments.setText(startParameters);
 				if (startParameters == null || startParameters.trim().isEmpty()) {
 					ImageIcon icon = ImageUtil.getImageIconFrom(Icons.get("warning", 16, 16));
 					tpMain.setIconAt(0, icon);
 				} else {
 					tpMain.setIconAt(0, null);
 				}
+			}
+
+			public void showRunCommandsBefore(List<String> runCommandsBefore) {
+				txtRunCommandsBefore.setText(runCommandsBefore.toString());
+				txtRunCommandsBefore.setCaretPosition(0);
+				spRunCommandsBefore.getHorizontalScrollBar().setValue(0);
+				spRunCommandsBefore.getVerticalScrollBar().setValue(0);
+			}
+
+			public void showGameCodeRegexes(List<String> gameCodeRegexes) {
+				txtGameCodeRegexes.setText(gameCodeRegexes.toString());
+				txtGameCodeRegexes.setCaretPosition(0);
+				spGameCodeRegexes.getHorizontalScrollBar().setValue(0);
+				spGameCodeRegexes.getVerticalScrollBar().setValue(0);
 			}
 
 			public JPanel showConfigurationFilePanel(String configFilePath) throws FileNotFoundException, IOException {
@@ -1056,15 +1077,17 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 			}
 
 			private Component createGeneralSettingsPanel2() {
-				FormLayout layout = new FormLayout("default, $ugap, min:grow", "fill:pref, $rgap, fill:min:grow");
+				FormLayout layout = new FormLayout("default, $ugap, min:grow",
+						"fill:pref, $rgap, fill:min:grow, $ugap, fill:min:grow, $ugap, fill:min:grow");
 				// layout.setRowGroup(9, 13);
-				CellConstraints cc = new CellConstraints();
 				JPanel pnl = new JPanel(layout);
 				pnl.setOpaque(false);
-				pnl.add(new JLabel("<html><strong>Supported filetypes</strong></html>"), cc.xy(1, 1));
-				pnl.add(pnlSupportedFileTypes, cc.xy(1, 3));
-				pnl.add(new JLabel("<html><strong>Startup parameters</strong></html>"), cc.xy(3, 1));
-				pnl.add(pnlCommandLineArguments, cc.xy(3, 3));
+				pnl.add(new JLabel("<html><strong>Supported filetypes</strong></html>"), CC.xy(1, 1));
+				pnl.add(pnlSupportedFileTypes, CC.xywh(1, 3, 1, layout.getRowCount()-2));
+				pnl.add(new JLabel("<html><strong>Startup parameters</strong></html>"), CC.xy(3, 1));
+				pnl.add(pnlCommandLineArguments, CC.xy(3, 3));
+				pnl.add(pnlRunCommandsBefore, CC.xy(3, 5));
+				pnl.add(pnlGameCodeRegexes, CC.xy(3, 7));
 				return pnl;
 			}
 
@@ -1217,11 +1240,17 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 			private void createUI() {
 				add(tpMain);
 
-				spCommandLineArguments = new JCustomScrollPane(lblCommandLineArguments);
+				spCommandLineArguments = new JCustomScrollPane(txtCommandLineArguments);
 				spCommandLineArguments.setOpaque(false);
 				spCommandLineArguments.getViewport().setOpaque(false);
 				pnlCommandLineArguments.setOpaque(false);
 				pnlCommandLineArguments.add(spCommandLineArguments);
+
+				spRunCommandsBefore = new JCustomScrollPane(txtRunCommandsBefore);
+				pnlRunCommandsBefore.add(spRunCommandsBefore);
+
+				spGameCodeRegexes = new JCustomScrollPane(txtGameCodeRegexes);
+				pnlGameCodeRegexes.add(spGameCodeRegexes);
 
 				spConfigurationFile = new JCustomScrollPane(null);
 				spConfigurationFile.setOpaque(false);
@@ -1263,11 +1292,15 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 				String configFilePathEdited = emulator.getConfigFilePath().replace("/", File.separator).trim();
 				final String configFilePath = parent + ((configFilePathEdited.startsWith(File.separator))
 						? configFilePathEdited : File.separator + configFilePathEdited);
+				List<String> runCommandsBefore = emulator.getRunCommandsBefore();
+				List<String> gameCodeRegexes = getSelectedPlatform().getGameCodeRegexes();
 				showName(name);
 				showPath(path);
 				showEmulatorPath(path);
 				showWebsite(website);
 				showCommandLineArguments(startParameters);
+				showRunCommandsBefore(runCommandsBefore);
+				showGameCodeRegexes(gameCodeRegexes);
 				txtConfigurationFile.setText("Loading file content...");
 				txtConfigFilePath.setText(configFilePath);
 				showSupportedFileTypes(fileTypes);
@@ -1371,7 +1404,7 @@ public class ManagePlatformsPanel extends JPanel implements ActionListener {
 				pnlEmulatorConfiguration.setEmulator(emulator);
 			} else {
 				btnSetDefaultEmulator.setEnabled(false);
-				pnlEmulatorConfiguration.lblCommandLineArguments.setText("");
+				pnlEmulatorConfiguration.txtCommandLineArguments.setText("");
 				pnlEmulatorConfiguration.txtConfigurationFile.setText("");
 				pnlEmulatorConfiguration.mdlLstSupportedFileTypes.removeAllElements();
 			}

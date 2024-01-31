@@ -78,8 +78,7 @@ public class BrowseCoversPanel extends JPanel {
 		}
 		spCovers.getVerticalScrollBar().setUnitIncrement(16);
 		spCovers.setBorder(BorderFactory.createEmptyBorder());
-
-		add(spCovers, CC.xy(1, 1));
+        add(spCovers, CC.xy(1, 1));
 		add(new JSeparator(SwingConstants.VERTICAL), CC.xy(2, 1));
 		add(createOptionPanel(), CC.xy(3, 1));
 

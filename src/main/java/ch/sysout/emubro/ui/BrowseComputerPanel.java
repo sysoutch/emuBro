@@ -417,13 +417,15 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 	}
 
 	public void minimizeButtons() {
+		switchToMinimizedView();
 		if (btnSetupFiles.getVerticalTextPosition() == SwingConstants.BOTTOM) {
-			switchToMinimizedView();
 			btnCommonGameFolders.setText("");
 			btnCommonEmulatorFolders.setText("");
-			btnUncategorized.setText("");
-			btnSetupFiles.setText("");
-		} else {
+//			btnUncategorized.setText("");
+//			btnSetupFiles.setText("");
+		} else if (btnSetupFiles.getVerticalTextPosition() == SwingConstants.CENTER) {
+			lnkSearchSettings.setText("");
+			lnkSearchResults.setText("");
 			btnCommonGameFolders.setText(Messages.get(MessageConstants.COMMON_GAME_FOLDERS, counterGameFolders));
 			btnCommonGameFolders.setHorizontalAlignment(SwingConstants.CENTER);
 			btnCommonGameFolders.setHorizontalTextPosition(SwingConstants.CENTER);
@@ -445,18 +447,27 @@ public class BrowseComputerPanel extends JPanel implements GameListener, Emulato
 
 	public void maximizeButtons() {
 		switchToNormalView();
+		lnkSearchSettings.setText(Messages.get(MessageConstants.SEARCH_PROGRESS_SETTINGS));
+		lnkSearchResults.setText(Messages.get(MessageConstants.SEARCH_LOGS));
 		btnCommonGameFolders.setText(Messages.get(MessageConstants.COMMON_GAME_FOLDERS, counterGameFolders));
 		btnCommonGameFolders.setHorizontalAlignment(SwingConstants.LEFT);
+		btnCommonGameFolders.setHorizontalTextPosition(SwingConstants.RIGHT);
+		btnCommonGameFolders.setVerticalTextPosition(SwingConstants.CENTER);
+
 		btnCommonEmulatorFolders.setText(Messages.get(MessageConstants.COMMON_EMULATOR_FOLDERS, counterEmulatorFolders));
 		btnCommonEmulatorFolders.setHorizontalAlignment(SwingConstants.LEFT);
+		btnCommonEmulatorFolders.setHorizontalTextPosition(SwingConstants.RIGHT);
+		btnCommonEmulatorFolders.setVerticalTextPosition(SwingConstants.CENTER);
+
 		btnUncategorized.setText(Messages.get(MessageConstants.ARCHIVES_AND_IMAGE_FILES, counterUncategorized));
 		btnUncategorized.setHorizontalAlignment(SwingConstants.LEFT);
+		btnUncategorized.setHorizontalTextPosition(SwingConstants.RIGHT);
+		btnUncategorized.setVerticalTextPosition(SwingConstants.CENTER);
+
 		btnSetupFiles.setText(Messages.get(MessageConstants.SETUP_FILES, counterSetupFiles));
 		btnSetupFiles.setHorizontalAlignment(SwingConstants.LEFT);
-		//		btnSetupFiles.setHorizontalTextPosition(SwingConstants.RIGHT);
-		//		btnUncategorized.setHorizontalTextPosition(SwingConstants.RIGHT);
-		//		btnSetupFiles.setVerticalTextPosition(SwingConstants.CENTER);
-		//		btnUncategorized.setVerticalTextPosition(SwingConstants.CENTER);
+		btnSetupFiles.setHorizontalTextPosition(SwingConstants.RIGHT);
+		btnSetupFiles.setVerticalTextPosition(SwingConstants.CENTER);
 	}
 
 	@Override

@@ -196,6 +196,13 @@ public class PropertiesFrame extends JFrame implements PlatformListener, Emulato
 		return pnlManagePlatforms.getSelectedPlatform();
 	}
 
+	public void languageChanged() {
+		setTitle(Messages.get(MessageConstants.SETTINGS));
+		tpMain.setTitleAt(0, Messages.get(MessageConstants.GENERAL));
+		tpMain.setTitleAt(1, Messages.get(MessageConstants.INPUT));
+		tpMain.setTitleAt(2, Messages.get(MessageConstants.ADVANCED));
+	}
+
 	class AdvancedPropertiesPanel extends JPanel implements ActionListener {
 		private static final long serialVersionUID = 1L;
 

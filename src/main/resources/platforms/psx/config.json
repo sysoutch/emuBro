@@ -1,0 +1,134 @@
+{  
+  "name":"Sony Playstation 1",
+  "shortName":"psx",
+  "companyName":"Sony",
+  "iconFilename":"",
+  "defaultGameCover":"",
+  "recommendedEmulators":[
+	 "Duckstation",
+	 "ePSXe"
+  ],
+  "plugins":[
+	{
+	  "covers":"",
+	  "titles":""
+	}
+  ],
+  "gameSearchModes":[  
+	 "FILE_FILE_NAME_MATCH",
+	 "IMAGE_FILE_NAME_MATCH"
+  ],
+  "searchFor":"",
+  "fileStructure":[  
+
+  ],
+  "supportedArchiveTypes":[  
+
+  ],
+  "supportedImageTypes":[  
+	 ".iso",
+	 ".bin",
+	 ".cue",
+	 ".img",
+	 ".mds"
+  ],
+  "emulators":[  
+	 {
+		"name":"Duckstation",
+		"os":[
+
+		],
+		"path":"",
+		"iconFilename":"duckstation.png",
+		"configFilePath":"",
+		"website":"https://github.com/stenzek/duckstation/releases/download/latest/",
+		"startParameters":"%emupath% %gamepath% -fullscreen",
+		"supportedFileTypes":[  
+		   ".iso",
+		   ".bin",
+		   ".img",
+		   ".cue",
+		   ".ccd",
+		   ".mds",
+		   ".pbp",
+		   ".ecm"
+		],
+		"searchString":"^(duckstation-(.+))\\.exe$",
+		"archiveFileMatchWin":"^(duckstation-(.+))\\.zip$",
+		"archiveFileMatchLinux":"^(duckstation-(.+)linux)\\.zip$|^(duckstation-(.+)linux_x64)\\.zip$",
+		"archiveFileMatchMac":"^(duckstation-(.+)\\.app)\\.zip$",
+		"setupFileMatchWin":"",
+		"setupFileMatchLinux":"",
+		"setupFileMatchMac":"",
+		"autoSearchEnabled":true,
+		"biosRequired":true,
+		"runCommandsBefore":[
+		 
+		]
+	 },
+	 {
+		"name":"ePSXe",
+		"os":[
+
+		],
+		"path":"",
+		"iconFilename":"epsxe.png",
+		"configFilePath":"",
+		"website":"http://www.epsxe.com/download.php",
+		"startParameters":"%emupath% -loadbin %gamepath% -nogui",
+		"supportedFileTypes":[  
+		   ".iso",
+		   ".bin",
+		   ".img",
+		   ".cue",
+		   ".ccd",
+		   ".mds",
+		   ".pbp",
+		   ".ecm"
+		],
+		"searchString":"^(epsxe)\\.exe$",
+		"archiveFileMatchWin":"^(ePSXe(.*))\\.zip$",
+		"archiveFileMatchLinux":"^(ePSXe(.*)linux)\\.zip$|^(ePSXe(.*)linux_x64)\\.zip$",
+		"archiveFileMatchMac":"^(ePSXe(.*)\\.app)\\.zip$",
+		"setupFileMatchWin":"",
+		"setupFileMatchLinux":"",
+		"setupFileMatchMac":"",
+		"autoSearchEnabled":true,
+		"biosRequired":true,
+		"runCommandsBefore":[
+		 
+		]
+	 },
+	 {
+		"name":"FPse",
+		"os":[
+
+		],
+		"path":"",
+		"iconFilename":"fpse.png",
+		"configFilePath":"",
+		"website":"http://www.zophar.net/psx/fpse.html",
+		"startParameters":"%emupath% %gamepath%",
+		"supportedFileTypes":[  
+
+		],
+		"searchString":"^(fpse)\\.exe$",
+		"archiveFileMatchWin":"^(fpse-(.*)-win_x64)\\.zip$",
+		"archiveFileMatchLinux":"^(fpse-(.*)-linux_x64)\\.tar$",
+		"archiveFileMatchMac":"^(fpse-(.*)-osx_x64)\\.zip$",
+		"setupFileMatchWin":"",
+		"setupFileMatchLinux":"",
+		"setupFileMatchMac":"",
+		"autoSearchEnabled":true,
+		"biosRequired":true,
+		"runCommandsBefore":[
+		 
+		]
+	 }
+  ],
+  "directExecutionMode":"none",
+  "autoSearchEnabled":true,
+  "gameCodeRegexes":[
+	"(SL(E|U|P)S|SC(E|U|P)S|S(C|L)PM|P(A|B|C|E|U|T)PX|CPCS|SCAJ|ESPM|SCZS|PCPD|SLKA|PSRM|HPS|PL|LSP|SIPS)(-[0-9]{5}|_[0-9]{3}\\.[0-9]{2})"
+  ]
+}

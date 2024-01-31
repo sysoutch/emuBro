@@ -3,14 +3,7 @@ package ch.sysout.emubro.ui;
 //-*- mode:java; encoding:utf-8 -*-
 // vim:set fileencoding=utf-8:
 //http://ateraimemo.com/Swing/FileSystemTreeWithCheckBox.html
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.Dimension;
-import java.awt.EventQueue;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.Rectangle;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
@@ -25,9 +18,7 @@ import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.DosFileAttributes;
-import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.EventObject;
+import java.util.*;
 import java.util.List;
 
 import javax.swing.BorderFactory;
@@ -59,6 +50,7 @@ import javax.swing.tree.TreePath;
 
 import ch.sysout.emubro.util.MessageConstants;
 import ch.sysout.ui.util.ImageUtil;
+import ch.sysout.ui.util.UIUtil;
 import ch.sysout.util.Icons;
 import ch.sysout.util.Messages;
 import ch.sysout.util.ScreenSizeUtil;
@@ -127,10 +119,22 @@ public final class FileTree extends JPanel {
 			}
 		});
 		final JPopupMenu popupFileTree = new JPopupMenu();
-		JMenuItem mnuOpenFolderInExplorer;
-		mnuOpenFolderInExplorer = new JMenuItem(Messages.get(MessageConstants.OPEN_FOLDER_IN_EXPLORER));
-		mnuOpenFolderInExplorer.setIcon(ImageUtil.getImageIconFrom(Icons.get("openFolder", 16, 16)));
-		popupFileTree.add(mnuOpenFolderInExplorer);
+		JMenuItem itmOpenFolderInExplorer;
+		itmOpenFolderInExplorer = new JMenuItem(Messages.get(MessageConstants.OPEN_FOLDER_IN_EXPLORER));
+		itmOpenFolderInExplorer.setIcon(ImageUtil.getImageIconFrom(Icons.get("openFolder", 16, 16)));
+		popupFileTree.add(itmOpenFolderInExplorer);
+		itmOpenFolderInExplorer.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				final DefaultMutableTreeNode node = (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
+				CheckBoxNode selectedNode = (CheckBoxNode) node.getUserObject();
+				File selectedFile = selectedNode.file;
+				System.out.println(selectedFile.getAbsolutePath());
+                try {
+                    UIUtil.openInExplorer(selectedFile);
+                } catch (IOException ex) { }
+			}
+		});
 		tree.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
@@ -201,7 +205,7 @@ public final class FileTree extends JPanel {
 		if (check.status == Status.SELECTED) {
 			// System.out.println(check.file.toString());
 		} else if (check.status == Status.INDETERMINATE && !node.isLeaf() && node.getChildCount() >= 0) {
-			Enumeration e = node.children();
+			Enumeration<TreeNode> e = node.children();
 			while (e.hasMoreElements()) {
 				searchTreeForCheckedNode(path.pathByAddingChild(e.nextElement()));
 			}
@@ -221,16 +225,6 @@ public final class FileTree extends JPanel {
 			}
 		}
 		return directories;
-	}
-
-	public void addOpenFolderInExplorerListener(JMenuItem mnuOpenFolderInExplorer) {
-		mnuOpenFolderInExplorer.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-
-			}
-		});
 	}
 }
 
@@ -322,7 +316,6 @@ class FolderSelectionListener implements TreeSelectionListener {
 	public void valueChanged(TreeSelectionEvent e) {
 		final JTree tree = (JTree) e.getSource();
 		final DefaultMutableTreeNode node = (DefaultMutableTreeNode) e.getPath().getLastPathComponent();
-
 		if (!node.isLeaf()) {
 			return;
 		}
@@ -355,6 +348,29 @@ class FolderSelectionListener implements TreeSelectionListener {
 			}
 		};
 		worker.execute();
+	}
+}
+
+class FileNode {
+	private File file;
+
+	public FileNode(File file) {
+		this.file = file;
+	}
+
+	/* new */
+	public File getFile() {
+		return file;
+	}
+
+	@Override
+	public String toString() {
+		String name = file.getName();
+		if (name.equals("")) {
+			return file.getAbsolutePath();
+		} else {
+			return name;
+		}
 	}
 }
 

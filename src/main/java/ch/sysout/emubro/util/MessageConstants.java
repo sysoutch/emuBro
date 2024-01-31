@@ -127,12 +127,14 @@ public class MessageConstants {
 	public static final String BIG_PICTURE_MODE = "bigPictureMode";
 	public static final String EXIT = "exit";
 	public static final String GAME_TITLE = "gameTitle";
+	public static final String GAME_CODE = "gameCode";
 	public static final String RUN_GAME = "runGame";
 	public static final String GAMES_FOUND1 = "gamesFound1";
 	public static final String RUN_ON_BOOT = "runOnBoot";
 	public static final String START_GAME_ON_BOOT = "startGameOnBoot";
 	public static final String RUN_WITH = "runWith";
 	public static final String SEARCH_NETWORK = "searchNetwork";
+	public static final String CONNECT_NETWORK_DRIVE = "connectNetworkDrive";
 	public static final String MINIMIZE_AFTER_GAME_START = "minimizeAfterGameStart";
 	public static final String EXIT_AFTER_GAME_START = "exitAfterGameStart";
 	public static final String RESTORE_AFTER_GAME_END = "restoreAfterGameEnd";
@@ -161,6 +163,7 @@ public class MessageConstants {
 	public static final String FILE_INFORMATIONS = "fileInformations";
 	public static final String FILE_NAME = "fileName";
 	public static final String FILE_LOCATION = "fileLocation";
+	public static final String DASHBOARD = "dashboard";
 	public static final String NOTIFICATIONS = "notifications";
 	public static final String WARNINGS = "warnings";
 	public static final String ERRORS = "errors";
@@ -204,6 +207,7 @@ public class MessageConstants {
 	public static final String SHOW_APPLICATION = "showApplication";
 	public static final String SEND_ESC = "sendEsc";
 	public static final String SEND_ALT_ENTER = "sendAltEnter";
+	public static final String SEND_F11 = "sendF11";
 	public static final String GAME_COUNT_FILTER_SET = "gameCountFilterSet";
 	public static final String DRAG_AND_DROP_FOLDER_HERE = "dragAndDropFolderHere";
 	public static final String DRAG_AND_DROP_FILE_HERE = "dragAndDropFileHere";
@@ -397,4 +401,5 @@ public class MessageConstants {
 	public static final String TRANSPARENT_GAME_COVERS = "transparentGameCovers";
 	public static final String GAME_FILTER_GROUPS = "gameFilterGroups";
 	public static final String MAKE_TRANSLATIONS = "makeTranslations";
+    public static final String CREATE_SHORTCUT_FILE = "createShortcutFile";
 }
