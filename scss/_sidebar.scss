@@ -1,7 +1,7 @@
 /* Sidebar */
 .sidebar {
     width: 250px;
-    background-color: var(--bg-quaternary);
+    background-color: var(--bg-sidebar);
     padding: 20px;
     overflow-y: auto;
     border-right: 1px solid var(--border-color);
@@ -66,7 +66,7 @@
 .tool-content {
     background-color: var(--bg-secondary);
     padding: 20px;
-    border-radius: 5px;
+    border-radius: var(--radius-card);
     margin-top: 20px;
 }
 
@@ -80,9 +80,9 @@
 }
 
 .tool-output {
-    background-color: #1e1e1e;
+    background-color: var(--bg-primary); /* Use variable instead of hardcoded */
     padding: 15px;
-    border-radius: 5px;
+    border-radius: var(--radius-sm);
     margin-top: 15px;
     min-height: 100px;
 }
@@ -90,7 +90,7 @@
 .stats {
     background-color: var(--bg-tertiary);
     padding: 15px;
-    border-radius: 5px;
+    border-radius: var(--radius-card);
 }
 
 .stats p {

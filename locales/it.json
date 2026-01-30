@@ -1,0 +1,191 @@
+{
+  "it": {
+    "app": {
+      "title": "emuBro",
+      "description": "Gestore Libreria Giochi"
+    },
+    "header": {
+      "library": "Libreria",
+      "tools": "Strumenti",
+      "community": "Comunità",
+      "profile": "Profilo",
+      "search": "Cerca giochi...",
+      "toggleTheme": "Cambia Tema",
+      "manageThemes": "Gestisci Temi"
+    },
+    "views": {
+      "cover": "Copertina",
+      "list": "Lista",
+      "table": "Tabella",
+      "slideshow": "Presentazione",
+      "random": "Casuale"
+    },
+    "sidebar": {
+      "library": "Libreria",
+      "allGames": "Tutti i Giochi",
+      "installed": "Installati",
+      "recentlyPlayed": "Giocati di recente",
+      "wishlist": "Lista desideri",
+      "downloads": "Download",
+      "categories": "Categorie",
+      "all": "Tutti",
+      "platformer": "Platform",
+      "adventure": "Avventura",
+      "rpg": "GDR",
+      "action": "Azione",
+      "puzzle": "Puzzle",
+      "fighting": "Picchiaduro",
+      "stats": "Statistiche",
+      "totalGames": "Giochi Totali",
+      "totalEmulators": "Emulatori Totali",
+      "playTime": "Tempo di gioco",
+      "hours": "ore",
+      "tools": "Strumenti",
+      "memoryCardReader": "Lettore Memory Card",
+      "romRipper": "Estrattore ROM",
+      "gameDatabase": "Database Giochi",
+      "cheatCodes": "Codici Cheat"
+    },
+    "gameGrid": {
+      "featuredGames": "Giochi in Evidenza",
+      "allPlatforms": "Tutte le Piattaforme",
+      "sortByName": "Ordina per Nome",
+      "sortByRating": "Ordina per Voto",
+      "sortByPlatform": "Ordina per Piattaforma",
+      "noGamesFound": "Nessun gioco trovato."
+    },
+    "gameCard": {
+      "launch": "Avvia",
+      "remove": "Rimuovi",
+      "install": "Installa",
+      "installed": "Installato",
+      "notInstalled": "Non Installato"
+    },
+    "gameDetails": {
+      "noGameSelected": "Nessun Gioco Selezionato",
+      "platform": "Piattaforma",
+      "rating": "Voto",
+      "genre": "Genere",
+      "price": "Prezzo",
+      "free": "Gratis"
+    },
+    "filters": {
+      "search": "Cerca giochi...",
+      "selectDrive": "Seleziona Unità",
+      "searchGamesBtn": "Cerca Giochi ed Emulatori",
+      "searching": "Ricerca in corso..."
+    },
+    "theme": {
+      "darkTheme": "Tema Scuro",
+      "lightTheme": "Tema Chiaro",
+      "themeManager": "Gestore Temi",
+      "presets": "Temi Predefiniti",
+      "custom": "Temi Personalizzati",
+      "presetThemes": "Temi Predefiniti",
+      "customThemes": "Temi Personalizzati",
+      "createNewTheme": "+ Crea Nuovo Tema",
+      "themeName": "Nome Tema",
+      "myCustomTheme": "Mio Tema Personalizzato",
+      "primaryBackground": "Sfondo Primario",
+      "primaryText": "Testo Primario",
+      "accentColor": "Colore Accento",
+      "secondaryBackground": "Sfondo Secondario",
+      "borderColor": "Colore Bordo",
+      "backgroundImage": "Immagine di Sfondo",
+      "uploadImage": "Carica Immagine",
+      "clearImage": "Rimuovi Immagine",
+      "backgroundImageLoaded": "Immagine caricata",
+      "position": "Posizione",
+      "centered": "Centrato",
+      "fixed": "Fisso",
+      "scaleMode": "Modalità Scala",
+      "originalSize": "Dimensione Originale",
+      "stretch": "Adatta",
+      "crop": "Ritaglia",
+      "zoom": "Zoom",
+      "cardEffects": "Effetti Schede",
+      "enableGlassEffect": "Abilita Effetto Vetro",
+      "glassEffectDesc": "Applica l'effetto vetro alle schede dei giochi",
+      "saveTheme": "Salva Tema",
+      "cancel": "Annulla",
+      "edit": "Modifica",
+      "delete": "Elimina",
+      "presetTheme": "Tema Predefinito",
+      "customTheme": "Tema Personalizzato",
+      "active": "Attivo",
+      "saved": "Tema salvato con successo!",
+      "editTheme": "Modifica Tema"
+    },
+    "language": {
+      "name": "Italiano",
+      "flag": "🇮🇹",
+      "selectLanguage": "Seleziona Lingua",
+      "english": "Inglese",
+      "afrikaans": "Afrikaans",
+      "spanish": "Spagnolo",
+      "french": "Francese",
+      "german": "Tedesco",
+      "japanese": "Giapponese",
+      "italian": "Italiano",
+      "dutch": "Olandese"
+    },
+    "buttons": {
+      "save": "Salva",
+      "cancel": "Annulla",
+      "edit": "Modifica",
+      "delete": "Elimina",
+      "create": "Crea",
+      "close": "Chiudi",
+      "yes": "Sì",
+      "no": "No",
+      "ok": "OK"
+    },
+    "messages": {
+      "loadingUserInfo": "Caricamento...",
+      "confirmDeleteTheme": "Sei sicuro di voler eliminare \"{{name}}\"? L'azione è irreversibile.",
+      "removalStarted": "Rimozione avviata!",
+      "removalFailed": "Rimozione fallita: {{message}}",
+      "gameLaunched": "Gioco avviato!",
+      "launchFailed": "Impossibile avviare il gioco: {{message}}",
+      "foundGames": "Trovati {{count}} giochi sul disco rigido!",
+      "searchFailed": "Ricerca fallita: {{message}}",
+      "initializationFailed": "Inizializzazione fallita. Controlla i log.",
+      "enterThemeName": "Inserisci un nome per il tema",
+      "failedToRemoveGame": "Impossibile rimuovere il gioco.",
+      "failedToLaunchGame": "Impossibile avviare il gioco.",
+      "failedToInitialize": "Impossibile avviare l'applicazione."
+    },
+    "table": {
+      "cover": "Copertina",
+      "game": "Gioco",
+      "genre": "Genere",
+      "rating": "Voto",
+      "platform": "Piattaforma",
+      "status": "Stato",
+      "actions": "Azioni"
+    },
+    "slideshow": {
+      "previous": "Precedente",
+      "next": "Successivo"
+    },
+    "random": {
+      "shuffle": "🎲 Mischia e Suggerisci",
+      "stop": "Stop ⏹",
+      "suggestion": "Perché non giochi a \"{{game}}\" ora?"
+    },
+    "tools": {
+      "memoryCardReader": "Lettore Memory Card",
+      "readCard": "Leggi Scheda",
+      "writeCard": "Scrivi Scheda",
+      "romRipper": "Estrattore ROM",
+      "startRip": "Avvia Estrazione",
+      "gameDatabase": "Database Giochi",
+      "searchGames": "Cerca giochi...",
+      "search": "Cerca",
+      "cheatCodes": "Codici Cheat",
+      "selectGame": "Seleziona un gioco",
+      "applyCheat": "Applica Cheat",
+      "notImplemented": "Strumento non ancora implementato."
+    }
+  }
+}

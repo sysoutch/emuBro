@@ -13,7 +13,7 @@
                 <!-- circle with transparent logo on top -->
                 <div class="logo-circle"></div>
                 <img src="./logo.png" alt="emuBro Logo">
-                <h1><span style="color: var(--text-secondary)">EMU</span><span style="color: var(--brand-color)"><strong>BRO</strong></span></h1>
+                <h1><span class="logo-text-prefix">EMU</span><span class="logo-text-suffix">BRO</span></h1>
             </div>
             <nav class="navigation">
                 <ul>
@@ -29,12 +29,7 @@
                 </div>
                 <div class="form-group">
                     <select id="language-select" title="Select Language">
-                        <!-- language flag icon and text -->
-                        <option value="en" data-i18n="language.english">🇺🇸 English</option>
-                        <option value="es" data-i18n="language.spanish">🇪🇸 Español</option>
-                        <option value="fr" data-i18n="language.french">🇫🇷 Français</option>
-                        <option value="de" data-i18n="language.german">🇩🇪 Deutsch</option>
-                        <option value="ja" data-i18n="language.japanese">🇯🇵 日本語</option>
+                        <!-- populated dynamically -->
                     </select>
                 </div>
                 <div class="theme-toggle-wrapper">
@@ -117,43 +112,50 @@
                 </div>
             </aside>
 
-            <!-- Game Grid -->
-            <main class="game-grid">
-                <div class="game-header">
-                    <h2 id="games-header">Featured Games</h2>
-                    <div class="filters">
-                        <select id="platform-filter">
-                            <option value="all">All Platforms</option>
-                            <option value="gameboy">Gameboy</option>
-                            <option value="android">Android</option>
-                            <option value="xbox">Xbox</option>
-                            <option value="nes">NES</option>
-                            <option value="snes">SNES</option>
-                        </select>
-                        <select id="sort-filter">
-                            <option value="name">Sort by Name</option>
-                            <option value="rating">Sort by Rating</option>
-                            <option value="platform">Sort by Platform</option>
-                        </select>
+            <!-- Game Content Wrapper -->
+            <div class="game-content-wrapper">
+                <!-- Game Grid -->
+                <main class="game-grid">
+                    <div class="game-header">
+                        <h2 id="games-header">Featured Games</h2>
+                        <div class="filters">
+                            <select id="platform-filter">
+                                <option value="all">All Platforms</option>
+                                <option value="gameboy">Gameboy</option>
+                                <option value="android">Android</option>
+                                <option value="xbox">Xbox</option>
+                                <option value="nes">NES</option>
+                                <option value="snes">SNES</option>
+                            </select>
+                            <select id="sort-filter">
+                                <option value="name">Sort by Name</option>
+                                <option value="rating">Sort by Rating</option>
+                                <option value="platform">Sort by Platform</option>
+                            </select>
+                        </div>
                     </div>
-                </div>
-                <div id="games-container" class="games-container">
-                    <!-- Games will be loaded here dynamically -->
-                </div>
-            </main>
-        </div>
-        <!-- Game Details Footer -->
-        <footer id="game-details-footer" class="game-details-footer">
-            <div class="game-details-content">
-                <div class="game-details-header">
-                    <h3 id="selected-game-title">No Game Selected</h3>
-                    <button id="close-game-details" class="close-btn">&times;</button>
-                </div>
-                <div id="game-details-info" class="game-details-info">
-                    <!-- Game details will be displayed here -->
-                </div>
+                    <div id="games-container" class="games-container">
+                        <!-- Games will be loaded here dynamically -->
+                    </div>
+                </main>
+                
+                <!-- Game Details Footer -->
+                <footer id="game-details-footer" class="game-details-footer glass">
+                    <div class="game-details-content">
+                        <div class="game-details-header">
+                            <h3 id="selected-game-title">No Game Selected</h3>
+                            <div class="footer-controls">
+                                <button id="pin-footer-btn" class="action-btn small" title="Pin Footer">📌</button>
+                                <button id="close-game-details" class="close-btn">&times;</button>
+                            </div>
+                        </div>
+                        <div id="game-details-info" class="game-details-info">
+                            <!-- Game details will be displayed here -->
+                        </div>
+                    </div>
+                </footer>
             </div>
-        </footer>
+        </div>
     </div>
 
     <!-- Theme Manager Modal -->
@@ -233,15 +235,73 @@
                             </div>
 
                             <div class="form-group">
+                                <label for="color-bg-header">Header Background:</label>
+                                <div class="color-input-group">
+                                    <input type="color" id="color-bg-header" class="color-picker">
+                                    <input type="text" class="color-text" placeholder="#2d2d2d" readonly>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="color-bg-sidebar">Sidebar Background:</label>
+                                <div class="color-input-group">
+                                    <input type="color" id="color-bg-sidebar" class="color-picker">
+                                    <input type="text" class="color-text" placeholder="#333333" readonly>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="color-bg-actionbar">Action Bar Background:</label>
+                                <div class="color-input-group">
+                                    <input type="color" id="color-bg-actionbar" class="color-picker">
+                                    <input type="text" class="color-text" placeholder="#252525" readonly>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
                                 <label for="color-border">Border Color:</label>
                                 <div class="color-input-group">
                                     <input type="color" id="color-border" class="color-picker">
                                     <input type="text" class="color-text" placeholder="#333333" readonly>
                                 </div>
                             </div>
+
+                            <div class="form-group">
+                                <label for="color-bg-tertiary">Tertiary Background:</label>
+                                <div class="color-input-group">
+                                    <input type="color" id="color-bg-tertiary" class="color-picker">
+                                    <input type="text" class="color-text" placeholder="#333333" readonly>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="color-success">Success Color:</label>
+                                <div class="color-input-group">
+                                    <input type="color" id="color-success" class="color-picker">
+                                    <input type="text" class="color-text" placeholder="#4caf50" readonly>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="color-danger">Danger Color:</label>
+                                <div class="color-input-group">
+                                    <input type="color" id="color-danger" class="color-picker">
+                                    <input type="text" class="color-text" placeholder="#f44336" readonly>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Background Image Section -->
+                        <!-- Style Options -->
+                        <div class="form-group">
+                            <label for="corner-style">Corner Style:</label>
+                            <select id="corner-style">
+                                <option value="rounded">Rounded (Modern)</option>
+                                <option value="semi-rounded">Slightly Rounded (Classic)</option>
+                                <option value="sharp">Sharp (Rectangle)</option>
+                            </select>
+                        </div>
+
                         <div class="background-section">
                             <h4>Background Image</h4>
                             
@@ -310,7 +370,7 @@
                     <div class="theme-manager-section">
                         <h3>Community Workshop</h3>
                         <div id="marketplace-list" class="marketplace-grid">
-                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

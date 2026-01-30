@@ -115,6 +115,8 @@
       "editTheme": "Design bearbeiten"
     },
     "language": {
+      "name": "Deutsch",
+      "flag": "🇩🇪",
       "selectLanguage": "Sprache auswählen",
       "english": "English",
       "spanish": "Español",

@@ -1,0 +1,191 @@
+{
+  "af": {
+    "app": {
+      "title": "emuBro",
+      "description": "Speletjie Biblioteek Bestuurder"
+    },
+    "header": {
+      "library": "Biblioteek",
+      "tools": "Gereedskap",
+      "community": "Gemeenskap",
+      "profile": "Profiel",
+      "search": "Soek speletjies...",
+      "toggleTheme": "Wissel Tema",
+      "manageThemes": "Bestuur Temas"
+    },
+    "views": {
+      "cover": "Omslag",
+      "list": "Lys",
+      "table": "Tabel",
+      "slideshow": "Skyfievertoning",
+      "random": "Ewetoevallig"
+    },
+    "sidebar": {
+      "library": "Biblioteek",
+      "allGames": "Alle Speletjies",
+      "installed": "Geïnstalleer",
+      "recentlyPlayed": "Onlangs Gespeel",
+      "wishlist": "Wenslys",
+      "downloads": "Aflaaie",
+      "categories": "Kategorieë",
+      "all": "Alle",
+      "platformer": "Platform",
+      "adventure": "Avontuur",
+      "rpg": "RPG",
+      "action": "Aksie",
+      "puzzle": "Legkaart",
+      "fighting": "Geveg",
+      "stats": "Statistieke",
+      "totalGames": "Totale Speletjies",
+      "totalEmulators": "Totale Emulators",
+      "playTime": "Speeltyd",
+      "hours": "ure",
+      "tools": "Gereedskap",
+      "memoryCardReader": "Geheuekaartleser",
+      "romRipper": "ROM Ripper",
+      "gameDatabase": "Speletjie-databasis",
+      "cheatCodes": "Cheat-kodes"
+    },
+    "gameGrid": {
+      "featuredGames": "Gewilde Speletjies",
+      "allPlatforms": "Alle Platforms",
+      "sortByName": "Sorteer volgens Naam",
+      "sortByRating": "Sorteer volgens Gradering",
+      "sortByPlatform": "Sorteer volgens Platform",
+      "noGamesFound": "Geen speletjies gevind nie."
+    },
+    "gameCard": {
+      "launch": "Begin",
+      "remove": "Verwyder",
+      "install": "Installeer",
+      "installed": "Geïnstalleer",
+      "notInstalled": "Nie Geïnstalleer nie"
+    },
+    "gameDetails": {
+      "noGameSelected": "Geen Speletjie Geselekteer nie",
+      "platform": "Platform",
+      "rating": "Gradering",
+      "genre": "Genre",
+      "price": "Prys",
+      "free": "Gratis"
+    },
+    "filters": {
+      "search": "Soek speletjies...",
+      "selectDrive": "Kies Skyf",
+      "searchGamesBtn": "Soek Speletjies en Emulators",
+      "searching": "Soek tans..."
+    },
+    "theme": {
+      "darkTheme": "Donker Tema",
+      "lightTheme": "Ligte Tema",
+      "themeManager": "Temabestuurder",
+      "presets": "Voorafingestelde Temas",
+      "custom": "Gepasmaakte Temas",
+      "presetThemes": "Voorafingestelde Temas",
+      "customThemes": "Gepasmaakte Temas",
+      "createNewTheme": "+ Skep Nuwe Tema",
+      "themeName": "Temanaam",
+      "myCustomTheme": "My Gepasmaakte Tema",
+      "primaryBackground": "Primêre Agtergrond",
+      "primaryText": "Primêre Teks",
+      "accentColor": "Aksentkleur",
+      "secondaryBackground": "Sekondêre Agtergrond",
+      "borderColor": "Randkleur",
+      "backgroundImage": "Agtergrondprent",
+      "uploadImage": "Laai Prent Op",
+      "clearImage": "Verwyder Prent",
+      "backgroundImageLoaded": "Agtergrondprent gelaai",
+      "position": "Posisie",
+      "centered": "Gesentreer",
+      "fixed": "Vaste Posisie",
+      "scaleMode": "Skaalmodus",
+      "originalSize": "Oorspronklike Grootte",
+      "stretch": "Rek",
+      "crop": "Snoei",
+      "zoom": "Zoem",
+      "cardEffects": "Kaarteffekte",
+      "enableGlassEffect": "Aktiveer Glas-effek",
+      "glassEffectDesc": "Pas glas-effek op speletjiekaarte toe",
+      "saveTheme": "Stoor Tema",
+      "cancel": "Kanselleer",
+      "edit": "Wysig",
+      "delete": "Vee uit",
+      "presetTheme": "Voorafingestelde Tema",
+      "customTheme": "Gepasmaakte Tema",
+      "active": "Aktief",
+      "saved": "Tema suksesvol gestoor!",
+      "editTheme": "Wysig Tema"
+    },
+    "language": {
+      "name": "Afrikaans",
+      "flag": "🇿🇦",
+      "selectLanguage": "Kies Taal",
+      "english": "Engels",
+      "afrikaans": "Afrikaans",
+      "spanish": "Spaans",
+      "french": "Frans",
+      "german": "Duits",
+      "japanese": "Japannees",
+      "italian": "Italiaans",
+      "dutch": "Nederlands"
+    },
+    "buttons": {
+      "save": "Stoor",
+      "cancel": "Kanselleer",
+      "edit": "Wysig",
+      "delete": "Vee uit",
+      "create": "Skep",
+      "close": "Sluit",
+      "yes": "Ja",
+      "no": "Nee",
+      "ok": "OK"
+    },
+    "messages": {
+      "loadingUserInfo": "Laai tans...",
+      "confirmDeleteTheme": "Is jy seker jy wil \"{{name}}\" uitvee? Hierdie aksie kan nie ongedaan gemaak word nie.",
+      "removalStarted": "Verwydering suksesvol begin!",
+      "removalFailed": "Verwydering misluk: {{message}}",
+      "gameLaunched": "Speletjie suksesvol begin!",
+      "launchFailed": "Kon nie speletjie begin nie: {{message}}",
+      "foundGames": "{{count}} speletjies op jou hardeskyf gevind!",
+      "searchFailed": "Soektog het misluk: {{message}}",
+      "initializationFailed": "Kon nie die toepassing begin nie. Gaan asseblief die logs na.",
+      "enterThemeName": "Voer asseblief 'n temanaam in",
+      "failedToRemoveGame": "Kon nie die speletjie verwyder nie.",
+      "failedToLaunchGame": "Kon nie die speletjie begin nie.",
+      "failedToInitialize": "Kon nie die toepassing begin nie."
+    },
+    "table": {
+      "cover": "Omslag",
+      "game": "Speletjie",
+      "genre": "Genre",
+      "rating": "Gradering",
+      "platform": "Platform",
+      "status": "Status",
+      "actions": "Aksies"
+    },
+    "slideshow": {
+      "previous": "Vorige",
+      "next": "Volgende"
+    },
+    "random": {
+      "shuffle": "🎲 Skud & Stel Voor",
+      "stop": "Stop ⏹",
+      "suggestion": "Hoekom speel jy nie nou \"{{game}}\" nie?"
+    },
+    "tools": {
+      "memoryCardReader": "Geheuekaartleser",
+      "readCard": "Lees Geheuekaart",
+      "writeCard": "Skryf Geheuekaart",
+      "romRipper": "ROM Ripper",
+      "startRip": "Begin ROM Rip",
+      "gameDatabase": "Speletjie-databasis",
+      "searchGames": "Soek speletjies...",
+      "search": "Soek",
+      "cheatCodes": "Cheat-kodes",
+      "selectGame": "Kies 'n speletjie",
+      "applyCheat": "Pas Cheat toe",
+      "notImplemented": "Gereedskap nog nie geïmplementeer nie."
+    }
+  }
+}

@@ -5,7 +5,7 @@
     margin-bottom: 20px;
     padding: 10px;
     background-color: var(--bg-tertiary);
-    border-radius: 8px;
+    border-radius: var(--radius-card);
 }
 
 .view-switcher button {
@@ -13,7 +13,7 @@
     color: var(--text-secondary);
     border: none;
     padding: 10px 15px;
-    border-radius: 4px;
+    border-radius: var(--radius-btn);
     cursor: pointer;
     transition: all 0.3s;
     display: flex;
@@ -35,35 +35,83 @@
 .view-controls {
     display: flex;
     gap: 10px;
-    margin-bottom: 20px;
+    margin: 10px 20px 20px 20px;
+    padding: 10px;
+    background-color: var(--bg-actionbar);
+    border-radius: var(--radius-card);
+    border: 1px solid var(--border-color);
     flex-wrap: wrap;
+    align-items: center;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
 
 .view-btn {
-    background-color: var(--bg-secondary);
+    background-color: transparent;
     color: var(--text-secondary);
-    border: none;
-    padding: 10px 15px;
-    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    padding: 8px 16px;
+    border-radius: var(--radius-btn);
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     align-items: center;
-    gap: 5px;
+    justify-content: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
 }
 
 .view-btn:hover {
-    background-color: var(--bg-quaternary);
+    background-color: var(--bg-tertiary);
     color: var(--text-primary);
+    border-color: var(--accent-color);
+    transform: translateY(-1px);
 }
 
 .view-btn.active {
     background-color: var(--accent-color);
-    color: white;
+    color: var(--bg-primary); /* Better contrast if accent is bright */
+    border-color: var(--accent-color);
+    font-weight: 600;
+}
+
+.drive-selector {
+    padding: 8px 12px;
+    border-radius: var(--radius-input);
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    margin-left: auto;
+}
+
+#search-games-btn {
+    background-color: var(--bg-quaternary);
+    font-weight: 600;
+    
+    &:hover {
+        background-color: var(--accent-color);
+        color: var(--bg-primary);
+    }
 }
 
 /* Responsive Design */
+@media (max-width: 900px) {
+    .drive-selector {
+        margin-left: 0;
+        flex-grow: 1;
+    }
+    
+    #search-games-btn {
+        flex-grow: 1;
+    }
+}
+
 @media (max-width: 768px) {
+    .view-controls {
+        margin: 10px;
+        justify-content: center;
+    }
+
     .sidebar {
         width: 200px;
     }
@@ -84,15 +132,7 @@
         margin-bottom: 10px;
     }
     
-    .header {
-        flex-direction: column;
-        gap: 10px;
-        padding: 10px;
-    }
-    
-    .navigation ul {
-        margin-top: 10px;
-    }
+    /* Header styles moved to _header.scss */
     
     .tools-container {
         grid-template-columns: 1fr;

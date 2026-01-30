@@ -115,6 +115,8 @@
       "editTheme": "Editar Tema"
     },
     "language": {
+      "name": "Español",
+      "flag": "🇪🇸",
       "selectLanguage": "Seleccionar Idioma",
       "english": "English",
       "spanish": "Español",

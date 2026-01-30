@@ -79,6 +79,8 @@
       "darkTheme": "Dark Theme",
       "lightTheme": "Light Theme",
       "themeManager": "Theme Manager",
+      "presets": "Preset Themes",
+      "custom": "Custom Themes",
       "presetThemes": "Preset Themes",
       "customThemes": "Custom Themes",
       "createNewTheme": "+ Create New Theme",
@@ -115,6 +117,8 @@
       "editTheme": "Edit Theme"
     },
     "language": {
+      "name": "English",
+      "flag": "🇺🇸",
       "selectLanguage": "Select Language",
       "english": "English",
       "spanish": "Español",
@@ -135,6 +139,7 @@
     },
     "messages": {
       "loadingUserInfo": "Loading...",
+      "confirmDeleteTheme": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
       "removalStarted": "Removal started successfully!",
       "removalFailed": "Removal failed: {{message}}",
       "gameLaunched": "Game launched successfully!",

@@ -115,6 +115,8 @@
       "editTheme": "テーマを編集"
     },
     "language": {
+      "name": "日本語",
+      "flag": "🇯🇵",
       "selectLanguage": "言語を選択",
       "english": "English",
       "spanish": "Español",

@@ -1,25 +1,28 @@
-/**
- * Load all translation files
- * This file combines all language translations and provides them to i18n
- */
+const fs = require('fs');
+const path = require('path');
 
-// Import all translation files
-const enTranslations = require('./locales/en.json');
-const esTranslations = require('./locales/es.json');
-const frTranslations = require('./locales/fr.json');
-const deTranslations = require('./locales/de.json');
-const jaTranslations = require('./locales/ja.json');
+const allTranslations = {};
+const localesDir = path.join(__dirname, 'locales');
 
-// Combine all translations
-const allTranslations = {
-    ...enTranslations,
-    ...esTranslations,
-    ...frTranslations,
-    ...deTranslations,
-    ...jaTranslations
-};
+try {
+    if (fs.existsSync(localesDir)) {
+        const files = fs.readdirSync(localesDir);
+        files.forEach(file => {
+            if (file.endsWith('.json')) {
+                const filePath = path.join(localesDir, file);
+                const content = fs.readFileSync(filePath, 'utf8');
+                const translation = JSON.parse(content);
+                Object.assign(allTranslations, translation);
+            }
+        });
+    }
+} catch (err) {
+    console.error('Error loading translations:', err);
+}
 
 // Export for use in renderer.js
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = allTranslations;
+} else {
+    window.allTranslations = allTranslations;
 }

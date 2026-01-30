@@ -1,0 +1,191 @@
+{
+  "nl": {
+    "app": {
+      "title": "emuBro",
+      "description": "Game Bibliotheek Beheerder"
+    },
+    "header": {
+      "library": "Bibliotheek",
+      "tools": "Gereedschap",
+      "community": "Gemeenschap",
+      "profile": "Profiel",
+      "search": "Zoek spellen...",
+      "toggleTheme": "Thema Wisselen",
+      "manageThemes": "Thema's Beheren"
+    },
+    "views": {
+      "cover": "Omslag",
+      "list": "Lijst",
+      "table": "Tabel",
+      "slideshow": "Diavoorstelling",
+      "random": "Willekeurig"
+    },
+    "sidebar": {
+      "library": "Bibliotheek",
+      "allGames": "Alle Spellen",
+      "installed": "Geïnstalleerd",
+      "recentlyPlayed": "Onlangs Gespeeld",
+      "wishlist": "Wenslijst",
+      "downloads": "Downloads",
+      "categories": "Categorieën",
+      "all": "Alle",
+      "platformer": "Platform",
+      "adventure": "Avontuur",
+      "rpg": "RPG",
+      "action": "Actie",
+      "puzzle": "Puzzel",
+      "fighting": "Vechtspel",
+      "stats": "Statistieken",
+      "totalGames": "Totaal Aantal Spellen",
+      "totalEmulators": "Totaal Aantal Emulators",
+      "playTime": "Speeltijd",
+      "hours": "uur",
+      "tools": "Gereedschap",
+      "memoryCardReader": "Geheugenkaartlezer",
+      "romRipper": "ROM Ripper",
+      "gameDatabase": "Spel Database",
+      "cheatCodes": "Cheat Codes"
+    },
+    "gameGrid": {
+      "featuredGames": "Aanbevolen Spellen",
+      "allPlatforms": "Alle Platforms",
+      "sortByName": "Sorteren op Naam",
+      "sortByRating": "Sorteren op Waardering",
+      "sortByPlatform": "Sorteren op Platform",
+      "noGamesFound": "Geen spellen gevonden."
+    },
+    "gameCard": {
+      "launch": "Starten",
+      "remove": "Verwijderen",
+      "install": "Installeren",
+      "installed": "Geïnstalleerd",
+      "notInstalled": "Niet Geïnstalleerd"
+    },
+    "gameDetails": {
+      "noGameSelected": "Geen Spel Geselecteerd",
+      "platform": "Platform",
+      "rating": "Waardering",
+      "genre": "Genre",
+      "price": "Prijs",
+      "free": "Gratis"
+    },
+    "filters": {
+      "search": "Zoek spellen...",
+      "selectDrive": "Selecteer Schijf",
+      "searchGamesBtn": "Zoek Spellen en Emulators",
+      "searching": "Zoeken..."
+    },
+    "theme": {
+      "darkTheme": "Donker Thema",
+      "lightTheme": "Licht Thema",
+      "themeManager": "Thema Beheer",
+      "presets": "Standaard Thema's",
+      "custom": "Aangepaste Thema's",
+      "presetThemes": "Standaard Thema's",
+      "customThemes": "Aangepaste Thema's",
+      "createNewTheme": "+ Nieuw Thema Maken",
+      "themeName": "Thema Naam",
+      "myCustomTheme": "Mijn Eigen Thema",
+      "primaryBackground": "Primaire Achtergrond",
+      "primaryText": "Primaire Tekst",
+      "accentColor": "Accent Kleur",
+      "secondaryBackground": "Secundaire Achtergrond",
+      "borderColor": "Rand Kleur",
+      "backgroundImage": "Achtergrond Afbeelding",
+      "uploadImage": "Afbeelding Uploaden",
+      "clearImage": "Afbeelding Verwijderen",
+      "backgroundImageLoaded": "Achtergrond afbeelding geladen",
+      "position": "Positie",
+      "centered": "Gecentreerd",
+      "fixed": "Vastgezet",
+      "scaleMode": "Schaal Modus",
+      "originalSize": "Originele Grootte",
+      "stretch": "Uitrekken",
+      "crop": "Bijsnijden",
+      "zoom": "Zoomen",
+      "cardEffects": "Kaart Effecten",
+      "enableGlassEffect": "Glas Effect Inschakelen",
+      "glassEffectDesc": "Pas frosted glass effect toe op spelkaarten",
+      "saveTheme": "Thema Opslaan",
+      "cancel": "Annuleren",
+      "edit": "Bewerken",
+      "delete": "Verwijderen",
+      "presetTheme": "Standaard Thema",
+      "customTheme": "Aangepast Thema",
+      "active": "Actief",
+      "saved": "Thema succesvol opgeslagen!",
+      "editTheme": "Thema Bewerken"
+    },
+    "language": {
+      "name": "Nederlands",
+      "flag": "🇳🇱",
+      "selectLanguage": "Selecteer Taal",
+      "english": "Engels",
+      "afrikaans": "Afrikaans",
+      "spanish": "Spaans",
+      "french": "Frans",
+      "german": "Duits",
+      "japanese": "Japans",
+      "italian": "Italiaans",
+      "dutch": "Nederlands"
+    },
+    "buttons": {
+      "save": "Opslaan",
+      "cancel": "Annuleren",
+      "edit": "Bewerken",
+      "delete": "Verwijderen",
+      "create": "Maken",
+      "close": "Sluiten",
+      "yes": "Ja",
+      "no": "Nee",
+      "ok": "OK"
+    },
+    "messages": {
+      "loadingUserInfo": "Laden...",
+      "confirmDeleteTheme": "Weet u zeker dat u \"{{name}}\" wilt verwijderen? Dit kan niet ongedaan worden gemaakt.",
+      "removalStarted": "Verwijderen gestart!",
+      "removalFailed": "Verwijderen mislukt: {{message}}",
+      "gameLaunched": "Spel gestart!",
+      "launchFailed": "Kon spel niet starten: {{message}}",
+      "foundGames": "{{count}} spellen gevonden op uw harde schijf!",
+      "searchFailed": "Zoeken mislukt: {{message}}",
+      "initializationFailed": "Initialisatie mislukt. Controleer de logs.",
+      "enterThemeName": "Voer een thema naam in",
+      "failedToRemoveGame": "Kon spel niet verwijderen.",
+      "failedToLaunchGame": "Kon spel niet starten.",
+      "failedToInitialize": "Kon applicatie niet starten."
+    },
+    "table": {
+      "cover": "Omslag",
+      "game": "Spel",
+      "genre": "Genre",
+      "rating": "Waardering",
+      "platform": "Platform",
+      "status": "Status",
+      "actions": "Acties"
+    },
+    "slideshow": {
+      "previous": "Vorige",
+      "next": "Volgende"
+    },
+    "random": {
+      "shuffle": "🎲 Schudden & Suggereren",
+      "stop": "Stop ⏹",
+      "suggestion": "Waarom speel je niet \"{{game}}\" nu?"
+    },
+    "tools": {
+      "memoryCardReader": "Geheugenkaartlezer",
+      "readCard": "Kaart Lezen",
+      "writeCard": "Kaart Schrijven",
+      "romRipper": "ROM Ripper",
+      "startRip": "Start Rip",
+      "gameDatabase": "Spel Database",
+      "searchGames": "Zoek spellen...",
+      "search": "Zoeken",
+      "cheatCodes": "Cheat Codes",
+      "selectGame": "Selecteer een spel",
+      "applyCheat": "Cheat Toepassen",
+      "notImplemented": "Tool nog niet geïmplementeerd."
+    }
+  }
+}

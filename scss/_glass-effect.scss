@@ -14,25 +14,27 @@
 /* When data-glass-effect="enabled" is on the <html> tag, change the cards */
 [data-glass-effect=enabled] {
     .game-card {
-        @include glass-bg(--bg-secondary, 30%);
+        /* Increased transparency from 30% to 50% */
+        @include glass-bg(--bg-secondary, 50%);
         
         &:hover {
-            /* Slightly less transparent on hover */
-            background: color-mix(in srgb, var(--bg-secondary), transparent 15%) !important;
+            /* Increased transparency from 15% to 30% on hover */
+            background: color-mix(in srgb, var(--bg-secondary), transparent 30%) !important;
             transform: translateY(-5px);
         }
     }
 
     .glass {
-        /* Modal usually uses bg-primary */
-        @include glass-bg(--bg-primary, 10%);
+        /* Increased transparency from 10% to 25% */
+        @include glass-bg(--bg-primary, 25%);
     }
 
     /* Apply Glass Effect to Theme Manager Inputs when enabled */
     .color-input-group,
     .theme-item {
         @include glass-base(10px);
-        background: color-mix(in srgb, var(--bg-secondary), transparent 40%) !important;
+        /* Increased transparency from 40% to 60% */
+        background: color-mix(in srgb, var(--bg-secondary), transparent 60%) !important;
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
     }
 }

@@ -2,40 +2,115 @@ import './scss/styles.scss';             // Webpack will compile SASS and inject
 
 const { ipcRenderer } = require('electron');
 const log = require('electron-log');
-
-// Mock Community Data
-const communityThemes = [
-    {
-        id: 'comm_cyber',
-        name: 'CyberBro 2077',
-        author: 'NeonRider',
-        colors: {
-            bgPrimary: '#0a0a12',
-            textPrimary: '#00ffcc',
-            accentColor: '#ff00ff',
-            bgSecondary: '#1a1a2e',
-            borderColor: '#333366',
-            textSecondary: '#00ccaa'
-        }
-    },
-    {
-        id: 'comm_retro',
-        name: 'CRT Nostalgia',
-        author: 'PixelBoi',
-        colors: {
-            bgPrimary: '#121212',
-            textPrimary: '#33ff33',
-            accentColor: '#22aa22',
-            bgSecondary: '#1e1e1e',
-            borderColor: '#224422',
-            textSecondary: '#228822'
-        }
-    }
-];
+const communityThemes = require('./community-themes');
 
 let platforms = [];
 let games = [];
 let emulators = [];
+let remoteCommunityThemes = null;
+
+async function fetchCommunityThemes() {
+    if (remoteCommunityThemes) return remoteCommunityThemes;
+
+    try {
+        const repoOwner = 'sysoutch';
+        const repoName = 'emuBro-themes';
+        const themesPath = 'community-themes';
+        
+        // 1. Get the list of directories in community-themes
+        const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${themesPath}`);
+        if (!response.ok) throw new Error('Failed to fetch themes list');
+        
+        const contents = await response.json();
+        const themeDirs = contents.filter(item => item.type === 'dir');
+        
+        const fetchedThemes = [];
+
+        // 2. For each directory, fetch the theme.json
+        // Note: The repo uses 'master' as the default branch based on the API response urls
+        const branch = 'master'; 
+
+        for (const dir of themeDirs) {
+            try {
+                const themeRes = await fetch(`https://raw.githubusercontent.com/${repoOwner}/${repoName}/${branch}/${themesPath}/${dir.name}/theme.json`);
+                if (themeRes.ok) {
+                    const theme = await themeRes.json();
+                    
+                    // Fix image path if it exists
+                    if (theme.background && theme.background.image && !theme.background.image.startsWith('http') && !theme.background.image.startsWith('data:')) {
+                        theme.background.image = `https://raw.githubusercontent.com/${repoOwner}/${repoName}/${branch}/${themesPath}/${dir.name}/${theme.background.image}`;
+                    }
+                    
+                    fetchedThemes.push(theme);
+                }
+            } catch (err) {
+                log.error(`Failed to fetch theme from ${dir.name}:`, err);
+            }
+        }
+
+        remoteCommunityThemes = fetchedThemes;
+        return fetchedThemes;
+    } catch (error) {
+        log.error('Error fetching community themes:', error);
+        return [];
+    }
+}
+
+async function renderMarketplace() {
+    const container = document.getElementById('marketplace-list');
+    if (!container) return;
+    
+    container.innerHTML = '<div class="loading-message" style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-secondary);">Fetching themes from GitHub...</div>';
+
+    const themes = await fetchCommunityThemes();
+    container.innerHTML = '';
+
+    if (themes.length === 0) {
+        container.innerHTML = '<div class="error-message" style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--danger-color);">Could not load themes. Please check your connection or try again later.</div>';
+        return;
+    }
+
+    themes.forEach(theme => {
+        const card = document.createElement('div');
+        card.className = 'marketplace-card';
+        
+        const hasBgImage = theme.background && theme.background.image;
+        const bgPreviewStyle = hasBgImage 
+            ? `background-image: url('${theme.background.image}'); background-size: cover; background-position: center;`
+            : `background: linear-gradient(135deg, ${theme.colors.bgPrimary}, ${theme.colors.bgSecondary});`;
+
+        card.innerHTML = `
+            <div class="marketplace-card-header" style="${bgPreviewStyle} height: 120px; border-radius: 6px; margin-bottom: 10px; position: relative; border: 1px solid var(--border-color); overflow: hidden;">
+                <span class="author-tag" style="position: absolute; bottom: 8px; right: 8px; margin: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">By ${theme.author}</span>
+            </div>
+            <div class="theme-item-info">
+                <span class="theme-item-name" style="font-weight: bold; font-size: 1.1rem;">${theme.name}</span>
+            </div>
+            <div class="theme-preview" style="margin: 10px 0;">
+                <div class="theme-color-dot" style="background-color: ${theme.colors.bgPrimary}" title="Background"></div>
+                <div class="theme-color-dot" style="background-color: ${theme.colors.accentColor}" title="Accent"></div>
+                <div class="theme-color-dot" style="background-color: ${theme.colors.textPrimary}" title="Text"></div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button class="action-btn small preview-btn" style="flex: 1; background: var(--bg-tertiary);">Preview</button>
+                <button class="action-btn launch-btn small add-btn" data-id="${theme.id}" style="flex: 1;">Add</button>
+            </div>
+        `;
+
+        card.querySelector('.preview-btn').addEventListener('click', () => {
+            applyCustomTheme(theme);
+            // We don't update currentTheme or localStorage, so it's temporary
+        });
+
+        card.querySelector('.add-btn').addEventListener('click', () => {
+            const newTheme = { ...theme, id: 'custom_' + Date.now() };
+            saveCustomTheme(newTheme);
+            alert(`"${theme.name}" has been added to your themes!`);
+        });
+
+        container.appendChild(card);
+    });
+}
 
 ipcRenderer.on('window-moved', (event, position, screenGoal) => {
     const { x, y } = position;
@@ -104,6 +179,7 @@ const themeManagerBtn = document.getElementById('theme-manager-btn');
 const themeManagerModal = document.getElementById('theme-manager-modal');
 const closeThemeManagerBtn = document.getElementById('close-theme-manager');
 const closeGameDetailsBtn = document.getElementById('close-game-details');
+const pinFooterBtn = document.getElementById('pin-footer-btn');
 
 // Current state
 let filteredGames = [];
@@ -127,10 +203,10 @@ function initializeTheme() {
         });
     }
     
-    // Language selector listener
+    // Language selector setup
+    populateLanguageSelector();
     const languageSelect = document.getElementById('language-select');
     if (languageSelect) {
-        languageSelect.value = i18n.getLanguage();
         languageSelect.addEventListener('change', (e) => {
             i18n.setLanguage(e.target.value);
         });
@@ -398,40 +474,6 @@ function setTheme(theme) {
     }
 }
 
-// function setTheme(theme) {
-//     currentTheme = theme;
-//     // remove background image
-//     disableFixedBackgroundTracking();
-//     const gameGrid = document.querySelector('main.game-grid');
-//     if (gameGrid) {
-//         gameGrid.style.backgroundImage = 'none';
-//     }
-
-//     // Check if it's a custom theme
-//     if (theme !== 'dark' && theme !== 'light') {
-//         const customThemes = getCustomThemes();
-//         const customTheme = customThemes.find(t => t.id === theme);
-//         if (customTheme) {
-//             applyCustomTheme(customTheme);
-//         }
-//     } else {
-//         // Reset custom CSS variables when switching to preset theme
-//         const root = document.documentElement;
-//         root.style.setProperty('--bg-primary', '');
-//         root.style.setProperty('--bg-secondary', '');
-//         root.style.setProperty('--bg-tertiary', '');
-//         root.style.setProperty('--bg-quaternary', '');
-//         root.style.setProperty('--text-primary', '');
-//         root.style.setProperty('--text-secondary', '');
-//         root.style.setProperty('--border-color', '');
-//         root.style.setProperty('--accent-color', '');
-//         root.style.setProperty('--accent-light', '');
-//         document.documentElement.setAttribute('data-theme', theme);
-//     }
-    
-//     log.info(`Theme changed to: ${theme}`);
-// }
-
 let shouldUseAccentColorForBrand = true;
 
 function applyCustomTheme(theme) {
@@ -439,14 +481,22 @@ function applyCustomTheme(theme) {
     const root = document.documentElement;
     root.style.setProperty('--bg-primary', theme.colors.bgPrimary);
     root.style.setProperty('--bg-secondary', theme.colors.bgSecondary);
-    root.style.setProperty('--bg-tertiary', theme.colors.bgSecondary);
-    root.style.setProperty('--bg-quaternary', theme.colors.bgSecondary);
+    // Use tertiary if available, else fallback to secondary
+    const tertiary = theme.colors.bgTertiary || theme.colors.bgSecondary;
+    root.style.setProperty('--bg-tertiary', tertiary);
+    // Quaternary is usually lighter/different than tertiary, but using tertiary as base for now if not specified
+    // Ideally we'd have a bgQuaternary too, but tertiary is the requested one.
+    root.style.setProperty('--bg-quaternary', tertiary); 
+    
     root.style.setProperty('--text-primary', theme.colors.textPrimary);
     root.style.setProperty('--text-secondary', theme.colors.textSecondary);
     root.style.setProperty('--text-tertiary', '#999');
     root.style.setProperty('--border-color', theme.colors.borderColor);
     root.style.setProperty('--accent-color', theme.colors.accentColor);
     root.style.setProperty('--accent-light', theme.colors.accentColor);
+    
+    if (theme.colors.successColor) root.style.setProperty('--success-color', theme.colors.successColor);
+    if (theme.colors.dangerColor) root.style.setProperty('--danger-color', theme.colors.dangerColor);
     if (shouldUseAccentColorForBrand) {
         const darkerColor = darkenHex(theme.colors.accentColor, 30);
         root.style.setProperty('--brand-color', darkerColor);
@@ -466,6 +516,30 @@ function applyCustomTheme(theme) {
     // Apply or remove glass effect based on theme setting
     const enableGlass = !theme.cardEffects || theme.cardEffects.glassEffect !== false;
     applyGlassEffect(enableGlass);
+
+    // Apply corner style
+    applyCornerStyle(theme.cornerStyle || 'rounded');
+}
+
+function applyCornerStyle(style) {
+    const root = document.documentElement;
+    if (style === 'sharp') {
+        root.style.setProperty('--radius-btn', '0px');
+        root.style.setProperty('--radius-input', '0px');
+        root.style.setProperty('--radius-card', '0px');
+        root.style.setProperty('--radius-sm', '0px');
+    } else if (style === 'semi-rounded') {
+        root.style.setProperty('--radius-btn', '4px');
+        root.style.setProperty('--radius-input', '4px');
+        root.style.setProperty('--radius-card', '4px');
+        root.style.setProperty('--radius-sm', '2px');
+    } else {
+        // rounded (default) - explicit set might be needed if switching from sharp
+        root.style.setProperty('--radius-btn', '20px');
+        root.style.setProperty('--radius-input', '20px');
+        root.style.setProperty('--radius-card', '12px');
+        root.style.setProperty('--radius-sm', '4px');
+    }
 }
 
 function darkenHex(hex, percent) {
@@ -563,8 +637,22 @@ function saveCustomTheme(theme) {
 
 function deleteCustomTheme(id) {
     const customThemes = getCustomThemes();
+    const theme = customThemes.find(t => t.id === id);
+    const themeName = theme ? theme.name : 'this theme';
+
+    const confirmDelete = confirm(i18n.t('messages.confirmDeleteTheme', { name: themeName }) || `Are you sure you want to delete "${themeName}"?`);
+    if (!confirmDelete) return;
+
     const filtered = customThemes.filter(t => t.id !== id);
     localStorage.setItem('customThemes', JSON.stringify(filtered));
+    
+    // If the deleted theme was the current one, switch to dark
+    if (currentTheme === id) {
+        setTheme('dark');
+        localStorage.setItem('theme', 'dark');
+        if (themeSelect) themeSelect.value = 'dark';
+    }
+
     updateThemeSelector();
     renderThemeManager();
 }
@@ -616,37 +704,6 @@ function renderThemeManager() {
             theme
         );
         customContainer.appendChild(item);
-    });
-}
-
-function renderMarketplace() {
-    const container = document.getElementById('marketplace-list');
-    container.innerHTML = '';
-
-    communityThemes.forEach(theme => {
-        const card = document.createElement('div');
-        card.className = 'marketplace-card';
-        
-        card.innerHTML = `
-            <span class="author-tag">By ${theme.author}</span>
-            <div class="theme-item-info">
-                <span class="theme-item-name">${theme.name}</span>
-            </div>
-            <div class="theme-preview">
-                <div class="theme-color-dot" style="background-color: ${theme.colors.bgPrimary}"></div>
-                <div class="theme-color-dot" style="background-color: ${theme.colors.accentColor}"></div>
-                <div class="theme-color-dot" style="background-color: ${theme.colors.textPrimary}"></div>
-            </div>
-            <button class="action-btn launch-btn small" data-id="${theme.id}">Add to Library</button>
-        `;
-
-        card.querySelector('.launch-btn').addEventListener('click', () => {
-            const newTheme = { ...theme, id: 'custom_' + Date.now() };
-            saveCustomTheme(newTheme);
-            alert(`"${theme.name}" has been added to your themes!`);
-        });
-
-        container.appendChild(card);
     });
 }
 
@@ -763,10 +820,17 @@ function resetThemeForm() {
     document.getElementById('color-accent').value = '#66ccff';
     document.getElementById('color-bg-secondary').value = '#2d2d2d';
     document.getElementById('color-border').value = '#444444';
+    document.getElementById('color-bg-header').value = '#2d2d2d';
+    document.getElementById('color-bg-sidebar').value = '#333333';
+    document.getElementById('color-bg-actionbar').value = '#252525';
+    document.getElementById('color-bg-tertiary').value = '#333333';
+    document.getElementById('color-success').value = '#4caf50';
+    document.getElementById('color-danger').value = '#f44336';
     document.getElementById('bg-position').value = 'centered';
     document.getElementById('bg-scale').value = 'crop';
     document.getElementById('bg-background-repeat').value = 'no-repeat';
     document.getElementById('glass-effect-toggle').checked = true;
+    document.getElementById('corner-style').value = 'rounded';
     clearBackgroundImage();
     window.currentBackgroundImage = null;
 }
@@ -782,6 +846,14 @@ function editTheme(theme) {
     document.getElementById('color-bg-secondary').value = theme.colors.bgSecondary;
     document.getElementById('color-border').value = theme.colors.borderColor;
     
+    // New colors
+    document.getElementById('color-bg-header').value = theme.colors.bgHeader || theme.colors.bgSecondary;
+    document.getElementById('color-bg-sidebar').value = theme.colors.bgSidebar || theme.colors.bgTertiary || theme.colors.bgSecondary;
+    document.getElementById('color-bg-actionbar').value = theme.colors.bgActionbar || theme.colors.bgQuaternary || theme.colors.bgSecondary;
+    document.getElementById('color-bg-tertiary').value = theme.colors.bgTertiary || theme.colors.bgSecondary;
+    document.getElementById('color-success').value = theme.colors.successColor || '#4caf50';
+    document.getElementById('color-danger').value = theme.colors.dangerColor || '#f44336';
+
     // Set background properties
     if (theme.background) {
         document.getElementById('bg-position').value = theme.background.position || 'centered';
@@ -806,6 +878,9 @@ function editTheme(theme) {
         document.getElementById('glass-effect-toggle').checked = true;
     }
     
+    // Set corner style
+    document.getElementById('corner-style').value = theme.cornerStyle || 'rounded';
+
     updateColorTexts();
     showThemeForm();
     setupBackgroundImageListeners();
@@ -931,6 +1006,15 @@ function setupThemeManagerListeners() {
     if (bgScaleInput) bgScaleInput.addEventListener('change', updateLiveBackground);
     if (bgRepeatInput) bgRepeatInput.addEventListener('change', updateLiveBackground);
 
+    // Live Preview for Corner Style
+    const cornerStyleSelect = document.getElementById('corner-style');
+    if (cornerStyleSelect) {
+        cornerStyleSelect.addEventListener('change', (e) => {
+            hasUnsavedChanges = true;
+            applyCornerStyle(e.target.value);
+        });
+    }
+
     // Live Preview for Glass Effect
     const glassEffectToggle = document.getElementById('glass-effect-toggle');
     if (glassEffectToggle) {
@@ -949,7 +1033,13 @@ function setupColorPickerListeners() {
         'color-text-secondary': '--text-secondary',
         'color-accent': '--accent-color',
         'color-bg-secondary': '--bg-secondary',
-        'color-border': '--border-color'
+        'color-border': '--border-color',
+        'color-bg-header': '--bg-header',
+        'color-bg-sidebar': '--bg-sidebar',
+        'color-bg-actionbar': '--bg-actionbar',
+        'color-bg-tertiary': '--bg-tertiary',
+        'color-success': '--success-color',
+        'color-danger': '--danger-color'
     };
 
     document.querySelectorAll('.color-picker').forEach(picker => {
@@ -1052,7 +1142,13 @@ function saveTheme() {
             textSecondary: document.getElementById('color-text-secondary').value,
             accentColor: document.getElementById('color-accent').value,
             bgSecondary: document.getElementById('color-bg-secondary').value,
-            borderColor: document.getElementById('color-border').value
+            borderColor: document.getElementById('color-border').value,
+            bgHeader: document.getElementById('color-bg-header').value,
+            bgSidebar: document.getElementById('color-bg-sidebar').value,
+            bgActionbar: document.getElementById('color-bg-actionbar').value,
+            bgTertiary: document.getElementById('color-bg-tertiary').value,
+            successColor: document.getElementById('color-success').value,
+            dangerColor: document.getElementById('color-danger').value
         },
         background: {
             image: window.currentBackgroundImage || null,
@@ -1062,7 +1158,8 @@ function saveTheme() {
         },
         cardEffects: {
             glassEffect: document.getElementById('glass-effect-toggle').checked
-        }
+        },
+        cornerStyle: document.getElementById('corner-style').value
     };
     
     saveCustomTheme(theme);
@@ -1141,6 +1238,29 @@ function setupEventListeners() {
         closeGameDetailsBtn.addEventListener('click', () => {
             document.getElementById('game-details-footer').style.display = 'none';
         });
+    }
+
+    // Pin footer button
+    if (pinFooterBtn) {
+        pinFooterBtn.addEventListener('click', toggleFooterPin);
+    }
+}
+
+function toggleFooterPin() {
+    const footer = document.getElementById('game-details-footer');
+    const isPinned = footer.classList.toggle('pinned');
+    
+    // Toggle glass effect
+    if (isPinned) {
+        footer.classList.remove('glass');
+        pinFooterBtn.classList.add('active');
+        pinFooterBtn.innerHTML = '🔒'; // Lock icon for pinned
+        pinFooterBtn.title = "Unpin Footer";
+    } else {
+        footer.classList.add('glass');
+        pinFooterBtn.classList.remove('active');
+        pinFooterBtn.innerHTML = '📌'; // Pin icon
+        pinFooterBtn.title = "Pin Footer";
     }
 }
 
@@ -1803,10 +1923,12 @@ async function searchForGamesAndEmulators() {
     try {
         const searchBtn = document.getElementById('search-games-btn');
         const driveSelector = document.getElementById('drive-selector');
-        searchBtn.disabled = true;
-        searchBtn.textContent = 'Searching...';
+        if (searchBtn) {
+            searchBtn.disabled = true;
+            searchBtn.textContent = 'Searching...';
+        }
         
-        const selectedDrive = driveSelector.value;
+        const selectedDrive = driveSelector ? driveSelector.value : '';
         const result = await ipcRenderer.invoke('browse-games-and-emus', selectedDrive);
         if (result.success) {
             platforms = [...platforms, ...result.platforms];
@@ -1826,8 +1948,10 @@ async function searchForGamesAndEmulators() {
     } finally {
         // Re-enable the button
         const searchBtn = document.getElementById('search-games-btn');
-        searchBtn.disabled = false;
-        searchBtn.textContent = 'Search Games And Emulators';
+        if (searchBtn) {
+            searchBtn.disabled = false;
+            searchBtn.textContent = 'Search Games And Emulators';
+        }
     }
 }
 
@@ -2262,4 +2386,26 @@ function disableFixedBackgroundTracking() {
         fixedBackgroundTracking.gameGrid.style.backgroundAttachment = 'scroll';
     }
     fixedBackgroundTracking = null;
+}
+
+function populateLanguageSelector() {
+    const languageSelect = document.getElementById('language-select');
+    if (!languageSelect || typeof allTranslations === 'undefined') return;
+
+    languageSelect.innerHTML = '';
+    const languages = Object.keys(allTranslations);
+
+    languages.forEach(langCode => {
+        const langData = allTranslations[langCode].language;
+        if (langData) {
+            const option = document.createElement('option');
+            option.value = langCode;
+            const flag = langData.flag || '';
+            const name = langData.name || langCode;
+            option.textContent = `${flag} ${name}`.trim();
+            languageSelect.appendChild(option);
+        }
+    });
+
+    languageSelect.value = i18n.getLanguage();
 }

@@ -67,3 +67,118 @@
         justify-content: center;
     }
 }
+
+/* Game Details Footer (Drawer) */
+.game-details-footer {
+    display: none; /* Hidden by default, toggled via JS */
+    padding: 0;
+    width: 100%;
+    z-index: 1000;
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    border-top: 1px solid var(--border-color);
+}
+
+/* Glass Mode (Floaty/Overlay) */
+.game-details-footer.glass {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    background-color: color-mix(in srgb, var(--bg-secondary), transparent 10%);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(10px);
+}
+
+/* Pinned Mode (Static/Solid) */
+.game-details-footer.pinned {
+    position: relative;
+    background-color: var(--bg-secondary);
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    backdrop-filter: none;
+    flex-shrink: 0; /* Prevent shrinking */
+}
+
+@keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+
+.game-details-content {
+    max-width: 1400px; /* Limit width on large screens */
+    margin: 0 auto;
+    padding: 20px;
+    position: relative;
+}
+
+.game-details-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.game-details-header h3 {
+    margin: 0;
+    color: var(--accent-color);
+    font-size: 1.2rem;
+}
+
+.footer-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.game-details-info {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+}
+
+.game-detail-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.detail-game-image {
+    width: 100px; /* Larger image in footer */
+    height: 100px;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+/* Footer Action Buttons */
+.footer-controls .close-btn {
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    
+    &:hover {
+        background-color: var(--bg-tertiary);
+        color: var(--danger-color);
+        transform: rotate(90deg);
+    }
+}
+
+#pin-footer-btn {
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: var(--radius-btn);
+    transition: all 0.2s;
+
+    &:hover {
+        background-color: var(--bg-tertiary);
+        transform: scale(1.1);
+    }
+
+    &.active {
+        color: var(--accent-color);
+    }
+}

@@ -17,6 +17,17 @@
     --danger-color: #f44336;
     --danger-dark: #da190b;
     --warning-color: #ffcc00;
+
+    /* Border Radius Defaults (Rounded/Modern) */
+    --radius-btn: 20px;
+    --radius-input: 20px;
+    --radius-card: 12px;
+    --radius-sm: 4px;
+
+    /* Component Backgrounds */
+    --bg-header: var(--bg-secondary);
+    --bg-sidebar: var(--bg-tertiary); /* Usually matches header */
+    --bg-actionbar: var(--bg-quaternary); /* View controls toolbar */
 }
 
 /* Light Theme */

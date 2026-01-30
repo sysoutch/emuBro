@@ -20,7 +20,7 @@ button {
     text-transform: uppercase;
     font-weight: 600;
     letter-spacing: 1px;
-    border-radius: 6px;
+    border-radius: var(--radius-btn);
     border: 1px solid var(--border-color);
     background: var(--bg-quaternary);
     color: var(--text-primary);
@@ -44,7 +44,7 @@ select {
     color: var(--text-primary);
     border: 1px solid var(--border-color);
     padding: 8px 12px;
-    border-radius: 4px;
+    border-radius: var(--radius-input);
     cursor: pointer;
     font-size: 0.9rem;
     transition: all 0.3s ease;
@@ -61,7 +61,7 @@ select {
     width: 28px;
     height: 28px;
     padding: 5px 5px;
-    border-radius: 50%;
+    border-radius: var(--radius-btn); /* Keep consistent or use 50%? Usually close btns are round */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -94,7 +94,7 @@ select {
     text-transform: uppercase;
     font-weight: 600;
     letter-spacing: 1px;
-    border-radius: 6px;
+    border-radius: var(--radius-btn);
     border: 1px solid var(--border-color);
     background: var(--bg-quaternary);
     color: var(--text-primary);
@@ -134,7 +134,7 @@ select {
     gap: 15px;
     background: rgba(0, 0, 0, 0.1);
     padding: 15px;
-    border-radius: 8px;
+    border-radius: var(--radius-card);
 }
 
 .form-group {
@@ -152,7 +152,7 @@ select {
     .color-input-group {
         background: var(--bg-primary);
         border: 1px solid var(--border-color);
-        border-radius: 6px;
+        border-radius: var(--radius-sm);
         overflow: hidden;
         display: flex;
         align-items: center;
@@ -187,7 +187,7 @@ select {
     background-color: var(--bg-secondary);
 }
 
-.form-groupselect:focus {
+.form-group select:focus {
     outline: none;
     border-color: var(--accent-color);
     box-shadow: 0 0 0 2px rgba(102, 204, 255, 0.2);
@@ -214,15 +214,4 @@ select {
 }
 ::-webkit-scrollbar-thumb:hover {
     background-color: var(--accent-light);
-}
-
-.game-details-content {
-    height: 100%;
-    padding: 10px;
-    border: 1px solid var(--border-color);
-}
-
-.detail-game-image {
-    width: 48px;
-    height: 48px;
 }
