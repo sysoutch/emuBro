@@ -1,0 +1,48 @@
+{
+  "name": "emuBro",
+  "version": "1.0.0",
+  "description": "A Steam-like Electron application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "prebuild:win": "taskkill /F /IM emuBro.exe /T || exit 0",
+    "build": "webpack --mode production",
+    "build:win": "electron-builder --win --config=electron-builder.config.js --publish=never",
+    "dist:win": "npm run build && npm run build:win"
+  },
+  "keywords": [
+    "electron",
+    "steam",
+    "gaming",
+    "app"
+  ],
+  "author": "sysout",
+  "license": "MIT",
+  "devDependencies": {
+    "@babel/core": "^7.28.6",
+    "@babel/preset-env": "^7.28.6",
+    "babel-loader": "^10.0.0",
+    "concurrently": "^8.2.2",
+    "css-loader": "^7.1.2",
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3",
+    "https-browserify": "^1.0.0",
+    "nodemon": "^3.1.11",
+    "os-browserify": "^0.3.0",
+    "path-browserify": "^1.0.1",
+    "querystring-es3": "^0.2.1",
+    "sass": "^1.97.3",
+    "sass-loader": "^16.0.6",
+    "stream-http": "^3.2.0",
+    "style-loader": "^4.0.0",
+    "webpack": "^5.104.1",
+    "webpack-cli": "^5.1.4",
+    "webpack-node-externals": "^3.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.13.2",
+    "electron-log": "^4.4.8",
+    "electron-store": "^8.2.0",
+    "node-ipc": "^10.1.0"
+  }
+}

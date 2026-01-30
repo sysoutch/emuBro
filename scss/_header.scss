@@ -1,0 +1,135 @@
+/* Header */
+.header {
+    background-color: var(--header-bg);
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--header-text);
+}
+
+.logo-circle {
+    position: absolute;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: var(--brand-color);
+    z-index: -1;
+}
+
+/* content should be next to each other */
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.logo img {
+    height: 48px;
+}
+
+.logo h1 {
+    font-size: 2.5rem;
+    font-weight: normal;
+    letter-spacing: 1px;
+}
+
+.navigation ul {
+    display: flex;
+    list-style: none;
+}
+
+/* Theme toggle button */
+.theme-toggle {
+    background-color: var(--button-bg);
+    color: var(--button-text);
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.3s ease;
+}
+
+.theme-toggle:hover {
+    background-color: var(--button-hover);
+}
+
+.navigation ul li {
+    margin: 0 15px;
+}
+
+.navigation ul li a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.3s;
+}
+
+.navigation ul li a:hover,
+.navigation ul li a.active {
+    color: var(--accent-color);
+}
+
+.user-actions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.search-bar input {
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: none;
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    width: 200px;
+    transition: background-color 0.3s;
+}
+
+.search-bar input:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--accent-color);
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-info img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid var(--accent-color);
+}
+
+// /* Language selector */
+// .language-selector {
+//     display: flex;
+//     align-items: center;
+// }
+
+// .language-selector select {
+//     background-color: var(--bg-tertiary);
+//     color: var(--text-primary);
+//     border: 1px solid var(--border-color);
+//     padding: 8px 12px;
+//     border-radius: 4px;
+//     cursor: pointer;
+//     font-size: 0.9rem;
+//     transition: all 0.3s ease;
+// }
+
+// .language-selector select:hover {
+//     border-color: var(--accent-color);
+//     background-color: var(--bg-secondary);
+// }
+
+// .language-selector select:focus {
+//     outline: none;
+//     border-color: var(--accent-color);
+//     box-shadow: 0 0 0 2px rgba(102, 204, 255, 0.2);
+// }

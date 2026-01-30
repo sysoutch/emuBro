@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en" data-glass-effect="enabled">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>emuBro</title>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <!-- circle with transparent logo on top -->
+                <div class="logo-circle"></div>
+                <img src="./logo.png" alt="emuBro Logo">
+                <h1><span style="color: var(--text-secondary)">EMU</span><span style="color: var(--brand-color)"><strong>BRO</strong></span></h1>
+            </div>
+            <nav class="navigation">
+                <ul>
+                    <li><a href="#" class="active">Library</a></li>
+                    <li><a href="#">Tools</a></li>
+                    <li><a href="#">Community</a></li>
+                    <li><a href="#">Profile</a></li>
+                </ul>
+            </nav>
+            <div class="user-actions">
+                <div class="search-bar">
+                    <input type="text" placeholder="Search games..." data-i18n-placeholder="filters.search">
+                </div>
+                <div class="form-group">
+                    <select id="language-select" title="Select Language">
+                        <!-- language flag icon and text -->
+                        <option value="en" data-i18n="language.english">🇺🇸 English</option>
+                        <option value="es" data-i18n="language.spanish">🇪🇸 Español</option>
+                        <option value="fr" data-i18n="language.french">🇫🇷 Français</option>
+                        <option value="de" data-i18n="language.german">🇩🇪 Deutsch</option>
+                        <option value="ja" data-i18n="language.japanese">🇯🇵 日本語</option>
+                    </select>
+                </div>
+                <div class="theme-toggle-wrapper">
+                    <select id="theme-select">
+                        <option value="dark" data-i18n="theme.darkTheme">Dark Theme</option>
+                        <option value="light" data-i18n="theme.lightTheme">Light Theme</option>
+                    </select>
+                    <button id="theme-manager-btn" class="theme-manager-btn" title="Manage Themes">⚙️</button>
+                    <button id="theme-toggle-btn" class="theme-toggle" title="Toggle Light/Dark Mode">💡</button>
+                    <button id="invert-colors-btn" class="theme-toggle" title="Invert Colors">🌗</button>
+                </div>
+                <div class="user-info">
+                    <img id="user-avatar" src="" alt="User Avatar">
+                    <span id="user-name" data-i18n="messages.loadingUserInfo">Loading...</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- View Toggle Controls -->
+        <div class="view-controls">
+            <button class="view-btn active" data-view="cover" data-i18n="views.cover">Cover</button>
+            <button class="view-btn" data-view="list" data-i18n="views.list">List</button>
+            <button class="view-btn" data-view="table" data-i18n="views.table">Table</button>
+            <button class="view-btn" data-view="slideshow" data-i18n="views.slideshow">Slideshow</button>
+            <button class="view-btn" data-view="random" data-i18n="views.random">Random</button>
+            
+            <select id="drive-selector" class="drive-selector">
+                <option value="">Select Drive</option>
+            </select>
+            <button id="search-games-btn" class="view-btn">Search Games</button>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="drop-zone-overlay">
+                <div>
+                    <div class="drop-zone-overlay-text">📁 Drop Folder or 📄 Drop File</div>
+                </div>
+            </div>
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="sidebar-section">
+                    <h3>Library</h3>
+                    <ul>
+                        <li class="active"><a href="#" data-view="all">All Games</a></li>
+                        <li><a href="#" data-view="installed">Installed</a></li>
+                        <li><a href="#" data-view="recent">Recently Played</a></li>
+                        <li><a href="#" data-view="wishlist">Wishlist</a></li>
+                        <li><a href="#" data-view="downloads">Downloads</a></li>
+                    </ul>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Categories</h3>
+                    <ul id="categories-list">
+                        <li><a href="#" data-genre="all">All</a></li>
+                        <li><a href="#" data-genre="Platformer">Platformer</a></li>
+                        <li><a href="#" data-genre="Adventure">Adventure</a></li>
+                        <li><a href="#" data-genre="RPG">RPG</a></li>
+                        <li><a href="#" data-genre="Action">Action</a></li>
+                        <li><a href="#" data-genre="Puzzle">Puzzle</a></li>
+                        <li><a href="#" data-genre="Fighting">Fighting</a></li>
+                    </ul>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Stats</h3>
+                    <div class="stats">
+                        <p>Total Games: <span id="total-games">0</span></p>
+                        <p>Total Emulators: <span id="total-emulators">0</span></p>
+                        <p>Play Time: <span id="play-time">0</span> hours</p>
+                    </div>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Tools</h3>
+                    <ul id="tools-list">
+                        <li><a href="#" data-tool="memory-card" class="active">Memory Card Reader</a></li>
+                        <li><a href="#" data-tool="rom-ripper">ROM Ripper</a></li>
+                        <li><a href="#" data-tool="game-database">Game Database</a></li>
+                        <li><a href="#" data-tool="cheat-codes">Cheat Codes</a></li>
+                    </ul>
+                </div>
+            </aside>
+
+            <!-- Game Grid -->
+            <main class="game-grid">
+                <div class="game-header">
+                    <h2 id="games-header">Featured Games</h2>
+                    <div class="filters">
+                        <select id="platform-filter">
+                            <option value="all">All Platforms</option>
+                            <option value="gameboy">Gameboy</option>
+                            <option value="android">Android</option>
+                            <option value="xbox">Xbox</option>
+                            <option value="nes">NES</option>
+                            <option value="snes">SNES</option>
+                        </select>
+                        <select id="sort-filter">
+                            <option value="name">Sort by Name</option>
+                            <option value="rating">Sort by Rating</option>
+                            <option value="platform">Sort by Platform</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="games-container" class="games-container">
+                    <!-- Games will be loaded here dynamically -->
+                </div>
+            </main>
+        </div>
+        <!-- Game Details Footer -->
+        <footer id="game-details-footer" class="game-details-footer">
+            <div class="game-details-content">
+                <div class="game-details-header">
+                    <h3 id="selected-game-title">No Game Selected</h3>
+                    <button id="close-game-details" class="close-btn">&times;</button>
+                </div>
+                <div id="game-details-info" class="game-details-info">
+                    <!-- Game details will be displayed here -->
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Theme Manager Modal -->
+    <div id="theme-manager-modal" class="theme-manager-modal glass">
+        <div class="theme-manager-content">
+            <div class="theme-manager-header">
+                <h2>Theme Manager</h2>
+                <button id="close-theme-manager" class="close-btn">&times;</button>
+            </div>
+            
+            <div class="theme-manager-body">
+                <div class="theme-manager-tabs">
+                    <button class="tab-btn active" data-tab="local">My Themes</button>
+                    <button class="tab-btn" data-tab="marketplace">Marketplace</button>
+                </div>
+
+                <div id="local-themes-view" class="tab-content active">
+                    <div class="theme-manager-section">
+                        <h3 data-i18n="theme.presets">Preset Themes</h3>
+                        <div id="preset-themes" class="preset-themes-list"></div>
+                    </div>
+                    <div class="theme-manager-section">
+                        <h3 data-i18n="theme.custom">Custom Themes</h3>
+                        <div id="custom-themes" class="custom-themes-list"></div>
+                        <button id="create-theme-btn" class="action-btn">+ Create New Theme</button>
+                    </div>
+                    
+
+                    <!-- Create/Edit Theme Form -->
+                    <div id="theme-form" class="theme-form" style="display: none;">
+                        <h3 id="form-title">Create New Theme</h3>
+                        
+                        <div class="form-group">
+                            <label for="theme-name">Theme Name:</label>
+                            <input type="text" id="theme-name" placeholder="My Custom Theme">
+                        </div>
+
+                        <div class="color-inputs">
+                            <div class="form-group">
+                                <label for="color-bg-primary">Primary Background:</label>
+                                <div class="color-input-group">
+                                    <input type="color" id="color-bg-primary" class="color-picker">
+                                    <input type="text" class="color-text" placeholder="#000000" readonly>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="color-text-primary">Primary Text:</label>
+                                <div class="color-input-group">
+                                    <input type="color" id="color-text-primary" class="color-picker">
+                                    <input type="text" class="color-text" placeholder="#ffffff" readonly>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="color-text-secondary">Secondary Text:</label>
+                                <div class="color-input-group">
+                                    <input type="color" id="color-text-secondary" class="color-picker">
+                                    <input type="text" class="color-text" placeholder="#ffffff" readonly>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="color-accent">Accent Color:</label>
+                                <div class="color-input-group">
+                                    <input type="color" id="color-accent" class="color-picker">
+                                    <input type="text" class="color-text" placeholder="#66ccff" readonly>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="color-bg-secondary">Secondary Background:</label>
+                                <div class="color-input-group">
+                                    <input type="color" id="color-bg-secondary" class="color-picker">
+                                    <input type="text" class="color-text" placeholder="#1a1a1a" readonly>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="color-border">Border Color:</label>
+                                <div class="color-input-group">
+                                    <input type="color" id="color-border" class="color-picker">
+                                    <input type="text" class="color-text" placeholder="#333333" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Background Image Section -->
+                        <div class="background-section">
+                            <h4>Background Image</h4>
+                            
+                            <div class="form-group">
+                                <label for="bg-image-input">Upload Image:</label>
+                                <input type="file" id="bg-image-input" accept="image/*">
+                                <span id="bg-image-name" class="image-name"></span>
+                                <button type="button" id="clear-bg-image-btn" class="action-btn remove-btn" style="display: none;">Clear Image</button>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="bg-position">Position:</label>
+                                <select id="bg-position">
+                                    <option value="centered">Centered (Moves with window)</option>
+                                    <option value="fixed">Fixed (Stays in place)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="bg-background-repeat">Background Repeat:</label>
+                                <select id="bg-background-repeat">
+                                    <option value="no-repeat">No Repeat</option>
+                                    <option value="repeat">Repeat</option>
+                                    <option value="repeat-x">Repeat Horizontally</option>
+                                    <option value="repeat-y">Repeat Vertically</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="bg-scale">Scale Mode:</label>
+                                <select id="bg-scale">
+                                    <option value="original">Original Size</option>
+                                    <option value="stretch">Stretch (Fill)</option>
+                                    <option value="crop">Crop (Cover)</option>
+                                    <option value="zoom">Zoom (Contain)</option>
+                                </select>
+                            </div>
+
+                            <div id="bg-preview" class="bg-preview" style="display: none;">
+                                <img id="bg-preview-img" src="" alt="Background preview">
+                            </div>
+                        </div>
+
+                        <!-- Card Effects Section -->
+                        <div class="card-effects-section">
+                            <h4>Card Effects</h4>
+                            
+                            <div class="form-group checkbox-group">
+                                <label for="glass-effect-toggle">
+                                    <input type="checkbox" id="glass-effect-toggle" checked>
+                                    <span>Enable Glass Morphism Effect</span>
+                                </label>
+                                <p class="checkbox-description">Apply frosted glass effect to game cards</p>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button id="reset-theme-defaults" class="action-btn">Reset Defaults</button>
+                            <button id="save-theme-btn" class="action-btn launch-btn">Save Theme</button>
+                            <button id="cancel-theme-btn" class="action-btn remove-btn">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="marketplace-view" class="tab-content" style="display: none;">
+                    <div class="theme-manager-section">
+                        <h3>Community Workshop</h3>
+                        <div id="marketplace-list" class="marketplace-grid">
+                            </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="./i18n.js"></script>
+    <script src="./translations-loader.js"></script>
+    <script src="dist/renderer.bundle.js"></script>
+</body>
+</html>

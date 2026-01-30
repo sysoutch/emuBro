@@ -1,0 +1,37 @@
+/* Main Content */
+.main-content {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Drag and Drop Zone */
+.main-content.drag-over {
+    background: rgba(102, 204, 255, 0.1);
+    border: 2px dashed var(--accent-color);
+}
+
+.drop-zone-overlay {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(102, 204, 255, 0.2);
+    border: 3px dashed var(--accent-color);
+    border-radius: 8px;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+.main-content.drag-over .drop-zone-overlay {
+    display: flex;
+}
+
+.drop-zone-overlay-text {
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--accent-color);
+    text-align: center;
+    pointer-events: none;
+}

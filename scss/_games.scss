@@ -1,0 +1,203 @@
+/* Game Grid */
+.game-grid {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #444;
+}
+
+.game-header h2 {
+    color: var(--accent-color);
+}
+
+.filters {
+    display: flex;
+    gap: 10px;
+}
+
+.games-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+/* List view container should be full width */
+.games-container.list-view {
+    display: flex;
+    flex-direction: column;
+    grid-template-columns: unset;
+}
+
+.games-container.list-view .game-card {
+    flex-direction: column;
+    text-align: center;
+}
+
+.games-container.list-view .game-image {
+    width: 100px;
+    height: 150px;
+    margin-right: 0;
+    margin-bottom: 10px;
+}
+
+/* Game Cards */
+.game-card {
+    background-color: var(--bg-secondary);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s, box-shadow 0.3s;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.game-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+.game-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.game-info {
+    padding: 15px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.game-info h3 {
+    color: var(--text-primary);
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+}
+
+.game-info p {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+    flex: 1;
+}
+
+.game-info .rating {
+    color: var(--accent-color);
+    font-weight: bold;
+    margin: 5px 0;
+}
+
+.game-info .price {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--success-color);
+    margin: 5px 0;
+}
+
+.game-info .platform {
+    display: inline-block;
+    background-color: var(--bg-tertiary);
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin: 2px;
+    font-size: 0.9rem;
+}
+
+.game-info .genre {
+    display: inline-block;
+    background-color: var(--bg-tertiary);
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin: 2px;
+    font-size: 0.9rem;
+}
+
+.game-info .game-more {
+    margin-top: 10px;
+    display: none;
+}
+
+/* List View */
+.list-item {
+    background-color: var(--bg-secondary);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.list-item:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.list-item .game-image {
+    width: 80px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.list-item .game-info {
+    flex: 1;
+    padding: 0;
+}
+
+.list-item .game-info h3 {
+    margin-bottom: 5px;
+}
+
+.list-item .game-info p {
+    margin-bottom: 5px;
+}
+
+/* Table View */
+.games-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: var(--bg-secondary);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.games-table thead {
+    background-color: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.games-table th,
+.games-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.games-table th {
+    color: var(--text-primary);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+}
+
+.games-table td {
+    color: var(--text-secondary);
+}
+
+.games-table tr:hover {
+    background-color: var(--bg-quaternary);
+}

@@ -1,0 +1,147 @@
+/* Tools Section */
+.tools-section {
+    padding: 20px;
+    background-color: var(--bg-secondary);
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+.tools-section h2 {
+    color: #66ccff;
+    margin-bottom: 20px;
+}
+
+.tools-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.tool-card {
+    background-color: var(--bg-tertiary);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s;
+}
+
+.tool-card:hover {
+    transform: translateY(-5px);
+}
+
+.tool-card h3 {
+    color: var(--accent-color);
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.tool-card h3 i {
+    font-size: 1.2rem;
+}
+
+.tool-card p {
+    color: var(--text-secondary);
+    margin-bottom: 15px;
+    line-height: 1.5;
+}
+
+.tool-card .action-btn {
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    font-weight: bold;
+}
+
+.tool-card .action-btn:hover {
+    background-color: var(--accent-light);
+}
+
+.tool-card .action-btn:disabled {
+    background-color: #666;
+    cursor: not-allowed;
+}
+
+.tool-card .tool-status {
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.tool-card .tool-status.success {
+    background-color: rgba(76, 175, 80, 0.2);
+    color: #4caf50;
+}
+
+.tool-card .tool-status.error {
+    background-color: rgba(244, 67, 54, 0.2);
+    color: #f44336;
+}
+
+.tool-card .tool-status.warning {
+    background-color: rgba(255, 204, 0, 0.2);
+    color: #ffcc00;
+}
+
+/* Tool Output */
+.tool-output {
+    background-color: var(--bg-quaternary);
+    padding: 15px;
+    border-radius: 4px;
+    margin-top: 15px;
+    max-height: 200px;
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 0.9rem;
+    white-space: pre-wrap;
+}
+
+/* Tool Settings */
+.tool-settings {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: var(--bg-tertiary);
+    border-radius: 4px;
+}
+
+.tool-settings h4 {
+    color: var(--accent-color);
+    margin-bottom: 10px;
+}
+
+.tool-settings label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text-secondary);
+}
+
+.tool-settings input,
+.tool-settings select {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    border: none;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    margin-bottom: 10px;
+}
+
+.tool-settings button {
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.tool-settings button:hover {
+    background-color: var(--accent-light);
+}

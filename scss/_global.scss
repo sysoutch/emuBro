@@ -1,0 +1,228 @@
+/* Global Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    height: 100vh;
+    overflow: hidden;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+button {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 1px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-quaternary);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+        background: var(--bg-tertiary);
+        border-color: var(--accent-color);
+    }
+
+    &.small {
+        padding: 4px 8px;
+        font-size: 0.8rem;
+        background: rgba(0,0,0,0.3);
+    }
+}
+
+select {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+/* App Container */
+.app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+.close-btn {
+    width: 28px;
+    height: 28px;
+    padding: 5px 5px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    
+    /* Typography */
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &:hover {
+        /* Feedback: Shift to Danger Red on hover */
+        background-color: var(--danger-color);
+        color: var(--text-primary);
+        border-color: var(--danger-dark);
+        transform: rotate(90deg) scale(1.1); // Add a playful spin
+    }
+
+    &:active {
+        transform: scale(0.95);
+    }
+}
+
+.action-btn {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 1px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-quaternary);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+        background: var(--bg-tertiary);
+        border-color: var(--accent-color);
+    }
+
+    &.launch-btn {
+        background: var(--accent-color);
+        color: #000;
+        border: none;
+        &:hover { background: var(--accent-light); }
+    }
+
+    &.remove-btn {
+        background: rgba(204, 68, 68, 0.1);
+        border: 1px solid #cc4444;
+        color: #cc4444;
+        &:hover { background: #cc4444; color: #fff; }
+    }
+
+    &.small {
+        padding: 4px 8px;
+        font-size: 0.8rem;
+        background: rgba(0,0,0,0.3);
+    }
+}
+
+/* Color Input Grid */
+.color-inputs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 15px;
+    background: rgba(0, 0, 0, 0.1);
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    label {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .color-input-group {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        transition: border-color 0.2s;
+
+        &:focus-within { border-color: var(--accent-color); }
+
+        .color-picker {
+            width: 45px;
+            height: 35px;
+            border: none;
+            background: none;
+            padding: 0;
+            border-right: 1px solid var(--border-color);
+            cursor: pointer;
+        }
+
+        .color-text {
+            border: none;
+            background: transparent;
+            padding: 0 12px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            width: 100%;
+        }
+    }
+}
+
+.form-group select:hover {
+    border-color: var(--accent-color);
+    background-color: var(--bg-secondary);
+}
+
+.form-groupselect:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(102, 204, 255, 0.2);
+}
+
+.form-actions {
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+/* Scrollbar Styles */
+::-webkit-scrollbar {
+    width: 8px;
+}
+::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+}
+::-webkit-scrollbar-thumb {
+    background-color: var(--accent-color);
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background-color: var(--accent-light);
+}
+
+.game-details-content {
+    height: 100%;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+}
+
+.detail-game-image {
+    width: 48px;
+    height: 48px;
+}

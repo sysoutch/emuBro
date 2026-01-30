@@ -1,0 +1,183 @@
+{
+  "en": {
+    "app": {
+      "title": "emuBro",
+      "description": "Game Library Manager"
+    },
+    "header": {
+      "library": "Library",
+      "tools": "Tools",
+      "community": "Community",
+      "profile": "Profile",
+      "search": "Search games...",
+      "toggleTheme": "Toggle Theme",
+      "manageThemes": "Manage Themes"
+    },
+    "views": {
+      "cover": "Cover",
+      "list": "List",
+      "table": "Table",
+      "slideshow": "Slideshow",
+      "random": "Random"
+    },
+    "sidebar": {
+      "library": "Library",
+      "allGames": "All Games",
+      "installed": "Installed",
+      "recentlyPlayed": "Recently Played",
+      "wishlist": "Wishlist",
+      "downloads": "Downloads",
+      "categories": "Categories",
+      "all": "All",
+      "platformer": "Platformer",
+      "adventure": "Adventure",
+      "rpg": "RPG",
+      "action": "Action",
+      "puzzle": "Puzzle",
+      "fighting": "Fighting",
+      "stats": "Stats",
+      "totalGames": "Total Games",
+      "totalEmulators": "Total Emulators",
+      "playTime": "Play Time",
+      "hours": "hours",
+      "tools": "Tools",
+      "memoryCardReader": "Memory Card Reader",
+      "romRipper": "ROM Ripper",
+      "gameDatabase": "Game Database",
+      "cheatCodes": "Cheat Codes"
+    },
+    "gameGrid": {
+      "featuredGames": "Featured Games",
+      "allPlatforms": "All Platforms",
+      "sortByName": "Sort by Name",
+      "sortByRating": "Sort by Rating",
+      "sortByPlatform": "Sort by Platform",
+      "noGamesFound": "No games found."
+    },
+    "gameCard": {
+      "launch": "Launch",
+      "remove": "Remove",
+      "install": "Install",
+      "installed": "Installed",
+      "notInstalled": "Not Installed"
+    },
+    "gameDetails": {
+      "noGameSelected": "No Game Selected",
+      "platform": "Platform",
+      "rating": "Rating",
+      "genre": "Genre",
+      "price": "Price",
+      "free": "Free"
+    },
+    "filters": {
+      "search": "Search games...",
+      "selectDrive": "Select Drive",
+      "searchGamesBtn": "Search Games And Emulators",
+      "searching": "Searching..."
+    },
+    "theme": {
+      "darkTheme": "Dark Theme",
+      "lightTheme": "Light Theme",
+      "themeManager": "Theme Manager",
+      "presetThemes": "Preset Themes",
+      "customThemes": "Custom Themes",
+      "createNewTheme": "+ Create New Theme",
+      "themeName": "Theme Name",
+      "myCustomTheme": "My Custom Theme",
+      "primaryBackground": "Primary Background",
+      "primaryText": "Primary Text",
+      "accentColor": "Accent Color",
+      "secondaryBackground": "Secondary Background",
+      "borderColor": "Border Color",
+      "backgroundImage": "Background Image",
+      "uploadImage": "Upload Image",
+      "clearImage": "Clear Image",
+      "backgroundImageLoaded": "Background image loaded",
+      "position": "Position",
+      "centered": "Centered (Moves with window)",
+      "fixed": "Fixed (Stays in place)",
+      "scaleMode": "Scale Mode",
+      "originalSize": "Original Size",
+      "stretch": "Stretch (Fill)",
+      "crop": "Crop (Cover)",
+      "zoom": "Zoom (Contain)",
+      "cardEffects": "Card Effects",
+      "enableGlassEffect": "Enable Glass Morphism Effect",
+      "glassEffectDesc": "Apply frosted glass effect to game cards",
+      "saveTheme": "Save Theme",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "delete": "Delete",
+      "presetTheme": "Preset Theme",
+      "customTheme": "Custom Theme",
+      "active": "Active",
+      "saved": "Theme saved successfully!",
+      "editTheme": "Edit Theme"
+    },
+    "language": {
+      "selectLanguage": "Select Language",
+      "english": "English",
+      "spanish": "Español",
+      "french": "Français",
+      "german": "Deutsch",
+      "japanese": "日本語"
+    },
+    "buttons": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "delete": "Delete",
+      "create": "Create",
+      "close": "Close",
+      "yes": "Yes",
+      "no": "No",
+      "ok": "OK"
+    },
+    "messages": {
+      "loadingUserInfo": "Loading...",
+      "removalStarted": "Removal started successfully!",
+      "removalFailed": "Removal failed: {{message}}",
+      "gameLaunched": "Game launched successfully!",
+      "launchFailed": "Failed to launch game: {{message}}",
+      "foundGames": "Found {{count}} games on your hard disk!",
+      "searchFailed": "Search failed: {{message}}",
+      "initializationFailed": "Failed to initialize the application. Please check the logs for more information.",
+      "enterThemeName": "Please enter a theme name",
+      "failedToRemoveGame": "Failed to remove the game. Please check the logs for more information.",
+      "failedToLaunchGame": "Failed to launch the game. Please check the logs for more information.",
+      "failedToInitialize": "Failed to initialize the application. Please check the logs for more information."
+    },
+    "table": {
+      "cover": "Cover",
+      "game": "Game",
+      "genre": "Genre",
+      "rating": "Rating",
+      "platform": "Platform",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "slideshow": {
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "random": {
+      "shuffle": "🎲 Shuffle & Suggest",
+      "stop": "Stop ⏹",
+      "suggestion": "Why not play \"{{game}}\" now?"
+    },
+    "tools": {
+      "memoryCardReader": "Memory Card Reader",
+      "readCard": "Read Memory Card",
+      "writeCard": "Write Memory Card",
+      "romRipper": "ROM Ripper",
+      "startRip": "Start ROM Rip",
+      "gameDatabase": "Game Database",
+      "searchGames": "Search games...",
+      "search": "Search",
+      "cheatCodes": "Cheat Codes",
+      "selectGame": "Select a game",
+      "applyCheat": "Apply Cheat",
+      "notImplemented": "Tool not implemented yet."
+    }
+  }
+}

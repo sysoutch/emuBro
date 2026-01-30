@@ -1,0 +1,183 @@
+{
+  "ja": {
+    "app": {
+      "title": "emuBro",
+      "description": "ゲームライブラリマネージャー"
+    },
+    "header": {
+      "library": "ライブラリ",
+      "tools": "ツール",
+      "community": "コミュニティ",
+      "profile": "プロフィール",
+      "search": "ゲームを検索...",
+      "toggleTheme": "テーマを切り替える",
+      "manageThemes": "テーマを管理"
+    },
+    "views": {
+      "cover": "カバー",
+      "list": "リスト",
+      "table": "テーブル",
+      "slideshow": "スライドショー",
+      "random": "ランダム"
+    },
+    "sidebar": {
+      "library": "ライブラリ",
+      "allGames": "すべてのゲーム",
+      "installed": "インストール済み",
+      "recentlyPlayed": "最近プレイ",
+      "wishlist": "ウィッシュリスト",
+      "downloads": "ダウンロード",
+      "categories": "カテゴリ",
+      "all": "すべて",
+      "platformer": "プラットフォーマー",
+      "adventure": "アドベンチャー",
+      "rpg": "RPG",
+      "action": "アクション",
+      "puzzle": "パズル",
+      "fighting": "格闘",
+      "stats": "統計",
+      "totalGames": "ゲーム総数",
+      "totalEmulators": "エミュレータ総数",
+      "playTime": "プレイ時間",
+      "hours": "時間",
+      "tools": "ツール",
+      "memoryCardReader": "メモリーカードリーダー",
+      "romRipper": "ROMリッパー",
+      "gameDatabase": "ゲームデータベース",
+      "cheatCodes": "チートコード"
+    },
+    "gameGrid": {
+      "featuredGames": "注目のゲーム",
+      "allPlatforms": "すべてのプラットフォーム",
+      "sortByName": "名前順でソート",
+      "sortByRating": "評価順でソート",
+      "sortByPlatform": "プラットフォーム順でソート",
+      "noGamesFound": "ゲームが見つかりません。"
+    },
+    "gameCard": {
+      "launch": "起動",
+      "remove": "削除",
+      "install": "インストール",
+      "installed": "インストール済み",
+      "notInstalled": "未インストール"
+    },
+    "gameDetails": {
+      "noGameSelected": "ゲームが選択されていません",
+      "platform": "プラットフォーム",
+      "rating": "評価",
+      "genre": "ジャンル",
+      "price": "価格",
+      "free": "無料"
+    },
+    "filters": {
+      "search": "ゲームを検索...",
+      "selectDrive": "ドライブを選択",
+      "searchGamesBtn": "ゲームとエミュレータを検索",
+      "searching": "検索中..."
+    },
+    "theme": {
+      "darkTheme": "ダークテーマ",
+      "lightTheme": "ライトテーマ",
+      "themeManager": "テーママネージャー",
+      "presetThemes": "プリセットテーマ",
+      "customThemes": "カスタムテーマ",
+      "createNewTheme": "+ 新しいテーマを作成",
+      "themeName": "テーマ名",
+      "myCustomTheme": "マイカスタムテーマ",
+      "primaryBackground": "プライマリ背景",
+      "primaryText": "プライマリテキスト",
+      "accentColor": "アクセントカラー",
+      "secondaryBackground": "セカンダリ背景",
+      "borderColor": "ボーダーカラー",
+      "backgroundImage": "背景画像",
+      "uploadImage": "画像をアップロード",
+      "clearImage": "画像をクリア",
+      "backgroundImageLoaded": "背景画像がロードされました",
+      "position": "位置",
+      "centered": "中央揃え（ウィンドウと一緒に移動）",
+      "fixed": "固定（所定位置に留まる）",
+      "scaleMode": "スケールモード",
+      "originalSize": "元のサイズ",
+      "stretch": "拡大（塗りつぶし）",
+      "crop": "トリミング（カバー）",
+      "zoom": "ズーム（含む）",
+      "cardEffects": "カード効果",
+      "enableGlassEffect": "ガラスモーフィズム効果を有効にする",
+      "glassEffectDesc": "ゲームカードにすりガラス効果を適用",
+      "saveTheme": "テーマを保存",
+      "cancel": "キャンセル",
+      "edit": "編集",
+      "delete": "削除",
+      "presetTheme": "プリセットテーマ",
+      "customTheme": "カスタムテーマ",
+      "active": "アクティブ",
+      "saved": "テーマが正常に保存されました!",
+      "editTheme": "テーマを編集"
+    },
+    "language": {
+      "selectLanguage": "言語を選択",
+      "english": "English",
+      "spanish": "Español",
+      "french": "Français",
+      "german": "Deutsch",
+      "japanese": "日本語"
+    },
+    "buttons": {
+      "save": "保存",
+      "cancel": "キャンセル",
+      "edit": "編集",
+      "delete": "削除",
+      "create": "作成",
+      "close": "閉じる",
+      "yes": "はい",
+      "no": "いいえ",
+      "ok": "OK"
+    },
+    "messages": {
+      "loadingUserInfo": "読み込み中...",
+      "removalStarted": "削除が正常に開始されました!",
+      "removalFailed": "削除に失敗しました: {{message}}",
+      "gameLaunched": "ゲームが正常に起動されました!",
+      "launchFailed": "ゲームの起動に失敗しました: {{message}}",
+      "foundGames": "ハードドライブで{{count}}個のゲームが見つかりました!",
+      "searchFailed": "検索に失敗しました: {{message}}",
+      "initializationFailed": "アプリケーションの初期化に失敗しました。詳細はログを確認してください。",
+      "enterThemeName": "テーマ名を入力してください",
+      "failedToRemoveGame": "ゲームの削除に失敗しました。詳細はログを確認してください。",
+      "failedToLaunchGame": "ゲームの起動に失敗しました。詳細はログを確認してください。",
+      "failedToInitialize": "アプリケーションの初期化に失敗しました。詳細はログを確認してください。"
+    },
+    "table": {
+      "cover": "カバー",
+      "game": "ゲーム",
+      "genre": "ジャンル",
+      "rating": "評価",
+      "platform": "プラットフォーム",
+      "status": "ステータス",
+      "actions": "アクション"
+    },
+    "slideshow": {
+      "previous": "前へ",
+      "next": "次へ"
+    },
+    "random": {
+      "shuffle": "🎲 シャッフルして提案",
+      "stop": "停止 ⏹",
+      "suggestion": "今、\"{{game}}\"をプレイしませんか?"
+    },
+    "tools": {
+      "memoryCardReader": "メモリーカードリーダー",
+      "readCard": "メモリーカードを読む",
+      "writeCard": "メモリーカードに書き込む",
+      "romRipper": "ROMリッパー",
+      "startRip": "ROMリップを開始",
+      "gameDatabase": "ゲームデータベース",
+      "searchGames": "ゲームを検索...",
+      "search": "検索",
+      "cheatCodes": "チートコード",
+      "selectGame": "ゲームを選択",
+      "applyCheat": "チートを適用",
+      "notImplemented": "ツールはまだ実装されていません。"
+    }
+  }
+}

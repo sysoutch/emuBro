@@ -1,0 +1,40 @@
+/* Theme Variables */
+:root {
+    /* Dark Theme */
+    --brand-color: #274056;
+    --bg-primary: #1e1e1e;
+    --bg-secondary: #2d2d2d;
+    --bg-tertiary: #333;
+    --bg-quaternary: #252525;
+    --text-primary: #ffffff;
+    --text-secondary: #ccc;
+    --text-tertiary: #aaa;
+    --border-color: #444;
+    --accent-color: color-mix(in srgb, var(--brand-color), white 20%);
+    --accent-light: color-mix(in srgb, var(--brand-color), white 10%);
+    --success-color: #4caf50;
+    --success-dark: #45a049;
+    --danger-color: #f44336;
+    --danger-dark: #da190b;
+    --warning-color: #ffcc00;
+}
+
+/* Light Theme */
+[data-theme="light"] {
+    --brand-color: #274056;
+    --bg-primary: #f5f5f5;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #e8e8e8;
+    --bg-quaternary: #f0f0f0;
+    --text-primary: #1a1a1a;
+    --text-secondary: #333;
+    --text-tertiary: #666;
+    --border-color: #ddd;
+    --accent-color: color-mix(in srgb, var(--brand-color), white 20%);
+    --accent-light: color-mix(in srgb, var(--brand-color), white 10%);
+    --success-color: #4caf50;
+    --success-dark: #388e3c;
+    --danger-color: #f44336;
+    --danger-dark: #d32f2f;
+    --warning-color: #ff9800;
+}

@@ -1,0 +1,126 @@
+/* View Switcher */
+.view-switcher {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding: 10px;
+    background-color: var(--bg-tertiary);
+    border-radius: 8px;
+}
+
+.view-switcher button {
+    background-color: var(--bg-secondary);
+    color: var(--text-secondary);
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.view-switcher button:hover {
+    background-color: var(--bg-quaternary);
+    color: var(--text-primary);
+}
+
+.view-switcher button.active {
+    background-color: var(--accent-color);
+    color: white;
+}
+
+/* View Controls */
+.view-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.view-btn {
+    background-color: var(--bg-secondary);
+    color: var(--text-secondary);
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.view-btn:hover {
+    background-color: var(--bg-quaternary);
+    color: var(--text-primary);
+}
+
+.view-btn.active {
+    background-color: var(--accent-color);
+    color: white;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 200px;
+    }
+    
+    .games-container {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+    
+    .list-item {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .list-item .game-image {
+        width: 100px;
+        height: 150px;
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+    
+    .header {
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px;
+    }
+    
+    .navigation ul {
+        margin-top: 10px;
+    }
+    
+    .tools-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .sidebar {
+        width: 150px;
+        padding: 10px;
+    }
+    
+    .games-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .game-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .filters {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .filters select {
+        width: 45%;
+    }
+}

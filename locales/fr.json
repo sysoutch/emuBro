@@ -1,0 +1,183 @@
+{
+  "fr": {
+    "app": {
+      "title": "emuBro",
+      "description": "Gestionnaire de Bibliothèque de Jeux"
+    },
+    "header": {
+      "library": "Bibliothèque",
+      "tools": "Outils",
+      "community": "Communauté",
+      "profile": "Profil",
+      "search": "Rechercher des jeux...",
+      "toggleTheme": "Basculer le thème",
+      "manageThemes": "Gérer les thèmes"
+    },
+    "views": {
+      "cover": "Couvertures",
+      "list": "Liste",
+      "table": "Tableau",
+      "slideshow": "Diaporama",
+      "random": "Aléatoire"
+    },
+    "sidebar": {
+      "library": "Bibliothèque",
+      "allGames": "Tous les Jeux",
+      "installed": "Installés",
+      "recentlyPlayed": "Récemment Joués",
+      "wishlist": "Liste de Souhaits",
+      "downloads": "Téléchargements",
+      "categories": "Catégories",
+      "all": "Tous",
+      "platformer": "Plateforme",
+      "adventure": "Aventure",
+      "rpg": "RPG",
+      "action": "Action",
+      "puzzle": "Puzzle",
+      "fighting": "Combat",
+      "stats": "Statistiques",
+      "totalGames": "Total des Jeux",
+      "totalEmulators": "Total des Émulateurs",
+      "playTime": "Temps de Jeu",
+      "hours": "heures",
+      "tools": "Outils",
+      "memoryCardReader": "Lecteur de Carte Mémoire",
+      "romRipper": "Extracteur ROM",
+      "gameDatabase": "Base de Données de Jeux",
+      "cheatCodes": "Codes de Triche"
+    },
+    "gameGrid": {
+      "featuredGames": "Jeux en Vedette",
+      "allPlatforms": "Toutes les Plates-formes",
+      "sortByName": "Trier par Nom",
+      "sortByRating": "Trier par Note",
+      "sortByPlatform": "Trier par Plate-forme",
+      "noGamesFound": "Aucun jeu trouvé."
+    },
+    "gameCard": {
+      "launch": "Lancer",
+      "remove": "Supprimer",
+      "install": "Installer",
+      "installed": "Installé",
+      "notInstalled": "Non Installé"
+    },
+    "gameDetails": {
+      "noGameSelected": "Aucun Jeu Sélectionné",
+      "platform": "Plate-forme",
+      "rating": "Note",
+      "genre": "Genre",
+      "price": "Prix",
+      "free": "Gratuit"
+    },
+    "filters": {
+      "search": "Rechercher des jeux...",
+      "selectDrive": "Sélectionner le Disque",
+      "searchGamesBtn": "Rechercher Jeux et Émulateurs",
+      "searching": "Recherche en cours..."
+    },
+    "theme": {
+      "darkTheme": "Thème Sombre",
+      "lightTheme": "Thème Clair",
+      "themeManager": "Gestionnaire de Thèmes",
+      "presetThemes": "Thèmes Prédéfinis",
+      "customThemes": "Thèmes Personnalisés",
+      "createNewTheme": "+ Créer un Nouveau Thème",
+      "themeName": "Nom du Thème",
+      "myCustomTheme": "Mon Thème Personnalisé",
+      "primaryBackground": "Arrière-plan Principal",
+      "primaryText": "Texte Principal",
+      "accentColor": "Couleur d'Accent",
+      "secondaryBackground": "Arrière-plan Secondaire",
+      "borderColor": "Couleur de la Bordure",
+      "backgroundImage": "Image de Fond",
+      "uploadImage": "Télécharger une Image",
+      "clearImage": "Effacer l'Image",
+      "backgroundImageLoaded": "Image de fond chargée",
+      "position": "Position",
+      "centered": "Centré (Se déplace avec la fenêtre)",
+      "fixed": "Fixé (Reste en place)",
+      "scaleMode": "Mode d'Échelle",
+      "originalSize": "Taille Originale",
+      "stretch": "Étirer (Remplir)",
+      "crop": "Recadrer (Couvrir)",
+      "zoom": "Zoom (Contenir)",
+      "cardEffects": "Effets de Carte",
+      "enableGlassEffect": "Activer l'Effet Morphisme de Verre",
+      "glassEffectDesc": "Appliquer un effet de verre dépoli aux cartes de jeu",
+      "saveTheme": "Enregistrer le Thème",
+      "cancel": "Annuler",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "presetTheme": "Thème Prédéfini",
+      "customTheme": "Thème Personnalisé",
+      "active": "Actif",
+      "saved": "Thème enregistré avec succès!",
+      "editTheme": "Modifier le Thème"
+    },
+    "language": {
+      "selectLanguage": "Sélectionner la Langue",
+      "english": "English",
+      "spanish": "Español",
+      "french": "Français",
+      "german": "Deutsch",
+      "japanese": "日本語"
+    },
+    "buttons": {
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "create": "Créer",
+      "close": "Fermer",
+      "yes": "Oui",
+      "no": "Non",
+      "ok": "OK"
+    },
+    "messages": {
+      "loadingUserInfo": "Chargement...",
+      "removalStarted": "Suppression lancée avec succès!",
+      "removalFailed": "Échec de la suppression: {{message}}",
+      "gameLaunched": "Jeu lancé avec succès!",
+      "launchFailed": "Impossible de lancer le jeu: {{message}}",
+      "foundGames": "{{count}} jeux trouvés sur votre disque dur!",
+      "searchFailed": "Échec de la recherche: {{message}}",
+      "initializationFailed": "Impossible d'initialiser l'application. Veuillez consulter les journaux pour plus de détails.",
+      "enterThemeName": "Veuillez entrer un nom de thème",
+      "failedToRemoveGame": "Impossible de supprimer le jeu. Veuillez consulter les journaux pour plus de détails.",
+      "failedToLaunchGame": "Impossible de lancer le jeu. Veuillez consulter les journaux pour plus de détails.",
+      "failedToInitialize": "Impossible d'initialiser l'application. Veuillez consulter les journaux pour plus de détails."
+    },
+    "table": {
+      "cover": "Couverture",
+      "game": "Jeu",
+      "genre": "Genre",
+      "rating": "Note",
+      "platform": "Plate-forme",
+      "status": "État",
+      "actions": "Actions"
+    },
+    "slideshow": {
+      "previous": "Précédent",
+      "next": "Suivant"
+    },
+    "random": {
+      "shuffle": "🎲 Mélanger et Suggérer",
+      "stop": "Arrêter ⏹",
+      "suggestion": "Pourquoi ne pas jouer à \"{{game}}\" maintenant?"
+    },
+    "tools": {
+      "memoryCardReader": "Lecteur de Carte Mémoire",
+      "readCard": "Lire une Carte Mémoire",
+      "writeCard": "Écrire sur une Carte Mémoire",
+      "romRipper": "Extracteur ROM",
+      "startRip": "Démarrer l'Extraction ROM",
+      "gameDatabase": "Base de Données de Jeux",
+      "searchGames": "Rechercher des jeux...",
+      "search": "Rechercher",
+      "cheatCodes": "Codes de Triche",
+      "selectGame": "Sélectionner un jeu",
+      "applyCheat": "Appliquer le Code",
+      "notImplemented": "Outil non implémenté pour le moment."
+    }
+  }
+}

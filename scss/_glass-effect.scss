@@ -1,0 +1,47 @@
+@mixin glass-base($blur: 12px) {
+    backdrop-filter: blur($blur);
+    -webkit-backdrop-filter: blur($blur);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+@mixin glass-bg($color-var, $transparency) {
+    @include glass-base();
+    background: color-mix(in srgb, var($color-var), transparent $transparency) !important;
+}
+
+/* Glass Effect Trigger */
+/* When data-glass-effect="enabled" is on the <html> tag, change the cards */
+[data-glass-effect=enabled] {
+    .game-card {
+        @include glass-bg(--bg-secondary, 30%);
+        
+        &:hover {
+            /* Slightly less transparent on hover */
+            background: color-mix(in srgb, var(--bg-secondary), transparent 15%) !important;
+            transform: translateY(-5px);
+        }
+    }
+
+    .glass {
+        /* Modal usually uses bg-primary */
+        @include glass-bg(--bg-primary, 10%);
+    }
+
+    /* Apply Glass Effect to Theme Manager Inputs when enabled */
+    .color-input-group,
+    .theme-item {
+        @include glass-base(10px);
+        background: color-mix(in srgb, var(--bg-secondary), transparent 40%) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+}
+
+/* 4. Other Glass Elements (Inputs/Dropdowns) */
+/* These can keep the .glass-input class since they are always glass */
+.glass-input, .glass-dropdown {
+    background: rgba(255, 255, 255, 0.05);
+    @include glass-base(10px);
+    border-radius: 8px;
+    color: white;
+}

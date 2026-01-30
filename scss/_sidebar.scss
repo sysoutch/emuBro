@@ -1,0 +1,104 @@
+/* Sidebar */
+.sidebar {
+    width: 250px;
+    background-color: var(--bg-quaternary);
+    padding: 20px;
+    overflow-y: auto;
+    border-right: 1px solid var(--border-color);
+}
+
+.sidebar-section {
+    margin-bottom: 25px;
+}
+
+.sidebar-section h3 {
+    color: var(--accent-color);
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+}
+
+.sidebar-section ul {
+    list-style: none;
+}
+
+.sidebar-section ul li {
+    margin-bottom: 10px;
+}
+
+.sidebar-section ul li a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color 0.3s;
+    display: block;
+    padding: 5px 0;
+}
+
+.sidebar-section ul li a:hover {
+    color: var(--accent-color);
+}
+
+.sidebar-section ul li a.active {
+    color: #66ccff;
+    font-weight: bold;
+}
+
+#tools-list {
+    margin-top: 10px;
+}
+
+#tools-list li {
+    margin-bottom: 8px;
+}
+
+#tools-list li a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color 0.3s;
+    display: block;
+    padding: 5px 0;
+    font-size: 0.9rem;
+}
+
+#tools-list li a:hover {
+    color: #66ccff;
+}
+
+.tool-content {
+    background-color: var(--bg-secondary);
+    padding: 20px;
+    border-radius: 5px;
+    margin-top: 20px;
+}
+
+.tool-controls {
+    margin: 15px 0;
+}
+
+.tool-controls .action-btn {
+    margin-right: 10px;
+    margin-bottom: 10px;
+}
+
+.tool-output {
+    background-color: #1e1e1e;
+    padding: 15px;
+    border-radius: 5px;
+    margin-top: 15px;
+    min-height: 100px;
+}
+
+.stats {
+    background-color: var(--bg-tertiary);
+    padding: 15px;
+    border-radius: 5px;
+}
+
+.stats p {
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+
+.stats span {
+    color: #66ccff;
+    font-weight: bold;
+}
