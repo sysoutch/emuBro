@@ -173,16 +173,37 @@
                 </div>
 
                 <div id="local-themes-view" class="tab-content active">
+                    <!-- Global Theme Settings -->
+                    <div class="theme-manager-section global-settings">
+                        <h3>Global Options</h3>
+                        <div class="settings-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; padding: 15px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color);">
+                            <div class="form-group">
+                                <label for="global-corner-style">Corner Style:</label>
+                                <select id="global-corner-style">
+                                    <option value="rounded">Rounded (Modern)</option>
+                                    <option value="semi-rounded">Slightly Rounded (Classic)</option>
+                                    <option value="sharp">Sharp (Rectangle)</option>
+                                </select>
+                            </div>
+                            <div class="form-group checkbox-group" style="display: flex; align-items: center; gap: 10px; height: 100%;">
+                                <label for="global-override-background" style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0;">
+                                    <input type="checkbox" id="global-override-background">
+                                    <span style="font-weight: bold;">Override Theme Background</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="theme-manager-section">
                         <h3 data-i18n="theme.presets">Preset Themes</h3>
                         <div id="preset-themes" class="preset-themes-list"></div>
                     </div>
+
                     <div class="theme-manager-section">
                         <h3 data-i18n="theme.custom">Custom Themes</h3>
                         <div id="custom-themes" class="custom-themes-list"></div>
                         <button id="create-theme-btn" class="action-btn">+ Create New Theme</button>
                     </div>
-                    
 
                     <!-- Create/Edit Theme Form -->
                     <div id="theme-form" class="theme-form" style="display: none;">
@@ -293,14 +314,6 @@
 
                         <!-- Background Image Section -->
                         <!-- Style Options -->
-                        <div class="form-group">
-                            <label for="corner-style">Corner Style:</label>
-                            <select id="corner-style">
-                                <option value="rounded">Rounded (Modern)</option>
-                                <option value="semi-rounded">Slightly Rounded (Classic)</option>
-                                <option value="sharp">Sharp (Rectangle)</option>
-                            </select>
-                        </div>
 
                         <div class="background-section">
                             <h4>Background Image</h4>
