@@ -72,7 +72,7 @@
     "filters": {
       "search": "Search games...",
       "selectDrive": "Select Drive",
-      "searchGamesBtn": "Search Games And Emulators",
+      "searchGamesBtn": "Search Games",
       "searching": "Searching..."
     },
     "theme": {
@@ -183,6 +183,27 @@
       "selectGame": "Select a game",
       "applyCheat": "Apply Cheat",
       "notImplemented": "Tool not implemented yet."
+    },
+    "themeManager": {
+      "selectDrive": "Select Drive",
+      "searching": "Searching. ..",
+      "searchGames": "Search Games",
+      "install": "Install",
+      "previous": "❮ Previous",
+      "next": "Next ❯",
+      "shuffle": "🎲 Shuffle & Suggest",
+      "stop": "Stop ⏹",
+      "editTheme": "Edit Theme",
+      "createNewTheme": "Create New Theme",
+      "backgroundImageLoaded": "Background image loaded",
+      "clearImage": "Clear Image",
+      "enableGlassEffect": "Enable Glass Morphism Effect",
+      "glassEffectDesc": "Apply frosted glass effect to game cards"
+    },
+    "stats": {
+      "totalEmulators": "Total Emulators",
+      "playTime": "Play Time",
+      "hours": "hours"
     }
   }
 }

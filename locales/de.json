@@ -159,27 +159,48 @@
       "actions": "Aktionen"
     },
     "slideshow": {
-      "previous": "Zurück",
-      "next": "Weiter"
+      "previous": "Vorherige",
+      "next": "Nächste"
     },
     "random": {
       "shuffle": "🎲 Mischen und Vorschlagen",
       "stop": "Stopp ⏹",
-      "suggestion": "Warum spielst du nicht \"{{game}}\"?"
+      "suggestion": "Warum nicht jetzt \"{{game}}\" spielen?"
     },
     "tools": {
-      "memoryCardReader": "Speicherkartenlese",
+      "memoryCardReader": "Speicherkartenleser",
       "readCard": "Speicherkarte lesen",
       "writeCard": "Speicherkarte schreiben",
-      "romRipper": "ROM-Extraktor",
-      "startRip": "ROM-Extraktion starten",
-      "gameDatabase": "Spieledatenbank",
+      "romRipper": "ROM-Ripper",
+      "startRip": "ROM-Rip starten",
+      "gameDatabase": "Spiel-Datenbank",
       "searchGames": "Spiele suchen...",
       "search": "Suchen",
-      "cheatCodes": "Cheat Codes",
+      "cheatCodes": "Cheat-Codes",
       "selectGame": "Spiel auswählen",
       "applyCheat": "Cheat anwenden",
       "notImplemented": "Werkzeug noch nicht implementiert."
+    },
+    "themeManager": {
+      "selectDrive": "Laufwerk auswählen",
+      "searching": "Suche läuft...",
+      "searchGames": "Spiele suchen",
+      "install": "Installieren",
+      "previous": "❮ Vorherige",
+      "next": "Nächste ❯",
+      "shuffle": "🎲 Mischen und Vorschlagen",
+      "stop": "Stopp ⏹",
+      "editTheme": "Thema bearbeiten",
+      "createNewTheme": "Neues Thema erstellen",
+      "backgroundImageLoaded": "Hintergrundbild geladen",
+      "clearImage": "Bild löschen",
+      "enableGlassEffect": "Glas-Effekt aktivieren",
+      "glassEffectDesc": "Frosted-Glas-Effekt auf Spielkarten anwenden"
+    },
+    "stats": {
+      "totalEmulators": "Gesamtzahl der Emulatoren",
+      "playTime": "Spielzeit",
+      "hours": "Stunden"
     }
   }
 }

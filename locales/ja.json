@@ -159,18 +159,18 @@
       "actions": "アクション"
     },
     "slideshow": {
-      "previous": "前へ",
-      "next": "次へ"
+      "previous": "前",
+      "next": "次"
     },
     "random": {
       "shuffle": "🎲 シャッフルして提案",
       "stop": "停止 ⏹",
-      "suggestion": "今、\"{{game}}\"をプレイしませんか?"
+      "suggestion": "今、「{{game}}」をプレイするのはどうでしょう？"
     },
     "tools": {
-      "memoryCardReader": "メモリーカードリーダー",
-      "readCard": "メモリーカードを読む",
-      "writeCard": "メモリーカードに書き込む",
+      "memoryCardReader": "メモリカードリーダー",
+      "readCard": "メモリカードを読む",
+      "writeCard": "メモリカードに書き込む",
       "romRipper": "ROMリッパー",
       "startRip": "ROMリップを開始",
       "gameDatabase": "ゲームデータベース",
@@ -180,6 +180,27 @@
       "selectGame": "ゲームを選択",
       "applyCheat": "チートを適用",
       "notImplemented": "ツールはまだ実装されていません。"
+    },
+    "themeManager": {
+      "selectDrive": "ドライブを選択",
+      "searching": "検索中...",
+      "searchGames": "ゲームを検索",
+      "install": "インストール",
+      "previous": "❮ 前",
+      "next": "次 ❯",
+      "shuffle": "🎲 シャッフルして提案",
+      "stop": "停止 ⏹",
+      "editTheme": "テーマを編集",
+      "createNewTheme": "新しいテーマを作成",
+      "backgroundImageLoaded": "背景画像が読み込まれました",
+      "clearImage": "画像をクリア",
+      "enableGlassEffect": "グラス効果を有効にする",
+      "glassEffectDesc": "ゲームカードにフロステッドグラス効果を適用"
+    },
+    "stats": {
+      "totalEmulators": "エミュレーター総数",
+      "playTime": "プレイ時間",
+      "hours": "時間"
     }
   }
 }

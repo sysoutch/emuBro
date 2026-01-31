@@ -222,10 +222,12 @@ ipcMain.handle('launch-game', async (event, gameId) => {
       }
       // Launch the game executable
       const { exec } = require('child_process');
-      exec(`"cmd.exe" /c "\"${emuPath}\" \"${gamePath}\""`, (error, stdout, stderr) => {
+      const escapedEmuPath = `"${emuPath}"`;
+      const escapedGamePath = `"${gamePath}"`;
+      exec(`${escapedEmuPath} ${escapedGamePath}`, (error, stdout, stderr) => {
         if (error) {
           log.error(`Error launching game ${game.name}:`, error);
-          return;
+          return { success: false, message: "Failed to execute launch command" };
         }
         log.info(`Game ${game.name} launched successfully`);
         if (mainWindow) {
@@ -242,6 +244,7 @@ ipcMain.handle('launch-game', async (event, gameId) => {
     return { success: false, message: "Game not found" };
   } catch (error) {
     log.error(`Failed to launch game ${gameId}:`, error);
+    mainWindow.restore();
     return { success: false, message: error.message };
   }
 });

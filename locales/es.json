@@ -163,23 +163,44 @@
       "next": "Siguiente"
     },
     "random": {
-      "shuffle": "🎲 Mezclar y Sugerir",
+      "shuffle": "🎲 Barajar y sugerir",
       "stop": "Detener ⏹",
-      "suggestion": "¿Por qué no juegas \"{{game}}\" ahora?"
+      "suggestion": "¿Por qué no jugar \"{{game}}\" ahora?"
     },
     "tools": {
-      "memoryCardReader": "Lector de Tarjetas de Memoria",
-      "readCard": "Leer Tarjeta de Memoria",
-      "writeCard": "Escribir Tarjeta de Memoria",
+      "memoryCardReader": "Lector de tarjeta de memoria",
+      "readCard": "Leer tarjeta de memoria",
+      "writeCard": "Escribir tarjeta de memoria",
       "romRipper": "Extractor de ROM",
-      "startRip": "Iniciar Extracción de ROM",
-      "gameDatabase": "Base de Datos de Juegos",
+      "startRip": "Iniciar extracción de ROM",
+      "gameDatabase": "Base de datos de juegos",
       "searchGames": "Buscar juegos...",
       "search": "Buscar",
-      "cheatCodes": "Códigos de Trucos",
+      "cheatCodes": "Códigos de trucos",
       "selectGame": "Seleccionar un juego",
-      "applyCheat": "Aplicar Truco",
+      "applyCheat": "Aplicar truco",
       "notImplemented": "Herramienta no implementada aún."
+    },
+    "themeManager": {
+      "selectDrive": "Seleccionar unidad",
+      "searching": "Buscando...",
+      "searchGames": "Buscar juegos",
+      "install": "Instalar",
+      "previous": "❮ Anterior",
+      "next": "Siguiente ❯",
+      "shuffle": "🎲 Barajar y sugerir",
+      "stop": "Detener ⏹",
+      "editTheme": "Editar tema",
+      "createNewTheme": "Crear nuevo tema",
+      "backgroundImageLoaded": "Imagen de fondo cargada",
+      "clearImage": "Limpiar imagen",
+      "enableGlassEffect": "Habilitar efecto de vidrio",
+      "glassEffectDesc": "Aplicar efecto de vidrio frosted a las tarjetas de juegos"
+    },
+    "stats": {
+      "totalEmulators": "Emuladores totales",
+      "playTime": "Tiempo de juego",
+      "hours": "horas"
     }
   }
 }

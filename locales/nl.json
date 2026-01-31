@@ -169,23 +169,44 @@
       "next": "Volgende"
     },
     "random": {
-      "shuffle": "🎲 Schudden & Suggereren",
+      "shuffle": "🎲 Shuffle en voorstellen",
       "stop": "Stop ⏹",
-      "suggestion": "Waarom speel je niet \"{{game}}\" nu?"
+      "suggestion": "Waarom niet nu \"{{game}}\" spelen?"
     },
     "tools": {
-      "memoryCardReader": "Geheugenkaartlezer",
-      "readCard": "Kaart Lezen",
-      "writeCard": "Kaart Schrijven",
+      "memoryCardReader": "Geheugenkaart lezer",
+      "readCard": "Geheugenkaart lezen",
+      "writeCard": "Geheugenkaart schrijven",
       "romRipper": "ROM Ripper",
-      "startRip": "Start Rip",
-      "gameDatabase": "Spel Database",
-      "searchGames": "Zoek spellen...",
+      "startRip": "ROM Rip starten",
+      "gameDatabase": "Gamedatabase",
+      "searchGames": "Spellen zoeken...",
       "search": "Zoeken",
-      "cheatCodes": "Cheat Codes",
+      "cheatCodes": "Cheatcodes",
       "selectGame": "Selecteer een spel",
-      "applyCheat": "Cheat Toepassen",
-      "notImplemented": "Tool nog niet geïmplementeerd."
+      "applyCheat": "Cheat toepassen",
+      "notImplemented": "Hulpmiddel nog niet geïmplementeerd."
+    },
+    "themeManager": {
+      "selectDrive": "Schijf selecteren",
+      "searching": "Zoeken...",
+      "searchGames": "Spellen zoeken",
+      "install": "Installeren",
+      "previous": "❮ Vorige",
+      "next": "Volgende ❯",
+      "shuffle": "🎲 Shuffle en voorstellen",
+      "stop": "Stop ⏹",
+      "editTheme": "Thema bewerken",
+      "createNewTheme": "Nieuw thema maken",
+      "backgroundImageLoaded": "Achtergrondafbeelding geladen",
+      "clearImage": "Afbeelding wissen",
+      "enableGlassEffect": "Glas-effect inschakelen",
+      "glassEffectDesc": "Frosted glass-effect op spelkaarten toepassen"
+    },
+    "stats": {
+      "totalEmulators": "Totaal aantal emulators",
+      "playTime": "Speeltijd",
+      "hours": "uren"
     }
   }
 }

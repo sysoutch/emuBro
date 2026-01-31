@@ -163,23 +163,44 @@
       "next": "Suivant"
     },
     "random": {
-      "shuffle": "🎲 Mélanger et Suggérer",
+      "shuffle": "🎲 Mélanger et suggérer",
       "stop": "Arrêter ⏹",
-      "suggestion": "Pourquoi ne pas jouer à \"{{game}}\" maintenant?"
+      "suggestion": "Pourquoi ne pas jouer à \"{{game}}\" maintenant ?"
     },
     "tools": {
-      "memoryCardReader": "Lecteur de Carte Mémoire",
-      "readCard": "Lire une Carte Mémoire",
-      "writeCard": "Écrire sur une Carte Mémoire",
-      "romRipper": "Extracteur ROM",
-      "startRip": "Démarrer l'Extraction ROM",
-      "gameDatabase": "Base de Données de Jeux",
+      "memoryCardReader": "Lecteur de carte mémoire",
+      "readCard": "Lire la carte mémoire",
+      "writeCard": "Écrire sur la carte mémoire",
+      "romRipper": "Extracteur de ROM",
+      "startRip": "Démarrer l'extraction de ROM",
+      "gameDatabase": "Base de données de jeux",
       "searchGames": "Rechercher des jeux...",
       "search": "Rechercher",
-      "cheatCodes": "Codes de Triche",
+      "cheatCodes": "Codes de triche",
       "selectGame": "Sélectionner un jeu",
-      "applyCheat": "Appliquer le Code",
+      "applyCheat": "Appliquer le triche",
       "notImplemented": "Outil non implémenté pour le moment."
+    },
+    "themeManager": {
+      "selectDrive": "Sélectionner le lecteur",
+      "searching": "Recherche en cours...",
+      "searchGames": "Rechercher des jeux",
+      "install": "Installer",
+      "previous": "❮ Précédent",
+      "next": "Suivant ❯",
+      "shuffle": "🎲 Mélanger et suggérer",
+      "stop": "Arrêter ⏹",
+      "editTheme": "Modifier le thème",
+      "createNewTheme": "Créer un nouveau thème",
+      "backgroundImageLoaded": "Image d'arrière-plan chargée",
+      "clearImage": "Effacer l'image",
+      "enableGlassEffect": "Activer l'effet de verre",
+      "glassEffectDesc": "Appliquer l'effet de verre froté aux cartes de jeux"
+    },
+    "stats": {
+      "totalEmulators": "Émulateurs totaux",
+      "playTime": "Temps de jeu",
+      "hours": "heures"
     }
   }
 }

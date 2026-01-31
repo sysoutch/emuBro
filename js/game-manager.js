@@ -110,7 +110,7 @@ export async function searchForGamesAndEmulators() {
     } finally {
         if (searchBtn) {
             searchBtn.disabled = false;
-            searchBtn.textContent = 'Search Games And Emulators';
+            searchBtn.textContent = 'Search Games';
         }
     }
 }
@@ -163,7 +163,8 @@ async function removeGame(gameId) {
 async function launchGame(gameId) {
     const result = await ipcRenderer.invoke('launch-game', gameId);
     if (!result.success) {
-        alert(i18n.tf('messages.launchFailed', { message: result.message }));
+        ipcRenderer.send('open-alert', 'messages.launchFailed' + ':' + result.message);
+        // alert(i18n.tf('messages.launchFailed', { message: result.message }));
     }
 }
 
