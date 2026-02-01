@@ -11,8 +11,8 @@
 - Project structure with memory-bank documentation system
 - README.md updated for Electron version
 - Core documentation files initialized (projectbrief, productContext, activeContext, systemPatterns, techContext)
-- Draggable theme-manager floating window
-- Dockable theme-manager (pins to right side as sidebar)
+- Draggable floating windows (Theme Manager, Language Manager)
+- Dockable panels with unified sidebar support and tabbed interface
 - Auto-centering for floating windows on resize (smoother and smarter behavior)
 - Electron-based architecture established
 - Internationalization system in place (i18n-manager.js)
@@ -53,3 +53,4 @@
 - Chose i18n.js for internationalization
 - Implemented IPC communication patterns
 - Added "Refresh Themes" button in marketplace to fetch community themes from GitHub dynamically
+- Implemented a unified docking system for floating panels with tabbed sidebar support

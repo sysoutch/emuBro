@@ -4,18 +4,15 @@ const { ipcRenderer } = require('electron');
 const log = require('electron-log');
 
 import { initI18n, populateLanguageSelector, updateUILanguage } from './js/i18n-manager';
-import { initLanguageManager } from './js/language-manager';
+import { initLanguageManager, openLanguageManager } from './js/language-manager';
 import { 
     setTheme, 
     updateThemeSelector, 
     renderMarketplace, 
-    openThemeManager, 
-    closeThemeManager, 
     toggleTheme, 
     invertColors, 
     saveTheme, 
     hideThemeForm, 
-    clearBackgroundImage, 
     setupColorPickerListeners, 
     setupBackgroundImageListeners,
     getHasUnsavedChanges,
@@ -24,8 +21,10 @@ import {
     resetThemeForm,
     applyCornerStyle,
     getCurrentTheme,
-    makeDraggable
+    makeDraggable,
+    openThemeManager
 } from './js/theme-manager';
+import { initDocking, toggleDock, removeFromDock, completelyRemoveFromDock } from './js/docking-manager';
 import { 
     getGames, 
     setGames, 
@@ -87,6 +86,7 @@ async function initializeApp() {
         updateUILanguage();
         populateLanguageSelector();
         initLanguageManager();
+        initDocking();
 
         // Old select listener removed as it is now custom dropdown handled in i18n-manager
 
@@ -165,30 +165,29 @@ function setupEventListeners() {
     if (invertBtn) invertBtn.addEventListener('click', invertColors);
     
     if (themeManagerBtn) themeManagerBtn.addEventListener('click', () => {
-        renderThemeManager();
-        
-        // Check if the modal has been moved (dragged)
-        // If it has inline top/left styles, it means it was dragged
-        if (themeManagerModal.style.top || themeManagerModal.style.left) {
-            themeManagerModal.classList.add('moved');
-        } else {
-            themeManagerModal.classList.remove('moved');
-        }
-        
-        themeManagerModal.classList.add('active');
-        makeDraggable('theme-manager-modal', 'theme-manager-header');
+        openThemeManager();
     });
+
+    const languageManagerBtn = document.getElementById('language-manager-btn');
+    if (languageManagerBtn) {
+        languageManagerBtn.addEventListener('click', () => {
+            openLanguageManager();
+        });
+    }
     
     if (closeThemeManagerBtn) closeThemeManagerBtn.addEventListener('click', () => {
         if (getHasUnsavedChanges()) {
             if (!confirm(i18n.t('messages.unsavedChanges'))) return;
         }
         themeManagerModal.classList.remove('active');
-        // If it was docked, we should probably keep it docked state or reset?
-        // Let's reset the body class just in case, but keep the modal class if user wants it docked when reopening?
-        // Usually closing implies hiding. If we want persistent docking, we keep the class.
-        // But if we hide the modal, we must remove the body padding.
-        document.body.classList.remove('theme-manager-docked');
+        themeManagerModal.style.display = 'none';
+        
+        // If it was docked, completely remove it from the dock Set as well
+        if (themeManagerModal.classList.contains('docked-right')) {
+            completelyRemoveFromDock('theme-manager-modal');
+        } else {
+            removeFromDock('theme-manager-modal');
+        }
         
         hideThemeForm();
         setHasUnsavedChanges(false);
@@ -198,14 +197,15 @@ function setupEventListeners() {
     if (pinThemeManagerBtn) {
         pinThemeManagerBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            const isDocked = themeManagerModal.classList.toggle('docked-right');
-            pinThemeManagerBtn.classList.toggle('active');
-            
-            if (isDocked) {
-                document.body.classList.add('theme-manager-docked');
-            } else {
-                document.body.classList.remove('theme-manager-docked');
-            }
+            toggleDock('theme-manager-modal', 'pin-theme-manager', 'theme-manager-docked');
+        });
+    }
+
+    const pinLanguageManagerBtn = document.getElementById('pin-language-manager');
+    if (pinLanguageManagerBtn) {
+        pinLanguageManagerBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleDock('language-manager-modal', 'pin-language-manager', 'language-manager-docked');
         });
     }
 

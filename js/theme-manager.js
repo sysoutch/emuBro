@@ -12,6 +12,7 @@ import {
     flipLightness, 
     darkenHex 
 } from './ui-utils';
+import { isPanelDocked } from './docking-manager';
 
 const { ipcRenderer } = require('electron');
 const log = require('electron-log');
@@ -40,15 +41,19 @@ export function makeDraggable(modalId, headerId) {
         // If user clicked a button or input inside the header, don't drag
         if (e.target.closest('button, input, select, textarea')) return;
 
-        isDragging = true;
-
-        // Undock if docked
-        if (modal.classList.contains('docked-right')) {
-            modal.classList.remove('docked-right');
-            document.body.classList.remove('theme-manager-docked');
-            const pinBtn = document.getElementById('pin-theme-manager');
-            if (pinBtn) pinBtn.classList.remove('active');
+        // If it's a collapsed accordion panel, clicking it should expand it
+        if (modal.classList.contains('accordion-collapsed')) {
+            import('./docking-manager').then(m => m.activatePanel(modalId));
+            return;
         }
+
+        // If it's docked, we don't allow dragging/undocking by clicking/moving the header
+        if (modal.classList.contains('docked-right')) {
+            return;
+        }
+
+        isDragging = true;
+        
         // Get the current position of the modal
         const rect = modal.getBoundingClientRect();
         
@@ -312,6 +317,26 @@ export function setTheme(theme) {
     if (themeManagerModal && themeManagerModal.classList.contains('active')) {
         renderThemeManager();
     }
+}
+
+export function openThemeManager() {
+    const modal = document.getElementById('theme-manager-modal');
+    if (!modal) return;
+    
+    renderThemeManager();
+    
+    if (modal.classList.contains('docked-right')) {
+        // Keep it docked and ensure body class is present
+        import('./docking-manager').then(m => m.activatePanel('theme-manager-modal'));
+    } else if (modal.style.top || modal.style.left) {
+        modal.classList.add('moved');
+    } else {
+        modal.classList.remove('moved');
+    }
+    
+    modal.classList.add('active');
+    modal.style.display = 'flex';
+    makeDraggable('theme-manager-modal', 'theme-manager-header');
 }
 
 export function updateThemeSelector() {

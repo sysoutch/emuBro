@@ -1,12 +1,12 @@
 const fs = require('fs');
 const path = require('path');
+import { makeDraggable } from './theme-manager';
 
 const localesPath = path.join(__dirname, 'locales');
 let baseLanguageCache = null;
 
 export function initLanguageManager() {
     const modal = document.getElementById('language-manager-modal');
-    const btn = document.getElementById('language-manager-btn');
     const closeBtn = document.getElementById('close-language-manager');
     const addBtn = document.getElementById('add-language-btn');
     const backBtn = document.getElementById('back-to-lang-list');
@@ -15,13 +15,16 @@ export function initLanguageManager() {
 
     if (!modal) return;
 
-    btn.addEventListener('click', () => {
-        modal.style.display = 'flex';
-        loadLanguagesList();
-    });
-
     closeBtn.addEventListener('click', () => {
         modal.style.display = 'none';
+        modal.classList.remove('active');
+        
+        // If it was docked, completely remove it from the dock Set as well
+        if (modal.classList.contains('docked-right')) {
+            import('./docking-manager').then(m => m.completelyRemoveFromDock('language-manager-modal'));
+        } else {
+            import('./docking-manager').then(m => m.removeFromDock('language-manager-modal'));
+        }
     });
 
     backBtn.addEventListener('click', () => {
@@ -49,8 +52,29 @@ export function initLanguageManager() {
     window.addEventListener('click', (event) => {
         if (event.target === modal) {
             modal.style.display = 'none';
+            modal.classList.remove('active');
+            import('./docking-manager').then(m => m.removeFromDock('language-manager-modal'));
         }
     });
+}
+
+export function openLanguageManager() {
+    const modal = document.getElementById('language-manager-modal');
+    if (!modal) return;
+
+    if (modal.classList.contains('docked-right')) {
+        // Keep it docked and ensure body class is present
+        import('./docking-manager').then(m => m.activatePanel('language-manager-modal'));
+    } else if (modal.style.top || modal.style.left) {
+        modal.classList.add('moved');
+    } else {
+        modal.classList.remove('moved');
+    }
+
+    modal.style.display = 'flex';
+    modal.classList.add('active');
+    loadLanguagesList();
+    makeDraggable('language-manager-modal', 'language-manager-header');
 }
 
 function switchTab(tabName) {

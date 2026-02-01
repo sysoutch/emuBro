@@ -5,6 +5,57 @@
     padding: 20px;
     overflow-y: auto;
     border-right: 1px solid var(--border-color);
+    position: relative;
+}
+
+/* Docked Tabs Interface */
+.docked-tabs-container {
+    position: absolute;
+    top: 50%;
+    right: 5px;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px 5px;
+    z-index: 1001;
+    box-shadow: 4px 0 10px rgba(0,0,0,0.2);
+}
+
+.docked-tab {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+
+    &:hover {
+        background: var(--bg-quaternary);
+        color: var(--accent-color);
+    }
+
+    &.active {
+        background: rgba(102, 204, 255, 0.1);
+        color: var(--accent-color);
+        box-shadow: inset 0 0 5px rgba(102, 204, 255, 0.2);
+    }
+}
+
+/* Body state when any panel is docked */
+body.panel-docked {
+    padding-right: 400px !important;
+    
+    .app-container {
+        width: calc(100vw - 400px) !important;
+    }
 }
 
 .sidebar-section {
