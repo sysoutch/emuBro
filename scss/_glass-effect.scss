@@ -13,15 +13,28 @@
 /* Glass Effect Trigger */
 /* When data-glass-effect="enabled" is on the <html> tag, change the cards */
 [data-glass-effect=enabled] {
-    .game-card {
+    .game-card,
+    .list-item,
+    .games-table,
+    .slideshow-card,
+    .random-display {
         /* Increased transparency from 30% to 50% */
         @include glass-bg(--bg-secondary, 50%);
-        
-        &:hover {
-            /* Increased transparency from 15% to 30% on hover */
-            background: color-mix(in srgb, var(--bg-secondary), transparent 30%) !important;
-            transform: translateY(-5px);
-        }
+    }
+
+    .game-card:hover {
+        /* Increased transparency from 15% to 30% on hover */
+        background: color-mix(in srgb, var(--bg-secondary), transparent 30%) !important;
+        transform: translateY(-5px);
+    }
+
+    .list-item:hover {
+        background: color-mix(in srgb, var(--bg-secondary), transparent 30%) !important;
+        transform: translateX(5px);
+    }
+
+    .games-table th {
+        background-color: rgba(0, 0, 0, 0.2) !important;
     }
 
     .glass {

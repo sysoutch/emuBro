@@ -22,7 +22,8 @@ import {
     renderThemeManager,
     resetThemeForm,
     applyCornerStyle,
-    getCurrentTheme
+    getCurrentTheme,
+    makeDraggable
 } from './js/theme-manager';
 import { 
     getGames, 
@@ -169,7 +170,17 @@ function setupEventListeners() {
     
     if (themeManagerBtn) themeManagerBtn.addEventListener('click', () => {
         renderThemeManager();
+        
+        // Check if the modal has been moved (dragged)
+        // If it has inline top/left styles, it means it was dragged
+        if (themeManagerModal.style.top || themeManagerModal.style.left) {
+            themeManagerModal.classList.add('moved');
+        } else {
+            themeManagerModal.classList.remove('moved');
+        }
+        
         themeManagerModal.classList.add('active');
+        makeDraggable('theme-manager-modal', 'theme-manager-header');
     });
     
     if (closeThemeManagerBtn) closeThemeManagerBtn.addEventListener('click', () => {
@@ -177,9 +188,30 @@ function setupEventListeners() {
             if (!confirm(i18n.t('messages.unsavedChanges') || "You have unsaved changes. Are you sure you want to close?")) return;
         }
         themeManagerModal.classList.remove('active');
+        // If it was docked, we should probably keep it docked state or reset?
+        // Let's reset the body class just in case, but keep the modal class if user wants it docked when reopening?
+        // Usually closing implies hiding. If we want persistent docking, we keep the class.
+        // But if we hide the modal, we must remove the body padding.
+        document.body.classList.remove('theme-manager-docked');
+        
         hideThemeForm();
         setHasUnsavedChanges(false);
     });
+
+    const pinThemeManagerBtn = document.getElementById('pin-theme-manager');
+    if (pinThemeManagerBtn) {
+        pinThemeManagerBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isDocked = themeManagerModal.classList.toggle('docked-right');
+            pinThemeManagerBtn.classList.toggle('active');
+            
+            if (isDocked) {
+                document.body.classList.add('theme-manager-docked');
+            } else {
+                document.body.classList.remove('theme-manager-docked');
+            }
+        });
+    }
 
     if (themeManagerModal) {
         themeManagerModal.addEventListener('click', (e) => {
@@ -230,6 +262,13 @@ function setupEventListeners() {
 
     const cancelThemeBtn = document.getElementById('cancel-theme-btn');
     if (cancelThemeBtn) cancelThemeBtn.addEventListener('click', hideThemeForm);
+
+    const refreshThemesBtn = document.getElementById('refresh-themes-btn');
+    if (refreshThemesBtn) {
+        refreshThemesBtn.addEventListener('click', () => {
+            renderMarketplace(true);
+        });
+    }
 
     // Marketplace Tabs
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -293,6 +332,65 @@ function setupEventListeners() {
     }
 
     setupDragDrop();
+    setupWindowResizeHandler();
+}
+
+let lastWindowWidth = window.innerWidth;
+let lastWindowHeight = window.innerHeight;
+
+function setupWindowResizeHandler() {
+    window.addEventListener('resize', () => {
+        const currentWidth = window.innerWidth;
+        const currentHeight = window.innerHeight;
+
+        // Check if window is getting smaller (width or height decreased)
+        const isGettingSmaller = currentWidth < lastWindowWidth || currentHeight < lastWindowHeight;
+        
+        // Update last dimensions
+        lastWindowWidth = currentWidth;
+        lastWindowHeight = currentHeight;
+
+        // Only proceed if getting smaller
+        if (!isGettingSmaller) return;
+
+        const themeManagerModal = document.getElementById('theme-manager-modal');
+        if (!themeManagerModal || !themeManagerModal.classList.contains('active') || themeManagerModal.classList.contains('docked-right')) {
+            return;
+        }
+
+        const rect = themeManagerModal.getBoundingClientRect();
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+
+        // Calculate overlap area
+        const visibleLeft = Math.max(0, rect.left);
+        const visibleRight = Math.min(windowWidth, rect.right);
+        const visibleTop = Math.max(0, rect.top);
+        const visibleBottom = Math.min(windowHeight, rect.bottom);
+
+        const visibleWidth = Math.max(0, visibleRight - visibleLeft);
+        const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+        
+        const totalArea = rect.width * rect.height;
+        const visibleArea = visibleWidth * visibleHeight;
+
+        // If more than 50% is outside (visible area < 50%)
+        if (visibleArea < totalArea * 0.5) {
+            // Add smooth class
+            themeManagerModal.classList.add('smooth-reset');
+            
+            // Reset to center
+            themeManagerModal.style.top = '';
+            themeManagerModal.style.left = '';
+            themeManagerModal.style.transform = ''; // Remove inline transform (if any from drag)
+            themeManagerModal.classList.remove('moved');
+            
+            // Remove smooth class after transition
+            setTimeout(() => {
+                themeManagerModal.classList.remove('smooth-reset');
+            }, 800);
+        }
+    });
 }
 
 function setupDragDrop() {

@@ -23,37 +23,116 @@ let hasUnsavedChanges = false;
 let shouldUseAccentColorForBrand = true;
 let fixedBackgroundTracking = null;
 
-export async function fetchCommunityThemes() {
-    if (remoteCommunityThemes) return remoteCommunityThemes;
+// Draggable state
+let isDragging = false;
+let startX, startY;
+let modalInitialX, modalInitialY;
+
+export function makeDraggable(modalId, headerId) {
+    const modal = document.getElementById(modalId);
+    const header = document.getElementById(headerId);
+    
+    if (!modal || !header) return;
+
+    header.style.cursor = 'move';
+
+    header.addEventListener('mousedown', (e) => {
+        // If user clicked a button or input inside the header, don't drag
+        if (e.target.closest('button, input, select, textarea')) return;
+
+        isDragging = true;
+
+        // Undock if docked
+        if (modal.classList.contains('docked-right')) {
+            modal.classList.remove('docked-right');
+            document.body.classList.remove('theme-manager-docked');
+            const pinBtn = document.getElementById('pin-theme-manager');
+            if (pinBtn) pinBtn.classList.remove('active');
+        }
+        // Get the current position of the modal
+        const rect = modal.getBoundingClientRect();
+        
+        // If modal has translate(-50%, -50%) and top/left 50%, we need to convert it to absolute pixels
+        // to avoid jumping when we start setting left/top
+        modal.style.transform = 'none';
+        modal.style.top = rect.top + 'px';
+        modal.style.left = rect.left + 'px';
+        modal.style.margin = '0';
+        
+        startX = e.clientX;
+        startY = e.clientY;
+        modalInitialX = rect.left;
+        modalInitialY = rect.top;
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+        
+        e.preventDefault();
+    });
+
+    function onMouseMove(e) {
+        if (!isDragging) return;
+
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+
+        modal.style.left = (modalInitialX + dx) + 'px';
+        modal.style.top = (modalInitialY + dy) + 'px';
+    }
+
+    function onMouseUp() {
+        isDragging = false;
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+    }
+}
+
+export async function fetchCommunityThemes(forceRefresh = false) {
+    if (remoteCommunityThemes && !forceRefresh) return remoteCommunityThemes;
 
     try {
         const repoOwner = 'sysoutch';
         const repoName = 'emuBro-themes';
         const themesPath = 'community-themes';
         
+        // 1. Get the list of files in the folder
         const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${themesPath}`);
         if (!response.ok) throw new Error('Failed to fetch themes list');
         
         const contents = await response.json();
-        const themeDirs = contents.filter(item => item.type === 'dir');
+        
+        // 2. Filter for files that end in .json (dynamic names like theme_user.json)
+        const themeFiles = contents.filter(item => 
+            item.type === 'file' && 
+            item.name.endsWith('.json')
+        );
         
         const fetchedThemes = [];
-        const branch = 'master'; 
 
-        for (const dir of themeDirs) {
+        // 3. Fetch each JSON file dynamically
+        for (const file of themeFiles) {
             try {
-                const themeRes = await fetch(`https://raw.githubusercontent.com/${repoOwner}/${repoName}/${branch}/${themesPath}/${dir.name}/theme.json`);
+                // Using the download_url provided by the API is safer than manual string building
+                const themeRes = await fetch(file.download_url);
+                
                 if (themeRes.ok) {
                     const theme = await themeRes.json();
                     
-                    if (theme.background && theme.background.image && !theme.background.image.startsWith('http') && !theme.background.image.startsWith('data:')) {
-                        theme.background.image = `https://raw.githubusercontent.com/${repoOwner}/${repoName}/${branch}/${themesPath}/${dir.name}/${theme.background.image}`;
+                    // 4. Image Logic
+                    // Since images are no longer in the repo, we assume the JSON 
+                    // contains a full URL. If it's a relative path, it will likely break.
+                    if (theme.background?.image) {
+                        const img = theme.background.image;
+                        // Optional: Validation check to ensure it's a valid remote URL
+                        if (!img.startsWith('http') && !img.startsWith('data:')) {
+                            console.warn(`Theme ${file.name} has a relative image path which may no longer exist.`);
+                        }
                     }
                     
                     fetchedThemes.push(theme);
                 }
             } catch (err) {
-                log.error(`Failed to fetch theme from ${dir.name}:`, err);
+                log.error(`Failed to fetch theme file ${file.name}:`, err);
             }
         }
 
@@ -382,6 +461,14 @@ function createThemeItem(id, name, type, isActive, themeData) {
                 });
             }
         };
+
+        const uploadBtn = document.createElement('button');
+        uploadBtn.className = 'action-btn small';
+        uploadBtn.innerHTML = 'Up'; 
+        uploadBtn.onclick = (e) => {
+        e.stopPropagation();
+            uploadTheme(themeData);
+        };
         
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'action-btn remove-btn small';
@@ -389,11 +476,92 @@ function createThemeItem(id, name, type, isActive, themeData) {
         deleteBtn.onclick = (e) => { e.stopPropagation(); deleteCustomTheme(id); };
         
         actions.appendChild(editBtn);
+        actions.appendChild(uploadBtn);
         actions.appendChild(deleteBtn);
         item.appendChild(actions);
     }
     
     return item;
+}
+
+async function uploadTheme(theme) {
+    let webhookUrl = localStorage.getItem('discordWebhookUrl');
+    
+    if (!webhookUrl) {
+        // Show the modal
+        const modal = document.getElementById('webhook-modal');
+        const input = document.getElementById('webhook-input');
+        const saveBtn = document.getElementById('webhook-save-btn');
+        const cancelBtn = document.getElementById('webhook-cancel-btn');
+        
+        if (!modal) {
+            console.error("Webhook modal not found");
+            return;
+        }
+
+        // Reset input
+        input.value = '';
+        modal.style.display = 'flex';
+
+        // Wait for user interaction
+        webhookUrl = await new Promise((resolve) => {
+            const cleanup = () => {
+                saveBtn.removeEventListener('click', onSave);
+                cancelBtn.removeEventListener('click', onCancel);
+            };
+
+            const onSave = () => {
+                const url = input.value.trim();
+                if (!url.startsWith('https://discord.com/api/webhooks/')) {
+                    alert("Invalid Webhook URL. It must start with https://discord.com/api/webhooks/");
+                    return; // Don't close, let user fix
+                }
+                localStorage.setItem('discordWebhookUrl', url);
+                modal.style.display = 'none';
+                cleanup();
+                resolve(url);
+            };
+
+            const onCancel = () => {
+                modal.style.display = 'none';
+                cleanup();
+                resolve(null);
+            };
+
+            saveBtn.addEventListener('click', onSave);
+            cancelBtn.addEventListener('click', onCancel);
+        });
+
+        if (!webhookUrl) return; // User cancelled
+    }
+
+    const userInfo = await ipcRenderer.invoke('get-user-info');
+
+    // Get the image name from the stored property or the UI if available
+    let imageName = window.currentBackgroundImageName || 'background';
+    
+    // If it's a generic "background", try to guess the extension from the base64 string
+    if (imageName === 'background' && theme.background && theme.background.image && theme.background.image.startsWith('data:')) {
+        const mimeType = theme.background.image.split(';base64,')[0].split(':')[1];
+        const extension = mimeType.split('/')[1];
+        imageName = `background.${extension}`;
+    }
+
+    // Create a copy of the theme object to modify it without affecting the original
+    const themeToUpload = JSON.parse(JSON.stringify(theme));
+    if (themeToUpload.background && themeToUpload.background.image) {
+        // Replace the base64 image with the image name in the JSON
+        themeToUpload.background.image = imageName;
+    }
+
+    const success = await ipcRenderer.invoke('upload-theme', {
+        author: userInfo.username,
+        name: theme.name, 
+        themeObject: themeToUpload, // The JSON with image name
+        base64Image: theme.background.image, // The original Base64 string
+        webhookUrl: webhookUrl
+    });
+    if (success) console.info("Theme and image uploaded successfully!");
 }
 
 export function editTheme(theme) {
@@ -421,9 +589,16 @@ export function editTheme(theme) {
         
         if (theme.background.image) {
             window.currentBackgroundImage = theme.background.image;
+            // Try to recover filename if it's not a base64 string
+            if (!theme.background.image.startsWith('data:')) {
+                window.currentBackgroundImageName = theme.background.image;
+            } else {
+                window.currentBackgroundImageName = 'background';
+            }
+            
             document.getElementById('bg-preview-img').src = theme.background.image;
             document.getElementById('bg-preview').style.display = 'block';
-            document.getElementById('bg-image-name').textContent = 'Background image loaded';
+            document.getElementById('bg-image-name').textContent = window.currentBackgroundImageName === 'background' ? 'Background image loaded' : `Selected: ${window.currentBackgroundImageName}`;
             document.getElementById('clear-bg-image-btn').style.display = 'inline-block';
         } else {
             clearBackgroundImage();
@@ -576,6 +751,7 @@ function handleBackgroundImageUpload(event) {
     reader.onload = (e) => {
         const imageData = e.target.result;
         window.currentBackgroundImage = imageData;
+        window.currentBackgroundImageName = file.name;
         
         const preview = document.getElementById('bg-preview');
         const previewImg = document.getElementById('bg-preview-img');
@@ -588,6 +764,7 @@ function handleBackgroundImageUpload(event) {
         hasUnsavedChanges = true;
         const bgConfig = {
             image: imageData,
+            imagePath: file.path,
             position: document.getElementById('bg-position').value,
             scale: document.getElementById('bg-scale').value,
             repeat: document.getElementById('bg-background-repeat').value
@@ -657,13 +834,13 @@ export function saveTheme() {
     alert(i18n.t('theme.saved'));
 }
 
-export async function renderMarketplace() {
+export async function renderMarketplace(forceRefresh = false) {
     const container = document.getElementById('marketplace-list');
     if (!container) return;
     
     container.innerHTML = '<div class="loading-message" style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-secondary);">Fetching themes from GitHub...</div>';
 
-    const themes = await fetchCommunityThemes();
+    const themes = await fetchCommunityThemes(forceRefresh);
     container.innerHTML = '';
 
     if (themes.length === 0) {

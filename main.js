@@ -397,6 +397,77 @@ ipcMain.handle('browse-games-and-emus', async (event, selectedDrive) => {
   }
 });
 
+ipcMain.handle('upload-theme', async (event, { author, name, themeObject, base64Image, webhookUrl }) => {
+    if (!webhookUrl) {
+        log.error("Upload failed: No webhook URL provided.");
+        return false;
+    }
+    const formData = new FormData();
+
+    // Ensure the author field is set in the theme object
+    themeObject.author = author;
+
+    // 1. Thread Metadata
+    const payload = {
+        content: `New theme submission: **${name}** by user **${author}**`,
+        thread_name: name,
+    };
+    formData.append("payload_json", JSON.stringify(payload));
+
+    // 2. Attach theme.json
+    const jsonBlob = new Blob([JSON.stringify(themeObject, null, 2)], { type: 'application/json' });
+    formData.append("files[0]", jsonBlob, "theme.json");
+
+    // 3. Robust Image/GIF Conversion
+    try {
+        let imageData;
+        let mimeType = 'image/png'; // Default
+        let extension = 'png';
+
+        if (base64Image.includes(';base64,')) {
+            // It's a full Data URL (e.g., data:image/gif;base64,...)
+            const parts = base64Image.split(';base64,');
+            mimeType = parts[0].split(':')[1];
+            imageData = parts[1];
+            extension = mimeType.split('/')[1];
+        } else {
+            // It's already raw Base64 data
+            imageData = base64Image;
+            // Attempt to guess extension or keep default
+            extension = 'gif'; 
+            mimeType = 'image/gif';
+        }
+
+        if (!imageData) {
+            throw new Error("Base64 data is empty or invalid.");
+        }
+
+        // Use the filename from the themeObject if it exists, otherwise use preview
+        const imageFileName = (themeObject.background && themeObject.background.image) 
+            ? themeObject.background.image 
+            : `preview.${extension}`;
+
+        // The Fix: Convert the cleaned string to a Buffer
+        const imageBuffer = Buffer.from(imageData, 'base64');
+        const imageBlob = new Blob([imageBuffer], { type: mimeType });
+        
+        formData.append("files[1]", imageBlob, imageFileName);
+        console.log(`Successfully prepared ${imageFileName} for upload.`);
+
+    } catch (err) {
+        console.error("Image conversion failed:", err.message);
+        // We can still return true if the JSON part is okay, or false to stop
+    }
+
+    try {
+        const response = await fetch(webhookUrl, { method: 'POST', body: formData });
+        return response.ok;
+    } catch (error) {
+        console.error("Webhook Error:", error);
+        return false;
+    }
+});
+
 // Function to read all platform configuration files
 async function getPlatformConfigs() {
   const platformConfigs = [];

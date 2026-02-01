@@ -29,8 +29,46 @@
 }
 
 @keyframes modalFadeIn {
-    from { opacity: 0; transform: translate(-50%, -45%); }
-    to { opacity: 1; transform: translate(-50%, -50%); }
+    from { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
+    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes modalFadeInMoved {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.theme-manager-modal.moved {
+    transform: none !important; /* Ensure no translate is applied if moved */
+    animation: modalFadeInMoved 0.3s ease-out;
+}
+
+.theme-manager-modal.smooth-reset {
+    transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1); /* Slower and smoother */
+}
+
+.theme-manager-modal.docked-right {
+    top: 0 !important;
+    right: 0 !important;
+    left: auto !important;
+    bottom: 0 !important;
+    width: 400px !important;
+    max-width: 100vw;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    border-radius: 0;
+    transform: none !important;
+    border-top: none;
+    border-bottom: none;
+    border-right: none;
+    box-shadow: -5px 0 20px rgba(0,0,0,0.3);
+    margin: 0 !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Ensure solid background when docked */
+    background: var(--bg-primary) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
 }
 
 .theme-manager-header {
@@ -47,6 +85,36 @@
         margin: 0;
         text-transform: uppercase;
         color: var(--accent-color);
+    }
+
+    .window-controls {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .pin-btn {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        padding: 0;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        
+        &:hover {
+            color: var(--accent-color);
+            transform: scale(1.1);
+        }
+        
+        &.active {
+            color: var(--accent-color);
+            transform: rotate(45deg);
+        }
     }
 }
 

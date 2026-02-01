@@ -161,9 +161,12 @@
     <!-- Theme Manager Modal -->
     <div id="theme-manager-modal" class="theme-manager-modal glass">
         <div class="theme-manager-content">
-            <div class="theme-manager-header">
+            <div id="theme-manager-header" class="theme-manager-header">
                 <h2>Theme Manager</h2>
-                <button id="close-theme-manager" class="close-btn">&times;</button>
+                <div class="window-controls">
+                    <button id="pin-theme-manager" class="pin-btn" title="Dock to RightSide">📌</button>
+                    <button id="close-theme-manager" class="close-btn">&times;</button>
+                </div>
             </div>
             
             <div class="theme-manager-body">
@@ -381,7 +384,10 @@
 
                 <div id="marketplace-view" class="tab-content" style="display: none;">
                     <div class="theme-manager-section">
-                        <h3>Community Workshop</h3>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h3 style="margin: 0;">Community Workshop</h3>
+                            <button id="refresh-themes-btn" class="action-btn small" title="Refresh Themes">🔄 Refresh</button>
+                        </div>
                         <div id="marketplace-list" class="marketplace-grid">
                         </div>
                     </div>
@@ -389,6 +395,23 @@
             </div>
         </div>
     </div>
+    <!-- Webhook Input Modal -->
+    <div id="webhook-modal" class="modal glass" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
+        <div class="modal-content" style="background: var(--bg-secondary); padding: 20px; border-radius: 8px; width: 400px; max-width: 90%; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: 1px solid var(--border-color);">
+            <h3 style="margin-top: 0;">Enter Discord Webhook URL</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                To upload themes, please provide a valid Discord Webhook URL. This will be saved locally.
+                <br>
+                <a href="https://discord.gg/EtKvZ2F" target="_blank" style="color: var(--accent-color); text-decoration: none; font-size: 0.9em; margin-top: 5px; display: inline-block;">No webhook yet? Get it in the Discord</a>
+            </p>
+            <input type="text" id="webhook-input" placeholder="https://discord.com/api/webhooks/..." style="width: 100%; padding: 8px; margin-bottom: 15px; background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 4px;">
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button id="webhook-cancel-btn" class="action-btn remove-btn">Cancel</button>
+                <button id="webhook-save-btn" class="action-btn launch-btn">Save & Continue</button>
+            </div>
+        </div>
+    </div>
+
     <script src="./i18n.js"></script>
     <script src="./translations-loader.js"></script>
     <script src="dist/renderer.bundle.js"></script>

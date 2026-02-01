@@ -55,6 +55,11 @@ select {
     display: flex;
     flex-direction: column;
     height: 100vh;
+    transition: padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.theme-manager-docked .app-container {
+    padding-right: 400px;
 }
 
 .close-btn {
