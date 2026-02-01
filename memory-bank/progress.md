@@ -23,7 +23,7 @@
 - Memory Card Editor tool (Full-stretch responsive layout, dual-pane management)
 - Dedicated "Tools" navigation and overview view
 
-## What's Left to Build
+## What
 - Complete implementation of game detection and library management
 - Full theme management system with custom theme creation
 - Implement duplicate theme detection (include all color codes in filename to detect if there are already themes with exact same colors shared/uploaded)
@@ -41,10 +41,11 @@
     - Implemented file-based upload flow for both memory card slots using native file dialogs
     - Added centralized operation controls and bottom action bars
     - Extracted PS1 save icons from memory card files and rendered them in the UI (32x32px size)
-    - **Debugged and fixed issues with icon rendering (path: null error, incorrect palette/bitmap decoding)**
+    - Debugged and fixed issues with icon rendering (path: null error, incorrect palette/bitmap decoding)
 - Added dedicated "Tools" navigation logic to header
     - Created a "Tools Overview" grid view to browse available utilities
     - Implemented seamless switching between the library and tools views
+    - **Implemented responsive header with dynamic element visibility and layout adjustments based on screen size.**
 - Implemented automatic webhook re-configuration when theme upload fails (e.g., if webhook is deleted on Discord)
 
 ## Current Status
