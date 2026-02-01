@@ -19,18 +19,33 @@ export function initDocking() {
     }
 }
 
-export function toggleDock(modalId, pinBtnId, bodyClass) {
+export function toggleDock(modalId, pinBtnId, forceState = null) {
     const modal = document.getElementById(modalId);
     const pinBtn = document.getElementById(pinBtnId);
     
     if (!modal) return;
 
-    const isDocked = modal.classList.toggle('docked-right');
-    if (pinBtn) pinBtn.classList.toggle('active');
+    let isDocked;
+    if (forceState !== null) {
+        isDocked = forceState;
+        if (isDocked) modal.classList.add('docked-right');
+        else modal.classList.remove('docked-right');
+    } else {
+        isDocked = modal.classList.toggle('docked-right');
+    }
+    
+    if (pinBtn) {
+        if (isDocked) pinBtn.classList.add('active');
+        else pinBtn.classList.remove('active');
+    }
 
     if (isDocked) {
         dockedPanels.add(modalId);
         
+        // If it was closed/hidden, make sure it's shown before activating
+        modal.style.display = 'flex';
+        modal.classList.add('active');
+
         // If it's the only one, make it active
         if (dockedPanels.size === 1) {
             activatePanel(modalId);

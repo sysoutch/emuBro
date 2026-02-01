@@ -326,16 +326,19 @@ export function openThemeManager() {
     renderThemeManager();
     
     if (modal.classList.contains('docked-right')) {
-        // Keep it docked and ensure body class is present
-        import('./docking-manager').then(m => m.activatePanel('theme-manager-modal'));
-    } else if (modal.style.top || modal.style.left) {
-        modal.classList.add('moved');
+        // Use toggleDock to "re-dock" and trigger all logic
+        import('./docking-manager').then(m => m.toggleDock('theme-manager-modal', 'pin-theme-manager', true));
     } else {
-        modal.classList.remove('moved');
+        modal.classList.add('active');
+        modal.style.display = 'flex';
+        
+        if (modal.style.top || modal.style.left) {
+            modal.classList.add('moved');
+        } else {
+            modal.classList.remove('moved');
+        }
     }
     
-    modal.classList.add('active');
-    modal.style.display = 'flex';
     makeDraggable('theme-manager-modal', 'theme-manager-header');
 }
 

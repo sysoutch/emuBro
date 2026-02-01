@@ -63,16 +63,19 @@ export function openLanguageManager() {
     if (!modal) return;
 
     if (modal.classList.contains('docked-right')) {
-        // Keep it docked and ensure body class is present
-        import('./docking-manager').then(m => m.activatePanel('language-manager-modal'));
-    } else if (modal.style.top || modal.style.left) {
-        modal.classList.add('moved');
+        // Use toggleDock to "re-dock" and trigger all logic
+        import('./docking-manager').then(m => m.toggleDock('language-manager-modal', 'pin-language-manager', true));
     } else {
-        modal.classList.remove('moved');
+        modal.style.display = 'flex';
+        modal.classList.add('active');
+        
+        if (modal.style.top || modal.style.left) {
+            modal.classList.add('moved');
+        } else {
+            modal.classList.remove('moved');
+        }
     }
 
-    modal.style.display = 'flex';
-    modal.classList.add('active');
     loadLanguagesList();
     makeDraggable('language-manager-modal', 'language-manager-header');
 }
