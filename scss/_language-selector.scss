@@ -151,6 +151,7 @@
     border: 1px solid var(--border-color);
     border-radius: 4px;
     padding: 10px;
+    container-type: inline-size;
 }
 
 .lang-key-row {
@@ -160,6 +161,33 @@
     padding: 12px 15px;
     border-bottom: 1px solid var(--border-color);
     align-items: start;
+
+    /* Responsive adjustments for narrow containers (like when docked) */
+    @container (max-width: 600px) {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        
+        .key-label {
+            font-weight: bold;
+            color: var(--accent-color);
+            padding-bottom: 2px;
+        }
+        
+        .base-value {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            background: rgba(0,0,0,0.1);
+            padding: 5px 8px;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            
+            &::before {
+                content: "Original: ";
+                font-size: 0.8em;
+                opacity: 0.7;
+            }
+        }
+    }
     
     &:last-child {
         border-bottom: none;

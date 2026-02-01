@@ -54,3 +54,4 @@
 - Implemented IPC communication patterns
 - Added "Refresh Themes" button in marketplace to fetch community themes from GitHub dynamically
 - Implemented a unified docking system for floating panels with tabbed sidebar support
+- Fixed and perfected window docking persistence, layout shift, and transition logic
