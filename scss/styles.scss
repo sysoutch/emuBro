@@ -1,4 +1,6 @@
 // Import all SCSS partials
+$flag-icons-path: '../node_modules/flag-icons/flags';
+@import "../node_modules/flag-icons/sass/flag-icons";
 @import "variables";
 @import "global";
 @import "header";
@@ -10,3 +12,4 @@
 @import "footer";
 @import "glass-effect";
 @import "theme-manager";
+@import "language-selector";

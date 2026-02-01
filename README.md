@@ -1,27 +1,56 @@
+# emuBro
+
 ## :information_source: About emuBro
 
-emuBro is an open source retro game launcher for windows, linux and mac. It allows you to manage all your games and emulators such as snes9x, epsxe, pcsx2, dolphin or whatever you like
+emuBro is an open source retro game launcher for Windows, Linux, and macOS. It allows you to manage all your games and emulators such as snes9x, epsxe, pcsx2, dolphin, or whatever you like.
 
-Still in active development by @sysoutch - written in Java.
+This is a complete rewrite, now built with **Electron** and **Node.js** to provide a modern, highly customizable, and cross-platform experience.
 
 ![](https://preview.redd.it/zpx8ciq23a831.png?width=600&format=png&auto=webp&v=enabled&s=fc5c19c4f90500b829bd709fca996c38770af01c "Retro Game Launcher for cool kids")
 
 ## :fire: Features
 - User-friendly interface
 - Automatic game scanning and organization
-- Download game covers, emulators and tags
-- Add game ids
+- Download game covers, emulators, and tags
+- Add game IDs
 - Different views
-- Export gamelist to json
+- Export gamelist to JSON
 - Discord Rich Presence
+- **New:** Modern architecture using Web Technologies (HTML/CSS/JS)
+- **New:** Enhanced theming engine (SASS-based)
 
-## :warning: Prerequirements
-- [Java 11+](https://adoptium.net/de/temurin/releases/?version=11 "Java 11+") needs to be installed for emuBro to run.
+## :warning: Prerequisites
+
+### For Users
+- No additional software is required (Java is **no longer** needed). Just download and run!
+
+### For Developers
+- [Node.js](https://nodejs.org/) (Latest LTS recommended)
+- [Git](https://git-scm.com/)
 
 ## :wrench: Installation
-1. Download the latest version of emuBro from the releases page
-2. Extract the files and run the installer
-3. Launch emuBro and start playing your favorite classic games
+
+### Download Release
+1. Download the latest version of emuBro from the releases page.
+2. Run the installer (or executable).
+3. Launch emuBro and start playing your favorite classic games.
+
+### Build from Source
+If you want to run the latest development version:
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/sysoutch/emuBro.git
+   cd emuBro
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Start the application:
+   ```bash
+   npm start
+   ```
 
 ## :white_check_mark: Usage
 1. Launch emuBro
@@ -39,8 +68,10 @@ Still in active development by @sysoutch - written in Java.
 - Ask to Download / Search for resource package when missing
 
 ## :framed_picture: Themes
-emuBro has a bunch of nice looking dark and light themes already installed.
 
+emuBro has a bunch of nice looking dark and light themes already installed and features a rich theme management system. You can install new themes from the theme manager.
+
+### Dark Themes
 A few examples of some of the dark themes:
 [![](https://emubro.net/images/screenshots/emuBro-SS00.png)](https://emubro.net/images/screenshots/emuBro-SS00.png "emuBro Screenshot")
 
@@ -60,4 +91,4 @@ A few examples of some of the dark themes:
 - [Facebook](https://www.facebook.com/emubr0 "emuBro on Facebook")
 
 ## :pray: Contributing
-If you would like to contribute to emuBro, please fork the repository and submit a pull request.
+If you would like to contribute to emuBro, please fork the repository and submit a pull request. We welcome contributions for bug fixes, new features, and themes!

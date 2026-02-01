@@ -4,6 +4,7 @@ const { ipcRenderer } = require('electron');
 const log = require('electron-log');
 
 import { initI18n, populateLanguageSelector, updateUILanguage } from './js/i18n-manager';
+import { initLanguageManager } from './js/language-manager';
 import { 
     setTheme, 
     updateThemeSelector, 
@@ -85,14 +86,9 @@ async function initializeApp() {
         });
         updateUILanguage();
         populateLanguageSelector();
+        initLanguageManager();
 
-        const languageSelect = document.getElementById('language-select');
-        if (languageSelect) {
-            languageSelect.value = i18n.getLanguage();
-            languageSelect.addEventListener('change', (e) => {
-                i18n.setLanguage(e.target.value);
-            });
-        }
+        // Old select listener removed as it is now custom dropdown handled in i18n-manager
 
         // Load data
         const userInfo = await ipcRenderer.invoke('get-user-info');
@@ -185,7 +181,7 @@ function setupEventListeners() {
     
     if (closeThemeManagerBtn) closeThemeManagerBtn.addEventListener('click', () => {
         if (getHasUnsavedChanges()) {
-            if (!confirm(i18n.t('messages.unsavedChanges') || "You have unsaved changes. Are you sure you want to close?")) return;
+            if (!confirm(i18n.t('messages.unsavedChanges'))) return;
         }
         themeManagerModal.classList.remove('active');
         // If it was docked, we should probably keep it docked state or reset?
@@ -217,7 +213,7 @@ function setupEventListeners() {
         themeManagerModal.addEventListener('click', (e) => {
             if (e.target === themeManagerModal) {
                 if (getHasUnsavedChanges()) {
-                    if (!confirm(i18n.t('messages.unsavedChanges') || "You have unsaved changes. Are you sure you want to close?")) return;
+                    if (!confirm(i18n.t('messages.unsavedChanges'))) return;
                 }
                 themeManagerModal.classList.remove('active');
                 hideThemeForm();
@@ -250,7 +246,7 @@ function setupEventListeners() {
     // Theme Form Actions
     const createThemeBtn = document.getElementById('create-theme-btn');
     if (createThemeBtn) createThemeBtn.addEventListener('click', () => {
-        document.getElementById('form-title').textContent = 'Create New Theme';
+        document.getElementById('form-title').textContent = i18n.t('theme.createTitle');
         resetThemeForm();
         document.getElementById('theme-form').style.display = 'flex';
         setupColorPickerListeners();

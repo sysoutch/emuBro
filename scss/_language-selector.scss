@@ -1,0 +1,203 @@
+.language-selector-wrapper {
+    position: relative;
+    width: 200px;
+}
+
+.custom-select {
+    position: relative;
+    width: 100%;
+    cursor: pointer;
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-size: 14px;
+    user-select: none;
+
+    .selected-option {
+        padding: 8px 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        justify-content: space-between;
+
+        &::after {
+            content: '▼';
+            font-size: 10px;
+            color: var(--text-secondary);
+        }
+    }
+
+    .options-list {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        background-color: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 0 0 4px 4px;
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+
+        &.show {
+            display: block;
+        }
+
+        li {
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+
+            &:hover {
+                background-color: var(--accent-color);
+                color: #fff;
+            }
+
+            &.selected {
+                background-color: rgba(var(--accent-color-rgb), 0.2);
+                color: var(--accent-color);
+            }
+        }
+    }
+}
+
+.fi {
+    border-radius: 2px;
+    box-shadow: 0 0 2px rgba(0,0,0,0.5);
+    width: 1.33em;
+    height: 1em;
+    line-height: 1em;
+    display: inline-block;
+}
+
+// Language Manager Styles
+.language-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.language-card {
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    
+    .lang-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 1.1em;
+        font-weight: bold;
+        
+        .lang-code {
+            color: var(--text-secondary);
+            font-size: 0.9em;
+            font-weight: normal;
+        }
+    }
+    
+    .lang-progress {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        
+        .progress-bar {
+            flex: 1;
+            height: 6px;
+            background-color: rgba(0,0,0,0.3);
+            border-radius: 3px;
+            overflow: hidden;
+            
+            .progress-fill {
+                height: 100%;
+                background-color: var(--accent-color);
+                border-radius: 3px;
+            }
+        }
+        
+        .progress-text {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            width: 35px;
+            text-align: right;
+        }
+    }
+    
+    .lang-actions {
+        margin-top: 5px;
+        display: flex;
+        justify-content: flex-end;
+    }
+}
+
+.lang-keys-list {
+    max-height: 400px;
+    overflow-y: auto;
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 10px;
+}
+
+.lang-key-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    padding: 10px;
+    border-bottom: 1px solid var(--border-color);
+    align-items: start;
+    
+    &:last-child {
+        border-bottom: none;
+    }
+    
+    &.missing {
+        border-left: 3px solid var(--danger-color);
+        background-color: rgba(var(--danger-color-rgb), 0.1);
+    }
+    
+    .key-label {
+        font-family: monospace;
+        font-size: 0.9em;
+        color: var(--text-secondary);
+        word-break: break-all;
+    }
+    
+    .base-value {
+        color: var(--text-primary);
+        font-size: 0.9em;
+    }
+    
+    .target-value {
+        textarea {
+            width: 100%;
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 5px;
+            border-radius: 4px;
+            resize: vertical;
+            min-height: 40px;
+            font-family: inherit;
+            
+            &:focus {
+                border-color: var(--accent-color);
+                outline: none;
+            }
+        }
+    }
+}

@@ -36,7 +36,7 @@ export function showToolView(tool) {
                 renderCheatCodesTool();
                 break;
             default:
-                gamesContainer.innerHTML = '<p>Tool not implemented yet.</p>';
+                gamesContainer.innerHTML = `<p>${i18n.t('tools.notImplemented')}</p>`;
         }
     }
 }
@@ -46,21 +46,21 @@ function renderMemoryCardTool() {
     const toolContent = document.createElement('div');
     toolContent.className = 'tool-content';
     toolContent.innerHTML = `
-        <h3>Memory Card Reader</h3>
-        <p>This tool allows you to read and write data to memory cards.</p>
+        <h3>${i18n.t('tools.memoryCardReader')}</h3>
+        <p>${i18n.t('tools.memoryCardDesc')}</p>
         <div class="tool-controls">
-            <button id="read-memory-btn" class="action-btn">Read Memory Card</button>
-            <button id="write-memory-btn" class="action-btn">Write Memory Card</button>
+            <button id="read-memory-btn" class="action-btn">${i18n.t('tools.readCard')}</button>
+            <button id="write-memory-btn" class="action-btn">${i18n.t('tools.writeCard')}</button>
         </div>
         <div id="memory-output" class="tool-output"></div>
     `;
     gamesContainer.appendChild(toolContent);
     
     document.getElementById('read-memory-btn').addEventListener('click', () => {
-        alert('Memory card reading functionality would be implemented here.');
+        alert(i18n.t('tools.placeholderAlert', {feature: i18n.t('tools.readCard')}));
     });
     document.getElementById('write-memory-btn').addEventListener('click', () => {
-        alert('Memory card writing functionality would be implemented here.');
+        alert(i18n.t('tools.placeholderAlert', {feature: i18n.t('tools.writeCard')}));
     });
 }
 
@@ -69,17 +69,17 @@ function renderRomRipperTool() {
     const toolContent = document.createElement('div');
     toolContent.className = 'tool-content';
     toolContent.innerHTML = `
-        <h3>ROM Ripper</h3>
-        <p>This tool allows you to rip ROMs from optical media.</p>
+        <h3>${i18n.t('tools.romRipper')}</h3>
+        <p>${i18n.t('tools.romRipperDesc')}</p>
         <div class="tool-controls">
-            <button id="rip-rom-btn" class="action-btn">Start ROM Rip</button>
+            <button id="rip-rom-btn" class="action-btn">${i18n.t('tools.startRip')}</button>
         </div>
         <div id="rom-output" class="tool-output"></div>
     `;
     gamesContainer.appendChild(toolContent);
     
     document.getElementById('rip-rom-btn').addEventListener('click', () => {
-        alert('ROM ripping functionality would be implemented here.');
+        alert(i18n.t('tools.placeholderAlert', {feature: i18n.t('tools.romRipper')}));
     });
 }
 
@@ -88,18 +88,18 @@ function renderGameDatabaseTool() {
     const toolContent = document.createElement('div');
     toolContent.className = 'tool-content';
     toolContent.innerHTML = `
-        <h3>Game Database</h3>
-        <p>This tool allows you to search and manage your game database.</p>
+        <h3>${i18n.t('tools.gameDatabase')}</h3>
+        <p>${i18n.t('tools.gameDatabaseDesc')}</p>
         <div class="tool-controls">
-            <input type="text" id="db-search" placeholder="Search games..." />
-            <button id="search-db-btn" class="action-btn">Search</button>
+            <input type="text" id="db-search" placeholder="${i18n.t('tools.searchGames')}" />
+            <button id="search-db-btn" class="action-btn">${i18n.t('tools.search')}</button>
         </div>
         <div id="db-results" class="tool-output"></div>
     `;
     gamesContainer.appendChild(toolContent);
     
     document.getElementById('search-db-btn').addEventListener('click', () => {
-        alert('Database search functionality would be implemented here.');
+        alert(i18n.t('tools.placeholderAlert', {feature: i18n.t('tools.gameDatabase')}));
     });
 }
 
@@ -108,23 +108,23 @@ function renderCheatCodesTool() {
     const toolContent = document.createElement('div');
     toolContent.className = 'tool-content';
     toolContent.innerHTML = `
-        <h3>Cheat Codes</h3>
-        <p>This tool allows you to manage and apply cheat codes to your games.</p>
+        <h3>${i18n.t('tools.cheatCodes')}</h3>
+        <p>${i18n.t('tools.cheatCodesDesc')}</p>
         <div class="tool-controls">
             <select id="game-select">
-                <option value="">Select a game</option>
+                <option value="">${i18n.t('tools.selectGame')}</option>
                 <option value="game1">Game 1</option>
                 <option value="game2">Game 2</option>
                 <option value="game3">Game 3</option>
             </select>
-            <button id="apply-cheat-btn" class="action-btn">Apply Cheat</button>
+            <button id="apply-cheat-btn" class="action-btn">${i18n.t('tools.applyCheat')}</button>
         </div>
         <div id="cheat-output" class="tool-output"></div>
     `;
     gamesContainer.appendChild(toolContent);
     
     document.getElementById('apply-cheat-btn').addEventListener('click', () => {
-        alert('Cheat code functionality would be implemented here.');
+        alert(i18n.t('tools.placeholderAlert', {feature: i18n.t('tools.cheatCodes')}));
     });
 }
 
@@ -136,21 +136,21 @@ export function showMemoryCardReader() {
         memoryCardReader.id = 'memory-card-reader';
         memoryCardReader.className = 'tool-content';
         memoryCardReader.innerHTML = `
-            <h2>Memory Card Reader</h2>
+            <h2>${i18n.t('tools.memoryCardReader')}</h2>
             <div class="memory-card-controls">
                 <div class="drive-selector">
-                    <label for="drive-selector-tools">Select Drive:</label>
+                    <label for="drive-selector-tools">${i18n.t('tools.selectDrive')}</label>
                     <select id="drive-selector-tools">
-                        <option value="">Select Drive</option>
+                        <option value="">${i18n.t('filters.selectDrive')}</option>
                     </select>
-                    <button id="search-memory-cards">Search for Memory Cards</button>
+                    <button id="search-memory-cards">${i18n.t('tools.searchMemoryCards')}</button>
                 </div>
                 <div class="memory-card-list">
-                    <h3>Found Memory Cards</h3>
+                    <h3>${i18n.t('tools.foundMemoryCards')}</h3>
                     <div id="memory-cards-container"></div>
                 </div>
                 <div class="memory-card-details">
-                    <h3>Memory Card Details</h3>
+                    <h3>${i18n.t('tools.memoryCardDetails')}</h3>
                     <div id="memory-card-details-content"></div>
                 </div>
             </div>
@@ -190,7 +190,7 @@ async function searchMemoryCards() {
         if (result.success) {
             displayMemoryCards(result.cards);
         } else {
-            alert('Failed to search for memory cards: ' + result.message);
+            alert(i18n.t('tools.searchFailed', {message: result.message}));
         }
     } catch (error) {
         log.error('Error searching for memory cards:', error);
@@ -202,7 +202,7 @@ function displayMemoryCards(cards) {
     if (!container) return;
 
     if (cards.length === 0) {
-        container.innerHTML = '<p>No memory cards found.</p>';
+        container.innerHTML = `<p>${i18n.t('tools.noMemoryCards')}</p>`;
         return;
     }
     
@@ -211,9 +211,9 @@ function displayMemoryCards(cards) {
         html += `
             <li class="memory-card-item" data-path="${card.path}">
                 <h4>${card.name}</h4>
-                <p>Size: ${card.size} bytes</p>
-                <p>Modified: ${new Date(card.modified).toLocaleString()}</p>
-                <button class="view-card-btn" data-path="${card.path}">View Details</button>
+                <p>${i18n.t('tools.size')}: ${card.size} bytes</p>
+                <p>${i18n.t('tools.modified')}: ${new Date(card.modified).toLocaleString()}</p>
+                <button class="view-card-btn" data-path="${card.path}">${i18n.t('tools.viewDetails')}</button>
             </li>
         `;
     });
@@ -235,7 +235,7 @@ async function readMemoryCard(cardPath) {
         if (result.success) {
             displayMemoryCardDetails(result.data);
         } else {
-            alert('Failed to read memory card: ' + result.message);
+            alert(i18n.t('tools.readFailed', {message: result.message}));
         }
     } catch (error) {
         log.error('Error reading memory card:', error);
@@ -251,8 +251,8 @@ function displayMemoryCardDetails(data) {
     } else {
         container.innerHTML = `
             <div class="memory-card-data">
-                <h4>Memory Card Data</h4>
-                <p><strong>Format:</strong> JSON</p>
+                <h4>${i18n.t('tools.memoryCardDetails')}</h4>
+                <p><strong>${i18n.t('tools.format')}:</strong> JSON</p>
                 <pre>${JSON.stringify(data, null, 2)}</pre>
             </div>
         `;

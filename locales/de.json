@@ -67,7 +67,8 @@
       "rating": "Bewertung",
       "genre": "Genre",
       "price": "Preis",
-      "free": "Kostenlos"
+      "free": "Kostenlos",
+      "unknown": ""
     },
     "filters": {
       "search": "Spiele suchen...",
@@ -112,17 +113,65 @@
       "customTheme": "Benutzerdefiniertes Design",
       "active": "Aktiv",
       "saved": "Design erfolgreich gespeichert!",
-      "editTheme": "Design bearbeiten"
+      "editTheme": "Design bearbeiten",
+      "add": "",
+      "addedToThemes": "",
+      "bgRepeatOptions": {
+        "noRepeat": "",
+        "repeat": "",
+        "repeatX": "",
+        "repeatY": ""
+      },
+      "by": "",
+      "communityWorkshop": "",
+      "cornerStyle": "",
+      "cornerStyleOptions": {
+        "rounded": "",
+        "semiRounded": "",
+        "sharp": ""
+      },
+      "createTitle": "",
+      "custom": "",
+      "fetchingThemes": "",
+      "globalOptions": "",
+      "loadThemesError": "",
+      "official": "",
+      "overrideBackground": "",
+      "presets": "",
+      "preview": "",
+      "refresh": "",
+      "remove": "",
+      "resetDefaults": "",
+      "uploadSuccess": ""
     },
     "language": {
       "name": "Deutsch",
-      "flag": "🇩🇪",
+      "flag": "de",
       "selectLanguage": "Sprache auswählen",
       "english": "English",
       "spanish": "Español",
       "french": "Français",
       "german": "Deutsch",
-      "japanese": "日本語"
+      "japanese": "日本語",
+      "addNew": "",
+      "alreadyExists": "",
+      "createError": "",
+      "editing": "",
+      "enterCode": "",
+      "installed": "",
+      "invalidCode": "",
+      "loadError": "",
+      "loading": "",
+      "managerTitle": "",
+      "reloadPrompt": "",
+      "saveError": "",
+      "saveSuccess": "",
+      "searchPlaceholder": "",
+      "showingFirst": "",
+      "tabs": {
+        "editor": "",
+        "languages": ""
+      }
     },
     "buttons": {
       "save": "Speichern",
@@ -133,7 +182,10 @@
       "close": "Schließen",
       "yes": "Ja",
       "no": "Nein",
-      "ok": "OK"
+      "ok": "OK",
+      "back": "",
+      "saveAndContinue": "",
+      "saveChanges": ""
     },
     "messages": {
       "loadingUserInfo": "Wird geladen...",
@@ -147,7 +199,10 @@
       "enterThemeName": "Bitte geben Sie einen Design-Namen ein",
       "failedToRemoveGame": "Fehler beim Entfernen des Spiels. Bitte überprüfen Sie die Protokolle für weitere Informationen.",
       "failedToLaunchGame": "Fehler beim Starten des Spiels. Bitte überprüfen Sie die Protokolle für weitere Informationen.",
-      "failedToInitialize": "Fehler beim Initialisieren der Anwendung. Bitte überprüfen Sie die Protokolle für weitere Informationen."
+      "failedToInitialize": "Fehler beim Initialisieren der Anwendung. Bitte überprüfen Sie die Protokolle für weitere Informationen.",
+      "confirmDeleteTheme": "",
+      "failedToAction": "",
+      "unsavedChanges": ""
     },
     "table": {
       "cover": "Cover",
@@ -179,7 +234,23 @@
       "cheatCodes": "Cheat-Codes",
       "selectGame": "Spiel auswählen",
       "applyCheat": "Cheat anwenden",
-      "notImplemented": "Werkzeug noch nicht implementiert."
+      "notImplemented": "Werkzeug noch nicht implementiert.",
+      "cheatCodesDesc": "",
+      "format": "",
+      "foundMemoryCards": "",
+      "gameDatabaseDesc": "",
+      "memoryCardDesc": "",
+      "memoryCardDetails": "",
+      "modified": "",
+      "noMemoryCards": "",
+      "placeholderAlert": "",
+      "readFailed": "",
+      "romRipperDesc": "",
+      "searchFailed": "",
+      "searchMemoryCards": "",
+      "selectDrive": "",
+      "size": "",
+      "viewDetails": ""
     },
     "themeManager": {
       "selectDrive": "Laufwerk auswählen",
@@ -201,6 +272,15 @@
       "totalEmulators": "Gesamtzahl der Emulatoren",
       "playTime": "Spielzeit",
       "hours": "Stunden"
+    },
+    "dropZone": {
+      "text": ""
+    },
+    "webhook": {
+      "description": "",
+      "getIt": "",
+      "invalidUrl": "",
+      "title": ""
     }
   }
 }

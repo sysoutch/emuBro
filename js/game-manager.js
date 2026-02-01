@@ -22,7 +22,7 @@ export function renderGames(gamesToRender) {
     gamesContainer.innerHTML = '';
     
     if (gamesToRender.length === 0) {
-        gamesContainer.innerHTML = '<p>No games found.</p>';
+        gamesContainer.innerHTML = `<p>${i18n.t('gameGrid.noGamesFound')}</p>`;
         return;
     }
     
@@ -62,7 +62,7 @@ export function createGameCard(game) {
             <h3 class="game-title">${game.name}</h3>
             <span class="game-platform-badge">
                 <img src="${platformIcon}" alt="${game.platformShortName}" class="game-platform-icon" loading="lazy" onerror="this.style.display='none'" />
-                <span>${game.platformName || game.platformShortName || 'Unknown'}</span>
+                <span>${game.platformName || game.platformShortName || i18n.t('gameDetails.unknown')}</span>
             </span>
             <div class="game-more">
                 <div class="game-rating">★ ${game.rating}</div>
@@ -103,7 +103,7 @@ export async function searchForGamesAndEmulators() {
             setFilteredGames(newGames);
             renderGames(newGames);
             result.platforms.forEach(addPlatformFilterOption);
-            alert(i18n.t('messages.foundGames', { count: result.games.length }) || `Found ${result.games.length} games!`);
+            alert(i18n.t('messages.foundGames', { count: result.games.length }));
         }
     } catch (error) {
         log.error('Search failed:', error);
@@ -132,7 +132,7 @@ export async function handleGameAction(event) {
         }
     } catch (error) {
         log.error(`Failed to ${action} game ${gameId}:`, error);
-        alert(`Failed to ${action} the game. Please check the logs for more information.`);
+        alert(i18n.t('messages.failedToAction', { action: action }));
     }
 }
 
@@ -297,7 +297,7 @@ function renderGamesAsList(gamesToRender) {
                 <h3 class="list-item-title">${game.name}</h3>
                 <span class="list-item-platform-badge">
                     <img src="${platformIcon}" alt="${game.platformShortName}" class="list-platform-icon" loading="lazy" onerror="this.style.display='none'" />
-                    <span>${game.platformName || game.platformShortName || 'Unknown'}</span>
+                    <span>${game.platformName || game.platformShortName || i18n.t('gameDetails.unknown')}</span>
                 </span>
                 <p class="list-item-genre">${game.genre}</p>
                 <div class="list-item-meta">
@@ -366,7 +366,7 @@ function renderGamesAsSlideshow(gamesToRender) {
                 <h2 class="slideshow-title">${game.name}</h2>
                 <span class="slideshow-platform-badge">
                     <img src="${platformIcon}" alt="${game.platformShortName}" class="slideshow-platform-icon" loading="lazy" onerror="this.style.display='none'" />
-                    <span>${game.platformName || game.platformShortName || 'Unknown'}</span>
+                    <span>${game.platformName || game.platformShortName || i18n.t('gameDetails.unknown')}</span>
                 </span>
                 <p class="slideshow-genre">${game.genre}</p>
                 <div class="slideshow-meta">
@@ -454,7 +454,7 @@ function renderGamesAsRandom(gamesToRender) {
                 <h2 class="random-title">${game.name}</h2>
                 <span class="random-platform-badge">
                     <img src="${platformIcon}" alt="${game.platformShortName}" class="random-platform-icon" loading="lazy" onerror="this.style.display='none'" />
-                    <span>${game.platformName || game.platformShortName || 'Unknown'}</span>
+                    <span>${game.platformName || game.platformShortName || i18n.t('gameDetails.unknown')}</span>
                 </span>
                 <p class="random-genre">${game.genre}</p>
                 <div class="random-meta">
@@ -528,7 +528,7 @@ export function showGameDetails(game) {
                 <img id="detail-game-image" src="" alt="${game.name}" class="detail-game-image" />
             </div>
             <div class="game-detail-row">
-                <p><strong>Platform:</strong> ${game.platformName || game.platformShortName || 'Unknown'}</p>
+                <p><strong>Platform:</strong> ${game.platformName || game.platformShortName || i18n.t('gameDetails.unknown')}</p>
                 <p><strong>Rating:</strong> ${game.rating}</p>
                 <p><strong>Genre:</strong> ${game.genre}</p>
                 <p><strong>Price:</strong> ${game.price > 0 ? `$${game.price.toFixed(2)}` : 'Free'}</p>

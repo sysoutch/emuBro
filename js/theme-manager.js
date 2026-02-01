@@ -320,8 +320,8 @@ export function updateThemeSelector() {
 
     const customThemes = getCustomThemes();
     const options = [
-        { value: 'dark', label: 'Dark Theme' },
-        { value: 'light', label: 'Light Theme' },
+        { value: 'dark', label: i18n.t('theme.darkTheme') },
+        { value: 'light', label: i18n.t('theme.lightTheme') },
         ...customThemes.map(t => ({ value: t.id, label: t.name }))
     ];
     
@@ -371,7 +371,7 @@ export function renderThemeManager() {
         const isActive = currentTheme === theme;
         const item = createThemeItem(
             theme,
-            theme.charAt(0).toUpperCase() + theme.slice(1) + ' Theme',
+            i18n.t(`theme.${theme}Theme`),
             'preset',
             isActive,
             theme
@@ -427,7 +427,7 @@ function createThemeItem(id, name, type, isActive, themeData) {
     item.innerHTML += `
         <div class="theme-item-info">
             <span class="theme-item-name">${name}</span>
-            <span class="theme-item-type">${type === 'preset' ? 'Official' : 'Custom'}</span>
+            <span class="theme-item-type">${type === 'preset' ? i18n.t('theme.official') : i18n.t('theme.custom')}</span>
         </div>
     `;
 
@@ -513,7 +513,7 @@ async function uploadTheme(theme) {
             const onSave = () => {
                 const url = input.value.trim();
                 if (!url.startsWith('https://discord.com/api/webhooks/')) {
-                    alert("Invalid Webhook URL. It must start with https://discord.com/api/webhooks/");
+                    alert(i18n.t('webhook.invalidUrl'));
                     return; // Don't close, let user fix
                 }
                 localStorage.setItem('discordWebhookUrl', url);
@@ -566,7 +566,7 @@ async function uploadTheme(theme) {
 
 export function editTheme(theme) {
     editingThemeId = theme.id;
-    document.getElementById('form-title').textContent = 'Edit Theme';
+    document.getElementById('form-title').textContent = i18n.t('theme.editTheme');
     document.getElementById('theme-name').value = theme.name;
     document.getElementById('color-bg-primary').value = theme.colors.bgPrimary;
     document.getElementById('color-text-primary').value = theme.colors.textPrimary;
@@ -598,7 +598,7 @@ export function editTheme(theme) {
             
             document.getElementById('bg-preview-img').src = theme.background.image;
             document.getElementById('bg-preview').style.display = 'block';
-            document.getElementById('bg-image-name').textContent = window.currentBackgroundImageName === 'background' ? 'Background image loaded' : `Selected: ${window.currentBackgroundImageName}`;
+            document.getElementById('bg-image-name').textContent = window.currentBackgroundImageName === 'background' ? i18n.t('theme.backgroundImageLoaded') : `${window.currentBackgroundImageName}`;
             document.getElementById('clear-bg-image-btn').style.display = 'inline-block';
         } else {
             clearBackgroundImage();
@@ -838,13 +838,13 @@ export async function renderMarketplace(forceRefresh = false) {
     const container = document.getElementById('marketplace-list');
     if (!container) return;
     
-    container.innerHTML = '<div class="loading-message" style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-secondary);">Fetching themes from GitHub...</div>';
+    container.innerHTML = `<div class="loading-message" style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-secondary);">${i18n.t('theme.fetchingThemes')}</div>`;
 
     const themes = await fetchCommunityThemes(forceRefresh);
     container.innerHTML = '';
 
     if (themes.length === 0) {
-        container.innerHTML = '<div class="error-message" style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--danger-color);">Could not load themes. Please check your connection or try again later.</div>';
+        container.innerHTML = `<div class="error-message" style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--danger-color);">${i18n.t('theme.loadThemesError')}</div>`;
         return;
     }
 
@@ -865,7 +865,7 @@ export async function renderMarketplace(forceRefresh = false) {
 
         card.innerHTML = `
             <div class="marketplace-card-header" style="${bgPreviewStyle} height: 120px; border-radius: 6px; margin-bottom: 10px; position: relative; border: 1px solid var(--border-color); overflow: hidden;">
-                <span class="author-tag" style="position: absolute; bottom: 8px; right: 8px; margin: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">By ${theme.author}</span>
+                <span class="author-tag" style="position: absolute; bottom: 8px; right: 8px; margin: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">${i18n.t('theme.by', {author: theme.author})}</span>
             </div>
             <div class="theme-item-info">
                 <span class="theme-item-name" style="font-weight: bold; font-size: 1.1rem;">${theme.name}</span>
@@ -876,10 +876,10 @@ export async function renderMarketplace(forceRefresh = false) {
                 <div class="theme-color-dot" style="background-color: ${theme.colors.textPrimary}" title="Text"></div>
             </div>
             <div style="display: flex; gap: 8px;">
-                <button class="action-btn small preview-btn" style="flex: 1; background: var(--bg-tertiary);">Preview</button>
+                <button class="action-btn small preview-btn" style="flex: 1; background: var(--bg-tertiary);">${i18n.t('theme.preview')}</button>
                 ${isInstalled 
-                    ? `<button class="action-btn remove-btn small marketplace-remove-btn" data-id="${installedTheme.id}" style="flex: 1;">Remove</button>`
-                    : `<button class="action-btn launch-btn small add-btn" data-id="${theme.id}" style="flex: 1;">Add</button>`
+                    ? `<button class="action-btn remove-btn small marketplace-remove-btn" data-id="${installedTheme.id}" style="flex: 1;">${i18n.t('theme.remove')}</button>`
+                    : `<button class="action-btn launch-btn small add-btn" data-id="${theme.id}" style="flex: 1;">${i18n.t('theme.add')}</button>`
                 }
             </div>
         `;
@@ -897,7 +897,7 @@ export async function renderMarketplace(forceRefresh = false) {
             card.querySelector('.add-btn').addEventListener('click', () => {
                 const newTheme = { ...theme, id: 'custom_' + Date.now() };
                 saveCustomTheme(newTheme);
-                alert(`"${theme.name}" has been added to your themes!`);
+                alert(i18n.t('theme.addedToThemes', {name: theme.name}));
                 renderMarketplace(); // Refresh marketplace to show "Remove" button
             });
         }
@@ -920,4 +920,21 @@ export function getHasUnsavedChanges() {
 
 export function setHasUnsavedChanges(val) {
     hasUnsavedChanges = val;
+}
+
+export function toggleTheme() {
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+    updateThemeSelector();
+}
+
+export function invertColors() {
+    const root = document.documentElement;
+    const currentFilter = root.style.filter || '';
+    if (currentFilter.includes('invert(1)')) {
+        root.style.filter = currentFilter.replace('invert(1)', '').trim();
+    } else {
+        root.style.filter = (currentFilter + ' invert(1)').trim();
+    }
 }

@@ -1,7 +1,7 @@
 {
   "af": {
     "app": {
-      "title": "emuBro",
+      "title": "emuBroer",
       "description": "Speletjie Biblioteek Bestuurder"
     },
     "header": {
@@ -118,7 +118,7 @@
     },
     "language": {
       "name": "Afrikaans",
-      "flag": "🇿🇦",
+      "flag": "za",
       "selectLanguage": "Kies Taal",
       "english": "Engels",
       "afrikaans": "Afrikaans",
@@ -186,6 +186,27 @@
       "selectGame": "Kies 'n speletjie",
       "applyCheat": "Pas Cheat toe",
       "notImplemented": "Gereedskap nog nie geïmplementeer nie."
+    },
+    "stats": {
+      "hours": "",
+      "playTime": "",
+      "totalEmulators": ""
+    },
+    "themeManager": {
+      "backgroundImageLoaded": "",
+      "clearImage": "",
+      "createNewTheme": "",
+      "editTheme": "",
+      "enableGlassEffect": "",
+      "glassEffectDesc": "",
+      "install": "",
+      "next": "",
+      "previous": "",
+      "searchGames": "",
+      "searching": "",
+      "selectDrive": "",
+      "shuffle": "",
+      "stop": ""
     }
   }
 }
