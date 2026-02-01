@@ -23,7 +23,12 @@ export function toggleDock(modalId, pinBtnId, forceState = null) {
     const modal = document.getElementById(modalId);
     const pinBtn = document.getElementById(pinBtnId);
     
-    if (!modal) return;
+    console.log(`[toggleDock] modalId: ${modalId}, pinBtnId: ${pinBtnId}, forceState: ${forceState}`);
+    
+    if (!modal) {
+        console.error(`[toggleDock] Modal ${modalId} not found`);
+        return;
+    }
 
     let isDocked;
     if (forceState !== null) {
@@ -34,28 +39,25 @@ export function toggleDock(modalId, pinBtnId, forceState = null) {
         isDocked = modal.classList.toggle('docked-right');
     }
     
+    console.log(`[toggleDock] isDocked: ${isDocked}`);
+    
     if (pinBtn) {
         if (isDocked) pinBtn.classList.add('active');
         else pinBtn.classList.remove('active');
     }
 
     if (isDocked) {
+        console.log(`[toggleDock] Docking panel ${modalId}`);
         dockedPanels.add(modalId);
         
         // If it was closed/hidden, make sure it's shown before activating
         modal.style.display = 'flex';
         modal.classList.add('active');
 
-        // If it's the only one, make it active
-        if (dockedPanels.size === 1) {
-            activatePanel(modalId);
-        } else {
-            // Hide other docked panels if we just docked a new one?
-            // Or just make the new one active
-            activatePanel(modalId);
-        }
+        activatePanel(modalId);
     } else {
-        removeFromDock(modalId);
+        console.log(`[toggleDock] Undocking panel ${modalId}`);
+        completelyRemoveFromDock(modalId);
         undockPanel(modalId);
     }
     

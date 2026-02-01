@@ -28,6 +28,9 @@ The current focus is on updating project documentation and maintaining the codeb
 - Added auto-centering logic for theme-manager when window is resized and modal is off-screen
 - Refined theme-manager resize behavior: slower/smoother reset and only when window shrinks
 - Implemented user-configurable Discord webhook for theme uploads (removed hardcoded URL)
+- Fixed and optimized window docking and persistence logic
+- Standardized layout shift behavior using a single `panel-docked` body class
+- Implemented explicit "re-docking" logic for reopening previously pinned windows
 
 ## Next Steps
 1. Push changes to remote repository (if requested)

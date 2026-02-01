@@ -46,3 +46,12 @@ emuBro-Reloaded follows an Electron-based architecture with clear separation bet
 3. Theme management system with custom and community themes
 4. Internationalization system with language selector
 5. Game detection and library organization system
+
+## Learned Patterns and Insights
+
+### Docking and Window Management Pattern
+- **Centralized Layout Control**: Use a single body class (e.g., `panel-docked`) as the source of truth for major layout shifts (like pushing content left). Avoid multiple window-specific body classes for layout as they lead to additive padding bugs.
+- **Persistence Logic**: When reopening windows, check their docked status (e.g., via `.docked-right` class or a Set). If they were docked, use a forced-docking call to re-initialize the layout shift and pin state.
+- **Forced State in Toggles**: The `toggleDock` function should support an optional `forceState` parameter to allow programmatic "re-docking" without accidentally triggering an "un-dock" due to simple toggling.
+- **Visibility Timing**: When re-docking a window during opening, ensure it is set to `display: flex` *before* activating the docking logic. This ensures CSS transitions for layout shifts are correctly triggered by the browser.
+- **State Cleanup**: When undocking, ensure the panel is removed from any active docking tracking Sets and that all layout-related body classes are cleaned up to prevent "stuck" padding.

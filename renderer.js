@@ -197,7 +197,7 @@ function setupEventListeners() {
     if (pinThemeManagerBtn) {
         pinThemeManagerBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            toggleDock('theme-manager-modal', 'pin-theme-manager', 'theme-manager-docked');
+            toggleDock('theme-manager-modal', 'pin-theme-manager');
         });
     }
 
@@ -205,7 +205,7 @@ function setupEventListeners() {
     if (pinLanguageManagerBtn) {
         pinLanguageManagerBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            toggleDock('language-manager-modal', 'pin-language-manager', 'language-manager-docked');
+            toggleDock('language-manager-modal', 'pin-language-manager');
         });
     }
 
