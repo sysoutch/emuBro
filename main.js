@@ -1,11 +1,10 @@
-const { app, BrowserWindow, Menu, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
 const path = require('path');
 const log = require('electron-log');
 const Store = require('electron-store');
 const fs = require('fs').promises;
 const fsSync = require('fs');
 const os = require('os');
-const { emit } = require('process');
 
 // Initialize the store for app settings
 const store = new Store();
@@ -57,7 +56,6 @@ ipcMain.on('minimize-window', () => {
 // Get available drives on the system
 ipcMain.handle('get-drives', async () => {
   try {
-    const homeDir = os.homedir();
     const drives = [];
     
     // Get platform-specific drives
@@ -265,7 +263,7 @@ ipcMain.handle('browse-games-and-emus', async (event, selectedDrive) => {
     const ignoreFoldersPath = path.join(__dirname, './emubro-resources', 'ignore-folders.json');
     let ignoreFolders = [];
     try {
-      const ignoreData = await fs.readFile(ignoreFoldersPath, 'utf8');
+      const ignoreData = await fsSync.readFileSync(ignoreFoldersPath, 'utf8');
       const ignoreJson = JSON.parse(ignoreData);
       ignoreFolders = ignoreJson['ignore-folders'] || [];
     } catch (ignoreErr) {
@@ -481,7 +479,7 @@ async function getPlatformConfigs() {
       
       try {
         if (fsSync.existsSync(configPath)) {
-          const configFile = await fs.readFile(configPath, 'utf8');
+          const configFile = await fsSync.readFileSync(configPath, 'utf8');
           const config = JSON.parse(configFile);
           // Add platform directory name for reference
           config.platformDir = platformDir;
@@ -560,6 +558,11 @@ ipcMain.handle('get-user-info', async () => {
   };
 });
 
+ipcMain.handle('open-file-dialog', async (event, options) => {
+  if (!mainWindow) return { canceled: true };
+  return await dialog.showOpenDialog(mainWindow, options);
+});
+
 ipcMain.handle('get-library-stats', async () => {
   const totalGames = games.length;
   const installedGames = games.filter(game => game.isInstalled).length;
@@ -588,33 +591,45 @@ ipcMain.handle('read-memory-card', async (event, cardPath) => {
     log.info('Reading memory card from:', cardPath);
     
     if (!fsSync.existsSync(cardPath)) {
+      log.error('File does not exist:', cardPath);
       return { success: false, message: "Memory card file not found" };
     }
     
     const stats = await fs.stat(cardPath);
-    const buffer = await fs.readFile(cardPath);
+    const buffer = await fsSync.readFileSync(cardPath);
     
-    // Determine format by size and header
-    if (stats.size === 128 * 1024) {
+    log.info(`Memory card size: ${stats.size} bytes`);
+
+    // PS1 Detection
+    // Standard size: 128KB (131072 bytes)
+    // DexDrive size: 131200 bytes (128KB + 128 byte header)
+    if (stats.size === 128 * 1024 || stats.size === 131200) {
       return parsePS1MemoryCard(buffer);
-    } else if (stats.size === 8 * 1024 * 1024 || stats.size === 16 * 1024 * 1024 || stats.size === 32 * 1024 * 1024 || stats.size === 64 * 1024 * 1024) {
+    } 
+    
+    // PS2 Detection
+    if (stats.size === 8 * 1024 * 1024 || stats.size === 16 * 1024 * 1024 || stats.size === 32 * 1024 * 1024 || stats.size === 64 * 1024 * 1024) {
       return parsePS2MemoryCard(buffer);
-    } else {
-      // Try to identify by header if size is unusual
-      const header = buffer.toString('ascii', 0, 11);
-      if (header === 'Sony PS ---') {
-        return parsePS1MemoryCard(buffer);
-      } else if (buffer.toString('ascii', 0, 28) === 'Sony PS2 Memory Card Format ') {
-        return parsePS2MemoryCard(buffer);
-      }
+    }
+
+    // Identify by Header
+    const ps1Magic = buffer.toString('ascii', 0, 11);
+    if (ps1Magic === 'Sony PS ---' || buffer.toString('ascii', 0, 2) === 'MC') {
+       return parsePS1MemoryCard(buffer);
     }
     
+    const ps2Magic = buffer.toString('ascii', 0, 28);
+    if (ps2Magic === 'Sony PS2 Memory Card Format ') {
+      return parsePS2MemoryCard(buffer);
+    }
+    
+    log.warn('Unrecognized memory card format at:', cardPath);
     return { 
       success: true, 
       data: { 
         format: 'Unknown',
         size: stats.size,
-        message: 'Unsupported memory card format'
+        message: 'Unsupported or unrecognized memory card format'
       } 
     };
   } catch (error) {
@@ -624,50 +639,61 @@ ipcMain.handle('read-memory-card', async (event, cardPath) => {
 });
 
 function parsePS1MemoryCard(buffer) {
-  // PS1 Memory Card: 128KB, 1 block = 8KB (8192 bytes)
-  // 16 blocks total. Block 0 is directory. Blocks 1-15 are data.
-  // Each block has 64 frames of 128 bytes.
-  
-  const blocks = [];
-  const headerFrame = buffer.slice(0, 128);
-  
-  if (headerFrame.toString('ascii', 0, 2) !== 'MC') {
-    // Some formats might not have the MC header at the very beginning if they have a custom header
-  }
-
-  // Parse directory frames (frames 1-15 of block 0)
-  for (let i = 1; i < 16; i++) {
-    const frame = buffer.slice(i * 128, (i + 1) * 128);
-    const status = frame[0]; // 0x51 = in use, 0xA1 = free
+  try {
+    let startOffset = 0;
     
-    if (status === 0x51) {
-      const size = (frame[4] | (frame[5] << 8) | (frame[6] << 16) | (frame[7] << 24));
-      const title = frame.slice(12, 12 + 64).toString('ascii').replace(/\0/g, '').trim();
-      const productCode = title.split('-')[0] || 'Unknown';
-      
-      blocks.push({
-        slot: i,
-        status: 'In Use',
-        size: size,
-        title: title,
-        productCode: productCode
-      });
+    if (buffer.length === 131200 && buffer.toString('ascii', 0, 11) === '123-456-STD') {
+       startOffset = 128;
+       log.info('Detected DexDrive header, skipping 128 bytes');
     }
-  }
 
-  return {
-    success: true,
-    data: {
-      format: 'PlayStation 1',
-      totalSize: buffer.length,
-      saves: blocks
+    const saves = [];
+    
+    for (let i = 1; i < 16; i++) {
+      const frameOffset = startOffset + (i * 128);
+      if (frameOffset + 128 > buffer.length) break;
+
+      const frame = buffer.slice(frameOffset, frameOffset + 128);
+      const status = frame[0]; 
+      
+      if (status === 0x51) {
+        const titleRaw = frame.slice(12, 12 + 64);
+        let title = '';
+        try {
+          title = titleRaw.toString('ascii').replace(/\0/g, '').trim();
+          if (!title) title = 'Untitled Save';
+        } catch (e) {
+          title = 'Unknown Title';
+        }
+
+        const productCode = title.substring(0, 12).trim() || 'N/A';
+        
+        saves.push({
+          slot: i,
+          status: 'In Use',
+          size: 8192,
+          title: title,
+          productCode: productCode
+        });
+      }
     }
-  };
+
+    log.info(`Parsed PS1 Card: Found ${saves.length} saves`);
+    return {
+      success: true,
+      data: {
+        format: 'PlayStation 1',
+        totalSize: buffer.length,
+        saves: saves
+      }
+    };
+  } catch (err) {
+    log.error('Error parsing PS1 memory card:', err);
+    return { success: false, message: 'Failed to parse PS1 memory card: ' + err.message };
+  }
 }
 
 function parsePS2MemoryCard(buffer) {
-  // PS2 Memory Card (VMC)
-  // Superblock is at offset 0
   const magic = buffer.toString('ascii', 0, 28);
   if (magic !== 'Sony PS2 Memory Card Format ') {
     return { success: false, message: "Invalid PS2 Memory Card format" };
@@ -677,7 +703,6 @@ function parsePS2MemoryCard(buffer) {
   const pagesPerBlock = buffer.readUInt16LE(0x2A);
   const pagesPerCluster = buffer.readUInt16LE(0x2C);
   
-  // Basic info for now, full MCS parsing is complex
   return {
     success: true,
     data: {
@@ -705,7 +730,6 @@ ipcMain.handle('browse-memory-cards', async (event, selectedDrive) => {
           try {
             const stat = await fs.lstat(itemPath);
             if (stat.isDirectory()) {
-              // Limit depth for performance
               if (!item.startsWith('$') && !item.startsWith('.')) {
                 await scan(itemPath);
               }

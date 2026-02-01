@@ -294,6 +294,25 @@ function setupEventListeners() {
         });
     });
 
+    // Header Navigation
+    const navLinks = document.querySelectorAll('.navigation a');
+    navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            navLinks.forEach(l => l.classList.remove('active'));
+            e.target.classList.add('active');
+            
+            const text = e.target.textContent.toLowerCase();
+            if (text === 'tools') {
+                showToolView(); // Show overview
+            } else if (text === 'library') {
+                // Return to library view
+                document.getElementById('games-header').textContent = i18n.t('views.featuredGames') || 'Featured Games';
+                renderGames(getFilteredGames());
+            }
+        });
+    });
+
     // Tools
     document.querySelectorAll('[data-tool]').forEach(link => {
         link.addEventListener('click', (e) => {
@@ -303,6 +322,7 @@ function setupEventListeners() {
     });
 
     const searchGamesBtn = document.getElementById('search-games-btn');
+
     if (searchGamesBtn) searchGamesBtn.addEventListener('click', searchForGamesAndEmulators);
 
     if (closeGameDetailsBtn) {

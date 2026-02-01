@@ -20,7 +20,8 @@
 - Game management system (game-manager.js) with multiple functional views (Cover, List, Table, Slideshow, Random)
 - Multi-language support with locale files
 - Webpack build system configured
-- Memory Card Editor tool (Responsive dual-pane management, full-screen stretch)
+- Memory Card Editor tool (Full-stretch responsive layout, dual-pane management)
+- Dedicated "Tools" navigation and overview view
 
 ## What's Left to Build
 - Complete implementation of game detection and library management
@@ -34,11 +35,14 @@
 
 ## Recent Changes
 - Implemented Memory Card Editor with professional dual-pane table-based layout
-    - Fixed responsive behavior by removing `overflow: hidden` and implementing media queries
-    - Added stacking support for smaller screens (under 1200px) with adjusted controls
+    - Optimized layout to fill 100% of available space by using absolute positioning and flex-grow
+    - Fixed responsive behavior with media queries and stacked layouts for smaller windows
     - Refined table visualization with sticky headers and responsive columns
     - Implemented file-based upload flow for both memory card slots
     - Added centralized operation controls and bottom action bars
+- Added dedicated "Tools" navigation logic to header
+    - Created a "Tools Overview" grid view to browse available utilities
+    - Implemented seamless switching between the library and tools views
 - Implemented automatic webhook re-configuration when theme upload fails (e.g., if webhook is deleted on Discord)
 
 ## Current Status

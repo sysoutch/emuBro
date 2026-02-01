@@ -16,12 +16,17 @@ export function showToolView(tool) {
     if (toolLink) toolLink.classList.add('active');
     
     if (gamesHeader) {
-        gamesHeader.textContent = tool.charAt(0).toUpperCase() + tool.slice(1).replace('-', ' ');
+        gamesHeader.textContent = tool ? (tool.charAt(0).toUpperCase() + tool.slice(1).replace('-', ' ')) : 'Tools';
     }
     
     if (gamesContainer) {
         gamesContainer.innerHTML = '';
         
+        if (!tool) {
+            renderToolsOverview();
+            return;
+        }
+
         switch(tool) {
             case 'memory-card':
                 renderMemoryCardTool();
@@ -39,6 +44,40 @@ export function showToolView(tool) {
                 gamesContainer.innerHTML = `<p>${i18n.t('tools.notImplemented')}</p>`;
         }
     }
+}
+
+function renderToolsOverview() {
+    const gamesContainer = document.getElementById('games-container');
+    const overview = document.createElement('div');
+    overview.className = 'tools-overview';
+    
+    const tools = [
+        { id: 'memory-card', icon: 'fas fa-memory', name: 'Memory Card Editor', desc: 'Manage PS1/PS2 save files in a dual-pane editor.' },
+        { id: 'rom-ripper', icon: 'fas fa-compact-disc', name: 'ROM Ripper', desc: 'Create backups of your physical game discs.' },
+        { id: 'game-database', icon: 'fas fa-database', name: 'Game Database', desc: 'Explore the global database of retro games.' },
+        { id: 'cheat-codes', icon: 'fas fa-magic', name: 'Cheat Codes', desc: 'Apply GameShark, Action Replay, or other cheats.' }
+    ];
+
+    overview.innerHTML = `
+        <div class="tools-grid">
+            ${tools.map(t => `
+                <div class="tool-card" data-tool-id="${t.id}">
+                    <div class="tool-icon"><i class="${t.icon}"></i></div>
+                    <h3>${t.name}</h3>
+                    <p>${t.desc}</p>
+                    <button class="action-btn">Open Tool</button>
+                </div>
+            `).join('')}
+        </div>
+    `;
+
+    gamesContainer.appendChild(overview);
+
+    overview.querySelectorAll('.tool-card').forEach(card => {
+        card.addEventListener('click', () => {
+            showToolView(card.dataset.toolId);
+        });
+    });
 }
 
 function renderMemoryCardTool() {
@@ -86,8 +125,8 @@ function renderMemoryCardTool() {
                 <button class="control-btn" disabled>Undelete File</button>
                 <button class="control-btn" disabled>Rename File</button>
                 <button class="control-btn" disabled>Export File</button>
-                <button class="control-btn move-btn" disabled><i class="fas fa-chevron-left"></i><i class="fas fa-chevron-left"></i></button>
-                <button class="control-btn move-btn" disabled><i class="fas fa-chevron-right"></i><i class="fas fa-chevron-right"></i></button>
+                <button class="control-btn move-btn" disabled>\<\<</button>
+                <button class="control-btn move-btn" disabled>\>\></button>
             </div>
 
             <!-- Right Card Slot -->
@@ -123,8 +162,6 @@ function renderMemoryCardTool() {
                 </div>
             </div>
         </div>
-        <input type="file" id="slot-1-input" hidden accept=".mcr,.mcd,.gme,.ps2,.max,.psu">
-        <input type="file" id="slot-2-input" hidden accept=".mcr,.mcd,.gme,.ps2,.max,.psu">
     `;
     gamesContainer.appendChild(toolContent);
     
@@ -134,22 +171,64 @@ function renderMemoryCardTool() {
 function setupEditorLogic() {
     const slot1Open = document.querySelector('#slot-1 .open-btn');
     const slot2Open = document.querySelector('#slot-2 .open-btn');
-    const slot1Input = document.getElementById('slot-1-input');
-    const slot2Input = document.getElementById('slot-2-input');
 
-    slot1Open.addEventListener('click', () => slot1Input.click());
-    slot2Open.addEventListener('click', () => slot2Input.click());
+    if (!slot1Open || !slot2Open) return;
 
-    slot1Input.addEventListener('change', (e) => handleFileSelection(e, 'slot-1'));
-    slot2Input.addEventListener('change', (e) => handleFileSelection(e, 'slot-2'));
+    slot1Open.addEventListener('click', () => handleNativeOpen('slot-1'));
+    slot2Open.addEventListener('click', () => handleNativeOpen('slot-2'));
+
+    // Handle Drag and Drop
+    setupSlotDropZone('slot-1');
+    setupSlotDropZone('slot-2');
 }
 
-async function handleFileSelection(e, slotId) {
-    const file = e.target.files[0];
-    if (!file) return;
-
+async function handleNativeOpen(slotId) {
     try {
-        const result = await ipcRenderer.invoke('read-memory-card', file.path);
+        const result = await ipcRenderer.invoke('open-file-dialog', {
+            properties: ['openFile'],
+            filters: [
+                { name: 'Memory Cards', extensions: ['mcr', 'mcd', 'gme', 'ps2', 'max', 'psu'] },
+                { name: 'All Files', extensions: ['*'] }
+            ]
+        });
+
+        if (!result.canceled && result.filePaths.length > 0) {
+            const filePath = result.filePaths[0];
+            log.info(`(Renderer) File selected via native dialog for ${slotId}: ${filePath}`);
+            readMemoryCardForSlot(filePath, slotId);
+        }
+    } catch (error) {
+        log.error('Error opening file dialog:', error);
+    }
+}
+
+function setupSlotDropZone(slotId) {
+    const slot = document.getElementById(slotId);
+    if (!slot) return;
+
+    slot.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        slot.classList.add('drag-over');
+    });
+
+    slot.addEventListener('dragleave', () => {
+        slot.classList.remove('drag-over');
+    });
+
+    slot.addEventListener('drop', (e) => {
+        e.preventDefault();
+        slot.classList.remove('drag-over');
+        const file = e.dataTransfer.files[0];
+        if (file && file.path) {
+            log.info(`(Renderer) File dropped for ${slotId}: ${file.path}`);
+            readMemoryCardForSlot(file.path, slotId);
+        }
+    });
+}
+
+async function readMemoryCardForSlot(filePath, slotId) {
+    try {
+        const result = await ipcRenderer.invoke('read-memory-card', filePath);
         if (result.success) {
             populateSlot(slotId, result.data);
         } else {
