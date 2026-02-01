@@ -151,7 +151,7 @@
       "title": "Enter Discord Webhook URL",
       "description": "To upload themes, please provide a valid Discord Webhook URL. This will be saved locally.",
       "getIt": "No webhook yet? Get it in the Discord",
-      "invalidUrl": "Invalid Webhook URL. It must start with https://discord.com/api/webhooks/"
+      "invalidUrl": "Invalid Webhook URL. It must start with {{discordWebhookUrl}}"
     },
     "language": {
       "name": "English",

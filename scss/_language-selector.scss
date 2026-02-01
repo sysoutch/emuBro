@@ -155,9 +155,9 @@
 
 .lang-key-row {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 10px;
-    padding: 10px;
+    grid-template-columns: 200px 1fr 1fr;
+    gap: 15px;
+    padding: 12px 15px;
     border-bottom: 1px solid var(--border-color);
     align-items: start;
     
@@ -172,14 +172,17 @@
     
     .key-label {
         font-family: monospace;
-        font-size: 0.9em;
+        font-size: 0.85em;
         color: var(--text-secondary);
         word-break: break-all;
+        padding-top: 5px;
     }
     
     .base-value {
         color: var(--text-primary);
-        font-size: 0.9em;
+        font-size: 0.95em;
+        padding-top: 5px;
+        line-height: 1.4;
     }
     
     .target-value {
@@ -188,15 +191,18 @@
             background-color: var(--bg-secondary);
             border: 1px solid var(--border-color);
             color: var(--text-primary);
-            padding: 5px;
+            padding: 8px;
             border-radius: 4px;
             resize: vertical;
             min-height: 40px;
             font-family: inherit;
+            font-size: 0.95em;
+            line-height: 1.4;
             
             &:focus {
                 border-color: var(--accent-color);
                 outline: none;
+                box-shadow: 0 0 0 2px rgba(var(--accent-color-rgb), 0.2);
             }
         }
     }

@@ -484,54 +484,61 @@ function createThemeItem(id, name, type, isActive, themeData) {
     return item;
 }
 
+async function askForWebhookUrl() {
+    // Show the modal
+    const modal = document.getElementById('webhook-modal');
+    const input = document.getElementById('webhook-input');
+    const saveBtn = document.getElementById('webhook-save-btn');
+    const cancelBtn = document.getElementById('webhook-cancel-btn');
+    
+    if (!modal) {
+        console.error("Webhook modal not found");
+        return null;
+    }
+
+    // Reset input
+    input.value = '';
+    modal.style.display = 'flex';
+
+    // Wait for user interaction
+    const webhookUrl = await new Promise((resolve) => {
+        const cleanup = () => {
+            saveBtn.removeEventListener('click', onSave);
+            cancelBtn.removeEventListener('click', onCancel);
+        };
+
+        const onSave = () => {
+            const url = input.value.trim();
+            const webhookDefaultUrl = 'https://discord.com/api/webhooks/';
+            if (!url.startsWith(webhookDefaultUrl)) {
+                const errorMsg = i18n.t('webhook.invalidUrl', { url: webhookDefaultUrl }) ;
+                alert(errorMsg);
+                return; // Don't close, let user fix
+            }
+            localStorage.setItem('discordWebhookUrl', url);
+            modal.style.display = 'none';
+            cleanup();
+            resolve(url);
+        };
+
+        const onCancel = () => {
+            modal.style.display = 'none';
+            cleanup();
+            resolve(null);
+        };
+
+        saveBtn.addEventListener('click', onSave);
+        cancelBtn.addEventListener('click', onCancel);
+    });
+
+    return webhookUrl;
+}
+
 async function uploadTheme(theme) {
     let webhookUrl = localStorage.getItem('discordWebhookUrl');
     
     if (!webhookUrl) {
-        // Show the modal
-        const modal = document.getElementById('webhook-modal');
-        const input = document.getElementById('webhook-input');
-        const saveBtn = document.getElementById('webhook-save-btn');
-        const cancelBtn = document.getElementById('webhook-cancel-btn');
-        
-        if (!modal) {
-            console.error("Webhook modal not found");
-            return;
-        }
-
-        // Reset input
-        input.value = '';
-        modal.style.display = 'flex';
-
-        // Wait for user interaction
-        webhookUrl = await new Promise((resolve) => {
-            const cleanup = () => {
-                saveBtn.removeEventListener('click', onSave);
-                cancelBtn.removeEventListener('click', onCancel);
-            };
-
-            const onSave = () => {
-                const url = input.value.trim();
-                if (!url.startsWith('https://discord.com/api/webhooks/')) {
-                    alert(i18n.t('webhook.invalidUrl'));
-                    return; // Don't close, let user fix
-                }
-                localStorage.setItem('discordWebhookUrl', url);
-                modal.style.display = 'none';
-                cleanup();
-                resolve(url);
-            };
-
-            const onCancel = () => {
-                modal.style.display = 'none';
-                cleanup();
-                resolve(null);
-            };
-
-            saveBtn.addEventListener('click', onSave);
-            cancelBtn.addEventListener('click', onCancel);
-        });
-
+        webhookUrl = await askForWebhookUrl();
         if (!webhookUrl) return; // User cancelled
     }
 
@@ -561,7 +568,20 @@ async function uploadTheme(theme) {
         base64Image: theme.background.image, // The original Base64 string
         webhookUrl: webhookUrl
     });
-    if (success) console.info("Theme and image uploaded successfully!");
+
+    if (success) {
+        console.info("Theme and image uploaded successfully!");
+    } else {
+        log.error("Theme upload failed. Webhook might be invalid.");
+        localStorage.removeItem('discordWebhookUrl');
+        alert(i18n.t('webhook.uploadFailed') || "Upload failed. Please check your webhook URL and try again.");
+        
+        // Ask for a new webhook URL and retry if the user provides one
+        const newWebhookUrl = await askForWebhookUrl();
+        if (newWebhookUrl) {
+            await uploadTheme(theme);
+        }
+    }
 }
 
 export function editTheme(theme) {

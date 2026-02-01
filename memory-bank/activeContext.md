@@ -4,6 +4,10 @@
 The current focus is on updating project documentation and maintaining the codebase to align with the new Electron-based architecture.
 
 ## Recent Changes
+- Implemented automatic webhook re-configuration when theme upload fails (e.g., if webhook is deleted on Discord)
+- Fixed Language Manager UI layout issues where long text caused rows to look weird
+- Improved Language Manager editor styling (grid layout, spacing, and font sizes)
+- Committed documentation and core feature enhancements to git
 - Updated `index.html` title to use localized `app.title` via i18n
 - Implemented Language Manager with progress tracking, editing, and creation capabilities
 - Added flag icons to language selector using `flag-icons` library
@@ -26,7 +30,8 @@ The current focus is on updating project documentation and maintaining the codeb
 - Implemented user-configurable Discord webhook for theme uploads (removed hardcoded URL)
 
 ## Next Steps
-1. Verify all views are rendering correctly in the application
+1. Push changes to remote repository (if requested)
+2. Verify all views are rendering correctly in the application
 2. Complete systemPatterns.md with architectural decisions
 3. Create techContext.md with technology stack details
 4. Implement progress.md to track development status

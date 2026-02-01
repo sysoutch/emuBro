@@ -1,9 +1,13 @@
 # Progress
 
 ## What Works
+- Automatic webhook re-configuration on upload failure
 - Localized App Title
+- Git commit of all current progress and documentation
 - Language Manager (Edit, Create, Progress Tracking)
 - Custom Language Dropdown with Flag Icons
+- Language Manager UI layout fix for long text content
+- Hardcoded Webhook URL base in validation to avoid translation issues
 - Project structure with memory-bank documentation system
 - README.md updated for Electron version
 - Core documentation files initialized (projectbrief, productContext, activeContext, systemPatterns, techContext)
