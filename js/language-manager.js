@@ -48,7 +48,8 @@ export function initLanguageManager() {
         }
     });
 
-    // Close on click outside
+    // Close on click outside - REMOVED because it conflicts with resizing
+    /*
     window.addEventListener('click', (event) => {
         if (event.target === modal) {
             modal.style.display = 'none';
@@ -56,6 +57,7 @@ export function initLanguageManager() {
             import('./docking-manager').then(m => m.removeFromDock('language-manager-modal'));
         }
     });
+    */
 }
 
 export function openLanguageManager() {

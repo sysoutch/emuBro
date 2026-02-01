@@ -349,43 +349,47 @@ function setupWindowResizeHandler() {
         // Only proceed if getting smaller
         if (!isGettingSmaller) return;
 
-        const themeManagerModal = document.getElementById('theme-manager-modal');
-        if (!themeManagerModal || !themeManagerModal.classList.contains('active') || themeManagerModal.classList.contains('docked-right')) {
-            return;
-        }
-
-        const rect = themeManagerModal.getBoundingClientRect();
-        const windowWidth = window.innerWidth;
-        const windowHeight = window.innerHeight;
-
-        // Calculate overlap area
-        const visibleLeft = Math.max(0, rect.left);
-        const visibleRight = Math.min(windowWidth, rect.right);
-        const visibleTop = Math.max(0, rect.top);
-        const visibleBottom = Math.min(windowHeight, rect.bottom);
-
-        const visibleWidth = Math.max(0, visibleRight - visibleLeft);
-        const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+        const modals = ['theme-manager-modal', 'language-manager-modal'];
         
-        const totalArea = rect.width * rect.height;
-        const visibleArea = visibleWidth * visibleHeight;
+        modals.forEach(id => {
+            const modal = document.getElementById(id);
+            if (!modal || !modal.classList.contains('active') || modal.classList.contains('docked-right')) {
+                return;
+            }
 
-        // If more than 50% is outside (visible area < 50%)
-        if (visibleArea < totalArea * 0.5) {
-            // Add smooth class
-            themeManagerModal.classList.add('smooth-reset');
+            const rect = modal.getBoundingClientRect();
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+
+            // Calculate overlap area
+            const visibleLeft = Math.max(0, rect.left);
+            const visibleRight = Math.min(windowWidth, rect.right);
+            const visibleTop = Math.max(0, rect.top);
+            const visibleBottom = Math.min(windowHeight, rect.bottom);
+
+            const visibleWidth = Math.max(0, visibleRight - visibleLeft);
+            const visibleHeight = Math.max(0, visibleBottom - visibleTop);
             
-            // Reset to center
-            themeManagerModal.style.top = '';
-            themeManagerModal.style.left = '';
-            themeManagerModal.style.transform = ''; // Remove inline transform (if any from drag)
-            themeManagerModal.classList.remove('moved');
-            
-            // Remove smooth class after transition
-            setTimeout(() => {
-                themeManagerModal.classList.remove('smooth-reset');
-            }, 800);
-        }
+            const totalArea = rect.width * rect.height;
+            const visibleArea = visibleWidth * visibleHeight;
+
+            // If more than 50% is outside (visible area < 50%)
+            if (visibleArea < totalArea * 0.5) {
+                // Add smooth class
+                modal.classList.add('smooth-reset');
+                
+                // Reset to center
+                modal.style.top = '';
+                modal.style.left = '';
+                modal.style.transform = ''; // Remove inline transform (if any from drag)
+                modal.classList.remove('moved');
+                
+                // Remove smooth class after transition
+                setTimeout(() => {
+                    modal.classList.remove('smooth-reset');
+                }, 800);
+            }
+        });
     });
 }
 

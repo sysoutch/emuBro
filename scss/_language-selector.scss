@@ -145,13 +145,33 @@
 }
 
 .lang-keys-list {
-    max-height: 400px;
+    flex: 1;
     overflow-y: auto;
     background-color: var(--bg-tertiary);
     border: 1px solid var(--border-color);
     border-radius: 4px;
     padding: 10px;
     container-type: inline-size;
+}
+
+#language-manager-modal {
+    .theme-manager-content, .tab-content {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    
+    #lang-list-view {
+        overflow-y: auto;
+    }
+    
+    #lang-edit-view .manager-section {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
 }
 
 .lang-key-row {
