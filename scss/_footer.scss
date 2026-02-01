@@ -170,7 +170,7 @@
     font-size: 1.2rem;
     cursor: pointer;
     padding: 5px;
-    border-radius: var(--radius-btn);
+    border-radius: var(--radius-btn-top-left) var(--radius-btn-top-right) var(--radius-btn-bottom-right) var(--radius-btn-bottom-left);
     transition: all 0.2s;
 
     &:hover {

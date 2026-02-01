@@ -117,7 +117,7 @@
     flex: 1;
     padding: 8px;
     border: none;
-    border-radius: var(--radius-btn);
+    border-radius: var(--radius-btn-top-left) var(--radius-btn-top-right) var(--radius-btn-bottom-right) var(--radius-btn-bottom-left);
     cursor: pointer;
     font-weight: 600;
     transition: background-color 0.2s;

@@ -123,6 +123,7 @@
       "cornerStyle": "Corner Style",
       "cornerStyleOptions": {
         "rounded": "Rounded (Modern)",
+        "futuristic": "Rounded and yet not (Futuristic)",
         "semiRounded": "Slightly Rounded (Classic)",
         "sharp": "Sharp (Rectangle)"
       },

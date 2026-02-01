@@ -20,7 +20,7 @@ button {
     text-transform: uppercase;
     font-weight: 600;
     letter-spacing: 1px;
-    border-radius: var(--radius-btn);
+    border-radius: var(--radius-btn-top-left) var(--radius-btn-top-right) var(--radius-btn-bottom-right) var(--radius-btn-bottom-left);
     border: 1px solid var(--border-color);
     background: var(--bg-quaternary);
     color: var(--text-primary);
@@ -100,7 +100,7 @@ select {
     text-transform: uppercase;
     font-weight: 600;
     letter-spacing: 1px;
-    border-radius: var(--radius-btn);
+    border-radius: var(--radius-btn-top-left) var(--radius-btn-top-right) var(--radius-btn-bottom-right) var(--radius-btn-bottom-left);
     border: 1px solid var(--border-color);
     background: var(--bg-quaternary);
     color: var(--text-primary);

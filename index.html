@@ -28,25 +28,30 @@
                     <input type="text" placeholder="Search games..." data-i18n-placeholder="filters.search">
                 </div>
                 <div class="form-group language-selector-wrapper">
-                    <div id="language-dropdown" class="custom-select" title="Select Language">
-                        <div class="selected-option">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <span id="current-flag" class="fi"></span>
-                                <span id="current-language-name">Select Language</span>
+                    <div class="form-group dropdown-with-button-wrapper">
+                        <div id="language-dropdown" class="custom-select" title="Select Language">
+                            <div class="selected-option">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span id="current-flag" class="fi"></span>
+                                    <span id="current-language-name">Select Language</span>
+                                </div>
                             </div>
+                            <ul id="language-options" class="options-list">
+                                <!-- populated dynamically -->
+                            </ul>
                         </div>
-                        <ul id="language-options" class="options-list">
-                            <!-- populated dynamically -->
-                        </ul>
+                        
+                        <button id="language-manager-btn" class="theme-manager-btn" title="Manage Languages">🌐</button>
                     </div>
                 </div>
-                <button id="language-manager-btn" class="theme-manager-btn" title="Manage Languages">🌐</button>
                 <div class="theme-toggle-wrapper">
-                    <select id="theme-select">
-                        <option value="dark" data-i18n="theme.darkTheme">Dark Theme</option>
-                        <option value="light" data-i18n="theme.lightTheme">Light Theme</option>
-                    </select>
-                    <button id="theme-manager-btn" class="theme-manager-btn" title="Manage Themes">⚙️</button>
+                    <div class="form-group dropdown-with-button-wrapper">
+                        <select id="theme-select">
+                            <option value="dark" data-i18n="theme.darkTheme">Dark Theme</option>
+                            <option value="light" data-i18n="theme.lightTheme">Light Theme</option>
+                        </select>
+                        <button id="theme-manager-btn" class="theme-manager-btn" title="Manage Themes">⚙️</button>
+                    </div>
                     <button id="theme-toggle-btn" class="theme-toggle" title="Toggle Light/Dark Mode">💡</button>
                     <button id="invert-colors-btn" class="theme-toggle" title="Invert Colors">🌗</button>
                 </div>
@@ -192,15 +197,16 @@
                             <div class="form-group">
                                 <label for="global-corner-style" data-i18n="theme.cornerStyle">Corner Style:</label>
                                 <select id="global-corner-style">
-                                    <option value="rounded" data-i18n="theme.cornerStyleOptions.rounded">Rounded (Modern)</option>
-                                    <option value="semi-rounded" data-i18n="theme.cornerStyleOptions.semiRounded">Slightly Rounded (Classic)</option>
-                                    <option value="sharp" data-i18n="theme.cornerStyleOptions.sharp">Sharp (Rectangle)</option>
+                                    <option value="rounded" data-i18n="theme.cornerStyleOptions.rounded"></option>
+                                    <option value="futuristic" data-i18n="theme.cornerStyleOptions.futuristic"></option>
+                                    <option value="semi-rounded" data-i18n="theme.cornerStyleOptions.semiRounded"></option>
+                                    <option value="sharp" data-i18n="theme.cornerStyleOptions.sharp"></option>
                                 </select>
                             </div>
                             <div class="form-group checkbox-group" style="display: flex; align-items: center; gap: 10px; height: 100%;">
                                 <label for="global-override-background" style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0;">
                                     <input type="checkbox" id="global-override-background">
-                                    <span style="font-weight: bold;" data-i18n="theme.overrideBackground">Override Theme Background</span>
+                                    <span style="font-weight: bold;" data-i18n="theme.overrideBackground"></span>
                                 </label>
                             </div>
                         </div>

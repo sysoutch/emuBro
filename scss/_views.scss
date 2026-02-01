@@ -13,7 +13,7 @@
     color: var(--text-secondary);
     border: none;
     padding: 10px 15px;
-    border-radius: var(--radius-btn);
+    border-radius: var(--radius-btn-top-left) var(--radius-btn-top-right) var(--radius-btn-bottom-right) var(--radius-btn-bottom-left);
     cursor: pointer;
     transition: all 0.3s;
     display: flex;
@@ -50,7 +50,7 @@
     color: var(--text-secondary);
     border: 1px solid var(--border-color);
     padding: 8px 16px;
-    border-radius: var(--radius-btn);
+    border-radius: var(--radius-btn-top-left) var(--radius-btn-top-right) var(--radius-btn-bottom-right) var(--radius-btn-bottom-left);
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
