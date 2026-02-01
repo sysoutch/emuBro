@@ -47,6 +47,7 @@
     "electron-log": "^4.4.8",
     "electron-store": "^8.2.0",
     "flag-icons": "^7.5.0",
+    "gamepad.js": "^2.1.0",
     "node-ipc": "^10.1.0"
   }
 }

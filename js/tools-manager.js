@@ -5,43 +5,72 @@
 const { ipcRenderer } = require("electron");
 const log = require("electron-log");
 
+import { GamepadTool } from './tools/gamepad-tool.js';
+import { MonitorTool } from './tools/monitor-tool.js';
+
+// Create instances of tools
+const gamepadTool = new GamepadTool();
+const monitorTool = new MonitorTool();
+
 export function showToolView(tool) {
     const gamesContainer = document.getElementById("games-container");
     const gamesHeader = document.getElementById("games-header");
     
+    // 1. Safety: Stop gamepad testing loop whenever switching AWAY from the gamepad tool
+    if (gamepadTool && typeof gamepadTool.stopTesting === 'function') {
+        gamepadTool.stopTesting();
+    }
+
+    // 2. Update Sidebar UI
     document.querySelectorAll("[data-tool]").forEach(link => {
         link.classList.remove("active");
     });
     const toolLink = document.querySelector(`[data-tool="${tool}"]`);
     if (toolLink) toolLink.classList.add("active");
     
+    // 3. Update Header Text
     if (gamesHeader) {
-        gamesHeader.textContent = tool ? (tool.charAt(0).toUpperCase() + tool.slice(1).replace("-", " ")) : "Tools";
+        // Use a fallback if i18n isn't globally available yet
+        const title = tool ? (tool.charAt(0).toUpperCase() + tool.slice(1).replace("-", " ")) : "Tools";
+        gamesHeader.textContent = title;
     }
     
     if (gamesContainer) {
-        gamesContainer.innerHTML = "";
+        gamesContainer.innerHTML = ""; // Wipe the current view
         
         if (!tool) {
             renderToolsOverview();
             return;
         }
 
+        // 4. Robust Switch with "Exits"
         switch(tool) {
             case "memory-card":
                 renderMemoryCardTool();
                 break;
+            case "gamepad":
+                if (gamepadTool && typeof gamepadTool.render === 'function') {
+                    gamepadTool.render(gamesContainer);
+                } else {
+                    log.error("Gamepad tool failed to load or has no render() method");
+                }
+                break;
+            case "monitor":
+                if (monitorTool && typeof monitorTool.render === 'function') {
+                    monitorTool.render(gamesContainer);
+                } else {
+                    log.error("Monitor tool failed to load or has no render() method");
+                }
+                break;
+            // Placeholders for other tools
             case "rom-ripper":
-                renderRomRipperTool();
+                renderPlaceholder("ROM Ripper");
                 break;
             case "game-database":
-                renderGameDatabaseTool();
-                break;
-            case "cheat-codes":
-                renderCheatCodesTool();
+                renderPlaceholder("Game Database");
                 break;
             default:
-                gamesContainer.innerHTML = `<p>${i18n.t("tools.notImplemented")}</p>`;
+                gamesContainer.innerHTML = `<p>Tool "${tool}" is not yet implemented.</p>`;
         }
     }
 }
@@ -52,10 +81,12 @@ function renderToolsOverview() {
     overview.className = "tools-overview";
     
     const tools = [
-        { id: "memory-card", icon: "fas fa-memory", name: "Memory Card Editor", desc: "Manage PS1/PS2 save files in a dual-pane editor." },
-        { id: "rom-ripper", icon: "fas fa-compact-disc", name: "ROM Ripper", desc: "Create backups of your physical game discs." },
-        { id: "game-database", icon: "fas fa-database", name: "Game Database", desc: "Explore the global database of retro games." },
-        { id: "cheat-codes", icon: "fas fa-magic", name: "Cheat Codes", desc: "Apply GameShark, Action Replay, or other cheats." }
+        { id: "memory-card", icon: "fas fa-memory", name: "Memory Card Editor", desc: "Manage PS1/PS2 save files." },
+        { id: "rom-ripper", icon: "fas fa-compact-disc", name: "ROM Ripper", desc: "Create backups of physical discs." },
+        { id: "game-database", icon: "fas fa-database", name: "Game Database", desc: "Explore the global database." },
+        { id: "cheat-codes", icon: "fas fa-magic", name: "Cheat Codes", desc: "Apply GameShark or Action Replay." },
+        { id: "gamepad", icon: "fas fa-gamepad", name: "Gamepad Tester", desc: "Test and map your controllers." },
+        { id: "monitor", icon: "fas fa-desktop", name: "Monitor Manager", desc: "Manage displays and orientation." }
     ];
 
     overview.innerHTML = `
@@ -372,6 +403,13 @@ function renderCheatCodesTool() {
     document.getElementById("apply-cheat-btn").addEventListener("click", () => {
         alert(i18n.t("tools.placeholderAlert", {feature: i18n.t("tools.cheatCodes")}));
     });
+}
+
+function renderGamepadTool() {
+    const gamesContainer = document.getElementById("games-container");
+    const toolContent = document.createElement("div");
+    toolContent.className = "tool-content";
+    gamepadTool.render(gamesContainer);
 }
 
 export function showMemoryCardReader() {
