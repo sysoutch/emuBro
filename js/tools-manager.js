@@ -44,23 +44,159 @@ export function showToolView(tool) {
 function renderMemoryCardTool() {
     const gamesContainer = document.getElementById('games-container');
     const toolContent = document.createElement('div');
-    toolContent.className = 'tool-content';
+    toolContent.className = 'tool-content memory-card-editor';
     toolContent.innerHTML = `
-        <h3>${i18n.t('tools.memoryCardReader')}</h3>
-        <p>${i18n.t('tools.memoryCardDesc')}</p>
-        <div class="tool-controls">
-            <button id="read-memory-btn" class="action-btn">${i18n.t('tools.readCard')}</button>
-            <button id="write-memory-btn" class="action-btn">${i18n.t('tools.writeCard')}</button>
+        <div class="editor-layout">
+            <!-- Left Card Slot -->
+            <div class="card-slot" id="slot-1">
+                <div class="slot-header">
+                    <label>Memory Card 1:</label>
+                    <div class="header-controls">
+                        <select class="card-select"><option value="">Select Card...</option></select>
+                        <button class="icon-btn add-btn" title="New Card"><i class="fas fa-plus-square"></i></button>
+                        <button class="icon-btn open-btn" title="Open Card"><i class="fas fa-folder-open"></i></button>
+                    </div>
+                </div>
+                <div class="save-table-container">
+                    <table class="save-table">
+                        <thead>
+                            <tr>
+                                <th class="col-icon">Icon</th>
+                                <th class="col-title">Title</th>
+                                <th class="col-name">File Name</th>
+                                <th class="col-blocks">Blocks</th>
+                            </tr>
+                        </thead>
+                        <tbody class="save-list">
+                            <!-- Saves will be injected here -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="slot-footer">
+                    <button class="action-btn small">Format Card</button>
+                    <button class="action-btn small">Import File...</button>
+                    <button class="action-btn small">Import Card...</button>
+                    <button class="action-btn small primary">Save</button>
+                </div>
+            </div>
+
+            <!-- Central Controls -->
+            <div class="central-controls">
+                <button class="control-btn" disabled>Delete File</button>
+                <button class="control-btn" disabled>Undelete File</button>
+                <button class="control-btn" disabled>Rename File</button>
+                <button class="control-btn" disabled>Export File</button>
+                <button class="control-btn move-btn" disabled><i class="fas fa-chevron-left"></i><i class="fas fa-chevron-left"></i></button>
+                <button class="control-btn move-btn" disabled><i class="fas fa-chevron-right"></i><i class="fas fa-chevron-right"></i></button>
+            </div>
+
+            <!-- Right Card Slot -->
+            <div class="card-slot" id="slot-2">
+                <div class="slot-header">
+                    <label>Memory Card 2:</label>
+                    <div class="header-controls">
+                        <select class="card-select"><option value="">Select Card...</option></select>
+                        <button class="icon-btn add-btn" title="New Card"><i class="fas fa-plus-square"></i></button>
+                        <button class="icon-btn open-btn" title="Open Card"><i class="fas fa-folder-open"></i></button>
+                    </div>
+                </div>
+                <div class="save-table-container">
+                    <table class="save-table">
+                        <thead>
+                            <tr>
+                                <th class="col-icon">Icon</th>
+                                <th class="col-title">Title</th>
+                                <th class="col-name">File Name</th>
+                                <th class="col-blocks">Blocks</th>
+                            </tr>
+                        </thead>
+                        <tbody class="save-list">
+                            <!-- Saves will be injected here -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="slot-footer">
+                    <button class="action-btn small">Format Card</button>
+                    <button class="action-btn small">Import File...</button>
+                    <button class="action-btn small">Import Card...</button>
+                    <button class="action-btn small primary">Save</button>
+                </div>
+            </div>
         </div>
-        <div id="memory-output" class="tool-output"></div>
+        <input type="file" id="slot-1-input" hidden accept=".mcr,.mcd,.gme,.ps2,.max,.psu">
+        <input type="file" id="slot-2-input" hidden accept=".mcr,.mcd,.gme,.ps2,.max,.psu">
     `;
     gamesContainer.appendChild(toolContent);
     
-    document.getElementById('read-memory-btn').addEventListener('click', () => {
-        alert(i18n.t('tools.placeholderAlert', {feature: i18n.t('tools.readCard')}));
-    });
-    document.getElementById('write-memory-btn').addEventListener('click', () => {
-        alert(i18n.t('tools.placeholderAlert', {feature: i18n.t('tools.writeCard')}));
+    setupEditorLogic();
+}
+
+function setupEditorLogic() {
+    const slot1Open = document.querySelector('#slot-1 .open-btn');
+    const slot2Open = document.querySelector('#slot-2 .open-btn');
+    const slot1Input = document.getElementById('slot-1-input');
+    const slot2Input = document.getElementById('slot-2-input');
+
+    slot1Open.addEventListener('click', () => slot1Input.click());
+    slot2Open.addEventListener('click', () => slot2Input.click());
+
+    slot1Input.addEventListener('change', (e) => handleFileSelection(e, 'slot-1'));
+    slot2Input.addEventListener('change', (e) => handleFileSelection(e, 'slot-2'));
+}
+
+async function handleFileSelection(e, slotId) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+        const result = await ipcRenderer.invoke('read-memory-card', file.path);
+        if (result.success) {
+            populateSlot(slotId, result.data);
+        } else {
+            alert(i18n.t('tools.readFailed', {message: result.message}));
+        }
+    } catch (error) {
+        log.error('Error reading card for ' + slotId, error);
+    }
+}
+
+function populateSlot(slotId, data) {
+    const tbody = document.querySelector(`#${slotId} .save-list`);
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+
+    if (data.format === 'PlayStation 1' && data.saves) {
+        data.saves.forEach(save => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="col-icon"><i class="fas fa-save"></i></td>
+                <td class="col-title">${save.title}</td>
+                <td class="col-name">${save.productCode}</td>
+                <td class="col-blocks">${Math.ceil(save.size / 8192)}</td>
+            `;
+            tr.addEventListener('click', () => {
+                tbody.querySelectorAll('tr').forEach(r => r.classList.remove('selected'));
+                tr.classList.add('selected');
+                updateCentralControls();
+            });
+            tbody.appendChild(tr);
+        });
+    } else if (data.format === 'PlayStation 2') {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td colspan="4" class="centered">${data.message}</td>`;
+        tbody.appendChild(tr);
+    } else {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td colspan="4" class="centered">Empty or Unsupported Card</td>`;
+        tbody.appendChild(tr);
+    }
+}
+
+function updateCentralControls() {
+    const hasSelection = !!document.querySelector('.save-list tr.selected');
+    document.querySelectorAll('.central-controls .control-btn').forEach(btn => {
+        btn.disabled = !hasSelection;
     });
 }
 
@@ -129,132 +265,5 @@ function renderCheatCodesTool() {
 }
 
 export function showMemoryCardReader() {
-    let memoryCardReader = document.getElementById('memory-card-reader');
-    
-    if (!memoryCardReader) {
-        memoryCardReader = document.createElement('div');
-        memoryCardReader.id = 'memory-card-reader';
-        memoryCardReader.className = 'tool-content';
-        memoryCardReader.innerHTML = `
-            <h2>${i18n.t('tools.memoryCardReader')}</h2>
-            <div class="memory-card-controls">
-                <div class="drive-selector">
-                    <label for="drive-selector-tools">${i18n.t('tools.selectDrive')}</label>
-                    <select id="drive-selector-tools">
-                        <option value="">${i18n.t('filters.selectDrive')}</option>
-                    </select>
-                    <button id="search-memory-cards">${i18n.t('tools.searchMemoryCards')}</button>
-                </div>
-                <div class="memory-card-list">
-                    <h3>${i18n.t('tools.foundMemoryCards')}</h3>
-                    <div id="memory-cards-container"></div>
-                </div>
-                <div class="memory-card-details">
-                    <h3>${i18n.t('tools.memoryCardDetails')}</h3>
-                    <div id="memory-card-details-content"></div>
-                </div>
-            </div>
-        `;
-        
-        const gamesContainer = document.getElementById('games-container');
-        gamesContainer.parentNode.insertBefore(memoryCardReader, gamesContainer.nextSibling);
-    }
-    
-    memoryCardReader.style.display = 'block';
-    setupMemoryCardReader();
-}
-
-async function setupMemoryCardReader() {
-    const searchBtn = document.getElementById('search-memory-cards');
-    if (searchBtn) searchBtn.addEventListener('click', searchMemoryCards);
-    
-    const drives = await ipcRenderer.invoke('get-drives');
-    const driveSelector = document.getElementById('drive-selector-tools');
-    if (driveSelector) {
-        driveSelector.innerHTML = '<option value="">Select Drive</option>';
-        drives.forEach(drive => {
-            const option = document.createElement('option');
-            option.value = drive;
-            option.textContent = drive;
-            driveSelector.appendChild(option);
-        });
-    }
-}
-
-async function searchMemoryCards() {
-    const driveSelector = document.getElementById('drive-selector-tools');
-    const selectedDrive = driveSelector.value;
-    
-    try {
-        const result = await ipcRenderer.invoke('browse-memory-cards', selectedDrive);
-        if (result.success) {
-            displayMemoryCards(result.cards);
-        } else {
-            alert(i18n.t('tools.searchFailed', {message: result.message}));
-        }
-    } catch (error) {
-        log.error('Error searching for memory cards:', error);
-    }
-}
-
-function displayMemoryCards(cards) {
-    const container = document.getElementById('memory-cards-container');
-    if (!container) return;
-
-    if (cards.length === 0) {
-        container.innerHTML = `<p>${i18n.t('tools.noMemoryCards')}</p>`;
-        return;
-    }
-    
-    let html = '<ul class="memory-cards-list">';
-    cards.forEach(card => {
-        html += `
-            <li class="memory-card-item" data-path="${card.path}">
-                <h4>${card.name}</h4>
-                <p>${i18n.t('tools.size')}: ${card.size} bytes</p>
-                <p>${i18n.t('tools.modified')}: ${new Date(card.modified).toLocaleString()}</p>
-                <button class="view-card-btn" data-path="${card.path}">${i18n.t('tools.viewDetails')}</button>
-            </li>
-        `;
-    });
-    html += '</ul>';
-    
-    container.innerHTML = html;
-    
-    document.querySelectorAll('.view-card-btn').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const cardPath = e.target.getAttribute('data-path');
-            readMemoryCard(cardPath);
-        });
-    });
-}
-
-async function readMemoryCard(cardPath) {
-    try {
-        const result = await ipcRenderer.invoke('read-memory-card', cardPath);
-        if (result.success) {
-            displayMemoryCardDetails(result.data);
-        } else {
-            alert(i18n.t('tools.readFailed', {message: result.message}));
-        }
-    } catch (error) {
-        log.error('Error reading memory card:', error);
-    }
-}
-
-function displayMemoryCardDetails(data) {
-    const container = document.getElementById('memory-card-details-content');
-    if (!container) return;
-
-    if (data.raw) {
-        container.innerHTML = `<pre>${data.raw}</pre>`;
-    } else {
-        container.innerHTML = `
-            <div class="memory-card-data">
-                <h4>${i18n.t('tools.memoryCardDetails')}</h4>
-                <p><strong>${i18n.t('tools.format')}:</strong> JSON</p>
-                <pre>${JSON.stringify(data, null, 2)}</pre>
-            </div>
-        `;
-    }
+    renderMemoryCardTool();
 }

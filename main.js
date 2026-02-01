@@ -587,31 +587,157 @@ ipcMain.handle('read-memory-card', async (event, cardPath) => {
   try {
     log.info('Reading memory card from:', cardPath);
     
-    // Check if file exists
     if (!fsSync.existsSync(cardPath)) {
       return { success: false, message: "Memory card file not found" };
     }
     
-    // Read the file
-    const data = await fs.readFile(cardPath, 'utf8');
+    const stats = await fs.stat(cardPath);
+    const buffer = await fs.readFile(cardPath);
     
-    // Parse memory card data (assuming it's JSON format)
-    let memoryCardData;
-    try {
-      memoryCardData = JSON.parse(data);
-    } catch (parseError) {
-      log.warn('Memory card data is not valid JSON, treating as raw data');
-      memoryCardData = { raw: data };
+    // Determine format by size and header
+    if (stats.size === 128 * 1024) {
+      return parsePS1MemoryCard(buffer);
+    } else if (stats.size === 8 * 1024 * 1024 || stats.size === 16 * 1024 * 1024 || stats.size === 32 * 1024 * 1024 || stats.size === 64 * 1024 * 1024) {
+      return parsePS2MemoryCard(buffer);
+    } else {
+      // Try to identify by header if size is unusual
+      const header = buffer.toString('ascii', 0, 11);
+      if (header === 'Sony PS ---') {
+        return parsePS1MemoryCard(buffer);
+      } else if (buffer.toString('ascii', 0, 28) === 'Sony PS2 Memory Card Format ') {
+        return parsePS2MemoryCard(buffer);
+      }
     }
     
-    log.info('Memory card read successfully');
-    return { success: true, data: memoryCardData };
+    return { 
+      success: true, 
+      data: { 
+        format: 'Unknown',
+        size: stats.size,
+        message: 'Unsupported memory card format'
+      } 
+    };
   } catch (error) {
     log.error('Failed to read memory card:', error);
     return { success: false, message: error.message };
   }
 });
 
+function parsePS1MemoryCard(buffer) {
+  // PS1 Memory Card: 128KB, 1 block = 8KB (8192 bytes)
+  // 16 blocks total. Block 0 is directory. Blocks 1-15 are data.
+  // Each block has 64 frames of 128 bytes.
+  
+  const blocks = [];
+  const headerFrame = buffer.slice(0, 128);
+  
+  if (headerFrame.toString('ascii', 0, 2) !== 'MC') {
+    // Some formats might not have the MC header at the very beginning if they have a custom header
+  }
+
+  // Parse directory frames (frames 1-15 of block 0)
+  for (let i = 1; i < 16; i++) {
+    const frame = buffer.slice(i * 128, (i + 1) * 128);
+    const status = frame[0]; // 0x51 = in use, 0xA1 = free
+    
+    if (status === 0x51) {
+      const size = (frame[4] | (frame[5] << 8) | (frame[6] << 16) | (frame[7] << 24));
+      const title = frame.slice(12, 12 + 64).toString('ascii').replace(/\0/g, '').trim();
+      const productCode = title.split('-')[0] || 'Unknown';
+      
+      blocks.push({
+        slot: i,
+        status: 'In Use',
+        size: size,
+        title: title,
+        productCode: productCode
+      });
+    }
+  }
+
+  return {
+    success: true,
+    data: {
+      format: 'PlayStation 1',
+      totalSize: buffer.length,
+      saves: blocks
+    }
+  };
+}
+
+function parsePS2MemoryCard(buffer) {
+  // PS2 Memory Card (VMC)
+  // Superblock is at offset 0
+  const magic = buffer.toString('ascii', 0, 28);
+  if (magic !== 'Sony PS2 Memory Card Format ') {
+    return { success: false, message: "Invalid PS2 Memory Card format" };
+  }
+
+  const pageSize = buffer.readUInt16LE(0x28);
+  const pagesPerBlock = buffer.readUInt16LE(0x2A);
+  const pagesPerCluster = buffer.readUInt16LE(0x2C);
+  
+  // Basic info for now, full MCS parsing is complex
+  return {
+    success: true,
+    data: {
+      format: 'PlayStation 2',
+      totalSize: buffer.length,
+      pageSize: pageSize,
+      pagesPerBlock: pagesPerBlock,
+      pagesPerCluster: pagesPerCluster,
+      message: 'PS2 Card identified. Detailed directory parsing coming soon.'
+    }
+  };
+}
+
 ipcMain.handle('browse-memory-cards', async (event, selectedDrive) => {
-    log.info('Starting memory card search');
+  try {
+    log.info('Starting memory card search in:', selectedDrive);
+    const foundCards = [];
+    const extensions = ['.mcr', '.mcd', '.gme', '.ps2', '.max', '.psu'];
+    
+    async function scan(dir) {
+      try {
+        const items = await fs.readdir(dir).catch(() => []);
+        for (const item of items) {
+          const itemPath = path.join(dir, item);
+          try {
+            const stat = await fs.lstat(itemPath);
+            if (stat.isDirectory()) {
+              // Limit depth for performance
+              if (!item.startsWith('$') && !item.startsWith('.')) {
+                await scan(itemPath);
+              }
+            } else if (stat.isFile()) {
+              const ext = path.extname(item).toLowerCase();
+              if (extensions.includes(ext)) {
+                foundCards.push({
+                  name: item,
+                  path: itemPath,
+                  size: stat.size,
+                  modified: stat.mtime
+                });
+              }
+            }
+          } catch (e) {}
+        }
+      } catch (e) {}
+    }
+
+    let searchPath = selectedDrive;
+    if (os.platform() === 'win32' && searchPath && searchPath.length === 2 && searchPath.endsWith(':')) {
+      searchPath += '\\';
+    }
+    
+    if (!searchPath) {
+      searchPath = os.homedir();
+    }
+
+    await scan(searchPath);
+    return { success: true, cards: foundCards };
+  } catch (error) {
+    log.error('Failed to browse memory cards:', error);
+    return { success: false, message: error.message };
+  }
 });

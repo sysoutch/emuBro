@@ -1,147 +1,285 @@
 /* Tools Section */
-.tools-section {
+.tool-content {
     padding: 20px;
-    background-color: var(--bg-secondary);
-    border-radius: 8px;
-    margin-top: 20px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
 }
 
-.tools-section h2 {
-    color: #66ccff;
-    margin-bottom: 20px;
+/* Ensure parents allow filling space */
+#games-container:has(.memory-card-editor) {
+    display: block; /* Override grid if necessary */
+    height: 100%;
+    position: relative;
 }
 
-.tools-container {
+/* Memory Card Editor Layout */
+.memory-card-editor {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.editor-layout {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
+    grid-template-columns: 1fr 150px 1fr;
+    gap: 15px;
+    height: 100%;
+    width: 100%;
+    align-items: stretch;
+    flex-grow: 1;
+    min-height: 0;
 }
 
-.tool-card {
-    background-color: var(--bg-tertiary);
+.card-slot {
+    background: #1a1a1a;
+    border: 1px solid #333;
     border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    transition: transform 0.3s;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
 }
 
-.tool-card:hover {
-    transform: translateY(-5px);
-}
-
-.tool-card h3 {
-    color: var(--accent-color);
-    margin-bottom: 15px;
+.slot-header {
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #333;
+    flex-shrink: 0;
+
+    label {
+        font-weight: bold;
+        color: #eee;
+        font-size: 1rem;
+    }
+
+    .header-controls {
+        display: flex;
+        gap: 8px;
+
+        .card-select {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            color: #ddd;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            width: 150px;
+        }
+
+        .icon-btn {
+            background: #333;
+            border: 1px solid #444;
+            color: #ccc;
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+
+            &:hover {
+                background: #444;
+                color: white;
+            }
+        }
+    }
 }
 
-.tool-card h3 i {
-    font-size: 1.2rem;
-}
-
-.tool-card p {
-    color: var(--text-secondary);
-    margin-bottom: 15px;
-    line-height: 1.5;
-}
-
-.tool-card .action-btn {
-    background-color: var(--accent-color);
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-    font-weight: bold;
-}
-
-.tool-card .action-btn:hover {
-    background-color: var(--accent-light);
-}
-
-.tool-card .action-btn:disabled {
-    background-color: #666;
-    cursor: not-allowed;
-}
-
-.tool-card .tool-status {
-    margin-top: 15px;
-    padding: 10px;
-    border-radius: 4px;
-    font-size: 0.9rem;
-}
-
-.tool-card .tool-status.success {
-    background-color: rgba(76, 175, 80, 0.2);
-    color: #4caf50;
-}
-
-.tool-card .tool-status.error {
-    background-color: rgba(244, 67, 54, 0.2);
-    color: #f44336;
-}
-
-.tool-card .tool-status.warning {
-    background-color: rgba(255, 204, 0, 0.2);
-    color: #ffcc00;
-}
-
-/* Tool Output */
-.tool-output {
-    background-color: var(--bg-quaternary);
-    padding: 15px;
-    border-radius: 4px;
-    margin-top: 15px;
-    max-height: 200px;
+.save-table-container {
+    flex-grow: 1;
     overflow-y: auto;
-    font-family: monospace;
-    font-size: 0.9rem;
-    white-space: pre-wrap;
-}
-
-/* Tool Settings */
-.tool-settings {
-    margin-top: 20px;
-    padding: 15px;
-    background-color: var(--bg-tertiary);
+    background: #111;
+    border: 1px solid #222;
     border-radius: 4px;
+    margin-bottom: 15px;
+    min-height: 0;
 }
 
-.tool-settings h4 {
-    color: var(--accent-color);
-    margin-bottom: 10px;
-}
-
-.tool-settings label {
-    display: block;
-    margin-bottom: 8px;
-    color: var(--text-secondary);
-}
-
-.tool-settings input,
-.tool-settings select {
+.save-table {
     width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    border: none;
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
-    margin-bottom: 10px;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+
+    th {
+        background: #222;
+        color: #aaa;
+        text-align: left;
+        padding: 10px 12px;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        border-bottom: 1px solid #333;
+        font-weight: 600;
+    }
+
+    td {
+        padding: 10px 12px;
+        color: #ccc;
+        border-bottom: 1px solid #222;
+    }
+
+    tr:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    tr.selected {
+        background: rgba(102, 204, 255, 0.2);
+        td { color: #66ccff; }
+    }
+
+    .centered {
+        text-align: center;
+        padding: 60px 20px;
+        color: #666;
+        font-style: italic;
+        font-size: 1rem;
+    }
+
+    .col-icon { width: 50px; text-align: center; font-size: 1.2rem; }
+    .col-title { min-width: 150px; }
+    .col-name { width: 120px; font-family: monospace; }
+    .col-blocks { width: 70px; text-align: center; }
 }
 
-.tool-settings button {
-    background-color: var(--accent-color);
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s;
+.slot-footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+    flex-shrink: 0;
+
+    .action-btn.small {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+        background: #333;
+        border: 1px solid #444;
+        color: #ccc;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 500;
+
+        &:hover {
+            background: #444;
+            color: white;
+        }
+
+        &.primary {
+            background: rgba(102, 204, 255, 0.1);
+            border-color: #66ccff;
+            color: #66ccff;
+
+            &:hover {
+                background: rgba(102, 204, 255, 0.2);
+            }
+        }
+    }
 }
 
-.tool-settings button:hover {
-    background-color: var(--accent-light);
+/* Central Controls */
+.central-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 20px 0;
+    justify-content: center;
+
+    .control-btn {
+        background: #2a2a2a;
+        border: 1px solid #333;
+        color: #bbb;
+        padding: 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+        text-align: center;
+        font-weight: 500;
+
+        &:hover:not(:disabled) {
+            background: #3a3a3a;
+            color: white;
+            border-color: #555;
+            transform: translateY(-1px);
+        }
+
+        &:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        &:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        &.move-btn {
+            font-size: 1.2rem;
+            display: flex;
+            justify-content: center;
+            gap: 2px;
+            padding: 12px;
+            background: #222;
+        }
+    }
 }
+
+/* Responsive Stacking */
+@media (max-width: 1200px) {
+    .tool-content {
+        position: relative; /* Allow natural height overflow on small screens */
+        height: auto;
+    }
+
+    .editor-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 25px;
+        height: auto;
+    }
+
+    .card-slot {
+        height: auto;
+        min-height: 500px;
+        flex-shrink: 0;
+    }
+
+    .central-controls {
+        flex-direction: row;
+        flex-wrap: wrap;
+        padding: 10px 0;
+        gap: 10px;
+        justify-content: center;
+
+        .control-btn {
+            flex: 1;
+            min-width: 120px;
+            
+            &.move-btn {
+                width: 100%;
+                flex: none;
+                font-size: 1.5rem;
+                
+                i {
+                    transform: rotate(90deg);
+                }
+            }
+        }
+    }
+}
+
+.hidden { display: none !important; }
