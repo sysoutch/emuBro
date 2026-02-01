@@ -229,7 +229,17 @@
         font-size: 1rem;
     }
 
-    .col-icon { width: 50px; text-align: center; font-size: 1.2rem; }
+    .col-icon {
+        width: 60px; 
+        text-align: center;
+        .save-icon-img {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+            image-rendering: pixelated; /* For sharp pixel art */
+        }
+    }
+
     .col-title { min-width: 150px; }
     .col-name { width: 120px; font-family: monospace; }
     .col-blocks { width: 70px; text-align: center; }
@@ -334,8 +344,12 @@
 
     .card-slot {
         height: auto;
-        min-height: 500px;
+        min-height: 400px; /* Smaller min-height for mobile */
         flex-shrink: 0;
+    }
+    
+    .slot-header .header-controls .card-select {
+        width: 120px;
     }
 
     .central-controls {
@@ -347,7 +361,9 @@
 
         .control-btn {
             flex: 1;
-            min-width: 120px;
+            min-width: 100px; /* Slightly smaller for more items per row */
+            font-size: 0.8rem;
+            padding: 8px;
             
             &.move-btn {
                 width: 100%;
@@ -360,6 +376,12 @@
             }
         }
     }
+
+    .save-table .col-icon { width: 50px; }
+    .save-table .col-title { min-width: 100px; }
+    .save-table .col-name { width: 80px; }
+    .save-table .col-blocks { width: 50px; }
+
 }
 
 .hidden { display: none !important; }

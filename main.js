@@ -1,10 +1,10 @@
-const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
-const path = require('path');
-const log = require('electron-log');
-const Store = require('electron-store');
-const fs = require('fs').promises;
-const fsSync = require('fs');
-const os = require('os');
+const { app, BrowserWindow, Menu, ipcMain, dialog } = require("electron");
+const path = require("path");
+const log = require("electron-log");
+const Store = require("electron-store");
+const fs = require("fs").promises;
+const fsSync = require("fs");
+const os = require("os");
 
 // Initialize the store for app settings
 const store = new Store();
@@ -12,7 +12,7 @@ const store = new Store();
 let mainWindow;
 let games = [];
 let emulators = [];
-const screen = require('electron').screen;
+const screen = require("electron").screen;
 
 // Create the main window
 function createWindow() {
@@ -21,7 +21,7 @@ function createWindow() {
     height: 800,
     minWidth: 1000,
     minHeight: 700,
-    icon: path.join(__dirname, 'icon.png'),
+    icon: path.join(__dirname, "icon.png"),
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -31,14 +31,14 @@ function createWindow() {
   });
   const primaryDisplay = screen.getPrimaryDisplay();
 
-  mainWindow.on('move', () => {
+  mainWindow.on("move", () => {
     const [x, y] = mainWindow.getPosition();
     const [screenGoalX, screenGoalY] = [primaryDisplay.bounds.width / 2, primaryDisplay.bounds.height / 2];
-    mainWindow.webContents.send('window-moved', { x, y }, { screenGoalX, screenGoalY });
+    mainWindow.webContents.send("window-moved", { x, y }, { screenGoalX, screenGoalY });
   });
 
   // Load the main HTML file
-  mainWindow.loadFile('index.html');
+  mainWindow.loadFile("index.html");
 
   // Open DevTools
   // mainWindow.webContents.openDevTools();
@@ -47,21 +47,21 @@ function createWindow() {
 }
 
 // Listen for the minimize event from the renderer
-ipcMain.on('minimize-window', () => {
+ipcMain.on("minimize-window", () => {
     if (mainWindow) {
         mainWindow.minimize();
     }
 });
 
 // Get available drives on the system
-ipcMain.handle('get-drives', async () => {
+ipcMain.handle("get-drives", async () => {
   try {
     const drives = [];
     
     // Get platform-specific drives
-    if (os.platform() === 'win32') {
+    if (os.platform() === "win32") {
       // For Windows, get all drives
-      const driveLetters = ['C:', 'D:', 'E:', 'F:', 'G:', 'H:', 'I:', 'J:', 'K:', 'L:', 'M:', 'N:', 'O:', 'P:', 'Q:', 'R:', 'S:', 'T:', 'U:', 'V:', 'W:', 'X:', 'Y:', 'Z:'];
+      const driveLetters = ["C:", "D:", "E:", "F:", "G:", "H:", "I:", "J:", "K:", "L:", "M:", "N:", "O:", "P:", "Q:", "R:", "S:", "T:", "U:", "V:", "W:", "X:", "Y:", "Z:"];
       for (const drive of driveLetters) {
         try {
           if (fsSync.existsSync(drive)) {
@@ -73,12 +73,12 @@ ipcMain.handle('get-drives', async () => {
       }
     } else {
       // For Unix-like systems, use root directory as the only drive
-      drives.push('/');
+      drives.push("/");
     }
     
     return drives;
   } catch (error) {
-    log.error('Failed to get drives:', error);
+    log.error("Failed to get drives:", error);
     return [];
   }
 });
@@ -87,22 +87,22 @@ ipcMain.handle('get-drives', async () => {
 function createMenu() {
   const menuTemplate = [
     {
-      label: 'File',
+      label: "File",
       submenu: [
-        { label: 'Exit', click: () => app.quit() }
+        { label: "Exit", click: () => app.quit() }
       ]
     },
     {
-      label: 'View',
+      label: "View",
       submenu: [
-        { label: 'Reload', click: () => mainWindow.reload() },
-        { label: 'Toggle DevTools', click: () => mainWindow.webContents.toggleDevTools() }
+        { label: "Reload", click: () => mainWindow.reload() },
+        { label: "Toggle DevTools", click: () => mainWindow.webContents.toggleDevTools() }
       ]
     },
     {
-      label: 'Help',
+      label: "Help",
       submenu: [
-        { label: 'About' }
+        { label: "About" }
       ]
     }
   ];
@@ -117,26 +117,26 @@ app.whenReady().then(() => {
   createMenu();
 
   // Handle window close
-  mainWindow.on('closed', () => {
+  mainWindow.on("closed", () => {
     app.quit();
   });
 });
 
 // Handle app quit
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
     app.quit();
   }
 });
 
-app.on('activate', () => {
+app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
   }
 });
 
 // Check if a path is a file or directory
-ipcMain.handle('check-path-type', async (event, filePath) => {
+ipcMain.handle("check-path-type", async (event, filePath) => {
   try {
     const stats = await fs.stat(filePath);
     return {
@@ -144,15 +144,15 @@ ipcMain.handle('check-path-type', async (event, filePath) => {
       path: filePath
     };
   } catch (error) {
-    log.error('Failed to check path type:', error);
+    log.error("Failed to check path type:", error);
     return { isDirectory: false, path: filePath };
   }
 });
 
 // Process a dropped emulator executable file
-ipcMain.handle('process-emulator-exe', async (event, filePath) => {
+ipcMain.handle("process-emulator-exe", async (event, filePath) => {
   try {
-    log.info('Processing dropped emulator exe:', filePath);
+    log.info("Processing dropped emulator exe:", filePath);
     
     const platformConfigs = await getPlatformConfigs();
     const fileName = path.basename(filePath);
@@ -165,25 +165,22 @@ ipcMain.handle('process-emulator-exe', async (event, filePath) => {
       message: `Emulator ${fileName} processed successfully`
     };
   } catch (error) {
-    log.error('Failed to process emulator exe:', error);
-    return {
-      success: false,
-      message: error.message
-    };
+    log.error("Failed to process emulator exe:", error);
+    return { success: false, message: error.message };
   }
 });
 
 // IPC handlers
-ipcMain.handle('get-games', async () => {
+ipcMain.handle("get-games", async () => {
   return games;
 });
 
-ipcMain.handle('get-game-details', async (event, gameId) => {
+ipcMain.handle("get-game-details", async (event, gameId) => {
   const game = games.find(g => g.id === gameId);
   return game || null;
 });
 
-ipcMain.handle('remove-game', async (event, gameId) => {
+ipcMain.handle("remove-game", async (event, gameId) => {
   try {
     const game = games.find(g => g.id === gameId);
     if (game) {
@@ -199,11 +196,11 @@ ipcMain.handle('remove-game', async (event, gameId) => {
   }
 });
 
-ipcMain.handle('launch-game', async (event, gameId) => {
+ipcMain.handle("launch-game", async (event, gameId) => {
   try {
     const game = games.find(g => g.id === gameId);
     if (game) {
-      console.log('(handle) Launching game with ID:', gameId);
+      console.log("(handle) Launching game with ID:", gameId);
       const gamePath = game.filePath;
       const emuPath = emulators.find(emu => emu.platformShortName === game.platformShortName)?.filePath;
       if (!emuPath) {
@@ -219,7 +216,7 @@ ipcMain.handle('launch-game', async (event, gameId) => {
         return { success: false, message: "Game file not found" };
       }
       // Launch the game executable
-      const { exec } = require('child_process');
+      const { exec } = require("child_process");
       const escapedEmuPath = `"${emuPath}"`;
       const escapedGamePath = `"${gamePath}"`;
       exec(`${escapedEmuPath} ${escapedGamePath}`, (error, stdout, stderr) => {
@@ -229,12 +226,12 @@ ipcMain.handle('launch-game', async (event, gameId) => {
         }
         log.info(`Game ${game.name} launched successfully`);
         if (mainWindow) {
-          log.info('restore main window from minimized state after game stopped');
+          log.info("restore main window from minimized state after game stopped");
           mainWindow.restore();
         }
       });
       if (mainWindow) {
-        log.info('Minimizing main window after game launch');
+        log.info("Minimizing main window after game launch");
         mainWindow.minimize();
       }
       return { success: true, message: "Game launched successfully" };
@@ -247,38 +244,38 @@ ipcMain.handle('launch-game', async (event, gameId) => {
   }
 });
 
-ipcMain.handle('get-emulators', async () => {
+ipcMain.handle("get-emulators", async () => {
   return emulators;
 });
 
-ipcMain.handle('browse-games-and-emus', async (event, selectedDrive) => {
+ipcMain.handle("browse-games-and-emus", async (event, selectedDrive) => {
   try {
-    log.info('Starting game search');
+    log.info("Starting game search");
     const platformConfigs = await getPlatformConfigs();
     let foundPlatforms = [];
     let foundGames = [];
     let foundEmulators = [];
     
     // load more folders to skip from ignore-folders.json
-    const ignoreFoldersPath = path.join(__dirname, './emubro-resources', 'ignore-folders.json');
+    const ignoreFoldersPath = path.join(__dirname, "./emubro-resources", "ignore-folders.json");
     let ignoreFolders = [];
     try {
-      const ignoreData = await fsSync.readFileSync(ignoreFoldersPath, 'utf8');
+      const ignoreData = await fsSync.readFileSync(ignoreFoldersPath, "utf8");
       const ignoreJson = JSON.parse(ignoreData);
-      ignoreFolders = ignoreJson['ignore-folders'] || [];
+      ignoreFolders = ignoreJson["ignore-folders"] || [];
     } catch (ignoreErr) {
-      log.warn('Failed to read ignore-folders.json:', ignoreErr.message);
+      log.warn("Failed to read ignore-folders.json:", ignoreErr.message);
     }
 
     const systemDirs = [
       process.env.WINDIR, 
       process.env.APPDATA, 
-      process.env['PROGRAMFILES'], 
-      process.env['PROGRAMFILES(X86)'], 
+      process.env["PROGRAMFILES"], 
+      process.env["PROGRAMFILES(X86)"], 
       process.env.LOCALAPPDATA,
-      'C:\\System Volume Information',
-      'C:\\$Recycle.Bin',
-      'C:\\Config.Msi'
+      "C:\\System Volume Information",
+      "C:\\$Recycle.Bin",
+      "C:\\Config.Msi"
     ];
 
     async function scanDirectory(dir, depth = 0) {
@@ -296,15 +293,15 @@ ipcMain.handle('browse-games-and-emus', async (event, selectedDrive) => {
           // 3. INNER TRY/CATCH: This is the most important part.
           // It prevents one bad file from killing the entire scan.
           try {
-            // Use lstat so we don't follow Windows Junctions/Symlinks
+            // Use lstat so we don\'t follow Windows Junctions/Symlinks
             const stat = await fs.lstat(itemPath);
 
-            if (item.startsWith('.') || stat.isSymbolicLink()) {
+            if (item.startsWith(".") || stat.isSymbolicLink()) {
               continue;
             }
 
             if (stat.isDirectory()) {
-              if (item.startsWith('$')) {
+              if (item.startsWith("$")) {
                 continue;
               }
 
@@ -312,7 +309,7 @@ ipcMain.handle('browse-games-and-emus', async (event, selectedDrive) => {
                 continue;
               }
               // --- Windows System Filters ---
-              if (os.platform() === 'win32') {
+              if (os.platform() === "win32") {
                 if (systemDirs.some(sysDir => sysDir && itemPath.toLowerCase().startsWith(sysDir.toLowerCase()))) {
                   continue;
                 }
@@ -340,7 +337,7 @@ ipcMain.handle('browse-games-and-emus', async (event, selectedDrive) => {
                 }
               }
               
-              if (itemPath.endsWith('.exe')) {
+              if (itemPath.endsWith(".exe")) {
                 processEmulatorExe(itemPath, item, platformConfigs, emulators, foundEmulators);
               }
 
@@ -350,7 +347,7 @@ ipcMain.handle('browse-games-and-emus', async (event, selectedDrive) => {
                   for (const emulator of config.emulators) {
                     if (!emulator.archiveFileMatchWin || !emulator.archiveFileMatchWin.trim()) continue;
                     try {
-                      const regex = new RegExp(emulator.archiveFileMatchWin, 'i');
+                      const regex = new RegExp(emulator.archiveFileMatchWin, "i");
                       if (regex.test(item)) {
                         const emulatorInArchive = emulator.name || "Unknown Emulator";
                         log.info(`Emulator archive matched: ${itemPath} for emulator ${emulatorInArchive} of platform ${config.name}`);
@@ -363,7 +360,7 @@ ipcMain.handle('browse-games-and-emus', async (event, selectedDrive) => {
               }
             }
           } catch (fileErr) {
-            // Silently skip files we can't read (like DumpStack.log)
+            // Silently skip files we can\'t read (like DumpStack.log)
             continue; 
           }
         }
@@ -372,30 +369,30 @@ ipcMain.handle('browse-games-and-emus', async (event, selectedDrive) => {
       }
     }
     
-    // If no drive selected, scan the entire system (limited to user's home directory for safety)
+    // If no drive selected, scan the entire system (limited to user\'s home directory for safety)
     if (!selectedDrive) {
       const homeDir = os.homedir();
-      log.info('Scanning home directory:', homeDir);
+      log.info("Scanning home directory:", homeDir);
       await scanDirectory(homeDir);
     } else {
       // Ensure Windows drive letters have a trailing slash
       let drivePath = selectedDrive;
-      if (os.platform() === 'win32' && drivePath.length === 2 && drivePath.endsWith(':')) {
-        drivePath += '\\';
+      if (os.platform() === "win32" && drivePath.length === 2 && drivePath.endsWith(":")) {
+        drivePath += "\\";
       }
-      log.info('Scanning selected drive:', drivePath);
+      log.info("Scanning selected drive:", drivePath);
       await scanDirectory(drivePath);
     }
 
     log.info(`Game search completed. Found ${foundGames.length} games and ${foundEmulators.length} emulators.`);
     return { success: true, platforms: foundPlatforms, games: foundGames, emulators: foundEmulators };
   } catch (error) {
-    log.error('Failed to search for games and emulators:', error);
+    log.error("Failed to search for games and emulators:", error);
     return { success: false, message: error.message };
   }
 });
 
-ipcMain.handle('upload-theme', async (event, { author, name, themeObject, base64Image, webhookUrl }) => {
+ipcMain.handle("upload-theme", async (event, { author, name, themeObject, base64Image, webhookUrl }) => {
     if (!webhookUrl) {
         log.error("Upload failed: No webhook URL provided.");
         return false;
@@ -413,27 +410,27 @@ ipcMain.handle('upload-theme', async (event, { author, name, themeObject, base64
     formData.append("payload_json", JSON.stringify(payload));
 
     // 2. Attach theme.json
-    const jsonBlob = new Blob([JSON.stringify(themeObject, null, 2)], { type: 'application/json' });
+    const jsonBlob = new Blob([JSON.stringify(themeObject, null, 2)], { type: "application/json" });
     formData.append("files[0]", jsonBlob, "theme.json");
 
     // 3. Robust Image/GIF Conversion
     try {
         let imageData;
-        let mimeType = 'image/png'; // Default
-        let extension = 'png';
+        let mimeType = "image/png"; // Default
+        let extension = "png";
 
-        if (base64Image.includes(';base64,')) {
-            // It's a full Data URL (e.g., data:image/gif;base64,...)
-            const parts = base64Image.split(';base64,');
-            mimeType = parts[0].split(':')[1];
+        if (base64Image.includes(";base64,")) {
+            // It\'s a full Data URL (e.g., data:image/gif;base64,...)
+            const parts = base64Image.split(";base64,");
+            mimeType = parts[0].split(":")[1];
             imageData = parts[1];
-            extension = mimeType.split('/')[1];
+            extension = mimeType.split("/")[1];
         } else {
-            // It's already raw Base64 data
+            // It\'s already raw Base64 data
             imageData = base64Image;
             // Attempt to guess extension or keep default
-            extension = 'gif'; 
-            mimeType = 'image/gif';
+            extension = "gif"; 
+            mimeType = "image/gif";
         }
 
         if (!imageData) {
@@ -446,7 +443,7 @@ ipcMain.handle('upload-theme', async (event, { author, name, themeObject, base64
             : `preview.${extension}`;
 
         // The Fix: Convert the cleaned string to a Buffer
-        const imageBuffer = Buffer.from(imageData, 'base64');
+        const imageBuffer = Buffer.from(imageData, "base64");
         const imageBlob = new Blob([imageBuffer], { type: mimeType });
         
         formData.append("files[1]", imageBlob, imageFileName);
@@ -458,7 +455,7 @@ ipcMain.handle('upload-theme', async (event, { author, name, themeObject, base64
     }
 
     try {
-        const response = await fetch(webhookUrl, { method: 'POST', body: formData });
+        const response = await fetch(webhookUrl, { method: "POST", body: formData });
         return response.ok;
     } catch (error) {
         console.error("Webhook Error:", error);
@@ -469,17 +466,17 @@ ipcMain.handle('upload-theme', async (event, { author, name, themeObject, base64
 // Function to read all platform configuration files
 async function getPlatformConfigs() {
   const platformConfigs = [];
-  const platformsDir = path.join(__dirname, './emubro-resources', 'platforms');
+  const platformsDir = path.join(__dirname, "./emubro-resources", "platforms");
   
   try {
     const platformDirs = await fs.readdir(platformsDir);
     
     for (const platformDir of platformDirs) {
-      const configPath = path.join(platformsDir, platformDir, 'config.json');
+      const configPath = path.join(platformsDir, platformDir, "config.json");
       
       try {
         if (fsSync.existsSync(configPath)) {
-          const configFile = await fsSync.readFileSync(configPath, 'utf8');
+          const configFile = await fsSync.readFileSync(configPath, "utf8");
           const config = JSON.parse(configFile);
           // Add platform directory name for reference
           config.platformDir = platformDir;
@@ -490,7 +487,7 @@ async function getPlatformConfigs() {
       }
     }
   } catch (error) {
-    log.error('Failed to read platform configurations:', error);
+    log.error("Failed to read platform configurations:", error);
   }
   
   return platformConfigs;
@@ -501,7 +498,7 @@ function determinePlatformFromFilename(filename, filePath, platformConfigs) {
     if (config.searchFor) {
       if (!config.searchFor || !config.searchFor.trim()) continue;
       try {
-        const regex = new RegExp(config.searchFor, 'i');
+        const regex = new RegExp(config.searchFor, "i");
         if (regex.test(filename)) {
           return config;
         }
@@ -519,7 +516,7 @@ function determinePlatformFromFilenameEmus(filename, filePath, platformConfigs) 
       for (const emulator of config.emulators) {
         if (!emulator.searchString || !emulator.searchString.trim()) continue;
         try {
-          const regex = new RegExp(emulator.searchString, 'i');
+          const regex = new RegExp(emulator.searchString, "i");
           if (regex.test(filename)) {
             return config;
           }
@@ -548,7 +545,7 @@ function processEmulatorExe(itemPath, item, platformConfigs, emulators, foundEmu
   }
 }
 
-ipcMain.handle('get-user-info', async () => {
+ipcMain.handle("get-user-info", async () => {
   return {
     username: "Bro",
     avatar: "./logo.png",
@@ -558,12 +555,12 @@ ipcMain.handle('get-user-info', async () => {
   };
 });
 
-ipcMain.handle('open-file-dialog', async (event, options) => {
+ipcMain.handle("open-file-dialog", async (event, options) => {
   if (!mainWindow) return { canceled: true };
   return await dialog.showOpenDialog(mainWindow, options);
 });
 
-ipcMain.handle('get-library-stats', async () => {
+ipcMain.handle("get-library-stats", async () => {
   const totalGames = games.length;
   const installedGames = games.filter(game => game.isInstalled).length;
   const totalPlayTime = Math.floor(Math.random() * 1000) + 500; // Random play time between 500-1500 hours
@@ -573,25 +570,25 @@ ipcMain.handle('get-library-stats', async () => {
     installedGames,
     totalPlayTime,
     recentlyPlayed: [
-      { id: 1, name: 'Super Mario Bros 3', playTime: 45 },
-      { id: 4, name: 'Super Metroid', playTime: 32 },
-      { id: 2, name: 'The Legend of Zelda: A Link to the Past', playTime: 28 }
+      { id: 1, name: "Super Mario Bros 3", playTime: 45 },
+      { id: 4, name: "Super Metroid", playTime: 32 },
+      { id: 2, name: "The Legend of Zelda: A Link to the Past", playTime: 28 }
     ]
   };
 });
 
 // Handle app quit
-app.on('before-quit', () => {
-  log.info('Application is quitting');
+app.on("before-quit", () => {
+  log.info("Application is quitting");
 });
 
 // Memory card reader functionality
-ipcMain.handle('read-memory-card', async (event, cardPath) => {
+ipcMain.handle("read-memory-card", async (event, cardPath) => {
   try {
-    log.info('Reading memory card from:', cardPath);
+    log.info("Reading memory card from:", cardPath);
     
     if (!fsSync.existsSync(cardPath)) {
-      log.error('File does not exist:', cardPath);
+      log.error("File does not exist:", cardPath);
       return { success: false, message: "Memory card file not found" };
     }
     
@@ -613,27 +610,27 @@ ipcMain.handle('read-memory-card', async (event, cardPath) => {
     }
 
     // Identify by Header
-    const ps1Magic = buffer.toString('ascii', 0, 11);
-    if (ps1Magic === 'Sony PS ---' || buffer.toString('ascii', 0, 2) === 'MC') {
+    const ps1Magic = buffer.toString("ascii", 0, 11);
+    if (ps1Magic === "Sony PS ---" || buffer.toString("ascii", 0, 2) === "MC") {
        return parsePS1MemoryCard(buffer);
     }
     
-    const ps2Magic = buffer.toString('ascii', 0, 28);
-    if (ps2Magic === 'Sony PS2 Memory Card Format ') {
+    const ps2Magic = buffer.toString("ascii", 0, 28);
+    if (ps2Magic === "Sony PS2 Memory Card Format ") {
       return parsePS2MemoryCard(buffer);
     }
     
-    log.warn('Unrecognized memory card format at:', cardPath);
+    log.warn("Unrecognized memory card format at:", cardPath);
     return { 
       success: true, 
-      data: { 
-        format: 'Unknown',
+      data: {
+        format: "Unknown",
         size: stats.size,
-        message: 'Unsupported or unrecognized memory card format'
-      } 
+        message: "Unsupported or unrecognized memory card format"
+      }
     };
   } catch (error) {
-    log.error('Failed to read memory card:', error);
+    log.error("Failed to read memory card:", error);
     return { success: false, message: error.message };
   }
 });
@@ -641,61 +638,94 @@ ipcMain.handle('read-memory-card', async (event, cardPath) => {
 function parsePS1MemoryCard(buffer) {
   try {
     let startOffset = 0;
-    
-    if (buffer.length === 131200 && buffer.toString('ascii', 0, 11) === '123-456-STD') {
-       startOffset = 128;
-       log.info('Detected DexDrive header, skipping 128 bytes');
-    }
+    if (buffer.length === 131200) startOffset = 128; // DexDrive
 
     const saves = [];
     
+    // 1. Loop through Directory Frames (Slots 1-15)
     for (let i = 1; i < 16; i++) {
-      const frameOffset = startOffset + (i * 128);
-      if (frameOffset + 128 > buffer.length) break;
-
-      const frame = buffer.slice(frameOffset, frameOffset + 128);
-      const status = frame[0]; 
+      const dirOffset = startOffset + (i * 128);
+      const frame = buffer.slice(dirOffset, dirOffset + 128);
       
-      if (status === 0x51) {
-        const titleRaw = frame.slice(12, 12 + 64);
-        let title = '';
-        try {
-          title = titleRaw.toString('ascii').replace(/\0/g, '').trim();
-          if (!title) title = 'Untitled Save';
-        } catch (e) {
-          title = 'Unknown Title';
+      // 0x51 means the block is the HEAD of a save file
+      if (frame[0] === 0x51) { 
+        
+        // THE FIX: Use the Block Link to find the actual data
+        // Block numbers are 0-indexed for the 15 data slots
+        const blockNumber = i - 1; 
+        const dataBlockOffset = startOffset + 8192 + (blockNumber * 8192);
+        
+        // Security check: Don't read past the buffer
+        if (dataBlockOffset + 1024 > buffer.length) continue;
+
+        const dataHeader = buffer.slice(dataBlockOffset, dataBlockOffset + 1024);
+
+        // Verify the "SC" Magic (Save Certificate) at the start of the data block
+        if (dataHeader.toString('ascii', 0, 2) !== 'SC') {
+          log.warn(`Block ${i} marked as used but 'SC' magic missing at offset ${dataBlockOffset}`);
+          continue;
         }
 
-        const productCode = title.substring(0, 12).trim() || 'N/A';
-        
+        // 1. Extract Palette (Offset 0x60 in the DATA block)
+        const palette = [];
+        for (let p = 0; p < 16; p++) {
+          const colorVal = dataHeader.readUInt16LE(0x60 + (p * 2));
+          palette.push([
+            (colorVal & 0x1F) << 3,
+            ((colorVal >> 5) & 0x1F) << 3,
+            ((colorVal >> 10) & 0x1F) << 3,
+            p === 0 ? 0 : 255 // Transparency
+          ]);
+        }
+
+        // 2. Extract Icon (Offset 0x80 in the DATA block)
+        const iconBitmap = dataHeader.slice(0x80, 0x80 + 128);
+        const icon = decodePS1Icon(iconBitmap, palette);
+
+        const title = frame.slice(12, 76).toString('ascii').replace(/\0/g, '').trim();
+
         saves.push({
           slot: i,
-          status: 'In Use',
-          size: 8192,
-          title: title,
-          productCode: productCode
+          title: title || "Untitled Save",
+          productCode: title.substring(0, 12).trim(),
+          icon: icon,
+          size: 8192
         });
       }
     }
-
-    log.info(`Parsed PS1 Card: Found ${saves.length} saves`);
-    return {
-      success: true,
-      data: {
-        format: 'PlayStation 1',
-        totalSize: buffer.length,
-        saves: saves
-      }
-    };
+    return { success: true, data: { format: "PlayStation 1", saves } };
   } catch (err) {
-    log.error('Error parsing PS1 memory card:', err);
-    return { success: false, message: 'Failed to parse PS1 memory card: ' + err.message };
+    return { success: false, message: err.message };
   }
 }
 
+// In Main Process
+function decodePS1Icon(bitmap, palette) {
+    const width = 16, height = 16;
+    const pixels = new Uint8ClampedArray(width * height * 4);
+
+    for (let i = 0; i < bitmap.length; i++) {
+        const byte = bitmap[i];
+        // PS1 stores 2 pixels per byte (4 bits each)
+        const nibbles = [byte & 0x0F, (byte >> 4) & 0x0F]; 
+
+        nibbles.forEach((paletteIdx, n) => {
+            const pixelPos = (i * 2 + n) * 4;
+            const color = palette[paletteIdx];
+            
+            pixels[pixelPos]     = color[0]; // R
+            pixels[pixelPos + 1] = color[1]; // G
+            pixels[pixelPos + 2] = color[2]; // B
+            pixels[pixelPos + 3] = color[3]; // A
+        });
+    }
+    // IMPORTANT: Convert to a regular Array for IPC reliability
+    return { pixels: Array.from(pixels), width: 16, height: 16 };
+}
+
 function parsePS2MemoryCard(buffer) {
-  const magic = buffer.toString('ascii', 0, 28);
-  if (magic !== 'Sony PS2 Memory Card Format ') {
+  const magic = buffer.toString("ascii", 0, 28);
+  if (magic !== "Sony PS2 Memory Card Format ") {
     return { success: false, message: "Invalid PS2 Memory Card format" };
   }
 
@@ -706,21 +736,21 @@ function parsePS2MemoryCard(buffer) {
   return {
     success: true,
     data: {
-      format: 'PlayStation 2',
+      format: "PlayStation 2",
       totalSize: buffer.length,
       pageSize: pageSize,
       pagesPerBlock: pagesPerBlock,
       pagesPerCluster: pagesPerCluster,
-      message: 'PS2 Card identified. Detailed directory parsing coming soon.'
+      message: "PS2 Card identified. Detailed directory parsing coming soon."
     }
   };
 }
 
-ipcMain.handle('browse-memory-cards', async (event, selectedDrive) => {
+ipcMain.handle("browse-memory-cards", async (event, selectedDrive) => {
   try {
-    log.info('Starting memory card search in:', selectedDrive);
+    log.info("Starting memory card search in:", selectedDrive);
     const foundCards = [];
-    const extensions = ['.mcr', '.mcd', '.gme', '.ps2', '.max', '.psu'];
+    const extensions = [".mcr", ".mcd", ".gme", ".ps2", ".max", ".psu"];
     
     async function scan(dir) {
       try {
@@ -730,7 +760,7 @@ ipcMain.handle('browse-memory-cards', async (event, selectedDrive) => {
           try {
             const stat = await fs.lstat(itemPath);
             if (stat.isDirectory()) {
-              if (!item.startsWith('$') && !item.startsWith('.')) {
+              if (!item.startsWith("$") && !item.startsWith(".")) {
                 await scan(itemPath);
               }
             } else if (stat.isFile()) {
@@ -750,8 +780,8 @@ ipcMain.handle('browse-memory-cards', async (event, selectedDrive) => {
     }
 
     let searchPath = selectedDrive;
-    if (os.platform() === 'win32' && searchPath && searchPath.length === 2 && searchPath.endsWith(':')) {
-      searchPath += '\\';
+    if (os.platform() === "win32" && searchPath && searchPath.length === 2 && searchPath.endsWith(":")) {
+      searchPath += "\\";
     }
     
     if (!searchPath) {
@@ -761,7 +791,7 @@ ipcMain.handle('browse-memory-cards', async (event, selectedDrive) => {
     await scan(searchPath);
     return { success: true, cards: foundCards };
   } catch (error) {
-    log.error('Failed to browse memory cards:', error);
+    log.error("Failed to browse memory cards:", error);
     return { success: false, message: error.message };
   }
 });

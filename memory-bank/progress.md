@@ -38,8 +38,10 @@
     - Optimized layout to fill 100% of available space by using absolute positioning and flex-grow
     - Fixed responsive behavior with media queries and stacked layouts for smaller windows
     - Refined table visualization with sticky headers and responsive columns
-    - Implemented file-based upload flow for both memory card slots
+    - Implemented file-based upload flow for both memory card slots using native file dialogs
     - Added centralized operation controls and bottom action bars
+    - Extracted PS1 save icons from memory card files and rendered them in the UI (32x32px size)
+    - **Debugged and fixed issues with icon rendering (path: null error, incorrect palette/bitmap decoding)**
 - Added dedicated "Tools" navigation logic to header
     - Created a "Tools Overview" grid view to browse available utilities
     - Implemented seamless switching between the library and tools views
