@@ -8,6 +8,7 @@
 - Custom Language Dropdown with Flag Icons
 - Language Manager UI layout fix for long text content
 - Hardcoded Webhook URL base in validation to avoid translation issues
+- Implemented translation fallback to English for missing keys in other locales
 - Project structure with memory-bank documentation system
 - README.md updated for Electron version
 - Core documentation files initialized (projectbrief, productContext, activeContext, systemPatterns, techContext)

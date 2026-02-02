@@ -4,6 +4,7 @@
 The current focus is on updating project documentation and maintaining the codebase to align with the new Electron-based architecture.
 
 ## Recent Changes
+- Implemented translation fallback to English in `js/i18n-manager.js` by overriding `i18n.t` to search in `allTranslations['en']` when a key is missing in the current language
 - Implemented logic for theme toggle button to temporally invert current theme colors (Light -> Dark, Dark -> Light) instead of switching presets
 - Improved `applyCustomTheme` to support granular color overrides (Header, Sidebar, Actionbar)
 - Enhanced `getCurrentThemeColors` to capture comprehensive color state for inversion

@@ -99,6 +99,43 @@ export function initI18n(onLanguageChange) {
         i18n.loadTranslations(allTranslations);
     }
 
+    // Wrap i18n.t to support fallback to English
+    const originalT = i18n.t.bind(i18n);
+    i18n.t = (key, data) => {
+        let translation = originalT(key, data);
+        
+        // If translation is missing (i18n returns the key itself or empty string)
+        if (translation === key || !translation) {
+            const currentLang = i18n.getLanguage();
+            // Only try fallback if we are not already in English
+            if (currentLang !== 'en' && typeof allTranslations !== 'undefined' && allTranslations['en']) {
+                // Manually lookup in English
+                const keys = key.split('.');
+                let result = allTranslations['en'];
+                for (const k of keys) {
+                    if (result && result[k] !== undefined) {
+                        result = result[k];
+                    } else {
+                        result = null;
+                        break;
+                    }
+                }
+                
+                if (result && typeof result === 'string') {
+                    // Handle simple data replacement if provided
+                    if (data) {
+                        Object.keys(data).forEach(dataKey => {
+                            result = result.replace(`{${dataKey}}`, data[dataKey]);
+                        });
+                    }
+                    return result;
+                }
+            }
+        }
+        
+        return translation;
+    };
+
     // Listen for language changes
     i18n.onChange(() => {
         updateUILanguage();
