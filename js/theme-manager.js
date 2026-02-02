@@ -168,6 +168,11 @@ export function applyCornerStyle(style) {
         root.style.setProperty('--radius-btn-bottom-right', '0px');
 
         root.style.setProperty('--radius-input', '0px');
+        root.style.setProperty('--radius-input-top-left', '0px');
+        root.style.setProperty('--radius-input-top-right', '0px');
+        root.style.setProperty('--radius-input-bottom-left', '0px');
+        root.style.setProperty('--radius-input-bottom-right', '0px');
+
         root.style.setProperty('--radius-card', '0px');
         root.style.setProperty('--radius-sm', '0px');
     } else if (style === 'semi-rounded') {
@@ -176,7 +181,13 @@ export function applyCornerStyle(style) {
         root.style.setProperty('--radius-btn-top-right', '4px');
         root.style.setProperty('--radius-btn-bottom-left', '4px');
         root.style.setProperty('--radius-btn-bottom-right', '4px');
+        
         root.style.setProperty('--radius-input', '4px');
+        root.style.setProperty('--radius-input-top-left', '4px');
+        root.style.setProperty('--radius-input-top-right', '4px');
+        root.style.setProperty('--radius-input-bottom-left', '4px');
+        root.style.setProperty('--radius-input-bottom-right', '4px');
+
         root.style.setProperty('--radius-card', '4px');
         root.style.setProperty('--radius-sm', '2px');
     } else if (style === 'futuristic') {
@@ -185,7 +196,13 @@ export function applyCornerStyle(style) {
         root.style.setProperty('--radius-btn-top-right', '0px');
         root.style.setProperty('--radius-btn-bottom-left', '0px');
         root.style.setProperty('--radius-btn-bottom-right', '20px');
+        
         root.style.setProperty('--radius-input', '20px');
+        root.style.setProperty('--radius-input-top-left', '20px');
+        root.style.setProperty('--radius-input-top-right', '0px');
+        root.style.setProperty('--radius-input-bottom-left', '0px');
+        root.style.setProperty('--radius-input-bottom-right', '20px');
+
         root.style.setProperty('--radius-card', '12px');
         root.style.setProperty('--radius-sm', '4px');
     } else {
@@ -194,7 +211,13 @@ export function applyCornerStyle(style) {
         root.style.setProperty('--radius-btn-top-right', '20px');
         root.style.setProperty('--radius-btn-bottom-left', '20px');
         root.style.setProperty('--radius-btn-bottom-right', '20px');
+        
         root.style.setProperty('--radius-input', '20px');
+        root.style.setProperty('--radius-input-top-left', '20px');
+        root.style.setProperty('--radius-input-top-right', '20px');
+        root.style.setProperty('--radius-input-bottom-left', '20px');
+        root.style.setProperty('--radius-input-bottom-right', '20px');
+
         root.style.setProperty('--radius-card', '12px');
         root.style.setProperty('--radius-sm', '4px');
     }
@@ -262,8 +285,12 @@ export function applyCustomTheme(theme) {
     root.style.setProperty('--bg-secondary', theme.colors.bgSecondary);
     const tertiary = theme.colors.bgTertiary || theme.colors.bgSecondary;
     root.style.setProperty('--bg-tertiary', tertiary);
-    root.style.setProperty('--bg-quaternary', tertiary); 
+    root.style.setProperty('--bg-quaternary', theme.colors.bgQuaternary || tertiary);
     
+    if (theme.colors.bgHeader) root.style.setProperty('--bg-header', theme.colors.bgHeader);
+    if (theme.colors.bgSidebar) root.style.setProperty('--bg-sidebar', theme.colors.bgSidebar);
+    if (theme.colors.bgActionbar) root.style.setProperty('--bg-actionbar', theme.colors.bgActionbar);
+
     root.style.setProperty('--text-primary', theme.colors.textPrimary);
     root.style.setProperty('--text-secondary', theme.colors.textSecondary);
     root.style.setProperty('--text-tertiary', '#999');
@@ -859,7 +886,14 @@ export function getCurrentThemeColors() {
         bgSecondary: getVar('--bg-secondary'),
         textSecondary: getVar('--text-secondary'),
         accentColor: getVar('--accent-color'),
-        borderColor: getVar('--border-color')
+        borderColor: getVar('--border-color'),
+        bgTertiary: getVar('--bg-tertiary'),
+        bgQuaternary: getVar('--bg-quaternary'),
+        bgHeader: getVar('--bg-header'),
+        bgSidebar: getVar('--bg-sidebar'),
+        bgActionbar: getVar('--bg-actionbar'),
+        successColor: getVar('--success-color'),
+        dangerColor: getVar('--danger-color')
     };
 }
 
@@ -993,10 +1027,64 @@ export function setHasUnsavedChanges(val) {
 }
 
 export function toggleTheme() {
-    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-    updateThemeSelector();
+    const currentColors = getCurrentThemeColors();
+    const invertedColors = {};
+    const flip = (hex) => flipLightness(hex);
+
+    invertedColors.bgPrimary = flip(currentColors.bgPrimary);
+    invertedColors.bgSecondary = flip(currentColors.bgSecondary);
+    invertedColors.bgTertiary = flip(currentColors.bgTertiary);
+    invertedColors.bgQuaternary = flip(currentColors.bgQuaternary);
+    
+    invertedColors.textPrimary = flip(currentColors.textPrimary);
+    invertedColors.textSecondary = flip(currentColors.textSecondary);
+    
+    invertedColors.borderColor = flip(currentColors.borderColor);
+    invertedColors.accentColor = flip(currentColors.accentColor);
+    
+    invertedColors.bgHeader = flip(currentColors.bgHeader);
+    invertedColors.bgSidebar = flip(currentColors.bgSidebar);
+    invertedColors.bgActionbar = flip(currentColors.bgActionbar);
+    
+    invertedColors.successColor = flip(currentColors.successColor);
+    invertedColors.dangerColor = flip(currentColors.dangerColor);
+
+    // Try to preserve background image
+    let currentBgImage = window.currentBackgroundImage;
+    if (!currentBgImage) {
+        const gameGrid = document.querySelector('main.game-grid');
+        if (gameGrid) {
+            const bgStyle = getComputedStyle(gameGrid).backgroundImage;
+            if (bgStyle && bgStyle !== 'none') {
+                const match = bgStyle.match(/url\(['"]?(.*?)['"]?\)/);
+                if (match) {
+                    currentBgImage = match[1];
+                }
+            }
+        }
+    }
+
+    // Create temporary theme object
+    const invertedTheme = {
+        id: 'temp_inverted',
+        name: 'Inverted (Temporary)',
+        colors: invertedColors,
+        background: {
+             image: currentBgImage || null,
+             position: 'centered', // Defaults
+             scale: 'crop',
+             repeat: 'no-repeat'
+        },
+        cardEffects: {
+             glassEffect: document.documentElement.getAttribute('data-glass-effect') === 'enabled'
+        }
+    };
+    
+    // Apply without saving to localStorage (temporal)
+    applyCustomTheme(invertedTheme);
+    
+    // Update currentTheme locally so we know state changed, but don't persist it
+    currentTheme = 'temp_inverted';
 }
 
 export function invertColors() {

@@ -44,10 +44,19 @@ select {
     color: var(--text-primary);
     border: 1px solid var(--border-color);
     padding: 8px 12px;
-    border-radius: var(--radius-input);
+    border-radius: var(--radius-input-top-left) var(--radius-input-top-right) var(--radius-input-bottom-right) var(--radius-input-bottom-left);
     cursor: pointer;
     font-size: 0.9rem;
     transition: all 0.3s ease;
+}
+
+input[type="text"], 
+input[type="number"], 
+input[type="password"], 
+input[type="email"], 
+input[type="search"],
+textarea {
+    border-radius: var(--radius-input-top-left) var(--radius-input-top-right) var(--radius-input-bottom-right) var(--radius-input-bottom-left);
 }
 
 /* App Container */

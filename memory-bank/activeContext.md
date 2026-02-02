@@ -4,6 +4,9 @@
 The current focus is on updating project documentation and maintaining the codebase to align with the new Electron-based architecture.
 
 ## Recent Changes
+- Implemented logic for theme toggle button to temporally invert current theme colors (Light -> Dark, Dark -> Light) instead of switching presets
+- Improved `applyCustomTheme` to support granular color overrides (Header, Sidebar, Actionbar)
+- Enhanced `getCurrentThemeColors` to capture comprehensive color state for inversion
 - Implemented automatic webhook re-configuration when theme upload fails (e.g., if webhook is deleted on Discord)
 - Fixed Language Manager UI layout issues where long text caused rows to look weird
 - Improved Language Manager editor styling (grid layout, spacing, and font sizes)
