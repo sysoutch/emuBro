@@ -7,6 +7,9 @@ const fsSync = require("fs");
 const os = require("os");
 const { execFile } = require("child_process");
 
+// Import handlers
+const ps1Handler = require("./ps1-handler");
+
 // Initialize the store for app settings
 const store = new Store();
 
@@ -760,144 +763,20 @@ ipcMain.handle("set-primary-monitor", async (event, monitorIndex) => {
 
 // Memory card reader functionality
 ipcMain.handle("read-memory-card", async (event, cardPath) => {
-  try {
-    log.info("Reading memory card from:", cardPath);
-    
-    if (!fsSync.existsSync(cardPath)) {
-      log.error("File does not exist:", cardPath);
-      return { success: false, message: "Memory card file not found" };
-    }
-    
-    const stats = await fs.stat(cardPath);
-    const buffer = await fsSync.readFileSync(cardPath);
-    
-    log.info(`Memory card size: ${stats.size} bytes`);
-
-    // PS1 Detection
-    // Standard size: 128KB (131072 bytes)
-    // DexDrive size: 131200 bytes (128KB + 128 byte header)
-    if (stats.size === 128 * 1024 || stats.size === 131200) {
-      return parsePS1MemoryCard(buffer);
-    } 
-    
-    // PS2 Detection
-    if (stats.size === 8 * 1024 * 1024 || stats.size === 16 * 1024 * 1024 || stats.size === 32 * 1024 * 1024 || stats.size === 64 * 1024 * 1024) {
-      return parsePS2MemoryCard(buffer);
-    }
-
-    // Identify by Header
-    const ps1Magic = buffer.toString("ascii", 0, 11);
-    if (ps1Magic === "Sony PS ---" || buffer.toString("ascii", 0, 2) === "MC") {
-       return parsePS1MemoryCard(buffer);
-    }
-    
-    const ps2Magic = buffer.toString("ascii", 0, 28);
-    if (ps2Magic === "Sony PS2 Memory Card Format ") {
-      return parsePS2MemoryCard(buffer);
-    }
-    
-    log.warn("Unrecognized memory card format at:", cardPath);
-    return { 
-      success: true, 
-      data: {
-        format: "Unknown",
-        size: stats.size,
-        message: "Unsupported or unrecognized memory card format"
-      }
-    };
-  } catch (error) {
-    log.error("Failed to read memory card:", error);
-    return { success: false, message: error.message };
-  }
+  return await ps1Handler.readCard(cardPath);
 });
 
-function parsePS1MemoryCard(buffer) {
-  try {
-    let startOffset = 0;
-    if (buffer.length === 131200) startOffset = 128; // DexDrive
+ipcMain.handle("delete-save", async (event, { filePath, slot }) => {
+  return await ps1Handler.deleteSave(filePath, slot);
+});
 
-    const saves = [];
-    
-    // 1. Loop through Directory Frames (Slots 1-15)
-    for (let i = 1; i < 16; i++) {
-      const dirOffset = startOffset + (i * 128);
-      const frame = buffer.slice(dirOffset, dirOffset + 128);
-      
-      // 0x51 means the block is the HEAD of a save file
-      if (frame[0] === 0x51) { 
-        
-        // THE FIX: Use the Block Link to find the actual data
-        // Block numbers are 0-indexed for the 15 data slots
-        const blockNumber = i - 1; 
-        const dataBlockOffset = startOffset + 8192 + (blockNumber * 8192);
-        
-        // Security check: Don't read past the buffer
-        if (dataBlockOffset + 1024 > buffer.length) continue;
+ipcMain.handle("rename-save", async (event, { filePath, slot, newName }) => {
+  return await ps1Handler.renameSave(filePath, slot, newName);
+});
 
-        const dataHeader = buffer.slice(dataBlockOffset, dataBlockOffset + 1024);
-
-        // Verify the "SC" Magic (Save Certificate) at the start of the data block
-        if (dataHeader.toString('ascii', 0, 2) !== 'SC') {
-          log.warn(`Block ${i} marked as used but 'SC' magic missing at offset ${dataBlockOffset}`);
-          continue;
-        }
-
-        // 1. Extract Palette (Offset 0x60 in the DATA block)
-        const palette = [];
-        for (let p = 0; p < 16; p++) {
-          const colorVal = dataHeader.readUInt16LE(0x60 + (p * 2));
-          palette.push([
-            (colorVal & 0x1F) << 3,
-            ((colorVal >> 5) & 0x1F) << 3,
-            ((colorVal >> 10) & 0x1F) << 3,
-            p === 0 ? 0 : 255 // Transparency
-          ]);
-        }
-
-        // 2. Extract Icon (Offset 0x80 in the DATA block)
-        const iconBitmap = dataHeader.slice(0x80, 0x80 + 128);
-        const icon = decodePS1Icon(iconBitmap, palette);
-
-        const title = frame.slice(12, 76).toString('ascii').replace(/\0/g, '').trim();
-
-        saves.push({
-          slot: i,
-          title: title || "Untitled Save",
-          productCode: title.substring(0, 12).trim(),
-          icon: icon,
-          size: 8192
-        });
-      }
-    }
-    return { success: true, data: { format: "PlayStation 1", saves } };
-  } catch (err) {
-    return { success: false, message: err.message };
-  }
-}
-
-// In Main Process
-function decodePS1Icon(bitmap, palette) {
-    const width = 16, height = 16;
-    const pixels = new Uint8ClampedArray(width * height * 4);
-
-    for (let i = 0; i < bitmap.length; i++) {
-        const byte = bitmap[i];
-        // PS1 stores 2 pixels per byte (4 bits each)
-        const nibbles = [byte & 0x0F, (byte >> 4) & 0x0F]; 
-
-        nibbles.forEach((paletteIdx, n) => {
-            const pixelPos = (i * 2 + n) * 4;
-            const color = palette[paletteIdx];
-            
-            pixels[pixelPos]     = color[0]; // R
-            pixels[pixelPos + 1] = color[1]; // G
-            pixels[pixelPos + 2] = color[2]; // B
-            pixels[pixelPos + 3] = color[3]; // A
-        });
-    }
-    // IMPORTANT: Convert to a regular Array for IPC reliability
-    return { pixels: Array.from(pixels), width: 16, height: 16 };
-}
+ipcMain.handle("format-card", async (event, filePath) => {
+  return await ps1Handler.formatCard(filePath);
+});
 
 function parsePS2MemoryCard(buffer) {
   const magic = buffer.toString("ascii", 0, 28);

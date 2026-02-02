@@ -7,10 +7,12 @@ const log = require("electron-log");
 
 import { GamepadTool } from './tools/gamepad-tool.js';
 import { MonitorTool } from './tools/monitor-tool.js';
+import { MemoryCardTool } from './tools/memory-card-tool.js';
 
 // Create instances of tools
 const gamepadTool = new GamepadTool();
 const monitorTool = new MonitorTool();
+const memoryCardTool = new MemoryCardTool();
 
 export function showToolView(tool) {
     const gamesContainer = document.getElementById("games-container");
@@ -46,7 +48,11 @@ export function showToolView(tool) {
         // 4. Robust Switch with "Exits"
         switch(tool) {
             case "memory-card":
-                renderMemoryCardTool();
+                if (memoryCardTool && typeof memoryCardTool.render === 'function') {
+                    memoryCardTool.render(gamesContainer);
+                } else {
+                    log.error("Memory Card tool failed to load or has no render() method");
+                }
                 break;
             case "gamepad":
                 if (gamepadTool && typeof gamepadTool.render === 'function') {
@@ -109,236 +115,6 @@ function renderToolsOverview() {
             showToolView(card.dataset.toolId);
         });
     });
-}
-
-function renderMemoryCardTool() {
-    const gamesContainer = document.getElementById("games-container");
-    const toolContent = document.createElement("div");
-    toolContent.className = "tool-content memory-card-editor";
-    toolContent.innerHTML = `
-        <div class="editor-layout">
-            <!-- Left Card Slot -->
-            <div class="card-slot" id="slot-1">
-                <div class="slot-header">
-                    <label>Memory Card 1:</label>
-                    <div class="header-controls">
-                        <select class="card-select"><option value="">Select Card...</option></select>
-                        <button class="icon-btn add-btn" title="New Card"><i class="fas fa-plus-square"></i></button>
-                        <button class="icon-btn open-btn" title="Open Card"><i class="fas fa-folder-open"></i></button>
-                    </div>
-                </div>
-                <div class="save-table-container">
-                    <table class="save-table">
-                        <thead>
-                            <tr>
-                                <th class="col-icon">Icon</th>
-                                <th class="col-title">Title</th>
-                                <th class="col-name">File Name</th>
-                                <th class="col-blocks">Blocks</th>
-                            </tr>
-                        </thead>
-                        <tbody class="save-list">
-                            <!-- Saves will be injected here -->
-                        </tbody>
-                    </table>
-                </div>
-                <div class="slot-footer">
-                    <button class="action-btn small">Format Card</button>
-                    <button class="action-btn small">Import File...</button>
-                    <button class="action-btn small">Import Card...</button>
-                    <button class="action-btn small primary">Save</button>
-                </div>
-            </div>
-
-            <!-- Central Controls -->
-            <div class="central-controls">
-                <button class="control-btn" disabled>Delete File</button>
-                <button class="control-btn" disabled>Undelete File</button>
-                <button class="control-btn" disabled>Rename File</button>
-                <button class="control-btn" disabled>Export File</button>
-                <button class="control-btn move-btn" disabled><i class="fas fa-chevron-left"></i><i class="fas fa-chevron-left"></i></button>
-                <button class="control-btn move-btn" disabled><i class="fas fa-chevron-right"></i><i class="fas fa-chevron-right"></i></button>
-            </div>
-
-            <!-- Right Card Slot -->
-            <div class="card-slot" id="slot-2">
-                <div class="slot-header">
-                    <label>Memory Card 2:</label>
-                    <div class="header-controls">
-                        <select class="card-select"><option value="">Select Card...</option></select>
-                        <button class="icon-btn add-btn" title="New Card"><i class="fas fa-plus-square"></i></button>
-                        <button class="icon-btn open-btn" title="Open Card"><i class="fas fa-folder-open"></i></button>
-                    </div>
-                </div>
-                <div class="save-table-container">
-                    <table class="save-table">
-                        <thead>
-                            <tr>
-                                <th class="col-icon">Icon</th>
-                                <th class="col-title">Title</th>
-                                <th class="col-name">File Name</th>
-                                <th class="col-blocks">Blocks</th>
-                            </tr>
-                        </thead>
-                        <tbody class="save-list">
-                            <!-- Saves will be injected here -->
-                        </tbody>
-                    </table>
-                </div>
-                <div class="slot-footer">
-                    <button class="action-btn small">Format Card</button>
-                    <button class="action-btn small">Import File...</button>
-                    <button class="action-btn small">Import Card...</button>
-                    <button class="action-btn small primary">Save</button>
-                </div>
-            </div>
-        </div>
-    `;
-    gamesContainer.appendChild(toolContent);
-    
-    setupEditorLogic();
-}
-
-function setupEditorLogic() {
-    const slot1Open = document.querySelector("#slot-1 .open-btn");
-    const slot2Open = document.querySelector("#slot-2 .open-btn");
-
-    if (!slot1Open || !slot2Open) return;
-
-    slot1Open.addEventListener("click", () => handleNativeOpen("slot-1"));
-    slot2Open.addEventListener("click", () => handleNativeOpen("slot-2"));
-
-    // Handle Drag and Drop
-    setupSlotDropZone("slot-1");
-    setupSlotDropZone("slot-2");
-}
-
-async function handleNativeOpen(slotId) {
-    try {
-        const result = await ipcRenderer.invoke("open-file-dialog", {
-            properties: ["openFile"],
-            filters: [
-                { name: "Memory Cards", extensions: ["mcr", "mcd", "gme", "ps2", "max", "psu"] },
-                { name: "All Files", extensions: ["*"] }
-            ]
-        });
-
-        if (!result.canceled && result.filePaths.length > 0) {
-            const filePath = result.filePaths[0];
-            log.info(`(Renderer) File selected via native dialog for ${slotId}: ${filePath}`);
-            readMemoryCardForSlot(filePath, slotId);
-        }
-    } catch (error) {
-        log.error("Error opening file dialog:", error);
-    }
-}
-
-function setupSlotDropZone(slotId) {
-    const slot = document.getElementById(slotId);
-    if (!slot) return;
-
-    slot.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        slot.classList.add("drag-over");
-    });
-
-    slot.addEventListener("dragleave", () => {
-        slot.classList.remove("drag-over");
-    });
-
-    slot.addEventListener("drop", (e) => {
-        e.preventDefault();
-        slot.classList.remove("drag-over");
-        const file = e.dataTransfer.files[0];
-        if (file && file.path) {
-            log.info(`(Renderer) File dropped for ${slotId}: ${file.path}`);
-            readMemoryCardForSlot(file.path, slotId);
-        }
-    });
-}
-
-async function readMemoryCardForSlot(filePath, slotId) {
-    try {
-        const result = await ipcRenderer.invoke("read-memory-card", filePath);
-        if (result.success) {
-            populateSlot(slotId, result.data);
-        } else {
-            alert(i18n.t("tools.readFailed", {message: result.message}));
-        }
-    } catch (error) {
-        log.error("Error reading card for " + slotId, error);
-    }
-}
-
-function populateSlot(slotId, data) {
-    const tbody = document.querySelector(`#${slotId} .save-list`);
-    if (!tbody) return;
-
-    tbody.innerHTML = "";
-
-    if (data.format === "PlayStation 1" && data.saves) {
-        data.saves.forEach(save => {
-            const tr = document.createElement("tr");
-            const iconHtml = save.icon ? `<img src="${createDataURL(save.icon)}" class="save-icon-img" alt="Save Icon"/>` : `<i class="fas fa-save"></i>`;
-
-            tr.innerHTML = `
-                <td class="col-icon">${iconHtml}</td>
-                <td class="col-title">${save.title}</td>
-                <td class="col-name">${save.productCode}</td>
-                <td class="col-blocks">${Math.ceil(save.size / 8192)}</td>
-            `;
-            tr.addEventListener("click", () => {
-                tbody.querySelectorAll("tr").forEach(r => r.classList.remove("selected"));
-                tr.classList.add("selected");
-                updateCentralControls();
-            });
-            tbody.appendChild(tr);
-        });
-    } else if (data.format === "PlayStation 2") {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td colspan="4" class="centered">${data.message}</td>`;
-        tbody.appendChild(tr);
-    } else {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td colspan="4" class="centered">Empty or Unsupported Card</td>`;
-        tbody.appendChild(tr);
-    }
-}
-
-function updateCentralControls() {
-    const hasSelection = !!document.querySelector(".save-list tr.selected");
-    document.querySelectorAll(".central-controls .control-btn").forEach(btn => {
-        btn.disabled = !hasSelection;
-    });
-}
-
-// Helper to create a data URL from raw pixel data for rendering in the browser
-function createDataURL(icon) {
-    // 1. Double check we have data
-    if (!icon || !icon.pixels) return "";
-
-    // 2. Extract raw array from Electron/IPC "Buffer" object if needed
-    const rawData = icon.pixels.data ? icon.pixels.data : icon.pixels;
-    
-    // 3. Ensure it's the right length (16x16 * 4 channels = 1024)
-    if (rawData.length === 0) return "";
-
-    const canvas = document.createElement("canvas");
-    canvas.width = icon.width || 16;
-    canvas.height = icon.height || 16;
-    const ctx = canvas.getContext("2d");
-
-    const imageData = ctx.createImageData(canvas.width, canvas.height);
-    
-    // Use the TypedArray for the canvas
-    const pixelArray = new Uint8ClampedArray(rawData);
-    imageData.data.set(pixelArray);
-    
-    ctx.putImageData(imageData, 0, 0);
-    
-    const dataUrl = canvas.toDataURL("image/png");
-    console.log("Generated DataURL length:", dataUrl.length); // Should be > 500 characters
-    return dataUrl;
 }
 
 function renderRomRipperTool() {
@@ -413,5 +189,8 @@ function renderGamepadTool() {
 }
 
 export function showMemoryCardReader() {
-    renderMemoryCardTool();
+    if (memoryCardTool && typeof memoryCardTool.render === 'function') {
+        const gamesContainer = document.getElementById("games-container");
+        memoryCardTool.render(gamesContainer);
+    }
 }
