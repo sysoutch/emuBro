@@ -31,6 +31,11 @@ The current focus is on updating project documentation and maintaining the codeb
 - Fixed and optimized window docking and persistence logic
 - Standardized layout shift behavior using a single `panel-docked` body class
 - Implemented explicit "re-docking" logic for reopening previously pinned windows
+- Refactored `GamepadManager` to use `gamepad.js` library for robust event handling and state management
+- Updated `GamepadTool` to utilize the new event-driven gamepad architecture
+- Fixed `TypeError` in `GamepadManager` where `getConnectedGamepads` could crash if a gamepad event was undefined
+- Improved `GamepadManager` event handling to support both standard `GamepadEvent` and direct gamepad object payloads
+- Implemented robust `syncWithNativeAPI` polling fallback in `GamepadManager` to detect controllers that don't emit events (e.g. stale state or browser quirks) and ensure button states are always fresh
 
 ## Next Steps
 1. Push changes to remote repository (if requested)

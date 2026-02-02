@@ -1,154 +1,124 @@
 /**
  * Gamepad Manager
- * Handles gamepad detection, mapping, and testing functionality
+ * Handles gamepad detection, mapping, and testing functionality using gamepad.js
  */
+
+import { GamepadListener } from 'gamepad.js';
 
 export class GamepadManager {
     constructor() {
-        this.gamepads = new Map();
-        this.gamepadState = new Map();
-        this.isTesting = false;
-        this.testInterval = null;
-        this.gamepadCallback = null;
-        this.init();
+        this.listener = new GamepadListener();
+        this.connectedGamepads = new Map();
+        
+        this.setupEvents();
+        this.listener.start();
     }
 
-    init() {
-        // Initialize gamepad support
-        if (navigator.getGamepads) {
-            console.log("Gamepad API supported");
-            this.setupGamepadEvents();
-        } else if (navigator.webkitGetGamepads) {
-            console.log("Gamepad API (webkit) supported");
-            this.setupGamepadEvents();
-        } else {
-            console.warn("Gamepad API not supported");
-        }
-    }
-
-    setupGamepadEvents() {
-        // Gamepad connected event
-        window.addEventListener('gamepadconnected', (event) => {
-            this.handleGamepadConnected(event);
+    setupEvents() {
+        // Track connected gamepads
+        this.listener.on('gamepad:connected', (event) => {
+            // Handle both standard GamepadEvent (has .gamepad) and direct gamepad object
+            const gamepad = event.gamepad || event;
+            
+            if (gamepad && typeof gamepad.index === 'number') {
+                this.connectedGamepads.set(gamepad.index, gamepad);
+                console.log(`Gamepad connected: ${gamepad.id} (${gamepad.index})`);
+            } else {
+                console.warn('Received invalid gamepad connection event:', event);
+            }
         });
 
-        // Gamepad disconnected event
-        window.addEventListener('gamepaddisconnected', (event) => {
-            this.handleGamepadDisconnected(event);
-        });
+        this.listener.on('gamepad:disconnected', (event) => {
+            const gamepad = event.gamepad || event;
+            const index = gamepad.index;
 
-        // Regular polling for gamepad state
-        setInterval(() => {
-            this.updateGamepadStates();
-        }, 16); // ~60fps
-    }
-
-    handleGamepadConnected(event) {
-        const gamepad = event.gamepad;
-        this.gamepads.set(gamepad.index, gamepad);
-        console.log(`Gamepad connected: ${gamepad.id} (${gamepad.index})`);
-        this.updateGamepadStates();
-    }
-
-    handleGamepadDisconnected(event) {
-        const gamepad = event.gamepad;
-        this.gamepads.delete(gamepad.index);
-        console.log(`Gamepad disconnected: ${gamepad.id} (${gamepad.index})`);
-        this.updateGamepadStates();
-    }
-
-    updateGamepadStates() {
-        const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-        gamepads.forEach((gamepad, index) => {
-            if (gamepad) {
-                this.gamepadState.set(index, {
-                    id: gamepad.id,
-                    index: gamepad.index,
-                    connected: gamepad.connected,
-                    timestamp: gamepad.timestamp,
-                    axes: [...gamepad.axes],
-                    buttons: gamepad.buttons.map(button => ({
-                        pressed: button.pressed,
-                        touched: button.touched,
-                        value: button.value
-                    })),
-                    mapping: gamepad.mapping
-                });
+            if (typeof index === 'number') {
+                this.connectedGamepads.delete(index);
+                console.log(`Gamepad disconnected: ${index}`);
             }
         });
     }
 
+    /**
+     * Get a list of currently connected gamepads
+     * @returns {Array} List of gamepad objects
+     */
     getConnectedGamepads() {
-        const connected = [];
-        this.gamepadState.forEach((state, index) => {
-            if (state.connected) {
-                connected.push({
-                    index: index,
-                    id: state.id,
-                    mapping: state.mapping
-                });
-            }
-        });
-        return connected;
+        this.syncWithNativeAPI();
+        return Array.from(this.connectedGamepads.values())
+            .filter(gp => gp)
+            .map(gp => ({
+                index: gp.index,
+                id: gp.id,
+                mapping: gp.mapping
+            }));
     }
 
+    /**
+     * Sync internal state with native Gamepad API
+     * Ensures we have the latest gamepad state and detects devices that might have been missed by events
+     */
+    syncWithNativeAPI() {
+        if (!navigator.getGamepads) return;
+        
+        const gamepads = navigator.getGamepads();
+        for (let i = 0; i < gamepads.length; i++) {
+            const gp = gamepads[i];
+            if (gp && gp.connected) {
+                // Always update to get latest state (snapshots)
+                if (!this.connectedGamepads.has(gp.index)) {
+                    console.log(`Gamepad detected via polling: ${gp.id} (${gp.index})`);
+                }
+                this.connectedGamepads.set(gp.index, gp);
+            } else {
+                // If we have a gamepad at this index but now it's null/disconnected
+                if (this.connectedGamepads.has(i)) {
+                    console.log(`Gamepad disconnected via polling: ${i}`);
+                    this.connectedGamepads.delete(i);
+                }
+            }
+        }
+    }
+
+    /**
+     * Get the current state of a specific gamepad
+     * @param {number} index Gamepad index
+     * @returns {Object|null} Gamepad state object or null if not found
+     */
     getGamepadState(index) {
-        return this.gamepadState.get(index) || null;
+        const gamepad = this.connectedGamepads.get(index);
+        if (!gamepad) return null;
+
+        return {
+            id: gamepad.id,
+            index: gamepad.index,
+            connected: gamepad.connected,
+            timestamp: gamepad.timestamp,
+            axes: [...gamepad.axes],
+            buttons: gamepad.buttons.map(button => ({
+                pressed: button.pressed,
+                value: button.value
+            })),
+            mapping: gamepad.mapping
+        };
     }
 
-    startTesting(callback = null) {
-        this.isTesting = true;
-        this.gamepadCallback = callback;
-        this.updateTestDisplay();
-        this.testInterval = setInterval(() => {
-            this.updateTestDisplay();
-        }, 100);
+    /**
+     * Subscribe to gamepad events
+     * @param {string} event Event name (e.g., 'gamepad:axis', 'gamepad:button')
+     * @param {Function} callback Callback function
+     */
+    on(event, callback) {
+        this.listener.on(event, callback);
     }
 
-    stopTesting() {
-        this.isTesting = false;
-        if (this.testInterval) {
-            clearInterval(this.testInterval);
-            this.testInterval = null;
-        }
-        this.clearTestDisplay();
-    }
-
-    updateTestDisplay() {
-        if (!this.isTesting) return;
-
-        const gamepads = this.getConnectedGamepads();
-        if (gamepads.length === 0) {
-            if (this.gamepadCallback) {
-                this.gamepadCallback({
-                    type: 'no-gamepads',
-                    message: 'No gamepads detected. Please connect a gamepad.'
-                });
-            }
-            return;
-        }
-
-        gamepads.forEach(gamepad => {
-            const state = this.getGamepadState(gamepad.index);
-            if (state && this.gamepadCallback) {
-                this.gamepadCallback({
-                    type: 'gamepad-update',
-                    index: gamepad.index,
-                    id: state.id,
-                    axes: state.axes,
-                    buttons: state.buttons,
-                    connected: state.connected
-                });
-            }
-        });
-    }
-
-    clearTestDisplay() {
-        if (this.gamepadCallback) {
-            this.gamepadCallback({
-                type: 'test-stopped'
-            });
-        }
+    /**
+     * Unsubscribe from gamepad events
+     * @param {string} event Event name
+     * @param {Function} callback Callback function
+     */
+    off(event, callback) {
+        this.listener.off(event, callback);
     }
 
     // Button mapping for common gamepad types

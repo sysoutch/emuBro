@@ -25,6 +25,7 @@
 ## Dependencies
 - electron: Main Electron framework
 - i18n: Internationalization support
+- gamepad.js: Gamepad event handling and state management
 - webpack: Module bundler
 - css-loader: CSS processing
 - style-loader: Style loading
