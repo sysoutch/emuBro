@@ -36,6 +36,7 @@ The current focus is on updating project documentation and maintaining the codeb
 - Fixed `TypeError` in `GamepadManager` where `getConnectedGamepads` could crash if a gamepad event was undefined
 - Improved `GamepadManager` event handling to support both standard `GamepadEvent` and direct gamepad object payloads
 - Implemented robust `syncWithNativeAPI` polling fallback in `GamepadManager` to detect controllers that don't emit events (e.g. stale state or browser quirks) and ensure button states are always fresh
+- Applied advanced CSS styling to `GamepadTool` and `MonitorTool` in `scss/_tools.scss`, utilizing glass effect mixins, responsive grid layouts, and theme variables for a polished look
 
 ## Next Steps
 1. Push changes to remote repository (if requested)
