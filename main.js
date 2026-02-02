@@ -5,6 +5,7 @@ const Store = require("electron-store");
 const fs = require("fs").promises;
 const fsSync = require("fs");
 const os = require("os");
+const { execFile } = require("child_process");
 
 // Initialize the store for app settings
 const store = new Store();
@@ -580,6 +581,181 @@ ipcMain.handle("get-library-stats", async () => {
 // Handle app quit
 app.on("before-quit", () => {
   log.info("Application is quitting");
+});
+
+// Monitor Tool Functionality
+const multiMonitorToolPath = path.join(__dirname, "resources", "MultiMonitorTool.exe");
+
+async function getMonitors() {
+  return new Promise((resolve) => {
+    const tempPath = path.join(os.tmpdir(), `monitors_${Date.now()}.csv`);
+    
+    execFile(multiMonitorToolPath, ["/scomma", tempPath], (error) => {
+      if (error) {
+        log.error("Failed to run MultiMonitorTool:", error);
+        resolve([]);
+        return;
+      }
+
+      try {
+        if (fsSync.existsSync(tempPath)) {
+          const content = fsSync.readFileSync(tempPath, 'utf8');
+          fsSync.unlinkSync(tempPath);
+          
+          const lines = content.trim().split('\n');
+          if (lines.length < 2) {
+            resolve([]);
+            return;
+          }
+
+          // Header: Name, Monitor ID, ...
+          const headers = lines[0].split(',').map(h => h.trim());
+          const monitors = [];
+
+          for (let i = 1; i < lines.length; i++) {
+            // Simple split handling (assuming no commas in values for this tool)
+            const values = lines[i].split(',').map(v => v.trim());
+            const monitor = {};
+            headers.forEach((h, idx) => {
+              if (idx < values.length) monitor[h] = values[idx];
+            });
+            
+            monitors.push({
+              id: monitor['Name'] || `Monitor ${i}`,
+              name: monitor['Name'],
+              deviceId: monitor['Monitor ID'] || monitor['Name'],
+              width: parseInt(monitor['Width']) || 0,
+              height: parseInt(monitor['Height']) || 0,
+              isPrimary: monitor['Primary'] === 'Yes',
+              orientation: parseInt(monitor['Orientation']) || 0,
+              connected: monitor['Active'] === 'Yes'
+            });
+          }
+          resolve(monitors);
+        } else {
+          resolve([]);
+        }
+      } catch (err) {
+        log.error("Error parsing monitor info:", err);
+        resolve([]);
+      }
+    });
+  });
+}
+
+ipcMain.handle("get-monitor-info", async () => {
+  return await getMonitors();
+});
+
+ipcMain.handle("detect-monitors", async () => {
+  // Can interpret as refresh
+  return await getMonitors();
+});
+
+ipcMain.handle("set-monitor-orientation", async (event, monitorIndex, orientation) => {
+  try {
+    const monitors = await getMonitors();
+    if (monitorIndex >= 0 && monitorIndex < monitors.length) {
+      const monitor = monitors[monitorIndex];
+      return new Promise((resolve) => {
+        // /SetOrientation <Monitor> <Orientation>
+        execFile(multiMonitorToolPath, ["/SetOrientation", monitor.id, orientation.toString()], (error) => {
+          if (error) {
+            resolve({ success: false, message: error.message });
+          } else {
+            resolve({ success: true });
+          }
+        });
+      });
+    }
+    return { success: false, message: "Monitor index out of range" };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+});
+
+ipcMain.handle("toggle-monitor-orientation", async (event, monitorIndex, targetOrientation) => {
+  try {
+    const monitors = await getMonitors();
+    if (monitorIndex >= 0 && monitorIndex < monitors.length) {
+        const monitor = monitors[monitorIndex];
+        // If current is target, switch to 0 (normal), else switch to target
+        // Logic: Toggle usually means A <-> B. User requested "landscape/portrait".
+        // Assuming targetOrientation is the "Active" state (e.g. 90/portrait).
+        // If already 90, go to 0. If 0, go to 90.
+        
+        // Wait, the UI passes 0 or 90.
+        // If I pass 90 (Portrait), and it's already 90, I might want to go back to 0?
+        // Let's implement simple set first. The user said "do landscape/portrait".
+        // The UI button says "Toggle Landscape" (passes 0) and "Toggle Portrait" (passes 90).
+        // Wait, "Toggle Landscape" -> 0? Landscape is usually 0 or 90?
+        // Standard: 0 = Landscape, 90 = Portrait, 180 = Landscape Flipped, 270 = Portrait Flipped.
+        // So Toggle Landscape (0) means set to 0. Toggle Portrait (90) means set to 90.
+        // The UI implementation:
+        // this.toggleMonitorOrientation(1, 0) -> Set to 0?
+        // this.toggleMonitorOrientation(1, 90) -> Set to 90?
+        
+        // Let's assume it's just "Set". If it's "Toggle", it implies checking current state.
+        // I will trust the "targetOrientation" as the desired state.
+        
+        return new Promise((resolve) => {
+          execFile(multiMonitorToolPath, ["/SetOrientation", monitor.id, targetOrientation.toString()], (error) => {
+            if (error) {
+              resolve({ success: false, message: error.message });
+            } else {
+              resolve({ success: true });
+            }
+          });
+        });
+    }
+    return { success: false, message: "Monitor index out of range" };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+});
+
+ipcMain.handle("set-monitor-display-state", async (event, monitorIndex, state) => {
+  try {
+    const monitors = await getMonitors();
+    if (monitorIndex >= 0 && monitorIndex < monitors.length) {
+      const monitor = monitors[monitorIndex];
+      const command = state === 'enable' ? '/Enable' : '/Disable';
+      
+      return new Promise((resolve) => {
+        execFile(multiMonitorToolPath, [command, monitor.id], (error) => {
+          if (error) {
+            resolve({ success: false, message: error.message });
+          } else {
+            resolve({ success: true });
+          }
+        });
+      });
+    }
+    return { success: false, message: "Monitor index out of range" };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+});
+
+ipcMain.handle("set-primary-monitor", async (event, monitorIndex) => {
+  try {
+    const monitors = await getMonitors();
+    if (monitorIndex >= 0 && monitorIndex < monitors.length) {
+      const monitor = monitors[monitorIndex];
+      return new Promise((resolve) => {
+        execFile(multiMonitorToolPath, ["/SetPrimary", monitor.id], (error) => {
+          if (error) {
+            resolve({ success: false, message: error.message });
+          } else {
+            resolve({ success: true });
+          }
+        });
+      });
+    }
+    return { success: false, message: "Monitor index out of range" };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
 });
 
 // Memory card reader functionality

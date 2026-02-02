@@ -3,6 +3,8 @@
  * Provides interface for managing multi-monitor configurations using MultiMonitorTool.exe
  */
 
+import { ipcRenderer } from 'electron';
+
 export class MonitorTool {
     constructor() {
         this.toolName = 'monitor-tool';
@@ -68,7 +70,7 @@ export class MonitorTool {
 
     async updateMonitorStatus() {
         try {
-            const monitors = await window.ipcRenderer.invoke('get-monitor-info');
+            const monitors = await ipcRenderer.invoke('get-monitor-info');
             this.displayMonitorStatus(monitors);
         } catch (error) {
             console.error('Failed to get monitor info:', error);
@@ -135,6 +137,11 @@ export class MonitorTool {
                             </select>
                             <button class="action-btn" data-action="set-display-state" data-monitor="${index}">Apply</button>
                         </div>
+                        <div class="control-group">
+                            <button class="action-btn" data-action="set-primary" data-monitor="${index}" ${monitor.isPrimary ? 'disabled' : ''}>
+                                ${monitor.isPrimary ? 'Is Primary' : 'Set as Primary'}
+                            </button>
+                        </div>
                     </div>
                 `).join('')}
             </div>
@@ -154,6 +161,13 @@ export class MonitorTool {
                 const monitorId = parseInt(e.target.dataset.monitor);
                 const select = document.querySelector(`.display-state-select[data-monitor="${monitorId}"]`);
                 this.setMonitorDisplayState(monitorId, select.value);
+            });
+        });
+
+        document.querySelectorAll('[data-action="set-primary"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const monitorId = parseInt(e.target.dataset.monitor);
+                this.setPrimaryMonitor(monitorId);
             });
         });
 
@@ -178,7 +192,7 @@ export class MonitorTool {
 
     async detectMonitors() {
         try {
-            const monitors = await window.ipcRenderer.invoke('detect-monitors');
+            const monitors = await ipcRenderer.invoke('detect-monitors');
             this.displayMonitorStatus(monitors);
             alert('Monitor detection completed successfully.');
         } catch (error) {
@@ -189,7 +203,7 @@ export class MonitorTool {
 
     async setMonitorOrientation(monitorId, orientation) {
         try {
-            const result = await window.ipcRenderer.invoke('set-monitor-orientation', monitorId, orientation);
+            const result = await ipcRenderer.invoke('set-monitor-orientation', monitorId, orientation);
             if (result.success) {
                 alert(`Monitor ${monitorId + 1} orientation set to ${orientation}°`);
                 this.updateMonitorStatus();
@@ -204,7 +218,7 @@ export class MonitorTool {
 
     async toggleMonitorOrientation(monitorId, targetOrientation) {
         try {
-            const result = await window.ipcRenderer.invoke('toggle-monitor-orientation', monitorId, targetOrientation);
+            const result = await ipcRenderer.invoke('toggle-monitor-orientation', monitorId, targetOrientation);
             if (result.success) {
                 alert(`Monitor ${monitorId + 1} orientation toggled to ${targetOrientation}°`);
                 this.updateMonitorStatus();
@@ -219,7 +233,7 @@ export class MonitorTool {
 
     async setMonitorDisplayState(monitorId, state) {
         try {
-            const result = await window.ipcRenderer.invoke('set-monitor-display-state', monitorId, state);
+            const result = await ipcRenderer.invoke('set-monitor-display-state', monitorId, state);
             if (result.success) {
                 alert(`Monitor ${monitorId + 1} ${state}d successfully`);
                 this.updateMonitorStatus();
@@ -234,7 +248,7 @@ export class MonitorTool {
 
     async setPrimaryMonitor(monitorId) {
         try {
-            const result = await window.ipcRenderer.invoke('set-primary-monitor', monitorId);
+            const result = await ipcRenderer.invoke('set-primary-monitor', monitorId);
             if (result.success) {
                 alert(`Monitor ${monitorId + 1} set as primary monitor`);
                 this.updateMonitorStatus();
