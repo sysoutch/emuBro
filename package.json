@@ -7,7 +7,8 @@
     "start": "electron .",
     "prebuild:win": "taskkill /F /IM emuBro.exe /T || exit 0",
     "build": "webpack --mode production",
-    "build:win": "electron-builder --win --config=electron-builder.config.js --publish=never",
+    "sync:resources": "node scripts/sync-emubro-resources.js",
+    "build:win": "npm run sync:resources && electron-builder --win --config=electron-builder.config.js --publish=never",
     "dist:win": "npm run build && npm run build:win"
   },
   "keywords": [

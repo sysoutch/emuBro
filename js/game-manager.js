@@ -326,189 +326,529 @@ function renderGamesAsSlideshow(gamesToRender) {
     const gamesContainer = document.getElementById('games-container');
     const slideshowContainer = document.createElement('div');
     slideshowContainer.className = 'slideshow-container';
-    
+    slideshowContainer.tabIndex = 0;
+
+    if (!gamesToRender || gamesToRender.length === 0) {
+        slideshowContainer.innerHTML = `<div class="slideshow-empty">No games to display.</div>`;
+        gamesContainer.appendChild(slideshowContainer);
+        return;
+    }
+
+    const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
     let currentIndex = 0;
+    let isAnimating = false;
+    let pendingSteps = 0;
+
+    const backdrops = [document.createElement('div'), document.createElement('div')];
+    let activeBackdrop = 0;
+    backdrops.forEach((el, i) => {
+        el.className = 'slideshow-backdrop' + (i === 0 ? ' is-active' : '');
+        el.setAttribute('aria-hidden', 'true');
+    });
+
+    const chrome = document.createElement('div');
+    chrome.className = 'slideshow-chrome';
+
+    const header = document.createElement('div');
+    header.className = 'slideshow-header';
+    const heading = document.createElement('h2');
+    heading.className = 'slideshow-heading';
+    header.appendChild(heading);
+
     const carouselWrapper = document.createElement('div');
     carouselWrapper.className = 'slideshow-carousel-wrapper';
     const carouselInner = document.createElement('div');
     carouselInner.className = 'slideshow-carousel-inner';
-    
+
+    const blurb = document.createElement('div');
+    blurb.className = 'slideshow-blurb glass';
+    const blurbMeta = document.createElement('div');
+    blurbMeta.className = 'slideshow-blurb-meta';
+    const blurbText = document.createElement('p');
+    blurbText.className = 'slideshow-blurb-text';
+    const blurbActions = document.createElement('div');
+    blurbActions.className = 'slideshow-blurb-actions';
+    blurb.appendChild(blurbMeta);
+    blurb.appendChild(blurbText);
+    blurb.appendChild(blurbActions);
+
     function getGameImage(game) {
-        let gameImageToUse = game.image;
-        if (!gameImageToUse && game.platformShortName) {
+        let gameImageToUse = game && game.image;
+        if (!gameImageToUse && game && game.platformShortName) {
             const platformShortName = game.platformShortName.toLowerCase();
             gameImageToUse = `emubro-resources/platforms/${platformShortName}/covers/default.jpg`;
         }
         return gameImageToUse;
     }
-    
-    function updateSlideshow() {
-        carouselInner.innerHTML = '';
-        
-        const prevIndex = (currentIndex - 1 + gamesToRender.length) % gamesToRender.length;
-        const prevGame = gamesToRender[prevIndex];
-        const prevCard = document.createElement('div');
-        prevCard.className = 'slideshow-card slideshow-card-prev';
-        prevCard.innerHTML = `
-            <img src="${getGameImage(prevGame)}" alt="${prevGame.name}" class="slideshow-image" loading="lazy" />
-            <div class="slideshow-card-label">Previous</div>
-        `;
-        carouselInner.appendChild(prevCard);
-        
-        const game = gamesToRender[currentIndex];
-        const platformShortName = game.platformShortName.toLowerCase();
-        const platformIcon = `emubro-resources/platforms/${platformShortName}/logos/default.png`;
-        const gameCard = document.createElement('div');
-        gameCard.className = 'slideshow-card slideshow-card-current';
-        gameCard.innerHTML = `
-            <img src="${getGameImage(game)}" alt="${game.name}" class="slideshow-image" loading="lazy" />
-            <div class="slideshow-info">
-                <h2 class="slideshow-title">${game.name}</h2>
-                <span class="slideshow-platform-badge">
-                    <img src="${platformIcon}" alt="${game.platformShortName}" class="slideshow-platform-icon" loading="lazy" onerror="this.style.display='none'" />
-                    <span>${game.platformName || game.platformShortName || i18n.t('gameDetails.unknown')}</span>
-                </span>
-                <p class="slideshow-genre">${game.genre}</p>
-                <div class="slideshow-meta">
-                    <span class="slideshow-rating">★ ${game.rating}</span>
-                <p class="slideshow-status">${game.isInstalled ? 'Installed' : 'Not Installed'}</p>
-                <div class="slideshow-actions">
-                    <button class="action-btn launch-btn" data-game-id="${game.id}" data-action="launch">Launch</button>
-                    <button class="action-btn remove-btn" data-game-id="${game.id}" data-action="remove">Remove</button>
-                </div>
-            </div>
-            <div class="slideshow-counter">${currentIndex + 1} / ${gamesToRender.length}</div>
-        `;
-        
-        const buttons = gameCard.querySelectorAll('.action-btn');
-        buttons.forEach(button => {
-            button.addEventListener('click', handleGameAction);
-        });
-        carouselInner.appendChild(gameCard);
-        
-        const nextIndex = (currentIndex + 1) % gamesToRender.length;
-        const nextGame = gamesToRender[nextIndex];
-        const nextCard = document.createElement('div');
-        nextCard.className = 'slideshow-card slideshow-card-next';
-        nextCard.innerHTML = `
-            <img src="${getGameImage(nextGame)}" alt="${nextGame.name}" class="slideshow-image" loading="lazy" />
-            <div class="slideshow-card-label">Next</div>
-        `;
-        carouselInner.appendChild(nextCard);
+
+    function setBackdropForIndex(idx) {
+        const game = gamesToRender[idx];
+        const heroImg = getGameImage(game);
+
+        const nextBackdrop = 1 - activeBackdrop;
+        backdrops[nextBackdrop].style.backgroundImage = heroImg ? `url("${heroImg}")` : '';
+        backdrops[nextBackdrop].classList.add('is-active');
+        backdrops[activeBackdrop].classList.remove('is-active');
+        activeBackdrop = nextBackdrop;
     }
-    
+
+    function updateHero(idx) {
+        const game = gamesToRender[idx];
+        heading.textContent = game.name;
+
+        const platformName = game.platformName || game.platformShortName || i18n.t('gameDetails.unknown');
+        const ratingText = (game.rating !== undefined && game.rating !== null) ? `${game.rating}` : i18n.t('gameDetails.unknown');
+        const statusText = game.isInstalled ? 'Installed' : 'Not Installed';
+
+        blurbMeta.innerHTML = `
+            <span class="slideshow-meta-pill">${platformName}</span>
+            <span class="slideshow-meta-pill">Rating: ${ratingText}</span>
+            <span class="slideshow-meta-pill">${statusText}</span>
+            <span class="slideshow-meta-pill">${idx + 1} / ${gamesToRender.length}</span>
+        `;
+
+        blurbText.textContent = (game.description && String(game.description).trim().length > 0)
+            ? String(game.description).trim()
+            : 'No description available for this game yet.';
+
+        blurbActions.innerHTML = `
+            <button class="action-btn launch-btn" data-game-id="${game.id}" data-action="launch">Launch</button>
+            <button class="action-btn remove-btn" data-game-id="${game.id}" data-action="remove">Remove</button>
+        `;
+        blurbActions.querySelectorAll('.action-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                handleGameAction(e);
+            });
+        });
+
+        if (!reduceMotion) {
+            chrome.classList.add('is-swapping');
+            setTimeout(() => chrome.classList.remove('is-swapping'), 180);
+        }
+
+        setBackdropForIndex(idx);
+    }
+
+    const len = gamesToRender.length;
+    let slotOffsets = [-2, -1, 0, 1, 2];
+    if (len <= 1) slotOffsets = [0];
+    else if (len === 2) slotOffsets = [-1, 0, 1];
+    else if (len === 3) slotOffsets = [-1, 0, 1];
+    else if (len === 4) slotOffsets = [-2, -1, 0, 1];
+
+    const minOffset = Math.min(...slotOffsets);
+    const maxOffset = Math.max(...slotOffsets);
+
+    function setCardContent(card, idx) {
+        const game = gamesToRender[idx];
+        const img = card.querySelector('img');
+        const src = getGameImage(game);
+        img.src = src || '';
+        img.alt = game.name;
+        card.setAttribute('aria-label', game.name);
+        card.dataset.index = String(idx);
+    }
+
+    const cards = slotOffsets.map(offset => {
+        const idx = (currentIndex + offset + len) % len;
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'slideshow-card';
+        card.dataset.offset = String(offset);
+        if (offset === 0) card.setAttribute('aria-current', 'true');
+        card.innerHTML = `
+            <img src="" alt="" class="slideshow-image" loading="lazy" />
+            <div class="slideshow-card-frame" aria-hidden="true"></div>
+        `;
+        setCardContent(card, idx);
+        return card;
+    });
+
+    function shiftOnce(dir) {
+        if (len <= 1) return;
+        isAnimating = true;
+
+        currentIndex = (currentIndex + dir + len) % len;
+        updateHero(currentIndex);
+
+        cards.forEach(card => {
+            const oldOffset = parseInt(card.dataset.offset || '0', 10);
+            let newOffset = oldOffset - dir;
+            let wrapped = false;
+
+            if (newOffset < minOffset) {
+                newOffset = maxOffset;
+                wrapped = true;
+            } else if (newOffset > maxOffset) {
+                newOffset = minOffset;
+                wrapped = true;
+            }
+
+            if (wrapped) {
+                const idx = (currentIndex + newOffset + len) % len;
+                card.classList.add('no-anim');
+                card.dataset.offset = String(newOffset);
+                setCardContent(card, idx);
+                if (newOffset === 0) card.setAttribute('aria-current', 'true');
+                else card.removeAttribute('aria-current');
+                void card.offsetHeight;
+                requestAnimationFrame(() => card.classList.remove('no-anim'));
+            } else {
+                card.dataset.offset = String(newOffset);
+                if (newOffset === 0) card.setAttribute('aria-current', 'true');
+                else card.removeAttribute('aria-current');
+            }
+        });
+
+        const durationMs = reduceMotion ? 0 : 360;
+        setTimeout(() => {
+            isAnimating = false;
+            runQueue();
+        }, durationMs);
+    }
+
+    function runQueue() {
+        if (isAnimating || pendingSteps === 0) return;
+        const dir = pendingSteps > 0 ? 1 : -1;
+        pendingSteps -= dir;
+        shiftOnce(dir);
+    }
+
+    function queueShift(steps) {
+        if (!steps) return;
+        if (len <= 1) return;
+        pendingSteps += Math.max(-6, Math.min(6, steps));
+        runQueue();
+    }
+
     const controlsContainer = document.createElement('div');
     controlsContainer.className = 'slideshow-controls';
-    
+
     const prevBtn = document.createElement('button');
     prevBtn.className = 'slideshow-btn prev-btn';
-    prevBtn.textContent = '❮ Previous';
-    prevBtn.addEventListener('click', () => {
-        currentIndex = (currentIndex - 1 + gamesToRender.length) % gamesToRender.length;
-        updateSlideshow();
-    });
-    
+    prevBtn.textContent = 'Previous';
+    prevBtn.addEventListener('click', () => queueShift(-1));
+
     const nextBtn = document.createElement('button');
     nextBtn.className = 'slideshow-btn next-btn';
-    nextBtn.textContent = 'Next ❯';
-    nextBtn.addEventListener('click', () => {
-        currentIndex = (currentIndex + 1) % gamesToRender.length;
-        updateSlideshow();
+    nextBtn.textContent = 'Next';
+    nextBtn.addEventListener('click', () => queueShift(1));
+
+    carouselInner.addEventListener('click', (e) => {
+        const card = e.target.closest('.slideshow-card');
+        if (!card) return;
+        const offset = parseInt(card.dataset.offset || '0', 10);
+        queueShift(offset);
     });
-    
-    updateSlideshow();
+
+    slideshowContainer.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            queueShift(-1);
+        } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            queueShift(1);
+        }
+    });
+
+    updateHero(currentIndex);
+
+    backdrops.forEach(el => slideshowContainer.appendChild(el));
+    cards.forEach(c => carouselInner.appendChild(c));
+
     carouselWrapper.appendChild(carouselInner);
-    slideshowContainer.appendChild(carouselWrapper);
+
+    chrome.appendChild(header);
+    chrome.appendChild(carouselWrapper);
+    chrome.appendChild(blurb);
+
     controlsContainer.appendChild(prevBtn);
     controlsContainer.appendChild(nextBtn);
-    slideshowContainer.appendChild(controlsContainer);
+    chrome.appendChild(controlsContainer);
+
+    slideshowContainer.appendChild(chrome);
     gamesContainer.appendChild(slideshowContainer);
+
+    slideshowContainer.focus();
 }
 
 function renderGamesAsRandom(gamesToRender) {
     const gamesContainer = document.getElementById('games-container');
     const randomContainer = document.createElement('div');
-    randomContainer.className = 'random-container';
-    
-    let currentIndex = 0;
-    let isShuffling = false;
-    let shuffleInterval = null;
-    
-    const gameDisplay = document.createElement('div');
-    gameDisplay.className = 'random-display';
-    
-    function updateRandomDisplay() {
-        const game = gamesToRender[currentIndex];
-        let gameImageToUse = game.image;
-        if (!gameImageToUse && game.platformShortName) {
+    randomContainer.className = 'random-container random-container--slot';
+
+    if (!gamesToRender || gamesToRender.length === 0) {
+        randomContainer.innerHTML = `<div class="slot-empty">No games to spin.</div>`;
+        gamesContainer.appendChild(randomContainer);
+        return;
+    }
+
+    const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    let selectedIndex = Math.floor(Math.random() * gamesToRender.length);
+
+    const machine = document.createElement('div');
+    machine.className = 'slot-machine';
+
+    const marquee = document.createElement('div');
+    marquee.className = 'slot-marquee';
+    marquee.innerHTML = `
+        <div class="slot-marquee-title">Lucky Shuffle</div>
+        <div class="slot-marquee-sub">Pull the lever. Let fate pick your next game.</div>
+    `;
+
+    const cabinet = document.createElement('div');
+    cabinet.className = 'slot-cabinet';
+
+    const windowEl = document.createElement('div');
+    windowEl.className = 'slot-window';
+
+    const reel = document.createElement('div');
+    reel.className = 'slot-reel';
+
+    const reelInner = document.createElement('div');
+    reelInner.className = 'slot-reel-inner';
+
+    const payline = document.createElement('div');
+    payline.className = 'slot-payline';
+    payline.setAttribute('aria-hidden', 'true');
+
+    const controls = document.createElement('div');
+    controls.className = 'slot-controls';
+
+    const leverBtn = document.createElement('button');
+    leverBtn.type = 'button';
+    leverBtn.className = 'action-btn slot-lever';
+    leverBtn.textContent = 'SPIN';
+
+    const result = document.createElement('div');
+    result.className = 'slot-result glass';
+
+    const resultTitle = document.createElement('div');
+    resultTitle.className = 'slot-result-title';
+
+    const resultMeta = document.createElement('div');
+    resultMeta.className = 'slot-result-meta';
+
+    const resultActions = document.createElement('div');
+    resultActions.className = 'slot-result-actions';
+
+    result.appendChild(resultTitle);
+    result.appendChild(resultMeta);
+    result.appendChild(resultActions);
+
+    controls.appendChild(leverBtn);
+
+    reel.appendChild(reelInner);
+    windowEl.appendChild(reel);
+    windowEl.appendChild(payline);
+    cabinet.appendChild(windowEl);
+
+    machine.appendChild(marquee);
+    machine.appendChild(cabinet);
+    machine.appendChild(controls);
+    machine.appendChild(result);
+
+    randomContainer.appendChild(machine);
+    gamesContainer.appendChild(randomContainer);
+
+    function getGameImage(game) {
+        let gameImageToUse = game && game.image;
+        if (!gameImageToUse && game && game.platformShortName) {
             const platformShortName = game.platformShortName.toLowerCase();
             gameImageToUse = `emubro-resources/platforms/${platformShortName}/covers/default.jpg`;
         }
-        
-        const platformShortName = game.platformShortName.toLowerCase();
-        const platformIcon = `emubro-resources/platforms/${platformShortName}/logos/default.png`;
-        
-        gameDisplay.innerHTML = `
-            <img src="${gameImageToUse}" alt="${game.name}" class="random-image" loading="lazy" />
-            <div class="random-info">
-                <h2 class="random-title">${game.name}</h2>
-                <span class="random-platform-badge">
-                    <img src="${platformIcon}" alt="${game.platformShortName}" class="random-platform-icon" loading="lazy" onerror="this.style.display='none'" />
-                    <span>${game.platformName || game.platformShortName || i18n.t('gameDetails.unknown')}</span>
-                </span>
-                <p class="random-genre">${game.genre}</p>
-                <div class="random-meta">
-                    <span class="random-rating">★ ${game.rating}</span>
-            </div>
-        `;
+        return gameImageToUse;
     }
-    
-    const controlsContainer = document.createElement('div');
-    controlsContainer.className = 'random-controls';
-    
-    const shuffleBtn = document.createElement('button');
-    shuffleBtn.className = 'action-btn random-shuffle-btn';
-    shuffleBtn.textContent = '🎲 Shuffle & Suggest';
-    shuffleBtn.addEventListener('click', () => {
-        if (isShuffling) {
-            isShuffling = false;
-            shuffleBtn.textContent = '🎲 Shuffle & Suggest';
-            clearInterval(shuffleInterval);
-        } else {
-            isShuffling = true;
-            shuffleBtn.textContent = 'Stop ⏹';
-            let shuffleCount = 0;
-            const maxShuffles = 30;
-            
-            shuffleInterval = setInterval(() => {
-                currentIndex = Math.floor(Math.random() * gamesToRender.length);
-                updateRandomDisplay();
-                shuffleCount++;
-                
-                if (shuffleCount >= maxShuffles) {
-                    isShuffling = false;
-                    shuffleBtn.textContent = '🎲 Shuffle & Suggest';
-                    clearInterval(shuffleInterval);
-                    
-                    const msgEl = document.createElement('p');
-                    msgEl.className = 'random-suggestion';
-                    msgEl.textContent = `Why not play "${gamesToRender[currentIndex].name}" now?`;
-                    randomContainer.appendChild(msgEl);
-                    
-                    setTimeout(() => {
-                        msgEl.remove();
-                    }, 3000);
-                }
-            }, 100);
+
+    function setResult(idx) {
+        const game = gamesToRender[idx];
+        const platformName = game.platformName || game.platformShortName || i18n.t('gameDetails.unknown');
+        const ratingText = (game.rating !== undefined && game.rating !== null) ? `${game.rating}` : i18n.t('gameDetails.unknown');
+
+        resultTitle.textContent = game.name;
+        resultMeta.innerHTML = `
+            <span class="slot-meta-pill">${platformName}</span>
+            <span class="slot-meta-pill">Rating: ${ratingText}</span>
+        `;
+
+        resultActions.innerHTML = `
+            <button class="action-btn launch-btn" data-game-id="${game.id}" data-action="launch">Launch</button>
+            <button class="action-btn remove-btn" data-game-id="${game.id}" data-action="remove">Remove</button>
+        `;
+        resultActions.querySelectorAll('.action-btn').forEach(btn => {
+            btn.addEventListener('click', handleGameAction);
+        });
+    }
+
+    const baseLen = gamesToRender.length;
+    const repeatBlocks = Math.max(10, Math.ceil(60 / Math.max(1, baseLen)));
+    const reelIndexToGameIndex = [];
+    for (let b = 0; b < repeatBlocks; b++) {
+        for (let i = 0; i < baseLen; i++) {
+            reelIndexToGameIndex.push(i);
         }
+    }
+
+    reelIndexToGameIndex.forEach((gameIdx) => {
+        const game = gamesToRender[gameIdx];
+        const item = document.createElement('div');
+        item.className = 'slot-item';
+        item.innerHTML = `
+            <img class="slot-item-image" src="${getGameImage(game)}" alt="${game.name}" loading="lazy" />
+            <div class="slot-item-caption">${game.name}</div>
+        `;
+        reelInner.appendChild(item);
     });
-    
-    updateRandomDisplay();
-    controlsContainer.appendChild(shuffleBtn);
-    
-    randomContainer.appendChild(gameDisplay);
-    randomContainer.appendChild(controlsContainer);
-    gamesContainer.appendChild(randomContainer);
+
+    let metricsReady = false;
+    let itemStep = 0;
+    let totalHeight = 0;
+    let alignOffset = 0;
+
+    let absPos = 0;
+    let rafId = null;
+    let spinning = false;
+
+    function measure() {
+        const first = reelInner.querySelector('.slot-item');
+        if (!first) return;
+        const rect = first.getBoundingClientRect();
+        const cs = window.getComputedStyle(first);
+        const mb = parseFloat(cs.marginBottom || '0') || 0;
+        itemStep = rect.height + mb;
+        totalHeight = itemStep * reelIndexToGameIndex.length;
+        const winRect = windowEl.getBoundingClientRect();
+        alignOffset = (winRect.height - rect.height) / 2;
+        metricsReady = itemStep > 0 && totalHeight > 0;
+    }
+
+    function renderPos() {
+        if (!metricsReady) return;
+        const mod = ((absPos % totalHeight) + totalHeight) % totalHeight;
+        reelInner.style.transform = `translate3d(0, ${-mod}px, 0)`;
+    }
+
+    function snapToGameIndex(gameIdx) {
+        if (!metricsReady) return;
+        const block = Math.floor((reelIndexToGameIndex.length / baseLen) / 2);
+        const reelIdx = gameIdx + block * baseLen;
+        const desired = (reelIdx * itemStep) - alignOffset;
+        const desiredMod = ((desired % totalHeight) + totalHeight) % totalHeight;
+        absPos = desiredMod;
+        renderPos();
+    }
+
+    function easeOutCubic(t) {
+        return 1 - Math.pow(1 - t, 3);
+    }
+
+    function animateTo(targetAbsPos, durationMs, onDone) {
+        const start = performance.now();
+        const startPos = absPos;
+        const delta = targetAbsPos - startPos;
+
+        function step(ts) {
+            const t = Math.min(1, (ts - start) / durationMs);
+            const e = easeOutCubic(t);
+            absPos = startPos + delta * e;
+            renderPos();
+            if (t < 1) {
+                rafId = requestAnimationFrame(step);
+            } else {
+                absPos = targetAbsPos;
+                renderPos();
+                if (typeof onDone === 'function') onDone();
+            }
+        }
+
+        rafId = requestAnimationFrame(step);
+    }
+
+    function stopSpinTo(gameIdx) {
+        if (!metricsReady) return;
+
+        const currentMod = ((absPos % totalHeight) + totalHeight) % totalHeight;
+        const currentBlock = Math.floor(absPos / (itemStep * baseLen));
+
+        let bestDelta = Infinity;
+        for (let b = currentBlock + 1; b <= currentBlock + 8; b++) {
+            const reelIdx = gameIdx + b * baseLen;
+            const desired = (reelIdx * itemStep) - alignOffset;
+            const desiredMod = ((desired % totalHeight) + totalHeight) % totalHeight;
+            let delta = desiredMod - currentMod;
+            if (delta < 0) delta += totalHeight;
+            delta += totalHeight * 2;
+            if (delta < bestDelta) bestDelta = delta;
+        }
+
+        const target = absPos + bestDelta;
+        const duration = reduceMotion ? 0 : 900;
+
+        machine.classList.remove('is-spinning');
+        machine.classList.add('is-stopping');
+        animateTo(target, duration, () => {
+            spinning = false;
+            machine.classList.remove('is-stopping');
+            leverBtn.disabled = false;
+            leverBtn.textContent = 'SPIN';
+            setResult(gameIdx);
+        });
+    }
+
+    function startSpin() {
+        if (spinning) return;
+        spinning = true;
+        leverBtn.disabled = true;
+        leverBtn.textContent = 'SPINNING...';
+        machine.classList.add('is-spinning');
+
+        if (!metricsReady) measure();
+        if (!metricsReady) {
+            setTimeout(() => {
+                measure();
+                startSpin();
+            }, 50);
+            return;
+        }
+
+        if (reduceMotion) {
+            selectedIndex = Math.floor(Math.random() * gamesToRender.length);
+            stopSpinTo(selectedIndex);
+            return;
+        }
+
+        const speed = 2400;
+        const spinMs = 1100 + Math.floor(Math.random() * 700);
+        const startTs = performance.now();
+        let lastTs = startTs;
+
+        function tick(ts) {
+            const dt = Math.min(0.05, (ts - lastTs) / 1000);
+            lastTs = ts;
+            absPos += speed * dt;
+            renderPos();
+
+            if (ts - startTs < spinMs) {
+                rafId = requestAnimationFrame(tick);
+            } else {
+                selectedIndex = Math.floor(Math.random() * gamesToRender.length);
+                stopSpinTo(selectedIndex);
+            }
+        }
+
+        rafId = requestAnimationFrame(tick);
+    }
+
+    leverBtn.addEventListener('click', startSpin);
+
+    requestAnimationFrame(() => {
+        measure();
+        snapToGameIndex(selectedIndex);
+        setResult(selectedIndex);
+    });
 }
 
 export function showGameDetails(game) {

@@ -113,7 +113,7 @@
     }
 
     .sidebar {
-        width: 200px;
+        --sidebar-expanded-width: 260px;
     }
     
     .games-container {
@@ -141,8 +141,7 @@
 
 @media (max-width: 480px) {
     .sidebar {
-        width: 150px;
-        padding: 10px;
+        --sidebar-expanded-width: 230px;
     }
     
     .games-container {

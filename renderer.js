@@ -136,6 +136,8 @@ async function populateDriveSelector() {
 }
 
 function setupEventListeners() {
+    setupSidebarRail();
+
     // Search
     const searchInput = document.querySelector('.search-bar input');
     if (searchInput) {
@@ -349,6 +351,56 @@ function setupEventListeners() {
 
     setupDragDrop();
     setupWindowResizeHandler();
+}
+
+function setupSidebarRail() {
+    const sidebar = document.getElementById('sidebar');
+    const toggleBtn = document.getElementById('sidebar-toggle');
+    if (!sidebar || !toggleBtn) return;
+
+    const stored = localStorage.getItem('emuBro.sidebarExpanded');
+    const initialExpanded = stored === null ? false : stored === 'true';
+
+    const setExpanded = (expanded) => {
+        sidebar.classList.toggle('sidebar--expanded', expanded);
+        sidebar.classList.toggle('sidebar--collapsed', !expanded);
+        toggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        toggleBtn.title = expanded ? 'Collapse sidebar' : 'Expand sidebar';
+        localStorage.setItem('emuBro.sidebarExpanded', expanded ? 'true' : 'false');
+    };
+
+    setExpanded(initialExpanded);
+
+    toggleBtn.addEventListener('click', () => {
+        const expanded = sidebar.classList.contains('sidebar--expanded');
+        setExpanded(!expanded);
+    });
+
+    const railButtons = document.querySelectorAll('.rail-btn.rail-nav[data-rail-target]');
+    railButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            railButtons.forEach(b => b.classList.remove('is-active'));
+            btn.classList.add('is-active');
+
+            const target = btn.dataset.railTarget;
+            if (target === 'tools') {
+                showToolView();
+                return;
+            }
+
+            if (target === 'settings') {
+                openThemeManager();
+                return;
+            }
+
+            // Default: return to library view
+            const gamesHeader = document.getElementById('games-header');
+            if (gamesHeader) {
+                gamesHeader.textContent = i18n.t('views.featuredGames') || 'Featured Games';
+            }
+            renderGames(getFilteredGames());
+        });
+    });
 }
 
 let lastWindowWidth = window.innerWidth;

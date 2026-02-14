@@ -184,9 +184,9 @@
       "yes": "Ja",
       "no": "Nein",
       "ok": "OK",
-      "back": "",
-      "saveAndContinue": "",
-      "saveChanges": ""
+      "back": "❮ Zurück",
+      "saveAndContinue": "Speichern & Weiter",
+      "saveChanges": "Änderungen speichern"
     },
     "messages": {
       "loadingUserInfo": "Wird geladen...",
@@ -275,7 +275,7 @@
       "hours": "Stunden"
     },
     "dropZone": {
-      "text": ""
+      "text": "📁 Ziehe ein Ordner oder📄 eine Datei hierhin"
     },
     "webhook": {
       "description": "",
