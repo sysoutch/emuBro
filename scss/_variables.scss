@@ -36,6 +36,41 @@
     --bg-header: var(--bg-secondary);
     --bg-sidebar: var(--bg-tertiary); /* Usually matches header */
     --bg-actionbar: var(--bg-quaternary); /* View controls toolbar */
+
+    /* Prism (multi-color) accents for borders/glow */
+    --prism-cyan: #00e5ff;
+    --prism-blue: #2b7bff;
+    --prism-magenta: #ff3d8d;
+    --prism-orange: #ff9f0a;
+    --prism-yellow: #ffe066;
+    --prism-green: #36ffb5;
+    --prism-gradient: conic-gradient(
+        from 180deg at 50% 50%,
+        var(--prism-cyan),
+        var(--prism-blue),
+        var(--prism-magenta),
+        var(--prism-orange),
+        var(--prism-yellow),
+        var(--prism-green),
+        var(--prism-cyan)
+    );
+
+    /* Glassy version (transparent stops) */
+    --prism-gradient-glass: conic-gradient(
+        from 180deg at 50% 50%,
+        color-mix(in srgb, var(--prism-cyan) 78%, transparent),
+        color-mix(in srgb, var(--prism-blue) 74%, transparent),
+        color-mix(in srgb, var(--prism-magenta) 70%, transparent),
+        color-mix(in srgb, var(--prism-orange) 72%, transparent),
+        color-mix(in srgb, var(--prism-yellow) 66%, transparent),
+        color-mix(in srgb, var(--prism-green) 70%, transparent),
+        color-mix(in srgb, var(--prism-cyan) 78%, transparent)
+    );
+
+    /* Windows frameless "window border" overlay */
+    --radius-window: 16px;
+    --win-border-w: 7px;
+    --radius-window-inner: calc(var(--radius-window) - var(--win-border-w));
 }
 
 /* Light Theme */

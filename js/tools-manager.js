@@ -2,8 +2,7 @@
  * Tools Manager
  */
 
-const { ipcRenderer } = require("electron");
-const log = require("electron-log");
+const log = console;
 
 import { GamepadTool } from './tools/gamepad-tool.js';
 import { MonitorTool } from './tools/monitor-tool.js';

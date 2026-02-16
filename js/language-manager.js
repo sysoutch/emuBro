@@ -1,8 +1,6 @@
-const fs = require('fs');
-const path = require('path');
 import { makeDraggable } from './theme-manager';
 
-const localesPath = path.join(__dirname, 'locales');
+const emubro = window.emubro;
 let baseLanguageCache = null;
 
 export function initLanguageManager() {
@@ -32,7 +30,7 @@ export function initLanguageManager() {
     });
 
     saveBtn.addEventListener('click', () => {
-        saveCurrentLanguage();
+        saveCurrentLanguage().catch((e) => console.error('Failed to save language:', e));
     });
     
     searchInput.addEventListener('input', (e) => {
@@ -42,7 +40,7 @@ export function initLanguageManager() {
     addBtn.addEventListener('click', () => {
         const langCode = prompt(i18n.t('language.enterCode'));
         if (langCode && /^[a-z]{2,3}$/.test(langCode)) {
-            createNewLanguage(langCode);
+            createNewLanguage(langCode).catch((e) => console.error('Failed to create language:', e));
         } else if (langCode) {
             alert(i18n.t('language.invalidCode'));
         }
@@ -105,14 +103,15 @@ function switchTab(tabName) {
 
 function getBaseLanguage() {
     if (baseLanguageCache) return baseLanguageCache;
-    try {
-        const content = fs.readFileSync(path.join(localesPath, 'en.json'), 'utf8');
-        baseLanguageCache = JSON.parse(content);
+
+    // Prefer already-loaded translations from i18n initialization.
+    if (typeof allTranslations !== 'undefined' && allTranslations && allTranslations['en']) {
+        baseLanguageCache = { en: allTranslations['en'] };
         return baseLanguageCache;
-    } catch (e) {
-        console.error("Failed to load base language", e);
-        return { en: {} };
     }
+
+    baseLanguageCache = { en: {} };
+    return baseLanguageCache;
 }
 
 function flattenObject(obj, prefix = '') {
@@ -147,34 +146,20 @@ function loadLanguagesList() {
     const listContainer = document.getElementById('language-list');
     listContainer.innerHTML = i18n.t('language.loading');
 
-    fs.readdir(localesPath, (err, files) => {
-        if (err) {
+    if (!emubro || !emubro.locales) {
+        listContainer.innerHTML = i18n.t('language.loadError');
+        return;
+    }
+
+    emubro.locales
+        .list()
+        .then((languages) => {
+            renderLanguages(Array.isArray(languages) ? languages : []);
+        })
+        .catch((err) => {
+            console.error('Failed to list locales:', err);
             listContainer.innerHTML = i18n.t('language.loadError');
-            return;
-        }
-
-        const languages = [];
-        files.forEach(file => {
-            if (file.endsWith('.json')) {
-                try {
-                    const content = fs.readFileSync(path.join(localesPath, file), 'utf8');
-                    const json = JSON.parse(content);
-                    const code = Object.keys(json)[0];
-                    if (code) {
-                        languages.push({
-                            code: code,
-                            data: json,
-                            filename: file
-                        });
-                    }
-                } catch (e) {
-                    console.error("Error parsing " + file, e);
-                }
-            }
         });
-
-        renderLanguages(languages);
-    });
 }
 
 function renderLanguages(languages) {
@@ -302,7 +287,7 @@ function unflattenObject(data) {
     return result;
 }
 
-function saveCurrentLanguage() {
+async function saveCurrentLanguage() {
     if (!currentLangData) return;
     
     const inputs = document.querySelectorAll('.lang-input');
@@ -326,7 +311,7 @@ function saveCurrentLanguage() {
     // Actually unflattenObject reconstructs it.
     
     try {
-        fs.writeFileSync(path.join(localesPath, currentLangData.filename), JSON.stringify(finalJson, null, 2));
+        await emubro.locales.write(currentLangData.filename, finalJson);
         alert(i18n.t('language.saveSuccess'));
         
         // Update current data in memory
@@ -342,18 +327,16 @@ function saveCurrentLanguage() {
     }
 }
 
-function createNewLanguage(code) {
+async function createNewLanguage(code) {
     const filename = `${code}.json`;
-    const filePath = path.join(localesPath, filename);
-    
-    if (fs.existsSync(filePath)) {
+
+    // The file is written via the main process into a writable locales directory.
+    const exists = await emubro.locales.exists(filename);
+    if (exists) {
         alert(i18n.t('language.alreadyExists'));
         return;
     }
-    
-    const base = getBaseLanguage();
-    const baseFlat = flattenObject(base['en']);
-    
+
     // Create minimal structure
     const newJson = {
         [code]: {
@@ -364,11 +347,11 @@ function createNewLanguage(code) {
             }
         }
     };
-    
+
     try {
-        fs.writeFileSync(filePath, JSON.stringify(newJson, null, 2));
+        await emubro.locales.write(filename, newJson);
         loadLanguagesList();
-        
+
         // Automatically open editor
         const lang = {
             code: code,
@@ -377,6 +360,6 @@ function createNewLanguage(code) {
         };
         openEditor(lang);
     } catch (e) {
-        alert(i18n.t('language.createError', {message: e.message}));
+        alert(i18n.t('language.createError', { message: e.message }));
     }
 }

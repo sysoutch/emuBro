@@ -3,7 +3,7 @@
  * Provides interface for managing multi-monitor configurations using MultiMonitorTool.exe
  */
 
-import { ipcRenderer } from 'electron';
+const emubro = window.emubro;
 
 export class MonitorTool {
     constructor() {
@@ -70,7 +70,7 @@ export class MonitorTool {
 
     async updateMonitorStatus() {
         try {
-            const monitors = await ipcRenderer.invoke('get-monitor-info');
+            const monitors = await emubro.invoke('get-monitor-info');
             this.displayMonitorStatus(monitors);
         } catch (error) {
             console.error('Failed to get monitor info:', error);
@@ -192,7 +192,7 @@ export class MonitorTool {
 
     async detectMonitors() {
         try {
-            const monitors = await ipcRenderer.invoke('detect-monitors');
+            const monitors = await emubro.invoke('detect-monitors');
             this.displayMonitorStatus(monitors);
             alert('Monitor detection completed successfully.');
         } catch (error) {
@@ -203,7 +203,7 @@ export class MonitorTool {
 
     async setMonitorOrientation(monitorId, orientation) {
         try {
-            const result = await ipcRenderer.invoke('set-monitor-orientation', monitorId, orientation);
+            const result = await emubro.invoke('set-monitor-orientation', monitorId, orientation);
             if (result.success) {
                 alert(`Monitor ${monitorId + 1} orientation set to ${orientation}°`);
                 this.updateMonitorStatus();
@@ -218,7 +218,7 @@ export class MonitorTool {
 
     async toggleMonitorOrientation(monitorId, targetOrientation) {
         try {
-            const result = await ipcRenderer.invoke('toggle-monitor-orientation', monitorId, targetOrientation);
+            const result = await emubro.invoke('toggle-monitor-orientation', monitorId, targetOrientation);
             if (result.success) {
                 alert(`Monitor ${monitorId + 1} orientation toggled to ${targetOrientation}°`);
                 this.updateMonitorStatus();
@@ -233,7 +233,7 @@ export class MonitorTool {
 
     async setMonitorDisplayState(monitorId, state) {
         try {
-            const result = await ipcRenderer.invoke('set-monitor-display-state', monitorId, state);
+            const result = await emubro.invoke('set-monitor-display-state', monitorId, state);
             if (result.success) {
                 alert(`Monitor ${monitorId + 1} ${state}d successfully`);
                 this.updateMonitorStatus();
@@ -248,7 +248,7 @@ export class MonitorTool {
 
     async setPrimaryMonitor(monitorId) {
         try {
-            const result = await ipcRenderer.invoke('set-primary-monitor', monitorId);
+            const result = await emubro.invoke('set-primary-monitor', monitorId);
             if (result.success) {
                 alert(`Monitor ${monitorId + 1} set as primary monitor`);
                 this.updateMonitorStatus();

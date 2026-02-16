@@ -7,7 +7,7 @@ module.exports = {
     path: path.resolve(__dirname, 'dist'),
   },
   mode: 'production',
-  target: 'electron-renderer',
+  target: 'web',
   module: {
     rules: [
       {

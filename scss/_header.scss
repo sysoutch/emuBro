@@ -1,7 +1,10 @@
 /* Header */
 .header {
     background-color: var(--bg-header);
+    --win-controls-space: 142px;
+
     padding: 2.5px 20px;
+    padding-right: calc(20px + var(--win-controls-space));
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -11,6 +14,77 @@
     top: 0;
     z-index: 100;
     transition: background-color 0.3s ease;
+
+    /* Custom titlebar drag region (frameless on Windows) */
+    -webkit-app-region: drag;
+}
+
+/* Interactive elements must be opt-out of drag region */
+.header a,
+.header button,
+.header input,
+.header select,
+.header .custom-select,
+.header .options-list,
+.header .dropdown-with-button-wrapper,
+.header .search-bar,
+.header .user-actions,
+.header .navigation,
+.header .logo {
+    -webkit-app-region: no-drag;
+}
+
+.user-actions {
+    /* Reserve space so the absolute-positioned window buttons don't overlap */
+    padding-right: var(--win-controls-space);
+}
+
+.window-controls-main {
+    position: absolute;
+    top: 0;
+    right: 8px;
+    height: 100%;
+    display: flex;
+    gap: 2px;
+    align-items: stretch;
+    padding: 2px 6px 2px 0;
+    -webkit-app-region: no-drag;
+}
+
+.win-btn {
+    width: 44px;
+    height: 100%;
+    padding: 0;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 16px;
+    line-height: 1;
+    letter-spacing: 0;
+    text-transform: none;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.win-btn:hover {
+    background-color: color-mix(in srgb, var(--bg-tertiary), white 6%);
+    border-color: color-mix(in srgb, var(--border-color), var(--accent-color) 20%);
+    color: var(--text-primary);
+}
+
+.win-btn:active {
+    background-color: color-mix(in srgb, var(--bg-tertiary), black 8%);
+}
+
+.win-btn-close:hover {
+    background-color: color-mix(in srgb, var(--danger-color), black 10%);
+    border-color: var(--danger-dark);
+    color: white;
 }
 
 .header-content-wrapper {
@@ -24,6 +98,7 @@
 @media (max-width: 1200px) {
     .header {
         padding: 10px;
+        padding-right: calc(10px + var(--win-controls-space));
         flex-direction: column; /* Stack header items vertically */
         gap: 15px;
     }
@@ -55,6 +130,7 @@
             justify-content: center;
             flex-wrap: wrap;
             gap: 10px;
+            padding-right: 0;
         }
 
         /* Hide less important elements progressively */

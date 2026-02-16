@@ -1,4 +1,4 @@
-import { ipcRenderer } from 'electron';
+const emubro = window.emubro;
 
 export class MemoryCardTool {
     constructor() {
@@ -122,7 +122,7 @@ export class MemoryCardTool {
 
     async handleNativeOpen(slotId) {
         try {
-            const result = await ipcRenderer.invoke("open-file-dialog", {
+            const result = await emubro.invoke("open-file-dialog", {
                 properties: ["openFile"],
                 filters: [
                     { name: "Memory Cards", extensions: ["mcr", "mcd", "gme", "ps2", "max", "psu"] },
@@ -164,7 +164,7 @@ export class MemoryCardTool {
 
     async loadCard(slotId, filePath) {
         try {
-            const result = await ipcRenderer.invoke("read-memory-card", filePath);
+            const result = await emubro.invoke("read-memory-card", filePath);
             if (result.success) {
                 if (slotId === "slot-1") this.currentSlot1Path = filePath;
                 else this.currentSlot2Path = filePath;
@@ -282,7 +282,7 @@ export class MemoryCardTool {
         const filePath = this.selectedSave.slotId === 'slot-1' ? this.currentSlot1Path : this.currentSlot2Path;
         
         try {
-            const result = await ipcRenderer.invoke('delete-save', {
+            const result = await emubro.invoke('delete-save', {
                 filePath: filePath,
                 slot: this.selectedSave.save.slot
             });
@@ -315,7 +315,7 @@ export class MemoryCardTool {
         const filePath = this.selectedSave.slotId === 'slot-1' ? this.currentSlot1Path : this.currentSlot2Path;
 
         try {
-            const result = await ipcRenderer.invoke('rename-save', {
+            const result = await emubro.invoke('rename-save', {
                 filePath: filePath,
                 slot: this.selectedSave.save.slot,
                 newName: newName
@@ -341,7 +341,7 @@ export class MemoryCardTool {
         if (!confirm("Are you sure you want to FORMAT this card?\nAll data will be lost!")) return;
 
         try {
-            const result = await ipcRenderer.invoke('format-card', filePath);
+            const result = await emubro.invoke('format-card', filePath);
             if (result.success) {
                 this.loadCard(slotId, filePath);
                 this.selectedSave = null;

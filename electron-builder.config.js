@@ -7,14 +7,23 @@ module.exports = {
   files: [
     "package.json",
     "main.js",
+    "preload.js",
+    "ps1-handler.js",
     "index.html",
     "i18n.js",
     "translations-loader.js",
     "dist/**/*",        // Your Webpack output
     "locales/**/*",
     "logo.png",
+    "icon.png",
     "emubro-resources/**/*", // Essential for your app to find configs/platforms
     "!build_out/**/*"
+  ],
+  protocols: [
+    {
+      name: "emuBro Launcher",
+      schemes: ["emubro"]
+    }
   ],
   extraResources: [
     {

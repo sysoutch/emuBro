@@ -14,8 +14,8 @@ import {
 } from './ui-utils';
 import { isPanelDocked } from './docking-manager';
 
-const { ipcRenderer } = require('electron');
-const log = require('electron-log');
+const emubro = window.emubro;
+const log = console;
 
 let remoteCommunityThemes = null;
 let currentTheme = 'dark';
@@ -619,7 +619,7 @@ async function uploadTheme(theme) {
         if (!webhookUrl) return; // User cancelled
     }
 
-    const userInfo = await ipcRenderer.invoke('get-user-info');
+    const userInfo = await emubro.invoke('get-user-info');
 
     // Get the image name from the stored property or the UI if available
     let imageName = window.currentBackgroundImageName || 'background';
@@ -638,7 +638,7 @@ async function uploadTheme(theme) {
         themeToUpload.background.image = imageName;
     }
 
-    const success = await ipcRenderer.invoke('upload-theme', {
+    const success = await emubro.invoke('upload-theme', {
         author: userInfo.username,
         name: theme.name, 
         themeObject: themeToUpload, // The JSON with image name

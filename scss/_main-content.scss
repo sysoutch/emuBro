@@ -3,6 +3,7 @@
     display: flex;
     flex: 1;
     overflow: hidden;
+    position: relative; /* for .drop-zone-overlay absolute positioning */
 }
 
 /* Drag and Drop Zone */

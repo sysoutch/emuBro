@@ -93,8 +93,19 @@ export function populateLanguageSelector() {
     updateSelectedLanguageDisplay();
 }
 
-export function initI18n(onLanguageChange) {
-    // Load translations from the global scope (set by translations-loader.js)
+export async function initI18n(onLanguageChange) {
+    // Load translations from a safe source (preload -> main process).
+    // Keep `allTranslations` as a global for legacy code paths.
+    if (typeof allTranslations === 'undefined') {
+        try {
+            if (window.emubro && typeof window.emubro.getAllTranslations === 'function') {
+                window.allTranslations = await window.emubro.getAllTranslations();
+            }
+        } catch (e) {
+            console.error('Failed to load translations:', e);
+        }
+    }
+
     if (typeof allTranslations !== 'undefined') {
         i18n.loadTranslations(allTranslations);
     }

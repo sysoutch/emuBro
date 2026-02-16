@@ -60,6 +60,13 @@
                     <span id="user-name" data-i18n="messages.loadingUserInfo">Loading...</span>
                 </div>
             </div>
+
+            <!-- Custom window controls (used when frameless on Windows) -->
+            <div class="window-controls-main" id="window-controls-main" aria-label="Window controls">
+                <button class="win-btn" id="win-min-btn" title="Minimize" aria-label="Minimize">_</button>
+                <button class="win-btn" id="win-max-btn" title="Maximize" aria-label="Maximize">▢</button>
+                <button class="win-btn win-btn-close" id="win-close-btn" title="Close" aria-label="Close">×</button>
+            </div>
         </header>
 
         <!-- View Toggle Controls -->
@@ -143,7 +150,7 @@
                             <li><a href="#" data-view="installed">Installed</a></li>
                             <li><a href="#" data-view="recent">Recently Played</a></li>
                             <li><a href="#" data-view="wishlist">Wishlist</a></li>
-                            <li><a href="#" data-view="downloads">Downloads</a></li>
+                            <li><a href="#" data-view="emulators">Emulators</a></li>
                         </ul>
                     </div>
                     <div class="sidebar-section">
@@ -531,7 +538,6 @@
     </div>
 
     <script src="./i18n.js"></script>
-    <script src="./translations-loader.js"></script>
     <script src="dist/renderer.bundle.js"></script>
 </body>
 </html>

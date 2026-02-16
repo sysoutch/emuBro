@@ -2,8 +2,8 @@
  * Game Manager
  */
 
-const { ipcRenderer } = require('electron');
-const log = require('electron-log');
+const emubro = window.emubro;
+const log = console;
 
 let games = [];
 let filteredGames = [];
@@ -57,12 +57,14 @@ export function createGameCard(game) {
     }
     const platformIcon = `emubro-resources/platforms/${platformShortName}/logos/default.png`;
     card.innerHTML = `
-        <img src="${gameImageToUse}" alt="${game.name}" class="game-image" loading="lazy" />
+        <div class="game-cover" aria-hidden="true">
+            <img src="${gameImageToUse}" alt="${game.name}" class="game-image" loading="lazy" decoding="async" fetchpriority="low" />
+        </div>
         <div class="game-info">
             <h3 class="game-title">${game.name}</h3>
             <span class="game-platform-badge">
                 <img src="${platformIcon}" alt="${game.platformShortName}" class="game-platform-icon" loading="lazy" onerror="this.style.display='none'" />
-                <span>${game.platformName || game.platformShortName || i18n.t('gameDetails.unknown')}</span>
+                <span>${game.platform || game.platformShortName || i18n.t('gameDetails.unknown')}</span>
             </span>
             <div class="game-more">
                 <div class="game-rating">★ ${game.rating}</div>
@@ -96,13 +98,14 @@ export async function searchForGamesAndEmulators() {
     }
     
     try {
-        const result = await ipcRenderer.invoke('browse-games-and-emus', driveSelector ? driveSelector.value : '');
+        const result = await emubro.invoke('browse-games-and-emus', driveSelector ? driveSelector.value : '');
         if (result.success) {
-            const newGames = [...getGames(), ...result.games];
-            setGames(newGames);
-            setFilteredGames(newGames);
-            renderGames(newGames);
-            result.platforms.forEach(addPlatformFilterOption);
+            // Avoid renderer-side duplication by always reloading from the persisted DB.
+            const updatedGames = await emubro.invoke('get-games');
+            setGames(updatedGames);
+            setFilteredGames([...updatedGames]);
+            renderGames(getFilteredGames());
+            initializePlatformFilterOptions();
             alert(i18n.t('messages.foundGames', { count: result.games.length }));
         }
     } catch (error) {
@@ -137,7 +140,7 @@ export async function handleGameAction(event) {
 }
 
 async function removeGame(gameId) {
-    const result = await ipcRenderer.invoke('remove-game', gameId);
+    const result = await emubro.invoke('remove-game', gameId);
     if (result.success) {
         const gameCard = document.querySelector(`[data-game-id="${gameId}"]`);
         if (gameCard) {
@@ -161,10 +164,9 @@ async function removeGame(gameId) {
 }
 
 async function launchGame(gameId) {
-    const result = await ipcRenderer.invoke('launch-game', gameId);
+    const result = await emubro.invoke('launch-game', gameId);
     if (!result.success) {
-        ipcRenderer.send('open-alert', 'messages.launchFailed' + ':' + result.message);
-        // alert(i18n.tf('messages.launchFailed', { message: result.message }));
+        alert(i18n.tf('messages.launchFailed', { message: result.message }));
     }
 }
 
@@ -189,7 +191,7 @@ export function applyFilters() {
             filteredGames.sort((a, b) => a.price - b.price);
             break;
         case 'platform':
-            filteredGames.sort((a, b) => (a.platformName || a.platformShortName || 'Unknown').localeCompare(b.platformName || b.platformShortName || 'Unknown'));
+            filteredGames.sort((a, b) => (a.platform || a.platformShortName || 'Unknown').localeCompare(b.platform || b.platformShortName || 'Unknown'));
             break;
         default: 
             filteredGames.sort((a, b) => a.name.localeCompare(b.name));
@@ -251,7 +253,7 @@ function renderGamesAsTable(gamesToRender) {
                 const platformIcon = `emubro-resources/platforms/${platformShortName}/logos/default.png`;
                 return `
                 <tr>
-                    <td class="table-image-cell"><img src="${gameImageToUse}" alt="${game.name}" class="table-game-image" loading="lazy" /></td>
+                    <td class="table-image-cell"><img src="${gameImageToUse}" alt="${game.name}" class="table-game-image" loading="lazy" decoding="async" fetchpriority="low" /></td>
                     <td>${game.name}</td>
                     <td>${game.genre}</td>
                     <td>★ ${game.rating}</td>
@@ -292,12 +294,12 @@ function renderGamesAsList(gamesToRender) {
         const platformIcon = `emubro-resources/platforms/${platformShortName}/logos/default.png`;
         
         listItem.innerHTML = `
-            <img src="${gameImageToUse}" alt="${game.name}" class="list-item-image" loading="lazy" />
+            <img src="${gameImageToUse}" alt="${game.name}" class="list-item-image" loading="lazy" decoding="async" fetchpriority="low" />
             <div class="list-item-info">
                 <h3 class="list-item-title">${game.name}</h3>
                 <span class="list-item-platform-badge">
                     <img src="${platformIcon}" alt="${game.platformShortName}" class="list-platform-icon" loading="lazy" onerror="this.style.display='none'" />
-                    <span>${game.platformName || game.platformShortName || i18n.t('gameDetails.unknown')}</span>
+                    <span>${game.platform || game.platformShortName || i18n.t('gameDetails.unknown')}</span>
                 </span>
                 <p class="list-item-genre">${game.genre}</p>
                 <div class="list-item-meta">
@@ -339,6 +341,7 @@ function renderGamesAsSlideshow(gamesToRender) {
     let currentIndex = 0;
     let isAnimating = false;
     let pendingSteps = 0;
+    let suppressClickUntil = 0;
 
     const backdrops = [document.createElement('div'), document.createElement('div')];
     let activeBackdrop = 0;
@@ -397,7 +400,7 @@ function renderGamesAsSlideshow(gamesToRender) {
         const game = gamesToRender[idx];
         heading.textContent = game.name;
 
-        const platformName = game.platformName || game.platformShortName || i18n.t('gameDetails.unknown');
+        const platformName = game.platform || game.platformShortName || i18n.t('gameDetails.unknown');
         const ratingText = (game.rating !== undefined && game.rating !== null) ? `${game.rating}` : i18n.t('gameDetails.unknown');
         const statusText = game.isInstalled ? 'Installed' : 'Not Installed';
 
@@ -441,6 +444,19 @@ function renderGamesAsSlideshow(gamesToRender) {
     const minOffset = Math.min(...slotOffsets);
     const maxOffset = Math.max(...slotOffsets);
 
+    function applyCardOrientation(card, imgEl) {
+        try {
+            const w = imgEl?.naturalWidth || 0;
+            const h = imgEl?.naturalHeight || 0;
+            if (!w || !h) return;
+            const ratio = w / h;
+            const landscape = ratio >= 1.10;
+
+            card.classList.toggle('is-landscape', landscape);
+            card.classList.toggle('is-portrait', !landscape);
+        } catch (_e) {}
+    }
+
     function setCardContent(card, idx) {
         const game = gamesToRender[idx];
         const img = card.querySelector('img');
@@ -449,6 +465,12 @@ function renderGamesAsSlideshow(gamesToRender) {
         img.alt = game.name;
         card.setAttribute('aria-label', game.name);
         card.dataset.index = String(idx);
+
+        // Set portrait/landscape card shape once the image dimensions are known.
+        img.onload = () => applyCardOrientation(card, img);
+        if (img.complete) {
+            applyCardOrientation(card, img);
+        }
     }
 
     const cards = slotOffsets.map(offset => {
@@ -459,19 +481,19 @@ function renderGamesAsSlideshow(gamesToRender) {
         card.dataset.offset = String(offset);
         if (offset === 0) card.setAttribute('aria-current', 'true');
         card.innerHTML = `
-            <img src="" alt="" class="slideshow-image" loading="lazy" />
+            <img src="" alt="" class="slideshow-image" loading="lazy" decoding="async" fetchpriority="low" />
             <div class="slideshow-card-frame" aria-hidden="true"></div>
         `;
         setCardContent(card, idx);
         return card;
     });
 
-    function shiftOnce(dir) {
+    function shiftOnce(dir, updateHeroNow = true) {
         if (len <= 1) return;
         isAnimating = true;
 
         currentIndex = (currentIndex + dir + len) % len;
-        updateHero(currentIndex);
+        if (updateHeroNow) updateHero(currentIndex);
 
         cards.forEach(card => {
             const oldOffset = parseInt(card.dataset.offset || '0', 10);
@@ -502,7 +524,7 @@ function renderGamesAsSlideshow(gamesToRender) {
             }
         });
 
-        const durationMs = reduceMotion ? 0 : 360;
+        const durationMs = reduceMotion ? 0 : (slideshowContainer.classList.contains('is-dragging') ? 140 : 360);
         setTimeout(() => {
             isAnimating = false;
             runQueue();
@@ -513,7 +535,8 @@ function renderGamesAsSlideshow(gamesToRender) {
         if (isAnimating || pendingSteps === 0) return;
         const dir = pendingSteps > 0 ? 1 : -1;
         pendingSteps -= dir;
-        shiftOnce(dir);
+        const updateHeroNow = pendingSteps === 0;
+        shiftOnce(dir, updateHeroNow);
     }
 
     function queueShift(steps) {
@@ -536,7 +559,102 @@ function renderGamesAsSlideshow(gamesToRender) {
     nextBtn.textContent = 'Next';
     nextBtn.addEventListener('click', () => queueShift(1));
 
+    // Drag to scroll (fast scrub). Uses discrete steps but feels smooth thanks to the carousel transitions.
+    (function enableDragScrub() {
+        const stepPx = 90; // lower = faster scrolling
+        const dragThreshold = 6;
+        let armed = false;
+        let dragging = false;
+        let dragMoved = false;
+
+        let startX = 0;
+        let startY = 0;
+        let lastSentSteps = 0;
+        let lastMoveX = 0;
+        let lastMoveT = 0;
+        let velocity = 0; // px/ms
+
+        const setDraggingUi = (on) => {
+            slideshowContainer.classList.toggle('is-dragging', !!on);
+        };
+
+        const onPointerDown = (e) => {
+            if (reduceMotion) return;
+            if (e.button !== 0) return;
+            armed = true;
+            dragging = false;
+            dragMoved = false;
+            startX = e.clientX;
+            startY = e.clientY;
+            lastMoveX = e.clientX;
+            lastMoveT = performance.now();
+            lastSentSteps = 0;
+            velocity = 0;
+        };
+
+        const onPointerMove = (e) => {
+            if (!armed) return;
+
+            const dx0 = e.clientX - startX;
+            const dy0 = e.clientY - startY;
+
+            if (!dragging) {
+                if (Math.abs(dx0) < dragThreshold && Math.abs(dy0) < dragThreshold) return;
+                dragging = true;
+                dragMoved = true;
+                setDraggingUi(true);
+                try { carouselWrapper.setPointerCapture(e.pointerId); } catch (_e) {}
+            }
+
+            const now = performance.now();
+            const dx = e.clientX - startX;
+
+            const dt = Math.max(1, now - lastMoveT);
+            const instV = (e.clientX - lastMoveX) / dt;
+            velocity = (velocity * 0.7) + (instV * 0.3);
+            lastMoveX = e.clientX;
+            lastMoveT = now;
+
+            // Swipe left (dx negative) => next => +steps. Swipe right => prev => -steps.
+            const wantedSteps = Math.trunc((-dx) / stepPx);
+            const delta = wantedSteps - lastSentSteps;
+            if (delta) {
+                queueShift(delta);
+                lastSentSteps = wantedSteps;
+            }
+
+            e.preventDefault();
+        };
+
+        const end = (e) => {
+            if (!armed) return;
+            armed = false;
+
+            if (!dragging) return;
+            dragging = false;
+            setDraggingUi(false);
+            try { carouselWrapper.releasePointerCapture(e.pointerId); } catch (_e) {}
+
+            if (dragMoved) {
+                suppressClickUntil = performance.now() + 260;
+            }
+
+            // Flick inertia: convert velocity into 1..3 extra steps.
+            const flick = Math.max(-3, Math.min(3, Math.round((-velocity) * 2.2)));
+            if (flick) queueShift(flick);
+            velocity = 0;
+        };
+
+        carouselWrapper.style.touchAction = 'pan-y';
+        carouselWrapper.addEventListener('pointerdown', onPointerDown);
+        carouselWrapper.addEventListener('pointermove', onPointerMove);
+        carouselWrapper.addEventListener('pointerup', end);
+        carouselWrapper.addEventListener('pointercancel', end);
+        carouselWrapper.addEventListener('lostpointercapture', end);
+    })();
+
     carouselInner.addEventListener('click', (e) => {
+        if (performance.now() < suppressClickUntil) return;
         const card = e.target.closest('.slideshow-card');
         if (!card) return;
         const offset = parseInt(card.dataset.offset || '0', 10);
@@ -621,7 +739,7 @@ function renderGamesAsRandom(gamesToRender) {
     const leverBtn = document.createElement('button');
     leverBtn.type = 'button';
     leverBtn.className = 'action-btn slot-lever';
-    leverBtn.textContent = 'SPIN';
+    leverBtn.textContent = 'PULL';
 
     const result = document.createElement('div');
     result.className = 'slot-result glass';
@@ -646,9 +764,13 @@ function renderGamesAsRandom(gamesToRender) {
     windowEl.appendChild(payline);
     cabinet.appendChild(windowEl);
 
+    const stage = document.createElement('div');
+    stage.className = 'slot-stage';
+    stage.appendChild(cabinet);
+    stage.appendChild(controls);
+
     machine.appendChild(marquee);
-    machine.appendChild(cabinet);
-    machine.appendChild(controls);
+    machine.appendChild(stage);
     machine.appendChild(result);
 
     randomContainer.appendChild(machine);
@@ -665,7 +787,7 @@ function renderGamesAsRandom(gamesToRender) {
 
     function setResult(idx) {
         const game = gamesToRender[idx];
-        const platformName = game.platformName || game.platformShortName || i18n.t('gameDetails.unknown');
+        const platformName = game.platform || game.platformShortName || i18n.t('gameDetails.unknown');
         const ratingText = (game.rating !== undefined && game.rating !== null) ? `${game.rating}` : i18n.t('gameDetails.unknown');
 
         resultTitle.textContent = game.name;
@@ -697,7 +819,7 @@ function renderGamesAsRandom(gamesToRender) {
         const item = document.createElement('div');
         item.className = 'slot-item';
         item.innerHTML = `
-            <img class="slot-item-image" src="${getGameImage(game)}" alt="${game.name}" loading="lazy" />
+            <img class="slot-item-image" src="${getGameImage(game)}" alt="${game.name}" loading="lazy" decoding="async" fetchpriority="low" />
             <div class="slot-item-caption">${game.name}</div>
         `;
         reelInner.appendChild(item);
@@ -865,13 +987,16 @@ export function showGameDetails(game) {
     if (detailsInfo) {
         detailsInfo.innerHTML = `
             <div class="game-detail-row">
-                <img id="detail-game-image" src="" alt="${game.name}" class="detail-game-image" />
+                <img id="detail-game-image" src="" alt="${game.name}" class="detail-game-image" loading="lazy" decoding="async" fetchpriority="low" />
             </div>
             <div class="game-detail-row">
-                <p><strong>Platform:</strong> ${game.platformName || game.platformShortName || i18n.t('gameDetails.unknown')}</p>
+                <p><strong>Platform:</strong> ${game.platform || game.platformShortName || i18n.t('gameDetails.unknown')}</p>
                 <p><strong>Rating:</strong> ${game.rating}</p>
                 <p><strong>Genre:</strong> ${game.genre}</p>
                 <p><strong>Price:</strong> ${game.price > 0 ? `$${game.price.toFixed(2)}` : 'Free'}</p>
+            </div>
+            <div class="game-detail-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-top: 10px;">
+                <button id="create-shortcut-btn" class="action-btn">Create Desktop Shortcut</button>
             </div>
         `;
         
@@ -881,6 +1006,26 @@ export function showGameDetails(game) {
         } else {
             const platformShortName = game.platformShortName.toLowerCase();
             gameImage.src = `emubro-resources/platforms/${platformShortName}/covers/default.jpg`;
+        }
+
+        const createShortcutBtn = document.getElementById('create-shortcut-btn');
+        if (createShortcutBtn && window.emubro && typeof window.emubro.createGameShortcut === 'function') {
+            createShortcutBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                createShortcutBtn.disabled = true;
+                try {
+                    const res = await window.emubro.createGameShortcut(game.id);
+                    if (res && res.success) {
+                        alert(`Shortcut created:\n${res.path}`);
+                    } else {
+                        alert(`Failed to create shortcut: ${res?.message || 'Unknown error'}`);
+                    }
+                } catch (err) {
+                    alert(`Failed to create shortcut: ${err?.message || err}`);
+                } finally {
+                    createShortcutBtn.disabled = false;
+                }
+            });
         }
     }
     

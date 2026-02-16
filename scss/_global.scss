@@ -6,12 +6,94 @@
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+html {
+    height: 100%;
+}
+
+/* When maximized, Windows corners become square. Mirror that in our CSS chrome. */
+[data-window-state="maximized"] {
+    --radius-window: 0px;
+    --radius-window-inner: 0px;
+}
+
 body {
-    background-color: var(--bg-primary);
+    background-color: color-mix(in srgb, var(--bg-primary), black 10%);
     color: var(--text-primary);
     height: 100vh;
     overflow: hidden;
     transition: background-color 0.3s, color 0.3s;
+    position: relative;
+    isolation: isolate;
+}
+
+/* Windows-only: full-window prism background + glassy border overlay (no layout padding). */
+[data-os="win32"] body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+
+    background:
+        radial-gradient(
+            1200px 700px at 14% 8%,
+            color-mix(in srgb, var(--prism-cyan) 38%, transparent),
+            transparent 62%
+        ),
+        radial-gradient(
+            900px 600px at 96% 96%,
+            color-mix(in srgb, var(--prism-orange) 32%, transparent),
+            transparent 66%
+        ),
+        var(--prism-gradient);
+
+    filter: saturate(1.1) brightness(1.02);
+}
+
+[data-os="win32"] body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 3;
+
+    padding: var(--win-border-w);
+    border-radius: var(--radius-window);
+
+    background: var(--prism-gradient-glass);
+    opacity: 0.9;
+
+    /* Glassy feel */
+    -webkit-backdrop-filter: blur(10px) saturate(1.25);
+    backdrop-filter: blur(10px) saturate(1.25);
+
+    /* Smooth color drift without moving the border */
+    filter: hue-rotate(0deg) saturate(1.05);
+    will-change: filter;
+    animation: prism-window-hue 24s linear infinite;
+
+    /* Tight glow, not a huge halo */
+    box-shadow:
+        0 0 10px color-mix(in srgb, var(--prism-cyan) 55%, transparent),
+        0 0 22px color-mix(in srgb, var(--prism-cyan) 26%, transparent),
+        0 0 10px color-mix(in srgb, var(--prism-orange) 45%, transparent),
+        0 0 24px color-mix(in srgb, var(--prism-orange) 22%, transparent);
+
+    /* Border ring mask */
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+}
+
+@keyframes prism-window-hue {
+    from { filter: hue-rotate(0deg) saturate(1.05); }
+    to { filter: hue-rotate(360deg) saturate(1.05); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [data-os="win32"] body::after {
+        animation: none;
+    }
 }
 
 button {
@@ -64,7 +146,36 @@ textarea {
     display: flex;
     flex-direction: column;
     height: 100vh;
+    width: 100%;
     transition: padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    background-color: var(--bg-primary);
+    border-radius: var(--radius-window, 16px);
+    overflow: hidden;
+
+    /* Subtle internal glow that tracks the accent color */
+    box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--border-color), var(--accent-color) 18%) inset,
+        0 0 28px color-mix(in srgb, var(--accent-color) 18%, transparent),
+        0 18px 42px rgba(0, 0, 0, 0.35);
+
+    position: relative;
+    z-index: 1;
+}
+
+[data-os="win32"] .app-container {
+    /* Let the prism background "bleed" very slightly through so the window border feels integrated. */
+    background-color: color-mix(in srgb, var(--bg-primary), transparent 6%);
+    -webkit-backdrop-filter: blur(6px) saturate(1.12);
+    backdrop-filter: blur(6px) saturate(1.12);
+
+    /* Inset the entire app so it sits exactly inside the glass border ring. */
+    margin: var(--win-border-w);
+    width: calc(100vw - (var(--win-border-w) * 2));
+    height: calc(100vh - (var(--win-border-w) * 2));
+
+    /* Match the inner edge radius of the border ring (outer radius minus border thickness). */
+    border-radius: var(--radius-window-inner);
 }
 
 /* Body state when any panel is docked is now handled in _sidebar.scss */

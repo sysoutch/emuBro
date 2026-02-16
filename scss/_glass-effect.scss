@@ -1,8 +1,20 @@
-@mixin glass-base($blur: 12px) {
+@mixin glass-frost($blur: 12px) {
     backdrop-filter: blur($blur);
     -webkit-backdrop-filter: blur($blur);
+}
+
+// Full glass surface (keeps its own border/shadow).
+@mixin glass-base($blur: 12px) {
+    @include glass-frost($blur);
     border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+// Background-only frosted glass. Use for components that already define their own
+// border/shadow/glow (e.g. game cards).
+@mixin glass-bg-only($color-var, $transparency, $blur: 12px) {
+    @include glass-frost($blur);
+    background: color-mix(in srgb, var($color-var), transparent $transparency) !important;
 }
 
 @mixin glass-bg($color-var, $transparency) {
@@ -19,7 +31,7 @@
     .slideshow-card,
     .random-display {
         /* Increased transparency from 30% to 50% */
-        @include glass-bg(--bg-secondary, 50%);
+        @include glass-bg-only(--bg-secondary, 50%);
     }
 
     .game-card:hover {

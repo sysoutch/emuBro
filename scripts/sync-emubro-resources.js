@@ -14,35 +14,149 @@ const targetDir = path.isAbsolute(targetDirRaw)
   ? path.normalize(targetDirRaw)
   : path.resolve(ROOT_DIR, targetDirRaw);
 
+let _gitExecutable = null;
+
+function _fileExists(p) {
+  try {
+    return !!p && fs.existsSync(p);
+  } catch (_e) {
+    return false;
+  }
+}
+
+function resolveGitExecutable() {
+  if (_gitExecutable) return _gitExecutable;
+
+  const envCandidates = [
+    process.env.EMUBRO_GIT,
+    process.env.GIT_PATH,
+    process.env.GIT
+  ]
+    .map((v) => String(v || '').trim())
+    .filter(Boolean);
+
+  for (const c of envCandidates) {
+    if (_fileExists(c)) {
+      _gitExecutable = c;
+      return _gitExecutable;
+    }
+  }
+
+  // First try PATH resolution ("git"). This should work on most setups.
+  {
+    const probe = spawnSync('git', ['--version'], { encoding: 'utf8', shell: false });
+    if (!probe.error && probe.status === 0) {
+      _gitExecutable = 'git';
+      return _gitExecutable;
+    }
+  }
+
+  // Windows: Git is often installed but not on PATH for non-interactive processes.
+  if (process.platform === 'win32') {
+    const localAppData = String(process.env.LOCALAPPDATA || '').trim();
+    const programFiles = String(process.env['ProgramFiles'] || 'C:\\Program Files').trim();
+    const programFilesX86 = String(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)').trim();
+
+    const winCandidates = [
+      // Standard installers
+      path.join(programFiles, 'Git', 'cmd', 'git.exe'),
+      path.join(programFiles, 'Git', 'bin', 'git.exe'),
+      path.join(programFilesX86, 'Git', 'cmd', 'git.exe'),
+      path.join(programFilesX86, 'Git', 'bin', 'git.exe'),
+      // Per-user installer (common)
+      localAppData ? path.join(localAppData, 'Programs', 'Git', 'cmd', 'git.exe') : '',
+      localAppData ? path.join(localAppData, 'Programs', 'Git', 'bin', 'git.exe') : ''
+    ].filter(Boolean);
+
+    for (const c of winCandidates) {
+      if (_fileExists(c)) {
+        _gitExecutable = c;
+        return _gitExecutable;
+      }
+    }
+  }
+
+  return null;
+}
+
 function runGit(args, cwd = ROOT_DIR) {
-  const result = spawnSync('git', args, {
+  const gitExe = resolveGitExecutable();
+  if (!gitExe) {
+    throw new Error(
+      [
+        'git executable not found.',
+        'Install Git (Windows: "Git for Windows") or set EMUBRO_GIT to the full path to git.exe, e.g.:',
+        '  setx EMUBRO_GIT "C:\\\\Users\\\\<you>\\\\AppData\\\\Local\\\\Programs\\\\Git\\\\cmd\\\\git.exe"'
+      ].join(' ')
+    );
+  }
+
+  // Avoid "detected dubious ownership" when running under a different Windows user (e.g. elevated admin).
+  // Passing `-c safe.directory=<path>` is equivalent to `git config --global --add safe.directory <path>`
+  // but scoped to this invocation.
+  const safeArgs =
+    Array.isArray(args) &&
+    args.length >= 2 &&
+    args[0] === '-C' &&
+    path.normalize(String(args[1])) === path.normalize(String(targetDir))
+      ? ['-c', `safe.directory=${targetDir}`, ...args]
+      : args;
+
+  const result = spawnSync(gitExe, safeArgs, {
     cwd,
     stdio: 'inherit',
     shell: false
   });
 
   if (result.error) {
-    throw result.error;
+    const msg = result.error && result.error.code === 'ENOENT'
+      ? `Failed to execute git at '${gitExe}' (ENOENT).`
+      : `Failed to execute git at '${gitExe}': ${result.error.message || String(result.error)}`;
+    throw new Error(msg);
   }
 
   if (result.status !== 0) {
-    throw new Error(`git ${args.join(' ')} failed with exit code ${result.status}`);
+    throw new Error(`git ${safeArgs.join(' ')} failed with exit code ${result.status}`);
   }
 }
 
 function runGitCapture(args, cwd = ROOT_DIR) {
-  const result = spawnSync('git', args, {
+  const gitExe = resolveGitExecutable();
+  if (!gitExe) {
+    throw new Error(
+      [
+        'git executable not found.',
+        'Install Git or set EMUBRO_GIT to the full path to git.exe.'
+      ].join(' ')
+    );
+  }
+
+  const safeArgs =
+    Array.isArray(args) &&
+    args.length >= 2 &&
+    args[0] === '-C' &&
+    path.normalize(String(args[1])) === path.normalize(String(targetDir))
+      ? ['-c', `safe.directory=${targetDir}`, ...args]
+      : args;
+
+  const result = spawnSync(gitExe, safeArgs, {
     cwd,
     encoding: 'utf8',
     shell: false
   });
 
   if (result.error) {
-    throw result.error;
+    const msg = result.error && result.error.code === 'ENOENT'
+      ? `Failed to execute git at '${gitExe}' (ENOENT).`
+      : `Failed to execute git at '${gitExe}': ${result.error.message || String(result.error)}`;
+    throw new Error(msg);
   }
 
   if (result.status !== 0) {
-    throw new Error((result.stderr || result.stdout || '').trim() || `git ${args.join(' ')} failed with exit code ${result.status}`);
+    throw new Error(
+      (result.stderr || result.stdout || '').trim() ||
+        `git ${safeArgs.join(' ')} failed with exit code ${result.status}`
+    );
   }
 
   return String(result.stdout || '').trim();

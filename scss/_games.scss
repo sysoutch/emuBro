@@ -33,27 +33,135 @@
 
 /* Cover View Card */
 .game-card {
-    background-color: var(--bg-secondary);
+    /* Frosted glass card */
+    background: color-mix(in srgb, var(--bg-secondary), transparent 55%);
+    -webkit-backdrop-filter: blur(14px) saturate(1.18);
+    backdrop-filter: blur(14px) saturate(1.18);
     border-radius: var(--radius-card);
     overflow: hidden;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    transition: transform 0.3s, box-shadow 0.3s;
+    position: relative;
+    border: 1px solid color-mix(in srgb, rgba(255,255,255,0.22), var(--border-color));
+    box-shadow:
+        0 22px 46px -32px rgba(0, 0, 0, 0.88),
+        0 0 0 1px rgba(255,255,255,0.05) inset,
+        0 1px 0 rgba(255,255,255,0.12) inset;
     display: flex;
     flex-direction: column;
     height: 100%;
-    position: relative;
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease, background 0.22s ease;
+}
+
+.game-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    /* Static "frost" overlay so glass reads even on flat backgrounds. */
+    background:
+        radial-gradient(220px 160px at 18% 14%, rgba(255,255,255,0.18), transparent 64%),
+        radial-gradient(260px 180px at 92% 8%, rgba(255,255,255,0.10), transparent 66%),
+        linear-gradient(180deg, rgba(255,255,255,0.12), transparent 40%, rgba(0,0,0,0.10));
+    opacity: 0.95;
 }
 
 .game-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    transform: translateY(-4px);
+    border-color: color-mix(in srgb, rgba(255,255,255,0.30), var(--accent-color));
+    background: color-mix(in srgb, var(--bg-secondary), transparent 62%);
+    box-shadow:
+        0 30px 62px -38px rgba(0, 0, 0, 0.92),
+        0 0 0 1px rgba(255,255,255,0.06) inset,
+        0 1px 0 rgba(255,255,255,0.14) inset;
 }
 
-.game-image {
-    width: 100%;
+.game-card:hover::before {
+    opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .game-card,
+    .game-card:hover {
+        transition: none;
+    }
+
+    .game-cover::after {
+        transition: opacity 180ms ease;
+        transform: none;
+        inset: 0;
+        background: linear-gradient(
+            0deg,
+            rgba(255,255,255,0.10),
+            rgba(255,255,255,0.04)
+        );
+    }
+}
+
+.game-cover {
+    width: calc(100% - 20px);
     height: 200px;
+    margin: 10px 10px 0 10px;
+    border-radius: calc(var(--radius-card) - 6px);
+    overflow: hidden;
+    border: none;
+    box-shadow: 0 10px 18px rgba(0, 0, 0, 0.26);
+    position: relative;
+    transform: translateZ(0);
+}
+
+.game-cover .game-image {
+    width: 100%;
+    height: 100%;
     object-fit: cover;
-    border-bottom: 1px solid var(--border-color);
+    display: block;
+    transform: scale(1.01);
+    transition: transform 240ms ease;
+}
+
+/* Steam-ish glass shine on hover */
+.game-cover::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(900px 240px at 30% -20%, rgba(255,255,255,0.20), transparent 55%),
+        radial-gradient(700px 220px at 120% 120%, rgba(255,255,255,0.10), transparent 60%);
+    -webkit-backdrop-filter: blur(3px) saturate(1.15);
+    backdrop-filter: blur(3px) saturate(1.15);
+    transition: opacity 220ms ease;
+}
+
+.game-cover::after {
+    content: "";
+    position: absolute;
+    inset: -45% -70%;
+    opacity: 0;
+    pointer-events: none;
+    background: linear-gradient(
+        115deg,
+        transparent 42%,
+        rgba(255,255,255,0.28) 50%,
+        rgba(255,255,255,0.10) 56%,
+        transparent 64%
+    );
+    transform: translateX(-30%) rotate(12deg);
+    filter: blur(0.2px);
+    transition: transform 760ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 180ms ease;
+}
+
+.game-card:hover .game-cover::before {
+    opacity: 1;
+}
+
+.game-card:hover .game-cover::after {
+    opacity: 1;
+    transform: translateX(30%) rotate(12deg);
+}
+
+.game-card:hover .game-cover .game-image {
+    transform: scale(1.04);
 }
 
 .game-info {
@@ -129,9 +237,11 @@
 .launch-btn {
     background-color: var(--accent-color);
     color: white;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-color) 35%, transparent), 0 0 18px color-mix(in srgb, var(--accent-color) 18%, transparent);
 }
 .launch-btn:hover {
     background-color: var(--accent-hover, #3a7bd5);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-color) 55%, transparent), 0 0 26px color-mix(in srgb, var(--accent-color) 26%, transparent);
 }
 
 .remove-btn {
@@ -382,12 +492,21 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    cursor: grab;
 }
 
 .slideshow-carousel-inner {
     position: relative;
     width: 100%;
     height: 100%;
+}
+
+.slideshow-container.is-dragging .slideshow-carousel-wrapper {
+    cursor: grabbing;
+}
+
+.slideshow-container.is-dragging .slideshow-card {
+    transition-duration: 220ms;
 }
 
 .slideshow-card {
@@ -397,11 +516,14 @@
     width: 260px;
     height: 380px;
     border-radius: 22px;
-    box-shadow: 0 18px 40px rgba(0,0,0,0.45);
+    box-shadow:
+        0 18px 40px rgba(0,0,0,0.45),
+        0 0 0 1px rgba(255,255,255,0.06) inset,
+        0 0 18px color-mix(in srgb, var(--accent-color) 14%, transparent);
     transition: transform 340ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 340ms ease, filter 340ms ease;
     transform-style: preserve-3d;
     background: color-mix(in srgb, var(--bg-secondary), transparent 18%);
-    border: 1px solid rgba(255,255,255,0.14);
+    border: 2px solid rgba(255,255,255,0.14);
     overflow: hidden;
     padding: 0;
     cursor: pointer;
@@ -413,6 +535,15 @@
     opacity: 0;
     filter: blur(2px);
     pointer-events: none;
+}
+
+.slideshow-card.is-landscape {
+    width: 380px;
+    height: 240px;
+}
+
+.slideshow-card.is-landscape .slideshow-card-frame {
+    border-radius: 22px;
 }
 
 .slideshow-card:focus-visible {
@@ -436,12 +567,29 @@
     pointer-events: auto;
 }
 
+.slideshow-card[data-offset="0"] {
+    box-shadow:
+        0 22px 48px rgba(0,0,0,0.55),
+        0 0 0 1px color-mix(in srgb, var(--accent-color) 55%, transparent),
+        0 0 34px color-mix(in srgb, var(--accent-color) 26%, transparent),
+        0 0 0 1px rgba(255,255,255,0.08) inset;
+    border-color: color-mix(in srgb, var(--accent-color) 55%, rgba(255,255,255,0.14));
+}
+
+.slideshow-card.is-landscape[data-offset="0"] {
+    transform: translate(-50%, -50%) translateX(0px) rotateY(0deg) scale(1.12);
+}
+
 .slideshow-card[data-offset="-1"] {
     z-index: 6;
     transform: translate(-50%, -50%) translateX(-300px) rotateY(18deg) scale(0.92);
     opacity: 0.78;
     filter: blur(0.3px);
     pointer-events: auto;
+}
+
+.slideshow-card.is-landscape[data-offset="-1"] {
+    transform: translate(-50%, -50%) translateX(-360px) rotateY(16deg) scale(0.9);
 }
 
 .slideshow-card[data-offset="1"] {
@@ -452,6 +600,10 @@
     pointer-events: auto;
 }
 
+.slideshow-card.is-landscape[data-offset="1"] {
+    transform: translate(-50%, -50%) translateX(360px) rotateY(-16deg) scale(0.9);
+}
+
 .slideshow-card[data-offset="-2"] {
     z-index: 2;
     transform: translate(-50%, -50%) translateX(-480px) rotateY(28deg) scale(0.78);
@@ -460,12 +612,20 @@
     pointer-events: auto;
 }
 
+.slideshow-card.is-landscape[data-offset="-2"] {
+    transform: translate(-50%, -50%) translateX(-580px) rotateY(24deg) scale(0.76);
+}
+
 .slideshow-card[data-offset="2"] {
     z-index: 2;
     transform: translate(-50%, -50%) translateX(480px) rotateY(-28deg) scale(0.78);
     opacity: 0.45;
     filter: blur(1.2px);
     pointer-events: auto;
+}
+
+.slideshow-card.is-landscape[data-offset="2"] {
+    transform: translate(-50%, -50%) translateX(580px) rotateY(-24deg) scale(0.76);
 }
 
 .slideshow-image {
@@ -725,6 +885,14 @@
     justify-items: center;
 }
 
+.slot-stage {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+}
+
 .slot-marquee {
     text-align: center;
     padding: 8px 10px;
@@ -880,27 +1048,82 @@
 
 .slot-controls {
     display: flex;
+    align-items: center;
     justify-content: center;
 }
 
 .slot-lever {
     flex: 0 0 auto;
-    min-width: 240px;
+    width: 74px;
+    height: 260px;
+    min-width: 0;
+    padding: 0 0 14px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    font-weight: 800;
+    font-weight: 900;
+    font-size: 0.78rem;
+    background:
+        radial-gradient(120% 120% at 50% 0%,
+            rgba(255,255,255,0.08) 0%,
+            rgba(0,0,0,0.35) 45%,
+            rgba(0,0,0,0.65) 100%),
+        linear-gradient(180deg,
+            rgba(0,0,0,0.15),
+            rgba(0,0,0,0.55));
+    color: var(--text-secondary);
+    border: 1px solid rgba(255,255,255,0.14);
+    box-shadow:
+        0 18px 34px rgba(0,0,0,0.45),
+        0 0 26px color-mix(in srgb, var(--accent-color) 18%, transparent),
+        inset 0 0 0 1px rgba(255,255,255,0.06);
+    transition: transform 160ms ease, filter 160ms ease, box-shadow 160ms ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.slot-lever::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 28px;
+    width: 10px;
+    height: 160px;
+    border-radius: 999px;
+    transform: translateX(-50%) rotate(0deg);
+    transform-origin: top;
     background: linear-gradient(180deg,
-        color-mix(in srgb, var(--accent-color), white 18%),
-        color-mix(in srgb, var(--accent-color), black 10%));
-    color: var(--bg-primary);
-    border: 1px solid color-mix(in srgb, var(--accent-color), white 20%);
-    box-shadow: 0 16px 28px rgba(0,0,0,0.35);
-    transition: transform 160ms ease, filter 160ms ease;
+        rgba(255,255,255,0.25),
+        rgba(255,255,255,0.10) 35%,
+        rgba(0,0,0,0.35) 100%);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.35) inset;
+    transition: transform 220ms ease;
+}
+
+.slot-lever::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 18px;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    transform: translateX(-50%) translateY(0);
+    background: radial-gradient(circle at 30% 30%,
+        rgba(255,255,255,0.95),
+        color-mix(in srgb, var(--accent-color), black 12%));
+    box-shadow:
+        0 10px 18px rgba(0,0,0,0.35),
+        0 0 22px color-mix(in srgb, var(--accent-color) 26%, transparent);
+    transition: transform 220ms ease, filter 220ms ease;
 }
 
 .slot-lever:hover {
     transform: translateY(-1px);
-    filter: brightness(1.05);
+    filter: brightness(1.06);
+    box-shadow:
+        0 20px 38px rgba(0,0,0,0.5),
+        0 0 34px color-mix(in srgb, var(--accent-color) 24%, transparent),
+        inset 0 0 0 1px rgba(255,255,255,0.08);
 }
 
 .slot-lever:disabled {
@@ -908,6 +1131,15 @@
     cursor: not-allowed;
     transform: none;
     filter: none;
+}
+
+.slot-machine.is-spinning .slot-lever::before {
+    transform: translateX(-50%) rotate(16deg);
+}
+
+.slot-machine.is-spinning .slot-lever::after {
+    transform: translateX(-50%) translateY(36px);
+    filter: brightness(1.02);
 }
 
 .slot-result {
@@ -984,8 +1216,13 @@
         border-radius: 22px;
     }
 
+    .slot-stage {
+        gap: 14px;
+    }
+
     .slot-lever {
-        min-width: 220px;
+        width: 66px;
+        height: 230px;
     }
 }
 

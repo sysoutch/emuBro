@@ -4,12 +4,15 @@
   "description": "A Steam-like Electron application",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
+    "start": "npm run build && electron .",
+    "start:fast": "electron .",
     "prebuild:win": "taskkill /F /IM emuBro.exe /T || exit 0",
     "build": "webpack --mode production",
     "sync:resources": "node scripts/sync-emubro-resources.js",
-    "build:win": "npm run sync:resources && electron-builder --win --config=electron-builder.config.js --publish=never",
-    "dist:win": "npm run build && npm run build:win"
+    "preelectron-builder": "node -e \"const fs=require('fs'); try{fs.rmSync('build_out/win-unpacked',{recursive:true,force:true});}catch(e){console.error('[clean] failed to remove build_out/win-unpacked:', e.message); process.exit(1);}\"",
+    "electron-builder": "electron-builder",
+    "build:win": "npm run sync:resources && npm run electron-builder -- --win --config=electron-builder.config.js --publish=never",
+    "dist:win": "npm run sync:resources && npm run build && npm run build:win"
   },
   "keywords": [
     "electron",
@@ -23,14 +26,11 @@
     "@babel/core": "^7.28.6",
     "@babel/preset-env": "^7.28.6",
     "babel-loader": "^10.0.0",
-    "better-sqlite3": "^9.4.0",
     "concurrently": "^8.2.2",
     "css-loader": "^7.1.2",
     "electron": "^40.1.0",
     "electron-builder": "^26.7.0",
-    "electron-store": "^8.2.0",
     "https-browserify": "^1.0.0",
-    "node-ipc": "^10.1.0",
     "nodemon": "^3.1.11",
     "os-browserify": "^0.3.0",
     "path-browserify": "^1.0.1",
@@ -45,6 +45,7 @@
   },
   "dependencies": {
     "axios": "^1.13.2",
+    "better-sqlite3": "^12.6.2",
     "electron-log": "^4.4.8",
     "electron-store": "^8.2.0",
     "flag-icons": "^7.5.0",

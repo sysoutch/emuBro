@@ -34,9 +34,9 @@
     color: var(--text-primary);
     background:
         radial-gradient(120% 120% at 50% 0%,
-            color-mix(in srgb, var(--brand-color), black 70%) 0%,
-            color-mix(in srgb, var(--brand-color), black 86%) 55%,
-            color-mix(in srgb, var(--brand-color), black 92%) 100%);
+            color-mix(in srgb, var(--bg-sidebar), var(--brand-color) 22%) 0%,
+            color-mix(in srgb, var(--bg-sidebar), black 10%) 60%,
+            color-mix(in srgb, var(--bg-sidebar), black 18%) 100%);
 }
 
 .sidebar-rail::after {
@@ -215,7 +215,7 @@ body.panel-docked {
 }
 
 .sidebar-section ul li a.active {
-    color: #66ccff;
+    color: var(--accent-color);
     font-weight: bold;
 }
 
@@ -237,7 +237,7 @@ body.panel-docked {
 }
 
 #tools-list li a:hover {
-    color: #66ccff;
+    color: var(--accent-color);
 }
 
 .tool-content {
@@ -276,6 +276,6 @@ body.panel-docked {
 }
 
 .stats span {
-    color: #66ccff;
+    color: var(--accent-color);
     font-weight: bold;
 }
