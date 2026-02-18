@@ -1,6 +1,7 @@
 /**
  * Game Manager
  */
+import { createEmulatorDownloadActions } from './game-manager/emulator-download-actions';
 
 const emubro = window.emubro;
 const log = console;
@@ -33,6 +34,21 @@ let emulatorInfoPopup = null;
 let emulatorInfoPopupPinned = localStorage.getItem(EMULATOR_INFO_PIN_STORAGE_KEY) === 'true';
 let gameInfoPlatformsCache = null;
 const emulatorIconPaletteCache = new Map();
+let emulatorDownloadActions = null;
+
+function getEmulatorDownloadActions() {
+    if (!emulatorDownloadActions) {
+        emulatorDownloadActions = createEmulatorDownloadActions({
+            emubro,
+            log,
+            escapeHtml,
+            normalizeEmulatorDownloadLinks,
+            fetchEmulators,
+            alertUser: (message) => alert(message)
+        });
+    }
+    return emulatorDownloadActions;
+}
 
 function markLazyImageLoaded(img) {
     if (!img) return;
@@ -673,182 +689,19 @@ async function openEmulatorDownloadLinkAction(emulator, osKey = '') {
 }
 
 function normalizeDownloadPackageType(packageType) {
-    const value = String(packageType || '').trim().toLowerCase();
-    if (value === 'setup' || value === 'install') return 'installer';
-    if (value === 'exe' || value === 'binary' || value === 'portable') return 'executable';
-    if (value === 'installer' || value === 'archive' || value === 'executable') return value;
-    return '';
+    return getEmulatorDownloadActions().normalizeDownloadPackageType(packageType);
 }
 
 function getDownloadPackageTypeLabel(packageType) {
-    const normalized = normalizeDownloadPackageType(packageType);
-    if (normalized === 'installer') return 'Installer';
-    if (normalized === 'archive') return 'Archive';
-    if (normalized === 'executable') return 'Executable';
-    return 'Package';
+    return getEmulatorDownloadActions().getDownloadPackageTypeLabel(packageType);
 }
 
 function promptEmulatorDownloadType(emulator, optionsPayload = {}) {
-    const options = (Array.isArray(optionsPayload?.options) ? optionsPayload.options : [])
-        .map((entry) => {
-            const type = normalizeDownloadPackageType(entry?.packageType);
-            if (!type) return null;
-            return {
-                packageType: type,
-                fileName: String(entry?.fileName || '').trim(),
-                source: String(entry?.source || '').trim()
-            };
-        })
-        .filter(Boolean);
-    const waybackUrl = String(optionsPayload?.waybackUrl || '').trim();
-    const hasWayback = !!waybackUrl;
-
-    if (options.length === 0 && !hasWayback) return Promise.resolve('');
-    if (options.length === 1 && !hasWayback) return Promise.resolve(options[0].packageType);
-
-    return new Promise((resolve) => {
-        const recommendedType = normalizeDownloadPackageType(optionsPayload?.recommendedType || '');
-        const overlay = document.createElement('div');
-        overlay.className = 'emulator-config-overlay';
-
-        const modal = document.createElement('div');
-        modal.className = 'emulator-config-modal glass emulator-download-choice-modal';
-
-        const title = document.createElement('h3');
-        title.textContent = `Choose package: ${emulator?.name || 'Emulator'}`;
-
-        const hint = document.createElement('p');
-        hint.className = 'emulator-download-choice-hint';
-        hint.textContent = 'Select the package type you want to download.';
-
-        const list = document.createElement('div');
-        list.className = 'emulator-download-choice-list';
-
-        options.forEach((entry) => {
-            const button = document.createElement('button');
-            const isRecommended = entry.packageType === recommendedType;
-            button.type = 'button';
-            button.className = `action-btn emulator-download-choice-btn ${isRecommended ? 'launch-btn' : ''}`.trim();
-            button.dataset.packageType = entry.packageType;
-            button.innerHTML = `
-                <span class="emulator-download-choice-label">${escapeHtml(getDownloadPackageTypeLabel(entry.packageType))}${isRecommended ? ' (Recommended)' : ''}</span>
-                <span class="emulator-download-choice-file">${escapeHtml(entry.fileName || entry.source || '')}</span>
-            `;
-            list.appendChild(button);
-        });
-
-        if (hasWayback) {
-            const waybackButton = document.createElement('button');
-            waybackButton.type = 'button';
-            waybackButton.className = 'action-btn emulator-download-choice-btn';
-            waybackButton.dataset.packageType = 'wayback-fallback';
-            waybackButton.innerHTML = `
-                <span class="emulator-download-choice-label">Use Wayback Machine</span>
-                <span class="emulator-download-choice-file">Open archived snapshots of the download page</span>
-            `;
-            list.appendChild(waybackButton);
-        }
-
-        const actions = document.createElement('div');
-        actions.className = 'emulator-config-actions';
-
-        const cancelBtn = document.createElement('button');
-        cancelBtn.type = 'button';
-        cancelBtn.className = 'action-btn remove-btn';
-        cancelBtn.textContent = 'Cancel';
-
-        actions.appendChild(cancelBtn);
-        modal.appendChild(title);
-        modal.appendChild(hint);
-        modal.appendChild(list);
-        modal.appendChild(actions);
-        overlay.appendChild(modal);
-        document.body.appendChild(overlay);
-
-        const close = (value) => {
-            overlay.remove();
-            resolve(value || '');
-        };
-
-        overlay.addEventListener('click', (event) => {
-            if (event.target === overlay) close('');
-        });
-        cancelBtn.addEventListener('click', () => close(''));
-        list.querySelectorAll('[data-package-type]').forEach((btn) => {
-            btn.addEventListener('click', () => close(String(btn.dataset.packageType || '').trim()));
-        });
-    });
+    return getEmulatorDownloadActions().promptEmulatorDownloadType(emulator, optionsPayload);
 }
 
 async function downloadAndInstallEmulatorAction(emulator) {
-    try {
-        const payload = {
-            name: emulator?.name || '',
-            platform: emulator?.platform || '',
-            platformShortName: emulator?.platformShortName || '',
-            website: emulator?.website || '',
-            downloadUrl: emulator?.downloadUrl || '',
-            downloadLinks: normalizeEmulatorDownloadLinks(emulator?.downloadLinks),
-            searchString: emulator?.searchString || '',
-            archiveFileMatchWin: emulator?.archiveFileMatchWin || '',
-            archiveFileMatchLinux: emulator?.archiveFileMatchLinux || '',
-            archiveFileMatchMac: emulator?.archiveFileMatchMac || '',
-            setupFileMatchWin: emulator?.setupFileMatchWin || '',
-            setupFileMatchLinux: emulator?.setupFileMatchLinux || '',
-            setupFileMatchMac: emulator?.setupFileMatchMac || '',
-            executableFileMatchWin: emulator?.executableFileMatchWin || '',
-            executableFileMatchLinux: emulator?.executableFileMatchLinux || '',
-            executableFileMatchMac: emulator?.executableFileMatchMac || ''
-        };
-
-        let selectedPackageType = '';
-        let useWaybackFallback = false;
-        let waybackSourceUrl = '';
-        let waybackUrl = '';
-        try {
-            const optionsResult = await emubro.invoke('get-emulator-download-options', payload);
-            if (optionsResult?.success) {
-                const selection = await promptEmulatorDownloadType(emulator, optionsResult);
-                selectedPackageType = selection === 'wayback-fallback' ? '' : selection;
-                useWaybackFallback = selection === 'wayback-fallback';
-                waybackSourceUrl = String(optionsResult?.manualUrl || emulator?.website || '').trim();
-                waybackUrl = String(optionsResult?.waybackUrl || '').trim();
-
-                const optionCount = Array.isArray(optionsResult?.options) ? optionsResult.options.length : 0;
-                const hadUserChoice = optionCount > 1 || !!waybackUrl;
-                if (!selection && hadUserChoice) {
-                    return false;
-                }
-            }
-        } catch (error) {
-            log.warn('Failed to fetch emulator download options, using auto mode:', error);
-        }
-
-        const result = await emubro.invoke('download-install-emulator', {
-            ...payload,
-            packageType: selectedPackageType,
-            useWaybackFallback,
-            waybackSourceUrl,
-            waybackUrl
-        });
-
-        if (!result?.success) {
-            if (result?.manual) {
-                alert(result?.message || 'Opened download page.');
-                return false;
-            }
-            alert(result?.message || 'Failed to download emulator.');
-            return false;
-        }
-
-        await fetchEmulators();
-        alert(result?.message || 'Emulator download finished.');
-        return true;
-    } catch (error) {
-        log.error('Failed to download/install emulator:', error);
-        alert('Failed to download emulator.');
-        return false;
-    }
+    return getEmulatorDownloadActions().downloadAndInstallEmulatorAction(emulator);
 }
 
 async function openEmulatorConfigEditor(emulator) {
