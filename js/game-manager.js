@@ -2,6 +2,18 @@
  * Game Manager
  */
 import { createEmulatorDownloadActions } from './game-manager/emulator-download-actions';
+import { createGameDetailsPopupActions } from './game-manager/game-details-popup-actions';
+import { createEmulatorDetailsPopupActions } from './game-manager/emulator-details-popup-actions';
+import { createEmulatorConfigActions } from './game-manager/emulator-config-actions';
+import { createLazyGameImageActions } from './game-manager/lazy-game-images';
+import { createEmulatorRuntimeActions } from './game-manager/emulator-runtime-actions';
+import { createEmulatorViewRenderer } from './game-manager/emulator-view-renderer';
+import { createGameCardElements } from './game-manager/game-card-elements';
+import { createMissingGameRecoveryActions } from './game-manager/missing-game-recovery';
+import {
+    normalizeEmulatorDownloadLinks as normalizeEmulatorDownloadLinksUtil,
+    hasAnyDownloadLink as hasAnyDownloadLinkUtil
+} from './game-manager/emulator-link-utils';
 
 const emubro = window.emubro;
 const log = console;
@@ -12,7 +24,6 @@ let emulators = [];
 let currentFilter = 'all';
 let currentSort = 'name';
 
-const EMULATOR_CONFIG_STORAGE_KEY = 'emuBro.emulatorConfigs.v1';
 const EMULATOR_TYPE_TABS = ['standalone', 'core', 'web'];
 const LAZY_PLACEHOLDER_SRC = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
 const MAX_SLIDESHOW_POOL_SIZE = 500;
@@ -22,19 +33,18 @@ const GAMES_BATCH_SIZE = {
     list: 48,
     table: 80
 };
-const GAME_INFO_PIN_STORAGE_KEY = 'emuBro.gameInfoPopupPinned';
-const EMULATOR_INFO_PIN_STORAGE_KEY = 'emuBro.emulatorInfoPopupPinned';
 
-let gameImageObserver = null;
 let gamesLoadObserver = null;
 let gamesRenderToken = 0;
-let gameInfoPopup = null;
-let gameInfoPopupPinned = localStorage.getItem(GAME_INFO_PIN_STORAGE_KEY) === 'true';
-let emulatorInfoPopup = null;
-let emulatorInfoPopupPinned = localStorage.getItem(EMULATOR_INFO_PIN_STORAGE_KEY) === 'true';
-let gameInfoPlatformsCache = null;
-const emulatorIconPaletteCache = new Map();
 let emulatorDownloadActions = null;
+let gameDetailsPopupActions = null;
+let emulatorDetailsPopupActions = null;
+let emulatorConfigActions = null;
+let lazyGameImageActions = null;
+let emulatorRuntimeActions = null;
+let emulatorViewRenderer = null;
+let gameCardElements = null;
+let missingGameRecoveryActions = null;
 
 function getEmulatorDownloadActions() {
     if (!emulatorDownloadActions) {
@@ -50,96 +60,121 @@ function getEmulatorDownloadActions() {
     return emulatorDownloadActions;
 }
 
-function markLazyImageLoaded(img) {
-    if (!img) return;
-    img.dataset.lazyStatus = 'loaded';
-    img.classList.remove('is-pending');
-}
-
-function attachLazyImageLoadHandlers(img) {
-    if (!img) return;
-    const onDone = () => {
-        if (img.dataset.lazyStatus !== 'loading') return;
-        markLazyImageLoaded(img);
-        img.removeEventListener('load', onDone);
-        img.removeEventListener('error', onDone);
-    };
-    img.addEventListener('load', onDone);
-    img.addEventListener('error', onDone);
-}
-
-function ensureGameImageObserver() {
-    if (gameImageObserver) return gameImageObserver;
-    if (typeof IntersectionObserver !== 'function') return null;
-
-    gameImageObserver = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-            if (!entry.isIntersecting) return;
-            const img = entry.target;
-            const source = String(img.dataset.lazySrc || '').trim();
-            if (!source) {
-                markLazyImageLoaded(img);
-                gameImageObserver.unobserve(img);
-                return;
-            }
-
-            if (img.dataset.lazyStatus === 'loaded' || img.dataset.lazyStatus === 'loading') {
-                gameImageObserver.unobserve(img);
-                return;
-            }
-
-            img.dataset.lazyStatus = 'loading';
-            attachLazyImageLoadHandlers(img);
-            img.src = source;
-            if (img.complete && img.naturalWidth > 0) {
-                markLazyImageLoaded(img);
-            }
-            gameImageObserver.unobserve(img);
+function getGameDetailsPopupActions() {
+    if (!gameDetailsPopupActions) {
+        gameDetailsPopupActions = createGameDetailsPopupActions({
+            emubro,
+            i18n,
+            log,
+            escapeHtml,
+            getGames,
+            getEmulators,
+            fetchEmulators,
+            getGameImagePath,
+            initializeLazyGameImages,
+            reloadGamesFromMainAndRender,
+            lazyPlaceholderSrc: LAZY_PLACEHOLDER_SRC,
+            alertUser: (message) => alert(message),
+            confirmUser: (message) => window.confirm(message)
         });
-    }, {
-        root: null,
-        rootMargin: '220px 0px',
-        threshold: 0.01
-    });
-
-    return gameImageObserver;
+    }
+    return gameDetailsPopupActions;
 }
 
-function prepareLazyGameImage(img) {
-    if (!img || img.dataset.lazyPrepared === '1') return;
-    const source = String(img.dataset.lazySrc || '').trim();
-    img.dataset.lazyPrepared = '1';
-    img.classList.add('lazy-game-image', 'is-pending');
-    img.dataset.lazyStatus = 'pending';
-    img.loading = 'lazy';
-    img.decoding = 'async';
-    if (!img.getAttribute('fetchpriority')) img.setAttribute('fetchpriority', 'low');
-    img.src = LAZY_PLACEHOLDER_SRC;
-
-    if (!source) {
-        markLazyImageLoaded(img);
-        return;
+function getEmulatorDetailsPopupActions() {
+    if (!emulatorDetailsPopupActions) {
+        emulatorDetailsPopupActions = createEmulatorDetailsPopupActions({
+            i18n,
+            escapeHtml,
+            getEmulatorKey,
+            getEmulators,
+            fetchEmulators,
+            normalizeEmulatorDownloadLinks,
+            hasAnyDownloadLink,
+            downloadAndInstallEmulatorAction,
+            launchEmulatorAction,
+            openEmulatorInExplorerAction,
+            openEmulatorWebsiteAction,
+            openEmulatorConfigEditor,
+            openEmulatorDownloadLinkAction
+        });
     }
+    return emulatorDetailsPopupActions;
+}
 
-    const observer = ensureGameImageObserver();
-    if (!observer) {
-        img.dataset.lazyStatus = 'loading';
-        attachLazyImageLoadHandlers(img);
-        img.src = source;
-        if (img.complete && img.naturalWidth > 0) {
-            markLazyImageLoaded(img);
-        }
-        return;
+function getEmulatorConfigActions() {
+    if (!emulatorConfigActions) {
+        emulatorConfigActions = createEmulatorConfigActions({
+            localStorageRef: localStorage
+        });
     }
+    return emulatorConfigActions;
+}
 
-    observer.observe(img);
+function getLazyGameImageActions() {
+    if (!lazyGameImageActions) {
+        lazyGameImageActions = createLazyGameImageActions({
+            lazyPlaceholderSrc: LAZY_PLACEHOLDER_SRC
+        });
+    }
+    return lazyGameImageActions;
+}
+
+function getEmulatorRuntimeActions() {
+    if (!emulatorRuntimeActions) {
+        emulatorRuntimeActions = createEmulatorRuntimeActions({
+            emubro,
+            log,
+            getEmulatorConfig,
+            normalizeEmulatorDownloadLinks,
+            alertUser: (message) => alert(message)
+        });
+    }
+    return emulatorRuntimeActions;
+}
+
+function getEmulatorViewRenderer() {
+    if (!emulatorViewRenderer) {
+        emulatorViewRenderer = createEmulatorViewRenderer({
+            i18n,
+            escapeHtml,
+            getEmulatorKey,
+            showEmulatorDetails: (emulator, options) => showEmulatorDetails(emulator, options),
+            emulatorTypeTabs: EMULATOR_TYPE_TABS
+        });
+    }
+    return emulatorViewRenderer;
+}
+
+function getGameCardElements() {
+    if (!gameCardElements) {
+        gameCardElements = createGameCardElements({
+            i18n,
+            escapeHtml,
+            getGameImagePath,
+            lazyPlaceholderSrc: LAZY_PLACEHOLDER_SRC,
+            launchGame: (gameId) => launchGame(gameId),
+            showGameDetails: (game) => showGameDetails(game)
+        });
+    }
+    return gameCardElements;
+}
+
+function getMissingGameRecoveryActions() {
+    if (!missingGameRecoveryActions) {
+        missingGameRecoveryActions = createMissingGameRecoveryActions({
+            emubro,
+            i18n,
+            escapeHtml,
+            reloadGamesFromMainAndRender,
+            alertUser: (message) => alert(message)
+        });
+    }
+    return missingGameRecoveryActions;
 }
 
 function initializeLazyGameImages(root) {
-    const scope = root || document;
-    if (!scope) return;
-    const images = scope.querySelectorAll('img[data-lazy-src]');
-    images.forEach((img) => prepareLazyGameImage(img));
+    getLazyGameImageActions().initialize(root);
 }
 
 function clearGamesLoadObserver() {
@@ -220,632 +255,48 @@ export function renderGames(gamesToRender) {
     initializeLazyGameImages(gamesContainer);
 }
 
-function normalizeEmulatorType(type) {
-    const value = String(type || '').trim().toLowerCase();
-    if (EMULATOR_TYPE_TABS.includes(value)) return value;
-    return '';
-}
-
-function createEmulatorTypeTabs(activeType, onTypeChange) {
-    const tabs = document.createElement('div');
-    tabs.className = 'emulator-type-tabs';
-    tabs.innerHTML = `
-        <button class="emulator-type-tab${activeType === 'standalone' ? ' is-active' : ''}" type="button" data-emulator-type="standalone">Standalone</button>
-        <button class="emulator-type-tab${activeType === 'core' ? ' is-active' : ''}" type="button" data-emulator-type="core">Core</button>
-        <button class="emulator-type-tab${activeType === 'web' ? ' is-active' : ''}" type="button" data-emulator-type="web">Web</button>
-    `;
-
-    if (typeof onTypeChange === 'function') {
-        tabs.querySelectorAll('.emulator-type-tab').forEach((button) => {
-            button.addEventListener('click', () => {
-                const nextType = normalizeEmulatorType(button.dataset.emulatorType);
-                if (!nextType || nextType === activeType) return;
-                onTypeChange(nextType);
-            });
-        });
-    }
-
-    return tabs;
-}
-
 export function renderEmulators(emulatorsToRender = emulators, options = {}) {
-    const gamesContainer = document.getElementById('games-container');
-    if (!gamesContainer) return;
-
-    const rows = Array.isArray(emulatorsToRender) ? emulatorsToRender : [];
-    const activeType = normalizeEmulatorType(options.activeType) || 'standalone';
-    const onTypeChange = typeof options.onTypeChange === 'function' ? options.onTypeChange : null;
-    const activeViewBtn = document.querySelector('.view-btn.active');
-    const activeView = activeViewBtn ? activeViewBtn.dataset.view : 'cover';
-
-    gamesContainer.className = `games-container ${activeView}-view emulators-view`;
-    gamesContainer.innerHTML = '';
-    gamesContainer.appendChild(createEmulatorTypeTabs(activeType, onTypeChange));
-
-    if (rows.length === 0) {
-        const empty = document.createElement('div');
-        empty.className = 'emulator-empty';
-        empty.textContent = 'No emulators found for this tab.';
-        gamesContainer.appendChild(empty);
-        return;
-    }
-
-    if (activeView === 'table') {
-        renderEmulatorsAsTable(rows, options);
-        return;
-    }
-
-    if (activeView === 'list') {
-        renderEmulatorsAsList(rows, options);
-        return;
-    }
-
-    renderEmulatorsAsGrid(rows, options);
+    getEmulatorViewRenderer().renderEmulators(emulatorsToRender, options);
 }
 
 function normalizeEmulatorDownloadLinks(raw) {
-    const links = (raw && typeof raw === 'object') ? raw : {};
-    const normalizeUrl = (value) => {
-        const rawUrl = String(value || '').trim();
-        if (!rawUrl) return '';
-        return /^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`;
-    };
-    return {
-        windows: normalizeUrl(links.windows || links.win || links.win32 || ''),
-        linux: normalizeUrl(links.linux || ''),
-        mac: normalizeUrl(links.mac || links.macos || links.darwin || '')
-    };
+    return normalizeEmulatorDownloadLinksUtil(raw);
 }
 
 function hasAnyDownloadLink(emulator) {
-    const links = normalizeEmulatorDownloadLinks(emulator?.downloadLinks);
-    const website = String(emulator?.website || '').trim();
-    return !!(links.windows || links.linux || links.mac || website);
-}
-
-function clampColorChannel(value) {
-    return Math.max(0, Math.min(255, Number(value) || 0));
-}
-
-function mixRgbColors(a, b, ratio) {
-    const t = Math.max(0, Math.min(1, Number(ratio) || 0));
-    return {
-        r: Math.round((a.r * (1 - t)) + (b.r * t)),
-        g: Math.round((a.g * (1 - t)) + (b.g * t)),
-        b: Math.round((a.b * (1 - t)) + (b.b * t))
-    };
-}
-
-function colorDistanceSq(a, b) {
-    const dr = a.r - b.r;
-    const dg = a.g - b.g;
-    const db = a.b - b.b;
-    return (dr * dr) + (dg * dg) + (db * db);
-}
-
-function toRgbaColor(rgb, alpha) {
-    return `rgba(${clampColorChannel(rgb.r)}, ${clampColorChannel(rgb.g)}, ${clampColorChannel(rgb.b)}, ${alpha})`;
-}
-
-function extractPaletteFromPlatformIcon(image) {
-    const width = Number(image?.naturalWidth || 0);
-    const height = Number(image?.naturalHeight || 0);
-    if (!width || !height) return null;
-
-    const maxSize = 42;
-    const scale = Math.min(1, maxSize / Math.max(width, height));
-    const canvasWidth = Math.max(1, Math.round(width * scale));
-    const canvasHeight = Math.max(1, Math.round(height * scale));
-
-    const canvas = document.createElement('canvas');
-    canvas.width = canvasWidth;
-    canvas.height = canvasHeight;
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) return null;
-
-    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-    ctx.drawImage(image, 0, 0, canvasWidth, canvasHeight);
-
-    let data = null;
-    try {
-        data = ctx.getImageData(0, 0, canvasWidth, canvasHeight).data;
-    } catch (_error) {
-        return null;
-    }
-    if (!data || data.length === 0) return null;
-
-    const buckets = new Map();
-    for (let i = 0; i < data.length; i += 4) {
-        const alpha = data[i + 3];
-        if (alpha < 120) continue;
-
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
-        if ((r + g + b) < 54) continue;
-
-        const keyR = Math.round(r / 24) * 24;
-        const keyG = Math.round(g / 24) * 24;
-        const keyB = Math.round(b / 24) * 24;
-        const key = `${keyR},${keyG},${keyB}`;
-        buckets.set(key, (buckets.get(key) || 0) + 1);
-    }
-
-    const sorted = [...buckets.entries()].sort((a, b) => b[1] - a[1]);
-    if (sorted.length === 0) return null;
-
-    const palette = [];
-    for (const [bucketKey, count] of sorted) {
-        if (palette.length > 0 && count < 2) continue;
-        const parts = bucketKey.split(',').map((value) => clampColorChannel(Number(value)));
-        if (parts.length !== 3) continue;
-        const color = { r: parts[0], g: parts[1], b: parts[2] };
-        const tooClose = palette.some((existing) => colorDistanceSq(existing, color) < 2300);
-        if (tooClose) continue;
-        palette.push(color);
-        if (palette.length >= 3) break;
-    }
-
-    if (palette.length === 0) return null;
-    if (palette.length === 1) {
-        palette.push(mixRgbColors(palette[0], { r: 255, g: 255, b: 255 }, 0.34));
-    }
-    if (palette.length === 2) {
-        palette.push(mixRgbColors(palette[0], { r: 16, g: 26, b: 56 }, 0.4));
-    }
-
-    return [
-        toRgbaColor(palette[0], 0.5),
-        toRgbaColor(palette[1], 0.42),
-        toRgbaColor(palette[2], 0.38)
-    ];
-}
-
-function applyPaletteToEmulatorCard(card, palette) {
-    if (!card || !Array.isArray(palette) || palette.length < 3) return;
-    card.style.setProperty('--emulator-glow-1', palette[0]);
-    card.style.setProperty('--emulator-glow-2', palette[1]);
-    card.style.setProperty('--emulator-glow-3', palette[2]);
-}
-
-function applyPlatformColorBlurToEmulatorCards(root) {
-    if (!root) return;
-    const cards = root.querySelectorAll('.emulator-card');
-    cards.forEach((card) => {
-        const icon = card.querySelector('.emulator-platform-icon');
-        if (!icon) return;
-
-        const applyFromIcon = () => {
-            const source = String(icon.currentSrc || icon.src || '').trim();
-            if (!source) return;
-
-            const cached = emulatorIconPaletteCache.get(source);
-            if (cached) {
-                applyPaletteToEmulatorCard(card, cached);
-                return;
-            }
-
-            const extracted = extractPaletteFromPlatformIcon(icon);
-            if (!extracted) return;
-            emulatorIconPaletteCache.set(source, extracted);
-            applyPaletteToEmulatorCard(card, extracted);
-        };
-
-        if (icon.complete && Number(icon.naturalWidth || 0) > 0) {
-            applyFromIcon();
-        } else {
-            icon.addEventListener('load', applyFromIcon, { once: true });
-        }
-    });
-}
-
-function getEmulatorCardHoverIconMarkup(installed) {
-    if (installed) {
-        return `
-            <span class="icon-svg" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="9.2"></circle>
-                    <path d="M10 8.8v6.4l5.4-3.2L10 8.8Z"></path>
-                </svg>
-            </span>
-        `;
-    }
-    return `
-        <span class="icon-svg" aria-hidden="true">
-            <svg viewBox="0 0 24 24">
-                <path d="M12 4.6v9.2"></path>
-                <path d="m8.7 10.5 3.3 3.3 3.3-3.3"></path>
-                <path d="M6 17.5h12"></path>
-            </svg>
-        </span>
-    `;
-}
-
-function renderEmulatorsAsGrid(emulatorsToRender, options = {}) {
-    const gamesContainer = document.getElementById('games-container');
-    const container = document.createElement('div');
-    container.className = 'emulators-container';
-
-    const grid = document.createElement('div');
-    grid.className = 'emulators-grid';
-    grid.innerHTML = emulatorsToRender.map((emulator) => {
-        const shortName = String(emulator.platformShortName || 'unknown').toLowerCase();
-        const platformName = emulator.platform || emulator.platformShortName || i18n.t('gameDetails.unknown');
-        const platformIcon = `emubro-resources/platforms/${shortName}/logos/default.png`;
-        const safeName = escapeHtml(emulator.name || 'Unknown Emulator');
-        const safePlatform = escapeHtml(platformName);
-        const installed = !!emulator.isInstalled;
-        const safePath = escapeHtml(installed ? (emulator.filePath || '') : 'Not installed yet');
-        const statusClass = installed ? 'is-installed' : 'is-missing';
-        const statusText = installed ? 'Installed' : 'Not Installed';
-        const key = encodeURIComponent(getEmulatorKey(emulator));
-
-        return `
-            <article class="emulator-card" data-emu-key="${key}" tabindex="0" role="button" aria-label="Open emulator details for ${safeName}">
-                <div class="emulator-card-hero">
-                    <header class="emulator-card-header">
-                        <h3 class="emulator-title" title="${safeName}">${safeName}</h3>
-                        <span class="emulator-platform-badge" title="${safePlatform}" aria-label="${safePlatform}">
-                            <img src="${platformIcon}" alt="${safePlatform}" class="emulator-platform-icon" loading="lazy" onerror="this.closest('.emulator-platform-badge').style.display='none'" />
-                        </span>
-                    </header>
-                    <p class="emulator-platform-name">${safePlatform}</p>
-                    <p class="emulator-install-status ${statusClass}">${statusText}</p>
-                    <p class="emulator-path">${safePath}</p>
-                </div>
-                <span class="emulator-card-hover-action ${installed ? 'is-play' : 'is-download'}">${getEmulatorCardHoverIconMarkup(installed)}</span>
-            </article>
-        `;
-    }).join('');
-
-    container.appendChild(grid);
-    gamesContainer.appendChild(container);
-    applyPlatformColorBlurToEmulatorCards(container);
-    wireEmulatorCardInteractions(container, emulatorsToRender, options);
-}
-
-function renderEmulatorsAsList(emulatorsToRender, options = {}) {
-    const gamesContainer = document.getElementById('games-container');
-    const container = document.createElement('div');
-    container.className = 'emulators-container';
-
-    const list = document.createElement('div');
-    list.className = 'emulators-list';
-    list.innerHTML = emulatorsToRender.map((emulator, idx) => {
-        const safeName = escapeHtml(emulator.name || 'Unknown Emulator');
-        const safePlatform = escapeHtml(emulator.platform || emulator.platformShortName || i18n.t('gameDetails.unknown'));
-        const installed = !!emulator.isInstalled;
-        const safePath = escapeHtml(installed ? (emulator.filePath || '') : 'Not installed yet');
-        const statusClass = installed ? 'is-installed' : 'is-missing';
-        const statusText = installed ? 'Installed' : 'Not Installed';
-        const key = encodeURIComponent(getEmulatorKey(emulator));
-
-        return `
-            <article class="emulator-list-item" data-emu-key="${key}" tabindex="0" role="button" aria-label="Open emulator details for ${safeName}">
-                <div class="emulator-list-main">
-                    <h3 class="emulator-title">${safeName}</h3>
-                    <div class="emulator-list-meta">
-                        <span>${safePlatform}</span>
-                        <span class="emulator-install-status ${statusClass}">${statusText}</span>
-                        <span>${idx + 1} / ${emulatorsToRender.length}</span>
-                    </div>
-                    <p class="emulator-path">${safePath}</p>
-                </div>
-            </article>
-        `;
-    }).join('');
-
-    container.appendChild(list);
-    gamesContainer.appendChild(container);
-    wireEmulatorCardInteractions(container, emulatorsToRender, options);
-}
-
-function renderEmulatorsAsTable(emulatorsToRender, options = {}) {
-    const gamesContainer = document.getElementById('games-container');
-    const container = document.createElement('div');
-    container.className = 'emulators-container';
-
-    const table = document.createElement('table');
-    table.className = 'emulators-table';
-    table.innerHTML = `
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Platform</th>
-                <th>Path</th>
-            </tr>
-        </thead>
-        <tbody>
-            ${emulatorsToRender.map((emulator) => {
-                const safeName = escapeHtml(emulator.name || 'Unknown Emulator');
-                const safePlatform = escapeHtml(emulator.platform || emulator.platformShortName || i18n.t('gameDetails.unknown'));
-                const installed = !!emulator.isInstalled;
-                const safePath = escapeHtml(installed ? (emulator.filePath || '') : 'Not installed yet');
-                const statusClass = installed ? 'is-installed' : 'is-missing';
-                const statusText = installed ? 'Installed' : 'Not Installed';
-                const key = encodeURIComponent(getEmulatorKey(emulator));
-                return `
-                    <tr data-emu-key="${key}" tabindex="0" role="button" aria-label="Open emulator details for ${safeName}">
-                        <td>${safeName}</td>
-                        <td>
-                            ${safePlatform}
-                            <div class="emulator-install-status ${statusClass}">${statusText}</div>
-                        </td>
-                        <td class="emulator-path">${safePath}</td>
-                    </tr>
-                `;
-            }).join('')}
-        </tbody>
-    `;
-
-    container.appendChild(table);
-    gamesContainer.appendChild(container);
-    wireEmulatorCardInteractions(container, emulatorsToRender, options);
-}
-
-function wireEmulatorCardInteractions(root, emulatorsToRender, options = {}) {
-    const emulatorByKey = new Map();
-    emulatorsToRender.forEach((emulator) => {
-        emulatorByKey.set(encodeURIComponent(getEmulatorKey(emulator)), emulator);
-    });
-
-    const activate = (el) => {
-        const emuKey = String(el?.dataset?.emuKey || '').trim();
-        const emulator = emulatorByKey.get(emuKey);
-        if (!emulator) return;
-        showEmulatorDetails(emulator, options);
-    };
-
-    root.querySelectorAll('[data-emu-key]').forEach((item) => {
-        item.addEventListener('click', () => activate(item));
-        item.addEventListener('keydown', (event) => {
-            if (event.key !== 'Enter' && event.key !== ' ') return;
-            event.preventDefault();
-            activate(item);
-        });
-    });
+    return hasAnyDownloadLinkUtil(emulator);
 }
 
 async function launchEmulatorAction(emulator) {
-    if (!emulator?.filePath || !emulator?.isInstalled) {
-        alert('This emulator is not installed yet.');
-        return;
-    }
-
-    try {
-        const config = getEmulatorConfig(emulator);
-        const result = await emubro.invoke('launch-emulator', {
-            filePath: emulator.filePath,
-            args: config.launchArgs || '',
-            workingDirectory: config.workingDirectory || ''
-        });
-
-        if (!result?.success) {
-            alert(result?.message || 'Failed to launch emulator.');
-        }
-    } catch (error) {
-        log.error('Failed to launch emulator:', error);
-        alert('Failed to launch emulator.');
-    }
+    return getEmulatorRuntimeActions().launchEmulatorAction(emulator);
 }
 
 async function openEmulatorInExplorerAction(emulator) {
-    if (!emulator?.filePath || !emulator?.isInstalled) {
-        alert('This emulator is not installed yet.');
-        return;
-    }
-
-    try {
-        const result = await emubro.invoke('show-item-in-folder', emulator.filePath);
-        if (!result?.success) {
-            alert(result?.message || 'Failed to open folder.');
-        }
-    } catch (error) {
-        log.error('Failed to open emulator in explorer:', error);
-        alert('Failed to open folder.');
-    }
+    return getEmulatorRuntimeActions().openEmulatorInExplorerAction(emulator);
 }
 
 async function openEmulatorWebsiteAction(emulator) {
-    try {
-        const config = getEmulatorConfig(emulator);
-        const website = String(config.website || '').trim();
-        const websiteFromConfig = String(emulator.website || '').trim();
-        const fallbackSearch = `https://www.google.com/search?q=${encodeURIComponent(`${emulator.name || ''} emulator`)}`;
-        const url = website || websiteFromConfig || fallbackSearch;
-
-        const result = await emubro.invoke('open-external-url', url);
-        if (!result?.success) {
-            alert(result?.message || 'Failed to open website.');
-        }
-    } catch (error) {
-        log.error('Failed to open emulator website:', error);
-        alert('Failed to open website.');
-    }
+    return getEmulatorRuntimeActions().openEmulatorWebsiteAction(emulator);
 }
 
 async function openEmulatorDownloadLinkAction(emulator, osKey = '') {
-    try {
-        const links = normalizeEmulatorDownloadLinks(emulator?.downloadLinks);
-        const normalized = String(osKey || '').toLowerCase();
-        const url = normalized === 'windows'
-            ? links.windows
-            : (normalized === 'linux' ? links.linux : (normalized === 'mac' ? links.mac : ''));
-        const fallback = String(emulator?.website || '').trim();
-        const target = url || fallback;
-        if (!target) {
-            alert('No download link available for this emulator.');
-            return;
-        }
-
-        const result = await emubro.invoke('open-external-url', target);
-        if (!result?.success) {
-            alert(result?.message || 'Failed to open download link.');
-        }
-    } catch (error) {
-        log.error('Failed to open emulator download link:', error);
-        alert('Failed to open download link.');
-    }
-}
-
-function normalizeDownloadPackageType(packageType) {
-    return getEmulatorDownloadActions().normalizeDownloadPackageType(packageType);
-}
-
-function getDownloadPackageTypeLabel(packageType) {
-    return getEmulatorDownloadActions().getDownloadPackageTypeLabel(packageType);
-}
-
-function promptEmulatorDownloadType(emulator, optionsPayload = {}) {
-    return getEmulatorDownloadActions().promptEmulatorDownloadType(emulator, optionsPayload);
+    return getEmulatorRuntimeActions().openEmulatorDownloadLinkAction(emulator, osKey);
 }
 
 async function downloadAndInstallEmulatorAction(emulator) {
     return getEmulatorDownloadActions().downloadAndInstallEmulatorAction(emulator);
 }
 
-async function openEmulatorConfigEditor(emulator) {
-    const key = getEmulatorKey(emulator);
-    const existing = getEmulatorConfig(emulator);
-    const result = await promptEmulatorConfigModal(emulator, existing);
-    if (!result) return false;
-
-    if (result.reset) {
-        const map = loadEmulatorConfigMap();
-        delete map[key];
-        saveEmulatorConfigMap(map);
-        return true;
-    }
-
-    const map = loadEmulatorConfigMap();
-    map[key] = {
-        website: String(result.website || '').trim(),
-        launchArgs: String(result.launchArgs || '').trim(),
-        workingDirectory: String(result.workingDirectory || '').trim(),
-        notes: String(result.notes || '').trim()
-    };
-    saveEmulatorConfigMap(map);
-    return true;
-}
-
 function getEmulatorKey(emulator) {
-    const filePath = String(emulator?.filePath || '').trim();
-    if (filePath) return filePath.toLowerCase();
-    const fallback = String(emulator?.id || emulator?.name || 'emu').trim();
-    return fallback.toLowerCase();
-}
-
-function loadEmulatorConfigMap() {
-    try {
-        const raw = localStorage.getItem(EMULATOR_CONFIG_STORAGE_KEY);
-        if (!raw) return {};
-        const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === 'object') return parsed;
-    } catch (_e) {}
-    return {};
-}
-
-function saveEmulatorConfigMap(map) {
-    try {
-        localStorage.setItem(EMULATOR_CONFIG_STORAGE_KEY, JSON.stringify(map || {}));
-    } catch (_e) {}
+    return getEmulatorConfigActions().getEmulatorKey(emulator);
 }
 
 function getEmulatorConfig(emulator) {
-    const key = getEmulatorKey(emulator);
-    return loadEmulatorConfigMap()[key] || {};
+    return getEmulatorConfigActions().getEmulatorConfig(emulator);
 }
 
-function promptEmulatorConfigModal(emulator, existing) {
-    return new Promise((resolve) => {
-        const overlay = document.createElement('div');
-        overlay.className = 'emulator-config-overlay';
-
-        const modal = document.createElement('div');
-        modal.className = 'emulator-config-modal glass';
-
-        const title = document.createElement('h3');
-        title.textContent = `Edit Emulator: ${emulator.name || 'Unknown'}`;
-
-        const makeField = (labelText, value, key, multiline = false) => {
-            const row = document.createElement('label');
-            row.className = 'emulator-config-row';
-
-            const label = document.createElement('span');
-            label.className = 'emulator-config-label';
-            label.textContent = labelText;
-
-            let input;
-            if (multiline) {
-                input = document.createElement('textarea');
-                input.rows = 3;
-            } else {
-                input = document.createElement('input');
-                input.type = 'text';
-            }
-
-            input.className = 'emulator-config-input';
-            input.value = String(value || '');
-            input.dataset.key = key;
-
-            row.appendChild(label);
-            row.appendChild(input);
-            return row;
-        };
-
-        const form = document.createElement('div');
-        form.className = 'emulator-config-form';
-        form.appendChild(makeField('Website URL', existing.website, 'website'));
-        form.appendChild(makeField('Launch Arguments', existing.launchArgs, 'launchArgs'));
-        form.appendChild(makeField('Working Directory', existing.workingDirectory, 'workingDirectory'));
-        form.appendChild(makeField('Notes', existing.notes, 'notes', true));
-
-        const actions = document.createElement('div');
-        actions.className = 'emulator-config-actions';
-
-        const cancelBtn = document.createElement('button');
-        cancelBtn.className = 'action-btn';
-        cancelBtn.textContent = 'Cancel';
-
-        const resetBtn = document.createElement('button');
-        resetBtn.className = 'action-btn remove-btn';
-        resetBtn.textContent = 'Reset';
-
-        const saveBtn = document.createElement('button');
-        saveBtn.className = 'action-btn launch-btn';
-        saveBtn.textContent = 'Save';
-
-        actions.appendChild(cancelBtn);
-        actions.appendChild(resetBtn);
-        actions.appendChild(saveBtn);
-
-        modal.appendChild(title);
-        modal.appendChild(form);
-        modal.appendChild(actions);
-        overlay.appendChild(modal);
-        document.body.appendChild(overlay);
-
-        const close = (payload) => {
-            overlay.remove();
-            resolve(payload);
-        };
-
-        cancelBtn.addEventListener('click', () => close(null));
-        resetBtn.addEventListener('click', () => close({ reset: true }));
-        saveBtn.addEventListener('click', () => {
-            const values = {};
-            modal.querySelectorAll('.emulator-config-input').forEach((input) => {
-                const key = String(input.dataset.key || '').trim();
-                if (!key) return;
-                values[key] = input.value;
-            });
-            close(values);
-        });
-
-        overlay.addEventListener('click', (event) => {
-            if (event.target === overlay) close(null);
-        });
-    });
+async function openEmulatorConfigEditor(emulator) {
+    return getEmulatorConfigActions().openEmulatorConfigEditor(emulator);
 }
 
 function escapeHtml(value) {
@@ -858,49 +309,7 @@ function escapeHtml(value) {
 }
 
 export function createGameCard(game) {
-    const card = document.createElement('div');
-    card.className = 'game-card';
-    card.dataset.gameId = game.id;
-
-    let gameImageToUse = game.image;
-    const platformShortName = String(game.platformShortName || 'unknown').toLowerCase();
-    const platformDisplayName = game.platform || game.platformShortName || i18n.t('gameDetails.unknown');
-    if (!gameImageToUse) {
-        gameImageToUse = `emubro-resources/platforms/${platformShortName}/covers/default.jpg`;
-    }
-    const platformIcon = `emubro-resources/platforms/${platformShortName}/logos/default.png`;
-    const safeName = escapeHtml(game.name);
-    const safePlatformName = escapeHtml(platformDisplayName);
-    const safeImagePath = escapeHtml(gameImageToUse);
-
-    card.innerHTML = `
-        <div class="game-cover">
-            <img src="${LAZY_PLACEHOLDER_SRC}" data-lazy-src="${safeImagePath}" alt="${safeName}" class="game-image lazy-game-image is-pending" loading="lazy" decoding="async" fetchpriority="low" />
-            <span class="game-platform-badge" title="${safePlatformName}" aria-label="${safePlatformName}">
-                <img src="${platformIcon}" alt="${safePlatformName}" class="game-platform-icon" loading="lazy" onerror="this.closest('.game-platform-badge').style.display='none'" />
-            </span>
-            <button class="game-cover-play-btn" type="button" aria-label="Play ${safeName}">
-                <span class="game-cover-play-icon" aria-hidden="true"></span>
-            </button>
-        </div>
-        <div class="game-info">
-            <h3 class="game-title">${safeName}</h3>
-        </div>
-    `;
-
-    const playBtn = card.querySelector('.game-cover-play-btn');
-    if (playBtn) {
-        playBtn.addEventListener('click', async (event) => {
-            event.stopPropagation();
-            await launchGame(game.id);
-        });
-    }
-
-    card.addEventListener('click', () => {
-        showGameDetails(game);
-    });
-
-    return card;
+    return getGameCardElements().createGameCard(game);
 }
 
 function normalizeSearchScope(scope) {
@@ -1040,190 +449,8 @@ async function reloadGamesFromMainAndRender() {
     renderGames(searched);
 }
 
-function showMissingGameDialog(missingResult) {
-    return new Promise((resolve) => {
-        const gameName = String(missingResult?.gameName || 'Game');
-        const missingPath = String(missingResult?.missingPath || '');
-        const parentPath = String(missingResult?.parentPath || '');
-        const parentExists = !!missingResult?.parentExists;
-        const rootPath = String(missingResult?.rootPath || '');
-        const rootExists = missingResult?.rootExists !== false;
-        const sourceMedia = String(missingResult?.sourceMedia || '').trim().toLowerCase();
-
-        let rootHint = '';
-        if (rootPath && !rootExists) {
-            if (sourceMedia === 'removable' || sourceMedia === 'cdrom' || sourceMedia === 'drive') {
-                rootHint = `Storage root is unavailable (${escapeHtml(rootPath)}). Connect the media (USB stick, external HDD, or disc), then try launch again.`;
-            } else if (sourceMedia === 'network') {
-                rootHint = `Network root is unavailable (${escapeHtml(rootPath)}). Reconnect the network share and try again.`;
-            } else {
-                rootHint = `Storage root is unavailable (${escapeHtml(rootPath)}). Reconnect the source media or remap the path.`;
-            }
-        }
-
-        const overlay = document.createElement('div');
-        overlay.style.cssText = [
-            'position:fixed',
-            'inset:0',
-            'z-index:4000',
-            'display:flex',
-            'align-items:center',
-            'justify-content:center',
-            'padding:18px',
-            'background:rgba(0,0,0,0.56)'
-        ].join(';');
-
-        const modal = document.createElement('div');
-        modal.className = 'glass';
-        modal.style.cssText = [
-            'width:min(760px,100%)',
-            'border:1px solid var(--border-color)',
-            'border-radius:14px',
-            'background:var(--bg-secondary)',
-            'padding:16px',
-            'box-shadow:0 16px 34px rgba(0,0,0,0.42)'
-        ].join(';');
-
-        modal.innerHTML = `
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
-                <h3 style="margin:0;font-size:1.06rem;">Could not launch: ${escapeHtml(gameName)}</h3>
-                <button type="button" class="close-btn" aria-label="Close">&times;</button>
-            </div>
-            <p style="margin:10px 0 6px 0;color:var(--text-secondary);">
-                The game file is missing.
-            </p>
-            <div style="font-family:monospace;font-size:12px;word-break:break-all;padding:10px;border:1px solid var(--border-color);border-radius:10px;background:var(--bg-primary);margin-bottom:8px;">
-                ${escapeHtml(missingPath || '(unknown path)')}
-            </div>
-            <p style="margin:0 0 14px 0;color:var(--text-secondary);font-size:0.92rem;">
-                ${parentExists
-                    ? `Parent folder exists: ${escapeHtml(parentPath)}.`
-                    : `Parent folder is missing: ${escapeHtml(parentPath || '(unknown)')}.`}
-            </p>
-            ${rootHint ? `<p style="margin:0 0 14px 0;color:var(--warning-color, #ffcc66);font-size:0.92rem;">${rootHint}</p>` : ''}
-            <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
-                <button type="button" class="action-btn remove-btn" data-missing-action="remove">Remove Game</button>
-                <button type="button" class="action-btn" data-missing-action="search">Search Further</button>
-                <button type="button" class="action-btn launch-btn" data-missing-action="browse">Browse For File</button>
-            </div>
-        `;
-
-        const close = (action) => {
-            overlay.remove();
-            resolve(action);
-        };
-
-        overlay.addEventListener('click', (event) => {
-            if (event.target === overlay) close('cancel');
-        });
-
-        const closeBtn = modal.querySelector('.close-btn');
-        if (closeBtn) closeBtn.addEventListener('click', () => close('cancel'));
-
-        modal.querySelectorAll('[data-missing-action]').forEach((btn) => {
-            btn.addEventListener('click', () => close(btn.dataset.missingAction || 'cancel'));
-        });
-
-        overlay.appendChild(modal);
-        document.body.appendChild(overlay);
-    });
-}
-
-async function handleMissingGameLaunch(gameId, missingResult) {
-    let currentMissing = missingResult;
-
-    while (true) {
-        const action = await showMissingGameDialog(currentMissing);
-
-        if (action === 'remove') {
-            const removeResult = await emubro.invoke('remove-game', gameId);
-            if (!removeResult?.success) {
-                alert(removeResult?.message || 'Failed to remove game.');
-                return false;
-            }
-            await reloadGamesFromMainAndRender();
-            return false;
-        }
-
-        if (action === 'search') {
-            const folderPick = await emubro.invoke('open-file-dialog', {
-                title: 'Select a folder to search',
-                properties: ['openDirectory']
-            });
-            if (!folderPick || folderPick.canceled || !Array.isArray(folderPick.filePaths) || folderPick.filePaths.length === 0) {
-                continue;
-            }
-
-            const searchResult = await emubro.invoke('search-missing-game-file', {
-                gameId,
-                rootDir: folderPick.filePaths[0],
-                maxDepth: 10
-            });
-
-            if (!searchResult?.success) {
-                alert(searchResult?.message || 'Search failed.');
-                continue;
-            }
-            if (!searchResult?.found) {
-                alert('File not found in that folder.');
-                continue;
-            }
-
-            await reloadGamesFromMainAndRender();
-            const retryResult = await emubro.invoke('launch-game', gameId);
-            if (retryResult?.success) return true;
-            if (retryResult?.code === 'GAME_FILE_MISSING') {
-                currentMissing = retryResult;
-                continue;
-            }
-            alert(i18n.tf('messages.launchFailed', { message: retryResult?.message || 'Unknown error' }));
-            return false;
-        }
-
-        if (action === 'browse') {
-            const filePick = await emubro.invoke('open-file-dialog', {
-                title: 'Locate game file',
-                properties: ['openFile'],
-                defaultPath: currentMissing?.parentPath || undefined
-            });
-            if (!filePick || filePick.canceled || !Array.isArray(filePick.filePaths) || filePick.filePaths.length === 0) {
-                continue;
-            }
-
-            const relinkResult = await emubro.invoke('relink-game-file', {
-                gameId,
-                filePath: filePick.filePaths[0]
-            });
-            if (!relinkResult?.success) {
-                alert(relinkResult?.message || 'Failed to relink game.');
-                continue;
-            }
-
-            await reloadGamesFromMainAndRender();
-            const retryResult = await emubro.invoke('launch-game', gameId);
-            if (retryResult?.success) return true;
-            if (retryResult?.code === 'GAME_FILE_MISSING') {
-                currentMissing = retryResult;
-                continue;
-            }
-            alert(i18n.tf('messages.launchFailed', { message: retryResult?.message || 'Unknown error' }));
-            return false;
-        }
-
-        return false;
-    }
-}
-
 async function launchGame(gameId) {
-    const result = await emubro.invoke('launch-game', gameId);
-    if (result?.success) return;
-
-    if (result?.code === 'GAME_FILE_MISSING') {
-        await handleMissingGameLaunch(gameId, result);
-        return;
-    }
-
-    alert(i18n.tf('messages.launchFailed', { message: result?.message || 'Unknown error' }));
+    return getMissingGameRecoveryActions().launchGame(gameId);
 }
 
 export function applyFilters() {
@@ -1299,79 +526,11 @@ export function addPlatformFilterOption(platformShortName) {
 }
 
 function createGameTableRow(game) {
-    const row = document.createElement('tr');
-    const gameImageToUse = getGameImagePath(game);
-    const platformShortName = String(game.platformShortName || 'unknown').toLowerCase();
-    const platformIcon = `emubro-resources/platforms/${platformShortName}/logos/default.png`;
-    const safeName = escapeHtml(game.name);
-    const safeGenre = escapeHtml(game.genre || i18n.t('gameDetails.unknown'));
-    const safePlatformShort = escapeHtml(game.platformShortName || '');
-
-    row.innerHTML = `
-        <td class="table-image-cell"><img src="${LAZY_PLACEHOLDER_SRC}" data-lazy-src="${escapeHtml(gameImageToUse)}" alt="${safeName}" class="table-game-image lazy-game-image is-pending" loading="lazy" decoding="async" fetchpriority="low" /></td>
-        <td>${safeName}</td>
-        <td>${safeGenre}</td>
-        <td>
-            <span class="rating-inline">
-                <span class="icon-svg rating-star-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24">
-                        <path d="m12 3 2.8 5.6 6.2.9-4.5 4.4 1.1 6.2L12 17.2 6.4 20l1.1-6.2L3 9.5l6.2-.9L12 3Z"></path>
-                    </svg>
-                </span>
-                <span>${game.rating}</span>
-            </span>
-        </td>
-        <td class="table-image-cell"><img src="${platformIcon}" alt="${safePlatformShort}" class="table-platform-image" loading="lazy" /></td>
-        <td>${game.isInstalled ? 'Installed' : 'Not Installed'}</td>
-    `;
-
-    row.classList.add('game-row-clickable');
-    row.addEventListener('click', () => showGameDetails(game));
-
-    return row;
+    return getGameCardElements().createGameTableRow(game);
 }
 
 function createGameListItem(game) {
-    const listItem = document.createElement('div');
-    listItem.className = 'list-item';
-
-    const gameImageToUse = getGameImagePath(game);
-    const platformShortName = String(game.platformShortName || 'unknown').toLowerCase();
-    const platformIcon = `emubro-resources/platforms/${platformShortName}/logos/default.png`;
-    const safeName = escapeHtml(game.name);
-    const safePlatform = escapeHtml(game.platform || game.platformShortName || i18n.t('gameDetails.unknown'));
-    const safePlatformShort = escapeHtml(game.platformShortName || '');
-    const safeGenre = escapeHtml(game.genre || i18n.t('gameDetails.unknown'));
-
-    listItem.innerHTML = `
-        <img src="${LAZY_PLACEHOLDER_SRC}" data-lazy-src="${escapeHtml(gameImageToUse)}" alt="${safeName}" class="list-item-image lazy-game-image is-pending" loading="lazy" decoding="async" fetchpriority="low" />
-        <div class="list-item-info">
-            <h3 class="list-item-title">${safeName}</h3>
-            <span class="list-item-platform-badge">
-                <img src="${platformIcon}" alt="${safePlatformShort}" class="list-platform-icon" loading="lazy" onerror="this.style.display='none'" />
-                <span>${safePlatform}</span>
-            </span>
-            <p class="list-item-genre">${safeGenre}</p>
-            <div class="list-item-meta">
-                <span class="list-item-rating">
-                    <span class="rating-inline">
-                        <span class="icon-svg rating-star-icon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24">
-                                <path d="m12 3 2.8 5.6 6.2.9-4.5 4.4 1.1 6.2L12 17.2 6.4 20l1.1-6.2L3 9.5l6.2-.9L12 3Z"></path>
-                            </svg>
-                        </span>
-                        <span>${game.rating}</span>
-                    </span>
-                </span>
-                <span class="list-item-status">${game.isInstalled ? 'Installed' : 'Not Installed'}</span>
-            </div>
-        </div>
-    `;
-
-    listItem.classList.add('game-row-clickable');
-    listItem.addEventListener('click', () => showGameDetails(game));
-
-    return listItem;
+    return getGameCardElements().createGameListItem(game);
 }
 
 function renderGamesIncremental(gamesToRender, activeView = 'cover') {
@@ -2215,742 +1374,12 @@ function renderGamesAsRandom(gamesToRender) {
     });
 }
 
-function getEmulatorInfoPinIconMarkup() {
-    return `
-        <span class="icon-svg" aria-hidden="true">
-            <svg viewBox="0 0 24 24">
-                <path d="M8.5 4h7l-1.5 4.8v3.1l1.4 1.5h-6.8l1.4-1.5V8.8L8.5 4Z"></path>
-                <path d="M12 13.4V20"></path>
-            </svg>
-        </span>
-    `;
-}
-
-function setEmulatorInfoPinnedStorage(pinned) {
-    emulatorInfoPopupPinned = !!pinned;
-    localStorage.setItem(EMULATOR_INFO_PIN_STORAGE_KEY, emulatorInfoPopupPinned ? 'true' : 'false');
-}
-
-function applyEmulatorInfoPinnedState() {
-    if (!emulatorInfoPopup) return;
-    const pinBtn = emulatorInfoPopup.querySelector('#pin-emulator-info');
-    const isDocked = emulatorInfoPopup.classList.contains('docked-right');
-    const pinned = !!(isDocked || emulatorInfoPopupPinned);
-    emulatorInfoPopup.classList.toggle('is-pinned', pinned);
-    if (pinBtn) {
-        pinBtn.classList.toggle('active', pinned);
-        pinBtn.innerHTML = getEmulatorInfoPinIconMarkup();
-        pinBtn.title = pinned ? 'Unpin' : 'Pin';
-        pinBtn.setAttribute('aria-label', pinned ? 'Unpin emulator details window' : 'Pin emulator details window');
-    }
-}
-
-function ensureEmulatorInfoPopup() {
-    if (emulatorInfoPopup && emulatorInfoPopup.isConnected) return emulatorInfoPopup;
-
-    emulatorInfoPopup = document.getElementById('emulator-info-modal');
-    if (!emulatorInfoPopup) return null;
-    if (emulatorInfoPopup.dataset.initialized === '1') return emulatorInfoPopup;
-
-    const closeBtn = emulatorInfoPopup.querySelector('#close-emulator-info');
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => {
-            emulatorInfoPopup.style.display = 'none';
-            emulatorInfoPopup.classList.remove('active');
-            if (emulatorInfoPopup.classList.contains('docked-right')) {
-                import('./docking-manager').then((m) => m.completelyRemoveFromDock('emulator-info-modal'));
-            } else {
-                import('./docking-manager').then((m) => m.removeFromDock('emulator-info-modal'));
-            }
-            setEmulatorInfoPinnedStorage(false);
-            applyEmulatorInfoPinnedState();
-        });
-    }
-
-    const pinBtn = emulatorInfoPopup.querySelector('#pin-emulator-info');
-    if (pinBtn) {
-        pinBtn.addEventListener('click', (event) => {
-            event.stopPropagation();
-            const shouldPin = !emulatorInfoPopup.classList.contains('docked-right');
-            import('./docking-manager').then((m) => {
-                m.toggleDock('emulator-info-modal', 'pin-emulator-info', shouldPin);
-                setEmulatorInfoPinnedStorage(shouldPin);
-                applyEmulatorInfoPinnedState();
-            });
-        });
-    }
-
-    import('./theme-manager').then((m) => m.makeDraggable('emulator-info-modal', 'emulator-info-header'));
-    emulatorInfoPopup.dataset.initialized = '1';
-    applyEmulatorInfoPinnedState();
-    return emulatorInfoPopup;
-}
-
-function getLatestEmulatorRecord(target) {
-    const key = getEmulatorKey(target);
-    return emulators.find((row) => getEmulatorKey(row) === key) || target;
-}
-
-function renderEmulatorDetailsMarkup(container, emulator) {
-    if (!container || !emulator) return;
-    const shortName = String(emulator.platformShortName || 'unknown').toLowerCase();
-    const platformIcon = `emubro-resources/platforms/${shortName}/logos/default.png`;
-    const safeName = escapeHtml(emulator.name || 'Unknown Emulator');
-    const safePlatform = escapeHtml(emulator.platform || emulator.platformShortName || i18n.t('gameDetails.unknown'));
-    const installed = !!emulator.isInstalled;
-    const statusClass = installed ? 'is-installed' : 'is-missing';
-    const statusText = installed ? 'Installed' : 'Not Installed';
-    const safePath = escapeHtml(installed ? (emulator.filePath || '') : 'Not installed yet');
-    const links = normalizeEmulatorDownloadLinks(emulator?.downloadLinks);
-    const winDisabled = links.windows ? '' : 'disabled';
-    const linuxDisabled = links.linux ? '' : 'disabled';
-    const macDisabled = links.mac ? '' : 'disabled';
-    const canDownload = hasAnyDownloadLink(emulator);
-    const downloadDisabled = canDownload ? '' : 'disabled';
-    const launchDisabled = installed ? '' : 'disabled';
-    const explorerDisabled = installed ? '' : 'disabled';
-
-    container.innerHTML = `
-        <div class="emulator-details-info">
-            <div class="emulator-detail-media">
-                <img src="${escapeHtml(platformIcon)}" alt="${safePlatform}" class="emulator-detail-icon" loading="lazy" onerror="this.style.display='none'" />
-            </div>
-            <div class="emulator-detail-meta">
-                <p><strong>Name:</strong> ${safeName}</p>
-                <p><strong>Platform:</strong> ${safePlatform}</p>
-                <p><strong>Status:</strong> <span class="emulator-install-status ${statusClass}">${statusText}</span></p>
-                <p><strong>Path:</strong> <span class="emulator-detail-path">${safePath}</span></p>
-            </div>
-            <div class="emulator-detail-download-links">
-                <button class="emulator-os-link" type="button" data-emu-download-os="windows" ${winDisabled}>Windows</button>
-                <button class="emulator-os-link" type="button" data-emu-download-os="linux" ${linuxDisabled}>Linux</button>
-                <button class="emulator-os-link" type="button" data-emu-download-os="mac" ${macDisabled}>Mac</button>
-            </div>
-            <div class="emulator-detail-actions">
-                <button class="action-btn" data-emu-popup-action="download" ${downloadDisabled}>Download</button>
-                <button class="action-btn launch-btn" data-emu-popup-action="launch" ${launchDisabled}>Launch</button>
-                <button class="action-btn" data-emu-popup-action="explorer" ${explorerDisabled}>Explorer</button>
-                <button class="action-btn" data-emu-popup-action="website">Website</button>
-                <button class="action-btn" data-emu-popup-action="edit">Edit</button>
-            </div>
-        </div>
-    `;
-}
-
-function bindEmulatorDetailsActions(container, emulator, options = {}) {
-    if (!container || !emulator) return;
-
-    const refreshAfterChange = async () => {
-        await fetchEmulators();
-        if (typeof options.onRefresh === 'function') options.onRefresh();
-        const latest = getLatestEmulatorRecord(emulator);
-        showEmulatorDetails(latest, options);
-    };
-
-    const actionButtons = container.querySelectorAll('[data-emu-popup-action]');
-    actionButtons.forEach((button) => {
-        button.addEventListener('click', async () => {
-            const action = String(button.dataset.emuPopupAction || '').trim();
-            if (!action) return;
-            const originalLabel = button.textContent;
-            const isBusyAction = action === 'download';
-            if (isBusyAction) {
-                button.disabled = true;
-                button.textContent = 'Downloading...';
-            }
-            try {
-                if (action === 'download') {
-                    const changed = await downloadAndInstallEmulatorAction(emulator);
-                    if (changed) await refreshAfterChange();
-                    return;
-                }
-                if (action === 'launch') {
-                    await launchEmulatorAction(emulator);
-                    return;
-                }
-                if (action === 'explorer') {
-                    await openEmulatorInExplorerAction(emulator);
-                    return;
-                }
-                if (action === 'website') {
-                    await openEmulatorWebsiteAction(emulator);
-                    return;
-                }
-                if (action === 'edit') {
-                    const changed = await openEmulatorConfigEditor(emulator);
-                    if (changed) await refreshAfterChange();
-                }
-            } finally {
-                if (isBusyAction) {
-                    button.textContent = originalLabel;
-                    button.disabled = false;
-                }
-            }
-        });
-    });
-
-    container.querySelectorAll('[data-emu-download-os]').forEach((button) => {
-        button.addEventListener('click', async () => {
-            const osKey = String(button.dataset.emuDownloadOs || '').trim().toLowerCase();
-            await openEmulatorDownloadLinkAction(emulator, osKey);
-        });
-    });
-}
-
 function showEmulatorDetails(emulator, options = {}) {
-    if (!emulator) return;
-    const popup = ensureEmulatorInfoPopup();
-    if (!popup) return;
-
-    const popupTitle = popup.querySelector('#emulator-info-popup-title');
-    const popupBody = popup.querySelector('#emulator-info-popup-body');
-    if (popupTitle) popupTitle.textContent = emulator.name || 'Emulator Details';
-    renderEmulatorDetailsMarkup(popupBody, emulator);
-    bindEmulatorDetailsActions(popupBody, emulator, options);
-
-    if (emulatorInfoPopupPinned || popup.classList.contains('docked-right')) {
-        import('./docking-manager').then((m) => m.toggleDock('emulator-info-modal', 'pin-emulator-info', true));
-        setEmulatorInfoPinnedStorage(true);
-    } else {
-        const hasManualPosition = !!(popup.style.left || popup.style.top || popup.classList.contains('moved'));
-        popup.classList.toggle('moved', hasManualPosition);
-        popup.style.display = 'flex';
-        popup.classList.add('active');
-    }
-    applyEmulatorInfoPinnedState();
-}
-
-function getGameInfoPinIconMarkup() {
-    return `
-        <span class="icon-svg" aria-hidden="true">
-            <svg viewBox="0 0 24 24">
-                <path d="M8.5 4h7l-1.5 4.8v3.1l1.4 1.5h-6.8l1.4-1.5V8.8L8.5 4Z"></path>
-                <path d="M12 13.4V20"></path>
-            </svg>
-        </span>
-    `;
-}
-
-function setGameInfoPinnedStorage(pinned) {
-    gameInfoPopupPinned = !!pinned;
-    localStorage.setItem(GAME_INFO_PIN_STORAGE_KEY, gameInfoPopupPinned ? 'true' : 'false');
-}
-
-function applyGameInfoPinnedState() {
-    if (!gameInfoPopup) return;
-    const pinBtn = gameInfoPopup.querySelector('#pin-game-info');
-    const isDocked = gameInfoPopup.classList.contains('docked-right');
-    const pinned = !!(isDocked || gameInfoPopupPinned);
-    gameInfoPopup.classList.toggle('is-pinned', pinned);
-    if (pinBtn) {
-        pinBtn.classList.toggle('active', pinned);
-        pinBtn.innerHTML = getGameInfoPinIconMarkup();
-        pinBtn.title = pinned ? 'Unpin' : 'Pin';
-        pinBtn.setAttribute('aria-label', pinned ? 'Unpin details window' : 'Pin details window');
-    }
-}
-
-function ensureGameInfoPopup() {
-    if (gameInfoPopup && gameInfoPopup.isConnected) return gameInfoPopup;
-
-    gameInfoPopup = document.getElementById('game-info-modal');
-    if (!gameInfoPopup) return null;
-    if (gameInfoPopup.dataset.initialized === '1') return gameInfoPopup;
-
-    const closeBtn = gameInfoPopup.querySelector('#close-game-info');
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => {
-            gameInfoPopup.style.display = 'none';
-            gameInfoPopup.classList.remove('active');
-            if (gameInfoPopup.classList.contains('docked-right')) {
-                import('./docking-manager').then((m) => m.completelyRemoveFromDock('game-info-modal'));
-            } else {
-                import('./docking-manager').then((m) => m.removeFromDock('game-info-modal'));
-            }
-            setGameInfoPinnedStorage(false);
-            applyGameInfoPinnedState();
-        });
-    }
-
-    const pinBtn = gameInfoPopup.querySelector('#pin-game-info');
-    if (pinBtn) {
-        pinBtn.addEventListener('click', (event) => {
-            event.stopPropagation();
-            const shouldPin = !gameInfoPopup.classList.contains('docked-right');
-            import('./docking-manager').then((m) => {
-                m.toggleDock('game-info-modal', 'pin-game-info', shouldPin);
-                setGameInfoPinnedStorage(shouldPin);
-                applyGameInfoPinnedState();
-            });
-        });
-    }
-
-    import('./theme-manager').then((m) => m.makeDraggable('game-info-modal', 'game-info-header'));
-    gameInfoPopup.dataset.initialized = '1';
-    applyGameInfoPinnedState();
-    return gameInfoPopup;
-}
-
-function bindCreateShortcutAction(button, game) {
-    if (!button || !window.emubro || typeof window.emubro.createGameShortcut !== 'function') return;
-    button.addEventListener('click', async (e) => {
-        e.preventDefault();
-        button.disabled = true;
-        try {
-            const res = await window.emubro.createGameShortcut(game.id);
-            if (res && res.success) {
-                alert(`Shortcut created:\n${res.path}`);
-            } else {
-                alert(`Failed to create shortcut: ${res?.message || 'Unknown error'}`);
-            }
-        } catch (err) {
-            alert(`Failed to create shortcut: ${err?.message || err}`);
-        } finally {
-            button.disabled = false;
-        }
-    });
-}
-
-async function ensurePopupEmulatorsLoaded() {
-    if (Array.isArray(emulators) && emulators.length > 0) return emulators;
-    try {
-        await fetchEmulators();
-    } catch (_error) {}
-    return Array.isArray(emulators) ? emulators : [];
-}
-
-async function getGameInfoPlatforms() {
-    if (Array.isArray(gameInfoPlatformsCache) && gameInfoPlatformsCache.length > 0) {
-        return gameInfoPlatformsCache;
-    }
-    try {
-        const rows = await emubro.invoke('get-platforms');
-        gameInfoPlatformsCache = Array.isArray(rows) ? rows : [];
-    } catch (_error) {
-        gameInfoPlatformsCache = [];
-    }
-    return gameInfoPlatformsCache;
-}
-
-function isKnownGamePlatform(game, platforms) {
-    const current = String(game?.platformShortName || '').trim().toLowerCase();
-    if (!current) return false;
-    const rows = Array.isArray(platforms) ? platforms : [];
-    return rows.some((platform) => String(platform?.shortName || '').trim().toLowerCase() === current);
-}
-
-async function bindShowInExplorerAction(button, game) {
-    if (!button || !game) return;
-    button.addEventListener('click', async () => {
-        const filePath = String(game.filePath || '').trim();
-        if (!filePath) {
-            alert('Game file path is missing.');
-            return;
-        }
-        const result = await emubro.invoke('show-item-in-folder', filePath);
-        if (!result?.success) {
-            alert(result?.message || 'Failed to open file location.');
-        }
-    });
-}
-
-async function bindEmulatorOverrideAction(select, game) {
-    if (!select || !game) return;
-
-    const rows = await ensurePopupEmulatorsLoaded();
-    const installedEmulators = rows
-        .filter((emu) => !!emu?.isInstalled && String(emu?.filePath || '').trim().length > 0)
-        .sort((a, b) => {
-            const p = String(a.platform || a.platformShortName || '').localeCompare(String(b.platform || b.platformShortName || ''));
-            if (p !== 0) return p;
-            return String(a.name || '').localeCompare(String(b.name || ''));
-        });
-
-    const currentOverride = String(game.emulatorOverridePath || '').trim();
-    const defaultLabel = `Default (${game.platform || game.platformShortName || 'platform emulator'})`;
-    let options = `<option value="">${escapeHtml(defaultLabel)}</option>`;
-
-    options += installedEmulators.map((emu) => {
-        const emuPath = String(emu.filePath || '').trim();
-        const emuName = String(emu.name || 'Emulator').trim();
-        const emuPlatform = String(emu.platformShortName || emu.platform || '').trim();
-        const label = emuPlatform ? `${emuName} (${emuPlatform})` : emuName;
-        const selected = currentOverride && emuPath.toLowerCase() === currentOverride.toLowerCase() ? ' selected' : '';
-        return `<option value="${escapeHtml(emuPath)}"${selected}>${escapeHtml(label)}</option>`;
-    }).join('');
-
-    select.innerHTML = options;
-
-    select.addEventListener('change', async () => {
-        const nextOverridePath = String(select.value || '').trim();
-        const payload = {
-            gameId: game.id,
-            emulatorOverridePath: nextOverridePath || null
-        };
-        const result = await emubro.invoke('update-game-metadata', payload);
-        if (!result?.success) {
-            alert(result?.message || 'Failed to save emulator override.');
-            return;
-        }
-        game.emulatorOverridePath = nextOverridePath || null;
-    });
-}
-
-async function bindChangePlatformAction(select, button, game) {
-    if (!select || !button || !game) return;
-
-    const platforms = await getGameInfoPlatforms();
-    const platformOptions = [...platforms]
-        .sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || '')))
-        .map((platform) => {
-            const shortName = String(platform?.shortName || '').trim().toLowerCase();
-            const name = String(platform?.name || shortName || 'Unknown').trim();
-            if (!shortName) return '';
-            const selected = shortName === String(game.platformShortName || '').trim().toLowerCase() ? ' selected' : '';
-            return `<option value="${escapeHtml(shortName)}"${selected}>${escapeHtml(name)} (${escapeHtml(shortName)})</option>`;
-        })
-        .filter(Boolean)
-        .join('');
-
-    select.innerHTML = platformOptions || `<option value="">No platforms found</option>`;
-
-    button.addEventListener('click', async () => {
-        const nextPlatformShortName = String(select.value || '').trim().toLowerCase();
-        const currentPlatformShortName = String(game.platformShortName || '').trim().toLowerCase();
-        if (!nextPlatformShortName || nextPlatformShortName === currentPlatformShortName) return;
-
-        if (isKnownGamePlatform(game, platforms)) {
-            const proceed = window.confirm('This game already has a recognized platform. Changing it can break emulator matching and metadata. Continue?');
-            if (!proceed) return;
-        }
-
-        button.disabled = true;
-        try {
-            const result = await emubro.invoke('update-game-metadata', {
-                gameId: game.id,
-                platformShortName: nextPlatformShortName
-            });
-            if (!result?.success) {
-                alert(result?.message || 'Failed to change platform.');
-                return;
-            }
-
-            await reloadGamesFromMainAndRender();
-            const refreshedGame = getGames().find((row) => Number(row.id) === Number(game.id));
-            if (refreshedGame) {
-                showGameDetails(refreshedGame);
-            }
-        } finally {
-            button.disabled = false;
-        }
-    });
-}
-
-function stripBracketedTitleParts(value) {
-    let text = String(value || '');
-    if (!text) return '';
-
-    // Remove bracketed suffixes like "(USA)", "[v1.1]" or "{Prototype}".
-    let previous = '';
-    while (previous !== text) {
-        previous = text;
-        text = text.replace(/\s*[\(\[\{][^()\[\]{}]*[\)\]\}]\s*/g, ' ');
-    }
-    return text.replace(/\s+/g, ' ').trim();
-}
-
-function buildYouTubeSearchQuery(game) {
-    const platformShort = String(game?.platformShortName || game?.platform || '').trim();
-    const cleanName = stripBracketedTitleParts(game?.name || '');
-    return [platformShort, cleanName].filter(Boolean).join(' ').trim();
-}
-
-function setYouTubePreviewResult(previewRoot, state) {
-    if (!previewRoot || !state) return;
-
-    const titleEl = previewRoot.querySelector('[data-youtube-video-title]');
-    const subtitleEl = previewRoot.querySelector('[data-youtube-video-subtitle]');
-    const linkEl = previewRoot.querySelector('[data-youtube-video-link]');
-    const thumbEl = previewRoot.querySelector('[data-youtube-video-thumb]');
-    const countEl = previewRoot.querySelector('[data-youtube-result-count]');
-    const copyButtons = [...previewRoot.querySelectorAll('[data-youtube-copy-link]')];
-    const nextBtn = previewRoot.querySelector('[data-youtube-next]');
-    const searchBtn = previewRoot.querySelector('[data-youtube-open-search]');
-    const statusEl = previewRoot.querySelector('[data-youtube-status]');
-    const queryEl = previewRoot.querySelector('[data-youtube-query]');
-    const loadingEl = previewRoot.querySelector('[data-youtube-loading]');
-
-    const hasResults = Array.isArray(state.results) && state.results.length > 0;
-    const current = hasResults ? state.results[state.index] : null;
-
-    if (queryEl) queryEl.textContent = state.query || '';
-    if (loadingEl) loadingEl.classList.toggle('is-visible', !!state.loading);
-    if (countEl) countEl.textContent = hasResults ? `Result ${state.index + 1} / ${state.results.length}` : 'Result 0 / 0';
-
-    if (statusEl) {
-        if (state.loading) {
-            statusEl.textContent = 'Searching YouTube...';
-        } else if (!hasResults) {
-            statusEl.textContent = 'No preview result found.';
-        } else {
-            statusEl.textContent = '';
-        }
-    }
-
-    if (!current) {
-        if (titleEl) titleEl.textContent = 'No video result';
-        if (subtitleEl) subtitleEl.textContent = '';
-        if (linkEl) linkEl.removeAttribute('href');
-        if (thumbEl) {
-            thumbEl.removeAttribute('src');
-            thumbEl.alt = 'No preview available';
-        }
-        copyButtons.forEach((btn) => { btn.disabled = true; });
-        if (nextBtn) nextBtn.disabled = true;
-        if (searchBtn) searchBtn.disabled = !state.searchUrl;
-        return;
-    }
-
-    if (titleEl) titleEl.textContent = current.title || 'YouTube Result';
-    if (subtitleEl) subtitleEl.textContent = current.channel ? `by ${current.channel}` : '';
-    if (linkEl) linkEl.href = current.url || state.searchUrl || '#';
-    if (thumbEl) {
-        thumbEl.src = current.thumbnail || '';
-        thumbEl.alt = current.title || 'YouTube preview thumbnail';
-    }
-    copyButtons.forEach((btn) => { btn.disabled = !current.url; });
-    if (nextBtn) nextBtn.disabled = state.results.length <= 1;
-    if (searchBtn) searchBtn.disabled = !state.searchUrl;
-}
-
-function bindYouTubePreviewAction(button, container, game) {
-    if (!button || !container || !game) return;
-
-    const previewRoot = container.querySelector('[data-game-youtube-preview]');
-    if (!previewRoot) return;
-
-    const nextBtn = previewRoot.querySelector('[data-youtube-next]');
-    const searchBtn = previewRoot.querySelector('[data-youtube-open-search]');
-    const copyButtons = [...previewRoot.querySelectorAll('[data-youtube-copy-link]')];
-    const mainLink = previewRoot.querySelector('[data-youtube-video-link]');
-    const query = buildYouTubeSearchQuery(game);
-    const state = {
-        loading: false,
-        loaded: false,
-        query,
-        searchUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
-        index: 0,
-        results: []
-    };
-
-    const refresh = () => setYouTubePreviewResult(previewRoot, state);
-    refresh();
-
-    const loadResults = async () => {
-        if (state.loading) return;
-        state.loading = true;
-        refresh();
-        try {
-            const result = await emubro.invoke('youtube:search-videos', { query: state.query, limit: 8 });
-            if (!result?.success) {
-                throw new Error(result?.message || 'Failed to fetch YouTube results');
-            }
-            state.results = Array.isArray(result.results) ? result.results : [];
-            state.searchUrl = String(result.searchUrl || state.searchUrl || '').trim() || state.searchUrl;
-            state.index = 0;
-            state.loaded = true;
-        } catch (error) {
-            state.results = [];
-            state.loaded = true;
-            const message = String(error?.message || error || 'Failed to fetch YouTube results');
-            const statusEl = previewRoot.querySelector('[data-youtube-status]');
-            if (statusEl) statusEl.textContent = message;
-        } finally {
-            state.loading = false;
-            refresh();
-        }
-    };
-
-    button.addEventListener('click', async () => {
-        previewRoot.classList.add('is-open');
-        if (!state.loaded) {
-            await loadResults();
-            return;
-        }
-        refresh();
-    });
-
-    if (nextBtn) {
-        nextBtn.addEventListener('click', async () => {
-            if (!state.loaded) {
-                await loadResults();
-                return;
-            }
-            if (!state.results.length) return;
-            state.index = (state.index + 1) % state.results.length;
-            refresh();
-        });
-    }
-
-    if (searchBtn) {
-        searchBtn.addEventListener('click', async () => {
-            const target = state.searchUrl || `https://www.youtube.com/results?search_query=${encodeURIComponent(state.query)}`;
-            await emubro.invoke('open-external-url', target);
-        });
-    }
-
-    if (mainLink) {
-        mainLink.addEventListener('click', async (event) => {
-            event.preventDefault();
-            const current = state.results[state.index];
-            const target = String(current?.url || state.searchUrl || '').trim();
-            if (!target) return;
-            await emubro.invoke('open-external-url', target);
-        });
-    }
-
-    copyButtons.forEach((copyBtn) => {
-        copyBtn.addEventListener('click', async () => {
-            const current = state.results[state.index];
-            const url = String(current?.url || '').trim();
-            if (!url) return;
-            const oldLabel = copyBtn.textContent;
-            try {
-                if (navigator.clipboard?.writeText) {
-                    await navigator.clipboard.writeText(url);
-                } else {
-                    const helper = document.createElement('textarea');
-                    helper.value = url;
-                    helper.setAttribute('readonly', '');
-                    helper.style.position = 'fixed';
-                    helper.style.opacity = '0';
-                    document.body.appendChild(helper);
-                    helper.select();
-                    document.execCommand('copy');
-                    helper.remove();
-                }
-                copyBtn.textContent = 'Link Copied';
-                setTimeout(() => {
-                    copyBtn.textContent = oldLabel;
-                }, 1200);
-            } catch (_error) {
-                alert('Failed to copy link.');
-            }
-        });
-    });
-}
-
-function bindGameDetailsActions(container, game) {
-    bindCreateShortcutAction(container.querySelector('[data-create-shortcut]'), game);
-    bindShowInExplorerAction(container.querySelector('[data-show-in-explorer]'), game);
-    bindEmulatorOverrideAction(container.querySelector('[data-game-emulator-override]'), game);
-    bindChangePlatformAction(
-        container.querySelector('[data-game-platform-select]'),
-        container.querySelector('[data-change-platform]'),
-        game
-    );
-    bindYouTubePreviewAction(container.querySelector('[data-youtube-preview]'), container, game);
-}
-
-function renderGameDetailsMarkup(container, game) {
-    if (!container || !game) return;
-    const safeName = escapeHtml(game.name || 'Unknown Game');
-    const platformText = escapeHtml(game.platform || game.platformShortName || i18n.t('gameDetails.unknown'));
-    const ratingText = escapeHtml(game.rating !== undefined && game.rating !== null ? String(game.rating) : i18n.t('gameDetails.unknown'));
-    const genreText = escapeHtml(game.genre || i18n.t('gameDetails.unknown'));
-    const priceText = escapeHtml(game.price > 0 ? `$${Number(game.price).toFixed(2)}` : (i18n.t('gameDetails.free') || 'Free'));
-    const platformLabel = escapeHtml(i18n.t('gameDetails.platform') || 'Platform');
-    const ratingLabel = escapeHtml(i18n.t('gameDetails.rating') || 'Rating');
-    const genreLabel = escapeHtml(i18n.t('gameDetails.genre') || 'Genre');
-    const priceLabel = escapeHtml(i18n.t('gameDetails.price') || 'Price');
-
-    container.innerHTML = `
-        <div class="game-detail-row game-detail-media">
-            <img src="${LAZY_PLACEHOLDER_SRC}" data-lazy-src="${escapeHtml(getGameImagePath(game))}" alt="${safeName}" class="detail-game-image lazy-game-image is-pending" loading="lazy" decoding="async" fetchpriority="low" />
-        </div>
-        <div class="game-detail-row game-detail-meta">
-            <p><strong>${platformLabel}:</strong> ${platformText}</p>
-            <p><strong>${ratingLabel}:</strong> ${ratingText}</p>
-            <p><strong>${genreLabel}:</strong> ${genreText}</p>
-            <p><strong>${priceLabel}:</strong> ${priceText}</p>
-        </div>
-        <div class="game-detail-row game-detail-emulator-control">
-            <label for="game-emulator-override-${Number(game.id)}">Emulator</label>
-            <select id="game-emulator-override-${Number(game.id)}" data-game-emulator-override>
-                <option value="">Loading emulators...</option>
-            </select>
-        </div>
-        <div class="game-detail-row game-detail-platform-control">
-            <label for="game-platform-select-${Number(game.id)}">Platform</label>
-            <div class="game-detail-platform-inline">
-                <select id="game-platform-select-${Number(game.id)}" data-game-platform-select>
-                    <option value="">Loading platforms...</option>
-                </select>
-                <button class="action-btn" data-change-platform>Change Platform</button>
-            </div>
-        </div>
-        <div class="game-detail-row game-detail-actions">
-            <button class="action-btn" data-create-shortcut>Create Desktop Shortcut</button>
-            <button class="action-btn" data-show-in-explorer>Show in Explorer</button>
-            <button class="action-btn youtube-preview-btn" data-youtube-preview>
-                <span class="youtube-preview-btn-icon" aria-hidden="true"></span>
-                <span>YouTube Preview</span>
-            </button>
-        </div>
-        <div class="game-detail-row game-detail-youtube-preview" data-game-youtube-preview>
-            <div class="game-youtube-preview-header">
-                <h4>Video Preview</h4>
-                <div class="game-youtube-preview-header-right">
-                    <span class="game-youtube-preview-query" data-youtube-query></span>
-                    <button class="action-btn small" type="button" data-youtube-copy-link>Copy Link</button>
-                </div>
-            </div>
-            <a class="game-youtube-preview-media" href="#" data-youtube-video-link>
-                <img class="game-youtube-preview-thumb" data-youtube-video-thumb alt="YouTube preview" />
-                <span class="game-youtube-preview-overlay">
-                    <span class="game-youtube-preview-title" data-youtube-video-title>Waiting for result...</span>
-                    <span class="game-youtube-preview-subtitle" data-youtube-video-subtitle></span>
-                </span>
-                <span class="game-youtube-preview-play" aria-hidden="true"></span>
-            </a>
-            <div class="game-youtube-preview-toolbar">
-                <button class="action-btn small" type="button" data-youtube-next>Try Next Result</button>
-                <button class="action-btn small" type="button" data-youtube-open-search>Open Search on YouTube</button>
-                <span class="game-youtube-preview-result-count" data-youtube-result-count>Result 0 / 0</span>
-                <button class="action-btn small" type="button" data-youtube-copy-link>Copy Link</button>
-            </div>
-            <p class="game-youtube-preview-status" data-youtube-status></p>
-            <p class="game-youtube-preview-loading" data-youtube-loading>Loading preview...</p>
-            <div class="game-youtube-preview-note">
-                YouTube preview results can be temporarily rate-limited. If previews fail, open the search link in browser.
-            </div>
-        </div>
-    `;
-
-    initializeLazyGameImages(container);
-    bindGameDetailsActions(container, game);
+    getEmulatorDetailsPopupActions().showEmulatorDetails(emulator, options);
 }
 
 export function showGameDetails(game) {
-    if (!game) return;
-
-    const popup = ensureGameInfoPopup();
-    if (!popup) return;
-    const popupTitle = popup.querySelector('#game-info-popup-title');
-    const popupBody = popup.querySelector('#game-info-popup-body');
-    if (popupTitle) popupTitle.textContent = game.name || 'Game Details';
-    renderGameDetailsMarkup(popupBody, game);
-
-    if (gameInfoPopupPinned || popup.classList.contains('docked-right')) {
-        import('./docking-manager').then((m) => m.toggleDock('game-info-modal', 'pin-game-info', true));
-        setGameInfoPinnedStorage(true);
-    } else {
-        const hasManualPosition = !!(popup.style.left || popup.style.top || popup.classList.contains('moved'));
-        popup.classList.toggle('moved', hasManualPosition);
-        popup.style.display = 'flex';
-        popup.classList.add('active');
-    }
-    applyGameInfoPinnedState();
+    getGameDetailsPopupActions().showGameDetails(game);
 }
 
 

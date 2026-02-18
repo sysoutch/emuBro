@@ -3,7 +3,9 @@
     background-color: color-mix(in srgb, var(--glass-surface-strong), transparent 8%);
     backdrop-filter: blur(16px) saturate(1.12);
     -webkit-backdrop-filter: blur(16px) saturate(1.12);
-    --win-controls-space: 142px;
+    --win-controls-width: 126px;
+    --win-controls-gap: 16px;
+    --win-controls-space: calc(var(--win-controls-width) + var(--win-controls-gap));
 
     padding: 2.5px 0px 2.5px 20px;
     padding-right: calc(0px + var(--win-controls-space));
@@ -46,12 +48,23 @@
     position: absolute;
     top: 0;
     right: 0;
+    width: var(--win-controls-width);
     height: 100%;
     display: flex;
     gap: 0px;
     align-items: stretch;
     padding: 0px;
     -webkit-app-region: no-drag;
+}
+
+.window-drag-gap {
+    display: none;
+    position: absolute;
+    top: 0;
+    right: var(--win-controls-width);
+    width: var(--win-controls-gap);
+    height: 100%;
+    -webkit-app-region: drag;
 }
 
 .win-btn {
@@ -91,9 +104,14 @@
 }
 
 [data-os="win32"] .header {
-    --win-controls-space: 126px;
+    --win-controls-width: 126px;
+    --win-controls-gap: 18px;
     min-height: 42px;
     padding: 1.5px 0 1.5px 14px;
+}
+
+[data-os="win32"] .window-drag-gap {
+    display: block;
 }
 
 [data-os="win32"] .logo img {
