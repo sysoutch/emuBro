@@ -169,8 +169,8 @@
       "next": "Volgende"
     },
     "random": {
-      "shuffle": "🎲 Shuffle en voorstellen",
-      "stop": "Stop ⏹",
+      "shuffle": "Shuffle en voorstellen",
+      "stop": "Stop",
       "suggestion": "Waarom niet nu \"{{game}}\" spelen?"
     },
     "tools": {
@@ -192,10 +192,10 @@
       "searching": "Zoeken...",
       "searchGames": "Spellen zoeken",
       "install": "Installeren",
-      "previous": "❮ Vorige",
-      "next": "Volgende ❯",
-      "shuffle": "🎲 Shuffle en voorstellen",
-      "stop": "Stop ⏹",
+      "previous": "Vorige",
+      "next": "Volgende",
+      "shuffle": "Shuffle en voorstellen",
+      "stop": "Stop",
       "editTheme": "Thema bewerken",
       "createNewTheme": "Nieuw thema maken",
       "backgroundImageLoaded": "Achtergrondafbeelding geladen",
@@ -210,3 +210,4 @@
     }
   }
 }
+

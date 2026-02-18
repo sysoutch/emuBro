@@ -33,13 +33,13 @@
     justify-content: center;
     align-items: flex-start;
     overflow-y: auto;
-    padding-top: 20px;
+    padding-top: calc(20px * var(--view-scale));
 }
 
 .tools-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 25px;
+    grid-template-columns: repeat(auto-fill, minmax(calc(300px * var(--view-scale)), 1fr));
+    gap: calc(25px * var(--view-scale));
     width: 100%;
     max-width: 1200px;
 }
@@ -51,7 +51,7 @@
     -webkit-backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: var(--radius-card);
-    padding: 30px;
+    padding: calc(30px * var(--view-scale));
     text-align: center;
     transition: all 0.3s ease;
     cursor: pointer;
@@ -62,7 +62,7 @@
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 
     .tool-icon {
-        font-size: 3rem;
+        font-size: calc(3rem * var(--view-scale));
         color: var(--accent-color);
         margin-bottom: 10px;
         opacity: 0.8;
@@ -71,13 +71,13 @@
 
     h3 {
         color: var(--text-primary);
-        font-size: 1.4rem;
+        font-size: calc(1.4rem * var(--view-scale));
         margin: 0;
     }
 
     p {
         color: var(--text-secondary);
-        font-size: 0.95rem;
+        font-size: calc(0.95rem * var(--view-scale));
         line-height: 1.5;
         margin: 0;
     }
@@ -85,7 +85,7 @@
     .action-btn {
         margin-top: auto;
         width: 100%;
-        padding: 10px;
+        padding: calc(10px * var(--view-scale));
         border-radius: var(--radius-btn);
         background: rgba(255,255,255,0.05);
         border: 1px solid rgba(255,255,255,0.1);

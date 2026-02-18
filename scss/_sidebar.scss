@@ -7,7 +7,7 @@
     width: var(--sidebar-expanded-width);
     padding: 0;
     overflow: hidden;
-    border-right: 1px solid var(--border-color);
+    border-right: 1px solid var(--glass-border);
     position: relative;
     display: flex;
     background: transparent;
@@ -89,6 +89,42 @@
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.10);
 }
 
+[data-theme="light"] .sidebar-rail {
+    background:
+        radial-gradient(120% 120% at 50% 0%,
+            color-mix(in srgb, var(--bg-sidebar), white 45%) 0%,
+            color-mix(in srgb, var(--bg-sidebar), white 25%) 62%,
+            color-mix(in srgb, var(--bg-sidebar), #d8e4e8 35%) 100%);
+}
+
+[data-theme="light"] .rail-btn {
+    background: color-mix(in srgb, var(--brand-color) 12%, white 88%);
+    color: color-mix(in srgb, var(--brand-color) 70%, #2b2f36 30%);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.65);
+}
+
+[data-theme="light"] .rail-btn:hover {
+    background: color-mix(in srgb, var(--accent-color) 24%, white 76%);
+    color: color-mix(in srgb, var(--brand-color), black 25%);
+    box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,0.8),
+        0 10px 18px rgba(26, 66, 82, 0.16);
+}
+
+[data-theme="light"] .rail-btn.rail-brand {
+    background: linear-gradient(145deg, #2b8f95 0%, #205d68 100%);
+    color: #f5f9fa;
+    box-shadow:
+        0 10px 20px rgba(17, 74, 88, 0.26),
+        inset 0 0 0 1px rgba(255,255,255,0.24);
+}
+
+[data-theme="light"] .rail-btn.rail-nav.is-active {
+    background: color-mix(in srgb, var(--accent-color) 22%, white 78%);
+    color: color-mix(in srgb, var(--brand-color), black 25%);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-color) 46%, white 54%);
+}
+
 .rail-icon {
     display: inline-flex;
     align-items: center;
@@ -116,6 +152,10 @@
     width: 100%;
 }
 
+.rail-group--bottom {
+    margin-bottom: 4px;
+}
+
 .rail-spacer {
     flex: 1;
 }
@@ -123,7 +163,9 @@
 .sidebar-content {
     flex: 1;
     min-width: 0;
-    background-color: var(--bg-sidebar);
+    background-color: color-mix(in srgb, var(--glass-surface-strong), transparent 8%);
+    backdrop-filter: blur(14px) saturate(1.08);
+    -webkit-backdrop-filter: blur(14px) saturate(1.08);
     padding: 20px;
     overflow-y: auto;
     transition: opacity 160ms ease;
@@ -175,13 +217,34 @@
     }
 }
 
+.docked-tab .icon-svg svg {
+    width: 17px;
+    height: 17px;
+}
+
 /* Body state when any panel is docked */
 body.panel-docked {
-    padding-right: 400px !important;
+    padding-right: var(--dock-panel-width) !important;
     
     .app-container {
-        width: calc(100vw - 400px) !important;
+        width: calc(100vw - var(--dock-panel-width)) !important;
     }
+}
+
+[data-os="win32"] body.panel-docked {
+    padding-right: 0 !important;
+
+    .app-container {
+        margin: var(--win-border-w) calc(var(--dock-panel-width) + var(--win-border-w)) var(--win-border-w) var(--win-border-w);
+        width: calc(100vw - var(--dock-panel-width) - (var(--win-border-w) * 2)) !important;
+        height: calc(100vh - (var(--win-border-w) * 2));
+    }
+}
+
+[data-window-state="maximized"][data-os="win32"] body.panel-docked .app-container {
+    margin: 0 var(--dock-panel-width) 0 0;
+    width: calc(100vw - var(--dock-panel-width)) !important;
+    height: 100vh;
 }
 
 .sidebar-section {

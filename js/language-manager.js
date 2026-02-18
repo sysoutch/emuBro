@@ -1,7 +1,13 @@
 import { makeDraggable } from './theme-manager';
+import { updateUILanguage } from './i18n-manager';
 
 const emubro = window.emubro;
 let baseLanguageCache = null;
+let currentLangData = null;
+let liveEditEnabled = false;
+let liveEditClickHandler = null;
+
+const LIVE_EDIT_SELECTOR = '[data-i18n], [data-i18n-placeholder]';
 
 export function initLanguageManager() {
     const modal = document.getElementById('language-manager-modal');
@@ -10,10 +16,12 @@ export function initLanguageManager() {
     const backBtn = document.getElementById('back-to-lang-list');
     const saveBtn = document.getElementById('save-lang-btn');
     const searchInput = document.getElementById('lang-search-keys');
+    const liveEditToggle = document.getElementById('lang-live-edit-toggle');
 
     if (!modal) return;
 
     closeBtn.addEventListener('click', () => {
+        setLiveEditEnabled(false);
         modal.style.display = 'none';
         modal.classList.remove('active');
         
@@ -26,6 +34,7 @@ export function initLanguageManager() {
     });
 
     backBtn.addEventListener('click', () => {
+        setLiveEditEnabled(false);
         switchTab('lang-list');
     });
 
@@ -36,6 +45,13 @@ export function initLanguageManager() {
     searchInput.addEventListener('input', (e) => {
         filterKeys(e.target.value);
     });
+
+    if (liveEditToggle) {
+        liveEditToggle.checked = false;
+        liveEditToggle.addEventListener('change', () => {
+            setLiveEditEnabled(liveEditToggle.checked);
+        });
+    }
 
     addBtn.addEventListener('click', () => {
         const langCode = prompt(i18n.t('language.enterCode'));
@@ -96,8 +112,138 @@ function switchTab(tabName) {
     
     // If going back to list, hide the editor tab
     if (tabName === 'lang-list') {
+        setLiveEditEnabled(false);
         const editorTab = modal.querySelector(`[data-tab="lang-edit"]`);
         if (editorTab) editorTab.style.display = 'none';
+    }
+}
+
+function getNestedValue(source, keyPath) {
+    if (!source || !keyPath) return '';
+    const keys = String(keyPath).split('.');
+    let node = source;
+    for (const key of keys) {
+        if (!node || typeof node !== 'object' || !(key in node)) return '';
+        node = node[key];
+    }
+    return node;
+}
+
+function setNestedValue(target, keyPath, value) {
+    if (!target || !keyPath) return;
+    const keys = String(keyPath).split('.');
+    let node = target;
+    keys.forEach((key, idx) => {
+        if (idx === keys.length - 1) {
+            node[key] = value;
+            return;
+        }
+        if (!node[key] || typeof node[key] !== 'object' || Array.isArray(node[key])) {
+            node[key] = {};
+        }
+        node = node[key];
+    });
+}
+
+function getLiveEditTarget(startNode) {
+    if (!(startNode instanceof Element)) return null;
+    const target = startNode.closest(LIVE_EDIT_SELECTOR);
+    if (!target) return null;
+
+    if (target.id === 'lang-live-edit-toggle') return null;
+    if (target.closest('#lang-keys-list')) return null;
+    if (target.closest('#lang-live-edit-toggle-wrap')) return null;
+
+    return target;
+}
+
+function getTranslationKeyForElement(element) {
+    if (!element) return '';
+    return String(
+        element.getAttribute('data-i18n')
+        || element.getAttribute('data-i18n-placeholder')
+        || ''
+    ).trim();
+}
+
+function applyLiveEditValueToElement(element, key, value) {
+    if (!element || !key) return;
+
+    if (element.hasAttribute('data-i18n')) {
+        element.textContent = value;
+        return;
+    }
+
+    if (element.hasAttribute('data-i18n-placeholder')) {
+        element.placeholder = value;
+    }
+}
+
+function attachLiveEditHandler() {
+    if (liveEditClickHandler) return;
+    liveEditClickHandler = (event) => {
+        if (!liveEditEnabled || !currentLangData) return;
+        if (event.button !== 0) return;
+
+        const target = getLiveEditTarget(event.target);
+        if (!target) return;
+
+        const key = getTranslationKeyForElement(target);
+        if (!key) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const langRoot = currentLangData.data?.[currentLangData.code] || {};
+        const baseRoot = getBaseLanguage().en || {};
+        const currentValue = String(getNestedValue(langRoot, key) || '');
+        const fallbackValue = String(getNestedValue(baseRoot, key) || '');
+        const nextValue = prompt(`Edit translation:\n${key}`, currentValue || fallbackValue);
+
+        if (nextValue === null) return;
+
+        if (!currentLangData.data[currentLangData.code]) {
+            currentLangData.data[currentLangData.code] = {};
+        }
+        setNestedValue(currentLangData.data[currentLangData.code], key, nextValue);
+
+        if (typeof allTranslations !== 'undefined') {
+            if (!allTranslations[currentLangData.code]) allTranslations[currentLangData.code] = {};
+            setNestedValue(allTranslations[currentLangData.code], key, nextValue);
+        }
+
+        applyLiveEditValueToElement(target, key, nextValue);
+
+        const searchValue = String(document.getElementById('lang-search-keys')?.value || '');
+        renderEditorKeys(searchValue);
+
+        if (i18n.getLanguage() === currentLangData.code) {
+            updateUILanguage();
+        }
+    };
+
+    document.addEventListener('click', liveEditClickHandler, true);
+}
+
+function detachLiveEditHandler() {
+    if (!liveEditClickHandler) return;
+    document.removeEventListener('click', liveEditClickHandler, true);
+    liveEditClickHandler = null;
+}
+
+function setLiveEditEnabled(enabled) {
+    liveEditEnabled = !!enabled;
+    document.body.classList.toggle('live-edit-mode', liveEditEnabled);
+
+    const toggle = document.getElementById('lang-live-edit-toggle');
+    if (toggle && toggle.checked !== liveEditEnabled) {
+        toggle.checked = liveEditEnabled;
+    }
+
+    if (liveEditEnabled) {
+        attachLiveEditHandler();
+    } else {
+        detachLiveEditHandler();
     }
 }
 
@@ -199,9 +345,8 @@ function renderLanguages(languages) {
     });
 }
 
-let currentLangData = null;
-
 function openEditor(lang) {
+    setLiveEditEnabled(false);
     currentLangData = lang;
     const editorTab = document.getElementById('lang-edit-view');
     const editorTabBtn = document.querySelector(`[data-tab="lang-edit"]`);

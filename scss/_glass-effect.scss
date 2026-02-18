@@ -29,15 +29,34 @@
     .list-item,
     .games-table,
     .slideshow-card,
-    .random-display {
+    .random-display,
+    .tools-overview .tool-card,
+    .emulator-card,
+    .emulator-list-item,
+    .emulators-table {
         /* Increased transparency from 30% to 50% */
         @include glass-bg-only(--bg-secondary, 50%);
     }
 
-    .game-card:hover {
+    .game-card:hover,
+    .tools-overview .tool-card:hover,
+    .emulator-card:hover,
+    .slideshow-card:hover {
         /* Increased transparency from 15% to 30% on hover */
         background: color-mix(in srgb, var(--bg-secondary), transparent 30%) !important;
+        border-color: color-mix(in srgb, var(--accent-color), rgba(255, 255, 255, 0.2) 45%);
+    }
+
+    .game-card:hover {
         transform: translateY(-5px);
+    }
+
+    .slideshow-card:hover {
+        box-shadow:
+            0 26px 52px rgba(0,0,0,0.6),
+            0 0 0 1px color-mix(in srgb, var(--accent-color) 55%, transparent),
+            0 0 38px color-mix(in srgb, var(--accent-color) 26%, transparent),
+            0 0 0 1px rgba(255,255,255,0.08) inset;
     }
 
     .list-item:hover {
@@ -46,6 +65,10 @@
     }
 
     .games-table th {
+        background-color: rgba(0, 0, 0, 0.2) !important;
+    }
+
+    .emulators-table th {
         background-color: rgba(0, 0, 0, 0.2) !important;
     }
 

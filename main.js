@@ -7,19 +7,220 @@ const fs = require("fs").promises;
 const fsSync = require("fs");
 const os = require("os");
 const { execFile, spawnSync } = require("child_process");
+const { Readable } = require("stream");
+const { pipeline } = require("stream/promises");
 
 // Import handlers
 const ps1Handler = require("./ps1-handler");
 
 // Initialize the store for app settings
 const store = new Store();
+const LIBRARY_PATH_SETTINGS_KEY = "library:path-settings:v1";
+const _driveTypeCache = new Map();
 
 let mainWindow;
+let splashWindow;
 let games = [];
 let emulators = [];
 const screen = require("electron").screen;
 
 let _db = null;
+let splashShownAt = 0;
+let appBootstrapStarted = false;
+let mainWindowRendererReady = false;
+let requestRevealMainWindow = null;
+
+function createSplashWindow() {
+  if (splashWindow && !splashWindow.isDestroyed()) return splashWindow;
+
+  splashWindow = new BrowserWindow({
+    width: 460,
+    height: 260,
+    frame: false,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    closable: true,
+    movable: false,
+    alwaysOnTop: true,
+    show: false,
+    skipTaskbar: true,
+    backgroundColor: "#0b1220",
+    webPreferences: {
+      backgroundThrottling: false,
+      partition: "splash",
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+
+  const splashHtml = `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>emuBro Loading</title>
+    <style>
+      :root { color-scheme: dark; }
+      html, body { height: 100%; margin: 0; }
+      body {
+        font-family: Segoe UI, system-ui, -apple-system, sans-serif;
+        display: grid;
+        place-items: center;
+        background:
+          radial-gradient(70% 120% at 0% 0%, rgba(0, 214, 255, 0.18), transparent 60%),
+          radial-gradient(70% 120% at 100% 100%, rgba(255, 200, 80, 0.16), transparent 60%),
+          #0b1220;
+        color: #d8e7ff;
+      }
+      .wrap {
+        width: 86%;
+        border: 1px solid rgba(124, 180, 255, 0.25);
+        border-radius: 14px;
+        background: rgba(13, 22, 40, 0.75);
+        backdrop-filter: blur(8px);
+        padding: 24px 22px;
+        text-align: center;
+      }
+      .brand {
+        margin: 0 0 10px 0;
+        font-size: 34px;
+        letter-spacing: 1px;
+        font-weight: 800;
+      }
+      .brand span { color: #32b8de; }
+      .sub { margin: 0 0 18px 0; color: #9bb7d7; font-size: 14px; }
+      .bar {
+        width: 100%;
+        height: 7px;
+        border-radius: 999px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.1);
+      }
+      .bar > i {
+        display: block;
+        height: 100%;
+        width: 34%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #32b8de, #8fe6ff);
+        transform: translate3d(-120%, 0, 0);
+        will-change: transform;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1 class="brand">EMU<span>BRO</span></h1>
+      <p class="sub">Loading library, themes, and tools...</p>
+      <div class="bar"><i id="splash-progress"></i></div>
+    </div>
+    <script>
+      (() => {
+        const bar = document.getElementById("splash-progress");
+        if (!bar) return;
+        let pos = -120;
+        const tick = () => {
+          pos += 2.4;
+          if (pos > 320) pos = -120;
+          bar.style.transform = "translate3d(" + pos + "%,0,0)";
+          window.requestAnimationFrame(tick);
+        };
+        window.requestAnimationFrame(tick);
+      })();
+    </script>
+  </body>
+</html>`;
+
+  splashWindow.once("ready-to-show", () => {
+    splashShownAt = Date.now();
+    if (splashWindow && !splashWindow.isDestroyed()) splashWindow.show();
+  });
+  splashWindow.on("closed", () => {
+    splashWindow = null;
+  });
+
+  splashWindow.loadURL(`data:text/html;charset=UTF-8,${encodeURIComponent(splashHtml)}`);
+  return splashWindow;
+}
+
+function closeSplashWindow(options = {}) {
+  const force = !!options.force;
+  if (!splashWindow || splashWindow.isDestroyed()) return;
+
+  const closeNow = () => {
+    const target = splashWindow;
+    splashWindow = null;
+    if (!target || target.isDestroyed()) return;
+    try {
+      target.destroy();
+    } catch (_e) {}
+  };
+
+  if (force) {
+    closeNow();
+    return;
+  }
+
+  const minVisibleMs = 500;
+  const elapsed = Date.now() - splashShownAt;
+  if (elapsed >= minVisibleMs) {
+    closeNow();
+    return;
+  }
+
+  setTimeout(closeNow, Math.max(0, minVisibleMs - elapsed));
+}
+
+function normalizeFolderPathList(values) {
+  const out = [];
+  const seen = new Set();
+  for (const raw of Array.isArray(values) ? values : []) {
+    const p = String(raw || "").trim();
+    if (!p) continue;
+    const normalized = path.normalize(p);
+    const key = normalized.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(normalized);
+  }
+  return out;
+}
+
+function getDefaultLibraryPathSettings() {
+  const base = path.join(app.getPath("userData"), "library-storage");
+  return {
+    scanFolders: [],
+    gameFolders: [path.join(base, "games")],
+    emulatorFolders: [path.join(base, "emulators")]
+  };
+}
+
+function getLibraryPathSettings() {
+  const defaults = getDefaultLibraryPathSettings();
+  const raw = store.get(LIBRARY_PATH_SETTINGS_KEY, {});
+  return {
+    scanFolders: normalizeFolderPathList(raw?.scanFolders || defaults.scanFolders),
+    gameFolders: normalizeFolderPathList(raw?.gameFolders || defaults.gameFolders),
+    emulatorFolders: normalizeFolderPathList(raw?.emulatorFolders || defaults.emulatorFolders)
+  };
+}
+
+function setLibraryPathSettings(nextValue) {
+  const settings = {
+    scanFolders: normalizeFolderPathList(nextValue?.scanFolders),
+    gameFolders: normalizeFolderPathList(nextValue?.gameFolders),
+    emulatorFolders: normalizeFolderPathList(nextValue?.emulatorFolders)
+  };
+  store.set(LIBRARY_PATH_SETTINGS_KEY, settings);
+  return settings;
+}
+
+function normalizeManagedFolderKind(rawKind) {
+  const value = String(rawKind || "").trim();
+  if (value === "gameFolders" || value === "emulatorFolders") return value;
+  return "";
+}
 
 function getDb() {
   if (_db) return _db;
@@ -37,6 +238,7 @@ function getDb() {
       name TEXT NOT NULL,
       platform TEXT,
       platformShortName TEXT NOT NULL,
+      emulatorOverridePath TEXT,
       filePath TEXT NOT NULL UNIQUE,
       code TEXT,
       image TEXT,
@@ -58,6 +260,16 @@ function getDb() {
     CREATE INDEX IF NOT EXISTS idx_emus_platform ON emulators(platformShortName);
   `);
 
+  try {
+    const gameColumns = _db.prepare("PRAGMA table_info(games)").all();
+    const hasOverrideColumn = gameColumns.some((col) => String(col?.name || "").trim().toLowerCase() === "emulatoroverridepath");
+    if (!hasOverrideColumn) {
+      _db.exec("ALTER TABLE games ADD COLUMN emulatorOverridePath TEXT");
+    }
+  } catch (error) {
+    log.error("Failed to migrate games table:", error);
+  }
+
   return _db;
 }
 
@@ -69,6 +281,72 @@ function dbLoadGames() {
 function dbLoadEmulators() {
   const db = getDb();
   return db.prepare("SELECT * FROM emulators ORDER BY name COLLATE NOCASE").all();
+}
+
+function dbGetGameById(id) {
+  const db = getDb();
+  return db.prepare("SELECT * FROM games WHERE id = ?").get(id);
+}
+
+function dbDeleteGameById(id) {
+  const db = getDb();
+  const result = db.prepare("DELETE FROM games WHERE id = ?").run(id);
+  return result.changes > 0;
+}
+
+function dbUpdateGameFilePath(gameId, newFilePath) {
+  const db = getDb();
+  const cleanPath = String(newFilePath || "").trim();
+  if (!cleanPath) return null;
+
+  const result = db.prepare(`
+    UPDATE games
+    SET filePath = ?, updatedAt = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).run(cleanPath, gameId);
+
+  if (!result.changes) return null;
+  return dbGetGameById(gameId);
+}
+
+function dbUpdateGameMetadata(gameId, patch = {}) {
+  const db = getDb();
+  const targetId = Number(gameId);
+  if (!targetId) return null;
+
+  const sets = [];
+  const params = { id: targetId };
+
+  if (Object.prototype.hasOwnProperty.call(patch, "platformShortName")) {
+    const normalized = normalizePlatform(patch.platformShortName);
+    if (!normalized) return null;
+    sets.push("platformShortName = @platformShortName");
+    params.platformShortName = normalized;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, "platform")) {
+    const value = String(patch.platform || "").trim();
+    sets.push("platform = @platform");
+    params.platform = value || null;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, "emulatorOverridePath")) {
+    const value = String(patch.emulatorOverridePath || "").trim();
+    sets.push("emulatorOverridePath = @emulatorOverridePath");
+    params.emulatorOverridePath = value || null;
+  }
+
+  if (sets.length === 0) return dbGetGameById(targetId);
+
+  const sql = `
+    UPDATE games
+    SET ${sets.join(", ")},
+        updatedAt = CURRENT_TIMESTAMP
+    WHERE id = @id
+  `;
+  const result = db.prepare(sql).run(params);
+  if (!result.changes) return null;
+  return dbGetGameById(targetId);
 }
 
 function dbUpsertGame(game) {
@@ -136,6 +414,382 @@ function refreshLibraryFromDb() {
   emulators = dbLoadEmulators();
 }
 
+function getPathRootInfo(inputPath) {
+  const raw = String(inputPath || "").trim();
+  const rootPath = raw ? String(path.parse(raw).root || "").trim() : "";
+  const lowerRoot = rootPath.toLowerCase();
+  const isDriveRoot = /^[a-z]:\\?$/i.test(rootPath);
+  const isNetworkRoot = /^\\\\[^\\]+\\[^\\]+\\?$/i.test(rootPath);
+
+  let rootExists = false;
+  if (rootPath) {
+    try {
+      rootExists = fsSync.existsSync(rootPath);
+    } catch (_e) {
+      rootExists = false;
+    }
+  }
+
+  return {
+    path: raw,
+    rootPath,
+    rootExists,
+    isDriveRoot,
+    isNetworkRoot,
+    rootKey: lowerRoot
+  };
+}
+
+function getWindowsDriveTypeCode(rootPath) {
+  const root = String(rootPath || "").trim();
+  if (!/^[a-z]:\\?$/i.test(root)) return null;
+
+  const drive = root.slice(0, 2).toUpperCase();
+  const cacheKey = drive;
+  if (_driveTypeCache.has(cacheKey)) return _driveTypeCache.get(cacheKey);
+
+  try {
+    const escaped = drive.replace(/'/g, "''");
+    const ps = spawnSync(
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-NonInteractive",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        `(Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='${escaped}'" | Select-Object -ExpandProperty DriveType)`
+      ],
+      { encoding: "utf8", timeout: 3000 }
+    );
+
+    if (!ps.error && ps.status === 0) {
+      const value = Number.parseInt(String(ps.stdout || "").trim(), 10);
+      if (Number.isFinite(value)) {
+        _driveTypeCache.set(cacheKey, value);
+        return value;
+      }
+    }
+  } catch (_e) {}
+
+  _driveTypeCache.set(cacheKey, null);
+  return null;
+}
+
+function classifyPathMedia(inputPath) {
+  const rootInfo = getPathRootInfo(inputPath);
+  let mediaCategory = "unknown";
+  let mediaLabel = "Unknown";
+
+  if (!rootInfo.rootPath) {
+    mediaCategory = "unknown";
+    mediaLabel = "Unknown";
+  } else if (rootInfo.isNetworkRoot) {
+    mediaCategory = "network";
+    mediaLabel = "Network Share";
+  } else if (rootInfo.isDriveRoot && process.platform === "win32") {
+    const driveType = getWindowsDriveTypeCode(rootInfo.rootPath);
+    if (driveType === 2) {
+      mediaCategory = "removable";
+      mediaLabel = "USB / Removable";
+    } else if (driveType === 3) {
+      mediaCategory = "fixed";
+      mediaLabel = "Fixed Disk";
+    } else if (driveType === 4) {
+      mediaCategory = "network";
+      mediaLabel = "Mapped Network Drive";
+    } else if (driveType === 5) {
+      mediaCategory = "cdrom";
+      mediaLabel = "CD / DVD";
+    } else if (driveType === 6) {
+      mediaCategory = "ramdisk";
+      mediaLabel = "RAM Disk";
+    } else {
+      mediaCategory = "drive";
+      mediaLabel = "Drive";
+    }
+  } else if (rootInfo.rootExists) {
+    mediaCategory = "fixed";
+    mediaLabel = "Filesystem";
+  }
+
+  return {
+    path: String(inputPath || "").trim(),
+    rootPath: rootInfo.rootPath,
+    rootExists: !!rootInfo.rootExists,
+    mediaCategory,
+    mediaLabel
+  };
+}
+
+function ensureUniqueDestinationPath(destPath) {
+  const initial = String(destPath || "").trim();
+  if (!initial) return initial;
+  if (!fsSync.existsSync(initial)) return initial;
+
+  const dir = path.dirname(initial);
+  const ext = path.extname(initial);
+  const base = path.basename(initial, ext);
+
+  let index = 1;
+  while (index < 5000) {
+    const candidate = path.join(dir, `${base} (${index})${ext}`);
+    if (!fsSync.existsSync(candidate)) return candidate;
+    index += 1;
+  }
+  return path.join(dir, `${base} (${Date.now()})${ext}`);
+}
+
+function movePathSafe(srcPath, destPath) {
+  try {
+    fsSync.renameSync(srcPath, destPath);
+    return;
+  } catch (error) {
+    if (!error || error.code !== "EXDEV") throw error;
+  }
+
+  const srcStat = fsSync.lstatSync(srcPath);
+  if (srcStat.isDirectory()) {
+    fsSync.cpSync(srcPath, destPath, { recursive: true, force: false, errorOnExist: true });
+    fsSync.rmSync(srcPath, { recursive: true, force: true });
+    return;
+  }
+
+  fsSync.copyFileSync(srcPath, destPath, fsSync.constants.COPYFILE_EXCL);
+  fsSync.unlinkSync(srcPath);
+}
+
+function normalizePathForCompare(inputPath) {
+  const normalized = path.normalize(String(inputPath || "").trim());
+  if (!normalized) return "";
+  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
+}
+
+function pathsEqual(a, b) {
+  const left = normalizePathForCompare(a);
+  const right = normalizePathForCompare(b);
+  return !!left && !!right && left === right;
+}
+
+function isPathInside(candidatePath, parentPath) {
+  const candidate = normalizePathForCompare(candidatePath);
+  const parent = normalizePathForCompare(parentPath);
+  if (!candidate || !parent) return false;
+  if (candidate === parent) return false;
+  const parentWithSep = parent.endsWith(path.sep) ? parent : `${parent}${path.sep}`;
+  return candidate.startsWith(parentWithSep);
+}
+
+function isExistingDirectory(inputPath) {
+  try {
+    return fsSync.existsSync(inputPath) && fsSync.lstatSync(inputPath).isDirectory();
+  } catch (_e) {
+    return false;
+  }
+}
+
+function removePathSafe(targetPath) {
+  try {
+    if (!fsSync.existsSync(targetPath)) return;
+    const stat = fsSync.lstatSync(targetPath);
+    if (stat.isDirectory()) {
+      fsSync.rmSync(targetPath, { recursive: true, force: true });
+    } else {
+      fsSync.unlinkSync(targetPath);
+    }
+  } catch (_e) {}
+}
+
+function tryRemoveDirIfEmpty(dirPath) {
+  try {
+    if (!isExistingDirectory(dirPath)) return false;
+    const entries = fsSync.readdirSync(dirPath);
+    if (entries.length > 0) return false;
+    fsSync.rmdirSync(dirPath);
+    return true;
+  } catch (_e) {
+    return false;
+  }
+}
+
+function normalizeConflictPolicy(rawPolicy) {
+  const value = String(rawPolicy || "").trim().toLowerCase();
+  if (value === "keep_both" || value === "skip_existing" || value === "replace_existing" || value === "cancel") {
+    return value;
+  }
+  return "";
+}
+
+async function promptConflictPolicy(conflictPath, operationLabel) {
+  if (!mainWindow) return "keep_both";
+  const result = await dialog.showMessageBox(mainWindow, {
+    type: "question",
+    buttons: ["Keep Both (Recommended)", "Skip Existing", "Replace Existing", "Cancel"],
+    defaultId: 0,
+    cancelId: 3,
+    noLink: true,
+    title: operationLabel || "Conflict detected",
+    message: "Existing files/folders were found in the destination.",
+    detail: `Conflict item:\n${String(conflictPath || "")}\n\nHow should integration handle conflicts for the remaining items?`
+  });
+  if (result.response === 0) return "keep_both";
+  if (result.response === 1) return "skip_existing";
+  if (result.response === 2) return "replace_existing";
+  return "cancel";
+}
+
+async function integratePathIntoDirectory(sourcePath, targetDir, ctx) {
+  const src = String(sourcePath || "").trim();
+  const destRoot = String(targetDir || "").trim();
+  if (!src || !destRoot) return false;
+  if (!fsSync.existsSync(src)) return true;
+
+  fsSync.mkdirSync(destRoot, { recursive: true });
+  const destinationPath = path.join(destRoot, path.basename(src));
+  const destinationExists = fsSync.existsSync(destinationPath);
+
+  if (!destinationExists) {
+    movePathSafe(src, destinationPath);
+    ctx.stats.moved += 1;
+    return true;
+  }
+
+  ctx.stats.conflicts += 1;
+  if (!ctx.policy) {
+    ctx.policy = await promptConflictPolicy(destinationPath, ctx.operationLabel);
+  }
+  const policy = normalizeConflictPolicy(ctx.policy) || "cancel";
+  if (policy === "cancel") {
+    ctx.cancelled = true;
+    return false;
+  }
+
+  const sourceIsDir = isExistingDirectory(src);
+  const destinationIsDir = isExistingDirectory(destinationPath);
+
+  if (sourceIsDir && destinationIsDir) {
+    if (policy === "replace_existing") {
+      removePathSafe(destinationPath);
+      movePathSafe(src, destinationPath);
+      ctx.stats.replaced += 1;
+      return true;
+    }
+    if (policy === "skip_existing") {
+      if (ctx.discardSkippedSources) removePathSafe(src);
+      ctx.stats.skipped += 1;
+      return true;
+    }
+    const merged = await integrateDirectoryContents(src, destinationPath, ctx);
+    if (!merged) return false;
+    tryRemoveDirIfEmpty(src);
+    return true;
+  }
+
+  if (policy === "replace_existing") {
+    removePathSafe(destinationPath);
+    movePathSafe(src, destinationPath);
+    ctx.stats.replaced += 1;
+    return true;
+  }
+
+  if (policy === "skip_existing") {
+    if (ctx.discardSkippedSources) removePathSafe(src);
+    ctx.stats.skipped += 1;
+    return true;
+  }
+
+  const uniqueDest = ensureUniqueDestinationPath(destinationPath);
+  movePathSafe(src, uniqueDest);
+  ctx.stats.keptBoth += 1;
+  return true;
+}
+
+async function integrateDirectoryContents(sourceDir, targetDir, ctx) {
+  const source = String(sourceDir || "").trim();
+  const target = String(targetDir || "").trim();
+  if (!source || !target) return false;
+  if (!isExistingDirectory(source)) return true;
+
+  fsSync.mkdirSync(target, { recursive: true });
+  const entries = fsSync.readdirSync(source, { withFileTypes: true });
+  for (const entry of entries) {
+    const srcPath = path.join(source, entry.name);
+    const ok = await integratePathIntoDirectory(srcPath, target, ctx);
+    if (!ok || ctx.cancelled) return false;
+  }
+  return true;
+}
+
+function buildDirectoryIntegrationPreview(sourceDir, targetDir, maxItems = 200000) {
+  const sourceRoot = String(sourceDir || "").trim();
+  const targetRoot = String(targetDir || "").trim();
+  const stats = {
+    totalItems: 0,
+    totalFiles: 0,
+    totalDirs: 0,
+    newItems: 0,
+    conflicts: 0,
+    fileConflicts: 0,
+    directoryConflicts: 0,
+    typeConflicts: 0,
+    mergeCandidates: 0,
+    truncated: false
+  };
+
+  if (!isExistingDirectory(sourceRoot)) return stats;
+
+  const stack = [sourceRoot];
+  const normalizedSource = path.normalize(sourceRoot);
+
+  while (stack.length > 0) {
+    const current = stack.pop();
+    let entries = [];
+    try {
+      entries = fsSync.readdirSync(current, { withFileTypes: true });
+    } catch (_e) {
+      continue;
+    }
+
+    for (const entry of entries) {
+      const sourcePath = path.join(current, entry.name);
+      const sourceIsDir = entry.isDirectory();
+      const relativePath = path.relative(normalizedSource, sourcePath);
+      const destinationPath = path.join(targetRoot, relativePath);
+
+      stats.totalItems += 1;
+      if (sourceIsDir) stats.totalDirs += 1;
+      else stats.totalFiles += 1;
+
+      const destinationExists = fsSync.existsSync(destinationPath);
+      if (!destinationExists) {
+        stats.newItems += 1;
+      } else {
+        const destinationIsDir = isExistingDirectory(destinationPath);
+        stats.conflicts += 1;
+        if (sourceIsDir && destinationIsDir) {
+          stats.directoryConflicts += 1;
+          stats.mergeCandidates += 1;
+        } else if (!sourceIsDir && !destinationIsDir) {
+          stats.fileConflicts += 1;
+        } else {
+          stats.typeConflicts += 1;
+        }
+      }
+
+      if (sourceIsDir) {
+        stack.push(sourcePath);
+      }
+
+      if (stats.totalItems >= maxItems) {
+        stats.truncated = true;
+        return stats;
+      }
+    }
+  }
+
+  return stats;
+}
+
 function getArchiveKind(p) {
   const lower = String(p || "").toLowerCase();
   if (lower.endsWith(".zip")) return "zip";
@@ -192,29 +846,42 @@ function findSevenZipExecutable() {
 }
 
 async function extractZipToDir(zipPath, destDir) {
-  if (process.platform !== "win32") {
-    throw new Error("ZIP extraction is only implemented on Windows for now");
-  }
-
   fsSync.mkdirSync(destDir, { recursive: true });
 
-  // Use PowerShell Expand-Archive (available on Windows).
-  const ps = spawnSync(
-    "powershell.exe",
-    [
-      "-NoProfile",
-      "-NonInteractive",
-      "-ExecutionPolicy",
-      "Bypass",
-      "-Command",
-      `Expand-Archive -LiteralPath '${zipPath.replace(/'/g, "''")}' -DestinationPath '${destDir.replace(/'/g, "''")}' -Force`
-    ],
-    { encoding: "utf8" }
-  );
+  if (process.platform === "win32") {
+    // Use PowerShell Expand-Archive (available on Windows).
+    const ps = spawnSync(
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-NonInteractive",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        `Expand-Archive -LiteralPath '${zipPath.replace(/'/g, "''")}' -DestinationPath '${destDir.replace(/'/g, "''")}' -Force`
+      ],
+      { encoding: "utf8" }
+    );
 
-  if (ps.error) throw ps.error;
-  if (ps.status !== 0) {
-    throw new Error((ps.stderr || ps.stdout || "").trim() || `Expand-Archive failed (${ps.status})`);
+    if (ps.error) throw ps.error;
+    if (ps.status !== 0) {
+      throw new Error((ps.stderr || ps.stdout || "").trim() || `Expand-Archive failed (${ps.status})`);
+    }
+    return;
+  }
+
+  // Linux/macOS fallback: try unzip first, then tar (bsdtar often supports zip).
+  const unzip = spawnSync("unzip", ["-o", zipPath, "-d", destDir], { encoding: "utf8", shell: false });
+  if (!unzip.error && unzip.status === 0) return;
+
+  const tarFallback = spawnSync("tar", ["-xf", zipPath, "-C", destDir], { encoding: "utf8", shell: false });
+  if (tarFallback.error) throw tarFallback.error;
+  if (tarFallback.status !== 0) {
+    const details = [
+      (unzip.stderr || unzip.stdout || "").trim(),
+      (tarFallback.stderr || tarFallback.stdout || "").trim()
+    ].filter(Boolean).join(" | ");
+    throw new Error(details || "ZIP extraction failed");
   }
 }
 
@@ -481,27 +1148,192 @@ function getShortcutTargetAndArgs(url) {
   return { target: process.execPath, args: `${quoteWinArg(url)}` };
 }
 
-function launchGameObject(game) {
-  const gamePath = game?.filePath;
-  const emuPath = emulators.find((emu) => emu.platformShortName === game.platformShortName)?.filePath;
+function findFileByNameInTree(rootDir, targetFileName, options = {}) {
+  const root = String(rootDir || "").trim();
+  const target = String(targetFileName || "").trim().toLowerCase();
+  if (!root || !target) return "";
 
-  if (!emuPath) {
-    log.error(`No emulator found for platform ${game.platformShortName}`);
-    return { success: false, message: "Emulator not found for this game" };
+  const maxDepth = Number.isFinite(options.maxDepth) ? Math.max(0, Math.floor(options.maxDepth)) : 6;
+  const maxVisitedDirs = Number.isFinite(options.maxVisitedDirs) ? Math.max(100, Math.floor(options.maxVisitedDirs)) : 5000;
+  const queue = [{ dir: root, depth: 0 }];
+  let visitedDirs = 0;
+
+  while (queue.length > 0) {
+    const next = queue.shift();
+    if (!next) break;
+    const { dir, depth } = next;
+    visitedDirs += 1;
+    if (visitedDirs > maxVisitedDirs) break;
+
+    let entries = [];
+    try {
+      entries = fsSync.readdirSync(dir, { withFileTypes: true });
+    } catch (_e) {
+      continue;
+    }
+
+    for (const entry of entries) {
+      const entryName = String(entry?.name || "");
+      if (!entryName) continue;
+      const fullPath = path.join(dir, entryName);
+
+      if (entry.isFile()) {
+        if (entryName.toLowerCase() === target) return fullPath;
+        continue;
+      }
+
+      if (!entry.isDirectory()) continue;
+      if (entry.isSymbolicLink && entry.isSymbolicLink()) continue;
+      if (depth >= maxDepth) continue;
+
+      queue.push({ dir: fullPath, depth: depth + 1 });
+    }
   }
-  if (!fsSync.existsSync(emuPath)) {
-    log.error(`Emulator executable not found at path: ${emuPath}`);
-    return { success: false, message: "Emulator executable not found" };
+
+  return "";
+}
+
+function tryRelinkGameInParent(game) {
+  const gameId = Number(game?.id);
+  const originalPath = String(game?.filePath || "").trim();
+  const parentPath = originalPath ? path.dirname(originalPath) : "";
+  const fileName = originalPath ? path.basename(originalPath) : "";
+
+  if (!gameId || !originalPath || !parentPath || !fileName) {
+    return { found: false, parentExists: false, parentPath, missingPath: originalPath };
   }
+
+  let parentExists = false;
+  try {
+    parentExists = fsSync.existsSync(parentPath) && fsSync.statSync(parentPath).isDirectory();
+  } catch (_e) {
+    parentExists = false;
+  }
+
+  if (!parentExists) {
+    return { found: false, parentExists: false, parentPath, missingPath: originalPath };
+  }
+
+  const resolvedPath = findFileByNameInTree(parentPath, fileName, { maxDepth: 2, maxVisitedDirs: 1500 });
+  if (!resolvedPath) {
+    return { found: false, parentExists: true, parentPath, missingPath: originalPath };
+  }
+
+  try {
+    const updated = dbUpdateGameFilePath(gameId, resolvedPath);
+    if (!updated) {
+      return { found: false, parentExists: true, parentPath, missingPath: originalPath };
+    }
+    refreshLibraryFromDb();
+    return {
+      found: true,
+      parentExists: true,
+      parentPath,
+      missingPath: originalPath,
+      newPath: resolvedPath,
+      game: updated
+    };
+  } catch (error) {
+    log.error("Failed to relink missing game in parent folder:", error);
+    return { found: false, parentExists: true, parentPath, missingPath: originalPath, error: error.message };
+  }
+}
+
+function launchGameObject(game) {
+  const platformShortName = String(game?.platformShortName || "").trim().toLowerCase();
+  let gameRow = game;
+  let gamePath = String(game?.filePath || "").trim();
+
   if (!gamePath || !fsSync.existsSync(gamePath)) {
-    log.error(`Game file not found at path: ${gamePath}`);
-    return { success: false, message: "Game file not found" };
+    const mediaInfo = classifyPathMedia(gamePath);
+    if (mediaInfo.rootPath && !mediaInfo.rootExists) {
+      log.warn(`Game root path is unavailable for "${game?.name}": ${mediaInfo.rootPath}`);
+      return {
+        success: false,
+        code: "GAME_FILE_MISSING",
+        message: "Game file not found",
+        gameId: game?.id ?? null,
+        gameName: game?.name || "Unknown Game",
+        missingPath: gamePath || "",
+        parentPath: gamePath ? path.dirname(gamePath) : "",
+        parentExists: false,
+        rootPath: mediaInfo.rootPath,
+        rootExists: false,
+        sourceMedia: mediaInfo.mediaCategory
+      };
+    }
+
+    const relink = tryRelinkGameInParent(gameRow);
+    if (relink.found && relink.newPath && fsSync.existsSync(relink.newPath)) {
+      gamePath = relink.newPath;
+      gameRow = relink.game || gameRow;
+      log.info(`Auto-relocated missing game "${gameRow?.name || game?.name}" to ${gamePath}`);
+    } else {
+      log.error(`Game file not found at path: ${gamePath}`);
+      return {
+        success: false,
+        code: "GAME_FILE_MISSING",
+        message: "Game file not found",
+        gameId: game?.id ?? null,
+        gameName: game?.name || "Unknown Game",
+        missingPath: gamePath || "",
+        parentPath: relink?.parentPath || (gamePath ? path.dirname(gamePath) : ""),
+        parentExists: !!relink?.parentExists,
+        rootPath: mediaInfo.rootPath,
+        rootExists: mediaInfo.rootExists,
+        sourceMedia: mediaInfo.mediaCategory
+      };
+    }
+  }
+
+  const isWindowsExeGame = process.platform === "win32" && /\.exe$/i.test(gamePath);
+  let launchTarget = "";
+  let launchArgs = [];
+  let launchCwd = "";
+  let launchMode = "";
+
+  if (isWindowsExeGame) {
+    const gameDir = path.dirname(gamePath);
+    const cmdPath = String(process.env.ComSpec || "cmd.exe").trim() || "cmd.exe";
+    launchTarget = cmdPath;
+    launchArgs = ["/d", "/s", "/c", "start", "", "/d", gameDir, "/wait", gamePath];
+    launchCwd = gameDir;
+    launchMode = "cmd";
+  } else {
+    const overridePath = String(gameRow?.emulatorOverridePath || game?.emulatorOverridePath || "").trim();
+    let emuPath = "";
+
+    if (overridePath && fsSync.existsSync(overridePath)) {
+      emuPath = overridePath;
+    } else {
+      if (overridePath) {
+        log.warn(`Game "${gameRow?.name || game?.name}" has an emulator override path that is missing: ${overridePath}`);
+      }
+      emuPath = emulators.find((emu) => String(emu.platformShortName || "").trim().toLowerCase() === platformShortName)?.filePath;
+    }
+
+    if (!emuPath) {
+      log.error(`No emulator found for platform ${game.platformShortName}`);
+      return { success: false, message: "Emulator not found for this game" };
+    }
+    if (!fsSync.existsSync(emuPath)) {
+      log.error(`Emulator executable not found at path: ${emuPath}`);
+      return { success: false, message: "Emulator executable not found" };
+    }
+
+    launchTarget = emuPath;
+    launchArgs = [gamePath];
+    launchCwd = path.dirname(emuPath);
+    launchMode = overridePath && overridePath === emuPath ? "emulator-override" : "emulator";
   }
 
   const { spawn } = require("child_process");
   try {
-    const child = spawn(emuPath, [gamePath], { stdio: "ignore" });
-    child.on("error", (e) => log.error(`Error launching game ${game.name}:`, e));
+    const child = spawn(launchTarget, launchArgs, {
+      stdio: "ignore",
+      cwd: launchCwd || undefined
+    });
+    child.on("error", (e) => log.error(`Error launching game ${gameRow?.name || game?.name}:`, e));
     child.on("exit", () => {
       if (mainWindow) {
         log.info("restore main window from minimized state after game stopped");
@@ -514,9 +1346,14 @@ function launchGameObject(game) {
       mainWindow.minimize();
     }
 
-    return { success: true, message: "Game launched successfully" };
+    return {
+      success: true,
+      message: "Game launched successfully",
+      resolvedPath: gamePath !== String(game?.filePath || "").trim() ? gamePath : null,
+      launchMode
+    };
   } catch (e) {
-    log.error(`Error launching game ${game.name}:`, e);
+    log.error(`Error launching game ${gameRow?.name || game?.name}:`, e);
     if (mainWindow) mainWindow.restore();
     return { success: false, message: "Failed to execute launch command" };
   }
@@ -525,13 +1362,20 @@ function launchGameObject(game) {
 // Create the main window
 function createWindow() {
   const isWin = process.platform === "win32";
+  let didFinishLoad = false;
+  let isReadyToShow = false;
+  let isRevealed = false;
+  mainWindowRendererReady = false;
+  requestRevealMainWindow = null;
 
   mainWindow = new BrowserWindow({
+    show: false,
     width: 1200,
     height: 800,
     minWidth: 1000,
     minHeight: 700,
     icon: path.join(__dirname, "icon.png"),
+    backgroundColor: "#0b1220",
     // Custom chrome on Windows so we can style the top bar + show glow inside the app.
       ...(isWin
         ? {
@@ -539,7 +1383,9 @@ function createWindow() {
             thickFrame: true,
             autoHideMenuBar: true,
             // Windows 11: request rounded corners for frameless windows.
-            roundedCorners: true
+            roundedCorners: true,
+            // Ask DWM for a blurred/acrylic backdrop behind the frameless window chrome.
+            backgroundMaterial: "acrylic"
           }
         : {}),
     webPreferences: {
@@ -558,15 +1404,45 @@ function createWindow() {
     mainWindow.webContents.send("window-moved", { x, y }, { screenGoalX, screenGoalY });
   });
 
+  const revealMainWindow = () => {
+    if (isRevealed) return;
+    if (!didFinishLoad || !isReadyToShow || !mainWindowRendererReady) return;
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+
+    isRevealed = true;
+    closeSplashWindow();
+    mainWindow.show();
+    mainWindow.focus();
+  };
+  requestRevealMainWindow = revealMainWindow;
+
   // Load the main HTML file
   mainWindow.loadFile("index.html");
 
+  mainWindow.once("ready-to-show", () => {
+    isReadyToShow = true;
+    revealMainWindow();
+  });
+
   // If we received a deep link before the renderer was ready, flush it now.
   mainWindow.webContents.on("did-finish-load", () => {
+    didFinishLoad = true;
     flushPendingDeepLinks();
     try {
       mainWindow.webContents.send("window:maximized-changed", mainWindow.isMaximized());
     } catch (_e) {}
+    revealMainWindow();
+  });
+
+  mainWindow.webContents.on("did-fail-load", () => {
+    closeSplashWindow({ force: true });
+    if (!mainWindow.isVisible()) {
+      mainWindow.show();
+    }
+  });
+  mainWindow.on("closed", () => {
+    requestRevealMainWindow = null;
+    mainWindowRendererReady = false;
   });
 
   // Keep renderer informed so it can adjust corner radii / chrome.
@@ -617,6 +1493,14 @@ ipcMain.handle("window:is-maximized", () => {
   return mainWindow.isMaximized();
 });
 
+ipcMain.handle("app:renderer-ready", (event) => {
+  if (!mainWindow || mainWindow.isDestroyed()) return { success: false };
+  if (event.sender !== mainWindow.webContents) return { success: false };
+  mainWindowRendererReady = true;
+  if (typeof requestRevealMainWindow === "function") requestRevealMainWindow();
+  return { success: true };
+});
+
 // --------------------------------------------------
 // Locales / Translations (renderer-safe access via preload)
 // --------------------------------------------------
@@ -644,6 +1528,12 @@ function getUserLocalesDir() {
   return dir;
 }
 
+function parseLocaleJson(content) {
+  const raw = String(content ?? '');
+  const sanitized = raw.replace(/^\uFEFF/, '').replace(/^\u00EF\u00BB\u00BF/, '');
+  return JSON.parse(sanitized);
+}
+
 async function readLocaleJson(filename) {
   const f = normalizeLocaleFilename(filename);
   const userPath = path.join(getUserLocalesDir(), f);
@@ -651,7 +1541,7 @@ async function readLocaleJson(filename) {
 
   const p = fsSync.existsSync(userPath) ? userPath : appPath;
   const content = await fs.readFile(p, 'utf8');
-  return JSON.parse(content);
+  return parseLocaleJson(content);
 }
 
 async function listLocaleFilePaths() {
@@ -686,7 +1576,7 @@ ipcMain.handle('get-all-translations', async () => {
   for (const f of files) {
     try {
       const content = await fs.readFile(f.fullPath, 'utf8');
-      const json = JSON.parse(content);
+      const json = parseLocaleJson(content);
       if (json && typeof json === 'object') Object.assign(all, json);
     } catch (e) {
       log.error(`Failed to load locale '${f.filename}':`, e);
@@ -703,7 +1593,7 @@ ipcMain.handle('locales:list', async () => {
   for (const f of files) {
     try {
       const content = await fs.readFile(f.fullPath, 'utf8');
-      const json = JSON.parse(content);
+      const json = parseLocaleJson(content);
       const code = json && typeof json === 'object' ? Object.keys(json)[0] : null;
       if (!code) continue;
       languages.push({ filename: f.filename, code, data: json });
@@ -855,8 +1745,18 @@ app.on("open-url", (event, url) => {
   handleDeepLink(url)
 })
 
-// Initialize the application
-app.whenReady().then(() => {
+app.on("before-quit", () => {
+  closeSplashWindow({ force: true });
+});
+
+app.on("window-all-closed", () => {
+  closeSplashWindow({ force: true });
+});
+
+function startApplicationBootstrap() {
+  if (appBootstrapStarted) return;
+  appBootstrapStarted = true;
+
   // Load persisted library before the renderer requests it.
   try {
     refreshLibraryFromDb();
@@ -866,6 +1766,16 @@ app.whenReady().then(() => {
 
   createWindow();
   createMenu();
+
+  // Fallback to avoid getting stuck on splash if renderer hangs.
+  setTimeout(() => {
+    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+      closeSplashWindow({ force: true });
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  }, 15000);
+
   try {
     // Hide menu bar by default on Windows; Alt will reveal it because autoHideMenuBar is enabled.
     if (process.platform === "win32" && mainWindow) {
@@ -879,8 +1789,27 @@ app.whenReady().then(() => {
   
   // Handle window close
   mainWindow.on("closed", () => {
+    closeSplashWindow({ force: true });
     app.quit();
   });
+}
+
+// Initialize the application
+app.whenReady().then(() => {
+  const splash = createSplashWindow();
+  const startSoon = () => setTimeout(() => startApplicationBootstrap(), 120);
+
+  if (splash && !splash.isDestroyed()) {
+    if (splash.isVisible()) startSoon();
+    else splash.once("show", startSoon);
+  } else {
+    startSoon();
+  }
+
+  // Safety: never block startup if splash show event is missed.
+  setTimeout(() => {
+    startApplicationBootstrap();
+  }, 1200);
 });
 
 function handleDeepLink(rawUrl) {
@@ -990,6 +1919,302 @@ ipcMain.handle("process-emulator-exe", async (event, filePath) => {
   }
 });
 
+ipcMain.handle("analyze-import-paths", async (_event, paths) => {
+  try {
+    const rows = [];
+    const inputPaths = Array.isArray(paths) ? paths : [];
+    for (const raw of inputPaths) {
+      const p = String(raw || "").trim();
+      if (!p) continue;
+      const info = classifyPathMedia(p);
+      rows.push(info);
+    }
+
+    const requiresDecision = rows.some((row) =>
+      row.mediaCategory === "removable" ||
+      row.mediaCategory === "cdrom" ||
+      row.mediaCategory === "network"
+    );
+
+    return { success: true, paths: rows, requiresDecision };
+  } catch (error) {
+    log.error("analyze-import-paths failed:", error);
+    return { success: false, message: error.message, paths: [], requiresDecision: false };
+  }
+});
+
+ipcMain.handle("stage-import-paths", async (_event, payload = {}) => {
+  try {
+    const mode = String(payload?.mode || "keep").trim().toLowerCase();
+    const targetDir = String(payload?.targetDir || "").trim();
+    const inputPaths = Array.isArray(payload?.paths) ? payload.paths : [];
+
+    if (mode !== "copy" && mode !== "move" && mode !== "keep") {
+      return { success: false, message: "Invalid staging mode" };
+    }
+
+    const cleanPaths = inputPaths
+      .map((p) => String(p || "").trim())
+      .filter(Boolean);
+
+    if (mode === "keep") {
+      return { success: true, mode, paths: cleanPaths, skipped: [] };
+    }
+
+    if (!targetDir) {
+      return { success: false, message: "Missing destination folder" };
+    }
+
+    fsSync.mkdirSync(targetDir, { recursive: true });
+
+    const staged = [];
+    const skipped = [];
+
+    for (const src of cleanPaths) {
+      try {
+        if (!fsSync.existsSync(src)) {
+          skipped.push({ path: src, reason: "not_found" });
+          continue;
+        }
+
+        const baseName = path.basename(src);
+        const requestedDest = path.join(targetDir, baseName);
+        const finalDest = ensureUniqueDestinationPath(requestedDest);
+
+        if (mode === "copy") {
+          const stat = fsSync.lstatSync(src);
+          if (stat.isDirectory()) {
+            fsSync.cpSync(src, finalDest, { recursive: true, force: false, errorOnExist: true });
+          } else if (stat.isFile()) {
+            fsSync.copyFileSync(src, finalDest, fsSync.constants.COPYFILE_EXCL);
+          } else {
+            skipped.push({ path: src, reason: "unsupported_type" });
+            continue;
+          }
+        } else {
+          movePathSafe(src, finalDest);
+        }
+
+        staged.push(finalDest);
+      } catch (error) {
+        skipped.push({ path: src, reason: "stage_failed", message: error.message });
+      }
+    }
+
+    return { success: true, mode, paths: staged, skipped };
+  } catch (error) {
+    log.error("stage-import-paths failed:", error);
+    return { success: false, message: error.message, paths: [], skipped: [] };
+  }
+});
+
+ipcMain.handle("settings:get-library-paths", async () => {
+  try {
+    return { success: true, settings: getLibraryPathSettings() };
+  } catch (error) {
+    log.error("Failed to read library path settings:", error);
+    return { success: false, message: error.message, settings: getDefaultLibraryPathSettings() };
+  }
+});
+
+ipcMain.handle("settings:set-library-paths", async (_event, payload = {}) => {
+  try {
+    const saved = setLibraryPathSettings(payload);
+    return { success: true, settings: saved };
+  } catch (error) {
+    log.error("Failed to save library path settings:", error);
+    return { success: false, message: error.message };
+  }
+});
+
+ipcMain.handle("settings:preview-relocate-managed-folder", async (_event, payload = {}) => {
+  try {
+    const kind = normalizeManagedFolderKind(payload?.kind);
+    if (!kind) return { success: false, message: "Invalid managed folder type" };
+
+    const sourcePath = path.normalize(String(payload?.sourcePath || "").trim());
+    const targetPath = path.normalize(String(payload?.targetPath || "").trim());
+    if (!sourcePath || !targetPath) {
+      return { success: false, message: "Missing source or destination path" };
+    }
+    if (!isExistingDirectory(sourcePath)) {
+      return { success: false, message: "Source folder does not exist" };
+    }
+    if (pathsEqual(sourcePath, targetPath)) {
+      return {
+        success: true,
+        kind,
+        sourcePath,
+        targetPath,
+        preview: {
+          totalItems: 0,
+          totalFiles: 0,
+          totalDirs: 0,
+          newItems: 0,
+          conflicts: 0,
+          fileConflicts: 0,
+          directoryConflicts: 0,
+          typeConflicts: 0,
+          mergeCandidates: 0,
+          truncated: false
+        }
+      };
+    }
+    if (isPathInside(targetPath, sourcePath)) {
+      return { success: false, message: "Destination folder cannot be inside the source folder." };
+    }
+
+    fsSync.mkdirSync(targetPath, { recursive: true });
+    const preview = buildDirectoryIntegrationPreview(sourcePath, targetPath);
+    return { success: true, kind, sourcePath, targetPath, preview };
+  } catch (error) {
+    log.error("settings:preview-relocate-managed-folder failed:", error);
+    return { success: false, message: error.message };
+  }
+});
+
+ipcMain.handle("settings:confirm-relocate-preview", async (_event, payload = {}) => {
+  try {
+    if (!mainWindow) {
+      return { success: true, proceed: true, policy: "", canceled: false };
+    }
+
+    const sourcePath = String(payload?.sourcePath || "").trim();
+    const targetPath = String(payload?.targetPath || "").trim();
+    const preview = (payload?.preview && typeof payload.preview === "object") ? payload.preview : {};
+    const totalItems = Number(preview.totalItems || 0);
+    const newItems = Number(preview.newItems || 0);
+    const conflicts = Number(preview.conflicts || 0);
+    const fileConflicts = Number(preview.fileConflicts || 0);
+    const directoryConflicts = Number(preview.directoryConflicts || 0);
+    const typeConflicts = Number(preview.typeConflicts || 0);
+    const truncated = !!preview.truncated;
+
+    const detailLines = [
+      `From: ${sourcePath}`,
+      `To: ${targetPath}`,
+      "",
+      `Items scanned: ${totalItems}`,
+      `New destination items: ${newItems}`,
+      `Conflicts: ${conflicts} (files: ${fileConflicts}, folders: ${directoryConflicts}, type mismatch: ${typeConflicts})`,
+      "",
+      `Conflict impact preview:`,
+      `- Keep Both: create up to ${conflicts} duplicate-name copies`,
+      `- Skip Existing: skip up to ${conflicts} source items`,
+      `- Replace Existing: replace up to ${conflicts} destination items`
+    ];
+    if (truncated) {
+      detailLines.push("", "Preview truncated due to very large folder size; actual conflicts may be higher.");
+    }
+
+    const response = await dialog.showMessageBox(mainWindow, {
+      type: "question",
+      title: "Relocate Managed Folder",
+      message: "Review relocation preview and choose conflict strategy.",
+      detail: detailLines.join("\n"),
+      buttons: [
+        "Keep Both (Recommended)",
+        "Skip Existing",
+        "Replace Existing",
+        "Ask Per Conflict",
+        "Cancel"
+      ],
+      defaultId: 0,
+      cancelId: 4,
+      noLink: true
+    });
+
+    if (response.response === 4) {
+      return { success: true, proceed: false, policy: "cancel", canceled: true };
+    }
+    if (response.response === 0) {
+      return { success: true, proceed: true, policy: "keep_both", canceled: false };
+    }
+    if (response.response === 1) {
+      return { success: true, proceed: true, policy: "skip_existing", canceled: false };
+    }
+    if (response.response === 2) {
+      return { success: true, proceed: true, policy: "replace_existing", canceled: false };
+    }
+
+    return { success: true, proceed: true, policy: "", canceled: false };
+  } catch (error) {
+    log.error("settings:confirm-relocate-preview failed:", error);
+    return { success: false, message: error.message };
+  }
+});
+
+ipcMain.handle("settings:relocate-managed-folder", async (_event, payload = {}) => {
+  try {
+    const kind = normalizeManagedFolderKind(payload?.kind);
+    if (!kind) return { success: false, message: "Invalid managed folder type" };
+
+    const sourcePath = path.normalize(String(payload?.sourcePath || "").trim());
+    const targetPath = path.normalize(String(payload?.targetPath || "").trim());
+    if (!sourcePath || !targetPath) {
+      return { success: false, message: "Missing source or destination path" };
+    }
+    if (!isExistingDirectory(sourcePath)) {
+      return { success: false, message: "Source folder does not exist" };
+    }
+    if (pathsEqual(sourcePath, targetPath)) {
+      return { success: true, message: "Source and destination are identical", settings: getLibraryPathSettings(), stats: { moved: 0, replaced: 0, keptBoth: 0, skipped: 0, conflicts: 0 } };
+    }
+    if (isPathInside(targetPath, sourcePath)) {
+      return { success: false, message: "Destination folder cannot be inside the source folder." };
+    }
+
+    fsSync.mkdirSync(targetPath, { recursive: true });
+
+    const ctx = {
+      policy: normalizeConflictPolicy(payload?.conflictPolicy),
+      operationLabel: "Relocate Managed Folder",
+      discardSkippedSources: false,
+      cancelled: false,
+      stats: { moved: 0, replaced: 0, keptBoth: 0, skipped: 0, conflicts: 0 }
+    };
+
+    const merged = await integrateDirectoryContents(sourcePath, targetPath, ctx);
+    if (!merged || ctx.cancelled) {
+      return {
+        success: false,
+        canceled: true,
+        message: "Folder relocation canceled by user.",
+        settings: getLibraryPathSettings(),
+        stats: ctx.stats
+      };
+    }
+
+    tryRemoveDirIfEmpty(sourcePath);
+
+    const current = getLibraryPathSettings();
+    const currentList = Array.isArray(current[kind]) ? current[kind] : [];
+    const replacedList = currentList.map((entryPath) => (
+      pathsEqual(entryPath, sourcePath) ? targetPath : entryPath
+    ));
+    const cleanedList = normalizeFolderPathList(
+      [...replacedList, targetPath].filter((entryPath) => !pathsEqual(entryPath, sourcePath))
+    );
+
+    const saved = setLibraryPathSettings({
+      ...current,
+      [kind]: cleanedList
+    });
+
+    return {
+      success: true,
+      message: "Managed folder relocated successfully.",
+      settings: saved,
+      sourcePath,
+      targetPath,
+      stats: ctx.stats
+    };
+  } catch (error) {
+    log.error("settings:relocate-managed-folder failed:", error);
+    return { success: false, message: error.message };
+  }
+});
+
 // IPC handlers
 ipcMain.handle("get-games", async () => {
   try {
@@ -1003,15 +2228,67 @@ ipcMain.handle("get-game-details", async (event, gameId) => {
   return game || null;
 });
 
+ipcMain.handle("update-game-metadata", async (_event, payload = {}) => {
+  try {
+    const gameId = Number(payload?.gameId);
+    if (!gameId) return { success: false, message: "Missing game ID" };
+
+    const game = dbGetGameById(gameId) || games.find((row) => Number(row.id) === gameId);
+    if (!game) return { success: false, message: "Game not found" };
+
+    const patch = {};
+
+    if (Object.prototype.hasOwnProperty.call(payload, "emulatorOverridePath")) {
+      const nextPath = String(payload?.emulatorOverridePath || "").trim();
+      if (nextPath && !fsSync.existsSync(nextPath)) {
+        return { success: false, message: "Selected emulator path does not exist" };
+      }
+      patch.emulatorOverridePath = nextPath || null;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(payload, "platformShortName")) {
+      const nextPlatformShortName = normalizePlatform(payload?.platformShortName);
+      if (!nextPlatformShortName) {
+        return { success: false, message: "Missing platform short name" };
+      }
+
+      let nextPlatformName = "Unknown";
+      if (nextPlatformShortName === "pc") {
+        nextPlatformName = "PC";
+      } else {
+        const platformConfigs = await getPlatformConfigs();
+        const config = (platformConfigs || []).find((row) => normalizePlatform(row?.shortName) === nextPlatformShortName);
+        if (config) nextPlatformName = String(config?.name || nextPlatformShortName).trim() || nextPlatformShortName;
+      }
+
+      patch.platformShortName = nextPlatformShortName;
+      patch.platform = nextPlatformName;
+    }
+
+    const updated = dbUpdateGameMetadata(gameId, patch);
+    if (!updated) return { success: false, message: "Failed to update game metadata" };
+
+    refreshLibraryFromDb();
+    return { success: true, game: updated };
+  } catch (error) {
+    log.error("Failed to update game metadata:", error);
+    return { success: false, message: error.message };
+  }
+});
+
 ipcMain.handle("remove-game", async (event, gameId) => {
   try {
-    const game = games.find(g => g.id === gameId);
-    if (game) {
-      game.isInstalled = false;
-      game.progress = 0;
-      log.info(`Game ${game.name} removed`);
-      return { success: true, message: "Removal started successfully" };
+    const targetId = Number(gameId);
+    const game = games.find(g => Number(g.id) === targetId) || dbGetGameById(targetId);
+    if (!game) return { success: false, message: "Game not found" };
+
+    const removed = dbDeleteGameById(targetId);
+    if (removed) {
+      refreshLibraryFromDb();
+      log.info(`Game ${game.name} removed from library`);
+      return { success: true, message: "Game removed from library" };
     }
+
     return { success: false, message: "Game not found" };
   } catch (error) {
     log.error(`Failed to remove game ${gameId}:`, error);
@@ -1021,7 +2298,8 @@ ipcMain.handle("remove-game", async (event, gameId) => {
 
 ipcMain.handle("launch-game", async (event, gameId) => {
   try {
-    const game = games.find(g => g.id === gameId);
+    const targetId = Number(gameId);
+    const game = games.find(g => Number(g.id) === targetId) || dbGetGameById(targetId);
     if (game) {
       console.log("(handle) Launching game with ID:", gameId);
       return launchGameObject(game);
@@ -1034,11 +2312,1258 @@ ipcMain.handle("launch-game", async (event, gameId) => {
   }
 });
 
+ipcMain.handle("search-missing-game-file", async (_event, payload = {}) => {
+  try {
+    const targetId = Number(payload?.gameId);
+    const rootDir = String(payload?.rootDir || "").trim();
+    const maxDepth = Number.isFinite(payload?.maxDepth) ? Math.max(0, Math.floor(payload.maxDepth)) : 8;
+
+    if (!targetId) return { success: false, message: "Missing game ID" };
+    if (!rootDir) return { success: false, message: "Missing search root folder" };
+    if (!fsSync.existsSync(rootDir) || !fsSync.statSync(rootDir).isDirectory()) {
+      return { success: false, message: "Search root folder not found" };
+    }
+
+    const game = dbGetGameById(targetId) || games.find(g => Number(g.id) === targetId);
+    if (!game) return { success: false, message: "Game not found" };
+
+    const oldPath = String(game.filePath || "").trim();
+    const targetFileName = path.basename(oldPath);
+    if (!targetFileName) return { success: false, message: "Game has no file name" };
+
+    const foundPath = findFileByNameInTree(rootDir, targetFileName, { maxDepth, maxVisitedDirs: 15000 });
+    if (!foundPath) {
+      return {
+        success: true,
+        found: false,
+        gameId: targetId,
+        gameName: game.name || "Unknown Game",
+        targetFileName
+      };
+    }
+
+    const updated = dbUpdateGameFilePath(targetId, foundPath);
+    if (!updated) return { success: false, message: "Failed to update game path" };
+    refreshLibraryFromDb();
+
+    return {
+      success: true,
+      found: true,
+      gameId: targetId,
+      gameName: updated.name || game.name || "Unknown Game",
+      newPath: foundPath
+    };
+  } catch (error) {
+    log.error("search-missing-game-file failed:", error);
+    return { success: false, message: error.message };
+  }
+});
+
+ipcMain.handle("relink-game-file", async (_event, payload = {}) => {
+  try {
+    const targetId = Number(payload?.gameId);
+    const selectedPath = String(payload?.filePath || "").trim();
+
+    if (!targetId) return { success: false, message: "Missing game ID" };
+    if (!selectedPath) return { success: false, message: "Missing file path" };
+    if (!fsSync.existsSync(selectedPath)) return { success: false, message: "Selected file was not found" };
+
+    let stat;
+    try {
+      stat = fsSync.statSync(selectedPath);
+    } catch (_e) {
+      stat = null;
+    }
+    if (!stat || !stat.isFile()) return { success: false, message: "Selected path is not a file" };
+
+    const game = dbGetGameById(targetId) || games.find(g => Number(g.id) === targetId);
+    if (!game) return { success: false, message: "Game not found" };
+
+    const updated = dbUpdateGameFilePath(targetId, selectedPath);
+    if (!updated) return { success: false, message: "Failed to update game path" };
+    refreshLibraryFromDb();
+
+    return {
+      success: true,
+      gameId: targetId,
+      gameName: updated.name || game.name || "Unknown Game",
+      newPath: selectedPath
+    };
+  } catch (error) {
+    log.error("relink-game-file failed:", error);
+    return { success: false, message: error.message };
+  }
+});
+
+function parseLaunchArgs(raw) {
+  const str = String(raw || "").trim();
+  if (!str) return [];
+
+  const args = [];
+  const re = /"([^"]*)"|'([^']*)'|([^\s]+)/g;
+  let m;
+  while ((m = re.exec(str)) !== null) {
+    args.push(m[1] ?? m[2] ?? m[3] ?? "");
+  }
+  return args.filter(Boolean);
+}
+
+ipcMain.handle("launch-emulator", async (_event, payload = {}) => {
+  try {
+    const exePath = String(payload.filePath || "").trim();
+    if (!exePath) return { success: false, message: "Missing emulator path" };
+    if (!fsSync.existsSync(exePath)) return { success: false, message: "Emulator executable not found" };
+
+    const args = Array.isArray(payload.args) ? payload.args : parseLaunchArgs(payload.args);
+    const cwd = String(payload.workingDirectory || "").trim() || path.dirname(exePath);
+
+    const { spawn } = require("child_process");
+    const child = spawn(exePath, args, {
+      cwd,
+      detached: true,
+      stdio: "ignore"
+    });
+
+    child.on("error", (error) => {
+      log.error("Failed to launch emulator:", error);
+    });
+    child.unref();
+
+    return { success: true };
+  } catch (error) {
+    log.error("launch-emulator failed:", error);
+    return { success: false, message: error.message };
+  }
+});
+
+ipcMain.handle("show-item-in-folder", async (_event, filePath) => {
+  try {
+    const p = String(filePath || "").trim();
+    if (!p) return { success: false, message: "Missing path" };
+    if (!fsSync.existsSync(p)) return { success: false, message: "Path not found" };
+    shell.showItemInFolder(p);
+    return { success: true };
+  } catch (error) {
+    log.error("show-item-in-folder failed:", error);
+    return { success: false, message: error.message };
+  }
+});
+
+ipcMain.handle("open-external-url", async (_event, rawUrl) => {
+  try {
+    let url = String(rawUrl || "").trim();
+    if (!url) return { success: false, message: "Missing URL" };
+    if (!/^https?:\/\//i.test(url)) {
+      url = `https://${url}`;
+    }
+    await shell.openExternal(url);
+    return { success: true, url };
+  } catch (error) {
+    log.error("open-external-url failed:", error);
+    return { success: false, message: error.message };
+  }
+});
+
+function extractYouTubeInitialData(html) {
+  const source = String(html || "");
+  const marker = "var ytInitialData = ";
+  const markerIndex = source.indexOf(marker);
+  if (markerIndex < 0) return null;
+
+  const start = markerIndex + marker.length;
+  const endMarker = ";</script>";
+  let end = source.indexOf(endMarker, start);
+  if (end < 0) {
+    end = source.indexOf(";\n", start);
+  }
+  if (end < 0) return null;
+
+  const raw = source.slice(start, end).trim();
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw);
+  } catch (_error) {
+    return null;
+  }
+}
+
+function readRendererText(node) {
+  if (!node || typeof node !== "object") return "";
+  if (typeof node.simpleText === "string") return node.simpleText.trim();
+  if (Array.isArray(node.runs)) {
+    return node.runs
+      .map((part) => String(part?.text || "").trim())
+      .filter(Boolean)
+      .join("");
+  }
+  return "";
+}
+
+function collectYouTubeVideoEntries(initialData, limit = 8) {
+  const max = Math.max(1, Math.min(20, Number(limit) || 8));
+  const entries = [];
+  const seen = new Set();
+
+  const visit = (node) => {
+    if (!node || entries.length >= max) return;
+
+    if (Array.isArray(node)) {
+      for (const item of node) {
+        visit(item);
+        if (entries.length >= max) break;
+      }
+      return;
+    }
+
+    if (typeof node !== "object") return;
+
+    const renderer = node.videoRenderer;
+    if (renderer && entries.length < max) {
+      const id = String(renderer.videoId || "").trim();
+      if (id && !seen.has(id)) {
+        seen.add(id);
+        const title = readRendererText(renderer.title) || "YouTube Result";
+        const channel = readRendererText(renderer.ownerText) || readRendererText(renderer.longBylineText) || "";
+        const thumb = renderer?.thumbnail?.thumbnails;
+        const thumbnail = Array.isArray(thumb) && thumb.length
+          ? String(thumb[thumb.length - 1]?.url || "").trim()
+          : `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+
+        entries.push({
+          videoId: id,
+          title,
+          channel,
+          url: `https://www.youtube.com/watch?v=${id}`,
+          embedUrl: `https://www.youtube.com/embed/${id}`,
+          thumbnail
+        });
+      }
+    }
+
+    for (const value of Object.values(node)) {
+      visit(value);
+      if (entries.length >= max) break;
+    }
+  };
+
+  visit(initialData);
+  return entries;
+}
+
+ipcMain.handle("youtube:search-videos", async (_event, payload = {}) => {
+  try {
+    const query = String(payload?.query || "").trim();
+    const limit = Math.max(1, Math.min(12, Number(payload?.limit) || 8));
+    if (!query) return { success: false, message: "Missing YouTube search query", results: [] };
+
+    const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+    const response = await fetch(searchUrl, {
+      method: "GET",
+      headers: {
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+        "accept-language": "en-US,en;q=0.9"
+      }
+    });
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: `YouTube search failed with status ${response.status}`,
+        query,
+        searchUrl,
+        results: []
+      };
+    }
+
+    const html = await response.text();
+    const initialData = extractYouTubeInitialData(html);
+    let results = collectYouTubeVideoEntries(initialData, limit);
+
+    if (!results.length) {
+      const fallbackMatches = [...html.matchAll(/"videoId":"([A-Za-z0-9_-]{11})"/g)];
+      const seen = new Set();
+      results = fallbackMatches
+        .map((match) => String(match?.[1] || "").trim())
+        .filter((id) => id && !seen.has(id) && seen.add(id))
+        .slice(0, limit)
+        .map((id) => ({
+          videoId: id,
+          title: "YouTube Result",
+          channel: "",
+          url: `https://www.youtube.com/watch?v=${id}`,
+          embedUrl: `https://www.youtube.com/embed/${id}`,
+          thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`
+        }));
+    }
+
+    return {
+      success: true,
+      query,
+      searchUrl,
+      results
+    };
+  } catch (error) {
+    log.error("youtube:search-videos failed:", error);
+    return {
+      success: false,
+      message: error.message || "Failed to search YouTube",
+      results: []
+    };
+  }
+});
+
+function normalizeEmulatorName(name) {
+  return String(name || "")
+    .toLowerCase()
+    .replace(/[\s._-]+/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function normalizeEmulatorType(type) {
+  const raw = String(type || "").trim().toLowerCase();
+  if (raw === "standalone" || raw === "core" || raw === "web") return raw;
+  return "";
+}
+
+function normalizeDownloadOsKey(raw) {
+  const value = String(raw || "").trim().toLowerCase();
+  if (value === "win32" || value === "windows" || value === "win") return "windows";
+  if (value === "darwin" || value === "mac" || value === "macos" || value === "osx") return "mac";
+  if (value === "linux") return "linux";
+  if (process.platform === "win32") return "windows";
+  if (process.platform === "darwin") return "mac";
+  return "linux";
+}
+
+function sanitizePathSegment(name) {
+  return String(name || "")
+    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80)
+    .replace(/[. ]+$/g, "")
+    || "item";
+}
+
+function ensureHttpUrl(rawUrl) {
+  let next = String(rawUrl || "").trim();
+  if (!next) return "";
+  if (!/^https?:\/\//i.test(next)) next = `https://${next}`;
+  return next;
+}
+
+function normalizeDownloadLinks(rawLinks) {
+  const links = (rawLinks && typeof rawLinks === "object") ? rawLinks : {};
+  return {
+    windows: ensureHttpUrl(links.windows || links.win || links.win32 || ""),
+    linux: ensureHttpUrl(links.linux || ""),
+    mac: ensureHttpUrl(links.mac || links.macos || links.darwin || "")
+  };
+}
+
+function parseGitHubRepoFromUrl(rawUrl) {
+  const input = ensureHttpUrl(rawUrl);
+  if (!input) return null;
+  try {
+    const parsed = new URL(input);
+    if (!/github\.com$/i.test(parsed.hostname)) return null;
+    const parts = parsed.pathname.split("/").filter(Boolean);
+    if (parts.length < 2) return null;
+    const owner = parts[0];
+    const repo = String(parts[1] || "").replace(/\.git$/i, "");
+    if (!owner || !repo) return null;
+    return { owner, repo };
+  } catch (_e) {
+    return null;
+  }
+}
+
+function getDownloadSourceUrl(name, website, downloadUrl) {
+  const explicitDownloadUrl = ensureHttpUrl(downloadUrl);
+  if (explicitDownloadUrl) return explicitDownloadUrl;
+  return ensureHttpUrl(website);
+}
+
+function buildEmulatorDownloadLinks(name, website, rawLinks, downloadUrl) {
+  const explicit = normalizeDownloadLinks(rawLinks);
+  const source = getDownloadSourceUrl(name, website, downloadUrl);
+  if (!source) return explicit;
+
+  return {
+    windows: explicit.windows || source,
+    linux: explicit.linux || source,
+    mac: explicit.mac || source
+  };
+}
+
+function compileRegexOrNull(pattern) {
+  const source = String(pattern || "").trim();
+  if (!source) return null;
+  try {
+    return new RegExp(source, "i");
+  } catch (_e) {
+    return null;
+  }
+}
+
+function getDownloadPatternForOs(emulator, osKey, patternKind) {
+  const key = normalizeDownloadOsKey(osKey);
+  if (patternKind === "archive") {
+    if (key === "windows") return String(emulator?.archiveFileMatchWin || "").trim();
+    if (key === "linux") return String(emulator?.archiveFileMatchLinux || "").trim();
+    return String(emulator?.archiveFileMatchMac || "").trim();
+  }
+  if (patternKind === "setup" || patternKind === "installer") {
+    if (key === "windows") return String(emulator?.setupFileMatchWin || "").trim();
+    if (key === "linux") return String(emulator?.setupFileMatchLinux || "").trim();
+    return String(emulator?.setupFileMatchMac || "").trim();
+  }
+  if (patternKind === "executable") {
+    if (key === "windows") return String(emulator?.executableFileMatchWin || "").trim();
+    if (key === "linux") return String(emulator?.executableFileMatchLinux || "").trim();
+    return String(emulator?.executableFileMatchMac || "").trim();
+  }
+  return "";
+}
+
+function normalizeDownloadPackageType(raw) {
+  const value = String(raw || "").trim().toLowerCase();
+  if (value === "setup") return "installer";
+  if (value === "install") return "installer";
+  if (value === "portable") return "executable";
+  if (value === "binary") return "executable";
+  if (value === "exe") return "executable";
+  if (value === "installer" || value === "archive" || value === "executable") return value;
+  return "";
+}
+
+function getDownloadRegexBundleForOs(emulator, osKey) {
+  return {
+    installer: compileRegexOrNull(getDownloadPatternForOs(emulator, osKey, "installer")),
+    archive: compileRegexOrNull(getDownloadPatternForOs(emulator, osKey, "archive")),
+    executable: compileRegexOrNull(getDownloadPatternForOs(emulator, osKey, "executable"))
+  };
+}
+
+function inferDownloadPackageTypeFromName(name, osKey) {
+  const rawName = String(name || "").trim();
+  if (!rawName) return "";
+  const lower = rawName.toLowerCase();
+  const normalizedOs = normalizeDownloadOsKey(osKey);
+
+  if (getArchiveKind(lower)) return "archive";
+
+  if (normalizedOs === "windows") {
+    if (/\.(msi|msix|appx)$/i.test(lower)) return "installer";
+    if (lower.endsWith(".exe")) {
+      return isInstallerLikeName(lower) ? "installer" : "executable";
+    }
+  } else if (normalizedOs === "linux") {
+    if (/\.(deb|rpm|snap|flatpak)$/i.test(lower)) return "installer";
+    if (lower.endsWith(".appimage")) return "executable";
+  } else {
+    if (/\.(dmg|pkg)$/i.test(lower)) return "installer";
+    if (lower.endsWith(".app")) return "executable";
+  }
+
+  if (isInstallerLikeName(lower)) return "installer";
+  return "";
+}
+
+function classifyDownloadPackageType(name, osKey, regexBundle) {
+  const fileName = String(name || "").trim();
+  if (!fileName) return "";
+  const regexes = (regexBundle && typeof regexBundle === "object") ? regexBundle : {};
+
+  if (regexes.installer && regexes.installer.test(fileName)) return "installer";
+  if (regexes.archive && regexes.archive.test(fileName)) return "archive";
+  if (regexes.executable && regexes.executable.test(fileName)) return "executable";
+
+  return inferDownloadPackageTypeFromName(fileName, osKey);
+}
+
+function scoreAssetForOs(assetName, osKey) {
+  const name = String(assetName || "").toLowerCase();
+  const key = normalizeDownloadOsKey(osKey);
+  let score = 0;
+
+  if (key === "windows") {
+    if (name.includes("win")) score += 4;
+    if (name.includes("windows")) score += 5;
+    if (/\.(zip|7z|rar|exe|msi|msix|appx)$/.test(name)) score += 4;
+  } else if (key === "linux") {
+    if (name.includes("linux")) score += 5;
+    if (name.includes("appimage")) score += 5;
+    if (/\.(tar|tar\.gz|tar\.xz|tgz|zip|appimage|deb|rpm)$/.test(name)) score += 4;
+  } else {
+    if (name.includes("mac")) score += 4;
+    if (name.includes("osx") || name.includes("darwin") || name.includes("macos")) score += 5;
+    if (/\.(dmg|pkg|zip|app)$/.test(name)) score += 4;
+  }
+
+  if (name.includes("x64") || name.includes("x86_64") || name.includes("amd64")) score += 2;
+  if (name.includes("debug") || name.includes("symbols") || name.includes("source")) score -= 3;
+  return score;
+}
+
+function selectBestGitHubAsset(release, emulator, osKey) {
+  const assets = Array.isArray(release?.assets) ? release.assets : [];
+  if (assets.length === 0) return null;
+
+  const setupRegex = compileRegexOrNull(getDownloadPatternForOs(emulator, osKey, "installer"));
+  const archiveRegex = compileRegexOrNull(getDownloadPatternForOs(emulator, osKey, "archive"));
+  const executableRegex = compileRegexOrNull(getDownloadPatternForOs(emulator, osKey, "executable"));
+
+  if (setupRegex) {
+    const match = assets.find((asset) => setupRegex.test(String(asset?.name || "")));
+    if (match) return match;
+  }
+
+  if (archiveRegex) {
+    const match = assets.find((asset) => archiveRegex.test(String(asset?.name || "")));
+    if (match) return match;
+  }
+
+  if (executableRegex) {
+    const match = assets.find((asset) => executableRegex.test(String(asset?.name || "")));
+    if (match) return match;
+  }
+
+  const ranked = assets
+    .map((asset) => ({ asset, score: scoreAssetForOs(asset?.name, osKey) }))
+    .sort((a, b) => b.score - a.score);
+
+  if (ranked.length && ranked[0].score > 0) return ranked[0].asset;
+  return assets[0] || null;
+}
+
+async function fetchGitHubLatestRelease(repoInfo) {
+  const apiUrl = `https://api.github.com/repos/${repoInfo.owner}/${repoInfo.repo}/releases/latest`;
+  const res = await fetch(apiUrl, {
+    headers: {
+      Accept: "application/vnd.github+json",
+      "User-Agent": "emuBro"
+    }
+  });
+  if (!res.ok) {
+    throw new Error(`GitHub release lookup failed (${res.status})`);
+  }
+  return await res.json();
+}
+
+function isLikelyDirectDownloadUrl(rawUrl) {
+  const input = ensureHttpUrl(rawUrl);
+  if (!input) return false;
+  try {
+    const parsed = new URL(input);
+    const pathname = String(parsed.pathname || "").toLowerCase();
+    if (getArchiveKind(pathname)) return true;
+    return /\.(exe|msi|msix|appx|dmg|pkg|appimage|deb|rpm)$/i.test(pathname);
+  } catch (_e) {
+    return false;
+  }
+}
+
+function extractFilenameFromContentDisposition(value) {
+  const header = String(value || "").trim();
+  if (!header) return "";
+  const utf8 = header.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8 && utf8[1]) {
+    try {
+      return decodeURIComponent(utf8[1]).trim();
+    } catch (_e) {}
+  }
+  const plain = header.match(/filename=\"?([^\";]+)\"?/i);
+  if (plain && plain[1]) return String(plain[1]).trim();
+  return "";
+}
+
+async function downloadUrlToFile(url, targetPath) {
+  const res = await fetch(url, {
+    headers: {
+      Accept: "*/*",
+      "User-Agent": "emuBro"
+    },
+    redirect: "follow"
+  });
+
+  if (!res.ok) throw new Error(`Download failed (${res.status})`);
+  if (!res.body) throw new Error("Download returned empty response");
+
+  fsSync.mkdirSync(path.dirname(targetPath), { recursive: true });
+  await pipeline(Readable.fromWeb(res.body), fsSync.createWriteStream(targetPath));
+
+  return {
+    contentType: String(res.headers.get("content-type") || "").trim(),
+    fileNameFromHeader: extractFilenameFromContentDisposition(res.headers.get("content-disposition"))
+  };
+}
+
+function findEmulatorBinaryInFolder(rootDir, searchString, osKey) {
+  const root = String(rootDir || "").trim();
+  if (!root || !fsSync.existsSync(root)) return "";
+
+  const matcher = compileRegexOrNull(searchString);
+  const normalizedOs = normalizeDownloadOsKey(osKey);
+  const fallbackCandidates = [];
+  const queue = [root];
+  let visitedDirs = 0;
+
+  while (queue.length > 0 && visitedDirs < 10000) {
+    const current = queue.shift();
+    visitedDirs += 1;
+
+    let entries = [];
+    try {
+      entries = fsSync.readdirSync(current, { withFileTypes: true });
+    } catch (_e) {
+      continue;
+    }
+
+    for (const entry of entries) {
+      const full = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        if (normalizedOs === "mac" && entry.name.toLowerCase().endsWith(".app")) {
+          if (!matcher || matcher.test(entry.name)) return full;
+          fallbackCandidates.push(full);
+          continue;
+        }
+        queue.push(full);
+        continue;
+      }
+
+      if (!entry.isFile()) continue;
+      const filename = entry.name;
+      const lowerName = filename.toLowerCase();
+      if (matcher && (matcher.test(filename) || matcher.test(full))) return full;
+
+      if (normalizedOs === "windows" && lowerName.endsWith(".exe")) {
+        fallbackCandidates.push(full);
+      } else if (normalizedOs === "linux" && (lowerName.endsWith(".appimage") || !path.extname(lowerName))) {
+        fallbackCandidates.push(full);
+      } else if (normalizedOs === "mac" && lowerName.endsWith(".app")) {
+        fallbackCandidates.push(full);
+      }
+    }
+  }
+
+  return fallbackCandidates[0] || "";
+}
+
+function isInstallerLikeName(fileName) {
+  const lower = String(fileName || "").toLowerCase();
+  if (/\.(msi|msix|appx|dmg|pkg|deb|rpm)$/i.test(lower)) return true;
+  return /\b(setup|installer|install)\b/.test(lower);
+}
+
+function rankDownloadOption(option, emulator, osKey) {
+  const entry = (option && typeof option === "object") ? option : {};
+  const packageType = normalizeDownloadPackageType(entry.packageType);
+  const fileName = String(entry.fileName || "").trim();
+  const score = Number.isFinite(entry.score) ? Number(entry.score) : scoreAssetForOs(fileName, osKey);
+
+  let rank = score;
+  const installerPattern = String(getDownloadPatternForOs(emulator, osKey, "installer") || "").trim();
+  const archivePattern = String(getDownloadPatternForOs(emulator, osKey, "archive") || "").trim();
+  const executablePattern = String(getDownloadPatternForOs(emulator, osKey, "executable") || "").trim();
+
+  if (packageType === "installer" && installerPattern) rank += 60;
+  if (packageType === "archive" && archivePattern) rank += 55;
+  if (packageType === "executable" && executablePattern) rank += 50;
+  return rank;
+}
+
+function selectPreferredDownloadOption(options, emulator, osKey) {
+  const list = Array.isArray(options) ? options : [];
+  if (!list.length) return null;
+
+  const installerPattern = String(getDownloadPatternForOs(emulator, osKey, "installer") || "").trim();
+  const archivePattern = String(getDownloadPatternForOs(emulator, osKey, "archive") || "").trim();
+  const executablePattern = String(getDownloadPatternForOs(emulator, osKey, "executable") || "").trim();
+
+  if (installerPattern) {
+    const installer = list.find((item) => normalizeDownloadPackageType(item?.packageType) === "installer");
+    if (installer) return installer;
+  }
+  if (archivePattern) {
+    const archive = list.find((item) => normalizeDownloadPackageType(item?.packageType) === "archive");
+    if (archive) return archive;
+  }
+  if (executablePattern) {
+    const executable = list.find((item) => normalizeDownloadPackageType(item?.packageType) === "executable");
+    if (executable) return executable;
+  }
+
+  const ranking = { archive: 3, executable: 2, installer: 1 };
+  return [...list].sort((a, b) => {
+    const aType = normalizeDownloadPackageType(a?.packageType);
+    const bType = normalizeDownloadPackageType(b?.packageType);
+    const typeDiff = (ranking[bType] || 0) - (ranking[aType] || 0);
+    if (typeDiff !== 0) return typeDiff;
+    return rankDownloadOption(b, emulator, osKey) - rankDownloadOption(a, emulator, osKey);
+  })[0] || null;
+}
+
+function selectDownloadOptionsByType(candidates, emulator, osKey) {
+  const byType = new Map();
+  const list = Array.isArray(candidates) ? candidates : [];
+  for (const candidate of list) {
+    const type = normalizeDownloadPackageType(candidate?.packageType);
+    const url = ensureHttpUrl(candidate?.url || "");
+    if (!type || !url) continue;
+
+    const normalized = {
+      packageType: type,
+      url,
+      fileName: String(candidate?.fileName || "").trim(),
+      source: String(candidate?.source || "").trim() || "unknown",
+      releaseUrl: ensureHttpUrl(candidate?.releaseUrl || ""),
+      score: Number.isFinite(candidate?.score) ? Number(candidate.score) : scoreAssetForOs(candidate?.fileName, osKey)
+    };
+
+    const existing = byType.get(type);
+    if (!existing || rankDownloadOption(normalized, emulator, osKey) > rankDownloadOption(existing, emulator, osKey)) {
+      byType.set(type, normalized);
+    }
+  }
+
+  const order = ["installer", "archive", "executable"];
+  return order
+    .map((type) => byType.get(type))
+    .filter(Boolean);
+}
+
+function getFilenameFromUrl(rawUrl) {
+  const input = ensureHttpUrl(rawUrl);
+  if (!input) return "";
+  try {
+    const parsed = new URL(input);
+    return decodeURIComponent(path.basename(parsed.pathname || ""));
+  } catch (_e) {
+    return "";
+  }
+}
+
+function getPreferredEmulatorDownloadUrl(emulator, osKey) {
+  const normalizedOs = normalizeDownloadOsKey(osKey);
+  const downloadLinks = buildEmulatorDownloadLinks(
+    emulator?.name,
+    emulator?.website,
+    emulator?.downloadLinks,
+    emulator?.downloadUrl
+  );
+  return ensureHttpUrl(downloadLinks[normalizedOs] || emulator?.downloadUrl || emulator?.website || "");
+}
+
+function buildWaybackMachineUrl(rawUrl) {
+  const source = ensureHttpUrl(rawUrl);
+  if (!source) return "";
+  return `https://web.archive.org/web/*/${source}`;
+}
+
+async function listEmulatorDownloadTargets(emulator, osKey) {
+  const normalizedOs = normalizeDownloadOsKey(osKey);
+  const preferredUrl = getPreferredEmulatorDownloadUrl(emulator, normalizedOs);
+  if (!preferredUrl) {
+    throw new Error("No download URL available for this emulator");
+  }
+
+  const regexBundle = getDownloadRegexBundleForOs(emulator, normalizedOs);
+  const candidates = [];
+  let manualUrl = preferredUrl;
+
+  const repo = parseGitHubRepoFromUrl(preferredUrl);
+  if (repo) {
+    try {
+      const release = await fetchGitHubLatestRelease(repo);
+      const releaseUrl = ensureHttpUrl(release?.html_url || preferredUrl);
+      manualUrl = releaseUrl || preferredUrl;
+      const assets = Array.isArray(release?.assets) ? release.assets : [];
+
+      for (const asset of assets) {
+        const assetUrl = ensureHttpUrl(asset?.browser_download_url || "");
+        if (!assetUrl) continue;
+
+        const fileName = String(asset?.name || getFilenameFromUrl(assetUrl)).trim();
+        if (!fileName) continue;
+
+        const packageType = classifyDownloadPackageType(fileName, normalizedOs, regexBundle);
+        if (!packageType) continue;
+
+        const score = scoreAssetForOs(fileName, normalizedOs);
+        if (score <= 0 && !(regexBundle.archive?.test(fileName) || regexBundle.installer?.test(fileName) || regexBundle.executable?.test(fileName))) {
+          continue;
+        }
+
+        candidates.push({
+          packageType,
+          url: assetUrl,
+          fileName,
+          score,
+          source: "github-release",
+          releaseUrl
+        });
+      }
+
+      if (candidates.length === 0) {
+        const bestAsset = selectBestGitHubAsset(release, emulator, normalizedOs);
+        if (bestAsset?.browser_download_url) {
+          const fallbackName = String(bestAsset?.name || getFilenameFromUrl(bestAsset.browser_download_url)).trim();
+          const fallbackType = classifyDownloadPackageType(fallbackName, normalizedOs, regexBundle);
+          if (fallbackType) {
+            candidates.push({
+              packageType: fallbackType,
+              url: ensureHttpUrl(bestAsset.browser_download_url),
+              fileName: fallbackName,
+              score: scoreAssetForOs(fallbackName, normalizedOs),
+              source: "github-release",
+              releaseUrl
+            });
+          }
+        }
+      }
+    } catch (_e) {
+      // Fall through to direct URL handling.
+    }
+  }
+
+  if (candidates.length === 0 && isLikelyDirectDownloadUrl(preferredUrl)) {
+    const fileName = getFilenameFromUrl(preferredUrl);
+    const packageType = classifyDownloadPackageType(fileName, normalizedOs, regexBundle);
+    if (packageType) {
+      candidates.push({
+        packageType,
+        url: preferredUrl,
+        fileName,
+        score: scoreAssetForOs(fileName, normalizedOs),
+        source: "direct-link",
+        releaseUrl: ensureHttpUrl(preferredUrl)
+      });
+    }
+  }
+
+  return {
+    osKey: normalizedOs,
+    options: selectDownloadOptionsByType(candidates, emulator, normalizedOs),
+    manualUrl,
+    waybackUrl: buildWaybackMachineUrl(manualUrl || preferredUrl)
+  };
+}
+
+async function resolveEmulatorDownloadTarget(emulator, osKey, preferredType) {
+  const normalizedOs = normalizeDownloadOsKey(osKey);
+  const requestedType = normalizeDownloadPackageType(preferredType);
+  const discovered = await listEmulatorDownloadTargets(emulator, normalizedOs);
+  const options = Array.isArray(discovered?.options) ? discovered.options : [];
+  const manualUrl = ensureHttpUrl(discovered?.manualUrl || "");
+
+  if (!options.length) {
+    return {
+      directDownload: false,
+      url: manualUrl,
+      releaseUrl: manualUrl,
+      osKey: normalizedOs,
+      options: [],
+      waybackUrl: buildWaybackMachineUrl(manualUrl)
+    };
+  }
+
+  const selected = requestedType
+    ? options.find((item) => normalizeDownloadPackageType(item?.packageType) === requestedType)
+    : null;
+  const preferred = selected || selectPreferredDownloadOption(options, emulator, normalizedOs);
+  if (!preferred?.url) {
+    return {
+      directDownload: false,
+      url: manualUrl,
+      releaseUrl: manualUrl,
+      osKey: normalizedOs,
+      options,
+      waybackUrl: buildWaybackMachineUrl(manualUrl)
+    };
+  }
+
+  return {
+    directDownload: true,
+    osKey: normalizedOs,
+    url: preferred.url,
+    fileName: preferred.fileName || "",
+    packageType: normalizeDownloadPackageType(preferred.packageType),
+    source: preferred.source || "unknown",
+    releaseUrl: ensureHttpUrl(preferred.releaseUrl || manualUrl || preferred.url),
+    options,
+    waybackUrl: buildWaybackMachineUrl(manualUrl || preferred.url)
+  };
+}
+
+function buildConfiguredEmulators(platformConfigs) {
+  const out = [];
+  const seen = new Set();
+
+  for (const config of platformConfigs || []) {
+    const platformShortName = normalizePlatform(config?.shortName) || "unknown";
+    const platformName = String(config?.name || platformShortName);
+
+    for (const emu of (config?.emulators || [])) {
+      const name = String(emu?.name || "").trim();
+      if (!name) continue;
+      const downloadUrl = ensureHttpUrl(emu?.downloadUrl || "");
+      const website = ensureHttpUrl(emu?.website || downloadUrl);
+      const downloadLinks = buildEmulatorDownloadLinks(name, website, emu?.downloadLinks, downloadUrl);
+
+      const key = `${platformShortName}::${normalizeEmulatorName(name)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      out.push({
+        id: `cfg:${platformShortName}:${normalizeEmulatorName(name) || "emu"}`,
+        name,
+        platform: platformName,
+        platformShortName,
+        type: normalizeEmulatorType(emu?.type) || "standalone",
+        filePath: "",
+        isInstalled: false,
+        website,
+        downloadUrl,
+        downloadLinks,
+        startParameters: String(emu?.startParameters || "").trim(),
+        searchString: String(emu?.searchString || "").trim(),
+        archiveFileMatchWin: String(emu?.archiveFileMatchWin || "").trim(),
+        archiveFileMatchLinux: String(emu?.archiveFileMatchLinux || "").trim(),
+        archiveFileMatchMac: String(emu?.archiveFileMatchMac || "").trim(),
+        setupFileMatchWin: String(emu?.setupFileMatchWin || "").trim(),
+        setupFileMatchLinux: String(emu?.setupFileMatchLinux || "").trim(),
+        setupFileMatchMac: String(emu?.setupFileMatchMac || "").trim(),
+        executableFileMatchWin: String(emu?.executableFileMatchWin || "").trim(),
+        executableFileMatchLinux: String(emu?.executableFileMatchLinux || "").trim(),
+        executableFileMatchMac: String(emu?.executableFileMatchMac || "").trim(),
+        iconFilename: String(emu?.iconFilename || "").trim(),
+        source: "config"
+      });
+    }
+  }
+
+  return out;
+}
+
+function installedMatchesConfigured(installed, configured) {
+  if (normalizePlatform(installed?.platformShortName) !== normalizePlatform(configured?.platformShortName)) {
+    return false;
+  }
+
+  const filePath = String(installed?.filePath || "").trim();
+  const exeBase = filePath
+    ? path.basename(filePath, path.extname(filePath))
+    : String(installed?.name || "").trim();
+
+  const installedNameNorm = normalizeEmulatorName(installed?.name);
+  const exeNorm = normalizeEmulatorName(exeBase);
+  const configuredNameNorm = normalizeEmulatorName(configured?.name);
+
+  if (installedNameNorm && installedNameNorm === configuredNameNorm) return true;
+  if (exeNorm && exeNorm === configuredNameNorm) return true;
+
+  const searchString = String(configured?.searchString || "").trim();
+  if (!searchString) return false;
+
+  try {
+    const re = new RegExp(searchString, "i");
+    return re.test(`${exeBase}.exe`) || re.test(exeBase);
+  } catch (_e) {
+    return false;
+  }
+}
+
 ipcMain.handle("get-emulators", async () => {
   try {
     refreshLibraryFromDb();
   } catch (_e) {}
-  return emulators;
+
+  const installedRows = (emulators || []).map((emu) => {
+    const filePath = String(emu?.filePath || "").trim();
+    const installed = !!filePath && fsSync.existsSync(filePath);
+    const downloadUrl = ensureHttpUrl(emu?.downloadUrl || "");
+    const website = ensureHttpUrl(emu?.website || downloadUrl);
+    return {
+      ...emu,
+      isInstalled: installed,
+      type: normalizeEmulatorType(emu?.type) || "",
+      website,
+      downloadUrl,
+      downloadLinks: buildEmulatorDownloadLinks(emu?.name, website, emu?.downloadLinks, downloadUrl),
+      archiveFileMatchWin: String(emu?.archiveFileMatchWin || "").trim(),
+      archiveFileMatchLinux: String(emu?.archiveFileMatchLinux || "").trim(),
+      archiveFileMatchMac: String(emu?.archiveFileMatchMac || "").trim(),
+      setupFileMatchWin: String(emu?.setupFileMatchWin || "").trim(),
+      setupFileMatchLinux: String(emu?.setupFileMatchLinux || "").trim(),
+      setupFileMatchMac: String(emu?.setupFileMatchMac || "").trim(),
+      executableFileMatchWin: String(emu?.executableFileMatchWin || "").trim(),
+      executableFileMatchLinux: String(emu?.executableFileMatchLinux || "").trim(),
+      executableFileMatchMac: String(emu?.executableFileMatchMac || "").trim(),
+      source: "library"
+    };
+  });
+
+  let platformConfigs = [];
+  try {
+    platformConfigs = await getPlatformConfigs();
+  } catch (_e) {}
+
+  const configured = buildConfiguredEmulators(platformConfigs);
+  const unusedConfigured = [...configured];
+  const merged = [];
+
+  for (const installed of installedRows) {
+    const idx = unusedConfigured.findIndex((cfg) => installedMatchesConfigured(installed, cfg));
+    if (idx >= 0) {
+      const cfg = unusedConfigured.splice(idx, 1)[0];
+      merged.push({
+        ...cfg,
+        ...installed,
+        name: cfg.name || installed.name,
+        platform: cfg.platform || installed.platform,
+        platformShortName: cfg.platformShortName || installed.platformShortName,
+        type: normalizeEmulatorType(installed.type || cfg.type) || "standalone",
+        website: cfg.website || installed.website || "",
+        downloadUrl: cfg.downloadUrl || installed.downloadUrl || "",
+        downloadLinks: buildEmulatorDownloadLinks(
+          cfg.name || installed.name,
+          cfg.website || installed.website,
+          cfg.downloadLinks || installed.downloadLinks,
+          cfg.downloadUrl || installed.downloadUrl
+        ),
+        searchString: cfg.searchString || "",
+        startParameters: cfg.startParameters || "",
+        archiveFileMatchWin: cfg.archiveFileMatchWin || installed.archiveFileMatchWin || "",
+        archiveFileMatchLinux: cfg.archiveFileMatchLinux || installed.archiveFileMatchLinux || "",
+        archiveFileMatchMac: cfg.archiveFileMatchMac || installed.archiveFileMatchMac || "",
+        setupFileMatchWin: cfg.setupFileMatchWin || installed.setupFileMatchWin || "",
+        setupFileMatchLinux: cfg.setupFileMatchLinux || installed.setupFileMatchLinux || "",
+        setupFileMatchMac: cfg.setupFileMatchMac || installed.setupFileMatchMac || "",
+        executableFileMatchWin: cfg.executableFileMatchWin || installed.executableFileMatchWin || "",
+        executableFileMatchLinux: cfg.executableFileMatchLinux || installed.executableFileMatchLinux || "",
+        executableFileMatchMac: cfg.executableFileMatchMac || installed.executableFileMatchMac || "",
+        iconFilename: cfg.iconFilename || "",
+        source: "library+config"
+      });
+    } else {
+      merged.push({
+        ...installed,
+        type: normalizeEmulatorType(installed.type) || "standalone",
+        downloadLinks: buildEmulatorDownloadLinks(
+          installed.name,
+          installed.website,
+          installed.downloadLinks,
+          installed.downloadUrl
+        )
+      });
+    }
+  }
+
+  unusedConfigured.forEach((cfg) => {
+    merged.push({
+      ...cfg,
+      type: normalizeEmulatorType(cfg.type) || "standalone",
+      downloadLinks: buildEmulatorDownloadLinks(cfg.name, cfg.website, cfg.downloadLinks, cfg.downloadUrl)
+    });
+  });
+
+  merged.sort((a, b) => {
+    const p = String(a.platform || a.platformShortName || "").localeCompare(String(b.platform || b.platformShortName || ""));
+    if (p !== 0) return p;
+    return String(a.name || "").localeCompare(String(b.name || ""));
+  });
+
+  return merged;
+});
+
+ipcMain.handle("get-emulator-download-options", async (_event, payload = {}) => {
+  try {
+    const emulator = (payload && typeof payload === "object") ? payload : {};
+    const name = String(emulator?.name || "").trim();
+    if (!name) return { success: false, message: "Missing emulator name" };
+
+    const osKey = normalizeDownloadOsKey(payload?.os || process.platform);
+    const resolved = await resolveEmulatorDownloadTarget(emulator, osKey, "");
+    return {
+      success: true,
+      osKey,
+      options: Array.isArray(resolved?.options) ? resolved.options : [],
+      recommendedType: normalizeDownloadPackageType(resolved?.packageType || ""),
+      manualUrl: ensureHttpUrl(resolved?.releaseUrl || resolved?.url || ""),
+      waybackUrl: ensureHttpUrl(resolved?.waybackUrl || "")
+    };
+  } catch (error) {
+    log.error("get-emulator-download-options failed:", error);
+    return { success: false, message: error.message };
+  }
+});
+
+ipcMain.handle("download-install-emulator", async (_event, payload = {}) => {
+  try {
+    const emulator = (payload && typeof payload === "object") ? payload : {};
+    const name = String(emulator?.name || "").trim();
+    const platformName = String(emulator?.platform || "").trim() || "Unknown";
+    const platformShortName = normalizePlatform(emulator?.platformShortName) || "unknown";
+    if (!name) return { success: false, message: "Missing emulator name" };
+
+    const osKey = normalizeDownloadOsKey(payload?.os || process.platform);
+    const useWaybackFallback = !!payload?.useWaybackFallback;
+    if (useWaybackFallback) {
+      const waybackSourceUrl = ensureHttpUrl(
+        payload?.waybackSourceUrl
+        || payload?.manualUrl
+        || getPreferredEmulatorDownloadUrl(emulator, osKey)
+      );
+      const waybackUrl = ensureHttpUrl(payload?.waybackUrl || buildWaybackMachineUrl(waybackSourceUrl));
+      if (!waybackUrl) {
+        return { success: false, message: "No fallback source URL available for Wayback Machine." };
+      }
+      await shell.openExternal(waybackUrl);
+      return {
+        success: false,
+        manual: true,
+        wayback: true,
+        message: "Opened Wayback Machine fallback for this emulator.",
+        openedUrl: waybackUrl
+      };
+    }
+
+    const requestedPackageType = normalizeDownloadPackageType(payload?.packageType || "");
+    const resolved = await resolveEmulatorDownloadTarget(emulator, osKey, requestedPackageType);
+    if (!resolved?.url) {
+      return { success: false, message: "No download source found for this emulator" };
+    }
+
+    if (!resolved.directDownload) {
+      await shell.openExternal(resolved.url);
+      return {
+        success: false,
+        manual: true,
+        message: "No direct package found. Opened the download page in your browser.",
+        openedUrl: resolved.url
+      };
+    }
+
+    const selectedPackageType = normalizeDownloadPackageType(resolved?.packageType || requestedPackageType);
+
+    const settings = getLibraryPathSettings();
+    const preferredRoot = String(payload?.targetDir || "").trim();
+    const baseInstallRoot = preferredRoot
+      || (Array.isArray(settings?.emulatorFolders) && settings.emulatorFolders[0])
+      || path.join(app.getPath("userData"), "library-storage", "emulators");
+    const platformDir = path.join(baseInstallRoot, sanitizePathSegment(platformShortName));
+    const emulatorDir = path.join(platformDir, sanitizePathSegment(name));
+    fsSync.mkdirSync(emulatorDir, { recursive: true });
+
+    const tempDir = path.join(app.getPath("temp"), "emubro-downloads", "emulators");
+    fsSync.mkdirSync(tempDir, { recursive: true });
+
+    const urlFileName = (() => {
+      try {
+        const parsed = new URL(resolved.url);
+        return decodeURIComponent(path.basename(parsed.pathname || ""));
+      } catch (_e) {
+        return "";
+      }
+    })();
+
+    const suggestedName = String(resolved.fileName || urlFileName || `${sanitizePathSegment(name)}-${Date.now()}`).trim();
+    const initialDownloadPath = ensureUniqueDestinationPath(path.join(tempDir, suggestedName));
+    const downloadMeta = await downloadUrlToFile(resolved.url, initialDownloadPath);
+    const finalName = String(downloadMeta?.fileNameFromHeader || path.basename(initialDownloadPath)).trim();
+    const finalDownloadPath = (finalName && finalName !== path.basename(initialDownloadPath))
+      ? ensureUniqueDestinationPath(path.join(tempDir, finalName))
+      : initialDownloadPath;
+    if (finalDownloadPath !== initialDownloadPath) {
+      movePathSafe(initialDownloadPath, finalDownloadPath);
+    }
+
+    const archiveKind = getArchiveKind(finalDownloadPath);
+    let installedPath = "";
+    let packagePath = "";
+
+    if (archiveKind) {
+      const extractRoot = ensureUniqueDestinationPath(
+        path.join(tempDir, `${sanitizePathSegment(name)}-extract`)
+      );
+      fsSync.mkdirSync(extractRoot, { recursive: true });
+      await extractArchiveToDir(finalDownloadPath, extractRoot);
+
+      const ctx = {
+        policy: "",
+        operationLabel: "Install Emulator Package",
+        discardSkippedSources: true,
+        cancelled: false,
+        stats: { moved: 0, replaced: 0, keptBoth: 0, skipped: 0, conflicts: 0 }
+      };
+      const integrated = await integrateDirectoryContents(extractRoot, emulatorDir, ctx);
+      removePathSafe(extractRoot);
+
+      if (!integrated || ctx.cancelled) {
+        return {
+          success: false,
+          canceled: true,
+          message: "Installation canceled during conflict resolution.",
+          installDir: emulatorDir,
+          stats: ctx.stats
+        };
+      }
+
+      packagePath = emulatorDir;
+      installedPath = findEmulatorBinaryInFolder(emulatorDir, emulator?.searchString, osKey);
+    } else {
+      const destination = ensureUniqueDestinationPath(path.join(emulatorDir, path.basename(finalDownloadPath)));
+      movePathSafe(finalDownloadPath, destination);
+      packagePath = destination;
+      installedPath = findEmulatorBinaryInFolder(emulatorDir, emulator?.searchString, osKey) || destination;
+    }
+
+    const installedFileName = path.basename(installedPath || "");
+    const detectedInstalledType = normalizeDownloadPackageType(
+      inferDownloadPackageTypeFromName(installedFileName || path.basename(packagePath || ""), osKey)
+    );
+    const installerOnly = (detectedInstalledType === "installer")
+      || (!installedPath && selectedPackageType === "installer")
+      || (installedFileName ? isInstallerLikeName(installedFileName) : false);
+    if (installedPath && !installerOnly) {
+      dbUpsertEmulator({
+        name,
+        platform: platformName,
+        platformShortName,
+        filePath: installedPath
+      });
+      refreshLibraryFromDb();
+    }
+
+    if (!installedPath || installerOnly) {
+      const message = installerOnly
+        ? `Downloaded installer to ${packagePath}. Run it once, then rescan emulators.`
+        : `Downloaded package to ${packagePath}. Could not auto-detect the emulator executable yet.`;
+      return {
+        success: true,
+        installed: false,
+        packagePath,
+        installDir: emulatorDir,
+        packageType: selectedPackageType || detectedInstalledType || "",
+        message
+      };
+    }
+
+    return {
+      success: true,
+      installed: true,
+      installedPath,
+      packagePath,
+      installDir: emulatorDir,
+      packageType: selectedPackageType || detectedInstalledType || "",
+      message: `Downloaded and installed ${name}.`
+    };
+  } catch (error) {
+    log.error("download-install-emulator failed:", error);
+    return { success: false, message: error.message };
+  }
 });
 
 ipcMain.handle("create-game-shortcut", async (_event, gameId) => {
@@ -1095,6 +3620,9 @@ async function scanForGamesAndEmulators(selectedDrive, options = {}) {
   const foundPlatforms = [];
   const foundGames = [];
   const foundEmulators = [];
+  const scope = String(options?.scope || "both").trim().toLowerCase();
+  const scanGames = scope !== "emulators";
+  const scanEmulators = scope !== "games";
   const recursive = options && options.recursive === false ? false : true;
   const maxDepth = Number.isFinite(options?.maxDepth)
     ? Math.max(0, Math.floor(options.maxDepth))
@@ -1155,38 +3683,40 @@ async function scanForGamesAndEmulators(selectedDrive, options = {}) {
               await scanDirectory(itemPath, depth + 1);
             }
           } else if (stat.isFile()) {
-            const platformConfig = determinePlatformFromFilename(item, itemPath, platformConfigs);
-            if (platformConfig) {
-              const filePath = String(itemPath || "").trim();
-              const exists = games.some((g) => String(g.filePath || "").toLowerCase() === filePath.toLowerCase());
-              if (!exists) {
-                const name = path.basename(item, path.extname(item));
-                const platformShortName = platformConfig.shortName || "unknown";
-                const code = inferGameCode({ name, filePath });
-                const image = discoverCoverImageRelative(platformShortName, code, name);
+            if (scanGames) {
+              const platformConfig = determinePlatformFromFilename(item, itemPath, platformConfigs);
+              if (platformConfig) {
+                const filePath = String(itemPath || "").trim();
+                const exists = games.some((g) => String(g.filePath || "").toLowerCase() === filePath.toLowerCase());
+                if (!exists) {
+                  const name = path.basename(item, path.extname(item));
+                  const platformShortName = platformConfig.shortName || "unknown";
+                  const code = inferGameCode({ name, filePath });
+                  const image = discoverCoverImageRelative(platformShortName, code, name);
 
-                const { row, existed: existedInDb } = dbUpsertGame({
-                  name,
-                  platform: platformConfig.name || "Unknown",
-                  platformShortName,
-                  filePath,
-                  code: code || null,
-                  image: image || null
-                });
+                  const { row, existed: existedInDb } = dbUpsertGame({
+                    name,
+                    platform: platformConfig.name || "Unknown",
+                    platformShortName,
+                    filePath,
+                    code: code || null,
+                    image: image || null
+                  });
 
-                if (!existedInDb) foundGames.push(row);
+                  if (!existedInDb) foundGames.push(row);
 
-                const psn = String(platformShortName).toLowerCase();
-                if (!foundPlatforms.includes(psn)) {
-                  log.info(`Found new platform ${platformConfig.name} shortName ${platformShortName}`);
-                  foundPlatforms.push(psn);
+                  const psn = String(platformShortName).toLowerCase();
+                  if (!foundPlatforms.includes(psn)) {
+                    log.info(`Found new platform ${platformConfig.name} shortName ${platformShortName}`);
+                    foundPlatforms.push(psn);
+                  }
+
+                  refreshLibraryFromDb();
                 }
-
-                refreshLibraryFromDb();
               }
             }
 
-            if (itemPath.toLowerCase().endsWith(".exe")) {
+            if (scanEmulators && itemPath.toLowerCase().endsWith(".exe")) {
               processEmulatorExe(itemPath, item, platformConfigs, emulators, foundEmulators);
             }
           }

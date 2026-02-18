@@ -1,14 +1,25 @@
-const { contextBridge, ipcRenderer } = require("electron");
+const { contextBridge, ipcRenderer, webUtils } = require("electron");
 
 const ALLOWED_INVOKE = new Set([
   "get-drives",
   "check-path-type",
+  "analyze-import-paths",
+  "stage-import-paths",
   "process-emulator-exe",
   "get-games",
   "get-game-details",
+  "update-game-metadata",
   "remove-game",
   "launch-game",
+  "search-missing-game-file",
+  "relink-game-file",
+  "launch-emulator",
+  "get-emulator-download-options",
+  "download-install-emulator",
   "get-emulators",
+  "show-item-in-folder",
+  "open-external-url",
+  "youtube:search-videos",
   "browse-games-and-emus",
   "upload-theme",
   "get-user-info",
@@ -36,12 +47,18 @@ const ALLOWED_INVOKE = new Set([
   "get-platforms",
   "import-files-as-platform",
   "detect-emulator-exe",
-  "import-exe"
+  "import-exe",
+  "settings:get-library-paths",
+  "settings:set-library-paths",
+  "settings:preview-relocate-managed-folder",
+  "settings:confirm-relocate-preview",
+  "settings:relocate-managed-folder"
   ,
   "window:minimize",
   "window:toggle-maximize",
   "window:close",
-  "window:is-maximized"
+  "window:is-maximized",
+  "app:renderer-ready"
 ]);
 
 const ALLOWED_SEND = new Set([
@@ -101,5 +118,15 @@ contextBridge.exposeInMainWorld("emubro", {
 
   createGameShortcut: (gameId) => invoke("create-game-shortcut", gameId),
   promptScanSubfolders: (folderPath) => invoke("prompt-scan-subfolders", folderPath),
-  importPaths: (paths, options) => invoke("import-paths", paths, options)
+  importPaths: (paths, options) => invoke("import-paths", paths, options),
+  getPathForFile: (file) => {
+    try {
+      const p = webUtils && typeof webUtils.getPathForFile === "function"
+        ? webUtils.getPathForFile(file)
+        : "";
+      return typeof p === "string" ? p : "";
+    } catch (_e) {
+      return "";
+    }
+  }
 });

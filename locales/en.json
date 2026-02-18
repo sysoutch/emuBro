@@ -5,7 +5,7 @@
       "description": "Game Library Manager"
     },
     "dropZone": {
-      "text": "📁 Drop Folder or 📄 Drop File"
+      "text": "Drop Folder or Drop File"
     },
     "header": {
       "library": "Library",
@@ -130,7 +130,7 @@
       "overrideBackground": "Override Theme Background",
       "resetDefaults": "Reset Defaults",
       "communityWorkshop": "Community Workshop",
-      "refresh": "🔄 Refresh",
+      "refresh": "Refresh",
       "official": "Official",
       "fetchingThemes": "Fetching themes from GitHub...",
       "loadThemesError": "Could not load themes. Please check your connection or try again later.",
@@ -195,7 +195,7 @@
       "ok": "OK",
       "saveAndContinue": "Save & Continue",
       "saveChanges": "Save Changes",
-      "back": "❮ Back"
+      "back": "Back"
     },
     "messages": {
       "loadingUserInfo": "Loading...",
@@ -228,8 +228,8 @@
       "next": "Next"
     },
     "random": {
-      "shuffle": "🎲 Shuffle & Suggest",
-      "stop": "Stop ⏹",
+      "shuffle": "Shuffle & Suggest",
+      "stop": "Stop",
       "suggestion": "Why not play \"{{game}}\" now?"
     },
     "tools": {
@@ -267,10 +267,10 @@
       "searching": "Searching. ..",
       "searchGames": "Search Games",
       "install": "Install",
-      "previous": "❮ Previous",
-      "next": "Next ❯",
-      "shuffle": "🎲 Shuffle & Suggest",
-      "stop": "Stop ⏹",
+      "previous": "Previous",
+      "next": "Next",
+      "shuffle": "Shuffle & Suggest",
+      "stop": "Stop",
       "editTheme": "Edit Theme",
       "createNewTheme": "Create New Theme",
       "backgroundImageLoaded": "Background image loaded",
@@ -285,3 +285,4 @@
     }
   }
 }
+

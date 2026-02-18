@@ -1,0 +1,111 @@
+.view-controls.is-hidden {
+    display: none;
+}
+
+.game-grid.non-library-mode .filters {
+    display: none;
+}
+
+.games-container.community-view {
+    display: block;
+}
+
+.community-view-shell {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.community-hero {
+    border: 1px solid color-mix(in srgb, rgba(255,255,255,0.22), var(--border-color));
+    border-radius: 18px;
+    padding: 22px;
+    background:
+        radial-gradient(120% 130% at 10% 0%, color-mix(in srgb, var(--accent-color) 18%, transparent), transparent 52%),
+        radial-gradient(110% 120% at 95% 100%, color-mix(in srgb, var(--brand-color) 20%, transparent), transparent 58%),
+        color-mix(in srgb, var(--bg-secondary), transparent 18%);
+    box-shadow: 0 18px 34px -26px rgba(0, 0, 0, 0.8);
+}
+
+.community-hero-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, rgba(255,255,255,0.28), var(--border-color));
+    background: color-mix(in srgb, var(--bg-primary), transparent 30%);
+    color: var(--text-secondary);
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 10px;
+}
+
+.community-hero-title {
+    margin: 0 0 8px 0;
+    color: var(--text-primary);
+    font-size: clamp(1.4rem, 2.6vw, 2rem);
+    letter-spacing: 0.01em;
+}
+
+.community-hero-copy {
+    margin: 0 0 16px 0;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    max-width: 760px;
+    line-height: 1.55;
+}
+
+.community-discord-btn {
+    min-width: 200px;
+    font-size: 0.98rem;
+    font-weight: 700;
+}
+
+.community-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+}
+
+.community-card {
+    border: 1px solid color-mix(in srgb, rgba(255,255,255,0.16), var(--border-color));
+    border-radius: 14px;
+    padding: 16px;
+    background: color-mix(in srgb, var(--bg-secondary), transparent 22%);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.community-card-title {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 1.1rem;
+}
+
+.community-card-blurb {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    line-height: 1.5;
+    flex: 1;
+}
+
+.community-card .community-link-btn {
+    align-self: flex-start;
+    min-width: 138px;
+}
+
+@media (max-width: 720px) {
+    .community-hero {
+        padding: 18px 16px;
+    }
+
+    .community-discord-btn {
+        width: 100%;
+    }
+}

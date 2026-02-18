@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Theme Manager
  */
 
@@ -28,6 +28,32 @@ let fixedBackgroundTracking = null;
 let isDragging = false;
 let startX, startY;
 let modalInitialX, modalInitialY;
+
+function normalizeGradientAngle(value, fallback = '160deg') {
+    const raw = String(value ?? '').trim();
+    const defaultNum = Number.parseInt(String(fallback).replace(/deg$/i, ''), 10);
+    const fallbackNum = Number.isFinite(defaultNum) ? defaultNum : 160;
+    let num = Number.parseInt(raw.replace(/deg$/i, ''), 10);
+    if (!Number.isFinite(num)) num = fallbackNum;
+    num = Math.max(0, Math.min(360, num));
+    return `${num}deg`;
+}
+
+function updateGradientAngleValueLabel(angleText) {
+    const label = document.getElementById('gradient-angle-value');
+    if (label) label.textContent = angleText;
+}
+
+function setGradientAngleInputFromValue(angleText) {
+    const input = document.getElementById('gradient-angle');
+    if (!input) return;
+    const num = Number.parseInt(String(angleText).replace(/deg$/i, ''), 10);
+    input.value = String(Number.isFinite(num) ? num : 160);
+}
+
+function applyGradientAnglePreview(angleText) {
+    document.documentElement.style.setProperty('--app-gradient-angle', normalizeGradientAngle(angleText));
+}
 
 export function makeDraggable(modalId, headerId) {
     const modal = document.getElementById(modalId);
@@ -290,6 +316,10 @@ export function applyCustomTheme(theme) {
     if (theme.colors.bgHeader) root.style.setProperty('--bg-header', theme.colors.bgHeader);
     if (theme.colors.bgSidebar) root.style.setProperty('--bg-sidebar', theme.colors.bgSidebar);
     if (theme.colors.bgActionbar) root.style.setProperty('--bg-actionbar', theme.colors.bgActionbar);
+    root.style.setProperty('--app-gradient-a', theme.colors.appGradientA || theme.colors.bgPrimary || '#0b1528');
+    root.style.setProperty('--app-gradient-b', theme.colors.appGradientB || theme.colors.bgSecondary || '#0f2236');
+    root.style.setProperty('--app-gradient-c', theme.colors.appGradientC || tertiary || '#1d2f4a');
+    root.style.setProperty('--app-gradient-angle', normalizeGradientAngle(theme.colors.appGradientAngle || '160deg'));
 
     root.style.setProperty('--text-primary', theme.colors.textPrimary);
     root.style.setProperty('--text-secondary', theme.colors.textSecondary);
@@ -395,10 +425,16 @@ export function updateThemeSelector() {
     const themeSelect = document.getElementById('theme-select');
     if (!themeSelect) return;
 
+    const safeThemeLabel = (key, fallback) => {
+        const translated = i18n.t(key);
+        if (!translated || translated === key) return fallback;
+        return translated;
+    };
+
     const customThemes = getCustomThemes();
     const options = [
-        { value: 'dark', label: i18n.t('theme.darkTheme') },
-        { value: 'light', label: i18n.t('theme.lightTheme') },
+        { value: 'dark', label: safeThemeLabel('theme.darkTheme', 'Dark Theme') },
+        { value: 'light', label: safeThemeLabel('theme.lightTheme', 'Light Theme') },
         ...customThemes.map(t => ({ value: t.id, label: t.name }))
     ];
     
@@ -411,6 +447,19 @@ export function updateThemeSelector() {
         themeSelect.appendChild(option);
     });
     themeSelect.value = currentValue;
+}
+
+function getThemeDisplayName(themeId) {
+    const normalizedId = String(themeId || '').toLowerCase();
+    if (normalizedId === 'dark') {
+        const label = i18n.t('theme.darkTheme');
+        return (!label || label === 'theme.darkTheme') ? 'Dark Theme' : label;
+    }
+    if (normalizedId === 'light') {
+        const label = i18n.t('theme.lightTheme');
+        return (!label || label === 'theme.lightTheme') ? 'Light Theme' : label;
+    }
+    return String(themeId || '');
 }
 
 export function deleteCustomTheme(id) {
@@ -448,7 +497,7 @@ export function renderThemeManager() {
         const isActive = currentTheme === theme;
         const item = createThemeItem(
             theme,
-            i18n.t(`theme.${theme}Theme`),
+            getThemeDisplayName(theme),
             'preset',
             isActive,
             theme
@@ -485,8 +534,8 @@ function createThemeItem(id, name, type, isActive, themeData) {
             : ['#f5f5f5', '#1a1a1a', '#0099cc'];
     } else {
         dots = [
-            themeData.colors.bgPrimary, 
-            themeData.colors.textPrimary, 
+            themeData.colors.appGradientA || themeData.colors.bgPrimary,
+            themeData.colors.appGradientB || themeData.colors.bgSecondary,
             themeData.colors.accentColor
         ];
     }
@@ -522,7 +571,14 @@ function createThemeItem(id, name, type, isActive, themeData) {
         
         const editBtn = document.createElement('button');
         editBtn.className = 'action-btn small';
-        editBtn.innerHTML = '✎'; 
+        editBtn.innerHTML = `
+            <span class="icon-svg" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <path d="M14 4 20 10 11 19H5v-6L14 4Z"></path>
+                    <path d="M14 4 17 7"></path>
+                </svg>
+            </span>
+        `;
         editBtn.onclick = (e) => {
         e.stopPropagation();
             
@@ -549,7 +605,7 @@ function createThemeItem(id, name, type, isActive, themeData) {
         
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'action-btn remove-btn small';
-        deleteBtn.innerHTML = '×'; 
+        deleteBtn.innerHTML = 'Ã—'; 
         deleteBtn.onclick = (e) => { e.stopPropagation(); deleteCustomTheme(id); };
         
         actions.appendChild(editBtn);
@@ -678,6 +734,12 @@ export function editTheme(theme) {
     document.getElementById('color-bg-tertiary').value = theme.colors.bgTertiary || theme.colors.bgSecondary;
     document.getElementById('color-success').value = theme.colors.successColor || '#4caf50';
     document.getElementById('color-danger').value = theme.colors.dangerColor || '#f44336';
+    document.getElementById('color-app-gradient-a').value = theme.colors.appGradientA || theme.colors.bgPrimary || '#0b1528';
+    document.getElementById('color-app-gradient-b').value = theme.colors.appGradientB || theme.colors.bgSecondary || '#0f2236';
+    document.getElementById('color-app-gradient-c').value = theme.colors.appGradientC || theme.colors.bgTertiary || '#1d2f4a';
+    const gradientAngle = normalizeGradientAngle(theme.colors.appGradientAngle || '160deg');
+    setGradientAngleInputFromValue(gradientAngle);
+    updateGradientAngleValueLabel(gradientAngle);
 
     if (theme.background) {
         document.getElementById('bg-position').value = theme.background.position || 'centered';
@@ -750,7 +812,10 @@ export function resetThemeForm() {
         'color-bg-actionbar': '#252525',
         'color-bg-tertiary': '#333333',
         'color-success': '#4caf50',
-        'color-danger': '#f44336'
+        'color-danger': '#f44336',
+        'color-app-gradient-a': '#0b1528',
+        'color-app-gradient-b': '#0f2236',
+        'color-app-gradient-c': '#1d2f4a'
     };
     for (const [id, val] of Object.entries(defaults)) {
         const el = document.getElementById(id);
@@ -768,6 +833,10 @@ export function resetThemeForm() {
     
     const glassToggle = document.getElementById('glass-effect-toggle');
     if (glassToggle) glassToggle.checked = true;
+
+    setGradientAngleInputFromValue('160deg');
+    updateGradientAngleValueLabel('160deg');
+    applyGradientAnglePreview('160deg');
     
     clearBackgroundImage();
 }
@@ -807,7 +876,10 @@ export function setupColorPickerListeners() {
         'color-bg-actionbar': '--bg-actionbar',
         'color-bg-tertiary': '--bg-tertiary',
         'color-success': '--success-color',
-        'color-danger': '--danger-color'
+        'color-danger': '--danger-color',
+        'color-app-gradient-a': '--app-gradient-a',
+        'color-app-gradient-b': '--app-gradient-b',
+        'color-app-gradient-c': '--app-gradient-c'
     };
 
     document.querySelectorAll('.color-picker').forEach(picker => {
@@ -831,6 +903,27 @@ export function setupColorPickerListeners() {
         newPicker.addEventListener('change', handleUpdate);
         newPicker.addEventListener('input', handleUpdate);
     });
+
+    const gradientAngleInput = document.getElementById('gradient-angle');
+    if (gradientAngleInput) {
+        const replacement = gradientAngleInput.cloneNode(true);
+        gradientAngleInput.parentNode.replaceChild(replacement, gradientAngleInput);
+
+        const handleAngleUpdate = (event) => {
+            const angle = normalizeGradientAngle(`${event.target.value}deg`);
+            updateGradientAngleValueLabel(angle);
+            applyGradientAnglePreview(angle);
+            hasUnsavedChanges = true;
+        };
+
+        replacement.addEventListener('input', handleAngleUpdate);
+        replacement.addEventListener('change', handleAngleUpdate);
+
+        const currentAngle = normalizeGradientAngle(`${replacement.value || '160'}deg`);
+        setGradientAngleInputFromValue(currentAngle);
+        updateGradientAngleValueLabel(currentAngle);
+        applyGradientAnglePreview(currentAngle);
+    }
 }
 
 export function setupBackgroundImageListeners() {
@@ -892,6 +985,10 @@ export function getCurrentThemeColors() {
         bgHeader: getVar('--bg-header'),
         bgSidebar: getVar('--bg-sidebar'),
         bgActionbar: getVar('--bg-actionbar'),
+        appGradientA: getVar('--app-gradient-a'),
+        appGradientB: getVar('--app-gradient-b'),
+        appGradientC: getVar('--app-gradient-c'),
+        appGradientAngle: normalizeGradientAngle(styles.getPropertyValue('--app-gradient-angle').trim() || '160deg'),
         successColor: getVar('--success-color'),
         dangerColor: getVar('--danger-color')
     };
@@ -918,6 +1015,10 @@ export function saveTheme() {
             bgSidebar: document.getElementById('color-bg-sidebar').value,
             bgActionbar: document.getElementById('color-bg-actionbar').value,
             bgTertiary: document.getElementById('color-bg-tertiary').value,
+            appGradientA: document.getElementById('color-app-gradient-a').value,
+            appGradientB: document.getElementById('color-app-gradient-b').value,
+            appGradientC: document.getElementById('color-app-gradient-c').value,
+            appGradientAngle: normalizeGradientAngle(`${document.getElementById('gradient-angle').value}deg`),
             successColor: document.getElementById('color-success').value,
             dangerColor: document.getElementById('color-danger').value
         },
@@ -963,9 +1064,13 @@ export async function renderMarketplace(forceRefresh = false) {
         const installedTheme = customThemes.find(t => t.name === theme.name && (t.author === theme.author || !t.author));
 
         const hasBgImage = theme.background && theme.background.image;
+        const gradientAngle = normalizeGradientAngle(theme.colors.appGradientAngle || '145deg');
+        const gradientA = theme.colors.appGradientA || theme.colors.bgPrimary;
+        const gradientB = theme.colors.appGradientB || theme.colors.bgSecondary;
+        const gradientC = theme.colors.appGradientC || theme.colors.bgPrimary;
         const bgPreviewStyle = hasBgImage 
             ? `background-image: url('${theme.background.image}'); background-size: cover; background-position: center;`
-            : `background: linear-gradient(135deg, ${theme.colors.bgPrimary}, ${theme.colors.bgSecondary});`;
+            : `background: linear-gradient(${gradientAngle}, ${gradientA}, ${gradientB}, ${gradientC});`;
 
         card.innerHTML = `
             <div class="marketplace-card-header" style="${bgPreviewStyle} height: 120px; border-radius: 6px; margin-bottom: 10px; position: relative; border: 1px solid var(--border-color); overflow: hidden;">
@@ -975,9 +1080,9 @@ export async function renderMarketplace(forceRefresh = false) {
                 <span class="theme-item-name" style="font-weight: bold; font-size: 1.1rem;">${theme.name}</span>
             </div>
             <div class="theme-preview" style="margin: 10px 0;">
-                <div class="theme-color-dot" style="background-color: ${theme.colors.bgPrimary}" title="Background"></div>
+                <div class="theme-color-dot" style="background-color: ${gradientA}" title="Gradient A"></div>
+                <div class="theme-color-dot" style="background-color: ${gradientB}" title="Gradient B"></div>
                 <div class="theme-color-dot" style="background-color: ${theme.colors.accentColor}" title="Accent"></div>
-                <div class="theme-color-dot" style="background-color: ${theme.colors.textPrimary}" title="Text"></div>
             </div>
             <div style="display: flex; gap: 8px;">
                 <button class="action-btn small preview-btn" style="flex: 1; background: var(--bg-tertiary);">${i18n.t('theme.preview')}</button>
@@ -1045,6 +1150,10 @@ export function toggleTheme() {
     invertedColors.bgHeader = flip(currentColors.bgHeader);
     invertedColors.bgSidebar = flip(currentColors.bgSidebar);
     invertedColors.bgActionbar = flip(currentColors.bgActionbar);
+    invertedColors.appGradientA = flip(currentColors.appGradientA);
+    invertedColors.appGradientB = flip(currentColors.appGradientB);
+    invertedColors.appGradientC = flip(currentColors.appGradientC);
+    invertedColors.appGradientAngle = currentColors.appGradientAngle || '160deg';
     
     invertedColors.successColor = flip(currentColors.successColor);
     invertedColors.dangerColor = flip(currentColors.dangerColor);

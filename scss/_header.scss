@@ -1,14 +1,17 @@
 /* Header */
 .header {
-    background-color: var(--bg-header);
+    background-color: color-mix(in srgb, var(--glass-surface-strong), transparent 8%);
+    backdrop-filter: blur(16px) saturate(1.12);
+    -webkit-backdrop-filter: blur(16px) saturate(1.12);
     --win-controls-space: 142px;
 
-    padding: 2.5px 20px;
-    padding-right: calc(20px + var(--win-controls-space));
+    padding: 2.5px 0px 2.5px 20px;
+    padding-right: calc(0px + var(--win-controls-space));
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid var(--border-color);
+    flex-wrap: nowrap;
+    border-bottom: 1px solid var(--glass-border);
     color: var(--text-primary);
     position: sticky;
     top: 0;
@@ -28,26 +31,26 @@
 .header .options-list,
 .header .dropdown-with-button-wrapper,
 .header .search-bar,
-.header .user-actions,
 .header .navigation,
-.header .logo {
+.header .user-actions > * {
     -webkit-app-region: no-drag;
 }
 
 .user-actions {
     /* Reserve space so the absolute-positioned window buttons don't overlap */
     padding-right: var(--win-controls-space);
+    -webkit-app-region: drag;
 }
 
 .window-controls-main {
     position: absolute;
     top: 0;
-    right: 8px;
+    right: 0;
     height: 100%;
     display: flex;
-    gap: 2px;
+    gap: 0px;
     align-items: stretch;
-    padding: 2px 6px 2px 0;
+    padding: 0px;
     -webkit-app-region: no-drag;
 }
 
@@ -55,7 +58,7 @@
     width: 44px;
     height: 100%;
     padding: 0;
-    border-radius: 8px;
+    border-radius: 0px;
     border: 1px solid transparent;
     background: transparent;
     color: var(--text-secondary);
@@ -85,6 +88,30 @@
     background-color: color-mix(in srgb, var(--danger-color), black 10%);
     border-color: var(--danger-dark);
     color: white;
+}
+
+[data-os="win32"] .header {
+    --win-controls-space: 126px;
+    min-height: 42px;
+    padding: 1.5px 0 1.5px 14px;
+}
+
+[data-os="win32"] .logo img {
+    height: 40px;
+}
+
+[data-os="win32"] .logo-circle {
+    width: 40px;
+    height: 40px;
+}
+
+[data-os="win32"] .logo h1 {
+    font-size: 2.2rem;
+}
+
+[data-os="win32"] .win-btn {
+    width: 42px;
+    font-size: 14px;
 }
 
 .header-content-wrapper {
@@ -200,10 +227,15 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    -webkit-app-region: drag;
+    user-select: none;
+    -webkit-user-select: none;
+    pointer-events: none;
 }
 
 .logo img {
     height: 48px;
+    -webkit-user-drag: none;
 }
 
 .logo h1 {
@@ -224,6 +256,11 @@
 .navigation ul {
     display: flex;
     list-style: none;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    gap: 14px;
+    margin: 0;
+    padding: 0;
 }
 
 .dropdown-with-button-wrapper {
@@ -277,15 +314,14 @@
     border-radius: var(--radius-input) 0 0 var(--radius-input);
 }
 
-.navigation ul li {
-    margin: 0 15px;
-}
-
 .navigation ul li a {
     color: var(--text-secondary);
     text-decoration: none;
     font-weight: 500;
     transition: color 0.3s;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
 }
 
 .navigation ul li a:hover,
@@ -297,6 +333,8 @@
     display: flex;
     align-items: center;
     gap: 20px;
+    flex-wrap: nowrap;
+    min-width: 0;
 }
 
 .search-bar input {
@@ -328,3 +366,51 @@
 }
 
 // The custom language selector has its own styles in _language-selector.scss
+
+/* Keep top nav single-line and hide it on smaller windows (sidebar already has navigation). */
+@media (max-width: 1360px) {
+    .navigation ul {
+        gap: 10px;
+    }
+
+    .search-bar input {
+        width: 170px;
+    }
+
+    .user-actions {
+        gap: 12px;
+    }
+}
+
+@media (max-width: 1200px) {
+    .navigation {
+        display: none;
+    }
+
+    .header {
+        flex-direction: row;
+        align-items: center;
+        gap: 10px;
+        padding-left: 12px;
+        padding-right: calc(10px + var(--win-controls-space));
+    }
+
+    .user-actions {
+        margin-left: auto;
+        gap: 10px;
+    }
+
+    .search-bar input {
+        width: 150px;
+    }
+}
+
+@media (max-width: 920px) {
+    .user-info #user-name {
+        display: none;
+    }
+
+    .search-bar input {
+        width: 130px;
+    }
+}

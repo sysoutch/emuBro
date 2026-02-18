@@ -6,6 +6,121 @@
 const dockedPanels = new Set();
 let activeDockedPanel = null;
 
+function clearDockInlineLayout(modal) {
+    if (!modal) return;
+    modal.style.removeProperty('top');
+    modal.style.removeProperty('bottom');
+    modal.style.removeProperty('height');
+    modal.style.removeProperty('max-height');
+}
+
+function getVisibleDockedPanelIds() {
+    return [...dockedPanels].filter((id) => {
+        const modal = document.getElementById(id);
+        if (!modal) return false;
+        if (!modal.classList.contains('docked-right')) return false;
+        if (modal.style.display === 'none') return false;
+        return true;
+    });
+}
+
+function applyDockedAccordionLayout() {
+    const visibleIds = getVisibleDockedPanelIds();
+    if (visibleIds.length === 0) return;
+
+    const activeId = (activeDockedPanel && visibleIds.includes(activeDockedPanel))
+        ? activeDockedPanel
+        : visibleIds[0];
+
+    // Single panel: let stylesheet defaults handle full-height dock mode.
+    if (visibleIds.length <= 1 || !document.body.classList.contains('docking-accordion')) {
+        visibleIds.forEach((id) => {
+            const modal = document.getElementById(id);
+            if (!modal) return;
+            clearDockInlineLayout(modal);
+        });
+        return;
+    }
+
+    const collapsedCount = visibleIds.length - 1;
+    let collapsedIndex = 0;
+
+    visibleIds.forEach((id) => {
+        const modal = document.getElementById(id);
+        if (!modal) return;
+
+        modal.style.bottom = 'auto';
+
+        if (id === activeId) {
+            const expandedTop = `calc(var(--dock-edge-inset) + (${collapsedCount} * var(--dock-accordion-header-h)))`;
+            const expandedHeight = `calc(100vh - (var(--dock-edge-inset) * 2) - (${collapsedCount} * var(--dock-accordion-header-h)))`;
+            modal.style.top = expandedTop;
+            modal.style.height = expandedHeight;
+            modal.style.maxHeight = expandedHeight;
+        } else {
+            const collapsedTop = `calc(var(--dock-edge-inset) + (${collapsedIndex} * var(--dock-accordion-header-h)))`;
+            modal.style.top = collapsedTop;
+            modal.style.height = 'var(--dock-accordion-header-h)';
+            modal.style.maxHeight = 'var(--dock-accordion-header-h)';
+            collapsedIndex += 1;
+        }
+    });
+}
+
+function getDockedTabIcon(id) {
+    if (id === 'theme-manager-modal') {
+        return `
+            <span class="icon-svg" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <path d="M14 4 20 10 11 19H5v-6L14 4Z"></path>
+                    <path d="M14 4 17 7"></path>
+                </svg>
+            </span>
+        `;
+    }
+
+    if (id === 'language-manager-modal') {
+        return `
+            <span class="icon-svg" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <path d="M3 12h18"></path>
+                    <path d="M12 3c2.7 2.4 4.2 5.7 4.2 9s-1.5 6.6-4.2 9"></path>
+                    <path d="M12 3c-2.7 2.4-4.2 5.7-4.2 9s1.5 6.6 4.2 9"></path>
+                </svg>
+            </span>
+        `;
+    }
+
+  if (id === 'game-info-modal') {
+        return `
+            <span class="icon-svg" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <path d="M12 10.3v5.5"></path>
+                    <circle cx="12" cy="7.2" r="0.8" fill="currentColor" stroke="none"></circle>
+                </svg>
+            </span>
+        `;
+    }
+
+    if (id === 'emulator-info-modal') {
+        return `
+            <span class="icon-svg" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <rect x="5" y="8" width="14" height="9" rx="2"></rect>
+                    <path d="M8 17v2"></path>
+                    <path d="M16 17v2"></path>
+                    <circle cx="10" cy="12.5" r="0.7" fill="currentColor" stroke="none"></circle>
+                    <circle cx="14" cy="12.5" r="0.7" fill="currentColor" stroke="none"></circle>
+                </svg>
+            </span>
+        `;
+    }
+
+    return '<span aria-hidden="true">P</span>';
+}
+
 export function initDocking() {
     // Create tab container if it doesn't exist
     if (!document.getElementById('docked-tabs-container')) {
@@ -197,17 +312,14 @@ export function updateDockedTabs() {
     dockedPanels.forEach(id => {
         const tab = document.createElement('div');
         tab.className = `docked-tab ${activeDockedPanel === id ? 'active' : ''}`;
-        
-        let label = 'Panel';
-        if (id === 'theme-manager-modal') label = '🎨';
-        if (id === 'language-manager-modal') label = '🌐';
-        
-        tab.textContent = label;
+        tab.innerHTML = getDockedTabIcon(id);
         tab.title = id.replace('-modal', '').replace('-', ' ');
         
         tab.addEventListener('click', () => activatePanel(id));
         container.appendChild(tab);
     });
+
+    applyDockedAccordionLayout();
 }
 
 export function isPanelDocked(modalId) {

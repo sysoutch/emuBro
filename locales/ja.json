@@ -163,8 +163,8 @@
       "next": "次"
     },
     "random": {
-      "shuffle": "🎲 シャッフルして提案",
-      "stop": "停止 ⏹",
+      "shuffle": "シャッフルして提案",
+      "stop": "停止",
       "suggestion": "今、「{{game}}」をプレイするのはどうでしょう？"
     },
     "tools": {
@@ -186,10 +186,10 @@
       "searching": "検索中...",
       "searchGames": "ゲームを検索",
       "install": "インストール",
-      "previous": "❮ 前",
-      "next": "次 ❯",
-      "shuffle": "🎲 シャッフルして提案",
-      "stop": "停止 ⏹",
+      "previous": "前",
+      "next": "次",
+      "shuffle": "シャッフルして提案",
+      "stop": "停止",
       "editTheme": "テーマを編集",
       "createNewTheme": "新しいテーマを作成",
       "backgroundImageLoaded": "背景画像が読み込まれました",
@@ -204,3 +204,5 @@
     }
   }
 }
+
+

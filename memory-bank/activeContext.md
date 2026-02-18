@@ -50,6 +50,17 @@ The current focus is on updating project documentation and maintaining the codeb
 4. Implement progress.md to track development status
 5. Begin implementing core features based on documented patterns
 6. Update documentation as features are implemented
+7. Add a future "Suggested Games" view powered by AI recommendations with pluggable providers (ChatGPT, Gemini, Ollama)
+8. Refactor `js/game-manager.js` into modular files under `js/game-manager/` to reduce file size and improve maintainability
+9. Proposed module split for `js/game-manager/`:
+   - `state.js` (shared state, getters/setters)
+   - `views/` (`cover-view.js`, `list-view.js`, `table-view.js`, `slideshow-view.js`, `random-view.js`, `emulators-view.js`)
+   - `popups/` (`game-info-popup.js`, `emulator-info-popup.js`, `dialogs.js`)
+   - `actions/` (`game-actions.js`, `emulator-actions.js`, `download-actions.js`)
+   - `rendering/` (`lazy-images.js`, `incremental-render.js`, `filters-sort.js`)
+   - `index.js` as the compatibility entry exporting current public API
+10. Keep exports stable during refactor so `renderer.js` and other consumers do not break
+11. Refactor `main.js` into modular files under `main/` (window lifecycle, IPC handlers, library/db, launcher, download/install, locale manager) to reduce coupling and improve startup reliability
 
 ## Active Decisions and Considerations
 - Using CSS Grid for the main `games-container` but `flex-column` or `block` overrides (via `grid-column: 1 / -1`) for non-grid views like List, Table, and Slideshow
@@ -59,6 +70,8 @@ The current focus is on updating project documentation and maintaining the codeb
 - Supporting multiple themes through localStorage
 - Multi-language support through i18n system
 - Modular architecture with separate managers for different functionalities
+- `js/game-manager.js` has grown too large; ongoing work should prioritize modularization into `js/game-manager/` with stable interfaces
+- `main.js` is also too large and should be split into domain modules with a small composition entrypoint
 
 ## Important Patterns and Preferences
 - Component-based architecture

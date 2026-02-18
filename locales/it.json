@@ -169,8 +169,8 @@
       "next": "Successivo"
     },
     "random": {
-      "shuffle": "🎲 Mescola e suggerisci",
-      "stop": "Interrompi ⏹",
+      "shuffle": "Mescola e suggerisci",
+      "stop": "Interrompi",
       "suggestion": "Perché non giocare a \"{{game}}\" ora?"
     },
     "tools": {
@@ -192,10 +192,10 @@
       "searching": "Ricerca in corso...",
       "searchGames": "Cerca giochi",
       "install": "Installa",
-      "previous": "❮ Precedente",
-      "next": "Successivo ❯",
-      "shuffle": "🎲 Mescola e suggerisci",
-      "stop": "Interrompi ⏹",
+      "previous": "Precedente",
+      "next": "Successivo",
+      "shuffle": "Mescola e suggerisci",
+      "stop": "Interrompi",
       "editTheme": "Modifica tema",
       "createNewTheme": "Crea nuovo tema",
       "backgroundImageLoaded": "Immagine di sfondo caricata",
@@ -210,3 +210,4 @@
     }
   }
 }
+

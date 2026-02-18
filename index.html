@@ -6,6 +6,7 @@
     <title data-i18n="app.title">emuBro</title>
 </head>
 <body>
+    <div class="win-top-drag-strip" aria-hidden="true"></div>
     <div class="app-container">
         <!-- Header -->
         <header class="header">
@@ -17,10 +18,9 @@
             </div>
             <nav class="navigation">
                 <ul>
-                    <li><a href="#" class="active">Library</a></li>
-                    <li><a href="#">Tools</a></li>
-                    <li><a href="#">Community</a></li>
-                    <li><a href="#">Profile</a></li>
+                    <li><a href="#" class="active" data-nav-target="library">Library</a></li>
+                    <li><a href="#" data-nav-target="tools">Tools</a></li>
+                    <li><a href="#" data-nav-target="community">Community</a></li>
                 </ul>
             </nav>
             <div class="user-actions">
@@ -41,7 +41,16 @@
                             </ul>
                         </div>
                         
-                        <button id="language-manager-btn" class="theme-manager-btn" title="Manage Languages">🌐</button>
+                        <button id="language-manager-btn" class="theme-manager-btn icon-only-btn" title="Manage Languages" aria-label="Manage Languages">
+                            <span class="icon-svg" aria-hidden="true">
+                                <svg viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="9"></circle>
+                                    <path d="M3 12h18"></path>
+                                    <path d="M12 3c2.7 2.4 4.2 5.7 4.2 9s-1.5 6.6-4.2 9"></path>
+                                    <path d="M12 3c-2.7 2.4-4.2 5.7-4.2 9s1.5 6.6 4.2 9"></path>
+                                </svg>
+                            </span>
+                        </button>
                     </div>
                 </div>
                 <div class="theme-toggle-wrapper">
@@ -50,14 +59,38 @@
                             <option value="dark" data-i18n="theme.darkTheme"></option>
                             <option value="light" data-i18n="theme.lightTheme"></option>
                         </select>
-                        <button id="theme-manager-btn" class="theme-manager-btn" title="Manage Themes">⚙️</button>
+                        <button id="theme-manager-btn" class="theme-manager-btn icon-only-btn" title="Manage Themes" aria-label="Manage Themes">
+                            <span class="icon-svg" aria-hidden="true">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"></path>
+                                    <path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a1 1 0 0 1 0 1.4l-1 1a1 1 0 0 1-1.4 0l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-.2a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a1 1 0 0 1-1.4 0l-1-1a1 1 0 0 1 0-1.4l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1h.2a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a1 1 0 0 1 0-1.4l1-1a1 1 0 0 1 1.4 0l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v.2a1 1 0 0 0 .6.9 1 1 0 0 0 1.1-.2l.1-.1a1 1 0 0 1 1.4 0l1 1a1 1 0 0 1 0 1.4l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6H20a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-.2a1 1 0 0 0-.9.6Z"></path>
+                                </svg>
+                            </span>
+                        </button>
                     </div>
-                    <button id="theme-toggle-btn" class="theme-toggle" title="Toggle Light/Dark Mode">💡</button>
-                    <button id="invert-colors-btn" class="theme-toggle" title="Invert Colors">🌗</button>
-                </div>
-                <div class="user-info">
-                    <img id="user-avatar" src="" alt="User Avatar">
-                    <span id="user-name" data-i18n="messages.loadingUserInfo">Loading...</span>
+                    <button id="theme-toggle-btn" class="theme-toggle icon-only-btn" title="Toggle Light/Dark Mode" aria-label="Toggle Light/Dark Mode">
+                        <span class="icon-svg" aria-hidden="true">
+                            <svg viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <path d="M12 2v2"></path>
+                                <path d="M12 20v2"></path>
+                                <path d="m4.9 4.9 1.4 1.4"></path>
+                                <path d="m17.7 17.7 1.4 1.4"></path>
+                                <path d="M2 12h2"></path>
+                                <path d="M20 12h2"></path>
+                                <path d="m4.9 19.1 1.4-1.4"></path>
+                                <path d="m17.7 6.3 1.4-1.4"></path>
+                            </svg>
+                        </span>
+                    </button>
+                    <button id="invert-colors-btn" class="theme-toggle icon-only-btn" title="Invert Colors" aria-label="Invert Colors">
+                        <span class="icon-svg" aria-hidden="true">
+                            <svg viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="9"></circle>
+                                <path d="M12 3a9 9 0 0 0 0 18V3Z"></path>
+                            </svg>
+                        </span>
+                    </button>
                 </div>
             </div>
 
@@ -69,25 +102,11 @@
             </div>
         </header>
 
-        <!-- View Toggle Controls -->
-        <div class="view-controls">
-            <button class="view-btn active" data-view="cover" data-i18n="views.cover">Cover</button>
-            <button class="view-btn" data-view="list" data-i18n="views.list">List</button>
-            <button class="view-btn" data-view="table" data-i18n="views.table">Table</button>
-            <button class="view-btn" data-view="slideshow" data-i18n="views.slideshow">Slideshow</button>
-            <button class="view-btn" data-view="random" data-i18n="views.random">Random</button>
-            
-            <select id="drive-selector" class="drive-selector">
-                <option value="">Select Drive</option>
-            </select>
-            <button id="search-games-btn" class="view-btn">Search Games</button>
-        </div>
-
         <!-- Main Content -->
         <div class="main-content">
             <div class="drop-zone-overlay">
                 <div>
-                    <div class="drop-zone-overlay-text" data-i18n="dropZone.text">📁 Drop Folder or 📄 Drop File</div>
+                    <div class="drop-zone-overlay-text" data-i18n="dropZone.text">Drop Folder or Drop File</div>
                 </div>
             </div>
             <!-- Sidebar: icon rail + expandable content -->
@@ -95,11 +114,9 @@
                 <div class="sidebar-rail" aria-label="Primary navigation">
                     <button id="sidebar-toggle" class="rail-btn rail-brand" type="button" aria-expanded="false" title="Expand sidebar">
                         <span class="rail-icon" aria-hidden="true">
-                            <!-- Controller icon -->
-                            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M7 16.5c-1.8 0-3.3-1.3-3.7-3l-.6-2.4C2.2 9 3.5 7 5.7 7h12.6c2.2 0 3.5 2 3 4.1l-.6 2.4c-.4 1.7-1.9 3-3.7 3-.9 0-1.7-.3-2.4-.9l-1.2-1.1c-.8-.7-2-.7-2.8 0l-1.2 1.1c-.7.6-1.5.9-2.4.9z"/>
-                                <path d="M7.4 11.3h2.8M8.8 9.9v2.8"/>
-                                <path d="M15.9 10.6h.01M18 12.7h.01"/>
+                            <!-- Grid icon -->
+                            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/>
                             </svg>
                         </span>
                     </button>
@@ -107,9 +124,11 @@
                     <div class="rail-group">
                         <button class="rail-btn rail-nav is-active" type="button" data-rail-target="library" title="Library">
                             <span class="rail-icon" aria-hidden="true">
-                                <!-- Grid icon -->
-                                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/>
+                                <!-- Controller icon -->
+                                <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M7 16.5c-1.8 0-3.3-1.3-3.7-3l-.6-2.4C2.2 9 3.5 7 5.7 7h12.6c2.2 0 3.5 2 3 4.1l-.6 2.4c-.4 1.7-1.9 3-3.7 3-.9 0-1.7-.3-2.4-.9l-1.2-1.1c-.8-.7-2-.7-2.8 0l-1.2 1.1c-.7.6-1.5.9-2.4.9z"/>
+                                    <path d="M7.4 11.3h2.8M8.8 9.9v2.8"/>
+                                    <path d="M15.9 10.6h.01M18 12.7h.01"/>
                                 </svg>
                             </span>
                             <span class="rail-label">Library</span>
@@ -126,20 +145,42 @@
                             </span>
                             <span class="rail-label">Tools</span>
                         </button>
+
+                        <button class="rail-btn rail-nav" type="button" data-rail-target="community" title="Community">
+                            <span class="rail-icon" aria-hidden="true">
+                                <!-- Chat icon -->
+                                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H8l-5 3 1.5-4.5A8.5 8.5 0 1 1 21 11.5z"/>
+                                </svg>
+                            </span>
+                            <span class="rail-label">Community</span>
+                        </button>
                     </div>
 
                     <div class="rail-spacer"></div>
+                    <div class="rail-group rail-group--bottom">
+                        <button class="rail-btn rail-nav" type="button" data-rail-target="profile" title="Profile">
+                            <span class="rail-icon" aria-hidden="true">
+                                <!-- User icon -->
+                                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M20 21a8 8 0 0 0-16 0"/>
+                                    <circle cx="12" cy="8" r="4"/>
+                                </svg>
+                            </span>
+                            <span class="rail-label">Profile</span>
+                        </button>
 
-                    <button class="rail-btn rail-nav" type="button" data-rail-target="settings" title="Settings">
-                        <span class="rail-icon" aria-hidden="true">
-                            <!-- Gear icon -->
-                            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/>
-                                <path d="M19.4 15a7.8 7.8 0 0 0 .1-1l2-1.2-2-3.5-2.3.5a8 8 0 0 0-1.6-1l-.3-2.4H8.7l-.3 2.4a8 8 0 0 0-1.6 1l-2.3-.5-2 3.5 2 1.2a7.8 7.8 0 0 0 .1 1 7.8 7.8 0 0 0-.1 1l-2 1.2 2 3.5 2.3-.5a8 8 0 0 0 1.6 1l.3 2.4h6.6l.3-2.4a8 8 0 0 0 1.6-1l2.3.5 2-3.5-2-1.2a7.8 7.8 0 0 0-.1-1z"/>
-                            </svg>
-                        </span>
-                        <span class="rail-label">Settings</span>
-                    </button>
+                        <button class="rail-btn rail-nav" type="button" data-rail-target="settings" title="Settings">
+                            <span class="rail-icon" aria-hidden="true">
+                                <!-- Gear icon -->
+                                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/>
+                                    <path d="M19.4 15a7.8 7.8 0 0 0 .1-1l2-1.2-2-3.5-2.3.5a8 8 0 0 0-1.6-1l-.3-2.4H8.7l-.3 2.4a8 8 0 0 0-1.6 1l-2.3-.5-2 3.5 2 1.2a7.8 7.8 0 0 0 .1 1 7.8 7.8 0 0 0-.1 1l-2 1.2 2 3.5 2.3-.5a8 8 0 0 0 1.6 1l.3 2.4h6.6l.3-2.4a8 8 0 0 0 1.6-1l2.3.5 2-3.5-2-1.2a7.8 7.8 0 0 0-.1-1z"/>
+                                </svg>
+                            </span>
+                            <span class="rail-label">Settings</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="sidebar-content" id="sidebar-content">
@@ -187,11 +228,30 @@
 
             <!-- Game Content Wrapper -->
             <div class="game-content-wrapper">
+                <!-- View Toggle Controls -->
+                <div class="view-controls">
+                    <button class="view-btn active" data-view="cover" data-i18n="views.cover">Cover</button>
+                    <button class="view-btn" data-view="list" data-i18n="views.list">List</button>
+                    <button class="view-btn" data-view="table" data-i18n="views.table">Table</button>
+                    <button class="view-btn" data-view="slideshow" data-i18n="views.slideshow">Slideshow</button>
+                    <button class="view-btn" data-view="random" data-i18n="views.random">Random</button>
+
+                    <div class="view-size-control">
+                        <label for="view-size-slider">Size</label>
+                        <input id="view-size-slider" type="range" min="70" max="140" step="5" value="100" />
+                        <span id="view-size-value">100%</span>
+                    </div>
+                </div>
+
                 <!-- Game Grid -->
                 <main class="game-grid">
                     <div class="game-header">
                         <h2 id="games-header">Featured Games</h2>
                         <div class="filters">
+                            <label id="emulators-installed-toggle-wrap" class="emulators-installed-toggle is-hidden">
+                                <input id="emulators-installed-toggle" type="checkbox" />
+                                <span>Installed</span>
+                            </label>
                             <select id="platform-filter">
                                 <option value="all">All Platforms</option>
                                 <option value="gameboy">Gameboy</option>
@@ -216,19 +276,67 @@
                 <footer id="game-details-footer" class="game-details-footer glass">
                     <div class="game-details-content">
                         <div class="game-details-header">
-                            <h3 id="selected-game-title">No Game Selected</h3>
+                            <h3>Library Panel</h3>
                             <div class="footer-controls">
-                                <button id="pin-footer-btn" class="action-btn small" title="Pin Footer">📌</button>
+                                <button id="pin-footer-btn" class="action-btn small icon-only-btn" title="Pin Footer" aria-label="Pin Footer">
+                                    <span class="icon-svg" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24">
+                                            <path d="M8.5 4h7l-1.5 4.8v3.1l1.4 1.5h-6.8l1.4-1.5V8.8L8.5 4Z"></path>
+                                            <path d="M12 13.4V20"></path>
+                                        </svg>
+                                    </span>
+                                </button>
                                 <button id="close-game-details" class="close-btn">&times;</button>
                             </div>
                         </div>
-                        <div id="game-details-info" class="game-details-info">
-                            <!-- Game details will be displayed here -->
+                        <div class="game-details-tabs" role="tablist" aria-label="Footer tabs">
+                            <button class="game-details-tab is-active" type="button" role="tab" data-footer-tab="browse">Browse Computer</button>
+                            <button class="game-details-tab" type="button" role="tab" data-footer-tab="notifications">Notifications</button>
+                            <button class="game-details-tab" type="button" role="tab" data-footer-tab="covers">Find Covers</button>
+                        </div>
+                        <div class="game-details-tab-panels">
+                            <section class="game-details-tab-panel is-active" data-footer-panel="browse">
+                                <div class="browse-scope-bar">
+                                    <span class="browse-scope-label">Scope</span>
+                                    <div class="browse-scope-options" role="group" aria-label="Browse scope">
+                                        <button class="browse-scope-btn is-active" type="button" data-browse-scope="both">Games + Emulators</button>
+                                        <button class="browse-scope-btn" type="button" data-browse-scope="games">Games</button>
+                                        <button class="browse-scope-btn" type="button" data-browse-scope="emulators">Emulators</button>
+                                    </div>
+                                </div>
+                                <div class="browse-computer-grid">
+                                    <button id="browse-quick-search-btn" class="browse-action-card" type="button">
+                                        <span class="browse-action-title">Quick Search</span>
+                                        <span class="browse-action-subtitle">Find new files in common parent folders from your last successful search.</span>
+                                    </button>
+                                    <button id="browse-search-games-btn" class="browse-action-card" type="button">
+                                        <span class="browse-action-title">Search Games/Emulators...</span>
+                                        <span class="browse-action-subtitle">Pick a folder and scan custom locations.</span>
+                                    </button>
+                                    <button id="browse-archives-btn" class="browse-action-card" type="button">
+                                        <span class="browse-action-title">Archives</span>
+                                        <span class="browse-action-subtitle">Browse archive files in your library paths.</span>
+                                    </button>
+                                    <button id="browse-zip-btn" class="browse-action-card" type="button">
+                                        <span class="browse-action-title">Zip</span>
+                                        <span class="browse-action-subtitle">Scan ZIP content and setup files.</span>
+                                    </button>
+                                </div>
+                            </section>
+                            <section class="game-details-tab-panel" data-footer-panel="notifications">
+                                <div id="footer-notifications-list" class="footer-notifications-list"></div>
+                            </section>
+                            <section class="game-details-tab-panel" data-footer-panel="covers">
+                                <div class="footer-covers-placeholder">
+                                    Drop files or folders here to search for covers.
+                                </div>
+                            </section>
                         </div>
                     </div>
                 </footer>
             </div>
         </div>
+        <button id="open-footer-btn" class="open-footer-btn" type="button" aria-label="Open bottom panel">Browse</button>
     </div>
 
     <!-- Theme Manager Modal -->
@@ -237,7 +345,14 @@
             <div id="theme-manager-header" class="theme-manager-header">
                 <h2>Theme Manager</h2>
                 <div class="window-controls">
-                    <button id="pin-theme-manager" class="pin-btn" title="Dock to RightSide">📌</button>
+                    <button id="pin-theme-manager" class="pin-btn icon-only-btn" title="Dock to RightSide" aria-label="Dock to right side">
+                        <span class="icon-svg" aria-hidden="true">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M8.5 4h7l-1.5 4.8v3.1l1.4 1.5h-6.8l1.4-1.5V8.8L8.5 4Z"></path>
+                                <path d="M12 13.4V20"></path>
+                            </svg>
+                        </span>
+                    </button>
                     <button id="close-theme-manager" class="close-btn">&times;</button>
                 </div>
             </div>
@@ -389,6 +504,40 @@
                             </div>
                         </div>
 
+                        <div class="theme-gradient-section">
+                            <h4>App Gradient</h4>
+                            <div class="color-inputs">
+                                <div class="form-group">
+                                    <label for="color-app-gradient-a">Gradient Color A:</label>
+                                    <div class="color-input-group">
+                                        <input type="color" id="color-app-gradient-a" class="color-picker">
+                                        <input type="text" class="color-text" placeholder="#0b1528" readonly>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="color-app-gradient-b">Gradient Color B:</label>
+                                    <div class="color-input-group">
+                                        <input type="color" id="color-app-gradient-b" class="color-picker">
+                                        <input type="text" class="color-text" placeholder="#0f2236" readonly>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="color-app-gradient-c">Gradient Color C:</label>
+                                    <div class="color-input-group">
+                                        <input type="color" id="color-app-gradient-c" class="color-picker">
+                                        <input type="text" class="color-text" placeholder="#1d2f4a" readonly>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group gradient-angle-group">
+                                <label for="gradient-angle">Gradient Angle:</label>
+                                <div class="gradient-angle-control">
+                                    <input type="range" id="gradient-angle" min="0" max="360" step="1" value="160" />
+                                    <span id="gradient-angle-value">160deg</span>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Background Image Section -->
                         <!-- Style Options -->
 
@@ -460,7 +609,15 @@
                     <div class="theme-manager-section">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                             <h3 style="margin: 0;" data-i18n="theme.communityWorkshop">Community Workshop</h3>
-                            <button id="refresh-themes-btn" class="action-btn small" title="Refresh Themes" data-i18n="theme.refresh">🔄 Refresh</button>
+                            <button id="refresh-themes-btn" class="action-btn small btn-with-icon" title="Refresh Themes" aria-label="Refresh Themes">
+                                <span class="icon-svg" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M20 11a8 8 0 1 0 2.2 5.5"></path>
+                                        <path d="M20 4v7h-7"></path>
+                                    </svg>
+                                </span>
+                                <span data-i18n="theme.refresh">Refresh</span>
+                            </button>
                         </div>
                         <div id="marketplace-list" class="marketplace-grid">
                         </div>
@@ -492,7 +649,14 @@
             <div id="language-manager-header" class="theme-manager-header">
                 <h2 data-i18n="language.managerTitle">Language Manager</h2>
                 <div class="window-controls">
-                    <button id="pin-language-manager" class="pin-btn" title="Dock to RightSide">📌</button>
+                    <button id="pin-language-manager" class="pin-btn icon-only-btn" title="Dock to RightSide" aria-label="Dock to right side">
+                        <span class="icon-svg" aria-hidden="true">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M8.5 4h7l-1.5 4.8v3.1l1.4 1.5h-6.8l1.4-1.5V8.8L8.5 4Z"></path>
+                                <path d="M12 13.4V20"></path>
+                            </svg>
+                        </span>
+                    </button>
                     <button id="close-language-manager" class="close-btn">&times;</button>
                 </div>
             </div>
@@ -516,12 +680,26 @@
                 <div id="lang-edit-view" class="tab-content" style="display: none;">
                      <div class="manager-section">
                         <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px; flex-shrink: 0;">
-                            <button id="back-to-lang-list" class="action-btn small" data-i18n="buttons.back">❮ Back</button>
+                            <button id="back-to-lang-list" class="action-btn small btn-with-icon" aria-label="Back">
+                                <span class="icon-svg" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M15 18 9 12l6-6"></path>
+                                    </svg>
+                                </span>
+                                <span data-i18n="buttons.back">Back</span>
+                            </button>
                             <h3 id="editing-lang-name" style="margin: 0;">Editing English</h3>
                         </div>
-                        
-                        <div class="search-bar" style="margin-bottom: 15px;">
-                            <input type="text" id="lang-search-keys" placeholder="Search keys or values..." data-i18n-placeholder="language.searchPlaceholder">
+
+                        <div class="lang-editor-toolbar">
+                            <label id="lang-live-edit-toggle-wrap" class="lang-live-edit-toggle" title="Enable direct UI label editing">
+                                <input type="checkbox" id="lang-live-edit-toggle" />
+                                <span>Live Edit</span>
+                            </label>
+
+                            <div class="search-bar">
+                                <input type="text" id="lang-search-keys" placeholder="Search keys or values..." data-i18n-placeholder="language.searchPlaceholder">
+                            </div>
                         </div>
 
                         <div id="lang-keys-list" class="lang-keys-list">
@@ -534,6 +712,48 @@
                      </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Game Info Modal -->
+    <div id="game-info-modal" class="theme-manager-modal game-info-popup glass" style="display: none;">
+        <div class="theme-manager-content">
+            <div id="game-info-header" class="theme-manager-header">
+                <h2 id="game-info-popup-title">Game Details</h2>
+                <div class="window-controls">
+                    <button id="pin-game-info" class="pin-btn icon-only-btn" title="Dock to RightSide" aria-label="Dock to right side">
+                        <span class="icon-svg" aria-hidden="true">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M8.5 4h7l-1.5 4.8v3.1l1.4 1.5h-6.8l1.4-1.5V8.8L8.5 4Z"></path>
+                                <path d="M12 13.4V20"></path>
+                            </svg>
+                        </span>
+                    </button>
+                    <button id="close-game-info" class="close-btn">&times;</button>
+                </div>
+            </div>
+            <div id="game-info-popup-body" class="theme-manager-body game-info-popup-body"></div>
+        </div>
+    </div>
+
+    <!-- Emulator Info Modal -->
+    <div id="emulator-info-modal" class="theme-manager-modal emulator-info-popup glass" style="display: none;">
+        <div class="theme-manager-content">
+            <div id="emulator-info-header" class="theme-manager-header">
+                <h2 id="emulator-info-popup-title">Emulator Details</h2>
+                <div class="window-controls">
+                    <button id="pin-emulator-info" class="pin-btn icon-only-btn" title="Dock to RightSide" aria-label="Dock to right side">
+                        <span class="icon-svg" aria-hidden="true">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M8.5 4h7l-1.5 4.8v3.1l1.4 1.5h-6.8l1.4-1.5V8.8L8.5 4Z"></path>
+                                <path d="M12 13.4V20"></path>
+                            </svg>
+                        </span>
+                    </button>
+                    <button id="close-emulator-info" class="close-btn">&times;</button>
+                </div>
+            </div>
+            <div id="emulator-info-popup-body" class="theme-manager-body emulator-info-popup-body"></div>
         </div>
     </div>
 

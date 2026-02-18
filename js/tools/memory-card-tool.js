@@ -156,8 +156,15 @@ export class MemoryCardTool {
             e.preventDefault();
             slot.classList.remove("drag-over");
             const file = e.dataTransfer.files[0];
-            if (file && file.path) {
-                this.loadCard(slotId, file.path);
+            const directPath = file && file.path ? String(file.path) : "";
+            const resolvedPath = directPath || (
+                emubro && typeof emubro.getPathForFile === "function"
+                    ? String(emubro.getPathForFile(file) || "")
+                    : ""
+            );
+
+            if (resolvedPath) {
+                this.loadCard(slotId, resolvedPath);
             }
         });
     }

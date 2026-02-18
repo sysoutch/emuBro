@@ -17,7 +17,11 @@ html {
 }
 
 body {
-    background-color: color-mix(in srgb, var(--bg-primary), black 10%);
+    background:
+        radial-gradient(1200px 760px at 8% 8%, color-mix(in srgb, var(--app-gradient-c), transparent 38%), transparent 70%),
+        radial-gradient(1000px 700px at 92% 92%, color-mix(in srgb, var(--app-gradient-b), transparent 42%), transparent 72%),
+        linear-gradient(var(--app-gradient-angle, 160deg), var(--app-gradient-a) 0%, var(--app-gradient-b) 48%, var(--app-gradient-c) 100%);
+    background-color: var(--bg-primary);
     color: var(--text-primary);
     height: 100vh;
     overflow: hidden;
@@ -36,18 +40,23 @@ body {
 
     background:
         radial-gradient(
-            1200px 700px at 14% 8%,
-            color-mix(in srgb, var(--prism-cyan) 38%, transparent),
-            transparent 62%
+            1050px 640px at 10% 10%,
+            color-mix(in srgb, var(--prism-blue) 34%, transparent),
+            transparent 70%
         ),
         radial-gradient(
-            900px 600px at 96% 96%,
-            color-mix(in srgb, var(--prism-orange) 32%, transparent),
-            transparent 66%
+            960px 620px at 92% 92%,
+            color-mix(in srgb, var(--prism-green) 28%, transparent),
+            transparent 70%
         ),
-        var(--prism-gradient);
+        radial-gradient(
+            760px 420px at 50% -12%,
+            color-mix(in srgb, var(--accent-color) 20%, transparent),
+            transparent 75%
+        );
 
-    filter: saturate(1.1) brightness(1.02);
+    opacity: 0.75;
+    filter: saturate(1.06) brightness(1.04);
 }
 
 [data-os="win32"] body::after {
@@ -60,24 +69,23 @@ body {
     padding: var(--win-border-w);
     border-radius: var(--radius-window);
 
-    background: var(--prism-gradient-glass);
-    opacity: 0.9;
+    background: linear-gradient(
+        125deg,
+        color-mix(in srgb, #ffe29a 92%, white 8%) 0%,
+        color-mix(in srgb, #ffd57f 90%, white 10%) 32%,
+        color-mix(in srgb, #ffbe57 88%, white 12%) 64%,
+        color-mix(in srgb, #ffe6ad 90%, white 10%) 100%
+    );
 
-    /* Glassy feel */
-    -webkit-backdrop-filter: blur(10px) saturate(1.25);
-    backdrop-filter: blur(10px) saturate(1.25);
-
-    /* Smooth color drift without moving the border */
-    filter: hue-rotate(0deg) saturate(1.05);
+    /* Smooth shimmer drift around the frame */
+    filter: hue-rotate(0deg) saturate(1.06);
     will-change: filter;
-    animation: prism-window-hue 24s linear infinite;
+    animation: prism-window-hue 18s linear infinite;
 
-    /* Tight glow, not a huge halo */
     box-shadow:
-        0 0 10px color-mix(in srgb, var(--prism-cyan) 55%, transparent),
-        0 0 22px color-mix(in srgb, var(--prism-cyan) 26%, transparent),
-        0 0 10px color-mix(in srgb, var(--prism-orange) 45%, transparent),
-        0 0 24px color-mix(in srgb, var(--prism-orange) 22%, transparent);
+        0 0 0 1px rgba(255, 225, 156, 0.72) inset,
+        0 0 8px rgba(255, 196, 84, 0.52),
+        0 0 18px rgba(255, 186, 72, 0.34);
 
     /* Border ring mask */
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -121,6 +129,61 @@ button {
     }
 }
 
+.win-top-drag-strip {
+    display: none;
+}
+
+[data-os="win32"] .win-top-drag-strip {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--win-border-w);
+    z-index: 40;
+    -webkit-app-region: drag;
+    pointer-events: auto;
+}
+
+.icon-svg {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+    pointer-events: none;
+}
+
+.icon-svg svg {
+    width: 1em;
+    height: 1em;
+    display: block;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.btn-with-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.icon-only-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.action-btn.small.icon-only-btn {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    padding: 0;
+}
+
 select {
     background-color: var(--bg-tertiary);
     color: var(--text-primary);
@@ -149,15 +212,18 @@ textarea {
     width: 100%;
     transition: padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
-    background-color: var(--bg-primary);
-    border-radius: var(--radius-window, 16px);
+    background-color: var(--glass-surface);
+    backdrop-filter: blur(18px) saturate(1.12);
+    -webkit-backdrop-filter: blur(18px) saturate(1.12);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-window, 10px);
     overflow: hidden;
 
     /* Subtle internal glow that tracks the accent color */
     box-shadow:
-        0 0 0 1px color-mix(in srgb, var(--border-color), var(--accent-color) 18%) inset,
+        0 0 0 1px color-mix(in srgb, var(--glass-border), transparent 35%) inset,
         0 0 28px color-mix(in srgb, var(--accent-color) 18%, transparent),
-        0 18px 42px rgba(0, 0, 0, 0.35);
+        0 18px 42px var(--glass-shadow);
 
     position: relative;
     z-index: 1;
@@ -165,9 +231,9 @@ textarea {
 
 [data-os="win32"] .app-container {
     /* Let the prism background "bleed" very slightly through so the window border feels integrated. */
-    background-color: color-mix(in srgb, var(--bg-primary), transparent 6%);
-    -webkit-backdrop-filter: blur(6px) saturate(1.12);
-    backdrop-filter: blur(6px) saturate(1.12);
+    background-color: color-mix(in srgb, var(--glass-surface), transparent 8%);
+    -webkit-backdrop-filter: blur(10px) saturate(1.15);
+    backdrop-filter: blur(10px) saturate(1.15);
 
     /* Inset the entire app so it sits exactly inside the glass border ring. */
     margin: var(--win-border-w);
@@ -176,6 +242,27 @@ textarea {
 
     /* Match the inner edge radius of the border ring (outer radius minus border thickness). */
     border-radius: var(--radius-window-inner);
+}
+
+[data-os="win32"] .app-container::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+        140deg,
+        color-mix(in srgb, rgba(255,255,255,0.58), var(--prism-cyan)),
+        color-mix(in srgb, rgba(255,255,255,0.34), var(--prism-blue) 55%),
+        color-mix(in srgb, rgba(255,255,255,0.42), var(--prism-orange) 45%)
+    );
+    -webkit-backdrop-filter: blur(10px) saturate(1.18);
+    backdrop-filter: blur(10px) saturate(1.18);
+    opacity: 0.9;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
 }
 
 /* Body state when any panel is docked is now handled in _sidebar.scss */

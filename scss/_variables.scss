@@ -1,15 +1,15 @@
 /* Theme Variables */
 :root {
     /* Dark Theme */
-    --brand-color: #274056;
-    --bg-primary: #1e1e1e;
-    --bg-secondary: #2d2d2d;
-    --bg-tertiary: #333;
-    --bg-quaternary: #252525;
-    --text-primary: #ffffff;
-    --text-secondary: #ccc;
-    --text-tertiary: #aaa;
-    --border-color: #444;
+    --brand-color: #2f9ec0;
+    --bg-primary: #0b1220;
+    --bg-secondary: #121c2f;
+    --bg-tertiary: #1a263d;
+    --bg-quaternary: #0f1828;
+    --text-primary: #e7edf8;
+    --text-secondary: #b9c7dc;
+    --text-tertiary: #8fa2bf;
+    --border-color: #2f4360;
     --accent-color: color-mix(in srgb, var(--brand-color), white 20%);
     --accent-light: color-mix(in srgb, var(--brand-color), white 10%);
     --success-color: #4caf50;
@@ -36,6 +36,14 @@
     --bg-header: var(--bg-secondary);
     --bg-sidebar: var(--bg-tertiary); /* Usually matches header */
     --bg-actionbar: var(--bg-quaternary); /* View controls toolbar */
+    --glass-surface: color-mix(in srgb, #0f1c30, transparent 18%);
+    --glass-surface-strong: color-mix(in srgb, #11213a, transparent 10%);
+    --glass-border: color-mix(in srgb, rgba(255,255,255,0.2), var(--border-color));
+    --glass-shadow: rgba(0, 8, 24, 0.46);
+    --app-gradient-a: #0b1528;
+    --app-gradient-b: #0f2236;
+    --app-gradient-c: #1d2f4a;
+    --app-gradient-angle: 160deg;
 
     /* Prism (multi-color) accents for borders/glow */
     --prism-cyan: #00e5ff;
@@ -68,22 +76,25 @@
     );
 
     /* Windows frameless "window border" overlay */
-    --radius-window: 16px;
-    --win-border-w: 7px;
+    --radius-window: 10px;
+    --win-border-w: 3px;
     --radius-window-inner: calc(var(--radius-window) - var(--win-border-w));
+    --dock-panel-width: 400px;
+    --dock-accordion-header-h: 50px;
+    --view-scale: 1;
 }
 
 /* Light Theme */
 [data-theme="light"] {
-    --brand-color: #274056;
-    --bg-primary: #f5f5f5;
-    --bg-secondary: #ffffff;
-    --bg-tertiary: #e8e8e8;
-    --bg-quaternary: #f0f0f0;
-    --text-primary: #1a1a1a;
-    --text-secondary: #333;
-    --text-tertiary: #666;
-    --border-color: #ddd;
+    --brand-color: #2f9ec0;
+    --bg-primary: #dfeaf6;
+    --bg-secondary: #edf4fb;
+    --bg-tertiary: #d9e6f6;
+    --bg-quaternary: #e4eef9;
+    --text-primary: #17263a;
+    --text-secondary: #2f4866;
+    --text-tertiary: #5d7694;
+    --border-color: #b9cee3;
     --accent-color: color-mix(in srgb, var(--brand-color), white 20%);
     --accent-light: color-mix(in srgb, var(--brand-color), white 10%);
     --success-color: #4caf50;
@@ -91,4 +102,12 @@
     --danger-color: #f44336;
     --danger-dark: #d32f2f;
     --warning-color: #ff9800;
+    --glass-surface: color-mix(in srgb, #f6fbff, transparent 18%);
+    --glass-surface-strong: color-mix(in srgb, #f0f7ff, transparent 10%);
+    --glass-border: color-mix(in srgb, rgba(255,255,255,0.62), #a6c3df 58%);
+    --glass-shadow: rgba(25, 63, 92, 0.18);
+    --app-gradient-a: #dbe9f7;
+    --app-gradient-b: #e7f3ff;
+    --app-gradient-c: #d2e3f5;
+    --app-gradient-angle: 160deg;
 }

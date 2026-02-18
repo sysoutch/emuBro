@@ -35,14 +35,24 @@
 .view-controls {
     display: flex;
     gap: 10px;
-    margin: 10px 20px 20px 20px;
+    margin: 0;
     padding: 10px;
-    background-color: var(--bg-actionbar);
-    border-radius: var(--radius-card);
-    border: 1px solid var(--border-color);
+    background-color: color-mix(in srgb, var(--glass-surface-strong), transparent 14%);
+    backdrop-filter: blur(14px) saturate(1.1);
+    -webkit-backdrop-filter: blur(14px) saturate(1.1);
+    border-radius: 0;
+    border: 1px solid var(--glass-border);
+    border-left: 0;
+    border-right: 0;
     flex-wrap: wrap;
     align-items: center;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--glass-shadow), transparent 45%);
+    position: relative;
+    z-index: 5;
+}
+
+.game-content-wrapper > .view-controls {
+    flex: 0 0 auto;
 }
 
 .view-btn {
@@ -75,6 +85,64 @@
     font-weight: 600;
 }
 
+.view-size-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 6px;
+    padding: 6px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-btn);
+    background: color-mix(in srgb, var(--bg-secondary), transparent 18%);
+
+    label {
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+    }
+
+    input[type="range"] {
+        width: 120px;
+        accent-color: var(--accent-color);
+    }
+}
+
+.view-size-control.is-locked {
+    opacity: 0.55;
+}
+
+.emulators-installed-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-btn);
+    background: color-mix(in srgb, var(--bg-secondary), transparent 18%);
+    color: var(--text-secondary);
+    font-size: 0.86rem;
+    font-weight: 600;
+
+    input[type="checkbox"] {
+        accent-color: var(--accent-color);
+        width: 15px;
+        height: 15px;
+    }
+}
+
+.emulators-installed-toggle.is-hidden {
+    display: none;
+}
+
+#view-size-value {
+    min-width: 44px;
+    text-align: right;
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
 .drive-selector {
     padding: 8px 12px;
     border-radius: var(--radius-input);
@@ -100,6 +168,13 @@
         margin-left: 0;
         flex-grow: 1;
     }
+
+    .view-size-control {
+        order: 10;
+        margin-left: 0;
+        flex-grow: 1;
+        justify-content: space-between;
+    }
     
     #search-games-btn {
         flex-grow: 1;
@@ -108,7 +183,7 @@
 
 @media (max-width: 768px) {
     .view-controls {
-        margin: 10px;
+        margin: 0;
         justify-content: center;
     }
 
@@ -156,10 +231,15 @@
     
     .filters {
         width: 100%;
-        justify-content: space-between;
+        justify-content: flex-start;
     }
     
     .filters select {
-        width: 45%;
+        width: calc(50% - 6px);
+    }
+
+    .filters .emulators-installed-toggle {
+        width: 100%;
+        justify-content: center;
     }
 }

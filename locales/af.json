@@ -169,8 +169,8 @@
       "next": "Volgende"
     },
     "random": {
-      "shuffle": "🎲 Skud & Stel Voor",
-      "stop": "Stop ⏹",
+      "shuffle": "Skud & Stel Voor",
+      "stop": "Stop",
       "suggestion": "Hoekom speel jy nie nou \"{{game}}\" nie?"
     },
     "tools": {
@@ -210,3 +210,4 @@
     }
   }
 }
+

@@ -184,7 +184,7 @@
       "yes": "Ja",
       "no": "Nein",
       "ok": "OK",
-      "back": "❮ Zurück",
+      "back": "Zurück",
       "saveAndContinue": "Speichern & Weiter",
       "saveChanges": "Änderungen speichern"
     },
@@ -219,8 +219,8 @@
       "next": "Nächste"
     },
     "random": {
-      "shuffle": "🎲 Mischen und Vorschlagen",
-      "stop": "Stopp ⏹",
+      "shuffle": "Mischen und Vorschlagen",
+      "stop": "Stopp",
       "suggestion": "Warum nicht jetzt \"{{game}}\" spielen?"
     },
     "tools": {
@@ -258,10 +258,10 @@
       "searching": "Suche läuft...",
       "searchGames": "Spiele suchen",
       "install": "Installieren",
-      "previous": "❮ Vorherige",
-      "next": "Nächste ❯",
-      "shuffle": "🎲 Mischen und Vorschlagen",
-      "stop": "Stopp ⏹",
+      "previous": "Vorherige",
+      "next": "Nächste",
+      "shuffle": "Mischen und Vorschlagen",
+      "stop": "Stopp",
       "editTheme": "Thema bearbeiten",
       "createNewTheme": "Neues Thema erstellen",
       "backgroundImageLoaded": "Hintergrundbild geladen",
@@ -275,7 +275,7 @@
       "hours": "Stunden"
     },
     "dropZone": {
-      "text": "📁 Ziehe ein Ordner oder📄 eine Datei hierhin"
+      "text": "Ziehe ein Ordner oder eine Datei hierhin"
     },
     "webhook": {
       "description": "",
@@ -285,3 +285,4 @@
     }
   }
 }
+
