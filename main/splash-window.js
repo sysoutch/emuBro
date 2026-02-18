@@ -1,11 +1,64 @@
 const { BrowserWindow } = require("electron");
 
-function createSplashWindowManager() {
+function sanitizeColor(value, fallback) {
+  const raw = String(value || "").trim();
+  if (!raw) return fallback;
+  if (/^#[0-9a-f]{3,8}$/i.test(raw)) return raw;
+  if (/^rgba?\(/i.test(raw)) return raw;
+  if (/^hsla?\(/i.test(raw)) return raw;
+  return fallback;
+}
+
+function resolveSplashTheme(snapshot) {
+  const tone = String(snapshot?.tone || "dark").toLowerCase() === "light" ? "light" : "dark";
+
+  const defaults = tone === "light"
+    ? {
+        bgPrimary: "#dfeaf6",
+        bgSecondary: "#edf4fb",
+        bgTertiary: "#d2e3f5",
+        textPrimary: "#17263a",
+        textSecondary: "#5d7694",
+        accentColor: "#3db2d6",
+        accentLight: "#87d8ef"
+      }
+    : {
+        bgPrimary: "#0b1220",
+        bgSecondary: "#121c2f",
+        bgTertiary: "#1a263d",
+        textPrimary: "#d8e7ff",
+        textSecondary: "#9bb7d7",
+        accentColor: "#32b8de",
+        accentLight: "#8fe6ff"
+      };
+
+  return {
+    tone,
+    bgPrimary: sanitizeColor(snapshot?.bgPrimary, defaults.bgPrimary),
+    bgSecondary: sanitizeColor(snapshot?.bgSecondary, defaults.bgSecondary),
+    bgTertiary: sanitizeColor(snapshot?.bgTertiary, defaults.bgTertiary),
+    textPrimary: sanitizeColor(snapshot?.textPrimary, defaults.textPrimary),
+    textSecondary: sanitizeColor(snapshot?.textSecondary, defaults.textSecondary),
+    accentColor: sanitizeColor(snapshot?.accentColor, defaults.accentColor),
+    accentLight: sanitizeColor(snapshot?.accentLight, defaults.accentLight),
+    appGradientA: sanitizeColor(snapshot?.appGradientA, defaults.bgPrimary),
+    appGradientB: sanitizeColor(snapshot?.appGradientB, defaults.bgSecondary),
+    appGradientC: sanitizeColor(snapshot?.appGradientC, defaults.bgTertiary)
+  };
+}
+
+function createSplashWindowManager(options = {}) {
+  const getSplashTheme = (typeof options.getSplashTheme === "function")
+    ? options.getSplashTheme
+    : (() => null);
+
   let splashWindow = null;
   let splashShownAt = 0;
 
   function createSplashWindow() {
     if (splashWindow && !splashWindow.isDestroyed()) return splashWindow;
+
+    const splashTheme = resolveSplashTheme(getSplashTheme());
 
     splashWindow = new BrowserWindow({
       width: 460,
@@ -19,7 +72,7 @@ function createSplashWindowManager() {
       alwaysOnTop: true,
       show: false,
       skipTaskbar: true,
-      backgroundColor: "#0b1220",
+      backgroundColor: splashTheme.bgPrimary,
       webPreferences: {
         backgroundThrottling: false,
         partition: "splash",
@@ -36,23 +89,34 @@ function createSplashWindowManager() {
     <meta charset="utf-8" />
     <title>emuBro Loading</title>
     <style>
-      :root { color-scheme: dark; }
+      :root {
+        color-scheme: ${splashTheme.tone};
+        --splash-bg-a: ${splashTheme.appGradientA};
+        --splash-bg-b: ${splashTheme.appGradientB};
+        --splash-bg-c: ${splashTheme.appGradientC};
+        --splash-panel-bg: ${splashTheme.bgSecondary};
+        --splash-border: ${splashTheme.accentColor};
+        --splash-text: ${splashTheme.textPrimary};
+        --splash-sub: ${splashTheme.textSecondary};
+        --splash-accent: ${splashTheme.accentColor};
+        --splash-accent-light: ${splashTheme.accentLight};
+      }
       html, body { height: 100%; margin: 0; }
       body {
         font-family: Segoe UI, system-ui, -apple-system, sans-serif;
         display: grid;
         place-items: center;
         background:
-          radial-gradient(70% 120% at 0% 0%, rgba(0, 214, 255, 0.18), transparent 60%),
-          radial-gradient(70% 120% at 100% 100%, rgba(255, 200, 80, 0.16), transparent 60%),
-          #0b1220;
-        color: #d8e7ff;
+          radial-gradient(70% 120% at 0% 0%, color-mix(in srgb, var(--splash-accent) 34%, transparent), transparent 60%),
+          radial-gradient(70% 120% at 100% 100%, color-mix(in srgb, var(--splash-accent-light) 28%, transparent), transparent 62%),
+          linear-gradient(160deg, var(--splash-bg-a) 0%, var(--splash-bg-b) 52%, var(--splash-bg-c) 100%);
+        color: var(--splash-text);
       }
       .wrap {
         width: 86%;
-        border: 1px solid rgba(124, 180, 255, 0.25);
+        border: 1px solid color-mix(in srgb, var(--splash-border) 48%, transparent);
         border-radius: 14px;
-        background: rgba(13, 22, 40, 0.75);
+        background: color-mix(in srgb, var(--splash-panel-bg) 82%, transparent);
         backdrop-filter: blur(8px);
         padding: 24px 22px;
         text-align: center;
@@ -63,21 +127,21 @@ function createSplashWindowManager() {
         letter-spacing: 1px;
         font-weight: 800;
       }
-      .brand span { color: #32b8de; }
-      .sub { margin: 0 0 18px 0; color: #9bb7d7; font-size: 14px; }
+      .brand span { color: var(--splash-accent); }
+      .sub { margin: 0 0 18px 0; color: var(--splash-sub); font-size: 14px; }
       .bar {
         width: 100%;
         height: 7px;
         border-radius: 999px;
         overflow: hidden;
-        background: rgba(255, 255, 255, 0.1);
+        background: color-mix(in srgb, var(--splash-text) 14%, transparent);
       }
       .bar > i {
         display: block;
         height: 100%;
         width: 34%;
         border-radius: inherit;
-        background: linear-gradient(90deg, #32b8de, #8fe6ff);
+        background: linear-gradient(90deg, var(--splash-accent), var(--splash-accent-light));
         transform: translate3d(-120%, 0, 0);
         will-change: transform;
       }
@@ -154,4 +218,3 @@ function createSplashWindowManager() {
 }
 
 module.exports = { createSplashWindowManager };
-

@@ -20,6 +20,7 @@ const ALLOWED_INVOKE = new Set([
   "show-item-in-folder",
   "open-external-url",
   "youtube:search-videos",
+  "suggestions:recommend-games",
   "browse-games-and-emus",
   "upload-theme",
   "get-user-info",
@@ -50,6 +51,8 @@ const ALLOWED_INVOKE = new Set([
   "import-exe",
   "settings:get-library-paths",
   "settings:set-library-paths",
+  "settings:get-splash-theme",
+  "settings:set-splash-theme",
   "settings:preview-relocate-managed-folder",
   "settings:confirm-relocate-preview",
   "settings:relocate-managed-folder"

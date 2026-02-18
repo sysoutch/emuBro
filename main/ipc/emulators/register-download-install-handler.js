@@ -1,0 +1,231 @@
+function registerEmulatorDownloadInstallHandler(deps = {}) {
+  const {
+    ipcMain,
+    log,
+    app,
+    shell,
+    path,
+    fsSync,
+    getLibraryPathSettings,
+    ensureUniqueDestinationPath,
+    movePathSafe,
+    getArchiveKind,
+    extractArchiveToDir,
+    integrateDirectoryContents,
+    removePathSafe,
+    normalizePlatform,
+    refreshLibraryFromDb,
+    dbUpsertEmulator,
+    runtimePlatform,
+    normalizeDownloadOsKey,
+    normalizeDownloadPackageType,
+    ensureHttpUrl,
+    resolveEmulatorDownloadTarget,
+    getPreferredEmulatorDownloadUrl,
+    buildWaybackMachineUrl,
+    sanitizePathSegment,
+    downloadUrlToFile,
+    findEmulatorBinaryInFolder,
+    inferDownloadPackageTypeFromName,
+    isInstallerLikeName
+  } = deps;
+
+  if (!ipcMain) throw new Error("registerEmulatorDownloadInstallHandler requires ipcMain");
+  if (!log) throw new Error("registerEmulatorDownloadInstallHandler requires log");
+  if (!app) throw new Error("registerEmulatorDownloadInstallHandler requires app");
+  if (!shell) throw new Error("registerEmulatorDownloadInstallHandler requires shell");
+  if (!path) throw new Error("registerEmulatorDownloadInstallHandler requires path");
+  if (!fsSync) throw new Error("registerEmulatorDownloadInstallHandler requires fsSync");
+  if (typeof getLibraryPathSettings !== "function") throw new Error("registerEmulatorDownloadInstallHandler requires getLibraryPathSettings");
+  if (typeof ensureUniqueDestinationPath !== "function") throw new Error("registerEmulatorDownloadInstallHandler requires ensureUniqueDestinationPath");
+  if (typeof movePathSafe !== "function") throw new Error("registerEmulatorDownloadInstallHandler requires movePathSafe");
+  if (typeof getArchiveKind !== "function") throw new Error("registerEmulatorDownloadInstallHandler requires getArchiveKind");
+  if (typeof extractArchiveToDir !== "function") throw new Error("registerEmulatorDownloadInstallHandler requires extractArchiveToDir");
+  if (typeof integrateDirectoryContents !== "function") throw new Error("registerEmulatorDownloadInstallHandler requires integrateDirectoryContents");
+  if (typeof removePathSafe !== "function") throw new Error("registerEmulatorDownloadInstallHandler requires removePathSafe");
+  if (typeof normalizePlatform !== "function") throw new Error("registerEmulatorDownloadInstallHandler requires normalizePlatform");
+  if (typeof refreshLibraryFromDb !== "function") throw new Error("registerEmulatorDownloadInstallHandler requires refreshLibraryFromDb");
+  if (typeof dbUpsertEmulator !== "function") throw new Error("registerEmulatorDownloadInstallHandler requires dbUpsertEmulator");
+  if (!runtimePlatform) throw new Error("registerEmulatorDownloadInstallHandler requires runtimePlatform");
+  if (typeof normalizeDownloadOsKey !== "function") throw new Error("registerEmulatorDownloadInstallHandler requires normalizeDownloadOsKey");
+  if (typeof normalizeDownloadPackageType !== "function") throw new Error("registerEmulatorDownloadInstallHandler requires normalizeDownloadPackageType");
+  if (typeof ensureHttpUrl !== "function") throw new Error("registerEmulatorDownloadInstallHandler requires ensureHttpUrl");
+  if (typeof resolveEmulatorDownloadTarget !== "function") throw new Error("registerEmulatorDownloadInstallHandler requires resolveEmulatorDownloadTarget");
+  if (typeof getPreferredEmulatorDownloadUrl !== "function") throw new Error("registerEmulatorDownloadInstallHandler requires getPreferredEmulatorDownloadUrl");
+  if (typeof buildWaybackMachineUrl !== "function") throw new Error("registerEmulatorDownloadInstallHandler requires buildWaybackMachineUrl");
+  if (typeof sanitizePathSegment !== "function") throw new Error("registerEmulatorDownloadInstallHandler requires sanitizePathSegment");
+  if (typeof downloadUrlToFile !== "function") throw new Error("registerEmulatorDownloadInstallHandler requires downloadUrlToFile");
+  if (typeof findEmulatorBinaryInFolder !== "function") throw new Error("registerEmulatorDownloadInstallHandler requires findEmulatorBinaryInFolder");
+  if (typeof inferDownloadPackageTypeFromName !== "function") throw new Error("registerEmulatorDownloadInstallHandler requires inferDownloadPackageTypeFromName");
+  if (typeof isInstallerLikeName !== "function") throw new Error("registerEmulatorDownloadInstallHandler requires isInstallerLikeName");
+
+  ipcMain.handle("download-install-emulator", async (_event, payload = {}) => {
+    try {
+      const emulator = (payload && typeof payload === "object") ? payload : {};
+      const name = String(emulator?.name || "").trim();
+      const platformName = String(emulator?.platform || "").trim() || "Unknown";
+      const platformShortName = normalizePlatform(emulator?.platformShortName) || "unknown";
+      if (!name) return { success: false, message: "Missing emulator name" };
+
+      const osKey = normalizeDownloadOsKey(payload?.os || runtimePlatform);
+      const useWaybackFallback = !!payload?.useWaybackFallback;
+      if (useWaybackFallback) {
+        const waybackSourceUrl = ensureHttpUrl(
+          payload?.waybackSourceUrl
+          || payload?.manualUrl
+          || getPreferredEmulatorDownloadUrl(emulator, osKey)
+        );
+        const waybackUrl = ensureHttpUrl(payload?.waybackUrl || buildWaybackMachineUrl(waybackSourceUrl));
+        if (!waybackUrl) {
+          return { success: false, message: "No fallback source URL available for Wayback Machine." };
+        }
+        await shell.openExternal(waybackUrl);
+        return {
+          success: false,
+          manual: true,
+          wayback: true,
+          message: "Opened Wayback Machine fallback for this emulator.",
+          openedUrl: waybackUrl
+        };
+      }
+
+      const requestedPackageType = normalizeDownloadPackageType(payload?.packageType || "");
+      const resolved = await resolveEmulatorDownloadTarget(emulator, osKey, requestedPackageType);
+      if (!resolved?.url) {
+        return { success: false, message: "No download source found for this emulator" };
+      }
+
+      if (!resolved.directDownload) {
+        await shell.openExternal(resolved.url);
+        return {
+          success: false,
+          manual: true,
+          message: "No direct package found. Opened the download page in your browser.",
+          openedUrl: resolved.url
+        };
+      }
+
+      const selectedPackageType = normalizeDownloadPackageType(resolved?.packageType || requestedPackageType);
+
+      const settings = getLibraryPathSettings();
+      const preferredRoot = String(payload?.targetDir || "").trim();
+      const baseInstallRoot = preferredRoot
+        || (Array.isArray(settings?.emulatorFolders) && settings.emulatorFolders[0])
+        || path.join(app.getPath("userData"), "library-storage", "emulators");
+      const platformDir = path.join(baseInstallRoot, sanitizePathSegment(platformShortName));
+      const emulatorDir = path.join(platformDir, sanitizePathSegment(name));
+      fsSync.mkdirSync(emulatorDir, { recursive: true });
+
+      const tempDir = path.join(app.getPath("temp"), "emubro-downloads", "emulators");
+      fsSync.mkdirSync(tempDir, { recursive: true });
+
+      const urlFileName = (() => {
+        try {
+          const parsed = new URL(resolved.url);
+          return decodeURIComponent(path.basename(parsed.pathname || ""));
+        } catch (_e) {
+          return "";
+        }
+      })();
+
+      const suggestedName = String(resolved.fileName || urlFileName || `${sanitizePathSegment(name)}-${Date.now()}`).trim();
+      const initialDownloadPath = ensureUniqueDestinationPath(path.join(tempDir, suggestedName));
+      const downloadMeta = await downloadUrlToFile(resolved.url, initialDownloadPath);
+      const finalName = String(downloadMeta?.fileNameFromHeader || path.basename(initialDownloadPath)).trim();
+      const finalDownloadPath = (finalName && finalName !== path.basename(initialDownloadPath))
+        ? ensureUniqueDestinationPath(path.join(tempDir, finalName))
+        : initialDownloadPath;
+      if (finalDownloadPath !== initialDownloadPath) {
+        movePathSafe(initialDownloadPath, finalDownloadPath);
+      }
+
+      const archiveKind = getArchiveKind(finalDownloadPath);
+      let installedPath = "";
+      let packagePath = "";
+
+      if (archiveKind) {
+        const extractRoot = ensureUniqueDestinationPath(
+          path.join(tempDir, `${sanitizePathSegment(name)}-extract`)
+        );
+        fsSync.mkdirSync(extractRoot, { recursive: true });
+        await extractArchiveToDir(finalDownloadPath, extractRoot);
+
+        const ctx = {
+          policy: "",
+          operationLabel: "Install Emulator Package",
+          discardSkippedSources: true,
+          cancelled: false,
+          stats: { moved: 0, replaced: 0, keptBoth: 0, skipped: 0, conflicts: 0 }
+        };
+        const integrated = await integrateDirectoryContents(extractRoot, emulatorDir, ctx);
+        removePathSafe(extractRoot);
+
+        if (!integrated || ctx.cancelled) {
+          return {
+            success: false,
+            canceled: true,
+            message: "Installation canceled during conflict resolution.",
+            installDir: emulatorDir,
+            stats: ctx.stats
+          };
+        }
+
+        packagePath = emulatorDir;
+        installedPath = findEmulatorBinaryInFolder(emulatorDir, emulator?.searchString, osKey);
+      } else {
+        const destination = ensureUniqueDestinationPath(path.join(emulatorDir, path.basename(finalDownloadPath)));
+        movePathSafe(finalDownloadPath, destination);
+        packagePath = destination;
+        installedPath = findEmulatorBinaryInFolder(emulatorDir, emulator?.searchString, osKey) || destination;
+      }
+
+      const installedFileName = path.basename(installedPath || "");
+      const detectedInstalledType = normalizeDownloadPackageType(
+        inferDownloadPackageTypeFromName(installedFileName || path.basename(packagePath || ""), osKey)
+      );
+      const installerOnly = (detectedInstalledType === "installer")
+        || (!installedPath && selectedPackageType === "installer")
+        || (installedFileName ? isInstallerLikeName(installedFileName) : false);
+      if (installedPath && !installerOnly) {
+        dbUpsertEmulator({
+          name,
+          platform: platformName,
+          platformShortName,
+          filePath: installedPath
+        });
+        refreshLibraryFromDb();
+      }
+
+      if (!installedPath || installerOnly) {
+        const message = installerOnly
+          ? `Downloaded installer to ${packagePath}. Run it once, then rescan emulators.`
+          : `Downloaded package to ${packagePath}. Could not auto-detect the emulator executable yet.`;
+        return {
+          success: true,
+          installed: false,
+          packagePath,
+          installDir: emulatorDir,
+          packageType: selectedPackageType || detectedInstalledType || "",
+          message
+        };
+      }
+
+      return {
+        success: true,
+        installed: true,
+        installedPath,
+        packagePath,
+        installDir: emulatorDir,
+        packageType: selectedPackageType || detectedInstalledType || "",
+        message: `Downloaded and installed ${name}.`
+      };
+    } catch (error) {
+      log.error("download-install-emulator failed:", error);
+      return { success: false, message: error.message };
+    }
+  });
+}
+
+module.exports = {
+  registerEmulatorDownloadInstallHandler
+};

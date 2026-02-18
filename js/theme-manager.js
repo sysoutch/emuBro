@@ -12,7 +12,7 @@ import {
     flipLightness, 
     darkenHex 
 } from './ui-utils';
-import { isPanelDocked } from './docking-manager';
+import { requestDockLayoutRefresh } from './docking-manager';
 
 const emubro = window.emubro;
 const log = console;
@@ -23,11 +23,53 @@ let editingThemeId = null;
 let hasUnsavedChanges = false;
 let shouldUseAccentColorForBrand = true;
 let fixedBackgroundTracking = null;
+const THEME_EDITOR_MODE_STORAGE_KEY = 'themeEditorCustomizationMode';
 
 // Draggable state
 let isDragging = false;
 let startX, startY;
 let modalInitialX, modalInitialY;
+
+function normalizeThemeCustomizationMode(mode) {
+    const value = String(mode || '').trim().toLowerCase();
+    return value === 'extended' ? 'extended' : 'basic';
+}
+
+function normalizeBasicVariant(variant) {
+    const value = String(variant || '').trim().toLowerCase();
+    if (value === 'dark' || value === 'light') return value;
+    return 'auto';
+}
+
+function inferBasicVariantFromTheme(theme) {
+    const bg = parseColorToHex(theme?.colors?.bgPrimary || '') || '';
+    const rgb = bg ? hexToRgb(bg) : null;
+    if (!rgb) return 'auto';
+    const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+    return hsl.l >= 0.55 ? 'light' : 'dark';
+}
+
+function normalizeBasicIntensity(value) {
+    const parsed = Number.parseInt(String(value ?? '').trim(), 10);
+    if (!Number.isFinite(parsed)) return 100;
+    return clampNumber(parsed, 60, 140);
+}
+
+function inferUiToneFromColor(color, fallback = 'dark') {
+    const parsed = parseColorToHex(color || '');
+    const rgb = parsed ? hexToRgb(parsed) : null;
+    if (!rgb) return fallback;
+    const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+    return hsl.l >= 0.56 ? 'light' : 'dark';
+}
+
+function applyThemeToneAttribute(colors = {}) {
+    const root = document.documentElement;
+    const bgPrimary = parseColorToHex(colors.bgPrimary || '') || '';
+    const tone = inferUiToneFromColor(bgPrimary, 'dark');
+    root.setAttribute('data-theme', tone);
+    return tone;
+}
 
 function normalizeGradientAngle(value, fallback = '160deg') {
     const raw = String(value ?? '').trim();
@@ -53,6 +95,520 @@ function setGradientAngleInputFromValue(angleText) {
 
 function applyGradientAnglePreview(angleText) {
     document.documentElement.style.setProperty('--app-gradient-angle', normalizeGradientAngle(angleText));
+}
+
+function updateBasicIntensityValueLabel(intensityValue) {
+    const label = document.getElementById('theme-basic-intensity-value');
+    if (!label) return;
+    const normalized = normalizeBasicIntensity(intensityValue);
+    label.textContent = `${normalized}%`;
+}
+
+function clampNumber(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+}
+
+function shiftColorHsl(hexColor, options = {}) {
+    const parsed = parseColorToHex(hexColor) || '#4f8cff';
+    const rgb = hexToRgb(parsed);
+    if (!rgb) return parsed;
+
+    const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+    // ui-utils uses normalized HSL (h/s/l in 0..1). Convert to degree/percent space
+    // for palette math, then convert back before hslToRgb.
+    const baseHue = hsl.h * 360;
+    const baseSat = hsl.s * 100;
+    const baseLight = hsl.l * 100;
+    const hueShift = Number(options.hueShift || 0);
+    const satMul = Number(options.satMul || 1);
+    const satAdd = Number(options.satAdd || 0);
+    const lightMul = Number(options.lightMul || 1);
+    const lightAdd = Number(options.lightAdd || 0);
+
+    let h = (baseHue + hueShift) % 360;
+    if (h < 0) h += 360;
+    let s = clampNumber((baseSat * satMul) + satAdd, 0, 100);
+    let l = clampNumber((baseLight * lightMul) + lightAdd, 0, 100);
+
+    if (Number.isFinite(options.minSat)) s = Math.max(Number(options.minSat), s);
+    if (Number.isFinite(options.maxSat)) s = Math.min(Number(options.maxSat), s);
+    if (Number.isFinite(options.minLight)) l = Math.max(Number(options.minLight), l);
+    if (Number.isFinite(options.maxLight)) l = Math.min(Number(options.maxLight), l);
+
+    return rgbToHex(...Object.values(hslToRgb(h / 360, s / 100, l / 100)));
+}
+
+function getThemeEditorMode() {
+    const form = document.getElementById('theme-form');
+    const activeBtn = document.querySelector('.theme-mode-btn.active[data-theme-mode]');
+    if (activeBtn && activeBtn.dataset.themeMode) {
+        return normalizeThemeCustomizationMode(activeBtn.dataset.themeMode);
+    }
+    if (!form) return normalizeThemeCustomizationMode(localStorage.getItem(THEME_EDITOR_MODE_STORAGE_KEY));
+    return normalizeThemeCustomizationMode(form.dataset.customizationMode || localStorage.getItem(THEME_EDITOR_MODE_STORAGE_KEY));
+}
+
+function setThemeEditorMode(mode, options = {}) {
+    const normalizedMode = normalizeThemeCustomizationMode(mode);
+    const form = document.getElementById('theme-form');
+    if (form) form.dataset.customizationMode = normalizedMode;
+
+    document.querySelectorAll('.theme-mode-btn[data-theme-mode]').forEach((button) => {
+        const active = normalizeThemeCustomizationMode(button.dataset.themeMode) === normalizedMode;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+
+    if (options.persist !== false) {
+        localStorage.setItem(THEME_EDITOR_MODE_STORAGE_KEY, normalizedMode);
+    }
+    return normalizedMode;
+}
+
+function buildBasicPalette(baseColor, requestedVariant = 'auto', intensityValue = 100) {
+    const base = parseColorToHex(baseColor) || '#5aa9ff';
+    const rgb = hexToRgb(base);
+    const hsl = rgb ? rgbToHsl(rgb.r, rgb.g, rgb.b) : { h: 210 / 360, s: 0.75, l: 0.6 };
+    const variant = normalizeBasicVariant(requestedVariant);
+    const intensity = normalizeBasicIntensity(intensityValue) / 100;
+    const useLightUi = (variant === 'light') || (variant === 'auto' && hsl.l >= 0.58);
+
+    let palette;
+    if (useLightUi) {
+        palette = {
+            bgPrimary: shiftColorHsl(base, { satMul: 0.16, lightAdd: 88, minLight: 94, maxLight: 99 }),
+            bgSecondary: shiftColorHsl(base, { satMul: 0.2, lightAdd: 82, minLight: 90, maxLight: 96 }),
+            bgTertiary: shiftColorHsl(base, { satMul: 0.22, lightAdd: 78, minLight: 86, maxLight: 94 }),
+            bgQuaternary: shiftColorHsl(base, { satMul: 0.24, lightAdd: 74, minLight: 83, maxLight: 92 }),
+            bgHeader: shiftColorHsl(base, { satMul: 0.18, lightAdd: 80, minLight: 88, maxLight: 95 }),
+            bgSidebar: shiftColorHsl(base, { satMul: 0.2, lightAdd: 77, minLight: 85, maxLight: 93 }),
+            bgActionbar: shiftColorHsl(base, { satMul: 0.22, lightAdd: 73, minLight: 82, maxLight: 91 }),
+            textPrimary: '#1D2938',
+            textSecondary: shiftColorHsl(base, { satMul: 0.12, lightAdd: 30, minLight: 44, maxLight: 56 }),
+            accentColor: shiftColorHsl(base, { satMul: 1.1, satAdd: 4, lightAdd: -6, minLight: 40, maxLight: 58 }),
+            borderColor: shiftColorHsl(base, { satMul: 0.24, lightAdd: 58, minLight: 70, maxLight: 84 }),
+            appGradientA: shiftColorHsl(base, { satMul: 0.25, lightAdd: 84, minLight: 90, maxLight: 97 }),
+            appGradientB: shiftColorHsl(base, { satMul: 0.35, lightAdd: 74, minLight: 82, maxLight: 92 }),
+            appGradientC: shiftColorHsl(base, { satMul: 0.55, lightAdd: 58, minLight: 70, maxLight: 86 }),
+            appGradientAngle: '145deg',
+            successColor: '#2e9f5f',
+            dangerColor: '#d45353'
+        };
+    } else {
+        palette = {
+            bgPrimary: shiftColorHsl(base, { satMul: 0.42, lightAdd: -58, minLight: 7, maxLight: 16 }),
+            bgSecondary: shiftColorHsl(base, { satMul: 0.4, lightAdd: -50, minLight: 10, maxLight: 22 }),
+            bgTertiary: shiftColorHsl(base, { satMul: 0.36, lightAdd: -44, minLight: 13, maxLight: 26 }),
+            bgQuaternary: shiftColorHsl(base, { satMul: 0.34, lightAdd: -38, minLight: 16, maxLight: 30 }),
+            bgHeader: shiftColorHsl(base, { satMul: 0.38, lightAdd: -48, minLight: 12, maxLight: 24 }),
+            bgSidebar: shiftColorHsl(base, { satMul: 0.34, lightAdd: -42, minLight: 14, maxLight: 28 }),
+            bgActionbar: shiftColorHsl(base, { satMul: 0.32, lightAdd: -36, minLight: 17, maxLight: 32 }),
+            textPrimary: '#F2F7FF',
+            textSecondary: shiftColorHsl(base, { satMul: 0.2, lightAdd: 34, minLight: 72, maxLight: 86 }),
+            accentColor: shiftColorHsl(base, { satMul: 1.15, satAdd: 6, lightAdd: 12, minLight: 52, maxLight: 72 }),
+            borderColor: shiftColorHsl(base, { satMul: 0.3, lightAdd: -22, minLight: 22, maxLight: 38 }),
+            appGradientA: shiftColorHsl(base, { satMul: 0.65, lightAdd: -34, minLight: 16, maxLight: 28 }),
+            appGradientB: shiftColorHsl(base, { satMul: 0.78, lightAdd: -24, minLight: 22, maxLight: 36 }),
+            appGradientC: shiftColorHsl(base, { satMul: 0.95, lightAdd: -12, minLight: 30, maxLight: 48 }),
+            appGradientAngle: '160deg',
+            successColor: '#49c06e',
+            dangerColor: '#ff6464'
+        };
+    }
+
+    const delta = intensity - 1;
+    const bgKeys = ['bgPrimary', 'bgSecondary', 'bgTertiary', 'bgQuaternary', 'bgHeader', 'bgSidebar', 'bgActionbar'];
+    bgKeys.forEach((key) => {
+        if (!palette[key]) return;
+        palette[key] = shiftColorHsl(palette[key], {
+            satAdd: delta * (useLightUi ? 10 : 14),
+            lightAdd: delta * (useLightUi ? 4 : -4)
+        });
+    });
+    palette.accentColor = shiftColorHsl(palette.accentColor, {
+        satAdd: delta * 18,
+        lightAdd: delta * 5
+    });
+    palette.borderColor = shiftColorHsl(palette.borderColor, {
+        satAdd: delta * 8,
+        lightAdd: delta * (useLightUi ? 4 : -3)
+    });
+    palette.textSecondary = shiftColorHsl(palette.textSecondary, {
+        satAdd: delta * 5,
+        lightAdd: delta * (useLightUi ? -3 : 3)
+    });
+    palette.appGradientA = shiftColorHsl(palette.appGradientA, { satAdd: delta * 10, lightAdd: delta * 5 });
+    palette.appGradientB = shiftColorHsl(palette.appGradientB, { satAdd: delta * 12, lightAdd: delta * 4 });
+    palette.appGradientC = shiftColorHsl(palette.appGradientC, { satAdd: delta * 15, lightAdd: delta * 3 });
+
+    return palette;
+}
+
+function resolveBasicVariantForEditor(baseColor, requestedVariant) {
+    const normalizedRequested = normalizeBasicVariant(requestedVariant);
+    if (normalizedRequested !== 'auto') return normalizedRequested;
+
+    // Auto mode should follow the base color intent.
+    return inferUiToneFromColor(baseColor, 'dark');
+}
+
+function resolveBasicVariantForRuntime(baseColor, requestedVariant) {
+    const normalizedRequested = normalizeBasicVariant(requestedVariant);
+    if (normalizedRequested === 'auto') {
+        return inferUiToneFromColor(baseColor, 'dark');
+    }
+    return normalizedRequested;
+}
+
+function resolveThemeColorsForRuntime(theme) {
+    const colors = theme?.colors || {};
+    const mode = normalizeThemeCustomizationMode(theme?.editor?.customizationMode);
+    if (mode !== 'basic') {
+        const repairedExtended = looksCorruptedBlackPalette(colors)
+            ? repairBlackPaletteFromAccent(colors, theme)
+            : colors;
+        return normalizePaletteToActiveTone(repairedExtended, theme);
+    }
+
+    const baseColor = parseColorToHex(theme?.editor?.basicBaseColor)
+        || parseColorToHex(colors.accentColor)
+        || '#5aa9ff';
+    const variant = resolveBasicVariantForRuntime(baseColor, theme?.editor?.basicVariant || 'auto');
+    const intensity = normalizeBasicIntensity(theme?.editor?.basicIntensity ?? 100);
+    const generated = buildBasicPalette(baseColor, variant, intensity);
+
+    // Regenerate core palette for basic mode to avoid stale/broken saved colors.
+    const basicColors = {
+        ...colors,
+        ...generated
+    };
+    const repairedBasic = looksCorruptedBlackPalette(basicColors)
+        ? repairBlackPaletteFromAccent(basicColors, theme)
+        : basicColors;
+    return normalizePaletteToActiveTone(repairedBasic, theme);
+}
+
+function normalizePaletteToActiveTone(colors = {}, theme = null) {
+    const activeTone = String(document.documentElement.getAttribute('data-theme') || '').toLowerCase();
+    if (activeTone !== 'light' && activeTone !== 'dark') return colors;
+
+    const bgCandidate = parseColorToHex(colors.bgPrimary) || parseColorToHex(colors.bgSecondary);
+    const paletteTone = inferUiToneFromColor(bgCandidate || '#0b1220', 'dark');
+    if (paletteTone === activeTone) return colors;
+
+    const baseColor = parseColorToHex(theme?.editor?.basicBaseColor)
+        || parseColorToHex(colors.accentColor)
+        || '#5aa9ff';
+    const intensity = normalizeBasicIntensity(theme?.editor?.basicIntensity ?? 100);
+    const repaired = buildBasicPalette(baseColor, activeTone, intensity);
+    return {
+        ...colors,
+        ...repaired
+    };
+}
+
+function isNearBlackHex(hexColor) {
+    const parsed = parseColorToHex(hexColor);
+    if (!parsed) return false;
+    const rgb = hexToRgb(parsed);
+    if (!rgb || !Number.isFinite(rgb.r) || !Number.isFinite(rgb.g) || !Number.isFinite(rgb.b)) return false;
+    return rgb.r <= 8 && rgb.g <= 8 && rgb.b <= 8;
+}
+
+function looksCorruptedBlackPalette(colors = {}) {
+    const keys = [
+        'bgPrimary',
+        'bgSecondary',
+        'bgTertiary',
+        'bgHeader',
+        'bgSidebar',
+        'bgActionbar',
+        'appGradientA',
+        'appGradientB',
+        'appGradientC'
+    ];
+    let blackCount = 0;
+    keys.forEach((key) => {
+        if (isNearBlackHex(colors[key])) blackCount += 1;
+    });
+
+    const accent = parseColorToHex(colors.accentColor);
+    const accentIsDark = isNearBlackHex(accent);
+    return blackCount >= 6 && !accentIsDark;
+}
+
+function repairBlackPaletteFromAccent(colors = {}, theme = null) {
+    const baseColor = parseColorToHex(theme?.editor?.basicBaseColor)
+        || parseColorToHex(colors.accentColor)
+        || '#5aa9ff';
+    const activeTone = String(document.documentElement.getAttribute('data-theme') || '').toLowerCase();
+    const variant = activeTone === 'light' ? 'light' : 'dark';
+    const intensity = normalizeBasicIntensity(theme?.editor?.basicIntensity ?? 100);
+    const repaired = buildBasicPalette(baseColor, variant, intensity);
+    return {
+        ...colors,
+        ...repaired
+    };
+}
+
+function collectThemeColorsFromInputs() {
+    const pick = (id, fallback = '') => parseColorToHex(document.getElementById(id)?.value) || fallback;
+    const gradientAngleInput = document.getElementById('gradient-angle');
+    const gradientAngle = normalizeGradientAngle(`${gradientAngleInput?.value || '160'}deg`);
+    return {
+        bgPrimary: pick('color-bg-primary', '#0b1220'),
+        bgSecondary: pick('color-bg-secondary', '#121c2f'),
+        bgTertiary: pick('color-bg-tertiary', '#1a263d'),
+        bgQuaternary: pick('color-bg-quaternary', '#0f1828'),
+        bgHeader: pick('color-bg-header', pick('color-bg-secondary', '#121c2f')),
+        bgSidebar: pick('color-bg-sidebar', pick('color-bg-tertiary', '#1a263d')),
+        bgActionbar: pick('color-bg-actionbar', pick('color-bg-quaternary', '#0f1828')),
+        textPrimary: pick('color-text-primary', '#e7edf8'),
+        textSecondary: pick('color-text-secondary', '#b9c7dc'),
+        accentColor: pick('color-accent', '#66ccff'),
+        borderColor: pick('color-border', '#2f4360'),
+        successColor: pick('color-success', '#4caf50'),
+        dangerColor: pick('color-danger', '#f44336'),
+        appGradientA: pick('color-app-gradient-a', '#0b1528'),
+        appGradientB: pick('color-app-gradient-b', '#0f2236'),
+        appGradientC: pick('color-app-gradient-c', '#1d2f4a'),
+        appGradientAngle: gradientAngle
+    };
+}
+
+function applyThemeColorsToRoot(colors = {}) {
+    const root = document.documentElement;
+    const set = (cssVar, value) => {
+        if (value === undefined || value === null || value === '') return;
+        root.style.setProperty(cssVar, value);
+    };
+
+    set('--bg-primary', parseColorToHex(colors.bgPrimary) || colors.bgPrimary);
+    set('--bg-secondary', parseColorToHex(colors.bgSecondary) || colors.bgSecondary);
+    set('--bg-tertiary', parseColorToHex(colors.bgTertiary) || colors.bgTertiary);
+    set('--bg-quaternary', parseColorToHex(colors.bgQuaternary) || colors.bgQuaternary);
+    set('--bg-header', parseColorToHex(colors.bgHeader) || colors.bgHeader);
+    set('--bg-sidebar', parseColorToHex(colors.bgSidebar) || colors.bgSidebar);
+    set('--bg-actionbar', parseColorToHex(colors.bgActionbar) || colors.bgActionbar);
+    set('--text-primary', parseColorToHex(colors.textPrimary) || colors.textPrimary);
+    set('--text-secondary', parseColorToHex(colors.textSecondary) || colors.textSecondary);
+    set('--border-color', parseColorToHex(colors.borderColor) || colors.borderColor);
+    set('--accent-color', parseColorToHex(colors.accentColor) || colors.accentColor);
+    set('--success-color', parseColorToHex(colors.successColor) || colors.successColor);
+    set('--danger-color', parseColorToHex(colors.dangerColor) || colors.dangerColor);
+    set('--app-gradient-a', parseColorToHex(colors.appGradientA) || colors.appGradientA);
+    set('--app-gradient-b', parseColorToHex(colors.appGradientB) || colors.appGradientB);
+    set('--app-gradient-c', parseColorToHex(colors.appGradientC) || colors.appGradientC);
+    set('--app-gradient-angle', normalizeGradientAngle(colors.appGradientAngle || '160deg'));
+
+    applyThemeToneAttribute(colors);
+    applyDerivedThemeVariables(colors);
+}
+
+function applyDerivedThemeVariables(colors = {}) {
+    const root = document.documentElement;
+    const bgPrimary = parseColorToHex(colors.bgPrimary) || '#0b1220';
+    const bgSecondary = parseColorToHex(colors.bgSecondary) || '#121c2f';
+    const textSecondary = parseColorToHex(colors.textSecondary) || '#b9c7dc';
+    const accentColor = parseColorToHex(colors.accentColor) || '#66ccff';
+    const borderColor = parseColorToHex(colors.borderColor) || '#2f4360';
+    const successColor = parseColorToHex(colors.successColor) || '#4caf50';
+    const dangerColor = parseColorToHex(colors.dangerColor) || '#f44336';
+
+    const bgRgb = hexToRgb(bgPrimary);
+    const bgHsl = bgRgb ? rgbToHsl(bgRgb.r, bgRgb.g, bgRgb.b) : { l: 0.18 };
+    const isLightUi = bgHsl.l >= 0.56;
+
+    const textTertiary = parseColorToHex(colors.textTertiary)
+        || shiftColorHsl(textSecondary, { satMul: 0.9, lightAdd: isLightUi ? -8 : -6, minLight: isLightUi ? 34 : 58, maxLight: isLightUi ? 62 : 82 });
+    const warningColor = parseColorToHex(colors.warningColor)
+        || shiftColorHsl(accentColor, { hueShift: 22, satMul: 1.08, lightAdd: isLightUi ? -2 : 8, minLight: 44, maxLight: 72 });
+    const successDark = parseColorToHex(colors.successDark) || darkenHex(successColor, 16);
+    const dangerDark = parseColorToHex(colors.dangerDark) || darkenHex(dangerColor, 16);
+    const glassSurface = parseColorToHex(colors.glassSurface)
+        || shiftColorHsl(bgSecondary, { satMul: isLightUi ? 0.65 : 0.9, lightAdd: isLightUi ? 8 : -2, minLight: isLightUi ? 88 : 10, maxLight: isLightUi ? 98 : 28 });
+    const glassSurfaceStrong = parseColorToHex(colors.glassSurfaceStrong)
+        || shiftColorHsl(bgSecondary, { satMul: isLightUi ? 0.68 : 0.95, lightAdd: isLightUi ? 4 : -6, minLight: isLightUi ? 84 : 8, maxLight: isLightUi ? 96 : 24 });
+    const glassBorder = parseColorToHex(colors.glassBorder)
+        || shiftColorHsl(borderColor, { satMul: 0.8, lightAdd: isLightUi ? 12 : 8, minLight: isLightUi ? 66 : 30, maxLight: isLightUi ? 90 : 58 });
+    const brandColor = parseColorToHex(colors.brandColor) || darkenHex(accentColor, 30);
+    const accentHover = parseColorToHex(colors.accentHover)
+        || shiftColorHsl(accentColor, { satAdd: isLightUi ? 4 : 6, lightAdd: isLightUi ? -8 : -6 });
+
+    const accentRgb = hexToRgb(accentColor) || { r: 102, g: 204, b: 255 };
+    const dangerRgb = hexToRgb(dangerColor) || { r: 244, g: 67, b: 54 };
+    const successRgb = hexToRgb(successColor) || { r: 76, g: 175, b: 80 };
+
+    const prismCyan = shiftColorHsl(accentColor, { hueShift: -14, satMul: 1.05, lightAdd: isLightUi ? -2 : 6 });
+    const prismBlue = shiftColorHsl(accentColor, { hueShift: 16, satMul: 1.02, lightAdd: isLightUi ? -8 : 0 });
+    const prismMagenta = shiftColorHsl(accentColor, { hueShift: 96, satMul: 1.02, lightAdd: isLightUi ? -2 : 8 });
+    const prismOrange = shiftColorHsl(accentColor, { hueShift: 144, satMul: 1.04, lightAdd: isLightUi ? -4 : 8 });
+    const prismYellow = shiftColorHsl(accentColor, { hueShift: 174, satMul: 0.98, lightAdd: isLightUi ? -2 : 10 });
+    const prismGreen = shiftColorHsl(accentColor, { hueShift: -62, satMul: 1.03, lightAdd: isLightUi ? -6 : 8 });
+    const glassShadow = isLightUi ? 'rgba(25, 63, 92, 0.18)' : 'rgba(0, 8, 24, 0.46)';
+
+    root.style.setProperty('--text-tertiary', textTertiary);
+    root.style.setProperty('--warning-color', warningColor);
+    root.style.setProperty('--success-dark', successDark);
+    root.style.setProperty('--danger-dark', dangerDark);
+    root.style.setProperty('--glass-surface', glassSurface);
+    root.style.setProperty('--glass-surface-strong', glassSurfaceStrong);
+    root.style.setProperty('--glass-border', glassBorder);
+    root.style.setProperty('--glass-shadow', glassShadow);
+    root.style.setProperty('--brand-color', brandColor);
+    root.style.setProperty('--accent-light', accentColor);
+    root.style.setProperty('--accent-hover', accentHover);
+    root.style.setProperty('--accent-color-rgb', `${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}`);
+    root.style.setProperty('--danger-color-rgb', `${dangerRgb.r}, ${dangerRgb.g}, ${dangerRgb.b}`);
+    root.style.setProperty('--success-color-rgb', `${successRgb.r}, ${successRgb.g}, ${successRgb.b}`);
+    root.style.setProperty('--prism-cyan', prismCyan);
+    root.style.setProperty('--prism-blue', prismBlue);
+    root.style.setProperty('--prism-magenta', prismMagenta);
+    root.style.setProperty('--prism-orange', prismOrange);
+    root.style.setProperty('--prism-yellow', prismYellow);
+    root.style.setProperty('--prism-green', prismGreen);
+}
+
+const THEME_INLINE_CSS_VARS = [
+    '--bg-primary',
+    '--bg-secondary',
+    '--bg-tertiary',
+    '--bg-quaternary',
+    '--bg-header',
+    '--bg-sidebar',
+    '--bg-actionbar',
+    '--text-primary',
+    '--text-secondary',
+    '--border-color',
+    '--accent-color',
+    '--success-color',
+    '--danger-color',
+    '--app-gradient-a',
+    '--app-gradient-b',
+    '--app-gradient-c',
+    '--app-gradient-angle',
+    '--text-tertiary',
+    '--warning-color',
+    '--success-dark',
+    '--danger-dark',
+    '--glass-surface',
+    '--glass-surface-strong',
+    '--glass-border',
+    '--glass-shadow',
+    '--brand-color',
+    '--accent-light',
+    '--accent-hover',
+    '--accent-color-rgb',
+    '--danger-color-rgb',
+    '--success-color-rgb',
+    '--prism-cyan',
+    '--prism-blue',
+    '--prism-magenta',
+    '--prism-orange',
+    '--prism-yellow',
+    '--prism-green'
+];
+
+function clearThemeInlineVariables(root) {
+    THEME_INLINE_CSS_VARS.forEach((cssVar) => {
+        root.style.removeProperty(cssVar);
+    });
+}
+
+function applyColorInputsPreview() {
+    applyThemeColorsToRoot(collectThemeColorsFromInputs());
+}
+
+function applyBasicPaletteToInputs(options = {}) {
+    const baseColorInput = document.getElementById('theme-base-color');
+    const variantSelect = document.getElementById('theme-basic-variant');
+    const intensityInput = document.getElementById('theme-basic-intensity');
+    if (!baseColorInput || !variantSelect || !intensityInput) return;
+
+    const intensity = normalizeBasicIntensity(intensityInput.value);
+    updateBasicIntensityValueLabel(intensity);
+    const resolvedVariant = resolveBasicVariantForEditor(baseColorInput.value, variantSelect.value);
+    const palette = buildBasicPalette(baseColorInput.value, resolvedVariant, intensity);
+    const assignments = {
+        'color-bg-primary': palette.bgPrimary,
+        'color-bg-secondary': palette.bgSecondary,
+        'color-bg-tertiary': palette.bgTertiary,
+        'color-bg-quaternary': palette.bgQuaternary,
+        'color-bg-header': palette.bgHeader,
+        'color-bg-sidebar': palette.bgSidebar,
+        'color-bg-actionbar': palette.bgActionbar,
+        'color-text-primary': palette.textPrimary,
+        'color-text-secondary': palette.textSecondary,
+        'color-accent': palette.accentColor,
+        'color-border': palette.borderColor,
+        'color-success': palette.successColor,
+        'color-danger': palette.dangerColor,
+        'color-app-gradient-a': palette.appGradientA,
+        'color-app-gradient-b': palette.appGradientB,
+        'color-app-gradient-c': palette.appGradientC
+    };
+
+    Object.entries(assignments).forEach(([id, value]) => {
+        const input = document.getElementById(id);
+        if (input) input.value = parseColorToHex(value) || value;
+    });
+
+    const angleInput = document.getElementById('gradient-angle');
+    if (angleInput) {
+        const angleNum = Number.parseInt(String(palette.appGradientAngle).replace(/deg$/i, ''), 10);
+        angleInput.value = String(Number.isFinite(angleNum) ? angleNum : 160);
+        const normalizedAngle = normalizeGradientAngle(`${angleInput.value}deg`);
+        updateGradientAngleValueLabel(normalizedAngle);
+        applyGradientAnglePreview(normalizedAngle);
+    }
+
+    updateColorTexts();
+    applyThemeColorsToRoot(palette);
+
+    if (options.markUnsaved !== false) {
+        hasUnsavedChanges = true;
+    }
+}
+
+export function setupThemeCustomizationControls() {
+    const form = document.getElementById('theme-form');
+    if (!form) return;
+
+    const modeButtons = Array.from(document.querySelectorAll('.theme-mode-btn[data-theme-mode]'));
+    modeButtons.forEach((button) => {
+        const clone = button.cloneNode(true);
+        button.parentNode.replaceChild(clone, button);
+        clone.addEventListener('click', () => {
+            const nextMode = normalizeThemeCustomizationMode(clone.dataset.themeMode);
+            setThemeEditorMode(nextMode);
+            if (nextMode === 'basic') applyBasicPaletteToInputs();
+        });
+    });
+
+    const variantInput = document.getElementById('theme-basic-variant');
+    if (variantInput) {
+        const clone = variantInput.cloneNode(true);
+        variantInput.parentNode.replaceChild(clone, variantInput);
+        clone.addEventListener('change', () => {
+            if (getThemeEditorMode() === 'basic') applyBasicPaletteToInputs();
+        });
+    }
+
+    const intensityInput = document.getElementById('theme-basic-intensity');
+    if (intensityInput) {
+        const clone = intensityInput.cloneNode(true);
+        intensityInput.parentNode.replaceChild(clone, intensityInput);
+        const onIntensityChange = () => {
+            updateBasicIntensityValueLabel(clone.value);
+            if (getThemeEditorMode() === 'basic') applyBasicPaletteToInputs();
+        };
+        clone.addEventListener('input', onIntensityChange);
+        clone.addEventListener('change', onIntensityChange);
+        updateBasicIntensityValueLabel(clone.value);
+    }
+
+    const savedMode = normalizeThemeCustomizationMode(localStorage.getItem(THEME_EDITOR_MODE_STORAGE_KEY));
+    setThemeEditorMode(form.dataset.customizationMode || savedMode, { persist: false });
 }
 
 export function makeDraggable(modalId, headerId) {
@@ -116,6 +672,71 @@ export function makeDraggable(modalId, headerId) {
         document.removeEventListener('mousemove', onMouseMove);
         document.removeEventListener('mouseup', onMouseUp);
     }
+}
+
+function resolveManagedModal(modalOrId) {
+    if (!modalOrId) return null;
+    if (typeof modalOrId === 'string') return document.getElementById(modalOrId);
+    return modalOrId instanceof HTMLElement ? modalOrId : null;
+}
+
+export function resetManagedModalPosition(modalOrId, options = {}) {
+    const modal = resolveManagedModal(modalOrId);
+    if (!modal) return false;
+
+    const smooth = options.smooth !== false;
+    if (smooth) modal.classList.add('smooth-reset');
+
+    modal.style.top = '';
+    modal.style.left = '';
+    modal.style.transform = '';
+    modal.classList.remove('moved');
+
+    if (smooth) {
+        const duration = Number.isFinite(Number(options.smoothDurationMs))
+            ? Math.max(0, Number(options.smoothDurationMs))
+            : 800;
+        window.setTimeout(() => {
+            modal.classList.remove('smooth-reset');
+        }, duration);
+    }
+
+    return true;
+}
+
+export function recenterManagedModalIfMostlyOutOfView(modalOrId, options = {}) {
+    const modal = resolveManagedModal(modalOrId);
+    if (!modal) return false;
+    if (modal.classList.contains('docked-right')) return false;
+    if (!options.allowInactive && !modal.classList.contains('active')) return false;
+
+    const rect = modal.getBoundingClientRect();
+    if (!Number.isFinite(rect.width) || !Number.isFinite(rect.height) || rect.width <= 0 || rect.height <= 0) {
+        return false;
+    }
+
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const visibleLeft = Math.max(0, rect.left);
+    const visibleRight = Math.min(viewportWidth, rect.right);
+    const visibleTop = Math.max(0, rect.top);
+    const visibleBottom = Math.min(viewportHeight, rect.bottom);
+    const visibleWidth = Math.max(0, visibleRight - visibleLeft);
+    const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+    const visibleArea = visibleWidth * visibleHeight;
+    const totalArea = rect.width * rect.height;
+    if (totalArea <= 0) return false;
+
+    const threshold = Number.isFinite(Number(options.visibleThreshold))
+        ? clampNumber(Number(options.visibleThreshold), 0, 1)
+        : 0.5;
+
+    if (visibleArea >= totalArea * threshold) return false;
+
+    return resetManagedModalPosition(modal, {
+        smooth: options.smooth !== false,
+        smoothDurationMs: options.smoothDurationMs
+    });
 }
 
 export async function fetchCommunityThemes(forceRefresh = false) {
@@ -305,34 +926,20 @@ export function applyBackgroundImage(bgConfig) {
 }
 
 export function applyCustomTheme(theme) {
-    document.documentElement.removeAttribute('data-theme');
     const root = document.documentElement;
-    root.style.setProperty('--bg-primary', theme.colors.bgPrimary);
-    root.style.setProperty('--bg-secondary', theme.colors.bgSecondary);
-    const tertiary = theme.colors.bgTertiary || theme.colors.bgSecondary;
-    root.style.setProperty('--bg-tertiary', tertiary);
-    root.style.setProperty('--bg-quaternary', theme.colors.bgQuaternary || tertiary);
-    
-    if (theme.colors.bgHeader) root.style.setProperty('--bg-header', theme.colors.bgHeader);
-    if (theme.colors.bgSidebar) root.style.setProperty('--bg-sidebar', theme.colors.bgSidebar);
-    if (theme.colors.bgActionbar) root.style.setProperty('--bg-actionbar', theme.colors.bgActionbar);
-    root.style.setProperty('--app-gradient-a', theme.colors.appGradientA || theme.colors.bgPrimary || '#0b1528');
-    root.style.setProperty('--app-gradient-b', theme.colors.appGradientB || theme.colors.bgSecondary || '#0f2236');
-    root.style.setProperty('--app-gradient-c', theme.colors.appGradientC || tertiary || '#1d2f4a');
-    root.style.setProperty('--app-gradient-angle', normalizeGradientAngle(theme.colors.appGradientAngle || '160deg'));
-
-    root.style.setProperty('--text-primary', theme.colors.textPrimary);
-    root.style.setProperty('--text-secondary', theme.colors.textSecondary);
-    root.style.setProperty('--text-tertiary', '#999');
-    root.style.setProperty('--border-color', theme.colors.borderColor);
-    root.style.setProperty('--accent-color', theme.colors.accentColor);
-    root.style.setProperty('--accent-light', theme.colors.accentColor);
-    
-    if (theme.colors.successColor) root.style.setProperty('--success-color', theme.colors.successColor);
-    if (theme.colors.dangerColor) root.style.setProperty('--danger-color', theme.colors.dangerColor);
-    if (shouldUseAccentColorForBrand) {
-        const darkerColor = darkenHex(theme.colors.accentColor, 30);
-        root.style.setProperty('--brand-color', darkerColor);
+    const runtimeColors = resolveThemeColorsForRuntime(theme);
+    const tertiary = runtimeColors.bgTertiary || runtimeColors.bgSecondary;
+    applyThemeColorsToRoot({
+        ...runtimeColors,
+        bgTertiary: tertiary,
+        bgQuaternary: runtimeColors.bgQuaternary || tertiary,
+        appGradientA: runtimeColors.appGradientA || runtimeColors.bgPrimary || '#0b1528',
+        appGradientB: runtimeColors.appGradientB || runtimeColors.bgSecondary || '#0f2236',
+        appGradientC: runtimeColors.appGradientC || tertiary || '#1d2f4a',
+        appGradientAngle: normalizeGradientAngle(runtimeColors.appGradientAngle || '160deg')
+    });
+    if (shouldUseAccentColorForBrand && runtimeColors?.accentColor) {
+        root.style.setProperty('--brand-color', darkenHex(runtimeColors.accentColor, 30));
     }
     
     // Check for global background override
@@ -380,7 +987,7 @@ export function setTheme(theme) {
     const root = document.documentElement;
     const themeManagerModal = document.getElementById('theme-manager-modal');
 
-    root.removeAttribute('style'); 
+    clearThemeInlineVariables(root);
     disableFixedBackgroundTracking();
 
     if (theme === 'dark' || theme === 'light') {
@@ -396,6 +1003,66 @@ export function setTheme(theme) {
     if (themeManagerModal && themeManagerModal.classList.contains('active')) {
         renderThemeManager();
     }
+
+    requestDockLayoutRefresh();
+    window.setTimeout(() => requestDockLayoutRefresh(), 32);
+    window.setTimeout(() => requestDockLayoutRefresh(), 180);
+
+    syncSplashThemePreference(theme);
+}
+
+function readThemeColorForSplash(styles, cssVar, fallback) {
+    const parsed = parseColorToHex(styles.getPropertyValue(cssVar) || '');
+    return parsed || fallback;
+}
+
+function syncSplashThemePreference(themeId) {
+    if (!emubro || typeof emubro.invoke !== 'function') return;
+
+    const root = document.documentElement;
+    const styles = getComputedStyle(root);
+    const tone = String(root.getAttribute('data-theme') || '').toLowerCase() === 'light' ? 'light' : 'dark';
+    const fallbackDark = {
+        bgPrimary: '#0b1220',
+        bgSecondary: '#121c2f',
+        bgTertiary: '#1a263d',
+        textPrimary: '#e7edf8',
+        textSecondary: '#b9c7dc',
+        accentColor: '#32b8de',
+        accentLight: '#8fe6ff'
+    };
+    const fallbackLight = {
+        bgPrimary: '#dfeaf6',
+        bgSecondary: '#edf4fb',
+        bgTertiary: '#d2e3f5',
+        textPrimary: '#17263a',
+        textSecondary: '#5d7694',
+        accentColor: '#3db2d6',
+        accentLight: '#87d8ef'
+    };
+    const fallback = tone === 'light' ? fallbackLight : fallbackDark;
+
+    const payload = {
+        id: String(themeId || 'dark'),
+        tone,
+        bgPrimary: readThemeColorForSplash(styles, '--bg-primary', fallback.bgPrimary),
+        bgSecondary: readThemeColorForSplash(styles, '--bg-secondary', fallback.bgSecondary),
+        bgTertiary: readThemeColorForSplash(styles, '--bg-tertiary', fallback.bgTertiary),
+        textPrimary: readThemeColorForSplash(styles, '--text-primary', fallback.textPrimary),
+        textSecondary: readThemeColorForSplash(styles, '--text-secondary', fallback.textSecondary),
+        accentColor: readThemeColorForSplash(styles, '--accent-color', fallback.accentColor),
+        accentLight: readThemeColorForSplash(styles, '--accent-light', fallback.accentLight),
+        appGradientA: readThemeColorForSplash(styles, '--app-gradient-a', fallback.bgPrimary),
+        appGradientB: readThemeColorForSplash(styles, '--app-gradient-b', fallback.bgSecondary),
+        appGradientC: readThemeColorForSplash(styles, '--app-gradient-c', fallback.bgTertiary)
+    };
+
+    try {
+        const result = emubro.invoke('settings:set-splash-theme', payload);
+        if (result && typeof result.catch === 'function') {
+            result.catch(() => {});
+        }
+    } catch (_e) {}
 }
 
 export function openThemeManager() {
@@ -718,6 +1385,7 @@ async function uploadTheme(theme) {
 }
 
 export function editTheme(theme) {
+    hasUnsavedChanges = false;
     editingThemeId = theme.id;
     document.getElementById('form-title').textContent = i18n.t('theme.editTheme');
     document.getElementById('theme-name').value = theme.name;
@@ -732,6 +1400,7 @@ export function editTheme(theme) {
     document.getElementById('color-bg-sidebar').value = theme.colors.bgSidebar || theme.colors.bgTertiary || theme.colors.bgSecondary;
     document.getElementById('color-bg-actionbar').value = theme.colors.bgActionbar || theme.colors.bgQuaternary || theme.colors.bgSecondary;
     document.getElementById('color-bg-tertiary').value = theme.colors.bgTertiary || theme.colors.bgSecondary;
+    document.getElementById('color-bg-quaternary').value = theme.colors.bgQuaternary || theme.colors.bgTertiary || theme.colors.bgSecondary;
     document.getElementById('color-success').value = theme.colors.successColor || '#4caf50';
     document.getElementById('color-danger').value = theme.colors.dangerColor || '#f44336';
     document.getElementById('color-app-gradient-a').value = theme.colors.appGradientA || theme.colors.bgPrimary || '#0b1528';
@@ -769,9 +1438,19 @@ export function editTheme(theme) {
     } else {
         document.getElementById('glass-effect-toggle').checked = true;
     }
+
+    const baseColorInput = document.getElementById('theme-base-color');
+    if (baseColorInput) baseColorInput.value = theme?.editor?.basicBaseColor || theme.colors.accentColor || '#5aa9ff';
+    const variantInput = document.getElementById('theme-basic-variant');
+    if (variantInput) variantInput.value = normalizeBasicVariant(theme?.editor?.basicVariant || inferBasicVariantFromTheme(theme));
+    const intensityInput = document.getElementById('theme-basic-intensity');
+    if (intensityInput) intensityInput.value = String(normalizeBasicIntensity(theme?.editor?.basicIntensity ?? 100));
+    updateBasicIntensityValueLabel(intensityInput?.value || 100);
+    setThemeEditorMode(theme?.editor?.customizationMode || localStorage.getItem(THEME_EDITOR_MODE_STORAGE_KEY), { persist: false });
     
     updateColorTexts();
     showThemeForm();
+    setupThemeCustomizationControls();
     setupBackgroundImageListeners();
     setupColorPickerListeners();
 }
@@ -811,6 +1490,7 @@ export function resetThemeForm() {
         'color-bg-sidebar': '#333333',
         'color-bg-actionbar': '#252525',
         'color-bg-tertiary': '#333333',
+        'color-bg-quaternary': '#2b2b2b',
         'color-success': '#4caf50',
         'color-danger': '#f44336',
         'color-app-gradient-a': '#0b1528',
@@ -834,11 +1514,28 @@ export function resetThemeForm() {
     const glassToggle = document.getElementById('glass-effect-toggle');
     if (glassToggle) glassToggle.checked = true;
 
+    const baseColorInput = document.getElementById('theme-base-color');
+    if (baseColorInput) baseColorInput.value = '#5aa9ff';
+    const variantInput = document.getElementById('theme-basic-variant');
+    if (variantInput) variantInput.value = 'auto';
+    const intensityInput = document.getElementById('theme-basic-intensity');
+    if (intensityInput) intensityInput.value = '100';
+    updateBasicIntensityValueLabel(100);
+
     setGradientAngleInputFromValue('160deg');
     updateGradientAngleValueLabel('160deg');
     applyGradientAnglePreview('160deg');
     
     clearBackgroundImage();
+
+    const startMode = normalizeThemeCustomizationMode(localStorage.getItem(THEME_EDITOR_MODE_STORAGE_KEY));
+    setThemeEditorMode(startMode, { persist: false });
+    setupThemeCustomizationControls();
+    if (startMode === 'basic') {
+        applyBasicPaletteToInputs({ markUnsaved: false });
+    }
+    updateColorTexts();
+    applyColorInputsPreview();
 }
 
 export function clearBackgroundImage() {
@@ -864,6 +1561,7 @@ export function clearBackgroundImage() {
 
 export function setupColorPickerListeners() {
     const root = document.documentElement;
+    setupThemeCustomizationControls();
     const colorMap = {
         'color-bg-primary': '--bg-primary',
         'color-text-primary': '--text-primary',
@@ -875,6 +1573,7 @@ export function setupColorPickerListeners() {
         'color-bg-sidebar': '--bg-sidebar',
         'color-bg-actionbar': '--bg-actionbar',
         'color-bg-tertiary': '--bg-tertiary',
+        'color-bg-quaternary': '--bg-quaternary',
         'color-success': '--success-color',
         'color-danger': '--danger-color',
         'color-app-gradient-a': '--app-gradient-a',
@@ -891,6 +1590,13 @@ export function setupColorPickerListeners() {
             hasUnsavedChanges = true;
             const color = e.target.value;
             const id = newPicker.id;
+
+            if (id === 'theme-base-color') {
+                if (getThemeEditorMode() === 'basic') {
+                    applyBasicPaletteToInputs();
+                    return;
+                }
+            }
             
             if (colorMap[id]) {
                 root.style.setProperty(colorMap[id], color);
@@ -898,6 +1604,8 @@ export function setupColorPickerListeners() {
                     root.style.setProperty('--brand-color', darkenHex(color, 30));
                 }
             }
+
+            applyColorInputsPreview();
         };
 
         newPicker.addEventListener('change', handleUpdate);
@@ -1015,6 +1723,7 @@ export function saveTheme() {
             bgSidebar: document.getElementById('color-bg-sidebar').value,
             bgActionbar: document.getElementById('color-bg-actionbar').value,
             bgTertiary: document.getElementById('color-bg-tertiary').value,
+            bgQuaternary: document.getElementById('color-bg-quaternary').value,
             appGradientA: document.getElementById('color-app-gradient-a').value,
             appGradientB: document.getElementById('color-app-gradient-b').value,
             appGradientC: document.getElementById('color-app-gradient-c').value,
@@ -1030,6 +1739,12 @@ export function saveTheme() {
         },
         cardEffects: {
             glassEffect: document.getElementById('glass-effect-toggle').checked
+        },
+        editor: {
+            customizationMode: getThemeEditorMode(),
+            basicBaseColor: document.getElementById('theme-base-color')?.value || '#5aa9ff',
+            basicVariant: normalizeBasicVariant(document.getElementById('theme-basic-variant')?.value || 'auto'),
+            basicIntensity: normalizeBasicIntensity(document.getElementById('theme-basic-intensity')?.value || 100)
         }
     };
     

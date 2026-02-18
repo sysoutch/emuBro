@@ -9,8 +9,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
+    margin: -20px -20px 20px;
+    padding: 14px 20px 15px;
     border-bottom: 1px solid var(--glass-border);
     position: sticky;
     top: 0;
@@ -30,6 +30,141 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 10px;
+}
+
+.suggested-panel {
+    margin: 0 0 16px 0;
+    padding: 14px;
+    border-radius: var(--radius-card);
+    border: 1px solid color-mix(in srgb, var(--border-color), rgba(255,255,255,0.2));
+    background: color-mix(in srgb, var(--bg-secondary), transparent 18%);
+    backdrop-filter: blur(8px) saturate(1.06);
+    -webkit-backdrop-filter: blur(8px) saturate(1.06);
+}
+
+.suggested-panel.is-hidden {
+    display: none;
+}
+
+.suggested-panel-title {
+    margin: 0 0 8px 0;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.suggested-panel-subtitle {
+    margin: 0 0 12px 0;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.suggested-panel-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    align-items: end;
+}
+
+.suggested-panel-form .form-group {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.suggested-panel-form label {
+    font-size: 0.76rem;
+    font-weight: 650;
+    color: var(--text-secondary);
+    letter-spacing: 0.01em;
+}
+
+.suggested-panel-form input,
+.suggested-panel-form select {
+    min-height: 36px;
+}
+
+.suggested-panel-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.suggested-panel-status {
+    margin: 8px 0 0 0;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+}
+
+.suggested-panel-results {
+    margin-top: 12px;
+    display: grid;
+    gap: 10px;
+}
+
+.suggested-result-group {
+    border: 1px solid color-mix(in srgb, var(--border-color), rgba(255,255,255,0.15));
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--bg-primary), transparent 20%);
+    padding: 10px;
+}
+
+.suggested-result-title {
+    margin: 0 0 8px 0;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+}
+
+.suggested-result-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+}
+
+.suggested-result-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid color-mix(in srgb, var(--border-color), transparent 18%);
+    background: color-mix(in srgb, var(--bg-secondary), transparent 22%);
+}
+
+.suggested-result-meta {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.suggested-result-name {
+    color: var(--text-primary);
+    font-weight: 650;
+    font-size: 0.86rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.suggested-result-reason {
+    color: var(--text-secondary);
+    font-size: 0.76rem;
+}
+
+.suggested-result-actions {
+    display: inline-flex;
+    gap: 6px;
+}
+
+.suggested-result-actions .action-btn {
+    flex: 0 0 auto;
+    min-width: 0;
+    padding: 6px 10px;
+    font-size: 0.72rem;
 }
 
 /* Container for Cover View */
@@ -638,7 +773,7 @@ tr.game-row-clickable:hover {
     --emulator-glow-1: color-mix(in srgb, var(--accent-color), transparent 38%);
     --emulator-glow-2: color-mix(in srgb, var(--accent-color), white 22%);
     --emulator-glow-3: color-mix(in srgb, var(--accent-color), black 18%);
-    background: color-mix(in srgb, var(--bg-secondary), transparent 42%);
+    background: color-mix(in srgb, var(--bg-secondary), white 10%);
     border: 1px solid color-mix(in srgb, rgba(255,255,255,0.18), var(--border-color));
     border-radius: var(--radius-card);
     padding: calc(16px * var(--view-scale));
@@ -670,7 +805,7 @@ tr.game-row-clickable:hover {
     margin-bottom: calc(8px * var(--view-scale));
     overflow: hidden;
     border: 1px solid color-mix(in srgb, rgba(255,255,255,0.18), var(--border-color));
-    background: color-mix(in srgb, var(--bg-primary), transparent 28%);
+    background: color-mix(in srgb, var(--bg-primary), white 9%);
 }
 
 .emulator-card-hero::before {
@@ -691,7 +826,11 @@ tr.game-row-clickable:hover {
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background: linear-gradient(180deg, rgba(8, 12, 20, 0.1) 0%, rgba(8, 12, 20, 0.4) 100%);
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, white 20%, transparent) 0%,
+        color-mix(in srgb, var(--bg-primary), transparent 52%) 100%
+    );
 }
 
 .emulator-card-hero > * {
@@ -1068,98 +1207,40 @@ tr.game-row-clickable:hover {
    SLIDESHOW VIEW
    ========================================= */
 .games-container.slideshow-view {
-    --view-scale: 1;
-    --slideshow-shift-1: clamp(240px, 26vw, 560px);
-    --slideshow-shift-2: clamp(380px, 40vw, 900px);
-    --slideshow-shift-1-landscape: clamp(300px, 33vw, 760px);
-    --slideshow-shift-2-landscape: clamp(440px, 48vw, 1060px);
+    --view-scale: calc(clamp(0.52, min(calc((100vw - 240px) / 1320), calc((100vh - 210px) / 760)), 1.12) * var(--view-scale-user, 1));
+    --slideshow-shift-1: clamp(170px, 24vw, 560px);
+    --slideshow-shift-2: clamp(280px, 36vw, 900px);
+    --slideshow-shift-1-landscape: clamp(220px, 29vw, 760px);
+    --slideshow-shift-2-landscape: clamp(320px, 42vw, 1060px);
     display: block;
-}
-
-@media (min-width: 1750px) and (min-height: 900px) {
-    .games-container.slideshow-view {
-        --view-scale: 1.08;
-    }
-}
-
-@media (min-width: 2200px) and (min-height: 1100px) {
-    .games-container.slideshow-view {
-        --view-scale: 1.16;
-    }
-}
-
-@media (max-width: 1400px) {
-    .games-container.slideshow-view {
-        --view-scale: 0.95;
-    }
-}
-
-@media (max-width: 1200px) {
-    .games-container.slideshow-view {
-        --view-scale: 0.88;
-    }
-}
-
-@media (max-width: 1024px) {
-    .games-container.slideshow-view {
-        --view-scale: 0.8;
-    }
-}
-
-@media (max-width: 900px) {
-    .games-container.slideshow-view {
-        --view-scale: 0.74;
-    }
-}
-
-@media (max-width: 760px) {
-    .games-container.slideshow-view {
-        --view-scale: 0.66;
-    }
-}
-
-@media (max-width: 640px) {
-    .games-container.slideshow-view {
-        --view-scale: 0.6;
-    }
-}
-
-@media (max-height: 820px) {
-    .games-container.slideshow-view {
-        --view-scale: 0.78;
-    }
-}
-
-@media (max-height: 740px) {
-    .games-container.slideshow-view {
-        --view-scale: 0.68;
-    }
+    width: calc(100% + 40px);
+    margin: -20px -20px 0;
 }
 
 .slideshow-container {
     position: relative;
     width: 100%;
-    height: clamp(560px, calc(100vh - 208px), 980px);
-    min-height: clamp(560px, calc(100vh - 208px), 980px);
-    padding: clamp(16px, 2vh, 24px) clamp(12px, 1.8vw, 18px) clamp(14px, 2vh, 22px);
-    border-radius: var(--radius-card);
+    height: clamp(360px, calc(100vh - 214px), 980px);
+    min-height: clamp(360px, calc(100vh - 214px), 980px);
+    padding: clamp(8px, 1.4vh, 20px) clamp(8px, 1.4vw, 16px) clamp(8px, 1.6vh, 18px);
+    border-radius: 0 0 var(--radius-card) var(--radius-card);
     overflow: hidden;
 }
 
 .slideshow-backdrop {
     position: absolute;
-    inset: -40px;
+    inset: -80px -60px -44px;
     background-size: cover;
     background-position: center;
-    filter: blur(26px) saturate(1.25) contrast(1.05);
+    filter: blur(24px) saturate(1.18) contrast(1.04);
     opacity: 0;
-    transform: scale(1.08);
+    transform: scale(1.04);
     transition: opacity 420ms ease;
     pointer-events: none;
 }
 
 .slideshow-backdrop.is-active {
-    opacity: 0.42;
+    opacity: 0.3;
 }
 
 .slideshow-chrome.is-swapping {
@@ -1186,23 +1267,23 @@ tr.game-row-clickable:hover {
     position: absolute;
     inset: 0;
     background:
-        radial-gradient(80% 70% at 50% 45%, rgba(0,0,0,0.25), rgba(0,0,0,0.75) 70%, rgba(0,0,0,0.85)),
-        linear-gradient(180deg, rgba(0,0,0,0.40), rgba(0,0,0,0.25) 40%, rgba(0,0,0,0.55));
+        radial-gradient(82% 74% at 50% 44%, rgba(0,0,0,0.1), rgba(0,0,0,0.44) 68%, rgba(0,0,0,0.58)),
+        linear-gradient(180deg, rgba(0,0,0,0.2), rgba(0,0,0,0.14) 42%, rgba(0,0,0,0.34));
     pointer-events: none;
 }
 
 [data-theme="light"] .slideshow-backdrop {
-    filter: blur(24px) saturate(1.1) contrast(1.02);
+    filter: blur(22px) saturate(1.05) contrast(1.02);
 }
 
 [data-theme="light"] .slideshow-backdrop.is-active {
-    opacity: 0.5;
+    opacity: 0.36;
 }
 
 [data-theme="light"] .slideshow-container::after {
     background:
-        radial-gradient(80% 70% at 50% 45%, rgba(255,255,255,0.12), rgba(151,185,219,0.26) 68%, rgba(126,161,197,0.42)),
-        linear-gradient(180deg, rgba(245,251,255,0.18), rgba(194,219,243,0.26) 42%, rgba(170,198,226,0.38));
+        radial-gradient(82% 74% at 50% 44%, rgba(255,255,255,0.16), rgba(156,188,220,0.24) 70%, rgba(132,166,198,0.35)),
+        linear-gradient(180deg, rgba(247,252,255,0.16), rgba(205,226,246,0.24) 42%, rgba(182,208,233,0.32));
 }
 
 .slideshow-chrome {
@@ -1243,8 +1324,8 @@ tr.game-row-clickable:hover {
 .slideshow-carousel-wrapper {
     width: 100%;
     flex: 1 1 auto;
-    min-height: clamp(300px, 52vh, 760px);
-    max-height: clamp(420px, 68vh, 860px);
+    min-height: clamp(180px, 40vh, 760px);
+    max-height: clamp(260px, 60vh, 860px);
     position: relative;
     perspective: 1200px;
     display: flex;
@@ -1271,8 +1352,8 @@ tr.game-row-clickable:hover {
     position: absolute;
     left: 50%;
     top: 50%;
-    width: clamp(220px, calc(18vw * var(--view-scale)), 440px);
-    height: clamp(320px, calc(54vh * var(--view-scale)), 740px);
+    width: clamp(150px, calc(18vw * var(--view-scale)), 440px);
+    height: clamp(220px, calc(54vh * var(--view-scale)), 740px);
     border-radius: 22px;
     box-shadow:
         0 18px 40px rgba(0,0,0,0.45),
@@ -1296,8 +1377,8 @@ tr.game-row-clickable:hover {
 }
 
 .slideshow-card.is-landscape {
-    width: clamp(340px, calc(44vw * var(--view-scale)), 980px);
-    height: clamp(210px, calc(36vh * var(--view-scale)), 580px);
+    width: clamp(220px, calc(44vw * var(--view-scale)), 980px);
+    height: clamp(140px, calc(36vh * var(--view-scale)), 580px);
 }
 
 .slideshow-card.is-landscape .slideshow-card-frame {
@@ -1340,50 +1421,50 @@ tr.game-row-clickable:hover {
 
 .slideshow-card[data-offset="-1"] {
     z-index: 6;
-    transform: translate(-50%, -50%) translateX(calc(-1 * var(--slideshow-shift-1) * var(--view-scale))) rotateY(18deg) scale(0.92);
+    transform: translate(-50%, -50%) translateX(calc(-1 * var(--slideshow-shift-1) * var(--view-scale))) rotateY(10deg) scale(0.93);
     opacity: 0.78;
     filter: blur(0.3px);
     pointer-events: auto;
 }
 
 .slideshow-card.is-landscape[data-offset="-1"] {
-    transform: translate(-50%, -50%) translateX(calc(-1 * var(--slideshow-shift-1-landscape) * var(--view-scale))) rotateY(16deg) scale(0.9);
+    transform: translate(-50%, -50%) translateX(calc(-1 * var(--slideshow-shift-1-landscape) * var(--view-scale))) rotateY(8deg) scale(0.92);
 }
 
 .slideshow-card[data-offset="1"] {
     z-index: 6;
-    transform: translate(-50%, -50%) translateX(calc(var(--slideshow-shift-1) * var(--view-scale))) rotateY(-18deg) scale(0.92);
+    transform: translate(-50%, -50%) translateX(calc(var(--slideshow-shift-1) * var(--view-scale))) rotateY(-10deg) scale(0.93);
     opacity: 0.78;
     filter: blur(0.3px);
     pointer-events: auto;
 }
 
 .slideshow-card.is-landscape[data-offset="1"] {
-    transform: translate(-50%, -50%) translateX(calc(var(--slideshow-shift-1-landscape) * var(--view-scale))) rotateY(-16deg) scale(0.9);
+    transform: translate(-50%, -50%) translateX(calc(var(--slideshow-shift-1-landscape) * var(--view-scale))) rotateY(-8deg) scale(0.92);
 }
 
 .slideshow-card[data-offset="-2"] {
     z-index: 2;
-    transform: translate(-50%, -50%) translateX(calc(-1 * var(--slideshow-shift-2) * var(--view-scale))) rotateY(28deg) scale(0.78);
+    transform: translate(-50%, -50%) translateX(calc(-1 * var(--slideshow-shift-2) * var(--view-scale))) rotateY(14deg) scale(0.8);
     opacity: 0.45;
     filter: blur(1.2px);
     pointer-events: auto;
 }
 
 .slideshow-card.is-landscape[data-offset="-2"] {
-    transform: translate(-50%, -50%) translateX(calc(-1 * var(--slideshow-shift-2-landscape) * var(--view-scale))) rotateY(24deg) scale(0.76);
+    transform: translate(-50%, -50%) translateX(calc(-1 * var(--slideshow-shift-2-landscape) * var(--view-scale))) rotateY(12deg) scale(0.78);
 }
 
 .slideshow-card[data-offset="2"] {
     z-index: 2;
-    transform: translate(-50%, -50%) translateX(calc(var(--slideshow-shift-2) * var(--view-scale))) rotateY(-28deg) scale(0.78);
+    transform: translate(-50%, -50%) translateX(calc(var(--slideshow-shift-2) * var(--view-scale))) rotateY(-14deg) scale(0.8);
     opacity: 0.45;
     filter: blur(1.2px);
     pointer-events: auto;
 }
 
 .slideshow-card.is-landscape[data-offset="2"] {
-    transform: translate(-50%, -50%) translateX(calc(var(--slideshow-shift-2-landscape) * var(--view-scale))) rotateY(-24deg) scale(0.76);
+    transform: translate(-50%, -50%) translateX(calc(var(--slideshow-shift-2-landscape) * var(--view-scale))) rotateY(-12deg) scale(0.78);
 }
 
 .slideshow-image {
@@ -1493,40 +1574,40 @@ tr.game-row-clickable:hover {
 
 @media (max-width: 900px) {
     .slideshow-carousel-wrapper {
-        height: 460px;
+        height: clamp(220px, 48vh, 460px);
     }
 
     .slideshow-card {
-        width: calc(230px * var(--view-scale));
-        height: calc(340px * var(--view-scale));
+        width: calc(190px * var(--view-scale));
+        height: calc(280px * var(--view-scale));
     }
 
     .slideshow-card[data-offset="-1"] {
-        transform: translate(-50%, -50%) translateX(calc(-250px * var(--view-scale))) rotateY(18deg) scale(0.9);
+        transform: translate(-50%, -50%) translateX(calc(-250px * var(--view-scale))) rotateY(10deg) scale(0.91);
     }
     .slideshow-card[data-offset="1"] {
-        transform: translate(-50%, -50%) translateX(calc(250px * var(--view-scale))) rotateY(-18deg) scale(0.9);
+        transform: translate(-50%, -50%) translateX(calc(250px * var(--view-scale))) rotateY(-10deg) scale(0.91);
     }
     .slideshow-card[data-offset="-2"] {
-        transform: translate(-50%, -50%) translateX(calc(-390px * var(--view-scale))) rotateY(26deg) scale(0.76);
+        transform: translate(-50%, -50%) translateX(calc(-390px * var(--view-scale))) rotateY(14deg) scale(0.78);
     }
     .slideshow-card[data-offset="2"] {
-        transform: translate(-50%, -50%) translateX(calc(390px * var(--view-scale))) rotateY(-26deg) scale(0.76);
+        transform: translate(-50%, -50%) translateX(calc(390px * var(--view-scale))) rotateY(-14deg) scale(0.78);
     }
 }
 
 @media (max-width: 640px) {
     .slideshow-container {
-        min-height: 640px;
-        padding: 18px 12px 22px;
+        min-height: clamp(320px, calc(100vh - 206px), 560px);
+        padding: 8px 8px 12px;
     }
 
     .slideshow-heading {
-        font-size: 1.7rem;
+        font-size: clamp(1rem, 4.6vw, 1.35rem);
     }
 
     .slideshow-carousel-wrapper {
-        height: 420px;
+        height: clamp(180px, 38vh, 340px);
     }
 
     .slideshow-card[data-offset="-2"],
@@ -1536,10 +1617,10 @@ tr.game-row-clickable:hover {
     }
 
     .slideshow-card[data-offset="-1"] {
-        transform: translate(-50%, -50%) translateX(calc(-220px * var(--view-scale))) rotateY(16deg) scale(0.88);
+        transform: translate(-50%, -50%) translateX(calc(-220px * var(--view-scale))) rotateY(9deg) scale(0.89);
     }
     .slideshow-card[data-offset="1"] {
-        transform: translate(-50%, -50%) translateX(calc(220px * var(--view-scale))) rotateY(-16deg) scale(0.88);
+        transform: translate(-50%, -50%) translateX(calc(220px * var(--view-scale))) rotateY(-9deg) scale(0.89);
     }
 }
 
@@ -1553,7 +1634,7 @@ tr.game-row-clickable:hover {
     align-items: center;
     justify-content: center;
     height: 100%;
-    min-height: calc(500px * var(--view-scale));
+    min-height: clamp(300px, calc(100vh - 250px), 560px);
     gap: calc(30px * var(--view-scale));
     padding: calc(20px * var(--view-scale));
 }
@@ -1564,14 +1645,14 @@ tr.game-row-clickable:hover {
     overflow: hidden;
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     width: 100%;
-    max-width: calc(350px * var(--view-scale));
+    max-width: clamp(220px, calc(32vw * var(--view-scale)), calc(350px * var(--view-scale)));
     display: flex;
     flex-direction: column;
 }
 
 .random-image {
     width: 100%;
-    height: calc(250px * var(--view-scale));
+    height: clamp(150px, calc(30vh * var(--view-scale)), calc(250px * var(--view-scale)));
     object-fit: cover;
     background-color: #000;
 }
@@ -1653,13 +1734,13 @@ tr.game-row-clickable:hover {
 
 /* Slot-Machine Variant (Random View) */
 .games-container.random-view {
-    --view-scale: 1;
+    --view-scale: clamp(0.62, min(calc((100vw - 240px) / 1120), calc((100vh - 210px) / 680)), 1.06);
     display: block;
 }
 
 .random-container.random-container--slot {
     width: 100%;
-    min-height: clamp(540px, calc(100vh - 220px), 700px);
+    min-height: clamp(320px, calc(100vh - 226px), 700px);
 }
 
 .slot-machine {
@@ -1699,7 +1780,7 @@ tr.game-row-clickable:hover {
 }
 
 .slot-cabinet {
-    --slot-item-h: clamp(124px, calc((100vh - 360px) / 3), 158px);
+    --slot-item-h: clamp(90px, calc((100vh - 360px) / 3), 158px);
     --slot-gap: clamp(10px, 1.4vh, 14px);
     --slot-window-h: calc((var(--slot-item-h) * 3) + (var(--slot-gap) * 2));
 
@@ -1842,7 +1923,7 @@ tr.game-row-clickable:hover {
 .slot-lever {
     flex: 0 0 auto;
     width: clamp(62px, 8vw, 74px);
-    height: clamp(210px, 35vh, 260px);
+    height: clamp(150px, 30vh, 250px);
     min-width: 0;
     padding: 0 0 14px;
     letter-spacing: 0.14em;
@@ -2015,8 +2096,8 @@ tr.game-row-clickable:hover {
 
 @media (max-width: 640px) {
     .slot-cabinet {
-        --slot-item-h: 138px;
-        --slot-gap: 12px;
+        --slot-item-h: 96px;
+        --slot-gap: 8px;
         padding: 14px;
         border-radius: 22px;
     }
@@ -2026,8 +2107,8 @@ tr.game-row-clickable:hover {
     }
 
     .slot-lever {
-        width: 66px;
-        height: 230px;
+        width: 58px;
+        height: 170px;
     }
 }
 
@@ -2045,7 +2126,13 @@ tr.game-row-clickable:hover {
 }
 
 #game-info-modal.is-pinned {
-    border-color: color-mix(in srgb, var(--accent-color), white 18%);
+    border: none !important;
+    box-shadow: none !important;
+}
+
+#game-info-modal.theme-manager-modal.docked-right {
+    border: none !important;
+    box-shadow: none !important;
 }
 
 #game-info-modal #game-info-header h2 {

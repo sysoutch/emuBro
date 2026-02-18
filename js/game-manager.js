@@ -676,14 +676,6 @@ function renderGamesIncremental(gamesToRender, activeView = 'cover') {
     gamesLoadObserver.observe(sentinel);
 }
 
-function renderGamesAsTable(gamesToRender) {
-    renderGamesIncremental(gamesToRender, 'table');
-}
-
-function renderGamesAsList(gamesToRender) {
-    renderGamesIncremental(gamesToRender, 'list');
-}
-
 function renderGamesAsSlideshow(gamesToRender) {
     const gamesContainer = document.getElementById('games-container');
     const slideshowContainer = document.createElement('div');
@@ -798,7 +790,7 @@ function renderGamesAsSlideshow(gamesToRender) {
             const h = imgEl?.naturalHeight || 0;
             if (!w || !h) return;
             const ratio = w / h;
-            const landscape = ratio >= 1.10;
+            const landscape = ratio >= 1.45;
 
             card.classList.toggle('is-landscape', landscape);
             card.classList.toggle('is-portrait', !landscape);
@@ -1381,5 +1373,4 @@ function showEmulatorDetails(emulator, options = {}) {
 export function showGameDetails(game) {
     getGameDetailsPopupActions().showGameDetails(game);
 }
-
 

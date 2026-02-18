@@ -4,9 +4,14 @@ module.exports = {
   directories: {
     output: "build_out"
   },
+  npmRebuild: true,
+  asarUnpack: [
+    "**/*.node"
+  ],
   files: [
     "package.json",
     "main.js",
+    "main/**/*",
     "preload.js",
     "ps1-handler.js",
     "index.html",
@@ -27,8 +32,8 @@ module.exports = {
   ],
   extraResources: [
     {
-      "from": "resources/${os}", // Grabs from your local /resources/win or /resources/mac
-      "to": "bin",               // Puts them into a folder named 'bin' in the final app
+      "from": "resources",
+      "to": "bin",
       "filter": ["**/*"]
     }
   ],
@@ -37,5 +42,18 @@ module.exports = {
   win: {
     target: "nsis",
     asar: true
+  },
+  linux: {
+    target: [
+      "AppImage",
+      "deb"
+    ],
+    category: "Game"
+  },
+  mac: {
+    target: [
+      "dmg",
+      "zip"
+    ]
   }
 };

@@ -54,6 +54,7 @@
                     </div>
                 </div>
                 <div class="theme-toggle-wrapper">
+                    <span class="theme-controls-title">Theme</span>
                     <div class="form-group dropdown-with-button-wrapper">
                         <select id="theme-select">
                             <option value="dark" data-i18n="theme.darkTheme"></option>
@@ -191,7 +192,7 @@
                             <li class="active"><a href="#" data-view="all">All Games</a></li>
                             <li><a href="#" data-view="installed">Installed</a></li>
                             <li><a href="#" data-view="recent">Recently Played</a></li>
-                            <li><a href="#" data-view="wishlist">Wishlist</a></li>
+                            <li><a href="#" data-view="suggested">Suggested</a></li>
                             <li><a href="#" data-view="emulators">Emulators</a></li>
                         </ul>
                     </div>
@@ -268,6 +269,7 @@
                             </select>
                         </div>
                     </div>
+                    <section id="suggested-panel" class="suggested-panel is-hidden" aria-live="polite"></section>
                     <div id="games-container" class="games-container">
                         <!-- Games will be loaded here dynamically -->
                     </div>
@@ -368,7 +370,7 @@
                     <!-- Global Theme Settings -->
                     <div class="theme-manager-section global-settings">
                         <h3 data-i18n="theme.globalOptions">Global Options</h3>
-                        <div class="settings-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; padding: 15px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color);">
+                        <div class="settings-grid settings-grid--global">
                             <div class="form-group">
                                 <label for="global-corner-style" data-i18n="theme.cornerStyle">Corner Style:</label>
                                 <select id="global-corner-style">
@@ -378,10 +380,10 @@
                                     <option value="sharp" data-i18n="theme.cornerStyleOptions.sharp"></option>
                                 </select>
                             </div>
-                            <div class="form-group checkbox-group" style="display: flex; align-items: center; gap: 10px; height: 100%;">
-                                <label for="global-override-background" style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0;">
+                            <div class="form-group checkbox-group global-override-bg-group">
+                                <label for="global-override-background" class="global-override-bg-label">
                                     <input type="checkbox" id="global-override-background">
-                                    <span style="font-weight: bold;" data-i18n="theme.overrideBackground"></span>
+                                    <span data-i18n="theme.overrideBackground"></span>
                                 </label>
                             </div>
                         </div>
@@ -407,6 +409,43 @@
                             <input type="text" id="theme-name" placeholder="My Custom Theme">
                         </div>
 
+                        <div class="theme-editor-mode-switch">
+                            <label>Customization Mode:</label>
+                            <div class="theme-mode-toggle" role="tablist" aria-label="Theme customization mode">
+                                <button type="button" id="theme-mode-basic-btn" class="theme-mode-btn active" data-theme-mode="basic" aria-selected="true">Basic Customize</button>
+                                <button type="button" id="theme-mode-extended-btn" class="theme-mode-btn" data-theme-mode="extended" aria-selected="false">Extended Customization</button>
+                            </div>
+                            <p class="theme-mode-help">Basic mode auto-generates the full palette from one base color. Switch to Extended to fine-tune every color.</p>
+                        </div>
+
+                        <div class="theme-basic-panel">
+                            <div class="color-inputs theme-basic-inputs">
+                                <div class="form-group">
+                                    <label for="theme-base-color">Base Color:</label>
+                                    <div class="color-input-group">
+                                        <input type="color" id="theme-base-color" class="color-picker">
+                                        <input type="text" class="color-text" placeholder="#5AA9FF" readonly>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="theme-basic-variant">Palette Style:</label>
+                                    <select id="theme-basic-variant">
+                                        <option value="auto">Auto</option>
+                                        <option value="dark">Dark UI</option>
+                                        <option value="light">Light UI</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="theme-basic-intensity">Intensity:</label>
+                                    <div class="gradient-angle-control">
+                                        <input type="range" id="theme-basic-intensity" min="60" max="140" step="1" value="100" />
+                                        <span id="theme-basic-intensity-value">100%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="theme-extended-panel">
                         <div class="color-inputs">
                             <div class="form-group">
                                 <label for="color-bg-primary">Primary Background:</label>
@@ -489,6 +528,14 @@
                             </div>
 
                             <div class="form-group">
+                                <label for="color-bg-quaternary">Quaternary Background:</label>
+                                <div class="color-input-group">
+                                    <input type="color" id="color-bg-quaternary" class="color-picker">
+                                    <input type="text" class="color-text" placeholder="#2B2B2B" readonly>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
                                 <label for="color-success">Success Color:</label>
                                 <div class="color-input-group">
                                     <input type="color" id="color-success" class="color-picker">
@@ -537,6 +584,7 @@
                                     <span id="gradient-angle-value">160deg</span>
                                 </div>
                             </div>
+                        </div>
                         </div>
 
                         <!-- Background Image Section -->

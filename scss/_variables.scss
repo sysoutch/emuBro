@@ -12,10 +12,14 @@
     --border-color: #2f4360;
     --accent-color: color-mix(in srgb, var(--brand-color), white 20%);
     --accent-light: color-mix(in srgb, var(--brand-color), white 10%);
+    --accent-hover: color-mix(in srgb, var(--accent-color), black 12%);
+    --accent-color-rgb: 102, 204, 255;
     --success-color: #4caf50;
     --success-dark: #45a049;
+    --success-color-rgb: 76, 175, 80;
     --danger-color: #f44336;
     --danger-dark: #da190b;
+    --danger-color-rgb: 244, 67, 54;
     --warning-color: #ffcc00;
 
     /* Border Radius Defaults (Rounded/Modern) */
@@ -81,7 +85,9 @@
     --radius-window-inner: calc(var(--radius-window) - var(--win-border-w));
     --dock-panel-width: 400px;
     --dock-accordion-header-h: 50px;
+    --dock-header-offset: 0px;
     --view-scale: 1;
+    --view-scale-user: 1;
 }
 
 /* Light Theme */
@@ -97,10 +103,14 @@
     --border-color: #b9cee3;
     --accent-color: color-mix(in srgb, var(--brand-color), white 20%);
     --accent-light: color-mix(in srgb, var(--brand-color), white 10%);
+    --accent-hover: color-mix(in srgb, var(--accent-color), black 8%);
+    --accent-color-rgb: 102, 204, 255;
     --success-color: #4caf50;
     --success-dark: #388e3c;
+    --success-color-rgb: 76, 175, 80;
     --danger-color: #f44336;
     --danger-dark: #d32f2f;
+    --danger-color-rgb: 244, 67, 54;
     --warning-color: #ff9800;
     --glass-surface: color-mix(in srgb, #f6fbff, transparent 18%);
     --glass-surface-strong: color-mix(in srgb, #f0f7ff, transparent 10%);

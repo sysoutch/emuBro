@@ -6,6 +6,10 @@
     position: relative; /* for .drop-zone-overlay absolute positioning */
 }
 
+body.panel-docked .main-content {
+    padding-right: var(--dock-panel-width);
+}
+
 /* Drag and Drop Zone */
 .main-content.drag-over {
     background: rgba(102, 204, 255, 0.1);

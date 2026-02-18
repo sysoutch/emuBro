@@ -228,6 +228,14 @@ export function createEmulatorDetailsPopupActions(deps = {}) {
             popup.classList.toggle('moved', hasManualPosition);
             popup.style.display = 'flex';
             popup.classList.add('active');
+            import('../theme-manager').then((m) => {
+                if (typeof m.recenterManagedModalIfMostlyOutOfView === 'function') {
+                    m.recenterManagedModalIfMostlyOutOfView('emulator-info-modal', {
+                        visibleThreshold: 0.5,
+                        smooth: true
+                    });
+                }
+            });
         }
         applyEmulatorInfoPinnedState();
     }

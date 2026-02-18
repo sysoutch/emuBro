@@ -112,10 +112,14 @@
 }
 
 [data-theme="light"] .rail-btn.rail-brand {
-    background: linear-gradient(145deg, #2b8f95 0%, #205d68 100%);
-    color: #f5f9fa;
+    background: linear-gradient(
+        145deg,
+        color-mix(in srgb, var(--accent-color), white 24%) 0%,
+        color-mix(in srgb, var(--brand-color), black 14%) 100%
+    );
+    color: color-mix(in srgb, var(--bg-primary), #ffffff 18%);
     box-shadow:
-        0 10px 20px rgba(17, 74, 88, 0.26),
+        0 10px 20px color-mix(in srgb, var(--glass-shadow), transparent 34%),
         inset 0 0 0 1px rgba(255,255,255,0.24);
 }
 
@@ -224,26 +228,22 @@
 
 /* Body state when any panel is docked */
 body.panel-docked {
-    padding-right: var(--dock-panel-width) !important;
-    
-    .app-container {
-        width: calc(100vw - var(--dock-panel-width)) !important;
-    }
+    padding-right: 0 !important;
 }
 
 [data-os="win32"] body.panel-docked {
     padding-right: 0 !important;
 
     .app-container {
-        margin: var(--win-border-w) calc(var(--dock-panel-width) + var(--win-border-w)) var(--win-border-w) var(--win-border-w);
-        width: calc(100vw - var(--dock-panel-width) - (var(--win-border-w) * 2)) !important;
+        margin: var(--win-border-w);
+        width: calc(100vw - (var(--win-border-w) * 2)) !important;
         height: calc(100vh - (var(--win-border-w) * 2));
     }
 }
 
 [data-window-state="maximized"][data-os="win32"] body.panel-docked .app-container {
-    margin: 0 var(--dock-panel-width) 0 0;
-    width: calc(100vw - var(--dock-panel-width)) !important;
+    margin: 0;
+    width: 100vw !important;
     height: 100vh;
 }
 

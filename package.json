@@ -12,7 +12,11 @@
     "preelectron-builder": "node -e \"const fs=require('fs'); try{fs.rmSync('build_out/win-unpacked',{recursive:true,force:true});}catch(e){console.error('[clean] failed to remove build_out/win-unpacked:', e.message); process.exit(1);}\"",
     "electron-builder": "electron-builder",
     "build:win": "npm run sync:resources && npm run electron-builder -- --win --config=electron-builder.config.js --publish=never",
-    "dist:win": "npm run sync:resources && npm run build && npm run build:win"
+    "build:linux": "npm run sync:resources && npm run electron-builder -- --linux --x64 --config=electron-builder.config.js --publish=never",
+    "build:mac": "npm run sync:resources && npm run electron-builder -- --mac --x64 --config=electron-builder.config.js --publish=never",
+    "dist:win": "npm run sync:resources && npm run build && npm run build:win",
+    "dist:linux": "npm run sync:resources && npm run build && npm run build:linux",
+    "dist:mac": "npm run sync:resources && npm run build && npm run build:mac"
   },
   "keywords": [
     "electron",

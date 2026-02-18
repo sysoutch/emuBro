@@ -281,6 +281,13 @@
     padding: 0;
 }
 
+.navigation {
+    flex: 0 1 auto;
+    min-width: 0;
+    margin-inline: clamp(10px, 2vw, 28px);
+    padding-inline: clamp(4px, 0.9vw, 10px);
+}
+
 .dropdown-with-button-wrapper {
     display: flex;
     flex-direction: row;
@@ -292,6 +299,17 @@
     display: flex;
     align-items: center;
     gap: 8px;
+}
+
+.theme-controls-title {
+    display: none;
+    color: var(--text-secondary);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    line-height: 1;
+    user-select: none;
 }
 
 .theme-toggle,
@@ -385,7 +403,7 @@
 
 // The custom language selector has its own styles in _language-selector.scss
 
-/* Keep top nav single-line and hide it on smaller windows (sidebar already has navigation). */
+/* Keep top nav single-line and visible on smaller windows. */
 @media (max-width: 1360px) {
     .navigation ul {
         gap: 10px;
@@ -401,14 +419,12 @@
 }
 
 @media (max-width: 1200px) {
-    .navigation {
-        display: none;
-    }
-
     .header {
         flex-direction: row;
         align-items: center;
         gap: 10px;
+        padding-top: 4px;
+        padding-bottom: 4px;
         padding-left: 12px;
         padding-right: calc(10px + var(--win-controls-space));
     }
@@ -418,14 +434,86 @@
         gap: 10px;
     }
 
+    .navigation {
+        display: block;
+        margin-inline: clamp(6px, 1.4vw, 18px);
+        padding-inline: 2px;
+    }
+
+    .navigation ul {
+        gap: 8px;
+    }
+
+    .navigation ul li a {
+        font-size: 0.96rem;
+    }
+
     .search-bar input {
         width: 150px;
+    }
+
+    .language-selector-wrapper {
+        width: auto;
+    }
+
+    .language-selector-wrapper .custom-select {
+        width: 74px;
+        min-width: 74px;
+    }
+
+    #language-dropdown .selected-option {
+        padding: 8px 10px;
+    }
+
+    #language-dropdown .selected-option > div {
+        gap: 0 !important;
+    }
+
+    #current-language-name {
+        display: none;
+    }
+
+    .theme-toggle-wrapper {
+        padding: 4px 8px;
+        gap: 6px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-input);
+        background: color-mix(in srgb, var(--bg-secondary), transparent 18%);
+    }
+
+    .theme-controls-title {
+        display: inline-block;
+    }
+
+    #theme-select {
+        width: clamp(98px, 13vw, 142px);
+        min-width: 98px;
+        padding: 6px 10px;
+        border-radius: var(--radius-input);
+        text-indent: 0;
+        background-image: none;
+        color: var(--text-secondary);
+        font-size: 0.86rem;
+        background-color: var(--bg-tertiary);
+    }
+
+    #theme-select option {
+        font-size: 0.9rem;
+        color: var(--text-primary);
     }
 }
 
 @media (max-width: 920px) {
     .user-info #user-name {
         display: none;
+    }
+
+    .navigation ul {
+        gap: 6px;
+    }
+
+    .navigation ul li a {
+        font-size: 0.9rem;
     }
 
     .search-bar input {

@@ -75,19 +75,54 @@ export function flipLightness(hex) {
 }
 
 export function parseColorToHex(color) {
-    if (!color) return '#000000';
-    if (color.startsWith('#')) return color;
-    
-    // Handle rgb(r, g, b)
-    const rgbMatch = color.match(/\d+/g);
-    if (rgbMatch && rgbMatch.length >= 3) {
-        return rgbToHex(parseInt(rgbMatch[0]), parseInt(rgbMatch[1]), parseInt(rgbMatch[2]));
+    if (color === null || color === undefined) return '';
+    const raw = String(color).trim();
+    if (!raw) return '';
+
+    // Normalize hex values first.
+    const hexMatch = raw.match(/^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
+    if (hexMatch) {
+        const normalized = hexMatch[1].toLowerCase();
+        if (normalized.length === 3) {
+            return `#${normalized.split('').map(c => c + c).join('')}`;
+        }
+        if (normalized.length === 8) {
+            // Drop alpha channel for theme color vars.
+            return `#${normalized.slice(0, 6)}`;
+        }
+        return `#${normalized}`;
     }
-    
-    // Fallback using canvas for named colors
+
+    // Handle rgb/rgba quickly.
+    const rgbMatch = raw.match(/^rgba?\(\s*(\d{1,3})\s*[, ]\s*(\d{1,3})\s*[, ]\s*(\d{1,3})/i);
+    if (rgbMatch) {
+        return rgbToHex(parseInt(rgbMatch[1], 10), parseInt(rgbMatch[2], 10), parseInt(rgbMatch[3], 10));
+    }
+
+    // Fallback using canvas for named colors and browser-supported syntaxes.
     const ctx = document.createElement('canvas').getContext('2d');
-    ctx.fillStyle = color;
-    return ctx.fillStyle;
+    if (!ctx) return '';
+    const sentinel = '#010203';
+    ctx.fillStyle = sentinel;
+    ctx.fillStyle = raw;
+    const resolved = String(ctx.fillStyle || '').trim().toLowerCase();
+    if (!resolved) return '';
+    if (resolved === sentinel && raw.toLowerCase() !== sentinel) return '';
+
+    const resolvedHex = resolved.match(/^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
+    if (resolvedHex) {
+        const value = resolvedHex[1].toLowerCase();
+        if (value.length === 3) return `#${value.split('').map(c => c + c).join('')}`;
+        if (value.length === 8) return `#${value.slice(0, 6)}`;
+        return `#${value}`;
+    }
+
+    const resolvedRgb = resolved.match(/^rgba?\(\s*(\d{1,3})\s*[, ]\s*(\d{1,3})\s*[, ]\s*(\d{1,3})/i);
+    if (resolvedRgb) {
+        return rgbToHex(parseInt(resolvedRgb[1], 10), parseInt(resolvedRgb[2], 10), parseInt(resolvedRgb[3], 10));
+    }
+
+    return '';
 }
 
 export function darkenHex(hex, percent) {

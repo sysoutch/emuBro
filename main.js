@@ -10,6 +10,7 @@ const { createSplashWindowManager } = require("./main/splash-window");
 const { registerWindowControlsIpc } = require("./main/ipc/window-controls");
 const { registerLocalesIpc } = require("./main/ipc/locales");
 const { registerYouTubeSearchIpc } = require("./main/ipc/youtube-search");
+const { registerSuggestionsIpc } = require("./main/ipc/suggestions");
 const { registerMonitorIpc } = require("./main/ipc/monitors");
 const { registerMemoryCardIpc } = require("./main/ipc/memory-cards");
 const { registerEmulatorIpc } = require("./main/ipc/emulators");
@@ -31,6 +32,7 @@ const ps1Handler = require("./ps1-handler");
 // Initialize the store for app settings
 const store = new Store();
 const LIBRARY_PATH_SETTINGS_KEY = "library:path-settings:v1";
+const SPLASH_THEME_SETTINGS_KEY = "ui:splash-theme:v1";
 
 let mainWindow;
 const screen = require("electron").screen;
@@ -39,7 +41,9 @@ let appBootstrapStarted = false;
 let mainWindowRendererReady = false;
 let requestRevealMainWindow = null;
 let gameIpcActions = null;
-const { createSplashWindow, closeSplashWindow } = createSplashWindowManager();
+const { createSplashWindow, closeSplashWindow } = createSplashWindowManager({
+  getSplashTheme: () => store.get(SPLASH_THEME_SETTINGS_KEY, null)
+});
 
 const {
   normalizeFolderPathList,
@@ -158,6 +162,12 @@ registerYouTubeSearchIpc({
   fetchImpl: fetch
 });
 
+registerSuggestionsIpc({
+  ipcMain,
+  log,
+  fetchImpl: fetch
+});
+
 registerSystemActionsIpc({
   ipcMain,
   log,
@@ -203,6 +213,40 @@ registerAppMetaIpc({
   dialog,
   getMainWindow: () => mainWindow,
   getGamesState
+});
+
+ipcMain.handle("settings:set-splash-theme", async (_event, payload = {}) => {
+  try {
+    const input = (payload && typeof payload === "object") ? payload : {};
+    const normalized = {
+      id: String(input.id || "dark"),
+      tone: String(input.tone || "dark").toLowerCase() === "light" ? "light" : "dark",
+      bgPrimary: String(input.bgPrimary || "").trim(),
+      bgSecondary: String(input.bgSecondary || "").trim(),
+      bgTertiary: String(input.bgTertiary || "").trim(),
+      textPrimary: String(input.textPrimary || "").trim(),
+      textSecondary: String(input.textSecondary || "").trim(),
+      accentColor: String(input.accentColor || "").trim(),
+      accentLight: String(input.accentLight || "").trim(),
+      appGradientA: String(input.appGradientA || "").trim(),
+      appGradientB: String(input.appGradientB || "").trim(),
+      appGradientC: String(input.appGradientC || "").trim()
+    };
+    store.set(SPLASH_THEME_SETTINGS_KEY, normalized);
+    return { success: true };
+  } catch (error) {
+    log.error("settings:set-splash-theme failed:", error);
+    return { success: false, message: error?.message || String(error) };
+  }
+});
+
+ipcMain.handle("settings:get-splash-theme", async () => {
+  try {
+    return { success: true, theme: store.get(SPLASH_THEME_SETTINGS_KEY, null) };
+  } catch (error) {
+    log.error("settings:get-splash-theme failed:", error);
+    return { success: false, theme: null };
+  }
 });
 
 registerImportIpc({

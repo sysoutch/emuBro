@@ -8,19 +8,20 @@
 
 .games-container.community-view {
     display: block;
+    min-height: 100%;
 }
 
 .community-view-shell {
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: clamp(10px, 1.4vw, 18px);
 }
 
 .community-hero {
     border: 1px solid color-mix(in srgb, rgba(255,255,255,0.22), var(--border-color));
-    border-radius: 18px;
-    padding: 22px;
+    border-radius: clamp(12px, 1.6vw, 18px);
+    padding: clamp(14px, 2.2vw, 22px);
     background:
         radial-gradient(120% 130% at 10% 0%, color-mix(in srgb, var(--accent-color) 18%, transparent), transparent 52%),
         radial-gradient(110% 120% at 95% 100%, color-mix(in srgb, var(--brand-color) 20%, transparent), transparent 58%),
@@ -67,31 +68,31 @@
 
 .community-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(clamp(160px, 24vw, 220px), 1fr));
+    gap: clamp(8px, 1.1vw, 14px);
 }
 
 .community-card {
     border: 1px solid color-mix(in srgb, rgba(255,255,255,0.16), var(--border-color));
-    border-radius: 14px;
-    padding: 16px;
+    border-radius: clamp(10px, 1.3vw, 14px);
+    padding: clamp(10px, 1.4vw, 16px);
     background: color-mix(in srgb, var(--bg-secondary), transparent 22%);
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: clamp(6px, 0.9vw, 10px);
 }
 
 .community-card-title {
     margin: 0;
     color: var(--text-primary);
-    font-size: 1.1rem;
+    font-size: clamp(0.96rem, 1.3vw, 1.1rem);
 }
 
 .community-card-blurb {
     margin: 0;
     color: var(--text-secondary);
-    font-size: 0.92rem;
-    line-height: 1.5;
+    font-size: clamp(0.78rem, 1vw, 0.92rem);
+    line-height: 1.42;
     flex: 1;
 }
 

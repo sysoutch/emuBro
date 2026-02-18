@@ -168,11 +168,17 @@ export function createGameDetailsPopupActions(deps = {}) {
         if (!select || !game) return;
 
         const rows = await ensurePopupEmulatorsLoaded();
+        const gamePlatformShortName = String(game.platformShortName || '').trim().toLowerCase();
         const installedEmulators = rows
-            .filter((emu) => !!emu?.isInstalled && String(emu?.filePath || '').trim().length > 0)
+            .filter((emu) => {
+                if (!emu?.isInstalled) return false;
+                const emuPath = String(emu?.filePath || '').trim();
+                if (!emuPath) return false;
+                if (!gamePlatformShortName) return true;
+                const emuPlatformShortName = String(emu?.platformShortName || emu?.platform || '').trim().toLowerCase();
+                return emuPlatformShortName === gamePlatformShortName;
+            })
             .sort((a, b) => {
-                const p = String(a.platform || a.platformShortName || '').localeCompare(String(b.platform || b.platformShortName || ''));
-                if (p !== 0) return p;
                 return String(a.name || '').localeCompare(String(b.name || ''));
             });
 
@@ -188,6 +194,10 @@ export function createGameDetailsPopupActions(deps = {}) {
             const selected = currentOverride && emuPath.toLowerCase() === currentOverride.toLowerCase() ? ' selected' : '';
             return `<option value="${escapeHtml(emuPath)}"${selected}>${escapeHtml(label)}</option>`;
         }).join('');
+
+        if (installedEmulators.length === 0) {
+            options += '<option value="" disabled>No installed emulator found for this platform</option>';
+        }
 
         select.innerHTML = options;
 
@@ -559,6 +569,14 @@ export function createGameDetailsPopupActions(deps = {}) {
             popup.classList.toggle('moved', hasManualPosition);
             popup.style.display = 'flex';
             popup.classList.add('active');
+            import('../theme-manager').then((m) => {
+                if (typeof m.recenterManagedModalIfMostlyOutOfView === 'function') {
+                    m.recenterManagedModalIfMostlyOutOfView('game-info-modal', {
+                        visibleThreshold: 0.5,
+                        smooth: true
+                    });
+                }
+            });
         }
         applyGameInfoPinnedState();
     }

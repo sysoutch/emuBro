@@ -1,22 +1,19 @@
 /* Tools Section */
 .tool-content {
-    padding: 20px;
-    height: 100%;
+    padding: clamp(12px, 1.8vw, 20px);
+    min-height: 100%;
+    height: auto;
     display: flex;
     flex-direction: column;
     width: 100%;
-    position: absolute;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    right: 0;
-    overflow-y: auto; /* Allow scrolling for tall tools */
+    position: relative;
+    overflow: visible;
 
     h3 {
         font-size: 1.8rem;
         margin-bottom: 0.5rem;
         color: var(--text-primary);
-        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        text-shadow: 0 2px 6px color-mix(in srgb, var(--glass-shadow), transparent 35%);
     }
 
     p {
@@ -26,85 +23,91 @@
 }
 
 /* Tools Overview Grid */
+.games-container.tools-view {
+    display: block;
+    width: 100%;
+    min-height: 100%;
+}
+
 .tools-overview {
-    height: 100%;
+    min-height: 100%;
     width: 100%;
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    overflow-y: auto;
-    padding-top: calc(20px * var(--view-scale));
+    overflow: visible;
+    padding: clamp(10px, 1.8vw, 20px) 0;
 }
 
 .tools-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(calc(300px * var(--view-scale)), 1fr));
-    gap: calc(25px * var(--view-scale));
+    grid-template-columns: repeat(auto-fill, minmax(clamp(190px, 24vw, calc(280px * var(--view-scale))), 1fr));
+    gap: clamp(10px, 1.6vw, calc(22px * var(--view-scale)));
     width: 100%;
-    max-width: 1200px;
+    max-width: min(1200px, 100%);
 }
 
 .tools-overview .tool-card {
     /* Use glass effect manually or via mixin if global scope allows, but safe fallback here */
-    background: rgba(30, 30, 30, 0.6);
+    background: color-mix(in srgb, var(--bg-secondary), transparent 28%);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid color-mix(in srgb, rgba(255, 255, 255, 0.2), var(--border-color));
     border-radius: var(--radius-card);
-    padding: calc(30px * var(--view-scale));
+    padding: clamp(12px, 2vw, calc(24px * var(--view-scale)));
     text-align: center;
     transition: all 0.3s ease;
     cursor: pointer;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 15px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    gap: clamp(8px, 1.3vw, 14px);
+    box-shadow: 0 8px 22px color-mix(in srgb, var(--glass-shadow), transparent 35%);
 
     .tool-icon {
-        font-size: calc(3rem * var(--view-scale));
+        font-size: clamp(1.8rem, 2.8vw, calc(2.7rem * var(--view-scale)));
         color: var(--accent-color);
-        margin-bottom: 10px;
+        margin-bottom: 6px;
         opacity: 0.8;
         transition: transform 0.3s ease;
     }
 
     h3 {
         color: var(--text-primary);
-        font-size: calc(1.4rem * var(--view-scale));
+        font-size: clamp(1rem, 1.5vw, calc(1.25rem * var(--view-scale)));
         margin: 0;
     }
 
     p {
         color: var(--text-secondary);
-        font-size: calc(0.95rem * var(--view-scale));
-        line-height: 1.5;
+        font-size: clamp(0.78rem, 1.1vw, calc(0.92rem * var(--view-scale)));
+        line-height: 1.4;
         margin: 0;
     }
 
     .action-btn {
         margin-top: auto;
         width: 100%;
-        padding: calc(10px * var(--view-scale));
+        padding: clamp(7px, 1vw, calc(10px * var(--view-scale)));
         border-radius: var(--radius-btn);
-        background: rgba(255,255,255,0.05);
-        border: 1px solid rgba(255,255,255,0.1);
+        background: color-mix(in srgb, var(--bg-primary), transparent 18%);
+        border: 1px solid color-mix(in srgb, rgba(255,255,255,0.2), var(--border-color));
         color: var(--text-primary);
         cursor: pointer;
         transition: all 0.2s;
 
         &:hover {
             background: var(--accent-color);
-            color: white;
+            color: var(--bg-primary);
             border-color: var(--accent-color);
         }
     }
 
     &:hover {
         transform: translateY(-5px);
-        background: rgba(40, 40, 40, 0.7);
+        background: color-mix(in srgb, var(--bg-secondary), transparent 16%);
         border-color: var(--accent-color);
-        box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        box-shadow: 0 14px 30px color-mix(in srgb, var(--glass-shadow), transparent 22%);
 
         .tool-icon {
             opacity: 1;
@@ -114,10 +117,15 @@
 }
 
 /* Ensure parents allow filling space */
-#games-container:has(.memory-card-editor),
-#games-container:has(.tools-overview) {
+#games-container:has(.memory-card-editor) {
     display: block;
     height: 100%;
+    position: relative;
+}
+
+#games-container:has(.tools-overview) {
+    display: block;
+    min-height: 100%;
     position: relative;
 }
 

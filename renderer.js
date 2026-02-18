@@ -23,10 +23,12 @@ import {
     setHasUnsavedChanges,
     renderThemeManager,
     resetThemeForm,
+    setupThemeCustomizationControls,
     applyCornerStyle,
     getCurrentTheme,
     makeDraggable,
-    openThemeManager
+    openThemeManager,
+    recenterManagedModalIfMostlyOutOfView
 } from './js/theme-manager';
 import { initDocking, toggleDock, removeFromDock, completelyRemoveFromDock } from './js/docking-manager';
 import { 
@@ -68,6 +70,495 @@ let activeEmulatorTypeTab = 'standalone';
 let activeTopSection = 'library';
 const QUICK_SEARCH_STATE_KEY = 'emuBro.quickSearchState.v1';
 const BROWSE_SCOPE_STORAGE_KEY = 'emuBro.browseScope.v1';
+const SUGGESTIONS_SETTINGS_KEY = 'emuBro.suggestionsSettings.v1';
+const SUGGESTED_SECTION_KEY = 'suggested';
+const SUPPORTED_LIBRARY_SECTIONS = new Set(['all', 'installed', 'recent', SUGGESTED_SECTION_KEY, 'emulators']);
+let suggestionsRequestInFlight = false;
+let lastSuggestionsResult = null;
+
+function normalizeLibrarySection(section) {
+    const value = String(section || '').trim().toLowerCase();
+    if (value === 'wishlist') return SUGGESTED_SECTION_KEY;
+    if (SUPPORTED_LIBRARY_SECTIONS.has(value)) return value;
+    return 'all';
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function normalizeSuggestionProvider(provider) {
+    const value = String(provider || '').trim().toLowerCase();
+    if (value === 'openai' || value === 'gemini') return value;
+    return 'ollama';
+}
+
+function normalizeSuggestionScope(scope) {
+    const value = String(scope || '').trim().toLowerCase();
+    if (value === 'library-only' || value === 'library-plus-missing') return value;
+    return 'library-plus-missing';
+}
+
+function getDefaultSuggestionSettings() {
+    return {
+        provider: 'ollama',
+        scope: 'library-plus-missing',
+        query: '',
+        models: {
+            ollama: 'llama3.1',
+            openai: 'gpt-4o-mini',
+            gemini: 'gemini-1.5-flash'
+        },
+        baseUrls: {
+            ollama: 'http://127.0.0.1:11434',
+            openai: 'https://api.openai.com/v1',
+            gemini: 'https://generativelanguage.googleapis.com/v1beta'
+        },
+        apiKeys: {
+            openai: '',
+            gemini: ''
+        }
+    };
+}
+
+function loadSuggestionSettings() {
+    const defaults = getDefaultSuggestionSettings();
+    try {
+        const raw = localStorage.getItem(SUGGESTIONS_SETTINGS_KEY);
+        if (!raw) return defaults;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return defaults;
+        const provider = normalizeSuggestionProvider(parsed.provider);
+        return {
+            provider,
+            scope: normalizeSuggestionScope(parsed.scope),
+            query: String(parsed.query || ''),
+            models: {
+                ...defaults.models,
+                ...(parsed.models && typeof parsed.models === 'object' ? parsed.models : {})
+            },
+            baseUrls: {
+                ...defaults.baseUrls,
+                ...(parsed.baseUrls && typeof parsed.baseUrls === 'object' ? parsed.baseUrls : {})
+            },
+            apiKeys: {
+                ...defaults.apiKeys,
+                ...(parsed.apiKeys && typeof parsed.apiKeys === 'object' ? parsed.apiKeys : {})
+            }
+        };
+    } catch (_error) {
+        return defaults;
+    }
+}
+
+function saveSuggestionSettings(settings) {
+    const defaults = getDefaultSuggestionSettings();
+    const provider = normalizeSuggestionProvider(settings?.provider);
+    const payload = {
+        provider,
+        scope: normalizeSuggestionScope(settings?.scope),
+        query: String(settings?.query || ''),
+        models: {
+            ...defaults.models,
+            ...(settings?.models && typeof settings.models === 'object' ? settings.models : {})
+        },
+        baseUrls: {
+            ...defaults.baseUrls,
+            ...(settings?.baseUrls && typeof settings.baseUrls === 'object' ? settings.baseUrls : {})
+        },
+        apiKeys: {
+            ...defaults.apiKeys,
+            ...(settings?.apiKeys && typeof settings.apiKeys === 'object' ? settings.apiKeys : {})
+        }
+    };
+    localStorage.setItem(SUGGESTIONS_SETTINGS_KEY, JSON.stringify(payload));
+    return payload;
+}
+
+function tokenizeSuggestionQuery(query) {
+    return String(query || '')
+        .toLowerCase()
+        .split(/[\s,;:|/\\]+/g)
+        .map((part) => part.trim())
+        .filter((part) => part.length >= 2)
+        .slice(0, 10);
+}
+
+function gameMatchesSuggestionTerms(game, terms) {
+    if (!Array.isArray(terms) || terms.length === 0) return false;
+    const haystack = [
+        String(game?.name || ''),
+        String(game?.genre || ''),
+        String(game?.platform || ''),
+        String(game?.platformShortName || '')
+    ].join(' ').toLowerCase();
+    return terms.some((term) => haystack.includes(term));
+}
+
+function buildSuggestionLibraryPayload(query = '') {
+    const rows = (Array.isArray(getGames()) ? getGames() : []).map((game) => ({
+        id: Number(game?.id || 0),
+        name: String(game?.name || '').trim(),
+        platform: String(game?.platform || game?.platformShortName || '').trim(),
+        platformShortName: String(game?.platformShortName || '').trim(),
+        genre: String(game?.genre || '').trim(),
+        rating: Number.isFinite(Number(game?.rating)) ? Number(game.rating) : null,
+        isInstalled: !!game?.isInstalled,
+        lastPlayed: String(game?.lastPlayed || '').trim()
+    })).filter((game) => game.name.length > 0);
+
+    if (rows.length === 0) return [];
+
+    const maxCount = 420;
+    const terms = tokenizeSuggestionQuery(query);
+    const out = [];
+    const seen = new Set();
+    const pushUnique = (game) => {
+        const key = `${String(game.name || '').toLowerCase()}::${String(game.platformShortName || game.platform || '').toLowerCase()}`;
+        if (!key || seen.has(key)) return;
+        seen.add(key);
+        out.push(game);
+    };
+
+    if (terms.length > 0) {
+        rows.filter((game) => gameMatchesSuggestionTerms(game, terms)).forEach(pushUnique);
+    }
+
+    rows
+        .filter((game) => game.lastPlayed)
+        .sort((a, b) => new Date(b.lastPlayed).getTime() - new Date(a.lastPlayed).getTime())
+        .slice(0, 120)
+        .forEach(pushUnique);
+
+    rows
+        .filter((game) => game.isInstalled)
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .slice(0, 220)
+        .forEach(pushUnique);
+
+    rows
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .forEach(pushUnique);
+
+    return out.slice(0, maxCount);
+}
+
+function applySuggestionSearchTerm(rawValue) {
+    const term = String(rawValue || '').trim();
+    if (!term) return;
+    const searchInput = document.querySelector('.search-bar input');
+    if (!searchInput) return;
+    searchInput.value = term;
+    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function renderSuggestionResults(panel, response) {
+    const resultsRoot = panel?.querySelector('[data-suggest-results]');
+    if (!resultsRoot) return;
+
+    const libraryMatches = Array.isArray(response?.libraryMatches) ? response.libraryMatches : [];
+    const missingSuggestions = Array.isArray(response?.missingSuggestions) ? response.missingSuggestions : [];
+    const summary = String(response?.summary || '').trim();
+
+    if (libraryMatches.length === 0 && missingSuggestions.length === 0) {
+        resultsRoot.innerHTML = '<div class="suggested-result-group"><h4 class="suggested-result-title">No suggestions yet</h4><p class="suggested-result-reason">Try another mood or broaden the scope.</p></div>';
+        return;
+    }
+
+    const libraryHtml = libraryMatches.length > 0
+        ? `
+            <section class="suggested-result-group">
+                <h4 class="suggested-result-title">From Your Library</h4>
+                <ul class="suggested-result-list">
+                    ${libraryMatches.map((entry) => {
+                        const name = escapeHtml(entry?.name || entry?.title || 'Suggested game');
+                        const platform = escapeHtml(entry?.platform ? ` (${entry.platform})` : '');
+                        const reason = escapeHtml(entry?.reason || '');
+                        const searchKey = escapeHtml(entry?.name || entry?.title || '');
+                        return `
+                            <li class="suggested-result-item">
+                                <div class="suggested-result-meta">
+                                    <span class="suggested-result-name">${name}${platform}</span>
+                                    <span class="suggested-result-reason">${reason}</span>
+                                </div>
+                                <div class="suggested-result-actions">
+                                    <button class="action-btn small" type="button" data-suggest-search="${searchKey}">Find in Library</button>
+                                </div>
+                            </li>
+                        `;
+                    }).join('')}
+                </ul>
+            </section>
+        `
+        : '';
+
+    const missingHtml = missingSuggestions.length > 0
+        ? `
+            <section class="suggested-result-group">
+                <h4 class="suggested-result-title">Recommended To Add</h4>
+                <ul class="suggested-result-list">
+                    ${missingSuggestions.map((entry) => {
+                        const name = escapeHtml(entry?.name || entry?.title || 'Suggested title');
+                        const platform = escapeHtml(entry?.platform ? ` (${entry.platform})` : '');
+                        const reason = escapeHtml(entry?.reason || '');
+                        const searchKey = escapeHtml(entry?.name || entry?.title || '');
+                        return `
+                            <li class="suggested-result-item">
+                                <div class="suggested-result-meta">
+                                    <span class="suggested-result-name">${name}${platform}</span>
+                                    <span class="suggested-result-reason">${reason}</span>
+                                </div>
+                                <div class="suggested-result-actions">
+                                    <button class="action-btn small" type="button" data-suggest-search="${searchKey}">Search Library</button>
+                                </div>
+                            </li>
+                        `;
+                    }).join('')}
+                </ul>
+            </section>
+        `
+        : '';
+
+    const summaryHtml = summary
+        ? `<section class="suggested-result-group"><h4 class="suggested-result-title">Summary</h4><p class="suggested-result-reason">${escapeHtml(summary)}</p></section>`
+        : '';
+
+    resultsRoot.innerHTML = `${summaryHtml}${libraryHtml}${missingHtml}`;
+    resultsRoot.querySelectorAll('[data-suggest-search]').forEach((button) => {
+        button.addEventListener('click', () => {
+            applySuggestionSearchTerm(button.dataset.suggestSearch || '');
+        });
+    });
+}
+
+async function runSuggestionsFromPanel(panel) {
+    if (!panel || suggestionsRequestInFlight) return;
+
+    const providerSelect = panel.querySelector('[data-suggest-provider]');
+    const scopeSelect = panel.querySelector('[data-suggest-scope]');
+    const modelInput = panel.querySelector('[data-suggest-model]');
+    const baseUrlInput = panel.querySelector('[data-suggest-base-url]');
+    const apiKeyInput = panel.querySelector('[data-suggest-api-key]');
+    const status = panel.querySelector('[data-suggest-status]');
+    const runBtn = panel.querySelector('[data-suggest-run]');
+
+    if (!providerSelect || !scopeSelect || !modelInput || !baseUrlInput || !apiKeyInput || !status || !runBtn) return;
+
+    const provider = normalizeSuggestionProvider(providerSelect.value);
+    const nextSettings = loadSuggestionSettings();
+    nextSettings.provider = provider;
+    nextSettings.scope = normalizeSuggestionScope(scopeSelect.value);
+    nextSettings.query = String(panel.querySelector('[data-suggest-query]')?.value || '').trim();
+    nextSettings.models = {
+        ...nextSettings.models,
+        [provider]: String(modelInput.value || '').trim() || nextSettings.models[provider]
+    };
+    nextSettings.baseUrls = {
+        ...nextSettings.baseUrls,
+        [provider]: String(baseUrlInput.value || '').trim() || nextSettings.baseUrls[provider]
+    };
+    if (provider !== 'ollama') {
+        nextSettings.apiKeys = {
+            ...nextSettings.apiKeys,
+            [provider]: String(apiKeyInput.value || '').trim()
+        };
+    }
+    saveSuggestionSettings(nextSettings);
+
+    const model = String(nextSettings.models?.[provider] || '').trim();
+    const baseUrl = String(nextSettings.baseUrls?.[provider] || '').trim();
+    const apiKey = String(nextSettings.apiKeys?.[provider] || '').trim();
+    const libraryGames = buildSuggestionLibraryPayload(nextSettings.query);
+
+    if (!model) {
+        status.textContent = 'Set a model first.';
+        return;
+    }
+    if (!baseUrl) {
+        status.textContent = 'Set a provider URL first.';
+        return;
+    }
+    if ((provider === 'openai' || provider === 'gemini') && !apiKey) {
+        status.textContent = 'API key is required for this provider.';
+        return;
+    }
+    if (!libraryGames.length) {
+        status.textContent = 'No games found in your library yet.';
+        return;
+    }
+
+    suggestionsRequestInFlight = true;
+    runBtn.disabled = true;
+    status.textContent = 'Generating suggestions...';
+
+    try {
+        const response = await emubro.invoke('suggestions:recommend-games', {
+            provider,
+            mode: nextSettings.scope,
+            query: nextSettings.query,
+            model,
+            baseUrl,
+            apiKey,
+            limit: 8,
+            libraryGames
+        });
+
+        if (!response?.success) {
+            status.textContent = String(response?.message || 'Suggestion request failed.');
+            return;
+        }
+
+        lastSuggestionsResult = response;
+        status.textContent = String(response?.summary || 'Suggestions ready.');
+        renderSuggestionResults(panel, response);
+    } catch (error) {
+        status.textContent = String(error?.message || error || 'Suggestion request failed.');
+    } finally {
+        suggestionsRequestInFlight = false;
+        runBtn.disabled = false;
+    }
+}
+
+function renderSuggestedPanel() {
+    const panel = document.getElementById('suggested-panel');
+    if (!panel) return;
+
+    const settings = loadSuggestionSettings();
+    const provider = normalizeSuggestionProvider(settings.provider);
+    const model = String(settings.models?.[provider] || '');
+    const baseUrl = String(settings.baseUrls?.[provider] || '');
+    const apiKey = String(settings.apiKeys?.[provider] || '');
+
+    panel.classList.remove('is-hidden');
+    panel.innerHTML = `
+        <h3 class="suggested-panel-title">Suggested</h3>
+        <p class="suggested-panel-subtitle">Use an LLM provider to recommend games from your library or titles you do not have yet.</p>
+        <div class="suggested-panel-form">
+            <div class="form-group">
+                <label for="suggest-provider">Provider</label>
+                <select id="suggest-provider" data-suggest-provider>
+                    <option value="ollama"${provider === 'ollama' ? ' selected' : ''}>Ollama</option>
+                    <option value="openai"${provider === 'openai' ? ' selected' : ''}>ChatGPT (OpenAI)</option>
+                    <option value="gemini"${provider === 'gemini' ? ' selected' : ''}>Gemini</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="suggest-scope">Mode</label>
+                <select id="suggest-scope" data-suggest-scope>
+                    <option value="library-only"${normalizeSuggestionScope(settings.scope) === 'library-only' ? ' selected' : ''}>Suggest from my library only</option>
+                    <option value="library-plus-missing"${normalizeSuggestionScope(settings.scope) === 'library-plus-missing' ? ' selected' : ''}>Suggest from library + missing titles</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="suggest-model">Model</label>
+                <input id="suggest-model" data-suggest-model type="text" value="${escapeHtml(model)}" />
+            </div>
+            <div class="form-group">
+                <label for="suggest-base-url">API URL</label>
+                <input id="suggest-base-url" data-suggest-base-url type="text" value="${escapeHtml(baseUrl)}" />
+            </div>
+            <div class="form-group" data-suggest-api-key-wrap>
+                <label for="suggest-api-key">API Key</label>
+                <input id="suggest-api-key" data-suggest-api-key type="password" value="${escapeHtml(apiKey)}" autocomplete="off" />
+            </div>
+            <div class="form-group">
+                <label for="suggest-query">Mood / Preferences</label>
+                <input id="suggest-query" data-suggest-query type="text" value="${escapeHtml(settings.query || '')}" placeholder="Example: short platform games for relaxed evening sessions" />
+            </div>
+            <div class="suggested-panel-actions">
+                <button class="action-btn launch-btn" type="button" data-suggest-run>Generate Suggestions</button>
+            </div>
+        </div>
+        <p class="suggested-panel-status" data-suggest-status></p>
+        <div class="suggested-panel-results" data-suggest-results></div>
+    `;
+
+    const providerSelect = panel.querySelector('[data-suggest-provider]');
+    const modelInput = panel.querySelector('[data-suggest-model]');
+    const baseUrlInput = panel.querySelector('[data-suggest-base-url]');
+    const apiKeyInput = panel.querySelector('[data-suggest-api-key]');
+    const apiKeyWrap = panel.querySelector('[data-suggest-api-key-wrap]');
+    const queryInput = panel.querySelector('[data-suggest-query]');
+    const scopeSelect = panel.querySelector('[data-suggest-scope]');
+    const runBtn = panel.querySelector('[data-suggest-run]');
+
+    const syncProviderFields = () => {
+        const nextSettings = loadSuggestionSettings();
+        const nextProvider = normalizeSuggestionProvider(providerSelect.value);
+        providerSelect.value = nextProvider;
+        modelInput.value = String(nextSettings.models?.[nextProvider] || '');
+        baseUrlInput.value = String(nextSettings.baseUrls?.[nextProvider] || '');
+        apiKeyInput.value = String(nextSettings.apiKeys?.[nextProvider] || '');
+        apiKeyWrap.style.display = nextProvider === 'ollama' ? 'none' : 'flex';
+    };
+
+    const persistInputs = () => {
+        const current = loadSuggestionSettings();
+        const currentProvider = normalizeSuggestionProvider(providerSelect.value);
+        current.provider = currentProvider;
+        current.scope = normalizeSuggestionScope(scopeSelect.value);
+        current.query = String(queryInput.value || '').trim();
+        current.models = {
+            ...current.models,
+            [currentProvider]: String(modelInput.value || '').trim() || current.models[currentProvider]
+        };
+        current.baseUrls = {
+            ...current.baseUrls,
+            [currentProvider]: String(baseUrlInput.value || '').trim() || current.baseUrls[currentProvider]
+        };
+        if (currentProvider !== 'ollama') {
+            current.apiKeys = {
+                ...current.apiKeys,
+                [currentProvider]: String(apiKeyInput.value || '').trim()
+            };
+        }
+        saveSuggestionSettings(current);
+    };
+
+    providerSelect.addEventListener('change', () => {
+        const current = loadSuggestionSettings();
+        current.provider = normalizeSuggestionProvider(providerSelect.value);
+        saveSuggestionSettings(current);
+        syncProviderFields();
+    });
+
+    [scopeSelect, modelInput, baseUrlInput, apiKeyInput, queryInput].forEach((element) => {
+        element.addEventListener('change', persistInputs);
+        element.addEventListener('blur', persistInputs);
+    });
+
+    if (runBtn) {
+        runBtn.addEventListener('click', async () => {
+            await runSuggestionsFromPanel(panel);
+        });
+    }
+
+    syncProviderFields();
+    if (lastSuggestionsResult) {
+        renderSuggestionResults(panel, lastSuggestionsResult);
+        const status = panel.querySelector('[data-suggest-status]');
+        if (status) {
+            status.textContent = String(lastSuggestionsResult.summary || 'Suggestions ready.');
+        }
+    }
+}
+
+function updateSuggestedPanelVisibility() {
+    const panel = document.getElementById('suggested-panel');
+    if (!panel) return;
+    const shouldShow = activeTopSection === 'library' && activeLibrarySection === SUGGESTED_SECTION_KEY;
+    if (!shouldShow) {
+        panel.classList.add('is-hidden');
+        panel.innerHTML = '';
+        return;
+    }
+    renderSuggestedPanel();
+}
 
 function switchFooterTab(tabId = 'browse') {
     const target = String(tabId || 'browse').trim().toLowerCase();
@@ -392,6 +883,7 @@ function setAppMode(mode) {
     }
 
     updateEmulatorsInstalledToggleVisibility();
+    updateSuggestedPanelVisibility();
 }
 
 async function getLibraryPathSettings() {
@@ -435,7 +927,7 @@ async function openLibraryPathSettingsModal() {
         emulatorFolders: normalizePathList(loaded.emulatorFolders)
     };
     const generalDraft = {
-        defaultSection: String(localStorage.getItem('emuBro.defaultLibrarySection') || activeLibrarySection || 'all').toLowerCase(),
+        defaultSection: normalizeLibrarySection(localStorage.getItem('emuBro.defaultLibrarySection') || activeLibrarySection || 'all'),
         defaultView: String(localStorage.getItem('emuBro.defaultLibraryView') || (document.querySelector('.view-btn.active')?.dataset.view || 'cover')).toLowerCase(),
         showLoadIndicator: localStorage.getItem('emuBro.showLoadIndicator') !== 'false',
         autoOpenFooter: localStorage.getItem('emuBro.autoOpenFooter') !== 'false'
@@ -509,7 +1001,7 @@ async function openLibraryPathSettingsModal() {
                             <option value="all"${generalDraft.defaultSection === 'all' ? ' selected' : ''}>All Games</option>
                             <option value="installed"${generalDraft.defaultSection === 'installed' ? ' selected' : ''}>Installed</option>
                             <option value="recent"${generalDraft.defaultSection === 'recent' ? ' selected' : ''}>Recently Played</option>
-                            <option value="wishlist"${generalDraft.defaultSection === 'wishlist' ? ' selected' : ''}>Wishlist</option>
+                            <option value="suggested"${generalDraft.defaultSection === 'suggested' ? ' selected' : ''}>Suggested</option>
                             <option value="emulators"${generalDraft.defaultSection === 'emulators' ? ' selected' : ''}>Emulators</option>
                         </select>
                     </label>
@@ -637,7 +1129,7 @@ async function openLibraryPathSettingsModal() {
         const defaultSectionSelect = modal.querySelector('[data-setting="default-section"]');
         if (defaultSectionSelect) {
             defaultSectionSelect.addEventListener('change', () => {
-                generalDraft.defaultSection = String(defaultSectionSelect.value || 'all').toLowerCase();
+                generalDraft.defaultSection = normalizeLibrarySection(defaultSectionSelect.value || 'all');
             });
         }
 
@@ -836,7 +1328,7 @@ async function openLibraryPathSettingsModal() {
                     localStorage.setItem('emuBro.preferCopyExternal', importDraft.preferCopyExternal ? 'true' : 'false');
                     localStorage.setItem('emuBro.enableNetworkScan', importDraft.enableNetworkScan ? 'true' : 'false');
 
-                    activeLibrarySection = generalDraft.defaultSection || 'all';
+                    activeLibrarySection = normalizeLibrarySection(generalDraft.defaultSection || 'all');
                     setActiveViewButton(generalDraft.defaultView || 'cover');
                     if (activeTopSection === 'library') {
                         await setActiveLibrarySection(activeLibrarySection);
@@ -1055,7 +1547,7 @@ function updateViewSizeControlState() {
     if (!slider) return;
 
     const activeView = document.querySelector('.view-btn.active')?.dataset?.view || 'cover';
-    const isLocked = activeView === 'slideshow' || activeView === 'random';
+    const isLocked = activeView === 'random';
 
     slider.disabled = isLocked;
     const wrapper = slider.closest('.view-size-control');
@@ -1071,6 +1563,7 @@ function setupViewScaleControl() {
         const clamped = Math.max(70, Math.min(140, Number(raw) || 100));
         const scale = clamped / 100;
         document.documentElement.style.setProperty('--view-scale', String(scale));
+        document.documentElement.style.setProperty('--view-scale-user', String(scale));
         slider.value = String(clamped);
         valueEl.textContent = `${clamped}%`;
         if (persist) localStorage.setItem('emuBro.viewScalePercent', String(clamped));
@@ -1098,24 +1591,25 @@ function setActiveSidebarLibraryLink(view) {
 function setGamesHeaderByLibrarySection(section) {
     const gamesHeader = document.getElementById('games-header');
     if (!gamesHeader) return;
+    const normalizedSection = normalizeLibrarySection(section);
 
-    if (section === 'emulators') {
+    if (normalizedSection === 'emulators') {
         gamesHeader.textContent = 'Emulators';
         return;
     }
 
-    if (section === 'installed') {
+    if (normalizedSection === 'installed') {
         gamesHeader.textContent = 'Installed Games';
         return;
     }
 
-    if (section === 'recent') {
+    if (normalizedSection === 'recent') {
         gamesHeader.textContent = 'Recently Played';
         return;
     }
 
-    if (section === 'wishlist') {
-        gamesHeader.textContent = 'Wishlist';
+    if (normalizedSection === SUGGESTED_SECTION_KEY) {
+        gamesHeader.textContent = 'Suggested Games';
         return;
     }
 
@@ -1135,8 +1629,8 @@ function getSectionFilteredGames() {
             .sort((a, b) => new Date(b.lastPlayed).getTime() - new Date(a.lastPlayed).getTime());
     }
 
-    if (activeLibrarySection === 'wishlist') {
-        return filtered.filter((game) => !!(game.isWishlist || game.wishlist || game.inWishlist));
+    if (activeLibrarySection === SUGGESTED_SECTION_KEY) {
+        return filtered;
     }
 
     return filtered;
@@ -1156,6 +1650,7 @@ async function refreshEmulatorsState() {
 
 async function renderActiveLibraryView() {
     if (activeTopSection !== 'library') return;
+    updateSuggestedPanelVisibility();
 
     if (activeLibrarySection === 'emulators') {
         if (!getEmulators().length) await refreshEmulatorsState();
@@ -1170,10 +1665,11 @@ async function renderActiveLibraryView() {
 
 async function setActiveLibrarySection(section) {
     setAppMode('library');
-    activeLibrarySection = section || 'all';
+    activeLibrarySection = normalizeLibrarySection(section || 'all');
     setActiveSidebarLibraryLink(activeLibrarySection);
     setGamesHeaderByLibrarySection(activeLibrarySection);
     updateEmulatorsInstalledToggleVisibility();
+    updateSuggestedPanelVisibility();
     await renderActiveLibraryView();
 }
 
@@ -1245,7 +1741,7 @@ async function initializeApp() {
 
         // Load data
         const userInfo = await emubro.invoke('get-user-info');
-        const savedDefaultSection = String(localStorage.getItem('emuBro.defaultLibrarySection') || 'all').trim().toLowerCase();
+        const savedDefaultSection = normalizeLibrarySection(localStorage.getItem('emuBro.defaultLibrarySection') || 'all');
         if (savedDefaultSection) activeLibrarySection = savedDefaultSection;
         setActiveViewButton(localStorage.getItem('emuBro.defaultLibraryView') || 'cover');
         
@@ -1427,6 +1923,7 @@ function setupEventListeners() {
         document.getElementById('form-title').textContent = i18n.t('theme.createTitle');
         resetThemeForm();
         document.getElementById('theme-form').style.display = 'flex';
+        setupThemeCustomizationControls();
         setupColorPickerListeners();
         setupBackgroundImageListeners();
     });
@@ -1721,46 +2218,18 @@ function setupWindowResizeHandler() {
         // Only proceed if getting smaller
         if (!isGettingSmaller) return;
 
-        const modals = ['theme-manager-modal', 'language-manager-modal'];
-        
-        modals.forEach(id => {
-            const modal = document.getElementById(id);
-            if (!modal || !modal.classList.contains('active') || modal.classList.contains('docked-right')) {
-                return;
-            }
+        const modals = [
+            'theme-manager-modal',
+            'language-manager-modal',
+            'game-info-modal',
+            'emulator-info-modal'
+        ];
 
-            const rect = modal.getBoundingClientRect();
-            const windowWidth = window.innerWidth;
-            const windowHeight = window.innerHeight;
-
-            // Calculate overlap area
-            const visibleLeft = Math.max(0, rect.left);
-            const visibleRight = Math.min(windowWidth, rect.right);
-            const visibleTop = Math.max(0, rect.top);
-            const visibleBottom = Math.min(windowHeight, rect.bottom);
-
-            const visibleWidth = Math.max(0, visibleRight - visibleLeft);
-            const visibleHeight = Math.max(0, visibleBottom - visibleTop);
-            
-            const totalArea = rect.width * rect.height;
-            const visibleArea = visibleWidth * visibleHeight;
-
-            // If more than 50% is outside (visible area < 50%)
-            if (visibleArea < totalArea * 0.5) {
-                // Add smooth class
-                modal.classList.add('smooth-reset');
-                
-                // Reset to center
-                modal.style.top = '';
-                modal.style.left = '';
-                modal.style.transform = ''; // Remove inline transform (if any from drag)
-                modal.classList.remove('moved');
-                
-                // Remove smooth class after transition
-                setTimeout(() => {
-                    modal.classList.remove('smooth-reset');
-                }, 800);
-            }
+        modals.forEach((id) => {
+            recenterManagedModalIfMostlyOutOfView(id, {
+                visibleThreshold: 0.5,
+                smooth: true
+            });
         });
     });
 }

@@ -37,6 +37,7 @@ export function showToolView(tool) {
     }
     
     if (gamesContainer) {
+        gamesContainer.className = "games-container tools-view";
         gamesContainer.innerHTML = ""; // Wipe the current view
         
         if (!tool) {

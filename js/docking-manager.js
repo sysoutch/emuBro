@@ -5,6 +5,47 @@
 
 const dockedPanels = new Set();
 let activeDockedPanel = null;
+let dockMetricsReady = false;
+let dockLayoutFrame = null;
+let headerResizeObserver = null;
+
+function updateDockHeaderOffset() {
+    const header = document.querySelector('.header');
+    const height = header ? Math.max(0, Math.round(header.getBoundingClientRect().height)) : 0;
+    document.documentElement.style.setProperty('--dock-header-offset', `${height}px`);
+}
+
+function scheduleDockLayoutUpdate() {
+    if (dockLayoutFrame !== null) return;
+    dockLayoutFrame = window.requestAnimationFrame(() => {
+        dockLayoutFrame = null;
+        updateDockHeaderOffset();
+        if (dockedPanels.size > 0) {
+            applyDockedAccordionLayout();
+        }
+    });
+}
+
+function ensureDockMetrics() {
+    if (dockMetricsReady) return;
+    dockMetricsReady = true;
+
+    updateDockHeaderOffset();
+    window.addEventListener('resize', scheduleDockLayoutUpdate, { passive: true });
+
+    const header = document.querySelector('.header');
+    if (header && typeof ResizeObserver !== 'undefined') {
+        headerResizeObserver = new ResizeObserver(() => {
+            scheduleDockLayoutUpdate();
+        });
+        headerResizeObserver.observe(header);
+    }
+}
+
+export function requestDockLayoutRefresh() {
+    ensureDockMetrics();
+    scheduleDockLayoutUpdate();
+}
 
 function clearDockInlineLayout(modal) {
     if (!modal) return;
@@ -38,33 +79,34 @@ function applyDockedAccordionLayout() {
             const modal = document.getElementById(id);
             if (!modal) return;
             clearDockInlineLayout(modal);
+            modal.classList.remove('accordion-collapsed');
+            modal.classList.remove('accordion-expanded');
         });
         return;
     }
 
-    const collapsedCount = visibleIds.length - 1;
-    let collapsedIndex = 0;
+    const collapsedIds = visibleIds.filter((id) => id !== activeId);
+    const collapsedCount = collapsedIds.length;
 
-    visibleIds.forEach((id) => {
+    collapsedIds.forEach((id, collapsedIndex) => {
         const modal = document.getElementById(id);
         if (!modal) return;
-
-        modal.style.bottom = 'auto';
-
-        if (id === activeId) {
-            const expandedTop = `calc(var(--dock-edge-inset) + (${collapsedCount} * var(--dock-accordion-header-h)))`;
-            const expandedHeight = `calc(100vh - (var(--dock-edge-inset) * 2) - (${collapsedCount} * var(--dock-accordion-header-h)))`;
-            modal.style.top = expandedTop;
-            modal.style.height = expandedHeight;
-            modal.style.maxHeight = expandedHeight;
-        } else {
-            const collapsedTop = `calc(var(--dock-edge-inset) + (${collapsedIndex} * var(--dock-accordion-header-h)))`;
-            modal.style.top = collapsedTop;
-            modal.style.height = 'var(--dock-accordion-header-h)';
-            modal.style.maxHeight = 'var(--dock-accordion-header-h)';
-            collapsedIndex += 1;
-        }
+        modal.style.setProperty('top', 'auto', 'important');
+        const collapsedBottom = `calc(var(--dock-edge-inset) + (${collapsedIndex} * var(--dock-accordion-header-h)))`;
+        modal.style.setProperty('bottom', collapsedBottom, 'important');
+        modal.style.setProperty('height', 'var(--dock-accordion-header-h)', 'important');
+        modal.style.setProperty('max-height', 'var(--dock-accordion-header-h)', 'important');
     });
+
+    const activeModal = document.getElementById(activeId);
+    if (activeModal) {
+        activeModal.style.setProperty('bottom', 'auto', 'important');
+        const expandedTop = 'calc(var(--dock-edge-inset) + var(--dock-header-offset))';
+        const expandedHeight = `calc(100vh - (var(--dock-edge-inset) * 2) - var(--dock-header-offset) - (${collapsedCount} * var(--dock-accordion-header-h)))`;
+        activeModal.style.setProperty('top', expandedTop, 'important');
+        activeModal.style.setProperty('height', expandedHeight, 'important');
+        activeModal.style.setProperty('max-height', expandedHeight, 'important');
+    }
 }
 
 function getDockedTabIcon(id) {
@@ -122,6 +164,8 @@ function getDockedTabIcon(id) {
 }
 
 export function initDocking() {
+    ensureDockMetrics();
+
     // Create tab container if it doesn't exist
     if (!document.getElementById('docked-tabs-container')) {
         const sidebar = document.querySelector('.sidebar');
@@ -232,6 +276,7 @@ export function completelyRemoveFromDock(modalId) {
             const remainingId = [...dockedPanels][0];
             const modal = document.getElementById(remainingId);
             if (modal) {
+                clearDockInlineLayout(modal);
                 modal.classList.remove('accordion-collapsed');
                 modal.classList.remove('accordion-expanded');
             }
@@ -290,14 +335,25 @@ function undockPanel(modalId) {
     modal.style.transform = 'translate(-50%, -50%)';
     modal.classList.remove('moved');
     
-    // Reset body classes
-    document.body.classList.remove('panel-docked');
-    document.body.classList.remove('docking-accordion');
+    // Keep dock layout active while other docked panels remain.
+    if (dockedPanels.size === 0) {
+        document.body.classList.remove('panel-docked');
+        document.body.classList.remove('docking-accordion');
+    } else {
+        document.body.classList.add('panel-docked');
+        if (dockedPanels.size > 1) {
+            document.body.classList.add('docking-accordion');
+        } else {
+            document.body.classList.remove('docking-accordion');
+        }
+    }
     
     updateDockedTabs();
 }
 
 export function updateDockedTabs() {
+    ensureDockMetrics();
+
     const container = document.getElementById('docked-tabs-container');
     if (!container) return;
     
@@ -319,7 +375,7 @@ export function updateDockedTabs() {
         container.appendChild(tab);
     });
 
-    applyDockedAccordionLayout();
+    scheduleDockLayoutUpdate();
 }
 
 export function isPanelDocked(modalId) {
