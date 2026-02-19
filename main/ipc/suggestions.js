@@ -27,6 +27,35 @@ function registerSuggestionsIpc(deps = {}) {
     return text || fallback;
   }
 
+  function getDefaultPromptTemplate() {
+    return [
+      "You are emuBro's game recommendation assistant.",
+      "Mode: {{mode}}",
+      "User mood/preferences: {{query}}",
+      "",
+      "Return valid JSON only with this exact shape:",
+      "{",
+      '  "summary": "short explanation",',
+      '  "libraryMatches": [',
+      '    {"name":"", "platform":"", "reason":""}',
+      "  ],",
+      '  "missingSuggestions": [',
+      '    {"name":"", "platform":"", "reason":""}',
+      "  ]",
+      "}",
+      "",
+      "Rules:",
+      "- Provide up to {{limit}} items in libraryMatches.",
+      '- Provide up to {{limit}} items in missingSuggestions only when mode is "library-plus-missing".',
+      '- If mode is "library-only", missingSuggestions must be an empty array.',
+      "- For libraryMatches, prefer exact names from the supplied library list.",
+      "- Keep reasons concise (under 20 words).",
+      "",
+      "Library games JSON:",
+      "{{libraryJson}}"
+    ].join("\n");
+  }
+
   function normalizeLibraryGames(rows, maxCount = 420) {
     const out = [];
     const seen = new Set();
@@ -58,33 +87,18 @@ function registerSuggestionsIpc(deps = {}) {
     const query = normalizeText(payload.query, "No specific mood provided.");
     const limit = Math.max(3, Math.min(12, Number(payload.limit) || 8));
     const libraryGames = normalizeLibraryGames(payload.libraryGames);
+    const libraryJson = JSON.stringify(libraryGames);
+    const template = normalizeText(payload.promptTemplate, getDefaultPromptTemplate());
+    let prompt = template
+      .replace(/\{\{\s*mode\s*\}\}/gi, mode)
+      .replace(/\{\{\s*query\s*\}\}/gi, query)
+      .replace(/\{\{\s*limit\s*\}\}/gi, String(limit))
+      .replace(/\{\{\s*libraryJson\s*\}\}/gi, libraryJson);
 
-    return [
-      "You are emuBro's game recommendation assistant.",
-      `Mode: ${mode}`,
-      `User mood/preferences: ${query}`,
-      "",
-      "Return valid JSON only with this exact shape:",
-      "{",
-      '  "summary": "short explanation",',
-      '  "libraryMatches": [',
-      '    {"name":"", "platform":"", "reason":""}',
-      "  ],",
-      '  "missingSuggestions": [',
-      '    {"name":"", "platform":"", "reason":""}',
-      "  ]",
-      "}",
-      "",
-      `Rules:`,
-      `- Provide up to ${limit} items in libraryMatches.`,
-      `- Provide up to ${limit} items in missingSuggestions only when mode is "library-plus-missing".`,
-      `- If mode is "library-only", missingSuggestions must be an empty array.`,
-      "- For libraryMatches, prefer exact names from the supplied library list.",
-      "- Keep reasons concise (under 20 words).",
-      "",
-      "Library games JSON:",
-      JSON.stringify(libraryGames)
-    ].join("\n");
+    if (!/\{\{\s*libraryJson\s*\}\}/i.test(template)) {
+      prompt += `\n\nLibrary games JSON:\n${libraryJson}`;
+    }
+    return prompt;
   }
 
   function extractJsonFromText(rawText) {
@@ -313,6 +327,43 @@ function registerSuggestionsIpc(deps = {}) {
     return parts.map((part) => normalizeText(part?.text)).filter(Boolean).join("\n");
   }
 
+  async function listOllamaModels(payload = {}) {
+    const baseUrl = normalizeText(payload.baseUrl, "http://127.0.0.1:11434").replace(/\/+$/g, "");
+    const endpoint = `${baseUrl}/api/tags`;
+    const response = await fetchImpl(endpoint, {
+      method: "GET",
+      headers: {
+        "content-type": "application/json"
+      }
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Ollama model list failed (${response.status}): ${text.slice(0, 180)}`);
+    }
+
+    const json = await response.json();
+    const rows = Array.isArray(json?.models) ? json.models : [];
+    const names = rows
+      .map((row) => normalizeText(row?.name || row?.model))
+      .filter(Boolean);
+
+    const seen = new Set();
+    const deduped = [];
+    names.forEach((name) => {
+      const key = name.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      deduped.push(name);
+    });
+
+    deduped.sort((a, b) => a.localeCompare(b));
+    return {
+      baseUrl,
+      models: deduped
+    };
+  }
+
   ipcMain.handle("suggestions:recommend-games", async (_event, payload = {}) => {
     const provider = normalizeProvider(payload.provider);
     const mode = normalizeMode(payload.mode);
@@ -356,6 +407,24 @@ function registerSuggestionsIpc(deps = {}) {
         message: error?.message || String(error),
         libraryMatches: [],
         missingSuggestions: []
+      };
+    }
+  });
+
+  ipcMain.handle("suggestions:list-ollama-models", async (_event, payload = {}) => {
+    try {
+      const result = await listOllamaModels(payload);
+      return {
+        success: true,
+        baseUrl: result.baseUrl,
+        models: result.models
+      };
+    } catch (error) {
+      log.error("suggestions:list-ollama-models failed:", error);
+      return {
+        success: false,
+        message: error?.message || String(error),
+        models: []
       };
     }
   });

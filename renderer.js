@@ -75,6 +75,7 @@ const SUGGESTED_SECTION_KEY = 'suggested';
 const SUPPORTED_LIBRARY_SECTIONS = new Set(['all', 'installed', 'recent', SUGGESTED_SECTION_KEY, 'emulators']);
 let suggestionsRequestInFlight = false;
 let lastSuggestionsResult = null;
+const ollamaModelsCacheByUrl = new Map();
 
 function normalizeLibrarySection(section) {
     const value = String(section || '').trim().toLowerCase();
@@ -104,11 +105,41 @@ function normalizeSuggestionScope(scope) {
     return 'library-plus-missing';
 }
 
+function getDefaultSuggestionPromptTemplate() {
+    return [
+        "You are emuBro's game recommendation assistant.",
+        "Mode: {{mode}}",
+        "User mood/preferences: {{query}}",
+        "",
+        "Return valid JSON only with this exact shape:",
+        "{",
+        '  "summary": "short explanation",',
+        '  "libraryMatches": [',
+        '    {"name":"", "platform":"", "reason":""}',
+        "  ],",
+        '  "missingSuggestions": [',
+        '    {"name":"", "platform":"", "reason":""}',
+        "  ]",
+        "}",
+        "",
+        "Rules:",
+        "- Provide up to {{limit}} items in libraryMatches.",
+        '- Provide up to {{limit}} items in missingSuggestions only when mode is "library-plus-missing".',
+        '- If mode is "library-only", missingSuggestions must be an empty array.',
+        "- For libraryMatches, prefer exact names from the supplied library list.",
+        "- Keep reasons concise (under 20 words).",
+        "",
+        "Library games JSON:",
+        "{{libraryJson}}"
+    ].join('\n');
+}
+
 function getDefaultSuggestionSettings() {
     return {
         provider: 'ollama',
         scope: 'library-plus-missing',
         query: '',
+        promptTemplate: getDefaultSuggestionPromptTemplate(),
         models: {
             ollama: 'llama3.1',
             openai: 'gpt-4o-mini',
@@ -138,6 +169,7 @@ function loadSuggestionSettings() {
             provider,
             scope: normalizeSuggestionScope(parsed.scope),
             query: String(parsed.query || ''),
+            promptTemplate: String(parsed.promptTemplate || defaults.promptTemplate || '').trim() || defaults.promptTemplate,
             models: {
                 ...defaults.models,
                 ...(parsed.models && typeof parsed.models === 'object' ? parsed.models : {})
@@ -163,6 +195,7 @@ function saveSuggestionSettings(settings) {
         provider,
         scope: normalizeSuggestionScope(settings?.scope),
         query: String(settings?.query || ''),
+        promptTemplate: String(settings?.promptTemplate || defaults.promptTemplate || '').trim() || defaults.promptTemplate,
         models: {
             ...defaults.models,
             ...(settings?.models && typeof settings.models === 'object' ? settings.models : {})
@@ -178,6 +211,41 @@ function saveSuggestionSettings(settings) {
     };
     localStorage.setItem(SUGGESTIONS_SETTINGS_KEY, JSON.stringify(payload));
     return payload;
+}
+
+async function fetchOllamaModels(baseUrl, options = {}) {
+    const normalizedBaseUrl = String(baseUrl || '').trim();
+    if (!normalizedBaseUrl) return { success: false, models: [], message: 'Set an Ollama API URL first.' };
+
+    const cacheKey = normalizedBaseUrl.toLowerCase();
+    if (!options.force && ollamaModelsCacheByUrl.has(cacheKey)) {
+        return {
+            success: true,
+            baseUrl: normalizedBaseUrl,
+            models: [...(ollamaModelsCacheByUrl.get(cacheKey) || [])]
+        };
+    }
+
+    const result = await emubro.invoke('suggestions:list-ollama-models', { baseUrl: normalizedBaseUrl });
+    if (!result?.success) {
+        return {
+            success: false,
+            baseUrl: normalizedBaseUrl,
+            models: [],
+            message: String(result?.message || 'Failed to fetch Ollama models.')
+        };
+    }
+
+    const models = (Array.isArray(result.models) ? result.models : [])
+        .map((value) => String(value || '').trim())
+        .filter(Boolean);
+
+    ollamaModelsCacheByUrl.set(cacheKey, models);
+    return {
+        success: true,
+        baseUrl: normalizedBaseUrl,
+        models
+    };
 }
 
 function tokenizeSuggestionQuery(query) {
@@ -341,22 +409,28 @@ async function runSuggestionsFromPanel(panel) {
 
     const providerSelect = panel.querySelector('[data-suggest-provider]');
     const scopeSelect = panel.querySelector('[data-suggest-scope]');
+    const modelSelect = panel.querySelector('[data-suggest-model-select]');
     const modelInput = panel.querySelector('[data-suggest-model]');
     const baseUrlInput = panel.querySelector('[data-suggest-base-url]');
     const apiKeyInput = panel.querySelector('[data-suggest-api-key]');
+    const promptInput = panel.querySelector('[data-suggest-prompt]');
     const status = panel.querySelector('[data-suggest-status]');
     const runBtn = panel.querySelector('[data-suggest-run]');
 
-    if (!providerSelect || !scopeSelect || !modelInput || !baseUrlInput || !apiKeyInput || !status || !runBtn) return;
+    if (!providerSelect || !scopeSelect || !modelInput || !baseUrlInput || !apiKeyInput || !promptInput || !status || !runBtn) return;
 
     const provider = normalizeSuggestionProvider(providerSelect.value);
+    const selectedModel = provider === 'ollama'
+        ? String(modelSelect?.value || modelInput.value || '').trim()
+        : String(modelInput.value || '').trim();
     const nextSettings = loadSuggestionSettings();
     nextSettings.provider = provider;
     nextSettings.scope = normalizeSuggestionScope(scopeSelect.value);
     nextSettings.query = String(panel.querySelector('[data-suggest-query]')?.value || '').trim();
+    nextSettings.promptTemplate = String(promptInput.value || '').trim() || getDefaultSuggestionPromptTemplate();
     nextSettings.models = {
         ...nextSettings.models,
-        [provider]: String(modelInput.value || '').trim() || nextSettings.models[provider]
+        [provider]: selectedModel || nextSettings.models[provider]
     };
     nextSettings.baseUrls = {
         ...nextSettings.baseUrls,
@@ -401,6 +475,7 @@ async function runSuggestionsFromPanel(panel) {
             provider,
             mode: nextSettings.scope,
             query: nextSettings.query,
+            promptTemplate: nextSettings.promptTemplate,
             model,
             baseUrl,
             apiKey,
@@ -433,6 +508,7 @@ function renderSuggestedPanel() {
     const model = String(settings.models?.[provider] || '');
     const baseUrl = String(settings.baseUrls?.[provider] || '');
     const apiKey = String(settings.apiKeys?.[provider] || '');
+    const promptTemplate = String(settings.promptTemplate || getDefaultSuggestionPromptTemplate());
 
     panel.classList.remove('is-hidden');
     panel.innerHTML = `
@@ -456,7 +532,13 @@ function renderSuggestedPanel() {
             </div>
             <div class="form-group">
                 <label for="suggest-model">Model</label>
-                <input id="suggest-model" data-suggest-model type="text" value="${escapeHtml(model)}" />
+                <div class="suggested-model-row" data-suggest-model-select-wrap>
+                    <select id="suggest-model-select" data-suggest-model-select>
+                        <option value="${escapeHtml(model || '')}" selected>${escapeHtml(model || 'Select model...')}</option>
+                    </select>
+                    <button class="action-btn small" type="button" data-suggest-refresh-models>Refresh</button>
+                </div>
+                <input id="suggest-model" data-suggest-model type="text" value="${escapeHtml(model)}" data-suggest-model-input />
             </div>
             <div class="form-group">
                 <label for="suggest-base-url">API URL</label>
@@ -470,6 +552,11 @@ function renderSuggestedPanel() {
                 <label for="suggest-query">Mood / Preferences</label>
                 <input id="suggest-query" data-suggest-query type="text" value="${escapeHtml(settings.query || '')}" placeholder="Example: short platform games for relaxed evening sessions" />
             </div>
+            <div class="form-group suggested-panel-form-group--wide">
+                <label for="suggest-prompt">Prompt Template</label>
+                <textarea id="suggest-prompt" data-suggest-prompt rows="9">${escapeHtml(promptTemplate)}</textarea>
+                <small class="suggested-panel-hint">Placeholders: {{mode}}, {{query}}, {{limit}}, {{libraryJson}}</small>
+            </div>
             <div class="suggested-panel-actions">
                 <button class="action-btn launch-btn" type="button" data-suggest-run>Generate Suggestions</button>
             </div>
@@ -479,13 +566,82 @@ function renderSuggestedPanel() {
     `;
 
     const providerSelect = panel.querySelector('[data-suggest-provider]');
+    const modelSelect = panel.querySelector('[data-suggest-model-select]');
+    const modelSelectWrap = panel.querySelector('[data-suggest-model-select-wrap]');
+    const refreshModelsBtn = panel.querySelector('[data-suggest-refresh-models]');
     const modelInput = panel.querySelector('[data-suggest-model]');
+    const modelInputWrap = panel.querySelector('[data-suggest-model-input]');
     const baseUrlInput = panel.querySelector('[data-suggest-base-url]');
     const apiKeyInput = panel.querySelector('[data-suggest-api-key]');
     const apiKeyWrap = panel.querySelector('[data-suggest-api-key-wrap]');
     const queryInput = panel.querySelector('[data-suggest-query]');
+    const promptInput = panel.querySelector('[data-suggest-prompt]');
     const scopeSelect = panel.querySelector('[data-suggest-scope]');
+    const status = panel.querySelector('[data-suggest-status]');
     const runBtn = panel.querySelector('[data-suggest-run]');
+
+    const populateOllamaModelSelect = (models = [], currentValue = '') => {
+        if (!modelSelect) return;
+        const current = String(currentValue || '').trim();
+        const deduped = [];
+        const seen = new Set();
+        (Array.isArray(models) ? models : []).forEach((name) => {
+            const value = String(name || '').trim();
+            if (!value) return;
+            const key = value.toLowerCase();
+            if (seen.has(key)) return;
+            seen.add(key);
+            deduped.push(value);
+        });
+
+        if (current && !deduped.some((name) => name.toLowerCase() === current.toLowerCase())) {
+            deduped.unshift(current);
+        }
+        if (deduped.length === 0) {
+            deduped.push(current || 'llama3.1');
+        }
+
+        modelSelect.innerHTML = deduped
+            .map((name) => {
+                const selected = current && name.toLowerCase() === current.toLowerCase();
+                return `<option value="${escapeHtml(name)}"${selected ? ' selected' : ''}>${escapeHtml(name)}</option>`;
+            })
+            .join('');
+
+        if (!current) {
+            modelSelect.value = deduped[0];
+            modelInput.value = deduped[0];
+        }
+    };
+
+    const refreshOllamaModels = async (force = false) => {
+        const currentProvider = normalizeSuggestionProvider(providerSelect.value);
+        if (currentProvider !== 'ollama') return;
+        const currentModel = String(modelInput.value || '').trim();
+        const baseUrl = String(baseUrlInput.value || '').trim();
+        if (refreshModelsBtn) refreshModelsBtn.disabled = true;
+        if (status) status.textContent = 'Loading Ollama models...';
+
+        try {
+            const result = await fetchOllamaModels(baseUrl, { force });
+            if (!result?.success) {
+                populateOllamaModelSelect([], currentModel || 'llama3.1');
+                if (status) status.textContent = String(result?.message || 'Failed to fetch Ollama models.');
+                return;
+            }
+
+            populateOllamaModelSelect(result.models, currentModel || result.models?.[0] || 'llama3.1');
+            if (!modelInput.value && modelSelect?.value) {
+                modelInput.value = modelSelect.value;
+            }
+            if (status) status.textContent = `Loaded ${result.models.length} Ollama model(s).`;
+        } catch (error) {
+            populateOllamaModelSelect([], currentModel || 'llama3.1');
+            if (status) status.textContent = String(error?.message || 'Failed to fetch Ollama models.');
+        } finally {
+            if (refreshModelsBtn) refreshModelsBtn.disabled = false;
+        }
+    };
 
     const syncProviderFields = () => {
         const nextSettings = loadSuggestionSettings();
@@ -495,6 +651,15 @@ function renderSuggestedPanel() {
         baseUrlInput.value = String(nextSettings.baseUrls?.[nextProvider] || '');
         apiKeyInput.value = String(nextSettings.apiKeys?.[nextProvider] || '');
         apiKeyWrap.style.display = nextProvider === 'ollama' ? 'none' : 'flex';
+        if (modelSelectWrap) {
+            modelSelectWrap.style.display = nextProvider === 'ollama' ? 'grid' : 'none';
+        }
+        if (modelInputWrap) {
+            modelInputWrap.style.display = nextProvider === 'ollama' ? 'none' : 'block';
+        }
+        if (nextProvider === 'ollama') {
+            refreshOllamaModels(false);
+        }
     };
 
     const persistInputs = () => {
@@ -503,9 +668,13 @@ function renderSuggestedPanel() {
         current.provider = currentProvider;
         current.scope = normalizeSuggestionScope(scopeSelect.value);
         current.query = String(queryInput.value || '').trim();
+        current.promptTemplate = String(promptInput.value || '').trim() || getDefaultSuggestionPromptTemplate();
+        const selectedModel = currentProvider === 'ollama'
+            ? String(modelSelect?.value || modelInput.value || '').trim()
+            : String(modelInput.value || '').trim();
         current.models = {
             ...current.models,
-            [currentProvider]: String(modelInput.value || '').trim() || current.models[currentProvider]
+            [currentProvider]: selectedModel || current.models[currentProvider]
         };
         current.baseUrls = {
             ...current.baseUrls,
@@ -520,6 +689,20 @@ function renderSuggestedPanel() {
         saveSuggestionSettings(current);
     };
 
+    if (modelSelect) {
+        modelSelect.addEventListener('change', () => {
+            modelInput.value = String(modelSelect.value || '').trim();
+            persistInputs();
+        });
+    }
+
+    if (refreshModelsBtn) {
+        refreshModelsBtn.addEventListener('click', async () => {
+            await refreshOllamaModels(true);
+            persistInputs();
+        });
+    }
+
     providerSelect.addEventListener('change', () => {
         const current = loadSuggestionSettings();
         current.provider = normalizeSuggestionProvider(providerSelect.value);
@@ -527,9 +710,14 @@ function renderSuggestedPanel() {
         syncProviderFields();
     });
 
-    [scopeSelect, modelInput, baseUrlInput, apiKeyInput, queryInput].forEach((element) => {
+    [scopeSelect, modelInput, baseUrlInput, apiKeyInput, queryInput, promptInput].forEach((element) => {
         element.addEventListener('change', persistInputs);
         element.addEventListener('blur', persistInputs);
+    });
+
+    baseUrlInput.addEventListener('change', async () => {
+        if (normalizeSuggestionProvider(providerSelect.value) !== 'ollama') return;
+        await refreshOllamaModels(true);
     });
 
     if (runBtn) {

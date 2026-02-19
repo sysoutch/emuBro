@@ -362,3 +362,22 @@
 #emulator-info-modal .emulator-detail-actions .action-btn {
     min-width: 108px;
 }
+
+#emulator-info-modal .emulator-detail-launch-path-control {
+    margin-top: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+#emulator-info-modal .emulator-detail-launch-path-control label {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+#emulator-info-modal .emulator-detail-launch-path-control select {
+    width: 100%;
+    min-width: 0;
+}

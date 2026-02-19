@@ -1,4 +1,5 @@
 const EMULATOR_INFO_PIN_STORAGE_KEY = 'emuBro.emulatorInfoPopupPinned';
+const EMULATOR_SELECTED_PATHS_STORAGE_KEY = 'emuBro.emulatorPreferredLaunchPath.v1';
 
 export function createEmulatorDetailsPopupActions(deps = {}) {
     const i18n = deps.i18n || window.i18n || { t: (key) => String(key || '') };
@@ -42,6 +43,40 @@ export function createEmulatorDetailsPopupActions(deps = {}) {
         try {
             localStorageRef.setItem(EMULATOR_INFO_PIN_STORAGE_KEY, emulatorInfoPopupPinned ? 'true' : 'false');
         } catch (_e) {}
+    }
+
+    function getEmulatorSelectionStorageKey(emulator) {
+        const platformKey = String(emulator?.platformShortName || emulator?.platform || '').trim().toLowerCase();
+        const nameKey = String(emulator?.name || '').trim().toLowerCase().replace(/[\s._-]+/g, '').replace(/[^a-z0-9]/g, '');
+        const fallback = String(getEmulatorKey(emulator) || '').trim().toLowerCase();
+        if (platformKey && nameKey) return `${platformKey}::${nameKey}`;
+        return fallback || `${platformKey || 'unknown'}::${nameKey || 'emulator'}`;
+    }
+
+    function loadSelectedPathMap() {
+        try {
+            const raw = localStorageRef.getItem(EMULATOR_SELECTED_PATHS_STORAGE_KEY);
+            if (!raw) return {};
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object') return parsed;
+        } catch (_e) {}
+        return {};
+    }
+
+    function saveSelectedPathMap(map) {
+        try {
+            localStorageRef.setItem(EMULATOR_SELECTED_PATHS_STORAGE_KEY, JSON.stringify(map || {}));
+        } catch (_e) {}
+    }
+
+    function setSelectedLaunchPath(emulator, pathValue) {
+        const key = getEmulatorSelectionStorageKey(emulator);
+        if (!key) return;
+        const value = String(pathValue || '').trim();
+        const map = loadSelectedPathMap();
+        if (value) map[key] = value;
+        else delete map[key];
+        saveSelectedPathMap(map);
     }
 
     function applyEmulatorInfoPinnedState() {
@@ -124,6 +159,25 @@ export function createEmulatorDetailsPopupActions(deps = {}) {
         return ordered;
     }
 
+    function getSelectedLaunchPath(emulator, filePaths = []) {
+        const paths = Array.isArray(filePaths) ? filePaths : [];
+        if (paths.length === 0) return '';
+        const map = loadSelectedPathMap();
+        const storageKey = getEmulatorSelectionStorageKey(emulator);
+        const fromStorage = String(map[storageKey] || '').trim();
+        if (fromStorage) {
+            const match = paths.find((path) => String(path || '').trim().toLowerCase() === fromStorage.toLowerCase());
+            if (match) return match;
+        }
+
+        const emulatorPath = String(emulator?.filePath || '').trim();
+        if (emulatorPath) {
+            const pathMatch = paths.find((path) => String(path || '').trim().toLowerCase() === emulatorPath.toLowerCase());
+            if (pathMatch) return pathMatch;
+        }
+        return paths[0];
+    }
+
     function renderEmulatorDetailsMarkup(container, emulator) {
         if (!container || !emulator) return;
         const shortName = String(emulator.platformShortName || 'unknown').toLowerCase();
@@ -132,11 +186,25 @@ export function createEmulatorDetailsPopupActions(deps = {}) {
         const safePlatform = escapeHtml(emulator.platform || emulator.platformShortName || i18n.t('gameDetails.unknown'));
         const installed = !!emulator.isInstalled;
         const filePaths = getEmulatorFilePaths(emulator);
+        const selectedLaunchPath = installed ? getSelectedLaunchPath(emulator, filePaths) : '';
         const statusClass = installed ? 'is-installed' : 'is-missing';
         const statusText = installed ? 'Installed' : 'Not Installed';
         const safePathMarkup = installed && filePaths.length > 0
             ? filePaths.map((p) => `<span class="emulator-detail-path-line">${escapeHtml(p)}</span>`).join('')
             : '<span class="emulator-detail-path-line">Not installed yet</span>';
+        const launchPathControlMarkup = installed && filePaths.length > 1
+            ? `
+                <div class="emulator-detail-launch-path-control">
+                    <label for="emu-launch-path-select">Launch Path</label>
+                    <select id="emu-launch-path-select" data-emu-launch-path>
+                        ${filePaths.map((p) => {
+                            const selected = String(p).toLowerCase() === String(selectedLaunchPath).toLowerCase() ? 'selected' : '';
+                            return `<option value="${escapeHtml(p)}" ${selected}>${escapeHtml(p)}</option>`;
+                        }).join('')}
+                    </select>
+                </div>
+            `
+            : '';
         const links = normalizeEmulatorDownloadLinks(emulator?.downloadLinks);
         const winDisabled = links.windows ? '' : 'disabled';
         const linuxDisabled = links.linux ? '' : 'disabled';
@@ -165,6 +233,7 @@ export function createEmulatorDetailsPopupActions(deps = {}) {
                 <p><strong>Platform:</strong> ${safePlatform}</p>
                 <p><strong>Status:</strong> <span class="emulator-install-status ${statusClass}">${statusText}</span></p>
                 <p><strong>Path:</strong> <span class="emulator-detail-path">${safePathMarkup}</span></p>
+                ${launchPathControlMarkup}
             </div>
             <div class="emulator-detail-download-links">
                 <button class="emulator-os-link" type="button" data-emu-download-os="windows" ${winDisabled}>Windows</button>
@@ -185,6 +254,17 @@ export function createEmulatorDetailsPopupActions(deps = {}) {
 
     function bindEmulatorDetailsActions(container, emulator, options = {}) {
         if (!container || !emulator) return;
+        const installedPaths = getEmulatorFilePaths(emulator);
+        let selectedLaunchPath = emulator?.isInstalled ? getSelectedLaunchPath(emulator, installedPaths) : '';
+
+        const launchPathSelect = container.querySelector('[data-emu-launch-path]');
+        if (launchPathSelect) {
+            launchPathSelect.value = selectedLaunchPath || launchPathSelect.value;
+            launchPathSelect.addEventListener('change', () => {
+                selectedLaunchPath = String(launchPathSelect.value || '').trim();
+                if (selectedLaunchPath) setSelectedLaunchPath(emulator, selectedLaunchPath);
+            });
+        }
 
         const refreshAfterChange = async () => {
             await fetchEmulators();
@@ -211,11 +291,17 @@ export function createEmulatorDetailsPopupActions(deps = {}) {
                         return;
                     }
                     if (action === 'launch') {
-                        await launchEmulatorAction(emulator);
+                        const targetEmulator = selectedLaunchPath
+                            ? { ...emulator, filePath: selectedLaunchPath, isInstalled: true }
+                            : emulator;
+                        await launchEmulatorAction(targetEmulator);
                         return;
                     }
                     if (action === 'explorer') {
-                        await openEmulatorInExplorerAction(emulator);
+                        const targetEmulator = selectedLaunchPath
+                            ? { ...emulator, filePath: selectedLaunchPath, isInstalled: true }
+                            : emulator;
+                        await openEmulatorInExplorerAction(targetEmulator);
                         return;
                     }
                     if (action === 'downloaded-package') {
