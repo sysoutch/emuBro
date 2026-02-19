@@ -9,8 +9,10 @@ export function createEmulatorDetailsPopupActions(deps = {}) {
     const normalizeEmulatorDownloadLinks = deps.normalizeEmulatorDownloadLinks || ((raw) => raw || {});
     const hasAnyDownloadLink = deps.hasAnyDownloadLink || (() => false);
     const downloadAndInstallEmulatorAction = deps.downloadAndInstallEmulatorAction || (async () => false);
+    const getDownloadedPackagePath = deps.getDownloadedPackagePath || (() => '');
     const launchEmulatorAction = deps.launchEmulatorAction || (async () => {});
     const openEmulatorInExplorerAction = deps.openEmulatorInExplorerAction || (async () => {});
+    const openDownloadedPackageInExplorerAction = deps.openDownloadedPackageInExplorerAction || (async () => {});
     const openEmulatorWebsiteAction = deps.openEmulatorWebsiteAction || (async () => {});
     const openEmulatorConfigEditor = deps.openEmulatorConfigEditor || (async () => false);
     const openEmulatorDownloadLinkAction = deps.openEmulatorDownloadLinkAction || (async () => {});
@@ -103,6 +105,25 @@ export function createEmulatorDetailsPopupActions(deps = {}) {
         return rows.find((row) => getEmulatorKey(row) === key) || target;
     }
 
+    function getEmulatorFilePaths(emulator) {
+        const ordered = [];
+        const seen = new Set();
+        const add = (rawPath) => {
+            const value = String(rawPath || '').trim();
+            if (!value) return;
+            const key = value.toLowerCase();
+            if (seen.has(key)) return;
+            seen.add(key);
+            ordered.push(value);
+        };
+
+        if (Array.isArray(emulator?.filePaths)) {
+            emulator.filePaths.forEach(add);
+        }
+        add(emulator?.filePath);
+        return ordered;
+    }
+
     function renderEmulatorDetailsMarkup(container, emulator) {
         if (!container || !emulator) return;
         const shortName = String(emulator.platformShortName || 'unknown').toLowerCase();
@@ -110,17 +131,29 @@ export function createEmulatorDetailsPopupActions(deps = {}) {
         const safeName = escapeHtml(emulator.name || 'Unknown Emulator');
         const safePlatform = escapeHtml(emulator.platform || emulator.platformShortName || i18n.t('gameDetails.unknown'));
         const installed = !!emulator.isInstalled;
+        const filePaths = getEmulatorFilePaths(emulator);
         const statusClass = installed ? 'is-installed' : 'is-missing';
         const statusText = installed ? 'Installed' : 'Not Installed';
-        const safePath = escapeHtml(installed ? (emulator.filePath || '') : 'Not installed yet');
+        const safePathMarkup = installed && filePaths.length > 0
+            ? filePaths.map((p) => `<span class="emulator-detail-path-line">${escapeHtml(p)}</span>`).join('')
+            : '<span class="emulator-detail-path-line">Not installed yet</span>';
         const links = normalizeEmulatorDownloadLinks(emulator?.downloadLinks);
         const winDisabled = links.windows ? '' : 'disabled';
         const linuxDisabled = links.linux ? '' : 'disabled';
         const macDisabled = links.mac ? '' : 'disabled';
         const canDownload = hasAnyDownloadLink(emulator);
         const downloadDisabled = canDownload ? '' : 'disabled';
-        const launchDisabled = installed ? '' : 'disabled';
-        const explorerDisabled = installed ? '' : 'disabled';
+        const downloadedPackagePath = String(getDownloadedPackagePath(emulator) || '').trim();
+        const showDownloadedSetupAction = !installed && !!downloadedPackagePath;
+        const launchActionMarkup = installed
+            ? '<button class="action-btn launch-btn" data-emu-popup-action="launch">Launch</button>'
+            : '';
+        const explorerActionMarkup = installed
+            ? '<button class="action-btn" data-emu-popup-action="explorer">Explorer</button>'
+            : '';
+        const downloadedSetupActionMarkup = showDownloadedSetupAction
+            ? '<button class="action-btn" data-emu-popup-action="downloaded-package">Show Downloaded Setup</button>'
+            : '';
 
         container.innerHTML = `
         <div class="emulator-details-info">
@@ -131,7 +164,7 @@ export function createEmulatorDetailsPopupActions(deps = {}) {
                 <p><strong>Name:</strong> ${safeName}</p>
                 <p><strong>Platform:</strong> ${safePlatform}</p>
                 <p><strong>Status:</strong> <span class="emulator-install-status ${statusClass}">${statusText}</span></p>
-                <p><strong>Path:</strong> <span class="emulator-detail-path">${safePath}</span></p>
+                <p><strong>Path:</strong> <span class="emulator-detail-path">${safePathMarkup}</span></p>
             </div>
             <div class="emulator-detail-download-links">
                 <button class="emulator-os-link" type="button" data-emu-download-os="windows" ${winDisabled}>Windows</button>
@@ -140,8 +173,9 @@ export function createEmulatorDetailsPopupActions(deps = {}) {
             </div>
             <div class="emulator-detail-actions">
                 <button class="action-btn" data-emu-popup-action="download" ${downloadDisabled}>Download</button>
-                <button class="action-btn launch-btn" data-emu-popup-action="launch" ${launchDisabled}>Launch</button>
-                <button class="action-btn" data-emu-popup-action="explorer" ${explorerDisabled}>Explorer</button>
+                ${launchActionMarkup}
+                ${explorerActionMarkup}
+                ${downloadedSetupActionMarkup}
                 <button class="action-btn" data-emu-popup-action="website">Website</button>
                 <button class="action-btn" data-emu-popup-action="edit">Edit</button>
             </div>
@@ -182,6 +216,10 @@ export function createEmulatorDetailsPopupActions(deps = {}) {
                     }
                     if (action === 'explorer') {
                         await openEmulatorInExplorerAction(emulator);
+                        return;
+                    }
+                    if (action === 'downloaded-package') {
+                        await openDownloadedPackageInExplorerAction(emulator);
                         return;
                     }
                     if (action === 'website') {

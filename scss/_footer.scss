@@ -405,7 +405,7 @@
     position: fixed;
     right: 24px;
     bottom: 20px;
-    z-index: 1200;
+    z-index: 1300;
     border-radius: 999px;
     padding: 10px 14px;
     font-size: 0.82rem;
@@ -419,6 +419,14 @@
 
 .open-footer-btn:hover {
     background: color-mix(in srgb, var(--accent-color), transparent 18%);
+}
+
+body.panel-docked .open-footer-btn {
+    right: calc(var(--dock-panel-width) + 24px);
+}
+
+[data-os="win32"] body.panel-docked .open-footer-btn {
+    right: calc(var(--dock-panel-width) + 24px + var(--win-border-w));
 }
 
 .open-footer-btn.is-hidden {

@@ -12,6 +12,8 @@ function registerEmulatorIpc(deps = {}) {
     ipcMain,
     log,
     app,
+    dialog,
+    getMainWindow,
     shell,
     fetchImpl,
     processPlatform,
@@ -34,6 +36,8 @@ function registerEmulatorIpc(deps = {}) {
 
   if (!ipcMain) throw new Error("registerEmulatorIpc requires ipcMain");
   if (!app) throw new Error("registerEmulatorIpc requires app");
+  if (!dialog) throw new Error("registerEmulatorIpc requires dialog");
+  if (typeof getMainWindow !== "function") throw new Error("registerEmulatorIpc requires getMainWindow");
   if (!shell) throw new Error("registerEmulatorIpc requires shell");
   if (!fetchFn) throw new Error("registerEmulatorIpc requires fetch implementation");
 
@@ -73,6 +77,8 @@ function registerEmulatorIpc(deps = {}) {
     ipcMain,
     log,
     app,
+    dialog,
+    getMainWindow,
     shell,
     path,
     fsSync,

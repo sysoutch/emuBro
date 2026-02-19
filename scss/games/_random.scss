@@ -1,0 +1,490 @@
+﻿/* =========================================
+   RANDOM VIEW
+   ========================================= */
+.random-container {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: clamp(300px, calc(100vh - 250px), 560px);
+    gap: calc(30px * var(--view-scale));
+    padding: calc(20px * var(--view-scale));
+}
+
+.random-display {
+    background-color: var(--bg-secondary);
+    border-radius: var(--radius-card);
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    width: 100%;
+    max-width: clamp(220px, calc(32vw * var(--view-scale)), calc(350px * var(--view-scale)));
+    display: flex;
+    flex-direction: column;
+}
+
+.random-image {
+    width: 100%;
+    height: clamp(150px, calc(30vh * var(--view-scale)), calc(250px * var(--view-scale)));
+    object-fit: cover;
+    background-color: #000;
+}
+
+.random-info {
+    padding: calc(20px * var(--view-scale));
+    text-align: center;
+}
+
+.random-title {
+    color: var(--text-primary);
+    margin: 0 0 10px 0;
+    font-size: calc(1.3rem * var(--view-scale));
+}
+
+.random-platform-badge {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+}
+
+.random-platform-icon {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+}
+
+.random-controls {
+    display: flex;
+    gap: 15px;
+}
+
+.random-shuffle-btn {
+    background-color: var(--accent-color);
+    color: white;
+    font-size: calc(1.1rem * var(--view-scale));
+    padding: calc(12px * var(--view-scale)) calc(24px * var(--view-scale));
+    border-radius: 30px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    transition: transform 0.2s, background-color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.random-shuffle-btn:hover {
+    transform: scale(1.05);
+    background-color: var(--accent-hover);
+}
+
+.random-suggestion {
+    font-size: 1.2rem;
+    color: var(--accent-color);
+    font-weight: bold;
+    animation: fadeIn 0.5s ease;
+    text-align: center;
+}
+
+.random-genre {
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+}
+
+.random-rating {
+    color: var(--warning-color);
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Slot-Machine Variant (Random View) */
+.games-container.random-view {
+    --view-scale: clamp(0.62, min(calc((100vw - 240px) / 1120), calc((100vh - 210px) / 680)), 1.06);
+    display: block;
+    padding: 0;
+    overflow: hidden;
+}
+
+.random-container.random-container--slot {
+    width: 100%;
+    min-height: clamp(320px, calc(100vh - 226px), 700px);
+}
+
+.slot-machine {
+    width: min(1100px, 100%);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 18px;
+    align-items: center;
+    justify-items: center;
+}
+
+.slot-stage {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(12px, 1.8vw, 18px);
+}
+
+.slot-marquee {
+    text-align: center;
+    padding: 8px 10px;
+}
+
+.slot-marquee-title {
+    color: var(--text-primary);
+    font-size: clamp(1.25rem, 3.4vw, 1.9rem);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-shadow: 0 10px 26px rgba(0,0,0,0.6);
+}
+
+.slot-marquee-sub {
+    margin-top: 8px;
+    color: var(--text-secondary);
+}
+
+.slot-cabinet {
+    --slot-item-h: clamp(90px, calc((100vh - 360px) / 3), 158px);
+    --slot-gap: clamp(10px, 1.4vh, 14px);
+    --slot-window-h: calc((var(--slot-item-h) * 3) + (var(--slot-gap) * 2));
+
+    width: min(560px, 100%);
+    padding: clamp(12px, 1.8vw, 18px);
+    border-radius: 28px;
+    position: relative;
+    background:
+        radial-gradient(120% 120% at 50% 0%,
+            color-mix(in srgb, var(--brand-color), black 55%) 0%,
+            rgba(0,0,0,0.78) 65%,
+            rgba(0,0,0,0.88) 100%);
+    border: 1px solid rgba(255,255,255,0.12);
+    box-shadow:
+        0 30px 70px rgba(0,0,0,0.55),
+        inset 0 0 0 1px rgba(255,255,255,0.06);
+}
+
+.slot-window {
+    height: var(--slot-window-h);
+    border-radius: 22px;
+    overflow: hidden;
+    position: relative;
+    background:
+        radial-gradient(120% 90% at 50% 50%, rgba(255,255,255,0.06), rgba(0,0,0,0.55));
+    border: 1px solid rgba(255,255,255,0.10);
+}
+
+.slot-reel {
+    position: absolute;
+    inset: 0;
+}
+
+.slot-reel-inner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    will-change: transform;
+}
+
+.slot-item {
+    height: var(--slot-item-h);
+    margin-bottom: var(--slot-gap);
+    border-radius: 18px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 18px 34px rgba(0,0,0,0.45);
+    border: 1px solid rgba(255,255,255,0.10);
+    background: rgba(0,0,0,0.25);
+}
+
+.slot-item-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transform: scale(1.02);
+    filter: contrast(1.05) saturate(1.05);
+}
+
+.slot-item-caption {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 10px 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--text-primary);
+    background: linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,0.80));
+    text-shadow: 0 8px 20px rgba(0,0,0,0.65);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.slot-window::before,
+.slot-window::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 20%;
+    z-index: 3;
+    pointer-events: none;
+}
+
+.slot-window::before {
+    top: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0.85), rgba(0,0,0,0));
+}
+
+.slot-window::after {
+    bottom: 0;
+    background: linear-gradient(0deg, rgba(0,0,0,0.90), rgba(0,0,0,0));
+}
+
+.slot-payline {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 0;
+    z-index: 4;
+    pointer-events: none;
+}
+
+.slot-payline::before,
+.slot-payline::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--accent-color), white 18%);
+    box-shadow:
+        0 0 22px color-mix(in srgb, var(--accent-color), transparent 30%),
+        0 0 50px color-mix(in srgb, var(--accent-color), transparent 70%);
+    opacity: 0.85;
+}
+
+.slot-payline::before {
+    top: -2px;
+}
+
+.slot-payline::after {
+    top: 8px;
+    opacity: 0.35;
+}
+
+.slot-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.slot-lever {
+    flex: 0 0 auto;
+    width: clamp(62px, 8vw, 74px);
+    height: clamp(150px, 30vh, 250px);
+    min-width: 0;
+    padding: 0 0 14px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 900;
+    font-size: 0.78rem;
+    background:
+        radial-gradient(120% 120% at 50% 0%,
+            rgba(255,255,255,0.08) 0%,
+            rgba(0,0,0,0.35) 45%,
+            rgba(0,0,0,0.65) 100%),
+        linear-gradient(180deg,
+            rgba(0,0,0,0.15),
+            rgba(0,0,0,0.55));
+    color: var(--text-secondary);
+    border: 1px solid rgba(255,255,255,0.14);
+    box-shadow:
+        0 18px 34px rgba(0,0,0,0.45),
+        0 0 26px color-mix(in srgb, var(--accent-color) 18%, transparent),
+        inset 0 0 0 1px rgba(255,255,255,0.06);
+    transition: transform 160ms ease, filter 160ms ease, box-shadow 160ms ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.slot-lever::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 28px;
+    width: 10px;
+    height: 160px;
+    border-radius: 999px;
+    transform: translateX(-50%) rotate(0deg);
+    transform-origin: top;
+    background: linear-gradient(180deg,
+        rgba(255,255,255,0.25),
+        rgba(255,255,255,0.10) 35%,
+        rgba(0,0,0,0.35) 100%);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.35) inset;
+    transition: transform 220ms ease;
+}
+
+.slot-lever::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 18px;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    transform: translateX(-50%) translateY(0);
+    background: radial-gradient(circle at 30% 30%,
+        rgba(255,255,255,0.95),
+        color-mix(in srgb, var(--accent-color), black 12%));
+    box-shadow:
+        0 10px 18px rgba(0,0,0,0.35),
+        0 0 22px color-mix(in srgb, var(--accent-color) 26%, transparent);
+    transition: transform 220ms ease, filter 220ms ease;
+}
+
+.slot-lever:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.06);
+    box-shadow:
+        0 20px 38px rgba(0,0,0,0.5),
+        0 0 34px color-mix(in srgb, var(--accent-color) 24%, transparent),
+        inset 0 0 0 1px rgba(255,255,255,0.08);
+}
+
+.slot-lever:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    transform: none;
+    filter: none;
+}
+
+.slot-machine.is-spinning .slot-lever::before {
+    transform: translateX(-50%) rotate(16deg);
+}
+
+.slot-machine.is-spinning .slot-lever::after {
+    transform: translateX(-50%) translateY(36px);
+    filter: brightness(1.02);
+}
+
+.slot-result {
+    width: min(900px, 100%);
+    padding: clamp(12px, 1.8vw, 16px) clamp(12px, 1.8vw, 18px);
+    border-radius: 18px;
+    text-align: center;
+}
+
+.slot-result.slot-result-clickable {
+    cursor: pointer;
+    transition: border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+}
+
+.slot-result.slot-result-clickable:hover {
+    border-color: color-mix(in srgb, var(--accent-color), white 18%);
+    transform: translateY(-1px);
+    box-shadow:
+        0 14px 28px rgba(0,0,0,0.26),
+        0 0 0 1px color-mix(in srgb, var(--accent-color), transparent 56%) inset;
+}
+
+.slot-result.slot-result-clickable:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--accent-color), white 14%);
+    outline-offset: 3px;
+}
+
+.slot-result-title {
+    color: var(--text-primary);
+    font-size: clamp(1.05rem, 2.2vw, 1.3rem);
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+.slot-result-meta {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.slot-meta-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.28);
+    border: 1px solid rgba(255,255,255,0.10);
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.slot-result-actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.slot-result-actions .action-btn {
+    flex: 0 0 auto;
+    min-width: 160px;
+}
+
+.slot-machine.is-spinning .slot-payline::before {
+    animation: slotPulse 520ms ease-in-out infinite;
+}
+
+.slot-machine.is-spinning .slot-cabinet {
+    box-shadow:
+        0 30px 70px rgba(0,0,0,0.55),
+        0 0 40px color-mix(in srgb, var(--accent-color), transparent 70%),
+        inset 0 0 0 1px rgba(255,255,255,0.06);
+}
+
+.slot-machine.is-stopping .slot-payline::before {
+    animation: slotPulse 320ms ease-in-out infinite;
+}
+
+@keyframes slotPulse {
+    0% { opacity: 0.45; filter: blur(0px); }
+    50% { opacity: 1; filter: blur(0.3px); }
+    100% { opacity: 0.55; filter: blur(0px); }
+}
+
+@media (max-width: 640px) {
+    .slot-cabinet {
+        --slot-item-h: 96px;
+        --slot-gap: 8px;
+        padding: 14px;
+        border-radius: 22px;
+    }
+
+    .slot-stage {
+        gap: 14px;
+    }
+
+    .slot-lever {
+        width: 58px;
+        height: 170px;
+    }
+}
+

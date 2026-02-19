@@ -7,6 +7,27 @@ export function createEmulatorRuntimeActions(deps = {}) {
         ? deps.alertUser
         : ((message) => window.alert(String(message || '')));
 
+    async function openPathInExplorerAction(targetPath, missingMessage = 'Path not found.') {
+        const filePath = String(targetPath || '').trim();
+        if (!filePath) {
+            alertUser(missingMessage);
+            return false;
+        }
+
+        try {
+            const result = await emubro.invoke('show-item-in-folder', filePath);
+            if (!result?.success) {
+                alertUser(result?.message || missingMessage || 'Failed to open folder.');
+                return false;
+            }
+            return true;
+        } catch (error) {
+            log.error('Failed to open path in explorer:', error);
+            alertUser('Failed to open folder.');
+            return false;
+        }
+    }
+
     async function launchEmulatorAction(emulator) {
         if (!emulator?.filePath || !emulator?.isInstalled) {
             alertUser('This emulator is not installed yet.');
@@ -36,15 +57,7 @@ export function createEmulatorRuntimeActions(deps = {}) {
             return;
         }
 
-        try {
-            const result = await emubro.invoke('show-item-in-folder', emulator.filePath);
-            if (!result?.success) {
-                alertUser(result?.message || 'Failed to open folder.');
-            }
-        } catch (error) {
-            log.error('Failed to open emulator in explorer:', error);
-            alertUser('Failed to open folder.');
-        }
+        return openPathInExplorerAction(emulator.filePath, 'This emulator is not installed yet.');
     }
 
     async function openEmulatorWebsiteAction(emulator) {
@@ -90,6 +103,7 @@ export function createEmulatorRuntimeActions(deps = {}) {
     }
 
     return {
+        openPathInExplorerAction,
         launchEmulatorAction,
         openEmulatorInExplorerAction,
         openEmulatorWebsiteAction,

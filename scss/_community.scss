@@ -8,7 +8,8 @@
 
 .games-container.community-view {
     display: block;
-    min-height: 100%;
+    min-height: 0;
+    padding-top: clamp(10px, 1.4vw, 16px);
 }
 
 .community-view-shell {

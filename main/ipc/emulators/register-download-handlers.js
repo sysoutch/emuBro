@@ -6,6 +6,8 @@ function registerEmulatorDownloadHandlers(deps = {}) {
     ipcMain,
     log,
     app,
+    dialog,
+    getMainWindow,
     shell,
     path,
     fsSync,
@@ -36,6 +38,8 @@ function registerEmulatorDownloadHandlers(deps = {}) {
   if (!ipcMain) throw new Error("registerEmulatorDownloadHandlers requires ipcMain");
   if (!log) throw new Error("registerEmulatorDownloadHandlers requires log");
   if (!app) throw new Error("registerEmulatorDownloadHandlers requires app");
+  if (!dialog) throw new Error("registerEmulatorDownloadHandlers requires dialog");
+  if (typeof getMainWindow !== "function") throw new Error("registerEmulatorDownloadHandlers requires getMainWindow");
   if (!shell) throw new Error("registerEmulatorDownloadHandlers requires shell");
   if (!path) throw new Error("registerEmulatorDownloadHandlers requires path");
   if (!fsSync) throw new Error("registerEmulatorDownloadHandlers requires fsSync");
@@ -75,6 +79,8 @@ function registerEmulatorDownloadHandlers(deps = {}) {
     ipcMain,
     log,
     app,
+    dialog,
+    getMainWindow,
     shell,
     path,
     fsSync,

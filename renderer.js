@@ -2089,6 +2089,7 @@ function setupEventListeners() {
     setupDragDrop();
     setupWindowResizeHandler();
     setupWindowControls();
+    setupHeaderThemeControlsToggle();
 }
 
 function setupWindowControls() {
@@ -2139,6 +2140,54 @@ function setupWindowControls() {
             await emubro.invoke('window:toggle-maximize');
             updateMaxIcon();
         });
+    }
+}
+
+function setupHeaderThemeControlsToggle() {
+    const wrapper = document.querySelector('.theme-toggle-wrapper');
+    const toggleBtn = document.getElementById('theme-controls-toggle');
+    const panel = document.getElementById('theme-controls-content');
+    if (!wrapper || !toggleBtn || !panel) return;
+
+    const compactQuery = window.matchMedia('(max-width: 1200px)');
+
+    const setOpenState = (open) => {
+        const shouldOpen = !!open && compactQuery.matches;
+        wrapper.classList.toggle('is-open', shouldOpen);
+        toggleBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+    };
+
+    const closePanel = () => setOpenState(false);
+
+    toggleBtn.addEventListener('click', (event) => {
+        if (!compactQuery.matches) return;
+        event.preventDefault();
+        event.stopPropagation();
+        setOpenState(!wrapper.classList.contains('is-open'));
+    });
+
+    document.addEventListener('click', (event) => {
+        if (!compactQuery.matches || !wrapper.classList.contains('is-open')) return;
+        if (wrapper.contains(event.target)) return;
+        closePanel();
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closePanel();
+    });
+
+    const syncLayout = () => {
+        if (!compactQuery.matches) closePanel();
+    };
+
+    if (typeof compactQuery.addEventListener === 'function') {
+        compactQuery.addEventListener('change', syncLayout);
+    } else if (typeof compactQuery.addListener === 'function') {
+        compactQuery.addListener(syncLayout);
+    }
+
+    if (themeSelect) {
+        themeSelect.addEventListener('change', closePanel);
     }
 }
 

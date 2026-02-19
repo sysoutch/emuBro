@@ -1,0 +1,626 @@
+﻿/* Game Grid (Default Cover View) */
+.game-grid {
+    flex: 1;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    position: relative;
+    isolation: isolate;
+    --theme-top-bg-image: none;
+    --theme-top-bg-size: 100% auto;
+    --theme-top-bg-repeat: no-repeat;
+    --theme-top-bg-position: top center;
+    --theme-top-bg-height: 0px;
+    --theme-top-bg-opacity: 0;
+}
+
+.game-grid::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--theme-top-bg-height);
+    background-image: var(--theme-top-bg-image);
+    background-size: var(--theme-top-bg-size);
+    background-repeat: var(--theme-top-bg-repeat);
+    background-position: var(--theme-top-bg-position);
+    opacity: var(--theme-top-bg-opacity);
+    pointer-events: none;
+    z-index: 0;
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.98) 0%, rgba(0, 0, 0, 0.92) 76%, rgba(0, 0, 0, 0) 100%);
+    -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.98) 0%, rgba(0, 0, 0, 0.92) 76%, rgba(0, 0, 0, 0) 100%);
+}
+
+.game-grid > .game-header,
+.game-grid > .game-scroll-body {
+    position: relative;
+    z-index: 1;
+}
+
+.theme-bg-layer-host {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.theme-bg-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center center;
+    opacity: 1;
+    will-change: transform;
+}
+
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 0;
+    padding: 14px 20px 15px;
+    border-bottom: 1px solid var(--glass-border);
+    position: relative;
+    z-index: 8;
+    background: color-mix(in srgb, var(--glass-surface-strong), transparent 10%);
+    backdrop-filter: blur(12px) saturate(1.08);
+    -webkit-backdrop-filter: blur(12px) saturate(1.08);
+}
+
+.game-scroll-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0 20px 20px;
+}
+
+.game-header h2 {
+    color: var(--accent-color);
+    margin: 0;
+}
+
+.filters {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.suggested-panel {
+    margin: 0 0 16px 0;
+    padding: 14px;
+    border-radius: var(--radius-card);
+    border: 1px solid color-mix(in srgb, var(--border-color), rgba(255,255,255,0.2));
+    background: color-mix(in srgb, var(--bg-secondary), transparent 18%);
+    backdrop-filter: blur(8px) saturate(1.06);
+    -webkit-backdrop-filter: blur(8px) saturate(1.06);
+}
+
+.suggested-panel.is-hidden {
+    display: none;
+}
+
+.suggested-panel-title {
+    margin: 0 0 8px 0;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.suggested-panel-subtitle {
+    margin: 0 0 12px 0;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.suggested-panel-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    align-items: end;
+}
+
+.suggested-panel-form .form-group {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.suggested-panel-form label {
+    font-size: 0.76rem;
+    font-weight: 650;
+    color: var(--text-secondary);
+    letter-spacing: 0.01em;
+}
+
+.suggested-panel-form input,
+.suggested-panel-form select {
+    min-height: 36px;
+}
+
+.suggested-panel-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.suggested-panel-status {
+    margin: 8px 0 0 0;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+}
+
+.suggested-panel-results {
+    margin-top: 12px;
+    display: grid;
+    gap: 10px;
+}
+
+.suggested-result-group {
+    border: 1px solid color-mix(in srgb, var(--border-color), rgba(255,255,255,0.15));
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--bg-primary), transparent 20%);
+    padding: 10px;
+}
+
+.suggested-result-title {
+    margin: 0 0 8px 0;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+}
+
+.suggested-result-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+}
+
+.suggested-result-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid color-mix(in srgb, var(--border-color), transparent 18%);
+    background: color-mix(in srgb, var(--bg-secondary), transparent 22%);
+}
+
+.suggested-result-meta {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.suggested-result-name {
+    color: var(--text-primary);
+    font-weight: 650;
+    font-size: 0.86rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.suggested-result-reason {
+    color: var(--text-secondary);
+    font-size: 0.76rem;
+}
+
+.suggested-result-actions {
+    display: inline-flex;
+    gap: 6px;
+}
+
+.suggested-result-actions .action-btn {
+    flex: 0 0 auto;
+    min-width: 0;
+    padding: 6px 10px;
+    font-size: 0.72rem;
+}
+
+/* Container for Cover View */
+.games-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(calc(250px * var(--view-scale)), 1fr));
+    gap: calc(20px * var(--view-scale));
+    width: 100%;
+    min-height: 0;
+}
+
+.games-container.cover-view {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(calc(250px * var(--view-scale)), 1fr));
+    gap: calc(20px * var(--view-scale));
+}
+
+.games-container.list-view,
+.games-container.table-view {
+    display: block;
+}
+
+.games-load-sentinel {
+    width: 100%;
+    height: 1px;
+    grid-column: 1 / -1;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.games-load-indicator {
+    position: fixed;
+    right: 24px;
+    bottom: 76px;
+    z-index: 1220;
+    min-width: 210px;
+    max-width: 320px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--accent-color), var(--border-color) 58%);
+    background: color-mix(in srgb, var(--bg-secondary), transparent 12%);
+    color: var(--text-primary);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(8px);
+    font-size: 0.82rem;
+    opacity: 0;
+    transform: translateY(8px);
+    pointer-events: none;
+    transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.games-load-indicator.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.games-load-indicator.is-complete {
+    border-color: color-mix(in srgb, var(--success-color), white 10%);
+}
+
+/* Cover View Card */
+.game-card {
+    /* Frosted glass card */
+    background: color-mix(in srgb, var(--bg-secondary), transparent 55%);
+    -webkit-backdrop-filter: blur(14px) saturate(1.18);
+    backdrop-filter: blur(14px) saturate(1.18);
+    border-radius: var(--radius-card);
+    overflow: hidden;
+    position: relative;
+    border: 1px solid color-mix(in srgb, rgba(255,255,255,0.22), var(--border-color));
+    box-shadow:
+        0 22px 46px -32px rgba(0, 0, 0, 0.88),
+        0 0 0 1px rgba(255,255,255,0.05) inset,
+        0 1px 0 rgba(255,255,255,0.12) inset;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease, background 0.22s ease;
+}
+
+.game-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    /* Static "frost" overlay so glass reads even on flat backgrounds. */
+    background:
+        radial-gradient(220px 160px at 18% 14%, rgba(255,255,255,0.18), transparent 64%),
+        radial-gradient(260px 180px at 92% 8%, rgba(255,255,255,0.10), transparent 66%),
+        linear-gradient(180deg, rgba(255,255,255,0.12), transparent 40%, rgba(0,0,0,0.10));
+    opacity: 0.95;
+}
+
+.game-card:hover {
+    transform: translateY(-4px);
+    border-color: color-mix(in srgb, rgba(255,255,255,0.30), var(--accent-color));
+    background: color-mix(in srgb, var(--bg-secondary), transparent 62%);
+    box-shadow:
+        0 30px 62px -38px rgba(0, 0, 0, 0.92),
+        0 0 0 1px rgba(255,255,255,0.06) inset,
+        0 1px 0 rgba(255,255,255,0.14) inset;
+}
+
+.game-card:hover::before {
+    opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .game-card,
+    .game-card:hover {
+        transition: none;
+    }
+
+    .game-cover::after {
+        transition: opacity 180ms ease;
+        transform: none;
+        inset: 0;
+        background: linear-gradient(
+            0deg,
+            rgba(255,255,255,0.10),
+            rgba(255,255,255,0.04)
+        );
+    }
+}
+
+.game-cover {
+    width: calc(100% - (20px * var(--view-scale)));
+    height: calc(200px * var(--view-scale));
+    margin: calc(10px * var(--view-scale)) calc(10px * var(--view-scale)) 0;
+    border-radius: calc(var(--radius-card) - 6px);
+    overflow: hidden;
+    border: none;
+    box-shadow: 0 10px 18px rgba(0, 0, 0, 0.26);
+    position: relative;
+    transform: translateZ(0);
+}
+
+.game-cover .game-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transform: scale(1.01);
+    transition: transform 240ms ease;
+}
+
+img.lazy-game-image {
+    background:
+        radial-gradient(120% 100% at 30% 20%, rgba(255,255,255,0.16), transparent 60%),
+        linear-gradient(108deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.03) 42%, rgba(255,255,255,0.12) 52%, rgba(255,255,255,0.03) 62%, rgba(255,255,255,0.10) 100%);
+    background-size: 100% 100%, 220% 100%;
+    background-position: center, 120% 0;
+    transition: opacity 220ms ease, filter 220ms ease, transform 220ms ease;
+}
+
+img.lazy-game-image.is-pending {
+    opacity: 0.48;
+    filter: blur(9px) saturate(0.85);
+    transform: scale(1.03);
+    animation: lazy-image-shimmer 1.35s linear infinite;
+}
+
+img.lazy-game-image:not(.is-pending),
+img.lazy-game-image[data-lazy-status="loaded"] {
+    opacity: 1;
+    filter: none;
+    animation: none;
+}
+
+@keyframes lazy-image-shimmer {
+    from {
+        background-position: center, 120% 0;
+    }
+    to {
+        background-position: center, -120% 0;
+    }
+}
+
+.game-cover-play-btn {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 58px;
+    height: 58px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--border-color), rgba(255,255,255,0.48));
+    background: color-mix(in srgb, var(--bg-secondary), transparent 36%);
+    -webkit-backdrop-filter: blur(8px) saturate(1.12);
+    backdrop-filter: blur(8px) saturate(1.12);
+    box-shadow:
+        0 8px 18px rgba(0, 0, 0, 0.34),
+        inset 0 1px 0 rgba(255,255,255,0.18);
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transform: translate(-50%, -50%) scale(0.95);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 6;
+    cursor: pointer;
+    transition: opacity 170ms ease, transform 170ms ease, border-color 170ms ease, box-shadow 170ms ease;
+}
+
+.game-cover-play-btn::before {
+    content: none;
+}
+
+.game-cover-play-icon {
+    position: relative;
+    width: 0;
+    height: 0;
+}
+
+.game-cover-play-icon::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 54%;
+    transform: translate(-50%, -50%);
+    width: 0;
+    height: 0;
+    border-top: 8px solid transparent;
+    border-bottom: 8px solid transparent;
+    border-left: 12px solid color-mix(in srgb, var(--text-primary), white 16%);
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.35));
+}
+
+/* Steam-ish glass shine on hover */
+.game-cover::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(900px 240px at 30% -20%, rgba(255,255,255,0.20), transparent 55%),
+        radial-gradient(700px 220px at 120% 120%, rgba(255,255,255,0.10), transparent 60%);
+    -webkit-backdrop-filter: blur(3px) saturate(1.15);
+    backdrop-filter: blur(3px) saturate(1.15);
+    transition: opacity 220ms ease;
+}
+
+.game-cover::after {
+    content: "";
+    position: absolute;
+    inset: -45% -70%;
+    opacity: 0;
+    pointer-events: none;
+    background: linear-gradient(
+        115deg,
+        transparent 42%,
+        rgba(255,255,255,0.28) 50%,
+        rgba(255,255,255,0.10) 56%,
+        transparent 64%
+    );
+    transform: translateX(-30%) rotate(12deg);
+    filter: blur(0.2px);
+    transition: transform 760ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 180ms ease;
+}
+
+.game-card:hover .game-cover::before {
+    opacity: 1;
+}
+
+.game-card:hover .game-cover::after {
+    opacity: 1;
+    transform: translateX(30%) rotate(12deg);
+}
+
+.game-card:hover .game-cover .game-image {
+    transform: scale(1.04);
+}
+
+.game-card:hover .game-cover-play-btn,
+.game-cover-play-btn:focus-visible {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    pointer-events: auto;
+}
+
+.game-cover-play-btn:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--accent-color), white 15%);
+    outline-offset: 2px;
+}
+
+.game-card:hover .game-cover-play-btn {
+    border-color: color-mix(in srgb, var(--accent-color), white 22%);
+    box-shadow:
+        0 10px 22px rgba(0, 0, 0, 0.44),
+        inset 0 1px 0 rgba(255,255,255,0.24);
+}
+
+.game-info {
+    padding: calc(12px * var(--view-scale)) calc(12px * var(--view-scale)) calc(14px * var(--view-scale));
+    flex: 0 0 auto;
+}
+
+.game-title {
+    color: var(--text-primary);
+    margin: 0;
+    font-size: calc(1.1rem * var(--view-scale));
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.game-platform-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 4;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    background: color-mix(in srgb, var(--bg-secondary), transparent 28%);
+    border: 1px solid color-mix(in srgb, rgba(255,255,255,0.35), var(--border-color));
+    border-radius: 999px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+    -webkit-backdrop-filter: blur(8px) saturate(1.15);
+    backdrop-filter: blur(8px) saturate(1.15);
+}
+
+.game-platform-icon {
+    width: 17px;
+    height: 17px;
+    object-fit: contain;
+}
+
+.game-more {
+    margin-top: auto;
+}
+
+.game-row-clickable {
+    cursor: pointer;
+}
+
+.list-item.game-row-clickable:hover {
+    border-color: color-mix(in srgb, var(--accent-color), transparent 32%);
+}
+
+tr.game-row-clickable:hover {
+    background: color-mix(in srgb, var(--accent-color), transparent 88%);
+}
+
+.game-rating {
+    color: var(--warning-color, #f1c40f);
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.game-genre {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+}
+
+.game-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.action-btn {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    border-radius: var(--radius-btn-top-left) var(--radius-btn-top-right) var(--radius-btn-bottom-right) var(--radius-btn-bottom-left);
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.launch-btn {
+    background-color: var(--accent-color);
+    color: white;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-color) 35%, transparent), 0 0 18px color-mix(in srgb, var(--accent-color) 18%, transparent);
+}
+.launch-btn:hover {
+    background-color: var(--accent-hover, #3a7bd5);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-color) 55%, transparent), 0 0 26px color-mix(in srgb, var(--accent-color) 26%, transparent);
+}
+
+.remove-btn {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+.remove-btn:hover {
+    background-color: var(--danger-color, #e74c3c);
+    color: white;
+}
+

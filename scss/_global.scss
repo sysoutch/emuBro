@@ -1,9 +1,41 @@
+@import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Montserrat:wght@400;500;600;700;800&family=Press+Start+2P&family=Quicksand:wght@400;500;600;700&display=swap');
+
 /* Global Styles */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: var(--font-body);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.navigation a,
+.view-btn,
+.game-header h2,
+.theme-manager-header h2,
+.slideshow-heading,
+.slot-marquee-title,
+.section-header h2 {
+    font-family: var(--font-heading);
+}
+
+[data-font-pixel="true"] {
+    letter-spacing: 0.01em;
+}
+
+html[data-font-pixel="true"] {
+    font-size: 14px;
+}
+
+[data-font-pixel="true"] input,
+[data-font-pixel="true"] select,
+[data-font-pixel="true"] textarea {
+    font-family: var(--font-body);
 }
 
 html {

@@ -1,7 +1,7 @@
 /* Tools Section */
 .tool-content {
     padding: clamp(12px, 1.8vw, 20px);
-    min-height: 100%;
+    min-height: 0;
     height: auto;
     display: flex;
     flex-direction: column;
@@ -26,11 +26,11 @@
 .games-container.tools-view {
     display: block;
     width: 100%;
-    min-height: 100%;
+    min-height: 0;
 }
 
 .tools-overview {
-    min-height: 100%;
+    min-height: 0;
     width: 100%;
     display: flex;
     justify-content: center;
@@ -125,7 +125,7 @@
 
 #games-container:has(.tools-overview) {
     display: block;
-    min-height: 100%;
+    min-height: 0;
     position: relative;
 }
 

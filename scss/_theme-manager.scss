@@ -530,6 +530,126 @@ body.panel-docked:not(.docking-accordion) {
     font-size: 0.84rem;
 }
 
+.background-section {
+    display: grid;
+    gap: 12px;
+}
+
+.background-section .form-group {
+    margin: 0;
+}
+
+.background-section .image-name {
+    display: inline-block;
+    margin-top: 6px;
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+}
+
+.bg-layers-section {
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 12px;
+    background: color-mix(in srgb, var(--bg-secondary), transparent 10%);
+    display: grid;
+    gap: 10px;
+}
+
+.bg-layers-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+
+    h5 {
+        margin: 0;
+        color: var(--text-primary);
+        font-size: 0.88rem;
+        letter-spacing: 0.02em;
+    }
+}
+
+.bg-layers-help {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    line-height: 1.35;
+}
+
+.bg-layer-list {
+    display: grid;
+    gap: 10px;
+}
+
+.bg-layer-empty {
+    padding: 10px;
+    border: 1px dashed color-mix(in srgb, var(--border-color), rgba(255, 255, 255, 0.2));
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+}
+
+.bg-layer-card {
+    border: 1px solid color-mix(in srgb, var(--border-color), rgba(255, 255, 255, 0.15));
+    border-radius: 10px;
+    padding: 10px;
+    background: color-mix(in srgb, var(--bg-tertiary), transparent 16%);
+    display: grid;
+    gap: 8px;
+}
+
+.bg-layer-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.bg-layer-title {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 0.82rem;
+    letter-spacing: 0.02em;
+}
+
+.bg-layer-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.bg-layer-actions .action-btn.small {
+    min-width: 34px;
+    padding: 4px 8px;
+}
+
+.bg-layer-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 8px;
+}
+
+.bg-layer-grid .form-group {
+    margin: 0;
+}
+
+.bg-layer-range-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.bg-layer-range-wrap input[type="range"] {
+    flex: 1;
+}
+
+.bg-layer-range-value {
+    min-width: 42px;
+    text-align: right;
+    color: var(--text-secondary);
+    font-size: 0.76rem;
+}
+
 /* Background Preview */
 .bg-preview {
     margin-top: 10px;

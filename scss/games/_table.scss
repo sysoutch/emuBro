@@ -1,0 +1,58 @@
+﻿/* =========================================
+   TABLE VIEW
+   ========================================= */
+.games-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background-color: var(--bg-secondary);
+    border-radius: var(--radius-card);
+    overflow: hidden;
+    grid-column: 1 / -1;
+}
+
+.games-table th {
+    background-color: var(--bg-tertiary);
+    padding: calc(15px * var(--view-scale));
+    text-align: left;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.games-table td {
+    padding: calc(15px * var(--view-scale));
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    vertical-align: middle;
+}
+
+.games-table tr:last-child td {
+    border-bottom: none;
+}
+
+.games-table tr:hover {
+    background-color: var(--bg-tertiary);
+}
+
+.games-table .rating-inline {
+    color: var(--warning-color, #f1c40f);
+}
+
+.table-image-cell {
+    width: calc(60px * var(--view-scale));
+    text-align: center;
+}
+
+.table-game-image {
+    width: calc(40px * var(--view-scale));
+    height: calc(60px * var(--view-scale));
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+}
+
+.table-platform-image {
+    width: calc(24px * var(--view-scale));
+    height: calc(24px * var(--view-scale));
+    object-fit: contain;
+}
+

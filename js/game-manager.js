@@ -52,8 +52,10 @@ function getEmulatorDownloadActions() {
             emubro,
             log,
             escapeHtml,
+            getEmulatorKey,
             normalizeEmulatorDownloadLinks,
             fetchEmulators,
+            localStorageRef: localStorage,
             alertUser: (message) => alert(message)
         });
     }
@@ -92,8 +94,10 @@ function getEmulatorDetailsPopupActions() {
             normalizeEmulatorDownloadLinks,
             hasAnyDownloadLink,
             downloadAndInstallEmulatorAction,
+            getDownloadedPackagePath: getDownloadedEmulatorPackagePath,
             launchEmulatorAction,
             openEmulatorInExplorerAction,
+            openDownloadedPackageInExplorerAction,
             openEmulatorWebsiteAction,
             openEmulatorConfigEditor,
             openEmulatorDownloadLinkAction
@@ -277,6 +281,19 @@ async function openEmulatorInExplorerAction(emulator) {
 
 async function openEmulatorWebsiteAction(emulator) {
     return getEmulatorRuntimeActions().openEmulatorWebsiteAction(emulator);
+}
+
+function getDownloadedEmulatorPackagePath(emulator) {
+    return getEmulatorDownloadActions().getDownloadedPackagePath(emulator);
+}
+
+async function openDownloadedPackageInExplorerAction(emulator) {
+    const packagePath = getDownloadedEmulatorPackagePath(emulator);
+    if (!packagePath) {
+        alert('No downloaded setup file found yet.');
+        return false;
+    }
+    return getEmulatorRuntimeActions().openPathInExplorerAction(packagePath, 'Downloaded setup file was not found.');
 }
 
 async function openEmulatorDownloadLinkAction(emulator, osKey = '') {
@@ -619,7 +636,11 @@ function renderGamesIncremental(gamesToRender, activeView = 'cover') {
         } else {
             const fragment = document.createDocumentFragment();
             chunk.forEach((game) => fragment.appendChild(createGameCard(game)));
-            mountTarget.appendChild(fragment);
+            if (sentinel.parentNode === mountTarget) {
+                mountTarget.insertBefore(fragment, sentinel);
+            } else {
+                mountTarget.appendChild(fragment);
+            }
             initializeLazyGameImages(mountTarget);
         }
 
@@ -659,7 +680,7 @@ function renderGamesIncremental(gamesToRender, activeView = 'cover') {
         return;
     }
 
-    const scrollRoot = document.querySelector('main.game-grid') || null;
+    const scrollRoot = document.querySelector('.game-scroll-body') || document.querySelector('main.game-grid') || null;
     gamesLoadObserver = new IntersectionObserver((entries) => {
         if (renderToken !== gamesRenderToken) {
             clearGamesLoadObserver();
@@ -776,26 +797,18 @@ function renderGamesAsSlideshow(gamesToRender) {
 
     const len = slideshowGames.length;
     let slotOffsets = [-2, -1, 0, 1, 2];
-    if (len <= 1) slotOffsets = [0];
-    else if (len === 2) slotOffsets = [-1, 0, 1];
-    else if (len === 3) slotOffsets = [-1, 0, 1];
-    else if (len === 4) slotOffsets = [-2, -1, 0, 1];
+    if (len <= 1) {
+        slotOffsets = [0];
+    } else if (len === 2) {
+        slotOffsets = [-1, 0];
+    } else if (len === 3) {
+        slotOffsets = [-1, 0, 1];
+    } else if (len === 4) {
+        slotOffsets = [-2, -1, 0, 1];
+    }
 
     const minOffset = Math.min(...slotOffsets);
     const maxOffset = Math.max(...slotOffsets);
-
-    function applyCardOrientation(card, imgEl) {
-        try {
-            const w = imgEl?.naturalWidth || 0;
-            const h = imgEl?.naturalHeight || 0;
-            if (!w || !h) return;
-            const ratio = w / h;
-            const landscape = ratio >= 1.45;
-
-            card.classList.toggle('is-landscape', landscape);
-            card.classList.toggle('is-portrait', !landscape);
-        } catch (_e) {}
-    }
 
     function setCardContent(card, idx) {
         const game = slideshowGames[idx];
@@ -805,12 +818,6 @@ function renderGamesAsSlideshow(gamesToRender) {
         img.alt = game.name;
         card.setAttribute('aria-label', game.name);
         card.dataset.index = String(idx);
-
-        // Set portrait/landscape card shape once the image dimensions are known.
-        img.onload = () => applyCardOrientation(card, img);
-        if (img.complete) {
-            applyCardOrientation(card, img);
-        }
     }
 
     const cards = slotOffsets.map(offset => {
@@ -827,6 +834,31 @@ function renderGamesAsSlideshow(gamesToRender) {
         setCardContent(card, idx);
         return card;
     });
+
+    const AUTO_ADVANCE_MS = 4200;
+    let autoAdvanceTimer = null;
+    let autoAdvancePaused = false;
+
+    function clearAutoAdvance() {
+        if (!autoAdvanceTimer) return;
+        clearTimeout(autoAdvanceTimer);
+        autoAdvanceTimer = null;
+    }
+
+    function scheduleAutoAdvance() {
+        clearAutoAdvance();
+        if (len <= 1 || autoAdvancePaused) return;
+        if (!slideshowContainer.isConnected) return;
+
+        autoAdvanceTimer = setTimeout(() => {
+            autoAdvanceTimer = null;
+            if (!slideshowContainer.isConnected || autoAdvancePaused || isAnimating || pendingSteps !== 0) {
+                scheduleAutoAdvance();
+                return;
+            }
+            queueShift(1, { auto: true });
+        }, AUTO_ADVANCE_MS);
+    }
 
     function shiftOnce(dir, updateHeroNow = true) {
         if (len <= 1) return;
@@ -882,7 +914,11 @@ function renderGamesAsSlideshow(gamesToRender) {
     }
 
     function runQueue() {
-        if (isAnimating || pendingSteps === 0) return;
+        if (isAnimating) return;
+        if (pendingSteps === 0) {
+            scheduleAutoAdvance();
+            return;
+        }
         const dir = pendingSteps > 0 ? 1 : -1;
         pendingSteps -= dir;
         const updateHeroNow = pendingSteps === 0;
@@ -893,6 +929,7 @@ function renderGamesAsSlideshow(gamesToRender) {
         if (!steps) return;
         if (len <= 1) return;
         if (options.rapid) rapidShiftBudget += Math.min(8, Math.abs(steps));
+        if (!options.auto) scheduleAutoAdvance();
         pendingSteps += Math.max(-6, Math.min(6, steps));
         runQueue();
     }
@@ -902,7 +939,7 @@ function renderGamesAsSlideshow(gamesToRender) {
 
     const prevBtn = document.createElement('button');
     prevBtn.className = 'slideshow-btn prev-btn';
-    prevBtn.textContent = 'Previous';
+    prevBtn.textContent = 'Prev';
     prevBtn.addEventListener('click', () => queueShift(-1));
 
     const nextBtn = document.createElement('button');
@@ -934,6 +971,8 @@ function renderGamesAsSlideshow(gamesToRender) {
             armed = true;
             dragging = false;
             dragMoved = false;
+            autoAdvancePaused = true;
+            clearAutoAdvance();
             startX = e.clientX;
             startY = e.clientY;
             lastMoveX = e.clientX;
@@ -994,6 +1033,8 @@ function renderGamesAsSlideshow(gamesToRender) {
             const flick = Math.max(-3, Math.min(3, Math.round((-velocity) * 2.2)));
             if (flick) queueShift(flick, { rapid: true });
             velocity = 0;
+            autoAdvancePaused = false;
+            scheduleAutoAdvance();
         };
 
         carouselWrapper.style.touchAction = 'none';
@@ -1006,6 +1047,7 @@ function renderGamesAsSlideshow(gamesToRender) {
 
     carouselInner.addEventListener('click', (e) => {
         if (performance.now() < suppressClickUntil) return;
+        scheduleAutoAdvance();
         const card = e.target.closest('.slideshow-card');
         if (!card) return;
         const offset = parseInt(card.dataset.offset || '0', 10);
@@ -1028,7 +1070,18 @@ function renderGamesAsSlideshow(gamesToRender) {
         }
     });
 
+    slideshowContainer.addEventListener('mouseenter', () => {
+        autoAdvancePaused = true;
+        clearAutoAdvance();
+    });
+
+    slideshowContainer.addEventListener('mouseleave', () => {
+        autoAdvancePaused = false;
+        scheduleAutoAdvance();
+    });
+
     updateHero(currentIndex);
+    scheduleAutoAdvance();
 
     backdrops.forEach(el => slideshowContainer.appendChild(el));
     cards.forEach(c => carouselInner.appendChild(c));
@@ -1039,8 +1092,7 @@ function renderGamesAsSlideshow(gamesToRender) {
     footer.className = 'slideshow-footer';
 
     chrome.appendChild(carouselWrapper);
-    chrome.appendChild(titleRow);
-
+    footer.appendChild(titleRow);
     footer.appendChild(blurb);
 
     controlsContainer.appendChild(prevBtn);
@@ -1373,4 +1425,3 @@ function showEmulatorDetails(emulator, options = {}) {
 export function showGameDetails(game) {
     getGameDetailsPopupActions().showGameDetails(game);
 }
-

@@ -4,9 +4,48 @@ export function createEmulatorDownloadActions(deps = {}) {
     const escapeHtml = deps.escapeHtml || ((v) => String(v ?? ''));
     const normalizeEmulatorDownloadLinks = deps.normalizeEmulatorDownloadLinks || ((raw) => raw || {});
     const fetchEmulators = deps.fetchEmulators || (async () => {});
+    const getEmulatorKey = deps.getEmulatorKey || ((emulator) => String(emulator?.id || emulator?.name || ''));
+    const localStorageRef = deps.localStorageRef || window.localStorage;
     const alertUser = typeof deps.alertUser === 'function'
         ? deps.alertUser
         : ((msg) => window.alert(String(msg || '')));
+    const DOWNLOADED_EMULATOR_PACKAGES_STORAGE_KEY = 'emuBro.downloadedEmulatorPackages.v1';
+
+    function loadDownloadedPackageMap() {
+        try {
+            const raw = localStorageRef.getItem(DOWNLOADED_EMULATOR_PACKAGES_STORAGE_KEY);
+            if (!raw) return {};
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object') return parsed;
+        } catch (_e) {}
+        return {};
+    }
+
+    function saveDownloadedPackageMap(map) {
+        try {
+            localStorageRef.setItem(DOWNLOADED_EMULATOR_PACKAGES_STORAGE_KEY, JSON.stringify(map || {}));
+        } catch (_e) {}
+    }
+
+    function getDownloadedPackagePath(emulator) {
+        const key = String(getEmulatorKey(emulator) || '').trim().toLowerCase();
+        if (!key) return '';
+        const value = loadDownloadedPackageMap()[key];
+        return String(value || '').trim();
+    }
+
+    function setDownloadedPackagePath(emulator, packagePath) {
+        const key = String(getEmulatorKey(emulator) || '').trim().toLowerCase();
+        if (!key) return;
+        const map = loadDownloadedPackageMap();
+        const normalizedPath = String(packagePath || '').trim();
+        if (normalizedPath) {
+            map[key] = normalizedPath;
+        } else {
+            delete map[key];
+        }
+        saveDownloadedPackageMap(map);
+    }
 
     function normalizeDownloadPackageType(packageType) {
         const value = String(packageType || '').trim().toLowerCase();
@@ -38,9 +77,10 @@ export function createEmulatorDownloadActions(deps = {}) {
             .filter(Boolean);
         const waybackUrl = String(optionsPayload?.waybackUrl || '').trim();
         const hasWayback = !!waybackUrl;
+        const showWaybackFallback = hasWayback && options.length === 0;
 
-        if (options.length === 0 && !hasWayback) return Promise.resolve('');
-        if (options.length === 1 && !hasWayback) return Promise.resolve(options[0].packageType);
+        if (options.length === 0 && !showWaybackFallback) return Promise.resolve('');
+        if (options.length === 1 && !showWaybackFallback) return Promise.resolve(options[0].packageType);
 
         return new Promise((resolve) => {
             const recommendedType = normalizeDownloadPackageType(optionsPayload?.recommendedType || '');
@@ -73,7 +113,7 @@ export function createEmulatorDownloadActions(deps = {}) {
                 list.appendChild(button);
             });
 
-            if (hasWayback) {
+            if (showWaybackFallback) {
                 const waybackButton = document.createElement('button');
                 waybackButton.type = 'button';
                 waybackButton.className = 'action-btn emulator-download-choice-btn';
@@ -151,7 +191,7 @@ export function createEmulatorDownloadActions(deps = {}) {
                     waybackUrl = String(optionsResult?.waybackUrl || '').trim();
 
                     const optionCount = Array.isArray(optionsResult?.options) ? optionsResult.options.length : 0;
-                    const hadUserChoice = optionCount > 1 || !!waybackUrl;
+                    const hadUserChoice = optionCount > 1 || (optionCount === 0 && !!waybackUrl);
                     if (!selection && hadUserChoice) {
                         return false;
                     }
@@ -177,6 +217,10 @@ export function createEmulatorDownloadActions(deps = {}) {
                 return false;
             }
 
+            if (result?.packagePath) {
+                setDownloadedPackagePath(emulator, result.packagePath);
+            }
+
             await fetchEmulators();
             alertUser(result?.message || 'Emulator download finished.');
             return true;
@@ -190,8 +234,9 @@ export function createEmulatorDownloadActions(deps = {}) {
     return {
         normalizeDownloadPackageType,
         getDownloadPackageTypeLabel,
+        getDownloadedPackagePath,
+        setDownloadedPackagePath,
         promptEmulatorDownloadType,
         downloadAndInstallEmulatorAction
     };
 }
-

@@ -33,6 +33,7 @@ const ps1Handler = require("./ps1-handler");
 const store = new Store();
 const LIBRARY_PATH_SETTINGS_KEY = "library:path-settings:v1";
 const SPLASH_THEME_SETTINGS_KEY = "ui:splash-theme:v1";
+const FIRST_RUN_LEGAL_NOTICE_KEY = "legal:first-run-notice-shown:v1";
 
 let mainWindow;
 const screen = require("electron").screen;
@@ -41,9 +42,33 @@ let appBootstrapStarted = false;
 let mainWindowRendererReady = false;
 let requestRevealMainWindow = null;
 let gameIpcActions = null;
+let hasAttemptedFirstRunLegalNotice = false;
 const { createSplashWindow, closeSplashWindow } = createSplashWindowManager({
   getSplashTheme: () => store.get(SPLASH_THEME_SETTINGS_KEY, null)
 });
+
+async function showFirstRunLegalNoticeOnce() {
+  if (hasAttemptedFirstRunLegalNotice) return;
+  hasAttemptedFirstRunLegalNotice = true;
+
+  try {
+    if (store.get(FIRST_RUN_LEGAL_NOTICE_KEY, false)) return;
+    const ownerWindow = (mainWindow && !mainWindow.isDestroyed()) ? mainWindow : null;
+    await dialog.showMessageBox(ownerWindow, {
+      type: "warning",
+      title: "emuBro - Anti-Piracy Notice",
+      message: "emuBro is intended for legal use only.",
+      detail: "Do not download, share, or use pirated games, BIOS files, firmware, or emulator packages.\n\nEmulator usage is at your own risk. You are responsible for legal compliance, file safety, and any effects caused by third-party software.",
+      buttons: ["I Understand"],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true
+    });
+    store.set(FIRST_RUN_LEGAL_NOTICE_KEY, true);
+  } catch (error) {
+    log.error("Failed to show first-run legal notice:", error);
+  }
+}
 
 const {
   normalizeFolderPathList,
@@ -133,7 +158,10 @@ const appBootstrapManager = createAppBootstrapManager({
   getMainWindowRendererReady: () => mainWindowRendererReady,
   setMainWindowRendererReady: (value) => { mainWindowRendererReady = !!value; },
   getRequestRevealMainWindow: () => requestRevealMainWindow,
-  setRequestRevealMainWindow: (value) => { requestRevealMainWindow = value; }
+  setRequestRevealMainWindow: (value) => { requestRevealMainWindow = value; },
+  onMainWindowRevealed: () => {
+    showFirstRunLegalNoticeOnce();
+  }
 });
 
 appBootstrapManager.initLifecycle();
@@ -275,6 +303,8 @@ registerEmulatorIpc({
   ipcMain,
   log,
   app,
+  dialog,
+  getMainWindow: () => mainWindow,
   shell,
   fetchImpl: fetch,
   processPlatform: process.platform,

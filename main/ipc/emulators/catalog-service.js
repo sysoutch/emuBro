@@ -43,6 +43,7 @@ function createEmulatorCatalogService(deps = {}) {
           platformShortName,
           type: normalizeEmulatorType(emu?.type) || "standalone",
           filePath: "",
+          filePaths: [],
           isInstalled: false,
           website,
           downloadUrl,
@@ -73,6 +74,7 @@ function createEmulatorCatalogService(deps = {}) {
     }
 
     const filePath = String(installed?.filePath || "").trim();
+    const fileName = filePath ? path.basename(filePath) : "";
     const exeBase = filePath
       ? path.basename(filePath, path.extname(filePath))
       : String(installed?.name || "").trim();
@@ -80,19 +82,37 @@ function createEmulatorCatalogService(deps = {}) {
     const installedNameNorm = normalizeEmulatorName(installed?.name);
     const exeNorm = normalizeEmulatorName(exeBase);
     const configuredNameNorm = normalizeEmulatorName(configured?.name);
+    const containsEither = (a, b) => !!(a && b && (a.includes(b) || b.includes(a)));
 
     if (installedNameNorm && installedNameNorm === configuredNameNorm) return true;
     if (exeNorm && exeNorm === configuredNameNorm) return true;
+    if (containsEither(installedNameNorm, configuredNameNorm)) return true;
+    if (containsEither(exeNorm, configuredNameNorm)) return true;
 
     const searchString = String(configured?.searchString || "").trim();
-    if (!searchString) return false;
+    const searchCandidates = [
+      fileName,
+      `${exeBase}.exe`,
+      exeBase,
+      String(installed?.name || "").trim(),
+      filePath
+    ].filter(Boolean);
 
-    try {
-      const re = new RegExp(searchString, "i");
-      return re.test(`${exeBase}.exe`) || re.test(exeBase);
-    } catch (_e) {
-      return false;
+    const regexSources = [
+      searchString,
+      String(configured?.executableFileMatchWin || "").trim(),
+      String(configured?.executableFileMatchLinux || "").trim(),
+      String(configured?.executableFileMatchMac || "").trim()
+    ].filter(Boolean);
+
+    for (const source of regexSources) {
+      try {
+        const re = new RegExp(source, "i");
+        if (searchCandidates.some((candidate) => re.test(candidate))) return true;
+      } catch (_e) {}
     }
+
+    return false;
   }
 
   function mapInstalledRows(installedRows) {
@@ -103,6 +123,8 @@ function createEmulatorCatalogService(deps = {}) {
       const website = ensureHttpUrl(emu?.website || downloadUrl);
       return {
         ...emu,
+        filePath,
+        filePaths: filePath ? [filePath] : [],
         isInstalled: installed,
         type: normalizeEmulatorType(emu?.type) || "",
         website,

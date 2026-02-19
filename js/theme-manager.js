@@ -23,12 +23,242 @@ let editingThemeId = null;
 let hasUnsavedChanges = false;
 let shouldUseAccentColorForBrand = true;
 let fixedBackgroundTracking = null;
+let backgroundLayerDrafts = [];
 const THEME_EDITOR_MODE_STORAGE_KEY = 'themeEditorCustomizationMode';
+const FONT_STACK_QUICKSAND = "'Quicksand', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+const FONT_STACK_MONTSERRAT = "'Montserrat', 'Quicksand', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+const FONT_STACK_LUCKIEST = "'Luckiest Guy', 'Montserrat', 'Quicksand', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+const FONT_STACK_GAMEBOY = "'Press Start 2P', 'VT323', 'Courier New', monospace";
+const DEFAULT_THEME_FONTS = {
+    body: FONT_STACK_QUICKSAND,
+    heading: FONT_STACK_QUICKSAND,
+    pixelMode: false
+};
+const ARCADE_THEME_FONTS = {
+    body: FONT_STACK_MONTSERRAT,
+    heading: FONT_STACK_LUCKIEST,
+    pixelMode: false
+};
+const GAMEBOY_THEME_FONTS = {
+    body: FONT_STACK_GAMEBOY,
+    heading: FONT_STACK_GAMEBOY,
+    pixelMode: true
+};
+
+const BACKGROUND_LAYER_POSITIONS = [
+    { value: 'center center', label: 'Center' },
+    { value: 'top center', label: 'Top' },
+    { value: 'top right', label: 'Top Right' },
+    { value: 'center right', label: 'Right' },
+    { value: 'bottom right', label: 'Bottom Right' },
+    { value: 'bottom center', label: 'Bottom' },
+    { value: 'bottom left', label: 'Bottom Left' },
+    { value: 'center left', label: 'Left' },
+    { value: 'top left', label: 'Top Left' }
+];
+
+const BACKGROUND_LAYER_SIZE_OPTIONS = [
+    { value: 'cover', label: 'Cover' },
+    { value: 'contain', label: 'Contain' },
+    { value: 'auto', label: 'Original' },
+    { value: '100% 100%', label: 'Stretch' },
+    { value: '100% auto', label: 'Top Banner' }
+];
+
+const BACKGROUND_LAYER_REPEAT_OPTIONS = [
+    { value: 'no-repeat', label: 'No Repeat' },
+    { value: 'repeat', label: 'Repeat' },
+    { value: 'repeat-x', label: 'Repeat X' },
+    { value: 'repeat-y', label: 'Repeat Y' }
+];
+
+const BACKGROUND_LAYER_BEHAVIOR_OPTIONS = [
+    { value: 'scroll', label: 'Scroll With View' },
+    { value: 'fixed', label: 'Fixed In Window' }
+];
+
+const BACKGROUND_LAYER_BLEND_OPTIONS = [
+    { value: 'normal', label: 'Normal' },
+    { value: 'screen', label: 'Screen' },
+    { value: 'overlay', label: 'Overlay' },
+    { value: 'multiply', label: 'Multiply' },
+    { value: 'soft-light', label: 'Soft Light' },
+    { value: 'lighten', label: 'Lighten' }
+];
+
+const BUILT_IN_PRESET_THEMES = [
+    {
+        id: 'spyro',
+        name: 'Spyro',
+        colors: {
+            bgPrimary: '#130d26',
+            bgSecondary: '#1d1336',
+            bgTertiary: '#281a46',
+            bgQuaternary: '#1a1132',
+            textPrimary: '#f4e9ff',
+            textSecondary: '#c6b1e6',
+            accentColor: '#b56dff',
+            borderColor: '#5a3a8f',
+            bgHeader: '#1f1439',
+            bgSidebar: '#281a46',
+            bgActionbar: '#1a1132',
+            appGradientA: '#1a1134',
+            appGradientB: '#2a1b52',
+            appGradientC: '#4f2d79',
+            appGradientAngle: '155deg',
+            successColor: '#5fca81',
+            dangerColor: '#ff6d7d'
+        },
+        background: { image: null, position: 'centered', scale: 'crop', repeat: 'no-repeat', topImage: null },
+        cardEffects: { glassEffect: true },
+        fonts: ARCADE_THEME_FONTS
+    },
+    {
+        id: 'red_bloody',
+        name: 'Red Bloody',
+        colors: {
+            bgPrimary: '#150709',
+            bgSecondary: '#220d12',
+            bgTertiary: '#2d1217',
+            bgQuaternary: '#1c0a0e',
+            textPrimary: '#ffe8ea',
+            textSecondary: '#dba6ac',
+            accentColor: '#d62d3a',
+            borderColor: '#6b2730',
+            bgHeader: '#220d12',
+            bgSidebar: '#2d1217',
+            bgActionbar: '#1c0a0e',
+            appGradientA: '#1a090d',
+            appGradientB: '#3a0f17',
+            appGradientC: '#5a111c',
+            appGradientAngle: '160deg',
+            successColor: '#6eca88',
+            dangerColor: '#ff4f5f'
+        },
+        background: { image: null, position: 'centered', scale: 'crop', repeat: 'no-repeat', topImage: null },
+        cardEffects: { glassEffect: true },
+        fonts: DEFAULT_THEME_FONTS
+    },
+    {
+        id: 'crash_bandicoot',
+        name: 'Crash Bandicoot',
+        colors: {
+            bgPrimary: '#16110a',
+            bgSecondary: '#24190e',
+            bgTertiary: '#342211',
+            bgQuaternary: '#1c140b',
+            textPrimary: '#fff2df',
+            textSecondary: '#e5c392',
+            accentColor: '#ff8d2e',
+            borderColor: '#7b4c1f',
+            bgHeader: '#2a1c0f',
+            bgSidebar: '#342211',
+            bgActionbar: '#1c140b',
+            appGradientA: '#1f140a',
+            appGradientB: '#3a230f',
+            appGradientC: '#6a3712',
+            appGradientAngle: '150deg',
+            successColor: '#73d191',
+            dangerColor: '#ff6e54'
+        },
+        background: { image: null, position: 'centered', scale: 'crop', repeat: 'no-repeat', topImage: null },
+        cardEffects: { glassEffect: true },
+        fonts: ARCADE_THEME_FONTS
+    },
+    {
+        id: 'mario',
+        name: 'Mario',
+        colors: {
+            bgPrimary: '#140b10',
+            bgSecondary: '#21111a',
+            bgTertiary: '#2d1822',
+            bgQuaternary: '#1b0f16',
+            textPrimary: '#fff5ef',
+            textSecondary: '#e6c4bc',
+            accentColor: '#ff4040',
+            borderColor: '#7f3441',
+            bgHeader: '#22121b',
+            bgSidebar: '#2d1822',
+            bgActionbar: '#1b0f16',
+            appGradientA: '#1a0d14',
+            appGradientB: '#3a1d2b',
+            appGradientC: '#174ea8',
+            appGradientAngle: '150deg',
+            successColor: '#73d98f',
+            dangerColor: '#ff4e4e'
+        },
+        background: { image: null, position: 'centered', scale: 'crop', repeat: 'no-repeat', topImage: null },
+        cardEffects: { glassEffect: true },
+        fonts: ARCADE_THEME_FONTS
+    },
+    {
+        id: 'gameboy',
+        name: 'Gameboy',
+        colors: {
+            bgPrimary: '#0f1711',
+            bgSecondary: '#162218',
+            bgTertiary: '#1f2d1f',
+            bgQuaternary: '#131e14',
+            textPrimary: '#d8f2b8',
+            textSecondary: '#9ebd7f',
+            accentColor: '#7ec850',
+            borderColor: '#486538',
+            bgHeader: '#19261b',
+            bgSidebar: '#1f2d1f',
+            bgActionbar: '#131e14',
+            appGradientA: '#10190f',
+            appGradientB: '#1d2c1a',
+            appGradientC: '#32472c',
+            appGradientAngle: '158deg',
+            successColor: '#8fe267',
+            dangerColor: '#cf6f76'
+        },
+        background: { image: null, position: 'centered', scale: 'crop', repeat: 'no-repeat', topImage: null },
+        cardEffects: { glassEffect: true },
+        fonts: GAMEBOY_THEME_FONTS
+    }
+];
 
 // Draggable state
 let isDragging = false;
 let startX, startY;
 let modalInitialX, modalInitialY;
+
+function cloneThemeDefinition(theme) {
+    if (!theme) return null;
+    try {
+        return JSON.parse(JSON.stringify(theme));
+    } catch (_e) {
+        return null;
+    }
+}
+
+function getBuiltInPresetTheme(themeId) {
+    const normalizedId = String(themeId || '').trim().toLowerCase();
+    const found = BUILT_IN_PRESET_THEMES.find((theme) => theme.id === normalizedId);
+    return cloneThemeDefinition(found);
+}
+
+function getBuiltInPresetThemes() {
+    return BUILT_IN_PRESET_THEMES.map((theme) => cloneThemeDefinition(theme)).filter(Boolean);
+}
+
+function resolveThemeFonts(fonts = null) {
+    const resolved = {
+        body: typeof fonts?.body === 'string' && fonts.body.trim().length > 0 ? fonts.body : DEFAULT_THEME_FONTS.body,
+        heading: typeof fonts?.heading === 'string' && fonts.heading.trim().length > 0 ? fonts.heading : DEFAULT_THEME_FONTS.heading,
+        pixelMode: Boolean(fonts?.pixelMode)
+    };
+    return resolved;
+}
+
+function applyThemeFonts(fonts = null) {
+    const root = document.documentElement;
+    const resolved = resolveThemeFonts(fonts);
+    root.style.setProperty('--font-body', resolved.body);
+    root.style.setProperty('--font-heading', resolved.heading);
+    root.setAttribute('data-font-pixel', resolved.pixelMode ? 'true' : 'false');
+}
 
 function normalizeThemeCustomizationMode(mode) {
     const value = String(mode || '').trim().toLowerCase();
@@ -106,6 +336,169 @@ function updateBasicIntensityValueLabel(intensityValue) {
 
 function clampNumber(value, min, max) {
     return Math.max(min, Math.min(max, value));
+}
+
+function escapeHtml(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function makeLayerId() {
+    return `bg_layer_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function normalizeBackgroundLayerPosition(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    if (!raw || raw === 'centered' || raw === 'center') return 'center center';
+    if (raw === 'fixed') return 'center center';
+    if (raw === 'top') return 'top center';
+    if (raw === 'bottom') return 'bottom center';
+    if (raw === 'left') return 'center left';
+    if (raw === 'right') return 'center right';
+    if (raw === 'top-left') return 'top left';
+    if (raw === 'top-right') return 'top right';
+    if (raw === 'bottom-left') return 'bottom left';
+    if (raw === 'bottom-right') return 'bottom right';
+    const known = new Set(BACKGROUND_LAYER_POSITIONS.map((item) => item.value));
+    if (known.has(raw)) return raw;
+    return 'center center';
+}
+
+function normalizeBackgroundLayerSize(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    if (!raw) return 'cover';
+    if (raw === 'crop') return 'cover';
+    if (raw === 'zoom') return 'contain';
+    if (raw === 'stretch') return '100% 100%';
+    if (raw === 'original') return 'auto';
+    const known = new Set(BACKGROUND_LAYER_SIZE_OPTIONS.map((item) => item.value.toLowerCase()));
+    if (known.has(raw)) {
+        if (raw === '100% 100%') return '100% 100%';
+        if (raw === '100% auto') return '100% auto';
+        return raw;
+    }
+    return 'cover';
+}
+
+function normalizeBackgroundLayerRepeat(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    if (BACKGROUND_LAYER_REPEAT_OPTIONS.some((item) => item.value === raw)) return raw;
+    return 'no-repeat';
+}
+
+function normalizeBackgroundLayerBehavior(value) {
+    return String(value || '').trim().toLowerCase() === 'fixed' ? 'fixed' : 'scroll';
+}
+
+function normalizeBackgroundLayerBlendMode(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    if (BACKGROUND_LAYER_BLEND_OPTIONS.some((item) => item.value === raw)) return raw;
+    return 'normal';
+}
+
+function normalizeBackgroundLayerOpacity(value) {
+    const parsed = Number.parseFloat(value);
+    if (!Number.isFinite(parsed)) return 1;
+    return clampNumber(parsed, 0, 1);
+}
+
+function mapLegacyScaleToLayerSize(scale) {
+    const value = String(scale || '').trim().toLowerCase();
+    if (value === 'original') return 'auto';
+    if (value === 'stretch') return '100% 100%';
+    if (value === 'zoom') return 'contain';
+    if (value === 'crop') return 'cover';
+    return normalizeBackgroundLayerSize(value || 'cover');
+}
+
+function createBackgroundLayerDraft(overrides = {}) {
+    const explicitBehavior = overrides.behavior || overrides.attachment;
+    const fallbackBehavior = String(overrides.position || '').trim().toLowerCase() === 'fixed' ? 'fixed' : 'scroll';
+    return {
+        id: String(overrides.id || makeLayerId()),
+        name: String(overrides.name || '').trim(),
+        image: typeof overrides.image === 'string' && overrides.image.trim().length > 0 ? overrides.image : null,
+        imageName: String(overrides.imageName || overrides.fileName || '').trim(),
+        position: normalizeBackgroundLayerPosition(overrides.position || 'center center'),
+        size: normalizeBackgroundLayerSize(overrides.size || overrides.scale || 'cover'),
+        repeat: normalizeBackgroundLayerRepeat(overrides.repeat || 'no-repeat'),
+        behavior: normalizeBackgroundLayerBehavior(explicitBehavior || fallbackBehavior),
+        opacity: normalizeBackgroundLayerOpacity(overrides.opacity ?? 1),
+        blendMode: normalizeBackgroundLayerBlendMode(overrides.blendMode || 'normal')
+    };
+}
+
+function cloneBackgroundLayerDrafts(layers = []) {
+    return (Array.isArray(layers) ? layers : [])
+        .map((layer) => createBackgroundLayerDraft(layer))
+        .filter((layer) => layer && layer.image);
+}
+
+function extractBackgroundLayers(bgConfig = {}) {
+    const config = bgConfig || {};
+    if (Array.isArray(config.layers) && config.layers.length > 0) {
+        return cloneBackgroundLayerDrafts(config.layers);
+    }
+
+    const layers = [];
+    if (config.image) {
+        layers.push(createBackgroundLayerDraft({
+            id: 'legacy_base',
+            image: config.image,
+            imageName: config.imageName || '',
+            position: config.position || 'centered',
+            size: mapLegacyScaleToLayerSize(config.scale || 'crop'),
+            repeat: config.repeat || 'no-repeat',
+            behavior: config.position === 'fixed' ? 'fixed' : 'scroll',
+            opacity: 1,
+            blendMode: 'normal'
+        }));
+    }
+
+    const topImage = config.topImage || config.top?.image || null;
+    if (topImage) {
+        layers.push(createBackgroundLayerDraft({
+            id: 'legacy_top',
+            image: topImage,
+            imageName: config.topImageName || '',
+            position: config.topPosition || config.top?.position || 'top center',
+            size: config.topScale || config.top?.scale || '100% auto',
+            repeat: config.topRepeat || config.top?.repeat || 'no-repeat',
+            behavior: config.topBehavior || config.top?.behavior || 'scroll',
+            opacity: config.topOpacity ?? config.top?.opacity ?? 1,
+            blendMode: config.topBlendMode || config.top?.blendMode || 'normal'
+        }));
+    }
+
+    return layers;
+}
+
+function hasThemeBackgroundLayers(bgConfig = {}) {
+    return extractBackgroundLayers(bgConfig).some((layer) => layer.image);
+}
+
+function setBackgroundLayerDrafts(layers = []) {
+    backgroundLayerDrafts = cloneBackgroundLayerDrafts(layers);
+}
+
+function extractAdditionalLayerDrafts(bgConfig = {}, baseImage = null, topImage = null) {
+    const allLayers = extractBackgroundLayers(bgConfig);
+    if (allLayers.length === 0) return [];
+
+    const extras = [...allLayers];
+    const removeFirstByImage = (imageValue) => {
+        if (!imageValue) return;
+        const idx = extras.findIndex((layer) => layer.image === imageValue);
+        if (idx >= 0) extras.splice(idx, 1);
+    };
+
+    removeFirstByImage(baseImage || null);
+    removeFirstByImage(topImage || null);
+    return extras;
 }
 
 function shiftColorHsl(hexColor, options = {}) {
@@ -884,45 +1277,107 @@ export function enableFixedBackgroundTracking(gameGrid) {
     fixedBackgroundTracking = { gameGrid: gameGrid };
 }
 
+function clearTopBackgroundLayer(gameGrid = null) {
+    const grid = gameGrid || document.querySelector('main.game-grid');
+    if (!grid) return;
+    grid.style.setProperty('--theme-top-bg-image', 'none');
+    grid.style.setProperty('--theme-top-bg-size', '100% auto');
+    grid.style.setProperty('--theme-top-bg-repeat', 'no-repeat');
+    grid.style.setProperty('--theme-top-bg-position', 'top center');
+    grid.style.setProperty('--theme-top-bg-height', '0px');
+    grid.style.setProperty('--theme-top-bg-opacity', '0');
+}
+
+function applyTopBackgroundLayer(gameGrid, bgConfig = {}) {
+    if (!gameGrid) return;
+    const topImage = bgConfig.topImage || bgConfig.top?.image || null;
+    if (!topImage) {
+        clearTopBackgroundLayer(gameGrid);
+        return;
+    }
+
+    const safeTopImage = String(topImage).replace(/'/g, "\\'");
+    const topHeight = clampNumber(Number.parseInt(bgConfig.topHeight ?? bgConfig.top?.height ?? 220, 10), 60, 640);
+    const topOpacity = clampNumber(Number.parseFloat(bgConfig.topOpacity ?? bgConfig.top?.opacity ?? 1), 0, 1);
+    const topSize = String(bgConfig.topScale ?? bgConfig.top?.scale ?? '100% auto').trim() || '100% auto';
+    const topRepeat = String(bgConfig.topRepeat ?? bgConfig.top?.repeat ?? 'no-repeat').trim() || 'no-repeat';
+    const topPosition = String(bgConfig.topPosition ?? bgConfig.top?.position ?? 'top center').trim() || 'top center';
+
+    gameGrid.style.setProperty('--theme-top-bg-image', `url('${safeTopImage}')`);
+    gameGrid.style.setProperty('--theme-top-bg-size', topSize);
+    gameGrid.style.setProperty('--theme-top-bg-repeat', topRepeat);
+    gameGrid.style.setProperty('--theme-top-bg-position', topPosition);
+    gameGrid.style.setProperty('--theme-top-bg-height', `${topHeight}px`);
+    gameGrid.style.setProperty('--theme-top-bg-opacity', String(topOpacity));
+}
+
+function clearGameGridBackgroundLayers(gameGrid = null) {
+    const grid = gameGrid || document.querySelector('main.game-grid');
+    if (!grid) return;
+    grid.style.backgroundImage = 'none';
+    grid.style.backgroundRepeat = 'no-repeat';
+    grid.style.backgroundSize = 'cover';
+    grid.style.backgroundPosition = 'center';
+    grid.style.backgroundAttachment = 'scroll';
+    clearTopBackgroundLayer(grid);
+    const host = grid.querySelector('.theme-bg-layer-host');
+    if (host) host.innerHTML = '';
+}
+
+function ensureThemeBackgroundLayerHost(gameGrid) {
+    if (!gameGrid) return null;
+    let host = gameGrid.querySelector('.theme-bg-layer-host');
+    if (!host) {
+        host = document.createElement('div');
+        host.className = 'theme-bg-layer-host';
+        gameGrid.insertBefore(host, gameGrid.firstChild);
+    }
+    return host;
+}
+
+function resolveLayerSizeCss(sizeValue) {
+    const size = normalizeBackgroundLayerSize(sizeValue);
+    return size;
+}
+
 export function applyBackgroundImage(bgConfig) {
     const gameGrid = document.querySelector('main.game-grid');
     if (!gameGrid) return;
     
-    const image = bgConfig.image;
-    const position = bgConfig.position || 'centered';
-    const repeat = bgConfig.repeat || 'no-repeat';
-    const scale = bgConfig.scale || 'crop';
-    
-    gameGrid.style.backgroundImage = `url('${image}')`;
+    const config = bgConfig || {};
+    const layers = extractBackgroundLayers(config);
+
+    disableFixedBackgroundTracking();
+    gameGrid.style.backgroundImage = 'none';
     gameGrid.style.backgroundRepeat = 'no-repeat';
     gameGrid.style.backgroundAttachment = 'scroll';
-    
-    if (position === 'fixed') {
-        enableFixedBackgroundTracking(gameGrid);
-    } else {
-        disableFixedBackgroundTracking();
-    }
-    
-    gameGrid.style.backgroundRepeat = repeat;
-    
-    switch (scale) {
-        case 'original':
-            gameGrid.style.backgroundSize = 'auto';
-            break;
-        case 'stretch':
-            gameGrid.style.backgroundSize = '100% 100%';
-            break;
-        case 'crop':
-            gameGrid.style.backgroundSize = 'cover';
-            break;
-        case 'zoom':
-            gameGrid.style.backgroundSize = 'contain';
-            break;
-        default:
-            gameGrid.style.backgroundSize = scale;
-    }
-    
+    gameGrid.style.backgroundSize = 'cover';
     gameGrid.style.backgroundPosition = 'center';
+    clearTopBackgroundLayer(gameGrid);
+
+    const host = ensureThemeBackgroundLayerHost(gameGrid);
+    if (!host) return;
+    host.innerHTML = '';
+
+    if (layers.length === 0) {
+        return;
+    }
+
+    layers.forEach((rawLayer, index) => {
+        const layer = createBackgroundLayerDraft(rawLayer);
+        if (!layer.image) return;
+        const layerEl = document.createElement('div');
+        layerEl.className = 'theme-bg-layer';
+        layerEl.style.zIndex = String(index);
+        layerEl.style.backgroundImage = `url('${String(layer.image).replace(/'/g, "\\'")}')`;
+        layerEl.style.backgroundPosition = layer.position;
+        layerEl.style.backgroundSize = resolveLayerSizeCss(layer.size);
+        layerEl.style.backgroundRepeat = layer.repeat;
+        layerEl.style.backgroundAttachment = layer.behavior === 'fixed' ? 'fixed' : 'scroll';
+        layerEl.style.mixBlendMode = layer.blendMode;
+        layerEl.style.opacity = String(layer.opacity);
+        host.appendChild(layerEl);
+    });
 }
 
 export function applyCustomTheme(theme) {
@@ -941,17 +1396,15 @@ export function applyCustomTheme(theme) {
     if (shouldUseAccentColorForBrand && runtimeColors?.accentColor) {
         root.style.setProperty('--brand-color', darkenHex(runtimeColors.accentColor, 30));
     }
+    applyThemeFonts(theme?.fonts || null);
     
     // Check for global background override
     const overrideBg = localStorage.getItem('globalOverrideBackground') === 'true';
-    if (!overrideBg && theme.background && theme.background.image) {
+    if (!overrideBg && theme.background && hasThemeBackgroundLayers(theme.background)) {
         applyBackgroundImage(theme.background);
-    } else if (!overrideBg) {
+    } else {
         disableFixedBackgroundTracking();
-        const gameGrid = document.querySelector('main.game-grid');
-        if (gameGrid) {
-            gameGrid.style.backgroundImage = 'none';
-        }
+        clearGameGridBackgroundLayers();
     }
     
     const enableGlass = !theme.cardEffects || theme.cardEffects.glassEffect !== false;
@@ -989,14 +1442,24 @@ export function setTheme(theme) {
 
     clearThemeInlineVariables(root);
     disableFixedBackgroundTracking();
+    applyThemeFonts(DEFAULT_THEME_FONTS);
 
     if (theme === 'dark' || theme === 'light') {
         root.setAttribute('data-theme', theme);
+        clearGameGridBackgroundLayers();
     } else {
-        const customThemes = getCustomThemes();
-        const customTheme = customThemes.find(t => t.id === theme);
-        if (customTheme) {
-            applyCustomTheme(customTheme);
+        const builtInTheme = getBuiltInPresetTheme(theme);
+        if (builtInTheme) {
+            applyCustomTheme(builtInTheme);
+        } else {
+            const customThemes = getCustomThemes();
+            const customTheme = customThemes.find(t => t.id === theme);
+            if (customTheme) {
+                applyCustomTheme(customTheme);
+            } else {
+                root.setAttribute('data-theme', 'dark');
+                clearGameGridBackgroundLayers();
+            }
         }
     }
     
@@ -1099,9 +1562,11 @@ export function updateThemeSelector() {
     };
 
     const customThemes = getCustomThemes();
+    const builtInPresets = getBuiltInPresetThemes();
     const options = [
         { value: 'dark', label: safeThemeLabel('theme.darkTheme', 'Dark Theme') },
         { value: 'light', label: safeThemeLabel('theme.lightTheme', 'Light Theme') },
+        ...builtInPresets.map((theme) => ({ value: theme.id, label: theme.name })),
         ...customThemes.map(t => ({ value: t.id, label: t.name }))
     ];
     
@@ -1114,6 +1579,9 @@ export function updateThemeSelector() {
         themeSelect.appendChild(option);
     });
     themeSelect.value = currentValue;
+    if (themeSelect.value !== currentValue) {
+        themeSelect.value = currentTheme || 'dark';
+    }
 }
 
 function getThemeDisplayName(themeId) {
@@ -1126,6 +1594,8 @@ function getThemeDisplayName(themeId) {
         const label = i18n.t('theme.lightTheme');
         return (!label || label === 'theme.lightTheme') ? 'Light Theme' : label;
     }
+    const builtIn = getBuiltInPresetTheme(normalizedId);
+    if (builtIn?.name) return builtIn.name;
     return String(themeId || '');
 }
 
@@ -1160,14 +1630,44 @@ export function renderThemeManager() {
 
     // Render preset themes
     presetContainer.innerHTML = '';
-    ['dark', 'light'].forEach(theme => {
-        const isActive = currentTheme === theme;
+    const presetEntries = [
+        {
+            id: 'dark',
+            name: getThemeDisplayName('dark'),
+            data: {
+                colors: {
+                    appGradientA: '#0b1528',
+                    appGradientB: '#0f2236',
+                    accentColor: '#66ccff'
+                }
+            }
+        },
+        {
+            id: 'light',
+            name: getThemeDisplayName('light'),
+            data: {
+                colors: {
+                    appGradientA: '#dbe9f7',
+                    appGradientB: '#e7f3ff',
+                    accentColor: '#3db2d6'
+                }
+            }
+        },
+        ...getBuiltInPresetThemes().map((theme) => ({
+            id: theme.id,
+            name: theme.name,
+            data: theme
+        }))
+    ];
+
+    presetEntries.forEach((preset) => {
+        const isActive = currentTheme === preset.id;
         const item = createThemeItem(
-            theme,
-            getThemeDisplayName(theme),
+            preset.id,
+            preset.name,
             'preset',
             isActive,
-            theme
+            preset.data
         );
         presetContainer.appendChild(item);
     });
@@ -1196,9 +1696,17 @@ function createThemeItem(id, name, type, isActive, themeData) {
     
     let dots = [];
     if (type === 'preset') {
-        dots = id === 'dark' 
-            ? ['#1e1e1e', '#ffffff', '#66ccff'] 
-            : ['#f5f5f5', '#1a1a1a', '#0099cc'];
+        if (themeData && themeData.colors) {
+            dots = [
+                themeData.colors.appGradientA || themeData.colors.bgPrimary || '#1e1e1e',
+                themeData.colors.appGradientB || themeData.colors.bgSecondary || '#2d2d2d',
+                themeData.colors.accentColor || '#66ccff'
+            ];
+        } else {
+            dots = id === 'dark'
+                ? ['#1e1e1e', '#ffffff', '#66ccff']
+                : ['#f5f5f5', '#1a1a1a', '#0099cc'];
+        }
     } else {
         dots = [
             themeData.colors.appGradientA || themeData.colors.bgPrimary,
@@ -1346,6 +1854,7 @@ async function uploadTheme(theme) {
 
     // Get the image name from the stored property or the UI if available
     let imageName = window.currentBackgroundImageName || 'background';
+    let topImageName = window.currentTopBackgroundImageName || 'top-background';
     
     // If it's a generic "background", try to guess the extension from the base64 string
     if (imageName === 'background' && theme.background && theme.background.image && theme.background.image.startsWith('data:')) {
@@ -1354,11 +1863,20 @@ async function uploadTheme(theme) {
         imageName = `background.${extension}`;
     }
 
+    if (topImageName === 'top-background' && theme.background && theme.background.topImage && theme.background.topImage.startsWith('data:')) {
+        const topMimeType = theme.background.topImage.split(';base64,')[0].split(':')[1];
+        const topExtension = topMimeType.split('/')[1];
+        topImageName = `top-background.${topExtension}`;
+    }
+
     // Create a copy of the theme object to modify it without affecting the original
     const themeToUpload = JSON.parse(JSON.stringify(theme));
     if (themeToUpload.background && themeToUpload.background.image) {
         // Replace the base64 image with the image name in the JSON
         themeToUpload.background.image = imageName;
+    }
+    if (themeToUpload.background && themeToUpload.background.topImage) {
+        themeToUpload.background.topImage = topImageName;
     }
 
     const success = await emubro.invoke('upload-theme', {
@@ -1366,6 +1884,7 @@ async function uploadTheme(theme) {
         name: theme.name, 
         themeObject: themeToUpload, // The JSON with image name
         base64Image: theme.background.image, // The original Base64 string
+        topBase64Image: theme.background.topImage || null,
         webhookUrl: webhookUrl
     });
 
@@ -1431,6 +1950,43 @@ export function editTheme(theme) {
         } else {
             clearBackgroundImage();
         }
+
+        if (theme.background.topImage) {
+            window.currentTopBackgroundImage = theme.background.topImage;
+            if (!theme.background.topImage.startsWith('data:')) {
+                window.currentTopBackgroundImageName = theme.background.topImage;
+            } else {
+                window.currentTopBackgroundImageName = 'top-background';
+            }
+
+            const topPreviewImg = document.getElementById('bg-top-preview-img');
+            const topPreview = document.getElementById('bg-top-preview');
+            if (topPreviewImg && topPreview) {
+                topPreviewImg.src = theme.background.topImage;
+                topPreview.style.display = 'block';
+            }
+            const topName = document.getElementById('bg-top-image-name');
+            if (topName) topName.textContent = window.currentTopBackgroundImageName;
+            const clearTopBtn = document.getElementById('clear-bg-top-image-btn');
+            if (clearTopBtn) clearTopBtn.style.display = 'inline-block';
+        } else {
+            clearTopBackgroundImage();
+        }
+
+        const extraLayers = extractAdditionalLayerDrafts(
+            theme.background,
+            theme.background.image || null,
+            theme.background.topImage || theme.background.top?.image || null
+        );
+        setBackgroundLayerDrafts(extraLayers);
+        renderBackgroundLayerEditor();
+        applyBackgroundImage(getThemeBackgroundConfigFromForm());
+    } else {
+        clearBackgroundImage();
+        clearTopBackgroundImage();
+        setBackgroundLayerDrafts([]);
+        renderBackgroundLayerEditor();
+        applyBackgroundImage(getThemeBackgroundConfigFromForm());
     }
     
     if (theme.cardEffects) {
@@ -1527,6 +2083,10 @@ export function resetThemeForm() {
     applyGradientAnglePreview('160deg');
     
     clearBackgroundImage();
+    clearTopBackgroundImage();
+    setBackgroundLayerDrafts([]);
+    renderBackgroundLayerEditor();
+    applyBackgroundImage(getThemeBackgroundConfigFromForm());
 
     const startMode = normalizeThemeCustomizationMode(localStorage.getItem(THEME_EDITOR_MODE_STORAGE_KEY));
     setThemeEditorMode(startMode, { persist: false });
@@ -1540,6 +2100,7 @@ export function resetThemeForm() {
 
 export function clearBackgroundImage() {
     window.currentBackgroundImage = null;
+    window.currentBackgroundImageName = '';
     const bgInput = document.getElementById('bg-image-input');
     if (bgInput) bgInput.value = '';
     
@@ -1552,11 +2113,25 @@ export function clearBackgroundImage() {
     const clearBtn = document.getElementById('clear-bg-image-btn');
     if (clearBtn) clearBtn.style.display = 'none';
 
-    const gameGrid = document.querySelector('main.game-grid');
-    if (gameGrid) {
-        gameGrid.style.backgroundImage = 'none';
-    }
-    disableFixedBackgroundTracking();
+    applyBackgroundImage(getThemeBackgroundConfigFromForm({ image: null }));
+}
+
+export function clearTopBackgroundImage() {
+    window.currentTopBackgroundImage = null;
+    window.currentTopBackgroundImageName = '';
+    const topBgInput = document.getElementById('bg-top-image-input');
+    if (topBgInput) topBgInput.value = '';
+
+    const topPreview = document.getElementById('bg-top-preview');
+    if (topPreview) topPreview.style.display = 'none';
+
+    const topName = document.getElementById('bg-top-image-name');
+    if (topName) topName.textContent = '';
+
+    const clearTopBtn = document.getElementById('clear-bg-top-image-btn');
+    if (clearTopBtn) clearTopBtn.style.display = 'none';
+
+    applyBackgroundImage(getThemeBackgroundConfigFromForm({ topImage: null }));
 }
 
 export function setupColorPickerListeners() {
@@ -1635,10 +2210,266 @@ export function setupColorPickerListeners() {
 }
 
 export function setupBackgroundImageListeners() {
-    const bgImageInput = document.getElementById('bg-image-input');
-    if (bgImageInput) {
-        bgImageInput.addEventListener('change', handleBackgroundImageUpload);
+    const bindWithClone = (id, eventName, handler) => {
+        const node = document.getElementById(id);
+        if (!node || !node.parentNode) return null;
+        const clone = node.cloneNode(true);
+        node.parentNode.replaceChild(clone, node);
+        clone.addEventListener(eventName, handler);
+        return clone;
+    };
+
+    bindWithClone('bg-image-input', 'change', handleBackgroundImageUpload);
+    bindWithClone('bg-top-image-input', 'change', handleTopBackgroundImageUpload);
+
+    const addLayerBtn = bindWithClone('add-bg-layer-btn', 'click', () => {
+        backgroundLayerDrafts.push(createBackgroundLayerDraft());
+        hasUnsavedChanges = true;
+        renderBackgroundLayerEditor();
+        applyBackgroundImage(getThemeBackgroundConfigFromForm());
+    });
+    if (addLayerBtn) addLayerBtn.type = 'button';
+
+    const layerList = document.getElementById('bg-layer-list');
+    if (layerList && layerList.parentNode) {
+        const clone = layerList.cloneNode(true);
+        layerList.parentNode.replaceChild(clone, layerList);
+
+        clone.addEventListener('click', (event) => {
+            const actionBtn = event.target.closest('[data-layer-action]');
+            if (!actionBtn) return;
+            const card = actionBtn.closest('[data-layer-index]');
+            if (!card) return;
+            const index = Number.parseInt(card.dataset.layerIndex, 10);
+            if (!Number.isInteger(index) || index < 0 || index >= backgroundLayerDrafts.length) return;
+
+            const action = actionBtn.dataset.layerAction;
+            if (action === 'remove') {
+                backgroundLayerDrafts.splice(index, 1);
+            } else if (action === 'up' && index > 0) {
+                const layer = backgroundLayerDrafts[index];
+                backgroundLayerDrafts[index] = backgroundLayerDrafts[index - 1];
+                backgroundLayerDrafts[index - 1] = layer;
+            } else if (action === 'down' && index < backgroundLayerDrafts.length - 1) {
+                const layer = backgroundLayerDrafts[index];
+                backgroundLayerDrafts[index] = backgroundLayerDrafts[index + 1];
+                backgroundLayerDrafts[index + 1] = layer;
+            }
+
+            hasUnsavedChanges = true;
+            renderBackgroundLayerEditor();
+            applyBackgroundImage(getThemeBackgroundConfigFromForm());
+        });
+
+        clone.addEventListener('input', (event) => {
+            const field = event.target?.dataset?.layerField;
+            if (field !== 'opacity') return;
+            const card = event.target.closest('[data-layer-index]');
+            if (!card) return;
+            const index = Number.parseInt(card.dataset.layerIndex, 10);
+            if (!Number.isInteger(index) || index < 0 || index >= backgroundLayerDrafts.length) return;
+            const nextOpacity = clampNumber(Number.parseInt(event.target.value, 10) / 100, 0, 1);
+            backgroundLayerDrafts[index].opacity = nextOpacity;
+            const valueLabel = card.querySelector('.bg-layer-range-value');
+            if (valueLabel) valueLabel.textContent = `${Math.round(nextOpacity * 100)}%`;
+            hasUnsavedChanges = true;
+            applyBackgroundImage(getThemeBackgroundConfigFromForm());
+        });
+
+        clone.addEventListener('change', (event) => {
+            const field = event.target?.dataset?.layerField;
+            if (!field) return;
+            const card = event.target.closest('[data-layer-index]');
+            if (!card) return;
+            const index = Number.parseInt(card.dataset.layerIndex, 10);
+            if (!Number.isInteger(index) || index < 0 || index >= backgroundLayerDrafts.length) return;
+
+            const layer = backgroundLayerDrafts[index];
+            if (!layer) return;
+
+            if (field === 'imageFile') {
+                const file = event.target.files && event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (readerEvent) => {
+                    layer.image = typeof readerEvent?.target?.result === 'string' ? readerEvent.target.result : null;
+                    layer.imageName = file.name;
+                    hasUnsavedChanges = true;
+                    renderBackgroundLayerEditor();
+                    applyBackgroundImage(getThemeBackgroundConfigFromForm());
+                };
+                reader.readAsDataURL(file);
+                return;
+            }
+
+            if (field === 'name') {
+                layer.name = String(event.target.value || '').trim();
+            } else if (field === 'position') {
+                layer.position = normalizeBackgroundLayerPosition(event.target.value);
+            } else if (field === 'size') {
+                layer.size = normalizeBackgroundLayerSize(event.target.value);
+            } else if (field === 'repeat') {
+                layer.repeat = normalizeBackgroundLayerRepeat(event.target.value);
+            } else if (field === 'behavior') {
+                layer.behavior = normalizeBackgroundLayerBehavior(event.target.value);
+            } else if (field === 'blendMode') {
+                layer.blendMode = normalizeBackgroundLayerBlendMode(event.target.value);
+            } else if (field === 'opacity') {
+                layer.opacity = normalizeBackgroundLayerOpacity(Number.parseInt(event.target.value, 10) / 100);
+            }
+
+            hasUnsavedChanges = true;
+            renderBackgroundLayerEditor();
+            applyBackgroundImage(getThemeBackgroundConfigFromForm());
+        });
     }
+
+    bindWithClone('clear-bg-image-btn', 'click', () => {
+        clearBackgroundImage();
+        hasUnsavedChanges = true;
+    });
+
+    bindWithClone('clear-bg-top-image-btn', 'click', () => {
+        clearTopBackgroundImage();
+        hasUnsavedChanges = true;
+    });
+
+    renderBackgroundLayerEditor();
+}
+
+function getSelectOptionsMarkup(options = [], selectedValue = '') {
+    return options.map((option) => {
+        const selected = option.value === selectedValue ? ' selected' : '';
+        return `<option value="${escapeHtml(option.value)}"${selected}>${escapeHtml(option.label)}</option>`;
+    }).join('');
+}
+
+function renderBackgroundLayerEditor() {
+    const list = document.getElementById('bg-layer-list');
+    if (!list) return;
+
+    if (!Array.isArray(backgroundLayerDrafts) || backgroundLayerDrafts.length === 0) {
+        list.innerHTML = `<div class="bg-layer-empty">No extra layers yet. Add one to stack more images over your base background.</div>`;
+        return;
+    }
+
+    list.innerHTML = backgroundLayerDrafts.map((layer, index) => {
+        const safeLayer = createBackgroundLayerDraft(layer);
+        const title = safeLayer.name || `Layer ${index + 1}`;
+        const imageName = safeLayer.imageName || (safeLayer.image ? 'Image loaded' : 'No image selected');
+        const opacityPercent = Math.round(safeLayer.opacity * 100);
+        const preview = safeLayer.image
+            ? `<div class="bg-preview"><img src="${escapeHtml(safeLayer.image)}" alt="Layer preview"></div>`
+            : '';
+        return `
+            <div class="bg-layer-card" data-layer-index="${index}">
+                <div class="bg-layer-card-header">
+                    <h6 class="bg-layer-title">${escapeHtml(title)}</h6>
+                    <div class="bg-layer-actions">
+                        <button type="button" class="action-btn small" data-layer-action="up" title="Move up">Up</button>
+                        <button type="button" class="action-btn small" data-layer-action="down" title="Move down">Down</button>
+                        <button type="button" class="action-btn small remove-btn" data-layer-action="remove" title="Remove layer">Remove</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Layer Name:</label>
+                    <input type="text" data-layer-field="name" value="${escapeHtml(safeLayer.name)}" placeholder="Optional label">
+                </div>
+                <div class="form-group">
+                    <label>Upload Image:</label>
+                    <input type="file" accept="image/*" data-layer-field="imageFile">
+                    <span class="image-name">${escapeHtml(imageName)}</span>
+                </div>
+                <div class="bg-layer-grid">
+                    <div class="form-group">
+                        <label>Position:</label>
+                        <select data-layer-field="position">${getSelectOptionsMarkup(BACKGROUND_LAYER_POSITIONS, safeLayer.position)}</select>
+                    </div>
+                    <div class="form-group">
+                        <label>Scale:</label>
+                        <select data-layer-field="size">${getSelectOptionsMarkup(BACKGROUND_LAYER_SIZE_OPTIONS, safeLayer.size)}</select>
+                    </div>
+                    <div class="form-group">
+                        <label>Repeat:</label>
+                        <select data-layer-field="repeat">${getSelectOptionsMarkup(BACKGROUND_LAYER_REPEAT_OPTIONS, safeLayer.repeat)}</select>
+                    </div>
+                    <div class="form-group">
+                        <label>Behavior:</label>
+                        <select data-layer-field="behavior">${getSelectOptionsMarkup(BACKGROUND_LAYER_BEHAVIOR_OPTIONS, safeLayer.behavior)}</select>
+                    </div>
+                    <div class="form-group">
+                        <label>Blend:</label>
+                        <select data-layer-field="blendMode">${getSelectOptionsMarkup(BACKGROUND_LAYER_BLEND_OPTIONS, safeLayer.blendMode)}</select>
+                    </div>
+                    <div class="form-group">
+                        <label>Opacity:</label>
+                        <div class="bg-layer-range-wrap">
+                            <input type="range" min="0" max="100" step="1" data-layer-field="opacity" value="${opacityPercent}">
+                            <span class="bg-layer-range-value">${opacityPercent}%</span>
+                        </div>
+                    </div>
+                </div>
+                ${preview}
+            </div>
+        `;
+    }).join('');
+}
+
+function getThemeBackgroundConfigFromForm(overrides = {}) {
+    const hasImageOverride = Object.prototype.hasOwnProperty.call(overrides, 'image');
+    const hasTopImageOverride = Object.prototype.hasOwnProperty.call(overrides, 'topImage');
+    const image = hasImageOverride ? overrides.image : (window.currentBackgroundImage || null);
+    const topImage = hasTopImageOverride ? overrides.topImage : (window.currentTopBackgroundImage || null);
+    const position = document.getElementById('bg-position')?.value || 'centered';
+    const scale = document.getElementById('bg-scale')?.value || 'crop';
+    const repeat = document.getElementById('bg-background-repeat')?.value || 'no-repeat';
+
+    const layers = [];
+    if (image) {
+        layers.push(createBackgroundLayerDraft({
+            id: 'base',
+            image,
+            imageName: window.currentBackgroundImageName || '',
+            position: normalizeBackgroundLayerPosition('center center'),
+            size: mapLegacyScaleToLayerSize(scale),
+            repeat,
+            behavior: position === 'fixed' ? 'fixed' : 'scroll',
+            opacity: 1,
+            blendMode: 'normal'
+        }));
+    }
+
+    if (topImage) {
+        layers.push(createBackgroundLayerDraft({
+            id: 'top',
+            image: topImage,
+            imageName: window.currentTopBackgroundImageName || '',
+            position: 'top center',
+            size: '100% auto',
+            repeat: 'no-repeat',
+            behavior: 'scroll',
+            opacity: 1,
+            blendMode: 'normal'
+        }));
+    }
+
+    layers.push(...cloneBackgroundLayerDrafts(backgroundLayerDrafts));
+
+    return {
+        image,
+        imagePath: null,
+        position,
+        scale,
+        repeat,
+        topImage,
+        topHeight: 220,
+        topOpacity: 1,
+        topScale: '100% auto',
+        topRepeat: 'no-repeat',
+        topPosition: 'top center',
+        layers,
+        ...overrides
+    };
 }
 
 function handleBackgroundImageUpload(event) {
@@ -1653,21 +2484,46 @@ function handleBackgroundImageUpload(event) {
         
         const preview = document.getElementById('bg-preview');
         const previewImg = document.getElementById('bg-preview-img');
-        previewImg.src = imageData;
-        preview.style.display = 'block';
+        if (preview && previewImg) {
+            previewImg.src = imageData;
+            preview.style.display = 'block';
+        }
         
-        document.getElementById('bg-image-name').textContent = `Selected: ${file.name}`;
-        document.getElementById('clear-bg-image-btn').style.display = 'inline-block';
+        const name = document.getElementById('bg-image-name');
+        if (name) name.textContent = `Selected: ${file.name}`;
+        const clearBtn = document.getElementById('clear-bg-image-btn');
+        if (clearBtn) clearBtn.style.display = 'inline-block';
 
         hasUnsavedChanges = true;
-        const bgConfig = {
-            image: imageData,
-            imagePath: file.path,
-            position: document.getElementById('bg-position').value,
-            scale: document.getElementById('bg-scale').value,
-            repeat: document.getElementById('bg-background-repeat').value
-        };
-        applyBackgroundImage(bgConfig);
+        applyBackgroundImage(getThemeBackgroundConfigFromForm({ image: imageData, imagePath: file.path || null }));
+    };
+    reader.readAsDataURL(file);
+}
+
+function handleTopBackgroundImageUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const imageData = e.target.result;
+        window.currentTopBackgroundImage = imageData;
+        window.currentTopBackgroundImageName = file.name;
+
+        const preview = document.getElementById('bg-top-preview');
+        const previewImg = document.getElementById('bg-top-preview-img');
+        if (preview && previewImg) {
+            previewImg.src = imageData;
+            preview.style.display = 'block';
+        }
+
+        const name = document.getElementById('bg-top-image-name');
+        if (name) name.textContent = `Selected: ${file.name}`;
+        const clearBtn = document.getElementById('clear-bg-top-image-btn');
+        if (clearBtn) clearBtn.style.display = 'inline-block';
+
+        hasUnsavedChanges = true;
+        applyBackgroundImage(getThemeBackgroundConfigFromForm({ topImage: imageData }));
     };
     reader.readAsDataURL(file);
 }
@@ -1708,6 +2564,10 @@ export function saveTheme() {
         alert(i18n.t('messages.enterThemeName'));
         return;
     }
+
+    const existingTheme = editingThemeId ? getCustomThemes().find((t) => t.id === editingThemeId) : null;
+    const existingFonts = resolveThemeFonts(existingTheme?.fonts || null);
+    const backgroundConfig = getThemeBackgroundConfigFromForm();
     
     const theme = {
         id: editingThemeId || 'custom_' + Date.now(),
@@ -1731,14 +2591,14 @@ export function saveTheme() {
             successColor: document.getElementById('color-success').value,
             dangerColor: document.getElementById('color-danger').value
         },
-        background: {
-            image: window.currentBackgroundImage || null,
-            position: document.getElementById('bg-position').value,
-            scale: document.getElementById('bg-scale').value,
-            repeat: document.getElementById('bg-background-repeat').value
-        },
+        background: backgroundConfig,
         cardEffects: {
             glassEffect: document.getElementById('glass-effect-toggle').checked
+        },
+        fonts: {
+            body: existingFonts.body,
+            heading: existingFonts.heading,
+            pixelMode: existingFonts.pixelMode
         },
         editor: {
             customizationMode: getThemeEditorMode(),
@@ -1778,13 +2638,14 @@ export async function renderMarketplace(forceRefresh = false) {
         const isInstalled = customThemes.some(t => t.name === theme.name && (t.author === theme.author || !t.author));
         const installedTheme = customThemes.find(t => t.name === theme.name && (t.author === theme.author || !t.author));
 
-        const hasBgImage = theme.background && theme.background.image;
+        const previewLayer = extractBackgroundLayers(theme.background || {})[0] || null;
+        const hasBgImage = Boolean(previewLayer && previewLayer.image);
         const gradientAngle = normalizeGradientAngle(theme.colors.appGradientAngle || '145deg');
         const gradientA = theme.colors.appGradientA || theme.colors.bgPrimary;
         const gradientB = theme.colors.appGradientB || theme.colors.bgSecondary;
         const gradientC = theme.colors.appGradientC || theme.colors.bgPrimary;
         const bgPreviewStyle = hasBgImage 
-            ? `background-image: url('${theme.background.image}'); background-size: cover; background-position: center;`
+            ? `background-image: url('${previewLayer.image}'); background-size: cover; background-position: center;`
             : `background: linear-gradient(${gradientAngle}, ${gradientA}, ${gradientB}, ${gradientC});`;
 
         card.innerHTML = `

@@ -19,7 +19,8 @@ function createAppBootstrapManager(deps = {}) {
     getMainWindowRendererReady,
     setMainWindowRendererReady,
     getRequestRevealMainWindow,
-    setRequestRevealMainWindow
+    setRequestRevealMainWindow,
+    onMainWindowRevealed
   } = deps;
 
   const protocol = "emubro";
@@ -45,6 +46,9 @@ function createAppBootstrapManager(deps = {}) {
   if (typeof setMainWindowRendererReady !== "function") throw new Error("createAppBootstrapManager requires setMainWindowRendererReady");
   if (typeof getRequestRevealMainWindow !== "function") throw new Error("createAppBootstrapManager requires getRequestRevealMainWindow");
   if (typeof setRequestRevealMainWindow !== "function") throw new Error("createAppBootstrapManager requires setRequestRevealMainWindow");
+  if (onMainWindowRevealed != null && typeof onMainWindowRevealed !== "function") {
+    throw new Error("createAppBootstrapManager requires onMainWindowRevealed to be a function when provided");
+  }
 
   function createWindow() {
     const isWin = proc.platform === "win32";
@@ -99,6 +103,11 @@ function createAppBootstrapManager(deps = {}) {
       closeSplashWindow();
       windowRef.show();
       windowRef.focus();
+      if (typeof onMainWindowRevealed === "function") {
+        try {
+          onMainWindowRevealed(windowRef);
+        } catch (_e) {}
+      }
     };
     setRequestRevealMainWindow(revealMainWindow);
 

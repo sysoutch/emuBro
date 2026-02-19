@@ -1,0 +1,104 @@
+﻿/* =========================================
+   LIST VIEW
+   ========================================= */
+.games-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    grid-column: 1 / -1; /* Take full width if inside grid */
+    width: 100%;
+}
+
+.list-item {
+    display: flex;
+    align-items: center;
+    gap: calc(20px * var(--view-scale));
+    background-color: var(--bg-secondary);
+    padding: calc(15px * var(--view-scale));
+    border-radius: var(--radius-card);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.list-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.list-item-image {
+    width: calc(60px * var(--view-scale));
+    height: calc(90px * var(--view-scale));
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+}
+
+.list-item-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0; /* Prevent overflow */
+}
+
+.list-item-title {
+    margin: 0 0 5px 0;
+    color: var(--text-primary);
+    font-size: calc(1.1rem * var(--view-scale));
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.list-item-platform-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+}
+
+.list-platform-icon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+}
+
+.list-item-genre {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin: 0 0 5px 0;
+}
+
+.list-item-meta {
+    display: flex;
+    gap: 15px;
+    font-size: 0.9rem;
+}
+
+.list-item-rating {
+    color: var(--warning-color, #f1c40f);
+}
+
+.rating-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.rating-star-icon svg {
+    width: 0.9em;
+    height: 0.9em;
+    fill: currentColor;
+    stroke: none;
+}
+
+.list-item-status {
+    color: var(--success-color, #2ecc71);
+}
+
+.list-item-actions {
+    display: flex;
+    gap: 10px;
+}
+

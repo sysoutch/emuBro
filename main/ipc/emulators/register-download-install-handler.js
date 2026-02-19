@@ -3,6 +3,8 @@ function registerEmulatorDownloadInstallHandler(deps = {}) {
     ipcMain,
     log,
     app,
+    dialog,
+    getMainWindow,
     shell,
     path,
     fsSync,
@@ -33,6 +35,8 @@ function registerEmulatorDownloadInstallHandler(deps = {}) {
   if (!ipcMain) throw new Error("registerEmulatorDownloadInstallHandler requires ipcMain");
   if (!log) throw new Error("registerEmulatorDownloadInstallHandler requires log");
   if (!app) throw new Error("registerEmulatorDownloadInstallHandler requires app");
+  if (!dialog) throw new Error("registerEmulatorDownloadInstallHandler requires dialog");
+  if (typeof getMainWindow !== "function") throw new Error("registerEmulatorDownloadInstallHandler requires getMainWindow");
   if (!shell) throw new Error("registerEmulatorDownloadInstallHandler requires shell");
   if (!path) throw new Error("registerEmulatorDownloadInstallHandler requires path");
   if (!fsSync) throw new Error("registerEmulatorDownloadInstallHandler requires fsSync");
@@ -58,6 +62,26 @@ function registerEmulatorDownloadInstallHandler(deps = {}) {
   if (typeof findEmulatorBinaryInFolder !== "function") throw new Error("registerEmulatorDownloadInstallHandler requires findEmulatorBinaryInFolder");
   if (typeof inferDownloadPackageTypeFromName !== "function") throw new Error("registerEmulatorDownloadInstallHandler requires inferDownloadPackageTypeFromName");
   if (typeof isInstallerLikeName !== "function") throw new Error("registerEmulatorDownloadInstallHandler requires isInstallerLikeName");
+
+  async function promptRedownloadWhenCached(filePath, displayName, emulatorName) {
+    try {
+      const ownerWindow = getMainWindow();
+      const result = await dialog.showMessageBox(ownerWindow, {
+        type: "question",
+        buttons: ["Cancel", "Re-download"],
+        defaultId: 1,
+        cancelId: 0,
+        noLink: true,
+        title: "Package Already Downloaded",
+        message: `A downloaded package already exists for ${emulatorName}.`,
+        detail: `File: ${displayName}\nPath: ${filePath}\n\nDo you want to re-download and replace this cached file?`
+      });
+      return result && result.response === 1;
+    } catch (error) {
+      log.warn("promptRedownloadWhenCached failed, defaulting to re-download:", error);
+      return true;
+    }
+  }
 
   ipcMain.handle("download-install-emulator", async (_event, payload = {}) => {
     try {
@@ -116,8 +140,8 @@ function registerEmulatorDownloadInstallHandler(deps = {}) {
       const emulatorDir = path.join(platformDir, sanitizePathSegment(name));
       fsSync.mkdirSync(emulatorDir, { recursive: true });
 
-      const tempDir = path.join(app.getPath("temp"), "emubro-downloads", "emulators");
-      fsSync.mkdirSync(tempDir, { recursive: true });
+      const downloadCacheDir = path.join(app.getPath("userData"), "download-cache", "emulators");
+      fsSync.mkdirSync(downloadCacheDir, { recursive: true });
 
       const urlFileName = (() => {
         try {
@@ -129,14 +153,41 @@ function registerEmulatorDownloadInstallHandler(deps = {}) {
       })();
 
       const suggestedName = String(resolved.fileName || urlFileName || `${sanitizePathSegment(name)}-${Date.now()}`).trim();
-      const initialDownloadPath = ensureUniqueDestinationPath(path.join(tempDir, suggestedName));
+      const safeSuggestedName = path.basename(suggestedName);
+      const initialDownloadPath = path.join(downloadCacheDir, safeSuggestedName);
+      if (fsSync.existsSync(initialDownloadPath)) {
+        const shouldRedownload = await promptRedownloadWhenCached(initialDownloadPath, safeSuggestedName, name);
+        if (!shouldRedownload) {
+          return {
+            success: false,
+            canceled: true,
+            message: "Download canceled. Existing cached package was kept.",
+            packagePath: initialDownloadPath
+          };
+        }
+        removePathSafe(initialDownloadPath);
+      }
       const downloadMeta = await downloadUrlToFile(resolved.url, initialDownloadPath);
       const finalName = String(downloadMeta?.fileNameFromHeader || path.basename(initialDownloadPath)).trim();
-      const finalDownloadPath = (finalName && finalName !== path.basename(initialDownloadPath))
-        ? ensureUniqueDestinationPath(path.join(tempDir, finalName))
-        : initialDownloadPath;
-      if (finalDownloadPath !== initialDownloadPath) {
-        movePathSafe(initialDownloadPath, finalDownloadPath);
+      const safeFinalName = path.basename(finalName);
+      let finalDownloadPath = initialDownloadPath;
+      if (safeFinalName && safeFinalName !== path.basename(initialDownloadPath)) {
+        const headerNamedPath = path.join(downloadCacheDir, safeFinalName);
+        if (fsSync.existsSync(headerNamedPath)) {
+          const shouldRedownload = await promptRedownloadWhenCached(headerNamedPath, safeFinalName, name);
+          if (!shouldRedownload) {
+            removePathSafe(initialDownloadPath);
+            return {
+              success: false,
+              canceled: true,
+              message: "Download canceled. Existing cached package was kept.",
+              packagePath: headerNamedPath
+            };
+          }
+          removePathSafe(headerNamedPath);
+        }
+        movePathSafe(initialDownloadPath, headerNamedPath);
+        finalDownloadPath = headerNamedPath;
       }
 
       const archiveKind = getArchiveKind(finalDownloadPath);
@@ -145,7 +196,7 @@ function registerEmulatorDownloadInstallHandler(deps = {}) {
 
       if (archiveKind) {
         const extractRoot = ensureUniqueDestinationPath(
-          path.join(tempDir, `${sanitizePathSegment(name)}-extract`)
+          path.join(downloadCacheDir, `${sanitizePathSegment(name)}-extract`)
         );
         fsSync.mkdirSync(extractRoot, { recursive: true });
         await extractArchiveToDir(finalDownloadPath, extractRoot);

@@ -196,6 +196,42 @@ export function createEmulatorViewRenderer(deps = {}) {
     `;
     }
 
+    function getEmulatorFilePaths(emulator) {
+        const ordered = [];
+        const seen = new Set();
+        const add = (rawPath) => {
+            const value = String(rawPath || '').trim();
+            if (!value) return;
+            const key = value.toLowerCase();
+            if (seen.has(key)) return;
+            seen.add(key);
+            ordered.push(value);
+        };
+
+        if (Array.isArray(emulator?.filePaths)) {
+            emulator.filePaths.forEach(add);
+        }
+        add(emulator?.filePath);
+        return ordered;
+    }
+
+    function getEmulatorPathMarkup(emulator, installed) {
+        if (!installed) return 'Not installed yet';
+        const paths = getEmulatorFilePaths(emulator);
+        if (paths.length === 0) return 'Not installed yet';
+        if (paths.length === 1) return escapeHtml(paths[0]);
+        const first = escapeHtml(paths[0]);
+        const restCount = paths.length - 1;
+        return `${first} <span class="emulator-path-more">(+${restCount} more)</span>`;
+    }
+
+    function getEmulatorPathTitle(emulator, installed) {
+        if (!installed) return 'Not installed yet';
+        const paths = getEmulatorFilePaths(emulator);
+        if (paths.length === 0) return 'Not installed yet';
+        return paths.join('\n');
+    }
+
     function renderEmulatorsAsGrid(emulatorsToRender, options = {}) {
         const gamesContainer = document.getElementById('games-container');
         const container = document.createElement('div');
@@ -210,7 +246,8 @@ export function createEmulatorViewRenderer(deps = {}) {
             const safeName = escapeHtml(emulator.name || 'Unknown Emulator');
             const safePlatform = escapeHtml(platformName);
             const installed = !!emulator.isInstalled;
-            const safePath = escapeHtml(installed ? (emulator.filePath || '') : 'Not installed yet');
+            const safePath = getEmulatorPathMarkup(emulator, installed);
+            const safePathTitle = escapeHtml(getEmulatorPathTitle(emulator, installed));
             const statusClass = installed ? 'is-installed' : 'is-missing';
             const statusText = installed ? 'Installed' : 'Not Installed';
             const key = encodeURIComponent(getEmulatorKey(emulator));
@@ -226,7 +263,7 @@ export function createEmulatorViewRenderer(deps = {}) {
                     </header>
                     <p class="emulator-platform-name">${safePlatform}</p>
                     <p class="emulator-install-status ${statusClass}">${statusText}</p>
-                    <p class="emulator-path">${safePath}</p>
+                    <p class="emulator-path" title="${safePathTitle}">${safePath}</p>
                 </div>
                 <span class="emulator-card-hover-action ${installed ? 'is-play' : 'is-download'}">${getEmulatorCardHoverIconMarkup(installed)}</span>
             </article>
@@ -250,7 +287,8 @@ export function createEmulatorViewRenderer(deps = {}) {
             const safeName = escapeHtml(emulator.name || 'Unknown Emulator');
             const safePlatform = escapeHtml(emulator.platform || emulator.platformShortName || i18n.t('gameDetails.unknown'));
             const installed = !!emulator.isInstalled;
-            const safePath = escapeHtml(installed ? (emulator.filePath || '') : 'Not installed yet');
+            const safePath = getEmulatorPathMarkup(emulator, installed);
+            const safePathTitle = escapeHtml(getEmulatorPathTitle(emulator, installed));
             const statusClass = installed ? 'is-installed' : 'is-missing';
             const statusText = installed ? 'Installed' : 'Not Installed';
             const key = encodeURIComponent(getEmulatorKey(emulator));
@@ -264,7 +302,7 @@ export function createEmulatorViewRenderer(deps = {}) {
                         <span class="emulator-install-status ${statusClass}">${statusText}</span>
                         <span>${idx + 1} / ${emulatorsToRender.length}</span>
                     </div>
-                    <p class="emulator-path">${safePath}</p>
+                    <p class="emulator-path" title="${safePathTitle}">${safePath}</p>
                 </div>
             </article>
         `;
@@ -295,7 +333,8 @@ export function createEmulatorViewRenderer(deps = {}) {
                 const safeName = escapeHtml(emulator.name || 'Unknown Emulator');
                 const safePlatform = escapeHtml(emulator.platform || emulator.platformShortName || i18n.t('gameDetails.unknown'));
                 const installed = !!emulator.isInstalled;
-                const safePath = escapeHtml(installed ? (emulator.filePath || '') : 'Not installed yet');
+                const safePath = getEmulatorPathMarkup(emulator, installed);
+                const safePathTitle = escapeHtml(getEmulatorPathTitle(emulator, installed));
                 const statusClass = installed ? 'is-installed' : 'is-missing';
                 const statusText = installed ? 'Installed' : 'Not Installed';
                 const key = encodeURIComponent(getEmulatorKey(emulator));
@@ -306,7 +345,7 @@ export function createEmulatorViewRenderer(deps = {}) {
                             ${safePlatform}
                             <div class="emulator-install-status ${statusClass}">${statusText}</div>
                         </td>
-                        <td class="emulator-path">${safePath}</td>
+                        <td class="emulator-path" title="${safePathTitle}">${safePath}</td>
                     </tr>
                 `;
             }).join('')}
