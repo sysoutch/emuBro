@@ -1,3 +1,8 @@
+const { execFile } = require("node:child_process");
+const { promisify } = require("node:util");
+
+const execFileAsync = promisify(execFile);
+
 function registerSuggestionsIpc(deps = {}) {
   const ipcMain = deps.ipcMain;
   const log = deps.log || console;
@@ -27,11 +32,113 @@ function registerSuggestionsIpc(deps = {}) {
     return text || fallback;
   }
 
+  function decodeHtmlEntities(value) {
+    return String(value || "")
+      .replace(/&lt;/gi, "<")
+      .replace(/&gt;/gi, ">")
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;|&apos;/gi, "'")
+      .replace(/&amp;/gi, "&");
+  }
+
+  function replacePromptToken(template, token, value) {
+    const safeValue = String(value ?? "");
+    const bracePattern = new RegExp(`\\{\\{\\s*${token}\\s*\\}\\}`, "gi");
+    const singleBracePattern = new RegExp(`\\{\\s*${token}\\s*\\}`, "gi");
+    return String(template || "")
+      .replace(bracePattern, safeValue)
+      .replace(singleBracePattern, safeValue);
+  }
+
+  function normalizeOllamaBaseUrl(baseUrl) {
+    return normalizeText(baseUrl, "http://127.0.0.1:11434").replace(/\/+$/g, "");
+  }
+
+  function isLocalhostHostname(hostname) {
+    const value = String(hostname || "").trim().toLowerCase();
+    return value === "localhost" || value === "127.0.0.1" || value === "::1";
+  }
+
+  function parseUrlSafe(rawUrl) {
+    const text = String(rawUrl || "").trim();
+    if (!text) return null;
+    try {
+      return new URL(text);
+    } catch (_error) {
+      try {
+        return new URL(`http://${text}`);
+      } catch (_error2) {
+        return null;
+      }
+    }
+  }
+
+  function isLocalOllamaBaseUrl(baseUrl) {
+    const parsed = parseUrlSafe(baseUrl);
+    if (!parsed) return false;
+    return isLocalhostHostname(parsed.hostname);
+  }
+
+  function getOllamaHostEnv(baseUrl) {
+    const parsed = parseUrlSafe(baseUrl);
+    if (!parsed) return "127.0.0.1:11434";
+    const host = String(parsed.hostname || "127.0.0.1");
+    const port = Number(parsed.port || 0) > 0 ? String(parsed.port) : "11434";
+    return `${host}:${port}`;
+  }
+
+  function parseOllamaListOutput(stdoutText) {
+    const lines = String(stdoutText || "")
+      .split(/\r?\n/g)
+      .map((line) => String(line || "").trim())
+      .filter(Boolean);
+    if (!lines.length) return [];
+
+    const out = [];
+    for (const line of lines) {
+      if (/^name\s+/i.test(line)) continue;
+      const parts = line.split(/\s{2,}/g).map((v) => String(v || "").trim()).filter(Boolean);
+      if (!parts.length) continue;
+      const modelName = parts[0];
+      if (!modelName || modelName.toLowerCase() === "name") continue;
+      out.push(modelName);
+    }
+    return out;
+  }
+
+  async function listOllamaModelsViaCli(baseUrl) {
+    const env = {
+      ...process.env,
+      OLLAMA_HOST: getOllamaHostEnv(baseUrl)
+    };
+    const result = await execFileAsync("ollama", ["list"], { env, windowsHide: true, maxBuffer: 2 * 1024 * 1024 });
+    return parseOllamaListOutput(result?.stdout);
+  }
+
+  function getOllamaApiEndpoint(baseUrl, pathPart) {
+    const normalizedBase = normalizeOllamaBaseUrl(baseUrl);
+    const normalizedPath = String(pathPart || "").replace(/^\/+/, "");
+    if (normalizedBase.toLowerCase().endsWith("/api")) {
+      return `${normalizedBase}/${normalizedPath}`;
+    }
+    return `${normalizedBase}/api/${normalizedPath}`;
+  }
+
+  function getOllamaV1Endpoint(baseUrl, pathPart) {
+    const normalizedBase = normalizeOllamaBaseUrl(baseUrl);
+    const normalizedPath = String(pathPart || "").replace(/^\/+/, "");
+    if (normalizedBase.toLowerCase().endsWith("/v1")) {
+      return `${normalizedBase}/${normalizedPath}`;
+    }
+    return `${normalizedBase}/v1/${normalizedPath}`;
+  }
+
   function getDefaultPromptTemplate() {
     return [
       "You are emuBro's game recommendation assistant.",
       "Mode: {{mode}}",
       "User mood/preferences: {{query}}",
+      "Platform constraint: {{platformConstraint}}",
       "",
       "Return valid JSON only with this exact shape:",
       "{",
@@ -86,18 +193,41 @@ function registerSuggestionsIpc(deps = {}) {
     const mode = normalizeMode(payload.mode);
     const query = normalizeText(payload.query, "No specific mood provided.");
     const limit = Math.max(3, Math.min(12, Number(payload.limit) || 8));
+    const selectedPlatformOnly = !!payload.selectedPlatformOnly;
+    const selectedPlatform = normalizeText(payload.selectedPlatform);
+    const platformConstraint = (selectedPlatformOnly && selectedPlatform)
+      ? `Only suggest games for platform "${selectedPlatform}".`
+      : "No platform restriction.";
     const libraryGames = normalizeLibraryGames(payload.libraryGames);
     const libraryJson = JSON.stringify(libraryGames);
-    const template = normalizeText(payload.promptTemplate, getDefaultPromptTemplate());
-    let prompt = template
-      .replace(/\{\{\s*mode\s*\}\}/gi, mode)
-      .replace(/\{\{\s*query\s*\}\}/gi, query)
-      .replace(/\{\{\s*limit\s*\}\}/gi, String(limit))
-      .replace(/\{\{\s*libraryJson\s*\}\}/gi, libraryJson);
+    const template = decodeHtmlEntities(normalizeText(payload.promptTemplate, getDefaultPromptTemplate()));
+    let prompt = template;
+    prompt = replacePromptToken(prompt, "mode", mode);
+    prompt = replacePromptToken(prompt, "query", query);
+    prompt = replacePromptToken(prompt, "limit", String(limit));
+    prompt = replacePromptToken(prompt, "platformConstraint", platformConstraint);
+    prompt = replacePromptToken(prompt, "selectedPlatform", selectedPlatform);
+    prompt = replacePromptToken(prompt, "libraryJson", libraryJson);
+
+    if (selectedPlatformOnly && selectedPlatform) {
+      prompt += `\n- IMPORTANT: Only suggest games for platform "${selectedPlatform}".`;
+    }
 
     if (!/\{\{\s*libraryJson\s*\}\}/i.test(template)) {
       prompt += `\n\nLibrary games JSON:\n${libraryJson}`;
     }
+    if (!/\{\{\s*query\s*\}\}/i.test(template)) {
+      prompt += `\nUser mood/preferences: ${query}`;
+    }
+    if (!/\{\{\s*mode\s*\}\}/i.test(template)) {
+      prompt += `\nMode: ${mode}`;
+    }
+    if (!/\{\{\s*platformConstraint\s*\}\}/i.test(template)) {
+      prompt += `\nPlatform constraint: ${platformConstraint}`;
+    }
+
+    // Always append a strict context block so custom templates still work.
+    prompt += `\n\nContext:\n- mode: ${mode}\n- query: ${query}\n- limit: ${limit}\n- platformConstraint: ${platformConstraint}\n- libraryJson: ${libraryJson}`;
     return prompt;
   }
 
@@ -140,10 +270,38 @@ function registerSuggestionsIpc(deps = {}) {
       const key = `${name.toLowerCase()}::${platform.toLowerCase()}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      out.push({ name, platform, reason });
+      const entry = { name, platform, reason };
+      const numericId = Number(row?.id || 0);
+      if (numericId > 0) {
+        entry.id = numericId;
+      }
+      const platformShortName = normalizeText(row?.platformShortName);
+      if (platformShortName) {
+        entry.platformShortName = platformShortName;
+      }
+      out.push(entry);
       if (out.length >= maxCount) break;
     }
     return out;
+  }
+
+  function matchesPlatformConstraint(value, selectedPlatform) {
+    const candidate = normalizeText(value).toLowerCase();
+    const target = normalizeText(selectedPlatform).toLowerCase();
+    if (!target) return true;
+    if (!candidate) return false;
+    return (
+      candidate === target
+      || candidate.includes(target)
+      || target.includes(candidate)
+    );
+  }
+
+  function gameMatchesPlatformConstraint(game, selectedPlatform) {
+    return (
+      matchesPlatformConstraint(game?.platformShortName, selectedPlatform)
+      || matchesPlatformConstraint(game?.platform, selectedPlatform)
+    );
   }
 
   function normalizeNameForMatch(value) {
@@ -176,7 +334,13 @@ function registerSuggestionsIpc(deps = {}) {
   function parseSuggestionPayload(rawModelText, payload) {
     const mode = normalizeMode(payload.mode);
     const limit = Math.max(3, Math.min(12, Number(payload.limit) || 8));
+    const selectedPlatformOnly = !!payload.selectedPlatformOnly;
+    const selectedPlatform = normalizeText(payload.selectedPlatform).toLowerCase();
     const libraryGames = normalizeLibraryGames(payload.libraryGames);
+    const scopedLibraryGames = selectedPlatformOnly && selectedPlatform
+      ? libraryGames.filter((game) => gameMatchesPlatformConstraint(game, selectedPlatform))
+      : libraryGames;
+    const libraryGamesForMatching = scopedLibraryGames.length > 0 ? scopedLibraryGames : libraryGames;
     const parsed = extractJsonFromText(rawModelText) || {};
 
     const rawLibraryMatches = Array.isArray(parsed.libraryMatches)
@@ -191,67 +355,121 @@ function registerSuggestionsIpc(deps = {}) {
 
     const mappedLibraryMatches = requestedLibraryMatches
       .map((entry) => {
-        const match = findLibraryMatch(libraryGames, entry.name, entry.platform);
+        const match = findLibraryMatch(libraryGamesForMatching, entry.name, entry.platform);
         if (!match) return null;
         return {
           id: Number(match.id || 0),
           name: normalizeText(match.name),
           platform: normalizeText(match.platform || match.platformShortName),
+          platformShortName: normalizeText(match.platformShortName),
           reason: normalizeText(entry.reason)
         };
       })
       .filter(Boolean);
 
     const dedupedLibraryMatches = normalizeSuggestionEntries(mappedLibraryMatches, limit);
-    const fallbackLibraryMatches = dedupedLibraryMatches.length > 0
-      ? dedupedLibraryMatches
+    const platformFilteredLibraryMatches = selectedPlatformOnly && selectedPlatform
+      ? dedupedLibraryMatches.filter((entry) => {
+          const platform = normalizeText(entry?.platform).toLowerCase();
+          if (!platform) return false;
+          return platform === selectedPlatform || platform.includes(selectedPlatform) || selectedPlatform.includes(platform);
+        })
+      : dedupedLibraryMatches;
+    const fallbackLibraryMatches = platformFilteredLibraryMatches.length > 0
+      ? platformFilteredLibraryMatches
       : normalizeSuggestionEntries(
-        libraryGames
+        libraryGamesForMatching
           .filter((game) => !!game.isInstalled || !!game.lastPlayed)
           .sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")))
           .slice(0, Math.min(5, limit))
           .map((game) => ({
+            id: Number(game.id || 0),
             name: game.name,
             platform: game.platform || game.platformShortName,
+            platformShortName: game.platformShortName,
             reason: "Good match based on your current library."
           })),
         limit
       );
 
-    const missingSuggestions = mode === "library-only"
+    const safeFallbackLibraryMatches = fallbackLibraryMatches.length > 0
+      ? fallbackLibraryMatches
+      : normalizeSuggestionEntries(
+        libraryGamesForMatching
+          .sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")))
+          .slice(0, Math.min(5, limit))
+          .map((game) => ({
+            id: Number(game.id || 0),
+            name: game.name,
+            platform: game.platform || game.platformShortName,
+            platformShortName: game.platformShortName,
+            reason: "Potential match from your current library."
+          })),
+        limit
+      );
+
+    const missingSuggestionsRaw = mode === "library-only"
       ? []
       : normalizeSuggestionEntries(requestedMissingSuggestions, limit);
+    const missingSuggestions = selectedPlatformOnly && selectedPlatform
+      ? missingSuggestionsRaw.filter((entry) => {
+          const platform = normalizeText(entry?.platform).toLowerCase();
+          if (!platform) return false;
+          return platform === selectedPlatform || platform.includes(selectedPlatform) || selectedPlatform.includes(platform);
+        })
+      : missingSuggestionsRaw;
 
     const summary = normalizeText(parsed.summary, "AI suggestions generated.");
     return {
       summary,
-      libraryMatches: fallbackLibraryMatches,
+      libraryMatches: safeFallbackLibraryMatches,
       missingSuggestions
     };
   }
 
   async function requestOllama(payload) {
-    const baseUrl = normalizeText(payload.baseUrl, "http://127.0.0.1:11434").replace(/\/+$/g, "");
-    const endpoint = `${baseUrl}/api/generate`;
-    const response = await fetchImpl(endpoint, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({
-        model: normalizeText(payload.model, "llama3.1"),
-        prompt: buildPrompt(payload),
-        format: "json",
-        stream: false
-      })
-    });
-
-    if (!response.ok) {
+    const endpoint = getOllamaApiEndpoint(payload.baseUrl, "generate");
+    const runWithModel = async (modelName) => {
+      const response = await fetchImpl(endpoint, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          model: normalizeText(modelName, "llama3.1"),
+          prompt: buildPrompt(payload),
+          format: "json",
+          stream: false
+        })
+      });
       const text = await response.text();
-      throw new Error(`Ollama request failed (${response.status}): ${text.slice(0, 180)}`);
+      return { ok: response.ok, status: response.status, text };
+    };
+
+    const initialModel = normalizeText(payload.model, "llama3.1");
+    let firstRun = await runWithModel(initialModel);
+    if (!firstRun.ok) {
+      const modelNotFound = firstRun.status === 404 || /model\s+['"]?.+?['"]?\s+not\s+found/i.test(firstRun.text);
+      if (modelNotFound) {
+        try {
+          const listed = await listOllamaModels({ baseUrl: payload.baseUrl });
+          const fallbackModel = normalizeText(listed?.models?.[0]);
+          if (fallbackModel && fallbackModel.toLowerCase() !== initialModel.toLowerCase()) {
+            firstRun = await runWithModel(fallbackModel);
+          }
+        } catch (_error) {}
+      }
     }
-    const json = await response.json();
-    return normalizeText(json?.response);
+
+    if (!firstRun.ok) {
+      throw new Error(`Ollama request failed (${firstRun.status}): ${String(firstRun.text || "").slice(0, 180)}`);
+    }
+
+    let json = null;
+    try {
+      json = JSON.parse(String(firstRun.text || "{}"));
+    } catch (_error) {}
+    return normalizeText(json?.response, String(firstRun.text || ""));
   }
 
   async function requestOpenAI(payload) {
@@ -328,25 +546,56 @@ function registerSuggestionsIpc(deps = {}) {
   }
 
   async function listOllamaModels(payload = {}) {
-    const baseUrl = normalizeText(payload.baseUrl, "http://127.0.0.1:11434").replace(/\/+$/g, "");
-    const endpoint = `${baseUrl}/api/tags`;
-    const response = await fetchImpl(endpoint, {
-      method: "GET",
-      headers: {
-        "content-type": "application/json"
-      }
-    });
+    const baseUrl = normalizeOllamaBaseUrl(payload.baseUrl);
+    const endpoints = [
+      { url: getOllamaApiEndpoint(baseUrl, "tags"), type: "tags" },
+      { url: getOllamaV1Endpoint(baseUrl, "models"), type: "v1" }
+    ];
+    const errors = [];
+    const names = [];
 
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`Ollama model list failed (${response.status}): ${text.slice(0, 180)}`);
+    for (const endpoint of endpoints) {
+      try {
+        const response = await fetchImpl(endpoint.url, {
+          method: "GET",
+          headers: {
+            "content-type": "application/json"
+          }
+        });
+        if (!response.ok) {
+          const text = await response.text();
+          errors.push(`${endpoint.url} -> ${response.status}: ${text.slice(0, 140)}`);
+          continue;
+        }
+
+        const json = await response.json();
+        const rows = endpoint.type === "v1"
+          ? (Array.isArray(json?.data) ? json.data : [])
+          : (Array.isArray(json?.models) ? json.models : []);
+
+        const parsed = rows
+          .map((row) => normalizeText(row?.name || row?.model || row?.id))
+          .filter(Boolean);
+
+        names.push(...parsed);
+      } catch (error) {
+        errors.push(`${endpoint.url} -> ${error?.message || String(error)}`);
+      }
     }
 
-    const json = await response.json();
-    const rows = Array.isArray(json?.models) ? json.models : [];
-    const names = rows
-      .map((row) => normalizeText(row?.name || row?.model))
-      .filter(Boolean);
+    // Local fallback: query `ollama list` CLI to avoid missing models on variant APIs/proxies.
+    if (isLocalOllamaBaseUrl(baseUrl)) {
+      try {
+        const cliNames = await listOllamaModelsViaCli(baseUrl);
+        names.push(...cliNames);
+      } catch (error) {
+        errors.push(`ollama list -> ${error?.message || String(error)}`);
+      }
+    }
+
+    if (names.length === 0) {
+      throw new Error(`Ollama model list failed. ${errors.join(" | ")}`.trim());
+    }
 
     const seen = new Set();
     const deduped = [];
@@ -372,6 +621,8 @@ function registerSuggestionsIpc(deps = {}) {
       provider,
       mode,
       limit: Math.max(3, Math.min(12, Number(payload.limit) || 8)),
+      selectedPlatformOnly: !!payload.selectedPlatformOnly,
+      selectedPlatform: normalizeText(payload.selectedPlatform),
       libraryGames: normalizeLibraryGames(payload.libraryGames)
     };
 

@@ -75,6 +75,7 @@ const SUGGESTED_SECTION_KEY = 'suggested';
 const SUPPORTED_LIBRARY_SECTIONS = new Set(['all', 'installed', 'recent', SUGGESTED_SECTION_KEY, 'emulators']);
 let suggestionsRequestInFlight = false;
 let lastSuggestionsResult = null;
+let suggestedCoverGames = [];
 const ollamaModelsCacheByUrl = new Map();
 
 function normalizeLibrarySection(section) {
@@ -110,6 +111,7 @@ function getDefaultSuggestionPromptTemplate() {
         "You are emuBro's game recommendation assistant.",
         "Mode: {{mode}}",
         "User mood/preferences: {{query}}",
+        "Platform constraint: {{platformConstraint}}",
         "",
         "Return valid JSON only with this exact shape:",
         "{",
@@ -140,6 +142,7 @@ function getDefaultSuggestionSettings() {
         scope: 'library-plus-missing',
         query: '',
         promptTemplate: getDefaultSuggestionPromptTemplate(),
+        selectedPlatformOnly: false,
         models: {
             ollama: 'llama3.1',
             openai: 'gpt-4o-mini',
@@ -170,6 +173,7 @@ function loadSuggestionSettings() {
             scope: normalizeSuggestionScope(parsed.scope),
             query: String(parsed.query || ''),
             promptTemplate: String(parsed.promptTemplate || defaults.promptTemplate || '').trim() || defaults.promptTemplate,
+            selectedPlatformOnly: !!parsed.selectedPlatformOnly,
             models: {
                 ...defaults.models,
                 ...(parsed.models && typeof parsed.models === 'object' ? parsed.models : {})
@@ -196,6 +200,7 @@ function saveSuggestionSettings(settings) {
         scope: normalizeSuggestionScope(settings?.scope),
         query: String(settings?.query || ''),
         promptTemplate: String(settings?.promptTemplate || defaults.promptTemplate || '').trim() || defaults.promptTemplate,
+        selectedPlatformOnly: !!settings?.selectedPlatformOnly,
         models: {
             ...defaults.models,
             ...(settings?.models && typeof settings.models === 'object' ? settings.models : {})
@@ -268,7 +273,10 @@ function gameMatchesSuggestionTerms(game, terms) {
     return terms.some((term) => haystack.includes(term));
 }
 
-function buildSuggestionLibraryPayload(query = '') {
+function buildSuggestionLibraryPayload(query = '', options = {}) {
+    const selectedPlatform = String(options?.selectedPlatform || '').trim().toLowerCase();
+    const selectedPlatformOnly = !!options?.selectedPlatformOnly && !!selectedPlatform;
+
     const rows = (Array.isArray(getGames()) ? getGames() : []).map((game) => ({
         id: Number(game?.id || 0),
         name: String(game?.name || '').trim(),
@@ -278,7 +286,12 @@ function buildSuggestionLibraryPayload(query = '') {
         rating: Number.isFinite(Number(game?.rating)) ? Number(game.rating) : null,
         isInstalled: !!game?.isInstalled,
         lastPlayed: String(game?.lastPlayed || '').trim()
-    })).filter((game) => game.name.length > 0);
+    }))
+        .filter((game) => game.name.length > 0)
+        .filter((game) => {
+            if (!selectedPlatformOnly) return true;
+            return String(game.platformShortName || '').trim().toLowerCase() === selectedPlatform;
+        });
 
     if (rows.length === 0) return [];
 
@@ -323,6 +336,93 @@ function applySuggestionSearchTerm(rawValue) {
     if (!searchInput) return;
     searchInput.value = term;
     searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function getSelectedPlatformContext() {
+    const platformFilter = document.getElementById('platform-filter');
+    if (!platformFilter) return { value: '', label: '' };
+    const value = String(platformFilter.value || '').trim().toLowerCase();
+    if (!value || value === 'all') return { value: '', label: '' };
+    const selectedOption = platformFilter.options?.[platformFilter.selectedIndex];
+    const label = String(selectedOption?.textContent || value).trim();
+    return { value, label };
+}
+
+function normalizeSuggestionMatchName(value) {
+    return String(value || '')
+        .toLowerCase()
+        .replace(/\s*[\(\[\{][^()\[\]{}]*[\)\]\}]\s*/g, ' ')
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
+}
+
+function platformMatchesSuggestionTarget(game, targetPlatform) {
+    const target = String(targetPlatform || '').trim().toLowerCase();
+    if (!target) return true;
+
+    const gamePlatformShort = String(game?.platformShortName || '').trim().toLowerCase();
+    const gamePlatformName = String(game?.platform || '').trim().toLowerCase();
+    if (gamePlatformShort && gamePlatformShort === target) return true;
+    if (gamePlatformName && gamePlatformName === target) return true;
+    if (gamePlatformName && (gamePlatformName.includes(target) || target.includes(gamePlatformName))) return true;
+    return false;
+}
+
+function getGameIdentityKey(game) {
+    const numericId = Number(game?.id || 0);
+    if (numericId > 0) return `id:${numericId}`;
+    const name = String(game?.name || '').trim().toLowerCase();
+    const platform = String(game?.platformShortName || game?.platform || '').trim().toLowerCase();
+    return `${name}::${platform}`;
+}
+
+function findSuggestedGameMatch(sourceGames, entry) {
+    const games = Array.isArray(sourceGames) ? sourceGames : [];
+    if (games.length === 0 || !entry) return null;
+
+    const entryId = Number(entry?.id || 0);
+    if (entryId > 0) {
+        const byId = games.find((game) => Number(game?.id || 0) === entryId);
+        if (byId) return byId;
+    }
+
+    const targetName = normalizeSuggestionMatchName(entry?.name || entry?.title || '');
+    if (!targetName) return null;
+    const targetPlatform = String(entry?.platform || '').trim().toLowerCase();
+
+    const exact = games.find((game) => {
+        const gameName = normalizeSuggestionMatchName(game?.name || '');
+        if (gameName !== targetName) return false;
+        return platformMatchesSuggestionTarget(game, targetPlatform);
+    });
+    if (exact) return exact;
+
+    return games.find((game) => {
+        const gameName = normalizeSuggestionMatchName(game?.name || '');
+        if (!gameName) return false;
+        if (!(gameName.includes(targetName) || targetName.includes(gameName))) return false;
+        return platformMatchesSuggestionTarget(game, targetPlatform);
+    }) || null;
+}
+
+function mapSuggestionLibraryMatchesToGames(response, options = {}) {
+    const libraryMatches = Array.isArray(response?.libraryMatches) ? response.libraryMatches : [];
+    const sourceGames = Array.isArray(getGames()) ? getGames() : [];
+    const selectedPlatform = String(options?.selectedPlatform || '').trim().toLowerCase();
+    const out = [];
+    const seen = new Set();
+
+    libraryMatches.forEach((entry) => {
+        const match = findSuggestedGameMatch(sourceGames, entry);
+        if (!match) return;
+        if (selectedPlatform && String(match?.platformShortName || '').trim().toLowerCase() !== selectedPlatform) return;
+        const key = getGameIdentityKey(match);
+        if (seen.has(key)) return;
+        seen.add(key);
+        out.push(match);
+    });
+
+    return out;
 }
 
 function renderSuggestionResults(panel, response) {
@@ -414,20 +514,23 @@ async function runSuggestionsFromPanel(panel) {
     const baseUrlInput = panel.querySelector('[data-suggest-base-url]');
     const apiKeyInput = panel.querySelector('[data-suggest-api-key]');
     const promptInput = panel.querySelector('[data-suggest-prompt]');
+    const platformOnlyToggle = panel.querySelector('[data-suggest-platform-only]');
     const status = panel.querySelector('[data-suggest-status]');
     const runBtn = panel.querySelector('[data-suggest-run]');
 
-    if (!providerSelect || !scopeSelect || !modelInput || !baseUrlInput || !apiKeyInput || !promptInput || !status || !runBtn) return;
+    if (!providerSelect || !scopeSelect || !modelInput || !baseUrlInput || !apiKeyInput || !promptInput || !status || !runBtn || !platformOnlyToggle) return;
 
     const provider = normalizeSuggestionProvider(providerSelect.value);
     const selectedModel = provider === 'ollama'
         ? String(modelSelect?.value || modelInput.value || '').trim()
         : String(modelInput.value || '').trim();
+    const platformContext = getSelectedPlatformContext();
     const nextSettings = loadSuggestionSettings();
     nextSettings.provider = provider;
     nextSettings.scope = normalizeSuggestionScope(scopeSelect.value);
     nextSettings.query = String(panel.querySelector('[data-suggest-query]')?.value || '').trim();
     nextSettings.promptTemplate = String(promptInput.value || '').trim() || getDefaultSuggestionPromptTemplate();
+    nextSettings.selectedPlatformOnly = !!platformOnlyToggle.checked;
     nextSettings.models = {
         ...nextSettings.models,
         [provider]: selectedModel || nextSettings.models[provider]
@@ -447,7 +550,10 @@ async function runSuggestionsFromPanel(panel) {
     const model = String(nextSettings.models?.[provider] || '').trim();
     const baseUrl = String(nextSettings.baseUrls?.[provider] || '').trim();
     const apiKey = String(nextSettings.apiKeys?.[provider] || '').trim();
-    const libraryGames = buildSuggestionLibraryPayload(nextSettings.query);
+    const libraryGames = buildSuggestionLibraryPayload(nextSettings.query, {
+        selectedPlatformOnly: nextSettings.selectedPlatformOnly,
+        selectedPlatform: platformContext.value
+    });
 
     if (!model) {
         status.textContent = 'Set a model first.';
@@ -461,8 +567,14 @@ async function runSuggestionsFromPanel(panel) {
         status.textContent = 'API key is required for this provider.';
         return;
     }
+    if (nextSettings.selectedPlatformOnly && !platformContext.value) {
+        status.textContent = 'Choose a platform in the top filter first, then run again.';
+        return;
+    }
     if (!libraryGames.length) {
-        status.textContent = 'No games found in your library yet.';
+        status.textContent = nextSettings.selectedPlatformOnly
+            ? 'No games found for the selected platform.'
+            : 'No games found in your library yet.';
         return;
     }
 
@@ -480,7 +592,9 @@ async function runSuggestionsFromPanel(panel) {
             baseUrl,
             apiKey,
             limit: 8,
-            libraryGames
+            libraryGames,
+            selectedPlatformOnly: nextSettings.selectedPlatformOnly,
+            selectedPlatform: platformContext.value
         });
 
         if (!response?.success) {
@@ -489,8 +603,14 @@ async function runSuggestionsFromPanel(panel) {
         }
 
         lastSuggestionsResult = response;
+        suggestedCoverGames = mapSuggestionLibraryMatchesToGames(response, {
+            selectedPlatform: nextSettings.selectedPlatformOnly ? platformContext.value : ''
+        });
         status.textContent = String(response?.summary || 'Suggestions ready.');
         renderSuggestionResults(panel, response);
+        if (activeTopSection === 'library' && activeLibrarySection === SUGGESTED_SECTION_KEY) {
+            renderGames(getSectionFilteredGames());
+        }
     } catch (error) {
         status.textContent = String(error?.message || error || 'Suggestion request failed.');
     } finally {
@@ -531,6 +651,13 @@ function renderSuggestedPanel() {
                 </select>
             </div>
             <div class="form-group">
+                <label class="suggested-checkbox-label" for="suggest-platform-only">
+                    <input id="suggest-platform-only" data-suggest-platform-only type="checkbox"${settings.selectedPlatformOnly ? ' checked' : ''} />
+                    <span>From Selected Platform only</span>
+                </label>
+                <small class="suggested-panel-hint">Uses the platform selected in the top filter.</small>
+            </div>
+            <div class="form-group">
                 <label for="suggest-model">Model</label>
                 <div class="suggested-model-row" data-suggest-model-select-wrap>
                     <select id="suggest-model-select" data-suggest-model-select>
@@ -555,7 +682,7 @@ function renderSuggestedPanel() {
             <div class="form-group suggested-panel-form-group--wide">
                 <label for="suggest-prompt">Prompt Template</label>
                 <textarea id="suggest-prompt" data-suggest-prompt rows="9">${escapeHtml(promptTemplate)}</textarea>
-                <small class="suggested-panel-hint">Placeholders: {{mode}}, {{query}}, {{limit}}, {{libraryJson}}</small>
+                <small class="suggested-panel-hint">Placeholders: {{mode}}, {{query}}, {{limit}}, {{platformConstraint}}, {{selectedPlatform}}, {{libraryJson}}</small>
             </div>
             <div class="suggested-panel-actions">
                 <button class="action-btn launch-btn" type="button" data-suggest-run>Generate Suggestions</button>
@@ -577,6 +704,7 @@ function renderSuggestedPanel() {
     const queryInput = panel.querySelector('[data-suggest-query]');
     const promptInput = panel.querySelector('[data-suggest-prompt]');
     const scopeSelect = panel.querySelector('[data-suggest-scope]');
+    const platformOnlyToggle = panel.querySelector('[data-suggest-platform-only]');
     const status = panel.querySelector('[data-suggest-status]');
     const runBtn = panel.querySelector('[data-suggest-run]');
 
@@ -658,7 +786,7 @@ function renderSuggestedPanel() {
             modelInputWrap.style.display = nextProvider === 'ollama' ? 'none' : 'block';
         }
         if (nextProvider === 'ollama') {
-            refreshOllamaModels(false);
+            refreshOllamaModels(true);
         }
     };
 
@@ -669,6 +797,7 @@ function renderSuggestedPanel() {
         current.scope = normalizeSuggestionScope(scopeSelect.value);
         current.query = String(queryInput.value || '').trim();
         current.promptTemplate = String(promptInput.value || '').trim() || getDefaultSuggestionPromptTemplate();
+        current.selectedPlatformOnly = !!platformOnlyToggle?.checked;
         const selectedModel = currentProvider === 'ollama'
             ? String(modelSelect?.value || modelInput.value || '').trim()
             : String(modelInput.value || '').trim();
@@ -710,7 +839,7 @@ function renderSuggestedPanel() {
         syncProviderFields();
     });
 
-    [scopeSelect, modelInput, baseUrlInput, apiKeyInput, queryInput, promptInput].forEach((element) => {
+    [scopeSelect, modelInput, baseUrlInput, apiKeyInput, queryInput, promptInput, platformOnlyToggle].forEach((element) => {
         element.addEventListener('change', persistInputs);
         element.addEventListener('blur', persistInputs);
     });
@@ -1818,7 +1947,9 @@ function getSectionFilteredGames() {
     }
 
     if (activeLibrarySection === SUGGESTED_SECTION_KEY) {
-        return filtered;
+        const suggestedKeys = new Set((Array.isArray(suggestedCoverGames) ? suggestedCoverGames : []).map((game) => getGameIdentityKey(game)));
+        if (!suggestedKeys.size) return [];
+        return filtered.filter((game) => suggestedKeys.has(getGameIdentityKey(game)));
     }
 
     return filtered;
@@ -1848,6 +1979,15 @@ async function renderActiveLibraryView() {
     }
 
     initializePlatformFilterOptions(getGames());
+    if (activeLibrarySection === SUGGESTED_SECTION_KEY) {
+        const suggestedRows = getSectionFilteredGames();
+        if (suggestedRows.length === 0) {
+            const activeView = document.querySelector('.view-btn.active')?.dataset?.view || 'cover';
+            gamesContainer.className = `games-container ${activeView}-view`;
+            gamesContainer.innerHTML = '<p class="suggested-empty-state">Generate suggestions to show recommended games here.</p>';
+            return;
+        }
+    }
     renderGames(getSectionFilteredGames());
 }
 
@@ -1994,7 +2134,7 @@ function setupEventListeners() {
                 renderEmulators(getFilteredEmulatorsForSection(), getEmulatorRenderOptions());
                 return;
             }
-            applyFilters();
+            applyFilters(false);
             renderGames(getSectionFilteredGames());
         });
     }
@@ -2006,7 +2146,7 @@ function setupEventListeners() {
                 renderEmulators(getFilteredEmulatorsForSection(), getEmulatorRenderOptions());
                 return;
             }
-            applyFilters();
+            applyFilters(false);
             renderGames(getSectionFilteredGames());
         });
     }

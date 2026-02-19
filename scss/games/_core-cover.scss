@@ -140,6 +140,19 @@
     letter-spacing: 0.01em;
 }
 
+.suggested-checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.suggested-checkbox-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+}
+
 .suggested-panel-form input,
 .suggested-panel-form select,
 .suggested-panel-form textarea {
@@ -197,6 +210,18 @@
     margin-top: 12px;
     display: grid;
     gap: 10px;
+}
+
+.suggested-empty-state {
+    grid-column: 1 / -1;
+    margin: 6px 0 0;
+    padding: 14px 16px;
+    border-radius: var(--radius-card);
+    border: 1px dashed color-mix(in srgb, var(--border-color), rgba(255, 255, 255, 0.24));
+    background: color-mix(in srgb, var(--bg-secondary), transparent 18%);
+    color: var(--text-secondary);
+    text-align: center;
+    font-size: 0.9rem;
 }
 
 .suggested-result-group {

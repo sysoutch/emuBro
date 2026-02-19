@@ -470,7 +470,7 @@ async function launchGame(gameId) {
     return getMissingGameRecoveryActions().launchGame(gameId);
 }
 
-export function applyFilters() {
+export function applyFilters(shouldRender = true) {
     filteredGames = [...games];
     
     const platformFilter = document.getElementById('platform-filter');
@@ -497,7 +497,9 @@ export function applyFilters() {
             filteredGames.sort((a, b) => a.name.localeCompare(b.name));
     }
     
-    renderGames(filteredGames);
+    if (shouldRender) {
+        renderGames(filteredGames);
+    }
 }
 
 export function initializePlatformFilterOptions(sourceRows = games) {
