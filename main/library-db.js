@@ -17,6 +17,7 @@ function createLibraryDbService(deps = {}) {
   let dbRef = null;
   let games = [];
   let emulators = [];
+  let tags = [];
 
   function normalizePlatform(value) {
     return String(value || "").trim().toLowerCase();
@@ -24,6 +25,55 @@ function createLibraryDbService(deps = {}) {
 
   function normalizeName(value) {
     return String(value || "").trim().toLowerCase();
+  }
+
+  function normalizeTagId(value) {
+    return String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9-]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+
+  function toTitleCaseFromSlug(value) {
+    return String(value || "")
+      .split("-")
+      .map((part) => part ? (part.charAt(0).toUpperCase() + part.slice(1)) : "")
+      .join(" ")
+      .trim();
+  }
+
+  function normalizeTagList(tagsInput) {
+    const rows = Array.isArray(tagsInput) ? tagsInput : [];
+    const out = [];
+    const seen = new Set();
+    for (const raw of rows) {
+      const tagId = normalizeTagId(raw);
+      if (!tagId || seen.has(tagId)) continue;
+      seen.add(tagId);
+      out.push(tagId);
+    }
+    return out;
+  }
+
+  function parseTagsColumn(rawValue) {
+    if (Array.isArray(rawValue)) return normalizeTagList(rawValue);
+    const text = String(rawValue || "").trim();
+    if (!text) return [];
+    try {
+      const parsed = JSON.parse(text);
+      return normalizeTagList(parsed);
+    } catch (_error) {
+      return [];
+    }
+  }
+
+  function hydrateGameRow(row) {
+    if (!row || typeof row !== "object") return row;
+    return {
+      ...row,
+      tags: parseTagsColumn(row.tags)
+    };
   }
 
   function getDb() {
@@ -43,6 +93,7 @@ function createLibraryDbService(deps = {}) {
         platform TEXT,
         platformShortName TEXT NOT NULL,
         emulatorOverridePath TEXT,
+        tags TEXT,
         filePath TEXT NOT NULL UNIQUE,
         code TEXT,
         image TEXT,
@@ -60,8 +111,17 @@ function createLibraryDbService(deps = {}) {
         updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
       );
 
+      CREATE TABLE IF NOT EXISTS tags (
+        id TEXT PRIMARY KEY,
+        label TEXT,
+        source TEXT,
+        createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+        updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+
       CREATE INDEX IF NOT EXISTS idx_games_platform ON games(platformShortName);
       CREATE INDEX IF NOT EXISTS idx_emus_platform ON emulators(platformShortName);
+      CREATE INDEX IF NOT EXISTS idx_tags_label ON tags(label COLLATE NOCASE);
     `);
 
     try {
@@ -69,6 +129,10 @@ function createLibraryDbService(deps = {}) {
       const hasOverrideColumn = gameColumns.some((col) => String(col?.name || "").trim().toLowerCase() === "emulatoroverridepath");
       if (!hasOverrideColumn) {
         dbRef.exec("ALTER TABLE games ADD COLUMN emulatorOverridePath TEXT");
+      }
+      const hasTagsColumn = gameColumns.some((col) => String(col?.name || "").trim().toLowerCase() === "tags");
+      if (!hasTagsColumn) {
+        dbRef.exec("ALTER TABLE games ADD COLUMN tags TEXT");
       }
     } catch (error) {
       log.error("Failed to migrate games table:", error);
@@ -79,7 +143,10 @@ function createLibraryDbService(deps = {}) {
 
   function dbLoadGames() {
     const db = getDb();
-    return db.prepare("SELECT * FROM games ORDER BY name COLLATE NOCASE").all();
+    return db
+      .prepare("SELECT * FROM games ORDER BY name COLLATE NOCASE")
+      .all()
+      .map((row) => hydrateGameRow(row));
   }
 
   function dbLoadEmulators() {
@@ -87,9 +154,81 @@ function createLibraryDbService(deps = {}) {
     return db.prepare("SELECT * FROM emulators ORDER BY name COLLATE NOCASE").all();
   }
 
+  function dbLoadTags() {
+    const db = getDb();
+    return db.prepare("SELECT id, label, source, createdAt, updatedAt FROM tags ORDER BY COALESCE(label, id) COLLATE NOCASE").all()
+      .map((row) => {
+        const id = normalizeTagId(row?.id);
+        if (!id) return null;
+        return {
+          id,
+          label: String(row?.label || "").trim() || toTitleCaseFromSlug(id),
+          source: String(row?.source || "").trim() || "db",
+          createdAt: row?.createdAt || null,
+          updatedAt: row?.updatedAt || null
+        };
+      })
+      .filter(Boolean);
+  }
+
+  function dbUpsertTags(rows, options = {}) {
+    const list = Array.isArray(rows) ? rows : [];
+    if (list.length === 0) return [];
+
+    const sourceDefault = String(options?.source || "user").trim() || "user";
+    const forceLabel = !!options?.forceLabel;
+    const forceSource = !!options?.forceSource;
+    const deduped = [];
+    const seen = new Set();
+    list.forEach((row) => {
+      const id = normalizeTagId(typeof row === "string" ? row : row?.id);
+      if (!id || seen.has(id)) return;
+      seen.add(id);
+      const providedLabel = typeof row === "string"
+        ? ""
+        : String(row?.label || "").trim();
+      deduped.push({
+        id,
+        label: providedLabel || toTitleCaseFromSlug(id),
+        source: String(typeof row === "string" ? sourceDefault : (row?.source || sourceDefault)).trim() || sourceDefault
+      });
+    });
+    if (!deduped.length) return [];
+
+    const db = getDb();
+    const tx = db.transaction((entries) => {
+      const labelExpr = forceLabel
+        ? "excluded.label"
+        : `CASE
+            WHEN tags.label IS NULL OR trim(tags.label) = '' THEN excluded.label
+            WHEN tags.label = tags.id AND excluded.label <> excluded.id THEN excluded.label
+            ELSE tags.label
+          END`;
+      const sourceExpr = forceSource
+        ? "excluded.source"
+        : `CASE
+            WHEN tags.source IS NULL OR trim(tags.source) = '' THEN excluded.source
+            WHEN tags.source = 'resource' AND excluded.source <> 'resource' THEN tags.source
+            ELSE excluded.source
+          END`;
+      const stmt = db.prepare(`
+        INSERT INTO tags (id, label, source, updatedAt)
+        VALUES (@id, @label, @source, CURRENT_TIMESTAMP)
+        ON CONFLICT(id) DO UPDATE SET
+          label = ${labelExpr},
+          source = ${sourceExpr},
+          updatedAt = CURRENT_TIMESTAMP
+      `);
+      entries.forEach((entry) => stmt.run(entry));
+    });
+    tx(deduped);
+    tags = dbLoadTags();
+    return deduped;
+  }
+
   function dbGetGameById(id) {
     const db = getDb();
-    return db.prepare("SELECT * FROM games WHERE id = ?").get(id);
+    return hydrateGameRow(db.prepare("SELECT * FROM games WHERE id = ?").get(id));
   }
 
   function dbDeleteGameById(id) {
@@ -140,6 +279,12 @@ function createLibraryDbService(deps = {}) {
       params.emulatorOverridePath = value || null;
     }
 
+    if (Object.prototype.hasOwnProperty.call(patch, "tags")) {
+      const tags = normalizeTagList(patch.tags);
+      sets.push("tags = @tags");
+      params.tags = tags.length > 0 ? JSON.stringify(tags) : null;
+    }
+
     if (sets.length === 0) return dbGetGameById(targetId);
 
     const sql = `
@@ -182,7 +327,7 @@ function createLibraryDbService(deps = {}) {
       .prepare("SELECT * FROM games WHERE filePath = ?")
       .get(filePath);
 
-    return { row, existed };
+    return { row: hydrateGameRow(row), existed };
   }
 
   function dbUpsertEmulator(emu) {
@@ -216,7 +361,8 @@ function createLibraryDbService(deps = {}) {
   function refreshLibraryFromDb() {
     games = dbLoadGames();
     emulators = dbLoadEmulators();
-    return { games, emulators };
+    tags = dbLoadTags();
+    return { games, emulators, tags };
   }
 
   function getGamesState() {
@@ -225,6 +371,10 @@ function createLibraryDbService(deps = {}) {
 
   function getEmulatorsState() {
     return emulators;
+  }
+
+  function getTagsState() {
+    return tags;
   }
 
   function inferGameCode(game) {
@@ -339,11 +489,14 @@ function createLibraryDbService(deps = {}) {
     dbDeleteGameById,
     dbUpdateGameFilePath,
     dbUpdateGameMetadata,
+    dbLoadTags,
+    dbUpsertTags,
     dbUpsertGame,
     dbUpsertEmulator,
     refreshLibraryFromDb,
     getGamesState,
     getEmulatorsState,
+    getTagsState,
     normalizePlatform,
     inferGameCode,
     discoverCoverImageRelative,

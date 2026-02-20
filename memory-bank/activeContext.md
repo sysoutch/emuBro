@@ -79,6 +79,7 @@ The current focus is on updating project documentation and maintaining the codeb
 - Theme management through localStorage
 - Internationalization using i18n.js
 - Responsive design for different screen sizes
+- Keep household continuously: prefer ongoing cleanup/refactoring, reduce oversized files, remove duplication, and keep modules tidy as part of regular feature work
 
 ## Learnings and Project Insights
 - When dynamically generating HTML classes in JS (e.g. `list-item-image`), ensure strict synchronization with SCSS selectors

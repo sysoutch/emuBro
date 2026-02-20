@@ -16,9 +16,11 @@ function registerGameIpc(deps = {}) {
     refreshLibraryFromDb,
     getGamesState,
     getEmulatorsState,
+    getTagsState,
     dbGetGameById,
     dbDeleteGameById,
     dbUpdateGameMetadata,
+    dbUpsertTags,
     dbUpdateGameFilePath,
     getPlatformConfigs
   } = deps;
@@ -36,13 +38,238 @@ function registerGameIpc(deps = {}) {
   if (typeof refreshLibraryFromDb !== "function") throw new Error("registerGameIpc requires refreshLibraryFromDb");
   if (typeof getGamesState !== "function") throw new Error("registerGameIpc requires getGamesState");
   if (typeof getEmulatorsState !== "function") throw new Error("registerGameIpc requires getEmulatorsState");
+  if (typeof getTagsState !== "function") throw new Error("registerGameIpc requires getTagsState");
   if (typeof dbGetGameById !== "function") throw new Error("registerGameIpc requires dbGetGameById");
   if (typeof dbDeleteGameById !== "function") throw new Error("registerGameIpc requires dbDeleteGameById");
   if (typeof dbUpdateGameMetadata !== "function") throw new Error("registerGameIpc requires dbUpdateGameMetadata");
+  if (typeof dbUpsertTags !== "function") throw new Error("registerGameIpc requires dbUpsertTags");
   if (typeof dbUpdateGameFilePath !== "function") throw new Error("registerGameIpc requires dbUpdateGameFilePath");
   if (typeof getPlatformConfigs !== "function") throw new Error("registerGameIpc requires getPlatformConfigs");
 
   const appPath = app.getAppPath();
+
+  function toTitleCaseFromSlug(value) {
+    return String(value || "")
+      .split("-")
+      .map((part) => part ? (part.charAt(0).toUpperCase() + part.slice(1)) : "")
+      .join(" ")
+      .trim();
+  }
+
+  function normalizeTagId(value) {
+    return String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9-]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+
+  function unquoteYamlScalar(value) {
+    let text = String(value || "").trim();
+    if (!text) return "";
+    if ((text.startsWith("'") && text.endsWith("'")) || (text.startsWith('"') && text.endsWith('"'))) {
+      text = text.slice(1, -1);
+    }
+    return text.trim();
+  }
+
+  function parseYamlTagLabel(yamlText) {
+    const lines = String(yamlText || "").split(/\r?\n/g);
+    let inEnglishSection = false;
+    const englishValues = [];
+
+    for (const rawLine of lines) {
+      const line = String(rawLine || "");
+      const trimmed = line.trim();
+      if (!trimmed || trimmed === "---") continue;
+
+      const keyMatch = trimmed.match(/^([A-Za-z0-9_-]+)\s*:\s*(.*)$/);
+      if (keyMatch) {
+        const key = String(keyMatch[1] || "").trim().toLowerCase();
+        const valuePart = String(keyMatch[2] || "").trim();
+        inEnglishSection = key === "en";
+        if (inEnglishSection && valuePart) {
+          const scalar = unquoteYamlScalar(valuePart);
+          if (scalar) englishValues.push(scalar);
+        }
+        continue;
+      }
+
+      if (inEnglishSection) {
+        const listItemMatch = trimmed.match(/^-+\s*(.+)$/);
+        if (listItemMatch) {
+          const scalar = unquoteYamlScalar(listItemMatch[1]);
+          if (scalar) englishValues.push(scalar);
+        } else if (/^[A-Za-z0-9_-]+\s*:/.test(trimmed)) {
+          inEnglishSection = false;
+        }
+      }
+    }
+
+    return englishValues.find((value) => String(value || "").trim().length > 0) || "";
+  }
+
+  function loadTagCatalog() {
+    const tagsDir = path.join(appPath, "emubro-resources", "tags");
+    if (!fsSync.existsSync(tagsDir)) return [];
+
+    const files = fsSync.readdirSync(tagsDir, { withFileTypes: true });
+    const out = [];
+    const seen = new Set();
+
+    for (const file of files) {
+      if (!file || !file.isFile()) continue;
+      const ext = path.extname(file.name).toLowerCase();
+      if (ext !== ".yaml" && ext !== ".yml") continue;
+
+      const slug = String(path.basename(file.name, ext) || "").trim().toLowerCase();
+      if (!slug || seen.has(slug)) continue;
+      seen.add(slug);
+
+      const absPath = path.join(tagsDir, file.name);
+      let label = "";
+      try {
+        const raw = fsSync.readFileSync(absPath, "utf8");
+        label = parseYamlTagLabel(raw);
+      } catch (_error) {
+        label = "";
+      }
+
+      out.push({
+        id: slug,
+        label: label || toTitleCaseFromSlug(slug)
+      });
+    }
+
+    out.sort((a, b) => String(a.label || a.id).localeCompare(String(b.label || b.id)));
+    return out;
+  }
+
+  function collectGameDerivedTags() {
+    const rows = Array.isArray(getGamesState()) ? getGamesState() : [];
+    const out = [];
+    const seen = new Set();
+    rows.forEach((game) => {
+      const tagRows = Array.isArray(game?.tags) ? game.tags : [];
+      tagRows.forEach((rawTag) => {
+        const tag = normalizeTagId(rawTag);
+        if (!tag || seen.has(tag)) return;
+        seen.add(tag);
+        out.push({
+          id: tag,
+          label: toTitleCaseFromSlug(tag),
+          source: "game"
+        });
+      });
+    });
+    return out;
+  }
+
+  function getDeletedTagIdSet() {
+    const rows = Array.isArray(getTagsState()) ? getTagsState() : [];
+    const deleted = new Set();
+    rows.forEach((row) => {
+      const id = normalizeTagId(row?.id);
+      const source = String(row?.source || "").trim().toLowerCase();
+      if (id && source === "deleted") {
+        deleted.add(id);
+      }
+    });
+    return deleted;
+  }
+
+  function getMergedTagCatalog() {
+    const mergedMap = new Map();
+    const deletedTagIds = getDeletedTagIdSet();
+    const pushRows = (rows) => {
+      (Array.isArray(rows) ? rows : []).forEach((row) => {
+        const id = normalizeTagId(row?.id);
+        if (!id) return;
+        const label = String(row?.label || "").trim() || toTitleCaseFromSlug(id);
+        const source = String(row?.source || "").trim() || "resource";
+        const existing = mergedMap.get(id);
+        if (!existing) {
+          mergedMap.set(id, { id, label, source });
+          return;
+        }
+        if (existing.label === existing.id && label !== id) {
+          existing.label = label;
+        }
+        if (existing.source !== "resource" || source === "resource") {
+          existing.source = source;
+        }
+      });
+    };
+
+    pushRows(loadTagCatalog().map((row) => ({ ...row, source: "resource" })));
+    pushRows((Array.isArray(getTagsState()) ? getTagsState() : []).filter((row) => {
+      return String(row?.source || "").trim().toLowerCase() !== "deleted";
+    }));
+    pushRows(collectGameDerivedTags());
+
+    const out = Array.from(mergedMap.values()).filter((row) => !deletedTagIds.has(normalizeTagId(row?.id)));
+    out.sort((a, b) => String(a.label || a.id).localeCompare(String(b.label || b.id)));
+    return out;
+  }
+
+  function remapTagAcrossGames(oldTagId, newTagId) {
+    const source = Array.isArray(getGamesState()) ? getGamesState() : [];
+    let updatedGames = 0;
+    source.forEach((gameRow) => {
+      const gameId = Number(gameRow?.id || 0);
+      if (!gameId) return;
+      const existing = Array.isArray(gameRow?.tags) ? gameRow.tags : [];
+      if (!existing.length) return;
+
+      let changed = false;
+      const next = [];
+      const seen = new Set();
+      existing.forEach((rawTag) => {
+        const tagId = normalizeTagId(rawTag);
+        if (!tagId) return;
+        const mapped = tagId === oldTagId ? newTagId : tagId;
+        if (tagId === oldTagId) changed = true;
+        if (!mapped || seen.has(mapped)) return;
+        seen.add(mapped);
+        next.push(mapped);
+      });
+
+      if (!changed) return;
+      dbUpdateGameMetadata(gameId, { tags: next });
+      updatedGames += 1;
+    });
+    return updatedGames;
+  }
+
+  function removeTagFromGames(tagIdToRemove) {
+    const source = Array.isArray(getGamesState()) ? getGamesState() : [];
+    let updatedGames = 0;
+    source.forEach((gameRow) => {
+      const gameId = Number(gameRow?.id || 0);
+      if (!gameId) return;
+      const existing = Array.isArray(gameRow?.tags) ? gameRow.tags : [];
+      if (!existing.length) return;
+
+      let changed = false;
+      const next = [];
+      const seen = new Set();
+      existing.forEach((rawTag) => {
+        const tagId = normalizeTagId(rawTag);
+        if (!tagId || tagId === tagIdToRemove) {
+          if (tagId === tagIdToRemove) changed = true;
+          return;
+        }
+        if (seen.has(tagId)) return;
+        seen.add(tagId);
+        next.push(tagId);
+      });
+
+      if (!changed) return;
+      dbUpdateGameMetadata(gameId, { tags: next });
+      updatedGames += 1;
+    });
+    return updatedGames;
+  }
 
   function sanitizeFilename(name) {
     return String(name || "")
@@ -349,6 +576,112 @@ function registerGameIpc(deps = {}) {
     return getGamesState();
   });
 
+  ipcMain.handle("tags:list", async () => {
+    try {
+      return { success: true, tags: getMergedTagCatalog() };
+    } catch (error) {
+      log.error("Failed to list tags:", error);
+      return { success: false, message: error.message, tags: [] };
+    }
+  });
+
+  ipcMain.handle("tags:rename", async (_event, payload = {}) => {
+    try {
+      const oldTagId = normalizeTagId(payload?.oldTagId || payload?.tagId || payload?.oldId);
+      const requestedName = String(
+        payload?.newTagName
+        || payload?.newLabel
+        || payload?.newName
+        || payload?.name
+        || ""
+      ).trim();
+      if (!oldTagId) {
+        return { success: false, message: "Missing source tag ID" };
+      }
+      if (!requestedName) {
+        return { success: false, message: "Missing new tag name" };
+      }
+
+      const newTagId = normalizeTagId(requestedName);
+      if (!newTagId) {
+        return { success: false, message: "Invalid new tag name" };
+      }
+
+      const catalogMap = new Map(getMergedTagCatalog().map((row) => [normalizeTagId(row?.id), row]));
+      const oldCatalog = catalogMap.get(oldTagId);
+      const oldLabel = String(oldCatalog?.label || toTitleCaseFromSlug(oldTagId)).trim() || toTitleCaseFromSlug(oldTagId);
+      const newLabel = requestedName;
+
+      let updatedGames = 0;
+      let mergedIntoExisting = false;
+
+      if (oldTagId !== newTagId) {
+        updatedGames = remapTagAcrossGames(oldTagId, newTagId);
+        mergedIntoExisting = catalogMap.has(newTagId);
+      }
+
+      dbUpsertTags(
+        [{
+          id: newTagId,
+          label: newLabel || toTitleCaseFromSlug(newTagId),
+          source: "user"
+        }],
+        { source: "user", forceLabel: true, forceSource: true }
+      );
+
+      if (oldTagId !== newTagId) {
+        dbUpsertTags(
+          [{
+            id: oldTagId,
+            label: oldLabel,
+            source: "deleted"
+          }],
+          { source: "deleted", forceLabel: true, forceSource: true }
+        );
+      }
+
+      refreshLibraryFromDb();
+      return {
+        success: true,
+        oldTagId,
+        newTagId,
+        newLabel: newLabel || toTitleCaseFromSlug(newTagId),
+        updatedGames,
+        merged: mergedIntoExisting
+      };
+    } catch (error) {
+      log.error("Failed to rename tag:", error);
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle("tags:delete", async (_event, payload = {}) => {
+    try {
+      const tagId = normalizeTagId(payload?.tagId || payload?.id);
+      if (!tagId) return { success: false, message: "Missing tag ID" };
+
+      const catalogMap = new Map(getMergedTagCatalog().map((row) => [normalizeTagId(row?.id), row]));
+      const existing = catalogMap.get(tagId);
+      const label = String(existing?.label || toTitleCaseFromSlug(tagId)).trim() || toTitleCaseFromSlug(tagId);
+
+      const updatedGames = removeTagFromGames(tagId);
+      dbUpsertTags(
+        [{
+          id: tagId,
+          label,
+          source: "deleted"
+        }],
+        { source: "deleted", forceLabel: true, forceSource: true }
+      );
+
+      refreshLibraryFromDb();
+      return { success: true, tagId, updatedGames };
+    } catch (error) {
+      log.error("Failed to delete tag:", error);
+      return { success: false, message: error.message };
+    }
+  });
+
   ipcMain.handle("get-game-details", async (_event, gameId) => {
     const targetId = Number(gameId);
     return getGamesState().find((game) => Number(game.id) === targetId) || null;
@@ -389,6 +722,33 @@ function registerGameIpc(deps = {}) {
 
         patch.platformShortName = nextPlatformShortName;
         patch.platform = nextPlatformName;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(payload, "tags")) {
+        const rawTags = Array.isArray(payload?.tags) ? payload.tags : [];
+        const normalizedTags = [];
+        const seen = new Set();
+        rawTags.forEach((rawTag) => {
+          const tag = normalizeTagId(rawTag);
+          if (!tag || seen.has(tag)) return;
+          seen.add(tag);
+          normalizedTags.push(tag);
+        });
+        patch.tags = normalizedTags;
+
+        if (normalizedTags.length > 0) {
+          const tagCatalogMap = new Map(
+            getMergedTagCatalog().map((row) => [String(row?.id || "").toLowerCase(), String(row?.label || "").trim()])
+          );
+          dbUpsertTags(
+            normalizedTags.map((tagId) => ({
+              id: tagId,
+              label: tagCatalogMap.get(tagId) || toTitleCaseFromSlug(tagId),
+              source: "user"
+            })),
+            { source: "user" }
+          );
+        }
       }
 
       const updated = dbUpdateGameMetadata(gameId, patch);

@@ -35,6 +35,26 @@
 - Deployment procedures and packaging
 
 ## Recent Changes
+- Refactored `renderer.js` by extracting reusable modules:
+  - `js/suggestions-settings.js`
+  - `js/suggestions-core.js`
+  - `js/suggested-results-view.js`
+  - `js/tag-categories.js`
+  - `js/ui/glass-message-dialog.js`
+  - `js/ui/llm-tagging-dialogs.js`
+  - `js/drag-drop-manager.js`
+  - `js/window-ui-manager.js`
+  - `js/settings/library-settings-modal.js`
+  - `js/events/setup-renderer-events.js`
+  - `js/profile/profile-modal.js`
+  - `js/library/categories-list-renderer.js`
+- Reduced renderer surface area and duplicated logic in suggestion/tagging/category flows
+- Moved drag/drop import flow out of `renderer.js` into `js/drag-drop-manager.js` and wired via dependency injection callbacks
+- Moved window chrome/sidebar/toggle/resize UI handlers into `js/window-ui-manager.js`
+- Moved the large settings modal implementation out of `renderer.js` into `js/settings/library-settings-modal.js` with a thin wrapper in renderer
+- Moved renderer event wiring into `js/events/setup-renderer-events.js` with dependency injection and state getters
+- Moved profile modal UI into `js/profile/profile-modal.js` with a thin wrapper in renderer
+- Moved categories sidebar rendering and tag-mutation workflows into `js/library/categories-list-renderer.js` and kept a small renderer wrapper
 - Implemented Memory Card Editor with professional dual-pane table-based layout
     - Optimized layout to fill 100% of available space by using absolute positioning and flex-grow
     - Fixed responsive behavior with media queries and stacked layouts for smaller windows

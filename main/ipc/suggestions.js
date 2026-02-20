@@ -189,6 +189,65 @@ function registerSuggestionsIpc(deps = {}) {
     return out;
   }
 
+  function groupLibraryGamesForPrompt(rows, maxCount = 420) {
+    const normalizedRows = normalizeLibraryGames(rows, Math.max(420, maxCount * 4));
+    const groups = new Map();
+
+    normalizedRows.forEach((game) => {
+      const cleanName = stripBracketedTitleParts(game?.name) || normalizeText(game?.name, "Unknown game");
+      const platformShortName = normalizeText(game?.platformShortName || game?.platform).toLowerCase();
+      const groupKey = `${normalizeNameForMatch(cleanName) || normalizeNameForMatch(game?.name)}::${platformShortName || "unknown"}`;
+      if (!groups.has(groupKey)) {
+        groups.set(groupKey, {
+          id: Number(game?.id || 0),
+          name: cleanName || normalizeText(game?.name, "Unknown game"),
+          cleanName: cleanName || normalizeText(game?.name, "Unknown game"),
+          platform: normalizeText(game?.platform || game?.platformShortName),
+          platformShortName: normalizeText(game?.platformShortName),
+          genre: normalizeText(game?.genre),
+          rating: Number.isFinite(Number(game?.rating)) ? Number(game.rating) : null,
+          isInstalled: !!game?.isInstalled,
+          lastPlayed: normalizeText(game?.lastPlayed),
+          variants: [],
+          gameIds: [],
+          duplicateCount: 0
+        });
+      }
+
+      const group = groups.get(groupKey);
+      const gameId = Number(game?.id || 0);
+      const variant = normalizeText(game?.name);
+      if (variant && !group.variants.some((row) => row.toLowerCase() === variant.toLowerCase())) {
+        group.variants.push(variant);
+      }
+      if (gameId > 0 && !group.gameIds.includes(gameId)) {
+        group.gameIds.push(gameId);
+      }
+      group.duplicateCount += 1;
+      if (!group.isInstalled && !!game?.isInstalled) {
+        group.isInstalled = true;
+      }
+      if (!group.platformShortName && game?.platformShortName) {
+        group.platformShortName = normalizeText(game.platformShortName);
+      }
+      if (!group.genre && game?.genre) {
+        group.genre = normalizeText(game.genre);
+      }
+      const gameLastPlayed = normalizeText(game?.lastPlayed);
+      if (gameLastPlayed) {
+        const nextDate = new Date(gameLastPlayed).getTime();
+        const currentDate = new Date(group.lastPlayed || "").getTime();
+        if (!group.lastPlayed || (Number.isFinite(nextDate) && nextDate > currentDate)) {
+          group.lastPlayed = gameLastPlayed;
+        }
+      }
+    });
+
+    const out = Array.from(groups.values());
+    out.sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+    return out.slice(0, Math.max(1, Number(maxCount) || 420));
+  }
+
   function buildPrompt(payload) {
     const mode = normalizeMode(payload.mode);
     const query = normalizeText(payload.query, "No specific mood provided.");
@@ -198,7 +257,7 @@ function registerSuggestionsIpc(deps = {}) {
     const platformConstraint = (selectedPlatformOnly && selectedPlatform)
       ? `Only suggest games for platform "${selectedPlatform}".`
       : "No platform restriction.";
-    const libraryGames = normalizeLibraryGames(payload.libraryGames);
+    const libraryGames = groupLibraryGamesForPrompt(payload.libraryGames);
     const libraryJson = JSON.stringify(libraryGames);
     const template = decodeHtmlEntities(normalizeText(payload.promptTemplate, getDefaultPromptTemplate()));
     let prompt = template;
@@ -229,6 +288,334 @@ function registerSuggestionsIpc(deps = {}) {
     // Always append a strict context block so custom templates still work.
     prompt += `\n\nContext:\n- mode: ${mode}\n- query: ${query}\n- limit: ${limit}\n- platformConstraint: ${platformConstraint}\n- libraryJson: ${libraryJson}`;
     return prompt;
+  }
+
+  function buildRequestPrompt(payload) {
+    const directPrompt = normalizeText(payload?.prompt);
+    if (directPrompt) return directPrompt;
+    return buildPrompt(payload);
+  }
+
+  function normalizeTagCatalogRows(rows) {
+    const out = [];
+    const seen = new Set();
+    const list = Array.isArray(rows) ? rows : [];
+    for (const row of list) {
+      const id = normalizeText(row?.id || row?.key || row?.name).toLowerCase();
+      if (!id) continue;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      out.push({
+        id,
+        label: normalizeText(row?.label, id)
+      });
+    }
+    return out;
+  }
+
+  function normalizeGamesForTagSuggestions(rows, maxCount = 240) {
+    const out = [];
+    const seen = new Set();
+    const list = Array.isArray(rows) ? rows : [];
+    for (const row of list) {
+      const id = Number(row?.id || 0);
+      const name = normalizeText(row?.name);
+      if (!id && !name) continue;
+      const key = id > 0 ? `id:${id}` : `name:${name.toLowerCase()}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const cleanName = stripBracketedTitleParts(name);
+      out.push({
+        id: id > 0 ? id : 0,
+        name,
+        cleanName: cleanName || name,
+        platform: normalizeText(row?.platform || row?.platformShortName),
+        platformShortName: normalizeText(row?.platformShortName),
+        genre: normalizeText(row?.genre),
+        description: normalizeText(row?.description),
+        tags: Array.isArray(row?.tags)
+          ? row.tags.map((tag) => normalizeText(tag).toLowerCase()).filter(Boolean)
+          : []
+      });
+      if (out.length >= maxCount) break;
+    }
+    return out;
+  }
+
+  function stripBracketedTitleParts(value) {
+    let text = normalizeText(value);
+    if (!text) return "";
+    let previous = "";
+    while (previous !== text) {
+      previous = text;
+      text = text.replace(/\s*[\(\[\{][^()\[\]{}]*[\)\]\}]\s*/g, " ");
+    }
+    return text.replace(/\s+/g, " ").trim();
+  }
+
+  function buildGroupedTagPromptRows(gamesInput) {
+    const games = normalizeGamesForTagSuggestions(gamesInput);
+    const groups = new Map();
+    let seq = 0;
+
+    games.forEach((game) => {
+      const cleanName = normalizeText(game?.cleanName || game?.name);
+      const platformShortName = normalizeText(game?.platformShortName || game?.platform).toLowerCase();
+      const normalizedNameKey = normalizeNameForMatch(cleanName || game?.name);
+      const groupKey = `${normalizedNameKey || "unknown"}::${platformShortName || "unknown"}`;
+      if (!groups.has(groupKey)) {
+        seq += 1;
+        groups.set(groupKey, {
+          groupId: `group-${seq}`,
+          groupKey,
+          canonicalName: cleanName || normalizeText(game?.name, "Unknown game"),
+          platform: normalizeText(game?.platform || game?.platformShortName),
+          platformShortName: platformShortName || normalizeText(game?.platformShortName),
+          genre: normalizeText(game?.genre),
+          description: normalizeText(game?.description),
+          existingTags: new Set(),
+          variants: [],
+          gameIds: []
+        });
+      }
+
+      const group = groups.get(groupKey);
+      const gameId = Number(game?.id || 0);
+      if (gameId > 0 && !group.gameIds.includes(gameId)) {
+        group.gameIds.push(gameId);
+      }
+
+      const variantName = normalizeText(game?.name);
+      if (variantName && !group.variants.includes(variantName)) {
+        group.variants.push(variantName);
+      }
+
+      if (!group.genre && normalizeText(game?.genre)) {
+        group.genre = normalizeText(game?.genre);
+      }
+      if (!group.description && normalizeText(game?.description)) {
+        group.description = normalizeText(game?.description);
+      }
+
+      (Array.isArray(game?.tags) ? game.tags : []).forEach((tag) => {
+        const normalizedTag = normalizeText(tag).toLowerCase();
+        if (normalizedTag) group.existingTags.add(normalizedTag);
+      });
+    });
+
+    return Array.from(groups.values()).map((group) => ({
+      groupId: group.groupId,
+      canonicalName: group.canonicalName,
+      platform: group.platform,
+      platformShortName: group.platformShortName,
+      genre: group.genre,
+      description: group.description,
+      existingTags: Array.from(group.existingTags),
+      variants: group.variants,
+      gameIds: group.gameIds
+    }));
+  }
+
+  function normalizeTagAlias(value) {
+    return String(value || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "")
+      .trim();
+  }
+
+  function normalizeTagId(value) {
+    return String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9-]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+
+  function sanitizeTagSource(value) {
+    let text = normalizeText(value);
+    if (!text) return "";
+
+    text = text
+      .replace(/\btag[\s_-]*id\b/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!text) return "";
+
+    const collapsed = text.replace(/[\s\-_:;,.|/\\]+/g, "");
+    if (collapsed.length <= 1) return "";
+    if (/^\d+$/.test(collapsed)) return "";
+
+    return text;
+  }
+
+  function createTagResolutionMaps(catalogRows) {
+    const idMap = new Map();
+    const labelMap = new Map();
+    const aliasMap = new Map();
+    const rows = normalizeTagCatalogRows(catalogRows);
+    rows.forEach((row) => {
+      const id = normalizeText(row?.id).toLowerCase();
+      const label = normalizeText(row?.label).toLowerCase();
+      if (!id) return;
+      idMap.set(id, row.id);
+      if (label) labelMap.set(label, row.id);
+      aliasMap.set(normalizeTagAlias(row.id), row.id);
+      if (label) aliasMap.set(normalizeTagAlias(row.label), row.id);
+    });
+    return { idMap, labelMap, aliasMap };
+  }
+
+  function collectTagSourcesFromParsed(parsed) {
+    const sourceList = [];
+    const pushSource = (value) => {
+      const text = sanitizeTagSource(value);
+      if (!text) return;
+      sourceList.push(text);
+    };
+
+    if (Array.isArray(parsed?.tags)) {
+      parsed.tags.forEach((entry) => {
+        if (entry && typeof entry === "object") {
+          pushSource(entry.id || entry.tag || entry.name || entry.label);
+        } else {
+          pushSource(entry);
+        }
+      });
+    }
+    if (Array.isArray(parsed?.tagIds)) parsed.tagIds.forEach(pushSource);
+    if (Array.isArray(parsed?.categories)) parsed.categories.forEach(pushSource);
+    if (sourceList.length === 0) {
+      const csvLike = normalizeText(parsed?.tags || parsed?.tagIds || parsed?.categories);
+      if (csvLike) {
+        csvLike
+          .split(/[,\n;|]+/g)
+          .map((part) => normalizeText(part))
+          .filter(Boolean)
+          .forEach(pushSource);
+      }
+    }
+    return sourceList;
+  }
+
+  function resolveTagSourcesToIds(sourceList, options = {}) {
+    const allowUnknownTags = !!options?.allowUnknownTags;
+    const maxTags = Math.max(1, Math.min(24, Number(options?.maxTags) || 6));
+    const maps = options?.maps || createTagResolutionMaps(options?.catalog || []);
+    const out = [];
+    const seen = new Set();
+
+    (Array.isArray(sourceList) ? sourceList : []).forEach((sourceValue) => {
+      const sanitizedSource = sanitizeTagSource(sourceValue);
+      const lower = normalizeText(sanitizedSource).toLowerCase();
+      if (!lower) return;
+      const alias = normalizeTagAlias(sanitizedSource);
+      const matchedId = maps.idMap.get(lower) || maps.labelMap.get(lower) || maps.aliasMap.get(alias) || "";
+      const resolvedId = matchedId || (allowUnknownTags ? normalizeTagId(sanitizedSource) : "");
+      if (!resolvedId) return;
+      const key = resolvedId.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push(resolvedId);
+    });
+
+    return out.slice(0, maxTags);
+  }
+
+  function buildTagSuggestionPrompt(payload) {
+    const game = payload?.game || {};
+    const maxTags = Math.max(1, Math.min(12, Number(payload?.maxTags) || 6));
+    const allowUnknownTags = !!payload?.allowUnknownTags;
+    const availableTags = normalizeTagCatalogRows(payload?.availableTags);
+    const gameName = normalizeText(game?.name, "Unknown game");
+    const platform = normalizeText(game?.platform || game?.platformShortName, "Unknown");
+    const genre = normalizeText(game?.genre, "Unknown");
+    const description = normalizeText(game?.description, "");
+    const existingTags = Array.isArray(game?.tags)
+      ? game.tags.map((tag) => normalizeText(tag).toLowerCase()).filter(Boolean)
+      : [];
+    const tagsJson = JSON.stringify(availableTags);
+
+    return [
+      "You are emuBro's metadata assistant.",
+      "Task: choose the best matching tags for a game.",
+      "",
+      "Return strict JSON only in this shape:",
+      "{",
+      '  "tags": ["single player", "multi player", "Action", "Snowboarding"],',
+      '  "reason": "short reason"',
+      "}",
+      "",
+      "Rules:",
+      allowUnknownTags
+        ? `- Prefer tag name from availableTags. If needed, you may add new short tag names (max ${maxTags} tags total).`
+        : `- Use only tag names from the provided availableTags list (max ${maxTags} tags).`,
+      "- Keep tags relevant to genre, gameplay style, and known franchise context.",
+      allowUnknownTags
+        ? "- For new tags, use concise kebab-case IDs (example: couch-coop, metroidvania)."
+        : "- Do not invent tags.",
+      "",
+      "Game:",
+      JSON.stringify({
+        name: gameName,
+        cleanName: stripBracketedTitleParts(gameName) || gameName,
+        platform,
+        platformShortName: normalizeText(game?.platformShortName),
+        genre,
+        description,
+        existingTags
+      }),
+      "",
+      "availableTags:",
+      tagsJson
+    ].join("\n");
+  }
+
+  function buildBatchTagSuggestionPrompt(payload) {
+    const maxTags = Math.max(1, Math.min(12, Number(payload?.maxTags) || 6));
+    const allowUnknownTags = !!payload?.allowUnknownTags;
+    const availableTags = normalizeTagCatalogRows(payload?.availableTags);
+    const games = buildGroupedTagPromptRows(payload?.games);
+    const gameJson = JSON.stringify(
+      games.map((game) => ({
+        groupId: normalizeText(game.groupId),
+        gameIds: Array.isArray(game.gameIds) ? game.gameIds : [],
+        name: normalizeText(game.canonicalName),
+        platform: normalizeText(game.platform),
+        platformShortName: normalizeText(game.platformShortName),
+        genre: normalizeText(game.genre),
+        description: normalizeText(game.description),
+        existingTags: Array.isArray(game.existingTags) ? game.existingTags : [],
+        variants: Array.isArray(game.variants) ? game.variants : []
+      }))
+    );
+    const tagsJson = JSON.stringify(availableTags);
+
+    return [
+      "You are emuBro's metadata assistant.",
+      "Task: choose the best matching tags for each game.",
+      "",
+      "Return strict JSON only in this exact shape:",
+      "{",
+      '  "results": [',
+      '    {"groupId": "group-1", "tags": ["tag-id-1", "tag-id-2"], "reason": "short reason"}',
+      "  ]",
+      "}",
+      "",
+      "Rules:",
+      `- Return exactly one result object for each provided groupId in input order (max ${maxTags} tags per group).`,
+      "- Apply tags to all gameIds in each group (same cleaned name + platformShortName).",
+      allowUnknownTags
+        ? "- Prefer availableTags. If needed, you may add short kebab-case tag IDs."
+        : "- Use only tag IDs from availableTags. Do not invent tags.",
+      "- Keep reason concise (under 20 words).",
+      "- If a game has no suitable tags, return an empty tags array for that game.",
+      "",
+      "games:",
+      gameJson,
+      "",
+      "availableTags:",
+      tagsJson
+    ].join("\n");
   }
 
   function extractJsonFromText(rawText) {
@@ -427,6 +814,143 @@ function registerSuggestionsIpc(deps = {}) {
     };
   }
 
+  function parseTagSuggestionPayload(rawModelText, payload) {
+    const catalog = normalizeTagCatalogRows(payload?.availableTags);
+    const maxTags = Math.max(1, Math.min(12, Number(payload?.maxTags) || 6));
+    const allowUnknownTags = !!payload?.allowUnknownTags;
+    const maps = createTagResolutionMaps(catalog);
+    const parsed = extractJsonFromText(rawModelText) || {};
+
+    return {
+      tags: resolveTagSourcesToIds(collectTagSourcesFromParsed(parsed), {
+        allowUnknownTags,
+        maxTags,
+        maps
+      }),
+      reason: normalizeText(parsed?.reason, "Tags generated by AI suggestion.")
+    };
+  }
+
+  function parseBatchTagSuggestionPayload(rawModelText, payload) {
+    const catalog = normalizeTagCatalogRows(payload?.availableTags);
+    const maxTags = Math.max(1, Math.min(12, Number(payload?.maxTags) || 6));
+    const allowUnknownTags = !!payload?.allowUnknownTags;
+    const games = normalizeGamesForTagSuggestions(payload?.games);
+    const groups = buildGroupedTagPromptRows(payload?.games);
+    const maps = createTagResolutionMaps(catalog);
+    const parsed = extractJsonFromText(rawModelText);
+
+    const gameIdMap = new Map();
+    const gameNameMap = new Map();
+    games.forEach((game) => {
+      const id = Number(game.id || 0);
+      const nameKey = normalizeNameForMatch(game.name);
+      if (id > 0) gameIdMap.set(id, game);
+      if (nameKey) gameNameMap.set(nameKey, game);
+    });
+
+    const groupIdMap = new Map();
+    const groupGameIdsMap = new Map();
+    groups.forEach((group) => {
+      const groupId = normalizeText(group?.groupId);
+      if (!groupId) return;
+      groupIdMap.set(groupId, group);
+      groupGameIdsMap.set(groupId, (Array.isArray(group?.gameIds) ? group.gameIds : [])
+        .map((id) => Number(id || 0))
+        .filter((id) => id > 0));
+    });
+
+    const resolveGamesFromEntry = (entry) => {
+      const rawGroupId = normalizeText(entry?.groupId || entry?.group?.id);
+      if (rawGroupId && groupIdMap.has(rawGroupId)) {
+        return (groupGameIdsMap.get(rawGroupId) || [])
+          .map((id) => gameIdMap.get(id))
+          .filter(Boolean);
+      }
+
+      const rawGameId = Number(entry?.gameId || entry?.id || entry?.game?.id || 0);
+      if (rawGameId > 0 && gameIdMap.has(rawGameId)) return [gameIdMap.get(rawGameId)];
+
+      const rawName = normalizeText(entry?.name || entry?.gameName || entry?.game?.name);
+      if (!rawName) return [];
+      const nameKey = normalizeNameForMatch(rawName);
+      if (!nameKey) return [];
+      const matched = gameNameMap.get(nameKey);
+      return matched ? [matched] : [];
+    };
+
+    const collectRawResultRows = () => {
+      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed?.results)) return parsed.results;
+      if (Array.isArray(parsed?.games)) return parsed.games;
+      if (Array.isArray(parsed?.items)) return parsed.items;
+      if (parsed && typeof parsed === "object") {
+        const objectEntries = Object.entries(parsed).filter(([key]) => !["summary", "reason", "message"].includes(String(key).toLowerCase()));
+        if (objectEntries.length > 0) {
+          return objectEntries.map(([key, value]) => {
+            if (value && typeof value === "object") {
+              return {
+                groupId: normalizeText(value.groupId || (/^group-\d+$/i.test(String(key)) ? key : "")),
+                gameId: Number(key) || Number(value.gameId || value.id || 0),
+                name: normalizeText(value.name || value.gameName),
+                tags: value.tags || value.tagIds || value.categories || [],
+                reason: value.reason
+              };
+            }
+            return {
+              groupId: /^group-\d+$/i.test(String(key)) ? String(key) : "",
+              gameId: Number(key) || 0,
+              tags: value
+            };
+          });
+        }
+      }
+      return [];
+    };
+
+    const rows = collectRawResultRows();
+    const collectedByGameId = new Map();
+    rows.forEach((entry) => {
+      const tags = resolveTagSourcesToIds(collectTagSourcesFromParsed(entry), {
+        allowUnknownTags,
+        maxTags,
+        maps
+      });
+      const matchedGames = resolveGamesFromEntry(entry);
+      matchedGames.forEach((game) => {
+        if (!game || Number(game.id || 0) <= 0) return;
+        const gameId = Number(game.id);
+        const previous = collectedByGameId.get(gameId);
+        if (!previous || (Array.isArray(previous.tags) && previous.tags.length === 0 && tags.length > 0)) {
+          collectedByGameId.set(gameId, {
+            gameId,
+            tags,
+            reason: normalizeText(entry?.reason, "Tags generated by AI suggestion.")
+          });
+        }
+      });
+    });
+
+    const results = games
+      .map((game) => {
+        const gameId = Number(game.id || 0);
+        if (gameId <= 0) return null;
+        const found = collectedByGameId.get(gameId);
+        if (found) return found;
+        return {
+          gameId,
+          tags: [],
+          reason: "No tags returned for this game."
+        };
+      })
+      .filter(Boolean);
+
+    return {
+      summary: normalizeText(parsed?.summary, "Batch tag suggestions generated."),
+      results
+    };
+  }
+
   async function requestOllama(payload) {
     const endpoint = getOllamaApiEndpoint(payload.baseUrl, "generate");
     const runWithModel = async (modelName) => {
@@ -437,7 +961,7 @@ function registerSuggestionsIpc(deps = {}) {
         },
         body: JSON.stringify({
           model: normalizeText(modelName, "llama3.1"),
-          prompt: buildPrompt(payload),
+          prompt: buildRequestPrompt(payload),
           format: "json",
           stream: false
         })
@@ -494,7 +1018,7 @@ function registerSuggestionsIpc(deps = {}) {
           },
           {
             role: "user",
-            content: buildPrompt(payload)
+            content: buildRequestPrompt(payload)
           }
         ]
       })
@@ -525,7 +1049,7 @@ function registerSuggestionsIpc(deps = {}) {
       body: JSON.stringify({
         contents: [
           {
-            parts: [{ text: buildPrompt(payload) }]
+            parts: [{ text: buildRequestPrompt(payload) }]
           }
         ],
         generationConfig: {
@@ -676,6 +1200,102 @@ function registerSuggestionsIpc(deps = {}) {
         success: false,
         message: error?.message || String(error),
         models: []
+      };
+    }
+  });
+
+  ipcMain.handle("suggestions:suggest-tags-for-game", async (_event, payload = {}) => {
+    const provider = normalizeProvider(payload.provider);
+    const safePayload = {
+      ...payload,
+      provider,
+      game: payload?.game && typeof payload.game === "object" ? payload.game : {},
+      availableTags: normalizeTagCatalogRows(payload?.availableTags),
+      maxTags: Math.max(1, Math.min(12, Number(payload.maxTags) || 6)),
+      allowUnknownTags: !!payload?.allowUnknownTags
+    };
+
+    if (!safePayload.game?.name) {
+      return { success: false, provider, message: "No game was provided.", tags: [] };
+    }
+    if (!safePayload.availableTags.length) {
+      return { success: false, provider, message: "No tag catalog was provided.", tags: [] };
+    }
+
+    safePayload.prompt = buildTagSuggestionPrompt(safePayload);
+
+    try {
+      let rawModelText = "";
+      if (provider === "openai") {
+        rawModelText = await requestOpenAI(safePayload);
+      } else if (provider === "gemini") {
+        rawModelText = await requestGemini(safePayload);
+      } else {
+        rawModelText = await requestOllama(safePayload);
+      }
+
+      const parsed = parseTagSuggestionPayload(rawModelText, safePayload);
+      return {
+        success: true,
+        provider,
+        tags: parsed.tags,
+        reason: parsed.reason
+      };
+    } catch (error) {
+      log.error("suggestions:suggest-tags-for-game failed:", error);
+      return {
+        success: false,
+        provider,
+        message: error?.message || String(error),
+        tags: []
+      };
+    }
+  });
+
+  ipcMain.handle("suggestions:suggest-tags-for-games-batch", async (_event, payload = {}) => {
+    const provider = normalizeProvider(payload.provider);
+    const safePayload = {
+      ...payload,
+      provider,
+      availableTags: normalizeTagCatalogRows(payload?.availableTags),
+      games: normalizeGamesForTagSuggestions(payload?.games),
+      maxTags: Math.max(1, Math.min(12, Number(payload?.maxTags) || 6)),
+      allowUnknownTags: !!payload?.allowUnknownTags
+    };
+
+    if (!safePayload.games.length) {
+      return { success: false, provider, message: "No games were provided.", results: [] };
+    }
+    if (!safePayload.availableTags.length) {
+      return { success: false, provider, message: "No tag catalog was provided.", results: [] };
+    }
+
+    safePayload.prompt = buildBatchTagSuggestionPrompt(safePayload);
+
+    try {
+      let rawModelText = "";
+      if (provider === "openai") {
+        rawModelText = await requestOpenAI(safePayload);
+      } else if (provider === "gemini") {
+        rawModelText = await requestGemini(safePayload);
+      } else {
+        rawModelText = await requestOllama(safePayload);
+      }
+
+      const parsed = parseBatchTagSuggestionPayload(rawModelText, safePayload);
+      return {
+        success: true,
+        provider,
+        summary: parsed.summary,
+        results: parsed.results
+      };
+    } catch (error) {
+      log.error("suggestions:suggest-tags-for-games-batch failed:", error);
+      return {
+        success: false,
+        provider,
+        message: error?.message || String(error),
+        results: []
       };
     }
   });

@@ -1,3 +1,8 @@
+import {
+    normalizeSuggestionProvider,
+    loadSuggestionSettings
+} from '../suggestions-settings';
+
 export function createGameDetailsPopupActions(deps = {}) {
     const emubro = deps.emubro || window.emubro;
     const i18n = deps.i18n || window.i18n || { t: (key) => String(key || '') };
@@ -10,6 +15,12 @@ export function createGameDetailsPopupActions(deps = {}) {
     const initializeLazyGameImages = deps.initializeLazyGameImages || (() => {});
     const reloadGamesFromMainAndRender = deps.reloadGamesFromMainAndRender || (async () => {});
     const lazyPlaceholderSrc = String(deps.lazyPlaceholderSrc || '').trim();
+    const isLlmHelpersEnabled = typeof deps.isLlmHelpersEnabled === 'function'
+        ? deps.isLlmHelpersEnabled
+        : (() => true);
+    const isLlmAllowUnknownTagsEnabled = typeof deps.isLlmAllowUnknownTagsEnabled === 'function'
+        ? deps.isLlmAllowUnknownTagsEnabled
+        : (() => false);
     const alertUser = typeof deps.alertUser === 'function'
         ? deps.alertUser
         : ((message) => window.alert(String(message || '')));
@@ -20,6 +31,7 @@ export function createGameDetailsPopupActions(deps = {}) {
     const GAME_INFO_PIN_STORAGE_KEY = 'emuBro.gameInfoPopupPinned';
     let gameInfoPopup = null;
     let gameInfoPlatformsCache = null;
+    let gameTagCatalogCache = null;
     let gameInfoPopupPinned = false;
     try {
         gameInfoPopupPinned = localStorageRef.getItem(GAME_INFO_PIN_STORAGE_KEY) === 'true';
@@ -140,6 +152,343 @@ export function createGameDetailsPopupActions(deps = {}) {
             gameInfoPlatformsCache = [];
         }
         return gameInfoPlatformsCache;
+    }
+
+    async function getGameTagCatalog() {
+        if (Array.isArray(gameTagCatalogCache) && gameTagCatalogCache.length > 0) {
+            return gameTagCatalogCache;
+        }
+        try {
+            const result = await emubro.invoke('tags:list');
+            const rows = Array.isArray(result?.tags) ? result.tags : [];
+            gameTagCatalogCache = rows
+                .map((row) => ({
+                    id: normalizeTagId(row?.id),
+                    label: String(row?.label || row?.id || '').trim()
+                }))
+                .filter((row) => row.id && row.label);
+        } catch (_error) {
+            gameTagCatalogCache = [];
+        }
+        return gameTagCatalogCache;
+    }
+
+    function normalizeTagId(value) {
+        return String(value || '')
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9-]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+    }
+
+    function renderSelectedTagPills(container, selectedTagIds, tagCatalog) {
+        if (!container) return;
+        const selected = Array.isArray(selectedTagIds) ? selectedTagIds : [];
+        const catalog = Array.isArray(tagCatalog) ? tagCatalog : [];
+        if (selected.length === 0) {
+            container.innerHTML = '<span class="game-tag-pill is-empty">No tags assigned</span>';
+            return;
+        }
+
+        container.innerHTML = selected.map((tagId) => {
+            const info = catalog.find((row) => String(row?.id || '').toLowerCase() === String(tagId || '').toLowerCase());
+            const label = info?.label || tagId;
+            return `<span class="game-tag-pill">${escapeHtml(label)}</span>`;
+        }).join('');
+    }
+
+    function applySelectedTagIdsToSelect(select, selectedTagIds) {
+        if (!select) return;
+        const selected = new Set((Array.isArray(selectedTagIds) ? selectedTagIds : [])
+            .map((tag) => normalizeTagId(tag))
+            .filter(Boolean));
+        Array.from(select.options || []).forEach((option) => {
+            option.selected = selected.has(normalizeTagId(option.value));
+        });
+    }
+
+    async function saveGameTagsAndRefresh(game, tags) {
+        const normalizedTags = (Array.isArray(tags) ? tags : [])
+            .map((tag) => normalizeTagId(tag))
+            .filter(Boolean);
+
+        const result = await emubro.invoke('update-game-metadata', {
+            gameId: game.id,
+            tags: normalizedTags
+        });
+        if (!result?.success) {
+            throw new Error(result?.message || 'Failed to save tags.');
+        }
+
+        game.tags = normalizedTags;
+        gameTagCatalogCache = null;
+        await reloadGamesFromMainAndRender();
+        try {
+            window.dispatchEvent(new CustomEvent('emubro:game-tags-updated', {
+                detail: { gameId: Number(game.id), tags: normalizedTags }
+            }));
+        } catch (_error) {}
+        const refreshedGame = getGames().find((row) => Number(row.id) === Number(game.id));
+        if (refreshedGame) {
+            showGameDetails(refreshedGame);
+        }
+    }
+
+    async function bindLlmTagSuggestionAction(button, select, selectedPreview, game) {
+        if (!button || !select || !selectedPreview || !game) return;
+        button.addEventListener('click', async () => {
+            const catalog = await getGameTagCatalog();
+            if (!catalog.length) {
+                alertUser('No tags found in emubro-resources/tags.');
+                return;
+            }
+
+            const tagById = new Set(catalog.map((tag) => normalizeTagId(tag.id)));
+            const settings = loadSuggestionSettings(localStorageRef);
+            const provider = normalizeSuggestionProvider(settings.provider);
+            const model = String(settings.models?.[provider] || '').trim();
+            const baseUrl = String(settings.baseUrls?.[provider] || '').trim();
+            const apiKey = String(settings.apiKeys?.[provider] || '').trim();
+            const allowUnknownTags = !!isLlmAllowUnknownTagsEnabled();
+
+            if (!model || !baseUrl) {
+                alertUser('Configure your LLM provider/model first in Suggested view.');
+                return;
+            }
+            if ((provider === 'openai' || provider === 'gemini') && !apiKey) {
+                alertUser('API key is missing for the selected provider.');
+                return;
+            }
+
+            const previousLabel = button.textContent;
+            button.disabled = true;
+            button.textContent = 'Tagging...';
+            try {
+                const response = await emubro.invoke('suggestions:suggest-tags-for-game', {
+                    provider,
+                    model,
+                    baseUrl,
+                    apiKey,
+                    maxTags: 6,
+                    allowUnknownTags,
+                    game: {
+                        id: Number(game.id || 0),
+                        name: String(game.name || ''),
+                        platform: String(game.platform || game.platformShortName || ''),
+                        platformShortName: String(game.platformShortName || ''),
+                        genre: String(game.genre || ''),
+                        description: String(game.description || ''),
+                        tags: Array.isArray(game.tags) ? game.tags : []
+                    },
+                    availableTags: catalog
+                });
+
+                if (!response?.success) {
+                    alertUser(response?.message || 'Failed to generate tags.');
+                    return;
+                }
+
+                const suggestedTags = (Array.isArray(response?.tags) ? response.tags : [])
+                    .map((tag) => normalizeTagId(tag))
+                    .filter((tag) => allowUnknownTags ? !!tag : tagById.has(tag));
+
+                if (!suggestedTags.length) {
+                    alertUser(allowUnknownTags
+                        ? 'LLM did not return usable tags.'
+                        : 'LLM did not return matching tags from your catalog.');
+                    return;
+                }
+
+                applySelectedTagIdsToSelect(select, suggestedTags);
+                renderSelectedTagPills(selectedPreview, suggestedTags, catalog);
+                await saveGameTagsAndRefresh(game, suggestedTags);
+            } catch (error) {
+                alertUser(error?.message || 'Failed to apply LLM tags.');
+            } finally {
+                button.disabled = false;
+                button.textContent = previousLabel;
+            }
+        });
+    }
+
+    async function bindTagAssignmentAction(select, saveBtn, clearBtn, renameBtn, deleteBtn, selectedPreview, game) {
+        if (!select || !saveBtn || !clearBtn || !selectedPreview || !game) return;
+
+        const catalog = await getGameTagCatalog();
+        const getAssignedTagIds = () => Array.from(new Set(
+            (Array.isArray(game?.tags) ? game.tags : [])
+                .map((tag) => normalizeTagId(tag))
+                .filter(Boolean)
+        ));
+        const currentTags = getAssignedTagIds();
+        const currentTagSet = new Set(currentTags);
+
+        if (catalog.length === 0) {
+            select.innerHTML = '<option value="">No tags found in emubro-resources/tags</option>';
+            select.disabled = true;
+            saveBtn.disabled = true;
+            clearBtn.disabled = true;
+            if (renameBtn) renameBtn.disabled = true;
+            if (deleteBtn) deleteBtn.disabled = true;
+            renderSelectedTagPills(selectedPreview, [], []);
+            return;
+        }
+
+        select.innerHTML = catalog.map((tag) => {
+            const selected = currentTagSet.has(normalizeTagId(tag.id)) ? ' selected' : '';
+            return `<option value="${escapeHtml(tag.id)}"${selected}>${escapeHtml(tag.label)}</option>`;
+        }).join('');
+
+        const getSelectedTagIds = () => Array.from(select.selectedOptions || [])
+            .map((option) => String(option.value || '').trim().toLowerCase())
+            .filter(Boolean);
+
+        const syncPreview = () => {
+            renderSelectedTagPills(selectedPreview, getSelectedTagIds(), catalog);
+        };
+
+        syncPreview();
+
+        select.addEventListener('change', syncPreview);
+
+        clearBtn.addEventListener('click', () => {
+            Array.from(select.options || []).forEach((option) => {
+                option.selected = false;
+            });
+            syncPreview();
+        });
+
+        saveBtn.addEventListener('click', async () => {
+            saveBtn.disabled = true;
+            try {
+                const tags = getSelectedTagIds();
+                await saveGameTagsAndRefresh(game, tags);
+            } catch (error) {
+                alertUser(error?.message || 'Failed to save tags.');
+            } finally {
+                saveBtn.disabled = false;
+            }
+        });
+
+        if (renameBtn) {
+            renameBtn.addEventListener('click', async () => {
+                const selectedTagIds = getSelectedTagIds();
+                if (selectedTagIds.length !== 1) {
+                    alertUser('Select exactly one tag to rename.');
+                    return;
+                }
+                const targetTagId = selectedTagIds[0] || '';
+                if (!targetTagId) {
+                    alertUser('Select a tag first.');
+                    return;
+                }
+
+                const targetInfo = catalog.find((row) => normalizeTagId(row.id) === normalizeTagId(targetTagId));
+                const currentLabel = String(targetInfo?.label || targetTagId).trim();
+                const nextLabelInput = window.prompt('Rename tag', currentLabel);
+                if (nextLabelInput === null) return;
+                const nextLabel = String(nextLabelInput || '').trim();
+                if (!nextLabel) {
+                    alertUser('Tag name cannot be empty.');
+                    return;
+                }
+
+                renameBtn.disabled = true;
+                try {
+                    const result = await emubro.invoke('tags:rename', {
+                        oldTagId: targetTagId,
+                        newTagName: nextLabel
+                    });
+                    if (!result?.success) {
+                        alertUser(result?.message || 'Failed to rename tag.');
+                        return;
+                    }
+
+                    const nextTagId = normalizeTagId(result?.newTagId || nextLabel);
+                    const remappedTags = Array.from(new Set(
+                        getAssignedTagIds()
+                            .map((tagId) => normalizeTagId(tagId) === normalizeTagId(targetTagId) ? nextTagId : normalizeTagId(tagId))
+                            .filter(Boolean)
+                    ));
+                    applySelectedTagIdsToSelect(select, remappedTags);
+                    gameTagCatalogCache = null;
+                    await saveGameTagsAndRefresh(game, remappedTags);
+                } catch (error) {
+                    alertUser(error?.message || 'Failed to rename tag.');
+                } finally {
+                    renameBtn.disabled = false;
+                }
+            });
+        }
+
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', async () => {
+                const selectedTagIds = Array.from(new Set(
+                    getSelectedTagIds()
+                        .map((tagId) => normalizeTagId(tagId))
+                        .filter(Boolean)
+                ));
+                if (selectedTagIds.length === 0) {
+                    alertUser('Select one or more tags first.');
+                    return;
+                }
+                const labelMap = new Map(
+                    (Array.isArray(catalog) ? catalog : [])
+                        .map((row) => [normalizeTagId(row?.id), String(row?.label || row?.id || '').trim()])
+                );
+                const previewLabels = selectedTagIds
+                    .slice(0, 5)
+                    .map((tagId) => labelMap.get(tagId) || tagId)
+                    .join(', ');
+                const hasMore = selectedTagIds.length > 5 ? ` and ${selectedTagIds.length - 5} more` : '';
+                const confirmed = confirmUser(
+                    `Delete ${selectedTagIds.length} tag(s): ${previewLabels}${hasMore}?\n\nThis removes them from all games.`
+                );
+                if (!confirmed) return;
+
+                deleteBtn.disabled = true;
+                try {
+                    const deletedTagIds = [];
+                    const failedDeletes = [];
+                    for (const targetTagId of selectedTagIds) {
+                        // eslint-disable-next-line no-await-in-loop
+                        const result = await emubro.invoke('tags:delete', { tagId: targetTagId });
+                        if (result?.success) {
+                            deletedTagIds.push(targetTagId);
+                        } else {
+                            failedDeletes.push({
+                                tagId: targetTagId,
+                                message: String(result?.message || 'Failed to delete tag.')
+                            });
+                        }
+                    }
+
+                    if (deletedTagIds.length === 0) {
+                        const firstError = failedDeletes[0];
+                        alertUser(firstError?.message || 'Failed to delete selected tags.');
+                        return;
+                    }
+
+                    const deletedSet = new Set(deletedTagIds.map((tagId) => normalizeTagId(tagId)));
+                    const remainingTags = getAssignedTagIds()
+                        .filter((tagId) => !deletedSet.has(normalizeTagId(tagId)));
+                    applySelectedTagIdsToSelect(select, remainingTags);
+                    gameTagCatalogCache = null;
+                    await saveGameTagsAndRefresh(game, remainingTags);
+
+                    if (failedDeletes.length > 0) {
+                        alertUser(
+                            `Deleted ${deletedTagIds.length} tag(s), but ${failedDeletes.length} failed.\n` +
+                            failedDeletes.map((entry) => `${entry.tagId}: ${entry.message}`).join('\n')
+                        );
+                    }
+                } catch (error) {
+                    alertUser(error?.message || 'Failed to delete tag.');
+                } finally {
+                    deleteBtn.disabled = false;
+                }
+            });
+        }
     }
 
     function isKnownGamePlatform(game, platforms) {
@@ -461,9 +810,27 @@ export function createGameDetailsPopupActions(deps = {}) {
     }
 
     function bindGameDetailsActions(container, game) {
+        const tagsSelect = container.querySelector('[data-game-tags-select]');
+        const tagsSaveBtn = container.querySelector('[data-game-tags-save]');
+        const tagsSelectedPreview = container.querySelector('[data-game-tags-selected]');
         bindCreateShortcutAction(container.querySelector('[data-create-shortcut]'), game);
         bindShowInExplorerAction(container.querySelector('[data-show-in-explorer]'), game);
         bindEmulatorOverrideAction(container.querySelector('[data-game-emulator-override]'), game);
+        bindTagAssignmentAction(
+            tagsSelect,
+            tagsSaveBtn,
+            container.querySelector('[data-game-tags-clear]'),
+            container.querySelector('[data-game-tags-rename]'),
+            container.querySelector('[data-game-tags-delete]'),
+            tagsSelectedPreview,
+            game
+        );
+        bindLlmTagSuggestionAction(
+            container.querySelector('[data-game-tags-llm]'),
+            tagsSelect,
+            tagsSelectedPreview,
+            game
+        );
         bindChangePlatformAction(
             container.querySelector('[data-game-platform-select]'),
             container.querySelector('[data-change-platform]'),
@@ -483,6 +850,9 @@ export function createGameDetailsPopupActions(deps = {}) {
         const ratingLabel = escapeHtml(i18n.t('gameDetails.rating') || 'Rating');
         const genreLabel = escapeHtml(i18n.t('gameDetails.genre') || 'Genre');
         const priceLabel = escapeHtml(i18n.t('gameDetails.price') || 'Price');
+        const llmButtonMarkup = isLlmHelpersEnabled()
+            ? '<button class="action-btn launch-btn" data-game-tags-llm type="button">Let LLM add tags</button>'
+            : '';
 
         container.innerHTML = `
         <div class="game-detail-row game-detail-media">
@@ -508,6 +878,21 @@ export function createGameDetailsPopupActions(deps = {}) {
                 </select>
                 <button class="action-btn" data-change-platform>Change Platform</button>
             </div>
+        </div>
+        <div class="game-detail-row game-detail-tags-control">
+            <label for="game-tags-select-${Number(game.id)}">Tags</label>
+            <select id="game-tags-select-${Number(game.id)}" data-game-tags-select multiple size="7">
+                <option value="">Loading tags...</option>
+            </select>
+            <div class="game-detail-tags-selected" data-game-tags-selected></div>
+            <div class="game-detail-tags-actions">
+                <button class="action-btn" data-game-tags-save>Save Tags</button>
+                <button class="action-btn" data-game-tags-clear type="button">Clear</button>
+                <button class="action-btn" data-game-tags-rename type="button">Rename Tag</button>
+                <button class="action-btn remove-btn" data-game-tags-delete type="button">Delete Tag</button>
+                ${llmButtonMarkup}
+            </div>
+            <small class="game-detail-tags-hint">Use Ctrl/Cmd + click to select multiple tags.</small>
         </div>
         <div class="game-detail-row game-detail-actions">
             <button class="action-btn" data-create-shortcut>Create Desktop Shortcut</button>
@@ -572,16 +957,17 @@ export function createGameDetailsPopupActions(deps = {}) {
             import('../theme-manager').then((m) => {
                 if (typeof m.recenterManagedModalIfMostlyOutOfView === 'function') {
                     m.recenterManagedModalIfMostlyOutOfView('game-info-modal', {
-                        visibleThreshold: 0.5,
-                        smooth: true
+                        padding: 24,
+                        forceCenterIfNoManualPosition: !hasManualPosition
                     });
                 }
             });
+            applyGameInfoPinnedState();
         }
-        applyGameInfoPinnedState();
     }
 
     return {
+        ensureGameInfoPopup,
         showGameDetails
     };
 }

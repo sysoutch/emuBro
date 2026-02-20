@@ -135,6 +135,38 @@
     display: none;
 }
 
+.group-same-names-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-btn);
+    background: color-mix(in srgb, var(--bg-secondary), transparent 18%);
+    color: var(--text-secondary);
+    font-size: 0.86rem;
+    font-weight: 600;
+
+    input[type="checkbox"] {
+        accent-color: var(--accent-color);
+        width: 15px;
+        height: 15px;
+    }
+}
+
+.group-same-names-toggle.is-hidden {
+    display: none;
+}
+
+#group-filter.is-hidden {
+    display: none;
+}
+
+#game-language-filter.is-hidden,
+#game-region-filter.is-hidden {
+    display: none;
+}
+
 #view-size-value {
     min-width: 44px;
     text-align: right;
@@ -239,6 +271,11 @@
     }
 
     .filters .emulators-installed-toggle {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .filters .group-same-names-toggle {
         width: 100%;
         justify-content: center;
     }

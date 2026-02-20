@@ -90,6 +90,64 @@
     width: auto;
 }
 
+#game-info-modal .game-detail-tags-control {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#game-info-modal .game-detail-tags-control label {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+#game-info-modal .game-detail-tags-control select {
+    width: 100%;
+    min-height: 134px;
+}
+
+#game-info-modal .game-detail-tags-selected {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+#game-info-modal .game-tag-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, rgba(255,255,255,0.24), var(--border-color));
+    background: color-mix(in srgb, var(--bg-secondary), transparent 22%);
+    color: var(--text-primary);
+    font-size: 0.74rem;
+    line-height: 1.2;
+}
+
+#game-info-modal .game-tag-pill.is-empty {
+    opacity: 0.7;
+}
+
+#game-info-modal .game-detail-tags-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+#game-info-modal .game-detail-tags-actions .action-btn {
+    width: auto;
+    min-width: 0;
+    padding-inline: 14px;
+}
+
+#game-info-modal .game-detail-tags-hint {
+    color: var(--text-tertiary);
+    font-size: 0.74rem;
+}
+
 #game-info-modal .youtube-preview-btn {
     background: linear-gradient(135deg, #ff3b30 0%, #cf1712 100%);
     border-color: color-mix(in srgb, #ff3b30, white 18%);

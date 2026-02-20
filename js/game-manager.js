@@ -23,6 +23,10 @@ let filteredGames = [];
 let emulators = [];
 let currentFilter = 'all';
 let currentSort = 'name';
+let currentGroupBy = 'none';
+let currentLanguageFilter = 'all';
+let currentRegionFilter = 'all';
+let groupSameNamesEnabled = false;
 
 const EMULATOR_TYPE_TABS = ['standalone', 'core', 'web'];
 const LAZY_PLACEHOLDER_SRC = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
@@ -35,6 +39,7 @@ const GAMES_BATCH_SIZE = {
 };
 
 let gamesLoadObserver = null;
+let gamesScrollDetach = null;
 let gamesRenderToken = 0;
 let emulatorDownloadActions = null;
 let gameDetailsPopupActions = null;
@@ -45,6 +50,7 @@ let emulatorRuntimeActions = null;
 let emulatorViewRenderer = null;
 let gameCardElements = null;
 let missingGameRecoveryActions = null;
+const groupAccordionState = new Map();
 
 function getEmulatorDownloadActions() {
     if (!emulatorDownloadActions) {
@@ -76,6 +82,20 @@ function getGameDetailsPopupActions() {
             initializeLazyGameImages,
             reloadGamesFromMainAndRender,
             lazyPlaceholderSrc: LAZY_PLACEHOLDER_SRC,
+            isLlmHelpersEnabled: () => {
+                try {
+                    return localStorage.getItem('emuBro.llmHelpersEnabled') !== 'false';
+                } catch (_error) {
+                    return true;
+                }
+            },
+            isLlmAllowUnknownTagsEnabled: () => {
+                try {
+                    return localStorage.getItem('emuBro.llmAllowUnknownTags') === 'true';
+                } catch (_error) {
+                    return false;
+                }
+            },
             alertUser: (message) => alert(message),
             confirmUser: (message) => window.confirm(message)
         });
@@ -157,7 +177,7 @@ function getGameCardElements() {
             escapeHtml,
             getGameImagePath,
             lazyPlaceholderSrc: LAZY_PLACEHOLDER_SRC,
-            launchGame: (gameId) => launchGame(gameId),
+            launchGame: (game) => launchGame(game),
             showGameDetails: (game) => showGameDetails(game)
         });
     }
@@ -182,11 +202,18 @@ function initializeLazyGameImages(root) {
 }
 
 function clearGamesLoadObserver() {
-    if (!gamesLoadObserver) return;
-    try {
-        gamesLoadObserver.disconnect();
-    } catch (_e) {}
-    gamesLoadObserver = null;
+    if (gamesLoadObserver) {
+        try {
+            gamesLoadObserver.disconnect();
+        } catch (_e) {}
+        gamesLoadObserver = null;
+    }
+    if (typeof gamesScrollDetach === 'function') {
+        try {
+            gamesScrollDetach();
+        } catch (_e) {}
+    }
+    gamesScrollDetach = null;
 }
 
 function getGameImagePath(game) {
@@ -213,7 +240,20 @@ function buildViewGamePool(sourceGames, maxSize) {
 }
 
 export function getGames() { return games; }
-export function setGames(val) { games = val; }
+function dispatchGamesUpdated(reason = 'updated') {
+    try {
+        window.dispatchEvent(new CustomEvent('emubro:games-updated', {
+            detail: {
+                reason: String(reason || 'updated'),
+                totalGames: Array.isArray(games) ? games.length : 0
+            }
+        }));
+    } catch (_error) {}
+}
+export function setGames(val) {
+    games = Array.isArray(val) ? val : [];
+    dispatchGamesUpdated('set-games');
+}
 export function getFilteredGames() { return filteredGames; }
 export function setFilteredGames(val) { filteredGames = val; }
 export function getEmulators() { return emulators; }
@@ -252,6 +292,8 @@ export function renderGames(gamesToRender) {
         renderGamesAsSlideshow(gamesToRender);
     } else if (activeView === 'random') {
         renderGamesAsRandom(gamesToRender);
+    } else if (currentGroupBy !== 'none') {
+        renderGamesGroupedAccordion(gamesToRender, activeView);
     } else {
         renderGamesIncremental(gamesToRender, activeView);
     }
@@ -325,6 +367,345 @@ function escapeHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
+function stripBracketedTitleParts(value) {
+    let text = String(value || '').trim();
+    if (!text) return '';
+    let previous = '';
+    while (previous !== text) {
+        previous = text;
+        text = text.replace(/\s*[\(\[\{][^()\[\]{}]*[\)\]\}]\s*/g, ' ');
+    }
+    return text.replace(/\s+/g, ' ').trim();
+}
+
+function normalizeNameKey(value) {
+    return stripBracketedTitleParts(value)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
+}
+
+function getGameCompanyValue(game) {
+    const raw = game?.company || game?.publisher || game?.developer || game?.studio || game?.manufacturer;
+    const text = String(raw || '').trim();
+    return text || 'Unknown';
+}
+
+function normalizeGroupByValue(value) {
+    const key = String(value || '').trim().toLowerCase();
+    if (key === 'platform' || key === 'company') return key;
+    return 'none';
+}
+
+function normalizeLanguageFilterValue(value) {
+    const key = String(value || '').trim().toLowerCase();
+    if (
+        key === 'en'
+        || key === 'de'
+        || key === 'fr'
+        || key === 'es'
+        || key === 'it'
+        || key === 'jp'
+        || key === 'pt'
+        || key === 'nl'
+        || key === 'sv'
+        || key === 'no'
+        || key === 'da'
+        || key === 'fi'
+        || key === 'pl'
+        || key === 'ru'
+        || key === 'tr'
+        || key === 'cs'
+        || key === 'hu'
+        || key === 'ko'
+        || key === 'zh'
+    ) {
+        return key;
+    }
+    return 'all';
+}
+
+function normalizeRegionFilterValue(value) {
+    const key = String(value || '').trim().toLowerCase();
+    if (key === 'eu' || key === 'us' || key === 'jp') return key;
+    return 'all';
+}
+
+function getBracketedNameSegments(value) {
+    const text = String(value || '');
+    if (!text) return [];
+    const segments = [];
+    const regex = /[\(\[\{]([^()\[\]{}]+)[\)\]\}]/g;
+    let match = null;
+    while ((match = regex.exec(text)) !== null) {
+        const segment = String(match[1] || '').trim();
+        if (segment) segments.push(segment);
+    }
+    return segments;
+}
+
+const LANGUAGE_TOKEN_TO_CODE = new Map([
+    ['english', 'en'],
+    ['eng', 'en'],
+    ['en', 'en'],
+    ['german', 'de'],
+    ['deutsch', 'de'],
+    ['ger', 'de'],
+    ['deu', 'de'],
+    ['de', 'de'],
+    ['french', 'fr'],
+    ['fra', 'fr'],
+    ['fre', 'fr'],
+    ['francais', 'fr'],
+    ['fr', 'fr'],
+    ['spanish', 'es'],
+    ['espanol', 'es'],
+    ['spa', 'es'],
+    ['esp', 'es'],
+    ['es', 'es'],
+    ['italian', 'it'],
+    ['ita', 'it'],
+    ['it', 'it'],
+    ['japanese', 'jp'],
+    ['jpn', 'jp'],
+    ['jp', 'jp'],
+    ['ja', 'jp'],
+    ['portuguese', 'pt'],
+    ['por', 'pt'],
+    ['pt', 'pt'],
+    ['dutch', 'nl'],
+    ['nederlands', 'nl'],
+    ['nld', 'nl'],
+    ['nl', 'nl'],
+    ['swedish', 'sv'],
+    ['svenska', 'sv'],
+    ['swe', 'sv'],
+    ['sv', 'sv'],
+    ['norwegian', 'no'],
+    ['norsk', 'no'],
+    ['nor', 'no'],
+    ['no', 'no'],
+    ['danish', 'da'],
+    ['dansk', 'da'],
+    ['dan', 'da'],
+    ['da', 'da'],
+    ['finnish', 'fi'],
+    ['suomi', 'fi'],
+    ['fin', 'fi'],
+    ['fi', 'fi'],
+    ['polish', 'pl'],
+    ['polski', 'pl'],
+    ['pol', 'pl'],
+    ['pl', 'pl'],
+    ['russian', 'ru'],
+    ['russkiy', 'ru'],
+    ['rus', 'ru'],
+    ['ru', 'ru'],
+    ['turkish', 'tr'],
+    ['turkce', 'tr'],
+    ['tur', 'tr'],
+    ['tr', 'tr'],
+    ['czech', 'cs'],
+    ['cesky', 'cs'],
+    ['cze', 'cs'],
+    ['ces', 'cs'],
+    ['cs', 'cs'],
+    ['hungarian', 'hu'],
+    ['magyar', 'hu'],
+    ['hun', 'hu'],
+    ['hu', 'hu'],
+    ['korean', 'ko'],
+    ['kor', 'ko'],
+    ['ko', 'ko'],
+    ['chinese', 'zh'],
+    ['chi', 'zh'],
+    ['zho', 'zh'],
+    ['zh', 'zh'],
+    ['cn', 'zh']
+]);
+
+function getLanguageCodesFromNameBrackets(game) {
+    const segments = getBracketedNameSegments(game?.name);
+    const out = new Set();
+    segments.forEach((segment) => {
+        const normalized = String(segment || '')
+            .toLowerCase()
+            .replace(/[-_/|,;+&]+/g, ' ')
+            .replace(/[^a-z0-9\s]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (!normalized) return;
+        normalized.split(' ').forEach((token) => {
+            const code = LANGUAGE_TOKEN_TO_CODE.get(token);
+            if (code) out.add(code);
+        });
+    });
+    return out;
+}
+
+const REGION_PREFIX_TO_CODE = new Map([
+    ['SLES', 'eu'],
+    ['SCES', 'eu'],
+    ['BLES', 'eu'],
+    ['BCES', 'eu'],
+    ['NPEB', 'eu'],
+    ['NLES', 'eu'],
+    ['ULES', 'eu'],
+    ['SLUS', 'us'],
+    ['SCUS', 'us'],
+    ['BLUS', 'us'],
+    ['BCUS', 'us'],
+    ['NPUB', 'us'],
+    ['NPUA', 'us'],
+    ['ULUS', 'us'],
+    ['SLPS', 'jp'],
+    ['SCPS', 'jp'],
+    ['BLJS', 'jp'],
+    ['BCJS', 'jp'],
+    ['NPJB', 'jp'],
+    ['ULJM', 'jp'],
+    ['SLPM', 'jp']
+]);
+
+function inferGameCodeForRegion(game) {
+    const direct = game?.code || game?.productCode || game?.serial || game?.gameCode;
+    if (direct) return String(direct).trim();
+
+    const fileName = String(game?.filePath || '').trim().split(/[/\\]/).pop() || '';
+    const hay = `${String(game?.name || '')} ${fileName}`.toUpperCase();
+    const match = hay.match(/\b([A-Z]{4})[-_ ]?(\d{3})[.\-_ ]?(\d{2})\b|\b([A-Z]{4})[-_ ]?(\d{5})\b/);
+    if (!match) return '';
+    if (match[1] && match[2] && match[3]) return `${match[1]}-${match[2]}${match[3]}`;
+    if (match[4] && match[5]) return `${match[4]}-${match[5]}`;
+    return '';
+}
+
+function getRegionCodeFromGame(game) {
+    const code = inferGameCodeForRegion(game);
+    if (code) {
+        const letters = String(code).toUpperCase().replace(/[^A-Z]/g, '');
+        const prefix = letters.slice(0, 4);
+        const mapped = REGION_PREFIX_TO_CODE.get(prefix);
+        if (mapped) return mapped;
+    }
+
+    const segments = getBracketedNameSegments(game?.name);
+    for (const segment of segments) {
+        const normalized = String(segment || '')
+            .toLowerCase()
+            .replace(/[_/|,;+&-]+/g, ' ')
+            .replace(/[^a-z0-9\s]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        if (!normalized) continue;
+        if (normalized === 'e' || normalized === 'eu') return 'eu';
+        if (normalized === 'u' || normalized === 'us' || normalized === 'usa') return 'us';
+        if (normalized === 'j' || normalized === 'jp') return 'jp';
+        if (/\b(europe|eur|eu|pal)\b/.test(normalized)) return 'eu';
+        if (/\b(usa|us|north america|na|ntsc u|ntscu)\b/.test(normalized)) return 'us';
+        if (/\b(japan|jpn|jp|ntsc j|ntscj)\b/.test(normalized)) return 'jp';
+    }
+
+    return '';
+}
+
+function getGroupValueForGame(game, groupBy) {
+    if (groupBy === 'platform') return String(game?.platform || game?.platformShortName || 'Unknown').trim() || 'Unknown';
+    if (groupBy === 'company') return getGameCompanyValue(game);
+    return '';
+}
+
+function compareGamesBySort(a, b, sortMode) {
+    const sort = String(sortMode || 'name').trim().toLowerCase();
+    switch (sort) {
+        case 'rating':
+            return Number(b?.rating || 0) - Number(a?.rating || 0);
+        case 'price':
+            return Number(a?.price || 0) - Number(b?.price || 0);
+        case 'platform':
+            return String(a?.platform || a?.platformShortName || 'Unknown')
+                .localeCompare(String(b?.platform || b?.platformShortName || 'Unknown'));
+        default:
+            return String(a?.name || '').localeCompare(String(b?.name || ''));
+    }
+}
+
+function groupRowsBySameNames(rows) {
+    const source = Array.isArray(rows) ? rows : [];
+    const groupedMap = new Map();
+    const order = [];
+
+    source.forEach((game) => {
+        const normalizedName = normalizeNameKey(game?.name || '');
+        const platformShort = String(game?.platformShortName || '').trim().toLowerCase();
+        const groupKey = `${normalizedName || String(game?.name || '').toLowerCase()}::${platformShort}`;
+        if (!groupedMap.has(groupKey)) {
+            groupedMap.set(groupKey, []);
+            order.push(groupKey);
+        }
+        groupedMap.get(groupKey).push(game);
+    });
+
+    return order.map((groupKey) => {
+        const members = groupedMap.get(groupKey) || [];
+        const base = members[0] || {};
+        const cleanName = stripBracketedTitleParts(base?.name || '') || String(base?.name || '');
+        const mergedTags = new Set();
+        members.forEach((row) => {
+            (Array.isArray(row?.tags) ? row.tags : []).forEach((tag) => {
+                const normalized = String(tag || '').trim().toLowerCase();
+                if (normalized) mergedTags.add(normalized);
+            });
+        });
+        const representative = {
+            ...base,
+            __groupDisplayName: cleanName || String(base?.name || ''),
+            __groupCount: members.length,
+            tags: Array.from(mergedTags),
+            isInstalled: members.some((row) => !!row?.isInstalled),
+            __groupMembers: members.map((row) => ({
+                id: Number(row?.id || 0),
+                name: String(row?.name || ''),
+                filePath: String(row?.filePath || ''),
+                platform: String(row?.platform || ''),
+                platformShortName: String(row?.platformShortName || '')
+            }))
+        };
+        return representative;
+    });
+}
+
+async function promptGroupedLaunchTarget(game) {
+    const members = Array.isArray(game?.__groupMembers) ? game.__groupMembers.filter((row) => Number(row?.id || 0) > 0) : [];
+    if (members.length <= 1) {
+        return Number(game?.id || members[0]?.id || 0) || 0;
+    }
+
+    const options = members.map((member, idx) => {
+        const fileName = String(member?.filePath || '').trim().split(/[/\\]/).pop() || 'Unknown file';
+        return `${idx + 1}. ${member?.name || 'Unknown'} (${fileName})`;
+    }).join('\n');
+
+    const promptMessage = [
+        `Choose file to launch for "${game?.__groupDisplayName || game?.name || 'Game'}":`,
+        '',
+        options,
+        '',
+        `Enter number (1-${members.length})`
+    ].join('\n');
+
+    const raw = window.prompt(promptMessage, '1');
+    if (raw === null) return 0;
+    const idx = Math.max(1, Math.min(members.length, Number.parseInt(String(raw).trim(), 10) || 0)) - 1;
+    const selected = members[idx];
+    if (!selected?.id) {
+        alert('Invalid selection.');
+        return 0;
+    }
+    return Number(selected.id);
+}
+
 export function createGameCard(game) {
     return getGameCardElements().createGameCard(game);
 }
@@ -359,6 +740,8 @@ export async function searchForGamesAndEmulators(scanTargets = [], options = {})
         let totalFoundEmulators = 0;
         const foundGamePaths = [];
         const foundEmulatorPaths = [];
+        const foundArchives = [];
+        const foundSetupFiles = [];
         let anySuccess = false;
 
         for (const target of dedupedTargets) {
@@ -376,6 +759,14 @@ export async function searchForGamesAndEmulators(scanTargets = [], options = {})
             emulatorsFound.forEach((emu) => {
                 const filePath = String(emu?.filePath || '').trim();
                 if (filePath) foundEmulatorPaths.push(filePath);
+            });
+            (Array.isArray(result.archives) ? result.archives : []).forEach((archivePath) => {
+                const filePath = String(archivePath || '').trim();
+                if (filePath) foundArchives.push(filePath);
+            });
+            (Array.isArray(result.setupFiles) ? result.setupFiles : []).forEach((setupPath) => {
+                const filePath = String(setupPath || '').trim();
+                if (filePath) foundSetupFiles.push(filePath);
             });
         }
 
@@ -395,7 +786,9 @@ export async function searchForGamesAndEmulators(scanTargets = [], options = {})
             totalFoundGames,
             totalFoundEmulators,
             foundGamePaths,
-            foundEmulatorPaths
+            foundEmulatorPaths,
+            foundArchives: Array.from(new Set(foundArchives.map((entry) => entry.toLowerCase()))).map((key) => foundArchives.find((entry) => entry.toLowerCase() === key)).filter(Boolean),
+            foundSetupFiles: Array.from(new Set(foundSetupFiles.map((entry) => entry.toLowerCase()))).map((key) => foundSetupFiles.find((entry) => entry.toLowerCase() === key)).filter(Boolean)
         };
     } catch (error) {
         log.error('Search failed:', error);
@@ -407,6 +800,8 @@ export async function searchForGamesAndEmulators(scanTargets = [], options = {})
             totalFoundEmulators: 0,
             foundGamePaths: [],
             foundEmulatorPaths: [],
+            foundArchives: [],
+            foundSetupFiles: [],
             error: error?.message || String(error)
         };
     } finally {
@@ -453,48 +848,76 @@ async function reloadGamesFromMainAndRender() {
     setGames(updatedGames);
 
     applyFilters();
-
-    const searchTerm = String(document.querySelector('.search-bar input')?.value || '').trim().toLowerCase();
-    if (!searchTerm) return;
-
-    const searched = getFilteredGames().filter((game) => {
-        const name = String(game.name || '').toLowerCase();
-        const platform = String(game.platform || game.platformShortName || '').toLowerCase();
-        return name.includes(searchTerm) || platform.includes(searchTerm);
-    });
-    setFilteredGames(searched);
-    renderGames(searched);
 }
 
-async function launchGame(gameId) {
+async function launchGame(gameOrId) {
+    let gameId = 0;
+    if (typeof gameOrId === 'object' && gameOrId) {
+        if (groupSameNamesEnabled) {
+            gameId = await promptGroupedLaunchTarget(gameOrId);
+        } else {
+            gameId = Number(gameOrId?.id || 0);
+        }
+    } else {
+        gameId = Number(gameOrId || 0);
+    }
+    if (!gameId) return { success: false, message: 'No game selected to launch.' };
     return getMissingGameRecoveryActions().launchGame(gameId);
 }
 
-export function applyFilters(shouldRender = true) {
-    filteredGames = [...games];
+export function applyFilters(shouldRender = true, sourceRows = null) {
+    filteredGames = Array.isArray(sourceRows) ? [...sourceRows] : [...games];
     
     const platformFilter = document.getElementById('platform-filter');
     const sortFilter = document.getElementById('sort-filter');
+    const groupFilter = document.getElementById('group-filter');
+    const languageFilter = document.getElementById('game-language-filter');
+    const regionFilter = document.getElementById('game-region-filter');
+    const groupSameNamesToggle = document.getElementById('group-same-names-toggle');
     
     currentFilter = platformFilter ? platformFilter.value : 'all';
     currentSort = sortFilter ? sortFilter.value : 'name';
+    currentGroupBy = normalizeGroupByValue(groupFilter ? groupFilter.value : 'none');
+    currentLanguageFilter = normalizeLanguageFilterValue(languageFilter ? languageFilter.value : 'all');
+    currentRegionFilter = normalizeRegionFilterValue(regionFilter ? regionFilter.value : 'all');
+    groupSameNamesEnabled = !!groupSameNamesToggle?.checked;
 
     if (currentFilter !== 'all') {
         filteredGames = filteredGames.filter(game => game.platformShortName.toLowerCase() === currentFilter);
     }
-    
-    switch (currentSort) {
-        case 'rating':
-            filteredGames.sort((a, b) => b.rating - a.rating);
-            break;
-        case 'price':
-            filteredGames.sort((a, b) => a.price - b.price);
-            break;
-        case 'platform':
-            filteredGames.sort((a, b) => (a.platform || a.platformShortName || 'Unknown').localeCompare(b.platform || b.platformShortName || 'Unknown'));
-            break;
-        default: 
-            filteredGames.sort((a, b) => a.name.localeCompare(b.name));
+
+    if (currentLanguageFilter !== 'all') {
+        filteredGames = filteredGames.filter((game) => getLanguageCodesFromNameBrackets(game).has(currentLanguageFilter));
+    }
+
+    if (currentRegionFilter !== 'all') {
+        filteredGames = filteredGames.filter((game) => getRegionCodeFromGame(game) === currentRegionFilter);
+    }
+
+    const searchTerm = String(document.querySelector('.search-bar input')?.value || '').trim().toLowerCase();
+    if (searchTerm) {
+        filteredGames = filteredGames.filter((game) => {
+            const name = String(game?.name || '').toLowerCase();
+            const platform = String(game?.platform || game?.platformShortName || '').toLowerCase();
+            const company = getGameCompanyValue(game).toLowerCase();
+            return name.includes(searchTerm) || platform.includes(searchTerm) || company.includes(searchTerm);
+        });
+    }
+
+    filteredGames.sort((a, b) => {
+        if (currentGroupBy !== 'none') {
+            const aGroup = getGroupValueForGame(a, currentGroupBy);
+            const bGroup = getGroupValueForGame(b, currentGroupBy);
+            const groupCompare = aGroup.localeCompare(bGroup);
+            if (groupCompare !== 0) return groupCompare;
+        }
+        const sortCompare = compareGamesBySort(a, b, currentSort);
+        if (sortCompare !== 0) return sortCompare;
+        return String(a?.name || '').localeCompare(String(b?.name || ''));
+    });
+
+    if (groupSameNamesEnabled) {
+        filteredGames = groupRowsBySameNames(filteredGames);
     }
     
     if (shouldRender) {
@@ -552,6 +975,124 @@ function createGameListItem(game) {
     return getGameCardElements().createGameListItem(game);
 }
 
+function getAccordionGroupRows(rows = [], groupBy = 'none') {
+    const source = Array.isArray(rows) ? rows : [];
+    const mode = normalizeGroupByValue(groupBy);
+    if (mode === 'none') return [];
+
+    const grouped = new Map();
+    const order = [];
+    source.forEach((game) => {
+        const label = String(getGroupValueForGame(game, mode) || 'Unknown').trim() || 'Unknown';
+        const key = label.toLowerCase();
+        if (!grouped.has(key)) {
+            grouped.set(key, { label, rows: [] });
+            order.push(key);
+        }
+        grouped.get(key).rows.push(game);
+    });
+    return order.map((key) => grouped.get(key)).filter(Boolean);
+}
+
+function getAccordionStateKey(view, label) {
+    return `${String(view || 'cover').toLowerCase()}::${String(currentGroupBy || 'none').toLowerCase()}::${String(label || 'unknown').toLowerCase()}`;
+}
+
+function renderGamesGroupedAccordion(gamesToRender, activeView = 'cover') {
+    const gamesContainer = document.getElementById('games-container');
+    if (!gamesContainer) return;
+
+    const view = (activeView === 'list' || activeView === 'table') ? activeView : 'cover';
+    const groups = getAccordionGroupRows(gamesToRender, currentGroupBy);
+
+    if (!groups.length) {
+        gamesContainer.innerHTML = `<p>${i18n.t('gameGrid.noGamesFound')}</p>`;
+        return;
+    }
+
+    groups.forEach((group) => {
+        const section = document.createElement('section');
+        section.className = `games-group-accordion games-group-accordion-${view}`;
+
+        const header = document.createElement('button');
+        header.type = 'button';
+        header.className = 'games-group-header';
+
+        const title = document.createElement('span');
+        title.className = 'games-group-header-title';
+        title.textContent = String(group.label || 'Unknown');
+
+        const count = document.createElement('span');
+        count.className = 'games-group-header-count';
+        count.textContent = `${Array.isArray(group.rows) ? group.rows.length : 0}`;
+
+        const chevron = document.createElement('span');
+        chevron.className = 'games-group-header-chevron';
+        chevron.setAttribute('aria-hidden', 'true');
+
+        header.appendChild(title);
+        header.appendChild(count);
+        header.appendChild(chevron);
+
+        const content = document.createElement('div');
+        content.className = `games-group-content games-group-content-${view}`;
+
+        if (view === 'table') {
+            const table = document.createElement('table');
+            table.className = 'games-table games-group-table';
+            table.innerHTML = `
+                <thead>
+                    <tr>
+                        <th>Cover</th>
+                        <th>Game</th>
+                        <th>Genre</th>
+                        <th>Rating</th>
+                        <th>Platform</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            `;
+            const tbody = table.querySelector('tbody');
+            (Array.isArray(group.rows) ? group.rows : []).forEach((game) => {
+                tbody.appendChild(createGameTableRow(game));
+            });
+            content.appendChild(table);
+        } else if (view === 'list') {
+            const list = document.createElement('div');
+            list.className = 'games-group-list';
+            (Array.isArray(group.rows) ? group.rows : []).forEach((game) => {
+                list.appendChild(createGameListItem(game));
+            });
+            content.appendChild(list);
+        } else {
+            const grid = document.createElement('div');
+            grid.className = 'games-group-grid';
+            (Array.isArray(group.rows) ? group.rows : []).forEach((game) => {
+                grid.appendChild(createGameCard(game));
+            });
+            content.appendChild(grid);
+        }
+
+        const stateKey = getAccordionStateKey(view, group.label);
+        const expanded = groupAccordionState.has(stateKey) ? !!groupAccordionState.get(stateKey) : true;
+        section.classList.toggle('is-collapsed', !expanded);
+        header.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+
+        header.addEventListener('click', () => {
+            const isExpanded = header.getAttribute('aria-expanded') === 'true';
+            const nextExpanded = !isExpanded;
+            header.setAttribute('aria-expanded', nextExpanded ? 'true' : 'false');
+            section.classList.toggle('is-collapsed', !nextExpanded);
+            groupAccordionState.set(stateKey, nextExpanded);
+        });
+
+        section.appendChild(header);
+        section.appendChild(content);
+        gamesContainer.appendChild(section);
+    });
+}
+
 function renderGamesIncremental(gamesToRender, activeView = 'cover') {
     const gamesContainer = document.getElementById('games-container');
     if (!gamesContainer) return;
@@ -559,9 +1100,13 @@ function renderGamesIncremental(gamesToRender, activeView = 'cover') {
     const view = (activeView === 'list' || activeView === 'table') ? activeView : 'cover';
     const renderToken = gamesRenderToken;
     const batchSize = GAMES_BATCH_SIZE[view] || GAMES_BATCH_SIZE.cover;
+    const totalGames = Array.isArray(gamesToRender) ? gamesToRender.length : 0;
+    const totalChunks = Math.ceil(totalGames / batchSize);
+    const maxChunksInDom = view === 'cover' ? 6 : (view === 'table' ? 8 : 9);
 
-    let mountTarget = gamesContainer;
-    let tableBody = null;
+    let mountTarget = null;
+    let topSpacer = null;
+    let bottomSpacer = null;
 
     if (view === 'table') {
         const table = document.createElement('table');
@@ -577,22 +1122,33 @@ function renderGamesIncremental(gamesToRender, activeView = 'cover') {
                     <th>Status</th>
                 </tr>
             </thead>
-            <tbody></tbody>
+            <tbody class="games-virtual-host-table"></tbody>
         `;
-        tableBody = table.querySelector('tbody');
-        mountTarget = tableBody;
+        mountTarget = table.querySelector('tbody');
+        topSpacer = document.createElement('tr');
+        topSpacer.className = 'games-virtual-table-spacer';
+        topSpacer.innerHTML = '<td colspan="6"></td>';
+        bottomSpacer = document.createElement('tr');
+        bottomSpacer.className = 'games-virtual-table-spacer';
+        bottomSpacer.innerHTML = '<td colspan="6"></td>';
+        mountTarget.appendChild(topSpacer);
+        mountTarget.appendChild(bottomSpacer);
         gamesContainer.appendChild(table);
-    } else if (view === 'list') {
-        const listContainer = document.createElement('div');
-        listContainer.className = 'games-list';
-        mountTarget = listContainer;
-        gamesContainer.appendChild(listContainer);
+    } else {
+        const host = document.createElement('div');
+        host.className = `games-virtual-host games-virtual-host-${view}`;
+        mountTarget = host;
+        topSpacer = document.createElement('div');
+        topSpacer.className = 'games-virtual-spacer';
+        bottomSpacer = document.createElement('div');
+        bottomSpacer.className = 'games-virtual-spacer';
+        mountTarget.appendChild(topSpacer);
+        mountTarget.appendChild(bottomSpacer);
+        if (view === 'list') {
+            host.classList.add('games-list');
+        }
+        gamesContainer.appendChild(host);
     }
-
-    const sentinel = document.createElement('div');
-    sentinel.className = 'games-load-sentinel';
-    sentinel.setAttribute('aria-hidden', 'true');
-    gamesContainer.appendChild(sentinel);
 
     const showIndicator = localStorage.getItem('emuBro.showLoadIndicator') !== 'false';
     const indicator = document.createElement('div');
@@ -612,91 +1168,293 @@ function renderGamesIncremental(gamesToRender, activeView = 'cover') {
             indicator.classList.remove('is-visible');
         }, isComplete ? 2000 : 1300);
     };
+    const isTableView = view === 'table';
+    const renderedChunks = new Map();
+    const chunkHeights = new Map();
+    let topSpacerHeight = 0;
+    let bottomSpacerHeight = 0;
+    let loadedTop = 0;
+    let loadedBottom = -1;
+    let highestLoadedChunk = -1;
+    let completedLoadIndicatorShown = false;
 
-    let cursor = 0;
-    let isLoading = false;
-
-    const appendNextChunk = () => {
-        if (isLoading || renderToken !== gamesRenderToken) return;
-        if (cursor >= gamesToRender.length) return;
-        isLoading = true;
-
-        const start = cursor;
-        const end = Math.min(gamesToRender.length, cursor + batchSize);
-        const chunk = gamesToRender.slice(cursor, end);
-
-        if (view === 'table') {
-            const fragment = document.createDocumentFragment();
-            chunk.forEach((game) => fragment.appendChild(createGameTableRow(game)));
-            tableBody.appendChild(fragment);
-            initializeLazyGameImages(tableBody);
-        } else if (view === 'list') {
-            const fragment = document.createDocumentFragment();
-            chunk.forEach((game) => fragment.appendChild(createGameListItem(game)));
-            mountTarget.appendChild(fragment);
-            initializeLazyGameImages(mountTarget);
-        } else {
-            const fragment = document.createDocumentFragment();
-            chunk.forEach((game) => fragment.appendChild(createGameCard(game)));
-            if (sentinel.parentNode === mountTarget) {
-                mountTarget.insertBefore(fragment, sentinel);
-            } else {
-                mountTarget.appendChild(fragment);
+    const setSpacerHeight = (spacer, height) => {
+        const value = Math.max(0, Number(height) || 0);
+        if (!spacer) return;
+        if (isTableView) {
+            const cell = spacer.querySelector('td');
+            if (cell) {
+                cell.style.height = `${Math.round(value)}px`;
+                cell.style.padding = '0';
+                cell.style.border = 'none';
             }
-            initializeLazyGameImages(mountTarget);
-        }
-
-        cursor = end;
-        isLoading = false;
-
-        const shouldShowProgress = start >= (batchSize * 2);
-        if (shouldShowProgress && cursor < gamesToRender.length) {
-            setIndicator(`Loaded ${cursor} / ${gamesToRender.length}`);
-        }
-
-        if (cursor >= gamesToRender.length) {
-            clearGamesLoadObserver();
-            sentinel.remove();
-            setIndicator(`All ${gamesToRender.length} games loaded`, true);
-            if (indicatorTimer) window.clearTimeout(indicatorTimer);
-            window.setTimeout(() => indicator.remove(), 2200);
+            spacer.style.display = value > 0 ? 'table-row' : 'none';
+        } else {
+            spacer.style.height = `${Math.round(value)}px`;
+            spacer.style.display = value > 0 ? 'block' : 'none';
         }
     };
 
-    appendNextChunk();
-    if (cursor < gamesToRender.length && gamesToRender.length > batchSize) {
-        appendNextChunk();
+    setSpacerHeight(topSpacer, 0);
+    setSpacerHeight(bottomSpacer, 0);
+
+    const getRenderedChunkCount = () => (loadedBottom >= loadedTop ? (loadedBottom - loadedTop + 1) : 0);
+
+    const getChunkSlice = (chunkIndex) => {
+        const start = chunkIndex * batchSize;
+        const end = Math.min(totalGames, start + batchSize);
+        return gamesToRender.slice(start, end);
+    };
+
+    const createChunk = (chunkIndex) => {
+        const rows = getChunkSlice(chunkIndex);
+        if (rows.length === 0) return null;
+
+        if (isTableView) {
+            return {
+                index: chunkIndex,
+                rows: rows.map((game) => createGameTableRow(game))
+            };
+        }
+
+        const chunkEl = document.createElement('div');
+        chunkEl.className = `games-virtual-chunk games-virtual-chunk-${view}`;
+        const fragment = document.createDocumentFragment();
+        rows.forEach((game) => {
+            if (view === 'list') {
+                fragment.appendChild(createGameListItem(game));
+            } else {
+                fragment.appendChild(createGameCard(game));
+            }
+        });
+        chunkEl.appendChild(fragment);
+        return { index: chunkIndex, el: chunkEl };
+    };
+
+    const estimateChunkHeight = (chunk) => {
+        if (!chunk) return 0;
+        if (isTableView) {
+            return (Array.isArray(chunk.rows) ? chunk.rows : []).reduce((sum, row) => {
+                return sum + (row?.getBoundingClientRect?.().height || 0);
+            }, 0);
+        }
+        return chunk.el?.getBoundingClientRect?.().height || 0;
+    };
+
+    const persistChunkHeight = (chunkIndex, chunk) => {
+        const measured = estimateChunkHeight(chunk);
+        const fallback = chunkHeights.get(chunkIndex) || 0;
+        const height = measured > 0 ? measured : fallback;
+        if (height > 0) {
+            chunkHeights.set(chunkIndex, height);
+        }
+        return height;
+    };
+
+    const removeChunkNodes = (chunk) => {
+        if (!chunk) return;
+        if (isTableView) {
+            (Array.isArray(chunk.rows) ? chunk.rows : []).forEach((row) => row?.remove?.());
+            return;
+        }
+        chunk.el?.remove?.();
+    };
+
+    const insertChunkNodes = (chunk, atTop = false) => {
+        if (!chunk) return;
+        if (isTableView) {
+            const anchor = atTop ? (topSpacer.nextSibling || bottomSpacer) : bottomSpacer;
+            (Array.isArray(chunk.rows) ? chunk.rows : []).forEach((row) => {
+                mountTarget.insertBefore(row, anchor);
+            });
+            initializeLazyGameImages(mountTarget);
+            return;
+        }
+
+        const anchor = atTop ? (topSpacer.nextSibling || bottomSpacer) : bottomSpacer;
+        mountTarget.insertBefore(chunk.el, anchor);
+        initializeLazyGameImages(chunk.el);
+    };
+
+    const updateTopSpacer = (nextHeight) => {
+        topSpacerHeight = Math.max(0, Number(nextHeight) || 0);
+        setSpacerHeight(topSpacer, topSpacerHeight);
+    };
+
+    const updateBottomSpacer = (nextHeight) => {
+        bottomSpacerHeight = Math.max(0, Number(nextHeight) || 0);
+        setSpacerHeight(bottomSpacer, bottomSpacerHeight);
+    };
+
+    const maybeShowProgress = () => {
+        if (!showIndicator) return;
+        const loadedGames = Math.min(totalGames, (highestLoadedChunk + 1) * batchSize);
+        if (highestLoadedChunk >= totalChunks - 1) {
+            if (!completedLoadIndicatorShown) {
+                completedLoadIndicatorShown = true;
+                setIndicator(`All ${totalGames} games loaded`, true);
+                if (indicatorTimer) window.clearTimeout(indicatorTimer);
+                window.setTimeout(() => indicator.remove(), 2200);
+            }
+            return;
+        }
+        const shouldShow = loadedGames >= (batchSize * 2);
+        if (shouldShow) {
+            setIndicator(`Loaded ${loadedGames} / ${totalGames}`);
+        }
+    };
+
+    const insertChunkAtBottom = (chunkIndex) => {
+        if (chunkIndex < 0 || chunkIndex >= totalChunks) return false;
+        if (renderedChunks.has(chunkIndex)) return false;
+
+        const existingHeight = chunkHeights.get(chunkIndex) || 0;
+        if (existingHeight > 0 && bottomSpacerHeight > 0) {
+            updateBottomSpacer(bottomSpacerHeight - existingHeight);
+        }
+
+        const chunk = createChunk(chunkIndex);
+        if (!chunk) return false;
+        insertChunkNodes(chunk, false);
+        renderedChunks.set(chunkIndex, chunk);
+        loadedBottom = chunkIndex;
+        if (loadedTop > loadedBottom) loadedTop = loadedBottom;
+        highestLoadedChunk = Math.max(highestLoadedChunk, chunkIndex);
+
+        requestAnimationFrame(() => {
+            if (renderToken !== gamesRenderToken) return;
+            persistChunkHeight(chunkIndex, chunk);
+        });
+
+        return true;
+    };
+
+    const insertChunkAtTop = (chunkIndex) => {
+        if (chunkIndex < 0 || chunkIndex >= totalChunks) return false;
+        if (renderedChunks.has(chunkIndex)) return false;
+
+        const existingHeight = chunkHeights.get(chunkIndex) || 0;
+        if (existingHeight > 0 && topSpacerHeight > 0) {
+            updateTopSpacer(topSpacerHeight - existingHeight);
+        }
+
+        const chunk = createChunk(chunkIndex);
+        if (!chunk) return false;
+        insertChunkNodes(chunk, true);
+        renderedChunks.set(chunkIndex, chunk);
+        loadedTop = chunkIndex;
+        if (loadedBottom < loadedTop) loadedBottom = loadedTop;
+
+        requestAnimationFrame(() => {
+            if (renderToken !== gamesRenderToken) return;
+            persistChunkHeight(chunkIndex, chunk);
+        });
+
+        return true;
+    };
+
+    const removeChunkFromTop = () => {
+        if (getRenderedChunkCount() <= 0) return false;
+        const chunkIndex = loadedTop;
+        const chunk = renderedChunks.get(chunkIndex);
+        if (!chunk) return false;
+        const height = persistChunkHeight(chunkIndex, chunk);
+        removeChunkNodes(chunk);
+        renderedChunks.delete(chunkIndex);
+        loadedTop += 1;
+        updateTopSpacer(topSpacerHeight + height);
+        return true;
+    };
+
+    const removeChunkFromBottom = () => {
+        if (getRenderedChunkCount() <= 0) return false;
+        const chunkIndex = loadedBottom;
+        const chunk = renderedChunks.get(chunkIndex);
+        if (!chunk) return false;
+        const height = persistChunkHeight(chunkIndex, chunk);
+        removeChunkNodes(chunk);
+        renderedChunks.delete(chunkIndex);
+        loadedBottom -= 1;
+        updateBottomSpacer(bottomSpacerHeight + height);
+        return true;
+    };
+
+    const stepDown = () => {
+        if (loadedBottom >= totalChunks - 1) return false;
+        const nextChunk = loadedBottom + 1;
+        const inserted = insertChunkAtBottom(nextChunk);
+        if (!inserted) return false;
+        while (getRenderedChunkCount() > maxChunksInDom) {
+            if (!removeChunkFromTop()) break;
+        }
+        maybeShowProgress();
+        return true;
+    };
+
+    const stepUp = () => {
+        if (loadedTop <= 0) return false;
+        const prevChunk = loadedTop - 1;
+        const inserted = insertChunkAtTop(prevChunk);
+        if (!inserted) return false;
+        while (getRenderedChunkCount() > maxChunksInDom) {
+            if (!removeChunkFromBottom()) break;
+        }
+        return true;
+    };
+
+    const initialChunks = Math.min(totalChunks, Math.max(2, Math.min(4, maxChunksInDom)));
+    for (let i = 0; i < initialChunks; i += 1) {
+        if (!stepDown()) break;
     }
 
-    if (cursor >= gamesToRender.length) return;
-
-    if (typeof IntersectionObserver !== 'function') {
-        const flushRemaining = () => {
-            if (renderToken !== gamesRenderToken) return;
-            appendNextChunk();
-            if (cursor < gamesToRender.length) {
-                requestAnimationFrame(flushRemaining);
-            }
-        };
-        requestAnimationFrame(flushRemaining);
+    if (totalChunks <= initialChunks) {
+        maybeShowProgress();
         return;
     }
 
-    const scrollRoot = document.querySelector('.game-scroll-body') || document.querySelector('main.game-grid') || null;
-    gamesLoadObserver = new IntersectionObserver((entries) => {
-        if (renderToken !== gamesRenderToken) {
-            clearGamesLoadObserver();
-            return;
-        }
-        if (!entries.some((entry) => entry.isIntersecting)) return;
-        appendNextChunk();
-    }, {
-        root: scrollRoot,
-        rootMargin: '640px 0px',
-        threshold: 0.01
-    });
+    const scrollRoot = document.querySelector('.game-scroll-body') || document.querySelector('main.game-grid') || gamesContainer.parentElement || null;
+    if (!scrollRoot) return;
 
-    gamesLoadObserver.observe(sentinel);
+    const nearEdgeThreshold = view === 'cover' ? 900 : 520;
+    let scrollTicking = false;
+
+    const processScroll = () => {
+        if (renderToken !== gamesRenderToken) return;
+        const scrollTop = Number(scrollRoot.scrollTop || 0);
+        const viewportHeight = Number(scrollRoot.clientHeight || 0);
+        const scrollHeight = Number(scrollRoot.scrollHeight || 0);
+
+        if ((scrollHeight - (scrollTop + viewportHeight)) <= nearEdgeThreshold) {
+            let guard = 0;
+            while (guard < 2 && stepDown()) {
+                guard += 1;
+            }
+        }
+
+        if (scrollTop <= nearEdgeThreshold) {
+            let guard = 0;
+            while (guard < 2 && stepUp()) {
+                guard += 1;
+            }
+        }
+    };
+
+    const onScroll = () => {
+        if (scrollTicking) return;
+        scrollTicking = true;
+        requestAnimationFrame(() => {
+            scrollTicking = false;
+            processScroll();
+        });
+    };
+
+    scrollRoot.addEventListener('scroll', onScroll, { passive: true });
+    gamesScrollDetach = () => {
+        scrollRoot.removeEventListener('scroll', onScroll);
+    };
+
+    // Run once to fill viewport if initial chunks are not enough.
+    processScroll();
 }
 
 function renderGamesAsSlideshow(gamesToRender) {
@@ -902,7 +1660,7 @@ function renderGamesAsSlideshow(gamesToRender) {
         const fastShift = rapidShiftBudget > 0 || Math.abs(pendingSteps) > 1;
         if (rapidShiftBudget > 0) rapidShiftBudget -= 1;
 
-        const durationMs = reduceMotion ? 0 : (isDraggingNow ? 90 : (fastShift ? 140 : 240));
+        const durationMs = reduceMotion ? 0 : (isDraggingNow ? 64 : (fastShift ? 100 : 170));
         if (durationMs === 0) {
             isAnimating = false;
             runQueue();
@@ -930,9 +1688,9 @@ function renderGamesAsSlideshow(gamesToRender) {
     function queueShift(steps, options = {}) {
         if (!steps) return;
         if (len <= 1) return;
-        if (options.rapid) rapidShiftBudget += Math.min(8, Math.abs(steps));
+        if (options.rapid) rapidShiftBudget += Math.min(10, Math.abs(steps));
         if (!options.auto) scheduleAutoAdvance();
-        pendingSteps += Math.max(-6, Math.min(6, steps));
+        pendingSteps += Math.max(-12, Math.min(12, steps));
         runQueue();
     }
 
@@ -941,7 +1699,7 @@ function renderGamesAsSlideshow(gamesToRender) {
 
     const prevBtn = document.createElement('button');
     prevBtn.className = 'slideshow-btn prev-btn';
-    prevBtn.textContent = 'Prev';
+    prevBtn.textContent = 'Previous';
     prevBtn.addEventListener('click', () => queueShift(-1));
 
     const nextBtn = document.createElement('button');
@@ -951,7 +1709,7 @@ function renderGamesAsSlideshow(gamesToRender) {
 
     // Drag to scroll (fast scrub). Uses discrete steps but feels smooth thanks to the carousel transitions.
     (function enableDragScrub() {
-        const stepPx = 70; // lower = faster scrolling
+        const stepPx = 54; // lower = faster scrolling
         const dragThreshold = 6;
         let armed = false;
         let dragging = false;

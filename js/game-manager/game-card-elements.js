@@ -7,19 +7,25 @@ export function createGameCardElements(deps = {}) {
     const showGameDetails = deps.showGameDetails || (() => {});
 
     function createGameCard(game) {
-        const card = document.createElement('div');
-        card.className = 'game-card';
-        card.dataset.gameId = game.id;
+        const shell = document.createElement('div');
+        shell.className = 'game-card-stack';
+        shell.dataset.gameId = game.id;
 
         const gameImageToUse = getGameImagePath(game);
         const platformShortName = String(game.platformShortName || 'unknown').toLowerCase();
         const platformDisplayName = game.platform || game.platformShortName || i18n.t('gameDetails.unknown');
         const platformIcon = `emubro-resources/platforms/${platformShortName}/logos/default.png`;
-        const safeName = escapeHtml(game.name);
+        const displayName = String(game.__groupDisplayName || game.name || '');
+        const safeName = escapeHtml(displayName);
         const safePlatformName = escapeHtml(platformDisplayName);
         const safeImagePath = escapeHtml(gameImageToUse);
+        const groupCount = Number(game?.__groupCount || 0);
+        const groupBadgeMarkup = groupCount > 1
+            ? `<span class="game-title-group-count" title="${groupCount} files">${groupCount}x</span>`
+            : '';
 
-        card.innerHTML = `
+        shell.innerHTML = `
+        <div class="game-card" data-game-id="${game.id}">
         <div class="game-cover">
             <img src="${lazyPlaceholderSrc}" data-lazy-src="${safeImagePath}" alt="${safeName}" class="game-image lazy-game-image is-pending" loading="lazy" decoding="async" fetchpriority="low" />
             <span class="game-platform-badge" title="${safePlatformName}" aria-label="${safePlatformName}">
@@ -29,24 +35,26 @@ export function createGameCardElements(deps = {}) {
                 <span class="game-cover-play-icon" aria-hidden="true"></span>
             </button>
         </div>
-        <div class="game-info">
+        </div>
+        <div class="game-title-box">
             <h3 class="game-title">${safeName}</h3>
+            ${groupBadgeMarkup}
         </div>
     `;
 
-        const playBtn = card.querySelector('.game-cover-play-btn');
+        const playBtn = shell.querySelector('.game-cover-play-btn');
         if (playBtn) {
             playBtn.addEventListener('click', async (event) => {
                 event.stopPropagation();
-                await launchGame(game.id);
+                await launchGame(game);
             });
         }
 
-        card.addEventListener('click', () => {
+        shell.addEventListener('click', () => {
             showGameDetails(game);
         });
 
-        return card;
+        return shell;
     }
 
     function createGameTableRow(game) {

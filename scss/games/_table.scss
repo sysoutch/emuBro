@@ -34,6 +34,13 @@
     background-color: var(--bg-tertiary);
 }
 
+.games-table .games-virtual-table-spacer td {
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    height: 0;
+}
+
 .games-table .rating-inline {
     color: var(--warning-color, #f1c40f);
 }
