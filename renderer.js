@@ -75,6 +75,7 @@ import { openProfileModalView } from './js/profile/profile-modal';
 import { createCategoriesListRenderer } from './js/library/categories-list-renderer';
 import { createSuggestionsPanelController } from './js/suggestions/suggestions-panel-controller';
 import { createBrowseFooterController } from './js/library/browse-footer-controller';
+import { createLibraryViewController } from './js/library/library-view-controller';
 
 // ===== Global State & Elements =====
 const gamesContainer = document.getElementById('games-container');
@@ -122,6 +123,7 @@ const CATEGORY_VISIBLE_LIMIT = 10;
 let categoriesListRenderer = null;
 let suggestionsPanelController = null;
 let browseFooterController = null;
+let libraryViewController = null;
 
 function normalizeCategorySelectionMode(value) {
     const mode = String(value || '').trim().toLowerCase();
