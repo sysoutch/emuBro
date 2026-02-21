@@ -48,6 +48,7 @@
     "webpack-node-externals": "^3.0.0"
   },
   "dependencies": {
+    "@fortawesome/fontawesome-free": "^7.2.0",
     "axios": "^1.13.2",
     "better-sqlite3": "^12.6.2",
     "electron-log": "^4.4.8",

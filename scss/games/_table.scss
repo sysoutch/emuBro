@@ -63,3 +63,9 @@
     object-fit: contain;
 }
 
+.games-table .table-title-text {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--game-title-row-height);
+}
+

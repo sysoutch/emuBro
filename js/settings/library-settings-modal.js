@@ -240,7 +240,7 @@ export async function openLibraryPathSettingsModal(options = {}) {
                         <span style="font-size:0.82rem;color:var(--text-secondary);">Default Library Section</span>
                         <select data-setting="default-section">
                             <option value="all"${generalDraft.defaultSection === 'all' ? ' selected' : ''}>All Games</option>
-                            <option value="installed"${generalDraft.defaultSection === 'installed' ? ' selected' : ''}>Installed</option>
+                            <option value="favorite"${generalDraft.defaultSection === 'favorite' ? ' selected' : ''}>Favorite</option>
                             <option value="recent"${generalDraft.defaultSection === 'recent' ? ' selected' : ''}>Recently Played</option>
                             ${generalDraft.llmHelpersEnabled ? `<option value="suggested"${generalDraft.defaultSection === 'suggested' ? ' selected' : ''}>Suggested</option>` : ''}
                             <option value="emulators"${generalDraft.defaultSection === 'emulators' ? ' selected' : ''}>Emulators</option>

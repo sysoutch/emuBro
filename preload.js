@@ -36,6 +36,7 @@ const ALLOWED_INVOKE = new Set([
   "suggestions:recommend-games",
   "suggestions:list-ollama-models",
   "suggestions:emulation-support",
+  "suggestions:generate-theme",
   "suggestions:translate-locale-missing",
   "suggestions:suggest-tags-for-game",
   "suggestions:suggest-tags-for-games-batch",

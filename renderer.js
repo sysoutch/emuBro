@@ -114,7 +114,7 @@ const GROUP_SAME_NAMES_KEY = 'emuBro.groupSameNamesEnabled';
 const GAME_LANGUAGE_FILTER_KEY = 'emuBro.gameLanguageFilter';
 const GAME_REGION_FILTER_KEY = 'emuBro.gameRegionFilter';
 const SUGGESTED_SECTION_KEY = 'suggested';
-const SUPPORTED_LIBRARY_SECTIONS = new Set(['all', 'installed', 'recent', SUGGESTED_SECTION_KEY, 'emulators']);
+const SUPPORTED_LIBRARY_SECTIONS = new Set(['all', 'favorite', 'recent', SUGGESTED_SECTION_KEY, 'emulators']);
 let suggestedCoverGames = [];
 let categorySelectionMode = normalizeCategorySelectionMode(localStorage.getItem(CATEGORY_SELECTION_MODE_KEY) || 'single');
 let llmHelpersEnabled = localStorage.getItem(LLM_HELPERS_ENABLED_KEY) !== 'false';
@@ -146,6 +146,9 @@ function normalizeCategorySelectionMode(value) {
 function getActiveCategorySelectionSet() {
     if (categorySelectionMode === 'multi') {
         return new Set(Array.from(activeTagCategories || []).map((tag) => normalizeTagCategory(tag)).filter((tag) => tag !== 'all'));
+    }
+    if (activeTagCategories instanceof Set && activeTagCategories.size > 1) {
+        return new Set(Array.from(activeTagCategories).map((tag) => normalizeTagCategory(tag)).filter((tag) => tag !== 'all'));
     }
     const single = normalizeTagCategory(activeTagCategory);
     return single === 'all' ? new Set() : new Set([single]);
@@ -233,6 +236,7 @@ function confirmDisableLlmHelpersFlow() {
 
 function normalizeLibrarySection(section) {
     const value = String(section || '').trim().toLowerCase();
+    if (value === 'installed') return 'favorite';
     if ((value === 'wishlist' || value === SUGGESTED_SECTION_KEY) && !llmHelpersEnabled) return 'all';
     if (value === 'wishlist') return SUGGESTED_SECTION_KEY;
     if (SUPPORTED_LIBRARY_SECTIONS.has(value)) return value;
@@ -727,8 +731,8 @@ function setGamesHeaderByLibrarySection(section) {
         return;
     }
 
-    if (normalizedSection === 'installed') {
-        gamesHeader.textContent = 'Installed Games';
+    if (normalizedSection === 'favorite') {
+        gamesHeader.textContent = 'Favorite Games';
         return;
     }
 
@@ -748,8 +752,8 @@ function setGamesHeaderByLibrarySection(section) {
 function getSectionFilteredGames() {
     const filtered = applyCategoryFilter(getFilteredGames());
 
-    if (activeLibrarySection === 'installed') {
-        return filtered.filter((game) => !!game.isInstalled);
+    if (activeLibrarySection === 'favorite') {
+        return filtered.filter((game) => Number(game?.rating || 0) > 0);
     }
 
     if (activeLibrarySection === 'recent') {

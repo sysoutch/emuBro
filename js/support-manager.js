@@ -107,6 +107,116 @@ function buildSupportPayload(formState) {
     };
 }
 
+function renderSupportInlineMarkdown(text) {
+    let html = escapeHtml(text);
+    html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/gi, (_m, label, url) => {
+        const safeLabel = String(label || '');
+        const safeUrl = String(url || '');
+        return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeLabel}</a>`;
+    });
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    return html;
+}
+
+function renderSupportMarkdown(markdownText) {
+    const source = String(markdownText || '').replace(/\r\n?/g, '\n');
+    const lines = source.split('\n');
+    const out = [];
+    let inCodeBlock = false;
+    let codeBuffer = [];
+    let paragraphBuffer = [];
+    let listType = null;
+    let listItems = [];
+
+    const flushParagraph = () => {
+        if (!paragraphBuffer.length) return;
+        const paragraph = paragraphBuffer.join(' ').trim();
+        if (paragraph) out.push(`<p>${renderSupportInlineMarkdown(paragraph)}</p>`);
+        paragraphBuffer = [];
+    };
+    const flushList = () => {
+        if (!listType || !listItems.length) {
+            listType = null;
+            listItems = [];
+            return;
+        }
+        out.push(`<${listType}>${listItems.map((item) => `<li>${renderSupportInlineMarkdown(item)}</li>`).join('')}</${listType}>`);
+        listType = null;
+        listItems = [];
+    };
+
+    lines.forEach((rawLine) => {
+        const line = String(rawLine || '');
+        const trimmed = line.trim();
+
+        if (trimmed.startsWith('```')) {
+            flushParagraph();
+            flushList();
+            if (!inCodeBlock) {
+                inCodeBlock = true;
+                codeBuffer = [];
+            } else {
+                const codeText = codeBuffer.join('\n');
+                out.push(`<pre><code>${escapeHtml(codeText)}</code></pre>`);
+                inCodeBlock = false;
+                codeBuffer = [];
+            }
+            return;
+        }
+
+        if (inCodeBlock) {
+            codeBuffer.push(line);
+            return;
+        }
+
+        if (!trimmed) {
+            flushParagraph();
+            flushList();
+            return;
+        }
+
+        const headingMatch = trimmed.match(/^(#{1,6})\s+(.+)$/);
+        if (headingMatch) {
+            flushParagraph();
+            flushList();
+            const level = Math.max(1, Math.min(6, headingMatch[1].length));
+            out.push(`<h${level}>${renderSupportInlineMarkdown(headingMatch[2])}</h${level}>`);
+            return;
+        }
+
+        const ulMatch = line.match(/^\s*[-*+]\s+(.+)$/);
+        if (ulMatch) {
+            flushParagraph();
+            if (listType && listType !== 'ul') flushList();
+            listType = 'ul';
+            listItems.push(ulMatch[1].trim());
+            return;
+        }
+
+        const olMatch = line.match(/^\s*\d+\.\s+(.+)$/);
+        if (olMatch) {
+            flushParagraph();
+            if (listType && listType !== 'ol') flushList();
+            listType = 'ol';
+            listItems.push(olMatch[1].trim());
+            return;
+        }
+
+        flushList();
+        paragraphBuffer.push(trimmed);
+    });
+
+    if (inCodeBlock && codeBuffer.length) {
+        out.push(`<pre><code>${escapeHtml(codeBuffer.join('\n'))}</code></pre>`);
+    }
+    flushParagraph();
+    flushList();
+
+    return out.join('');
+}
+
 export function showSupportView() {
     const gamesContainer = document.getElementById('games-container');
     const gamesHeader = document.getElementById('games-header');
@@ -172,7 +282,7 @@ export function showSupportView() {
 
             <article class="support-output-card">
                 <h3>${escapeHtml(t('support.suggestedFixSteps', 'Suggested Fix Steps'))}</h3>
-                <pre class="support-output-pre" data-support-output>${escapeHtml(t('support.initialOutput', 'Run a support request to get troubleshooting steps.'))}</pre>
+                <div class="support-output-pre support-output-markdown" data-support-output>${renderSupportMarkdown(t('support.initialOutput', 'Run a support request to get troubleshooting steps.'))}</div>
             </article>
         </section>
     `;
@@ -218,7 +328,7 @@ export function showSupportView() {
         errorTextInput.value = '';
         detailsInput.value = '';
         statusEl.textContent = '';
-        outputEl.textContent = t('support.initialOutput', 'Run a support request to get troubleshooting steps.');
+        outputEl.innerHTML = renderSupportMarkdown(t('support.initialOutput', 'Run a support request to get troubleshooting steps.'));
         persistDraft();
     });
 
@@ -253,22 +363,22 @@ export function showSupportView() {
 
         runBtn.disabled = true;
         statusEl.textContent = t('support.status.generating', 'Generating support steps with {{provider}}...', { provider: payload.provider });
-        outputEl.textContent = t('support.status.thinking', 'Thinking...');
+        outputEl.innerHTML = renderSupportMarkdown(t('support.status.thinking', 'Thinking...'));
 
         try {
             const response = await emubro.invoke('suggestions:emulation-support', payload);
             if (!response?.success) {
                 statusEl.textContent = String(response?.message || t('support.status.requestFailed', 'Support request failed.'));
-                outputEl.textContent = t('support.status.noResponse', 'No response available.');
+                outputEl.innerHTML = renderSupportMarkdown(t('support.status.noResponse', 'No response available.'));
                 return;
             }
 
             const answerText = String(response?.answer || '').trim();
-            outputEl.textContent = answerText || t('support.status.noSupportText', 'No support text returned.');
+            outputEl.innerHTML = renderSupportMarkdown(answerText || t('support.status.noSupportText', 'No support text returned.'));
             statusEl.textContent = t('support.status.ready', 'Support response ready ({{provider}}).', { provider: String(response.provider || payload.provider || '').trim() });
         } catch (error) {
             statusEl.textContent = String(error?.message || error || t('support.status.requestFailed', 'Support request failed.'));
-            outputEl.textContent = t('support.status.noResponse', 'No response available.');
+            outputEl.innerHTML = renderSupportMarkdown(t('support.status.noResponse', 'No response available.'));
         } finally {
             runBtn.disabled = false;
         }

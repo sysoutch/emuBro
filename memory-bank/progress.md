@@ -35,6 +35,17 @@
 - Deployment procedures and packaging
 
 ## Recent Changes
+- Fixed category single-mode Ctrl/Cmd multi-select behavior in sidebar categories (logic + visual state)
+- Fixed category mode button text interpolation so `{{mode}}` is always rendered to concrete text
+- Replaced Library `Installed` section with `Favorite` (games rated with stars / `rating > 0`)
+- Added compatibility mapping so legacy stored `installed` default section resolves to `favorite`
+- Normalized title-row height treatment across Cover/List/Table to better match Slideshow/Random presentation
+- Decoupled logo brand color from global brand color (`--logo-brand-color`) so logo span toggle no longer alters sidebar branding
+- Added Font Awesome brand icons for community/social cards
+- Fixed Theme Manager custom-theme delete icon rendering and hover action icon consistency
+- Improved grouped game rendering behavior and lazy-load batching
+- Added markdown rendering for Support view suggested fix steps
+- Improved LLM-driven theme generation variance, prompt controls, and color update consistency
 - Moved runtime backup rule editing into Emulator Edit modal and removed it from Library Settings modal
 - Added emulator-specific `runtimeDataRules` and wired launch payloads so backup matching can be controlled per emulator
 - Added game session overlay controls (show launcher, Alt+Enter, screenshot, quit) with active session polling

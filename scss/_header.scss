@@ -1,6 +1,6 @@
 /* Header */
 .header {
-    background-color: color-mix(in srgb, var(--glass-surface-strong), transparent 8%);
+    background-color: color-mix(in srgb, var(--bg-header), transparent 8%);
     backdrop-filter: blur(16px) saturate(1.12);
     -webkit-backdrop-filter: blur(16px) saturate(1.12);
     --win-controls-width: 126px;
@@ -243,7 +243,7 @@
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    background-color: var(--brand-color);
+    background-color: var(--logo-brand-color, var(--brand-color));
     z-index: -1;
 }
 
@@ -274,8 +274,273 @@
 }
 
 .logo-text-suffix {
-    color: var(--brand-color);
+    color: var(--logo-brand-color, var(--brand-color));
     font-weight: bold;
+}
+
+[data-logo-text-effect]:not([data-logo-text-effect="none"]) .logo-text-prefix,
+[data-logo-text-effect]:not([data-logo-text-effect="none"]) .logo-text-suffix {
+    color: inherit;
+}
+
+[data-logo-text-effect="flowy-blood"] .logo h1 {
+    background-image:
+        linear-gradient(
+            118deg,
+            color-mix(in srgb, #ffecf0, var(--text-primary) 22%) 0%,
+            color-mix(in srgb, #ff7e8b, var(--accent-color) 35%) 32%,
+            color-mix(in srgb, #ca1227, var(--logo-brand-color, var(--brand-color)) 30%) 66%,
+            color-mix(in srgb, #7d050f, black 18%) 100%
+        );
+    background-size: 240% 240%;
+    background-position: 50% 50%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: logo-flowy-blood var(--logo-text-effect-speed, 7s) ease-in-out infinite;
+    filter:
+        saturate(calc(0.9 + (var(--logo-text-effect-intensity, 72) / 120)))
+        drop-shadow(0 0 calc(4px + (var(--logo-text-effect-intensity, 72) * 0.09px)) color-mix(in srgb, #d31a2f 70%, transparent));
+}
+
+[data-logo-text-effect="burning"] .logo h1 {
+    background-image:
+        linear-gradient(
+            180deg,
+            color-mix(in srgb, #fff6de, white 35%) 0%,
+            color-mix(in srgb, #ffd480, #ff9d00 42%) 28%,
+            color-mix(in srgb, #ff5a00, #ff2f00 44%) 60%,
+            color-mix(in srgb, #8f1400, black 18%) 100%
+        );
+    background-size: 190% 185%;
+    background-position: 50% 55%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation:
+        logo-burning-shift var(--logo-text-effect-speed, 7s) linear infinite,
+        logo-burning-flicker 0.22s steps(2, end) infinite;
+    filter:
+        saturate(calc(0.95 + (var(--logo-text-effect-intensity, 72) / 110)))
+        drop-shadow(0 0 calc(6px + (var(--logo-text-effect-intensity, 72) * 0.12px)) color-mix(in srgb, #ff6400 78%, transparent))
+        drop-shadow(0 0 calc(2px + (var(--logo-text-effect-intensity, 72) * 0.05px)) color-mix(in srgb, #ffd35f 52%, transparent));
+}
+
+[data-logo-text-effect="water"] .logo h1 {
+    background-image:
+        linear-gradient(
+            164deg,
+            color-mix(in srgb, #e7fbff, #9be8ff 36%) 0%,
+            color-mix(in srgb, #79daff, #4ac2ff 45%) 32%,
+            color-mix(in srgb, #2c97ff, #2f6dff 42%) 66%,
+            color-mix(in srgb, #0f4eb8, #081e5f 30%) 100%
+        );
+    background-size: 240% 220%;
+    background-position: 50% 50%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: logo-water-flow var(--logo-text-effect-speed, 7s) ease-in-out infinite;
+    filter:
+        saturate(calc(0.9 + (var(--logo-text-effect-intensity, 72) / 130)))
+        drop-shadow(0 0 calc(5px + (var(--logo-text-effect-intensity, 72) * 0.1px)) color-mix(in srgb, #4ac8ff 68%, transparent));
+}
+
+[data-logo-text-effect="slimey-green"] .logo h1 {
+    background-image:
+        linear-gradient(
+            145deg,
+            color-mix(in srgb, #eaffd2, var(--text-primary) 24%) 0%,
+            color-mix(in srgb, #91ff5f, var(--accent-color) 32%) 30%,
+            color-mix(in srgb, #3fbf2a, var(--logo-brand-color, var(--brand-color)) 36%) 62%,
+            color-mix(in srgb, #1b5f15, black 16%) 100%
+        );
+    background-size: 240% 240%;
+    background-position: 50% 52%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: logo-slimey-green var(--logo-text-effect-speed, 7s) ease-in-out infinite;
+    filter:
+        saturate(calc(0.92 + (var(--logo-text-effect-intensity, 72) / 126)))
+        drop-shadow(0 0 calc(5px + (var(--logo-text-effect-intensity, 72) * 0.1px)) color-mix(in srgb, #67df49 70%, transparent));
+}
+
+[data-logo-text-effect="custom"] .logo h1 {
+    background-image:
+        linear-gradient(
+            var(--logo-text-effect-angle, 140deg),
+            var(--logo-text-effect-color-1, #66d8ff) 0%,
+            var(--logo-text-effect-color-2, #2f7dff) 34%,
+            var(--logo-text-effect-color-3, #14306a) 68%,
+            var(--logo-text-effect-color-4, #0d1742) 100%
+        );
+    background-size: 220% 220%;
+    background-position: 50% 50%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: logo-custom-flow var(--logo-text-effect-speed, 7s) ease-in-out infinite;
+    filter:
+        saturate(calc(0.88 + (var(--logo-text-effect-intensity, 72) / 125)))
+        drop-shadow(0 0 calc(4px + (var(--logo-text-effect-intensity, 72) * 0.09px)) color-mix(in srgb, var(--logo-text-effect-color-2, #2f7dff) 70%, transparent));
+}
+
+[data-logo-effect-apply-logo="true"][data-logo-text-effect]:not([data-logo-text-effect="none"]) .logo img {
+    animation:
+        logo-icon-float calc(var(--logo-text-effect-speed, 7s) * 0.78) ease-in-out infinite,
+        logo-icon-breathe 1.2s ease-in-out infinite;
+    transform-origin: center;
+    will-change: transform, filter;
+}
+
+[data-logo-effect-apply-logo="true"][data-logo-text-effect]:not([data-logo-text-effect="none"]) .logo-circle {
+    animation: logo-icon-float calc(var(--logo-text-effect-speed, 7s) * 0.78) ease-in-out infinite;
+    background-size: 220% 220%;
+}
+
+[data-logo-effect-apply-logo="true"][data-logo-text-effect="flowy-blood"] .logo-circle {
+    background-image: linear-gradient(
+        118deg,
+        color-mix(in srgb, #ffecf0, var(--text-primary) 22%) 0%,
+        color-mix(in srgb, #ff7e8b, var(--accent-color) 35%) 32%,
+        color-mix(in srgb, #ca1227, var(--logo-brand-color, var(--brand-color)) 30%) 66%,
+        color-mix(in srgb, #7d050f, black 18%) 100%
+    );
+    box-shadow: 0 0 calc(8px + (var(--logo-text-effect-intensity, 72) * 0.1px)) color-mix(in srgb, #d31a2f 55%, transparent);
+}
+
+[data-logo-effect-apply-logo="true"][data-logo-text-effect="burning"] .logo-circle {
+    background-image: linear-gradient(
+        180deg,
+        color-mix(in srgb, #fff9e7, var(--text-primary) 18%) 0%,
+        color-mix(in srgb, #ffd35f, var(--accent-color) 28%) 28%,
+        color-mix(in srgb, #ff7f1f, var(--logo-brand-color, var(--brand-color)) 32%) 58%,
+        color-mix(in srgb, #7a1b00, black 20%) 100%
+    );
+    box-shadow: 0 0 calc(9px + (var(--logo-text-effect-intensity, 72) * 0.11px)) color-mix(in srgb, #ff7f1f 62%, transparent);
+}
+
+[data-logo-effect-apply-logo="true"][data-logo-text-effect="water"] .logo-circle {
+    background-image: linear-gradient(
+        145deg,
+        color-mix(in srgb, #eefbff, var(--text-primary) 20%) 0%,
+        color-mix(in srgb, #6edbff, var(--accent-color) 35%) 36%,
+        color-mix(in srgb, #278cff, var(--logo-brand-color, var(--brand-color)) 35%) 70%,
+        color-mix(in srgb, #0f2f85, black 18%) 100%
+    );
+    box-shadow: 0 0 calc(8px + (var(--logo-text-effect-intensity, 72) * 0.1px)) color-mix(in srgb, #53cbff 60%, transparent);
+}
+
+[data-logo-effect-apply-logo="true"][data-logo-text-effect="slimey-green"] .logo-circle {
+    background-image: linear-gradient(
+        145deg,
+        color-mix(in srgb, #f0ffd9, var(--text-primary) 22%) 0%,
+        color-mix(in srgb, #9aff66, var(--accent-color) 34%) 35%,
+        color-mix(in srgb, #43bc2d, var(--logo-brand-color, var(--brand-color)) 35%) 68%,
+        color-mix(in srgb, #1f6618, black 14%) 100%
+    );
+    box-shadow: 0 0 calc(8px + (var(--logo-text-effect-intensity, 72) * 0.1px)) color-mix(in srgb, #6ce84b 62%, transparent);
+}
+
+[data-logo-effect-apply-logo="true"][data-logo-text-effect="custom"] .logo-circle {
+    background-image: linear-gradient(
+        var(--logo-text-effect-angle, 140deg),
+        var(--logo-text-effect-color-1, #66d8ff) 0%,
+        var(--logo-text-effect-color-2, #2f7dff) 34%,
+        var(--logo-text-effect-color-3, #14306a) 68%,
+        var(--logo-text-effect-color-4, #0d1742) 100%
+    );
+    box-shadow: 0 0 calc(8px + (var(--logo-text-effect-intensity, 72) * 0.1px)) color-mix(in srgb, var(--logo-text-effect-color-2, #2f7dff) 62%, transparent);
+}
+
+[data-logo-effect-apply-logo="true"][data-logo-text-effect="flowy-blood"] .logo img {
+    filter:
+        saturate(calc(1 + (var(--logo-text-effect-intensity, 72) / 120)))
+        hue-rotate(-18deg)
+        drop-shadow(0 0 calc(6px + (var(--logo-text-effect-intensity, 72) * 0.1px)) color-mix(in srgb, #d31a2f 75%, transparent));
+}
+
+[data-logo-effect-apply-logo="true"][data-logo-text-effect="burning"] .logo img {
+    filter:
+        saturate(calc(1 + (var(--logo-text-effect-intensity, 72) / 110)))
+        brightness(calc(0.96 + (var(--logo-text-effect-intensity, 72) / 380)))
+        hue-rotate(-28deg)
+        drop-shadow(0 0 calc(7px + (var(--logo-text-effect-intensity, 72) * 0.11px)) color-mix(in srgb, #ff7f1f 78%, transparent));
+}
+
+[data-logo-effect-apply-logo="true"][data-logo-text-effect="water"] .logo img {
+    filter:
+        saturate(calc(1 + (var(--logo-text-effect-intensity, 72) / 135)))
+        hue-rotate(22deg)
+        drop-shadow(0 0 calc(7px + (var(--logo-text-effect-intensity, 72) * 0.1px)) color-mix(in srgb, #53cbff 72%, transparent));
+}
+
+[data-logo-effect-apply-logo="true"][data-logo-text-effect="slimey-green"] .logo img {
+    filter:
+        saturate(calc(1 + (var(--logo-text-effect-intensity, 72) / 130)))
+        hue-rotate(36deg)
+        drop-shadow(0 0 calc(7px + (var(--logo-text-effect-intensity, 72) * 0.1px)) color-mix(in srgb, #67df49 72%, transparent));
+}
+
+[data-logo-effect-apply-logo="true"][data-logo-text-effect="custom"] .logo img {
+    filter:
+        saturate(calc(1 + (var(--logo-text-effect-intensity, 72) / 128)))
+        drop-shadow(0 0 calc(6px + (var(--logo-text-effect-intensity, 72) * 0.1px)) color-mix(in srgb, var(--logo-text-effect-color-2, #2f7dff) 74%, transparent));
+}
+
+@keyframes logo-flowy-blood {
+    0% { background-position: 0% 56%; }
+    25% { background-position: 54% 34%; }
+    50% { background-position: 100% 60%; }
+    75% { background-position: 42% 72%; }
+    100% { background-position: 0% 56%; }
+}
+
+@keyframes logo-burning-shift {
+    0% { background-position: 50% 90%; }
+    50% { background-position: 50% 0%; }
+    100% { background-position: 50% 90%; }
+}
+
+@keyframes logo-burning-flicker {
+    0% { opacity: 0.95; }
+    50% { opacity: 1; }
+    100% { opacity: 0.96; }
+}
+
+@keyframes logo-water-flow {
+    0% { background-position: 0% 58%; }
+    25% { background-position: 42% 34%; }
+    50% { background-position: 100% 62%; }
+    75% { background-position: 58% 76%; }
+    100% { background-position: 0% 58%; }
+}
+
+@keyframes logo-slimey-green {
+    0% { background-position: 10% 52%; }
+    30% { background-position: 58% 38%; }
+    55% { background-position: 94% 64%; }
+    80% { background-position: 44% 76%; }
+    100% { background-position: 10% 52%; }
+}
+
+@keyframes logo-custom-flow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+@keyframes logo-icon-float {
+    0% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-1px) scale(1.018); }
+    100% { transform: translateY(0) scale(1); }
+}
+
+@keyframes logo-icon-breathe {
+    0% { opacity: 0.93; }
+    50% { opacity: 1; }
+    100% { opacity: 0.94; }
 }
 
 .navigation ul {
@@ -600,3 +865,4 @@
         min-width: 6px;
     }
 }
+

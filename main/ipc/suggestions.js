@@ -32,6 +32,97 @@ function registerSuggestionsIpc(deps = {}) {
     return text || fallback;
   }
 
+  function normalizeTemperature(value, fallback = 0.7) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return fallback;
+    return Math.max(0, Math.min(2, parsed));
+  }
+
+  function getThemeAccentGuidance(payload = {}) {
+    const mood = normalizeText(payload.mood).toLowerCase();
+    const style = normalizeText(payload.style).toLowerCase();
+    const allowBlue = style.includes("cyber") || style.includes("water") || mood.includes("calm");
+    let hint = "balanced warm-vs-cool, but avoid defaulting to blue";
+
+    if (style.includes("nature") || mood.includes("cozy")) {
+      hint = "green, olive, amber, moss, earthy tones";
+    } else if (style.includes("horror") || mood.includes("dark") || mood.includes("mysterious")) {
+      hint = "deep crimson, rust, violet, toxic green accents";
+    } else if (style.includes("retro") || style.includes("arcade") || mood.includes("playful")) {
+      hint = "bold arcade accents: orange, lime, magenta, yellow";
+    } else if (style.includes("fantasy") || mood.includes("epic")) {
+      hint = "gold, emerald, ruby, amethyst accents";
+    } else if (style.includes("minimal")) {
+      hint = "subtle but distinct non-blue accents (muted coral, moss, warm amber)";
+    }
+
+    return { hint, allowBlue };
+  }
+
+  function hexToRgbSafe(hex) {
+    const normalized = normalizeHexColor(hex, "");
+    if (!normalized) return null;
+    const raw = normalized.slice(1);
+    const r = Number.parseInt(raw.slice(0, 2), 16);
+    const g = Number.parseInt(raw.slice(2, 4), 16);
+    const b = Number.parseInt(raw.slice(4, 6), 16);
+    if (!Number.isFinite(r) || !Number.isFinite(g) || !Number.isFinite(b)) return null;
+    return { r, g, b };
+  }
+
+  function rgbToHslSafe(r, g, b) {
+    const rn = r / 255;
+    const gn = g / 255;
+    const bn = b / 255;
+    const max = Math.max(rn, gn, bn);
+    const min = Math.min(rn, gn, bn);
+    const delta = max - min;
+    let h = 0;
+    let s = 0;
+    const l = (max + min) / 2;
+    if (delta !== 0) {
+      s = delta / (1 - Math.abs(2 * l - 1));
+      if (max === rn) {
+        h = 60 * (((gn - bn) / delta) % 6);
+      } else if (max === gn) {
+        h = 60 * (((bn - rn) / delta) + 2);
+      } else {
+        h = 60 * (((rn - gn) / delta) + 4);
+      }
+    }
+    if (h < 0) h += 360;
+    return { h, s, l };
+  }
+
+  function isBlueishHex(hex) {
+    const rgb = hexToRgbSafe(hex);
+    if (!rgb) return false;
+    const hsl = rgbToHslSafe(rgb.r, rgb.g, rgb.b);
+    return hsl.h >= 180 && hsl.h <= 265;
+  }
+
+  function deterministicPalettePick(seedText = "", palette = []) {
+    const source = String(seedText || "seed");
+    let hash = 0;
+    for (let i = 0; i < source.length; i += 1) {
+      hash = ((hash << 5) - hash) + source.charCodeAt(i);
+      hash |= 0;
+    }
+    const index = Math.abs(hash) % Math.max(1, palette.length);
+    return palette[index] || palette[0] || "#ff8c42";
+  }
+
+  function darkenHexSimple(hex, percent = 26) {
+    const rgb = hexToRgbSafe(hex);
+    if (!rgb) return "#8c5a2b";
+    const f = Math.max(0, Math.min(100, Number(percent) || 26)) / 100;
+    const nextR = Math.max(0, Math.min(255, Math.round(rgb.r * (1 - f))));
+    const nextG = Math.max(0, Math.min(255, Math.round(rgb.g * (1 - f))));
+    const nextB = Math.max(0, Math.min(255, Math.round(rgb.b * (1 - f))));
+    const out = `#${nextR.toString(16).padStart(2, "0")}${nextG.toString(16).padStart(2, "0")}${nextB.toString(16).padStart(2, "0")}`;
+    return normalizeHexColor(out, "#8c5a2b");
+  }
+
   function decodeHtmlEntities(value) {
     return String(value || "")
       .replace(/</gi, "<")
@@ -908,6 +999,212 @@ function registerSuggestionsIpc(deps = {}) {
     };
   }
 
+  function normalizeThemeTextEffectMode(value) {
+    const normalized = String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[\s_]+/g, "-");
+    if (normalized === "none") return "none";
+    if (normalized === "flowy-blood" || normalized === "burning" || normalized === "water" || normalized === "slimey-green" || normalized === "custom") {
+      return normalized;
+    }
+    return "slimey-green";
+  }
+
+  function normalizeHexColor(value, fallback = "") {
+    const text = String(value || "").trim();
+    if (!text) return String(fallback || "");
+    let raw = text.startsWith("#") ? text.slice(1) : text;
+    if (/^[a-fA-F0-9]{3}$/.test(raw)) {
+      raw = raw.split("").map((char) => `${char}${char}`).join("");
+    }
+    if (!/^[a-fA-F0-9]{6}$/.test(raw)) return String(fallback || "");
+    return `#${raw.toLowerCase()}`;
+  }
+
+  function buildThemeGenerationPrompt(payload = {}) {
+    const mood = normalizeText(payload.mood, "balanced");
+    const style = normalizeText(payload.style, "arcade");
+    const energy = Math.max(0, Math.min(100, Number(payload.energy) || 55));
+    const saturation = Math.max(0, Math.min(100, Number(payload.saturation) || 62));
+    const notes = normalizeText(payload.notes, "No extra notes.");
+    const extraPrompt = normalizeText(payload.extraPrompt, "");
+    const variationSeed = normalizeText(payload.variationSeed, "");
+    const preferTextEffect = !!payload.preferTextEffect;
+    const applyEffectToLogo = !!payload.applyEffectToLogo;
+    const accentGuidance = getThemeAccentGuidance(payload);
+    const currentColors = payload.currentColors && typeof payload.currentColors === "object"
+      ? payload.currentColors
+      : {};
+    const currentColorsJson = JSON.stringify(currentColors);
+
+    return [
+      "You are emuBro's theme designer assistant.",
+      "Generate one cohesive gaming UI color theme.",
+      "",
+      "Return strict JSON only with this exact shape:",
+      "{",
+      '  "summary": "short description",',
+      '  "theme": {',
+      '    "colors": {',
+      '      "bgPrimary":"#000000",',
+      '      "bgSecondary":"#000000",',
+      '      "bgTertiary":"#000000",',
+      '      "bgQuaternary":"#000000",',
+      '      "textPrimary":"#ffffff",',
+      '      "textSecondary":"#cccccc",',
+      '      "accentColor":"#66ccff",',
+      '      "borderColor":"#444444",',
+      '      "bgHeader":"#000000",',
+      '      "bgSidebar":"#000000",',
+      '      "bgActionbar":"#000000",',
+      '      "brandColor":"#2f9ec0",',
+      '      "appGradientA":"#0b1528",',
+      '      "appGradientB":"#0f2236",',
+      '      "appGradientC":"#1d2f4a",',
+      '      "appGradientAngle":"160deg",',
+      '      "successColor":"#4caf50",',
+      '      "dangerColor":"#f44336"',
+      "    },",
+      '    "textEffect": {',
+      '      "enabled": true,',
+      '      "mode": "custom",',
+      '      "applyToLogo": true,',
+      '      "useColor4": true,',
+      '      "angle": 140,',
+      '      "speed": 7,',
+      '      "intensity": 72,',
+      '      "customColors": {',
+      '        "color1":"#66d8ff",',
+      '        "color2":"#2f7dff",',
+      '        "color3":"#14306a",',
+      '        "color4":"#0d1742"',
+      "      }",
+      "    }",
+      "  }",
+      "}",
+      "",
+      "Rules:",
+      "- Colors must be 6-digit hex strings (#RRGGBB).",
+      "- Ensure high readability between background and text.",
+      "- Keep a coherent, intentional style.",
+      "- IMPORTANT: Do not copy example colors literally; they are placeholders only.",
+      "- textEffect.mode must be one of: none, flowy-blood, burning, water, slimey-green, custom.",
+      "- If textEffect.enabled=true, prefer mode='custom' with new customColors.",
+      "- If preferTextEffect=false, set textEffect.enabled=false and mode=none.",
+      "- If applyEffectToLogo=false, set textEffect.applyToLogo=false.",
+      accentGuidance.allowBlue
+        ? "- Blue accents are allowed, but still avoid repeating the same palette from previous runs."
+        : "- Avoid blue/cyan as the dominant accent hue for this request.",
+      "",
+      "User direction:",
+      `- Mood: ${mood}`,
+      `- Visual style: ${style}`,
+      `- Accent hue guidance: ${accentGuidance.hint}`,
+      `- Energy (0-100): ${energy}`,
+      `- Saturation preference (0-100): ${saturation}`,
+      `- Prefer text effect: ${preferTextEffect ? "yes" : "no"}`,
+      `- Apply effect to logo icon: ${applyEffectToLogo ? "yes" : "no"}`,
+      variationSeed ? `- Variation seed: ${variationSeed}` : "",
+      `- Notes: ${notes}`,
+      extraPrompt ? `- Extra prompt: ${extraPrompt}` : "",
+      "",
+      "Current theme colors (use as context, not a strict limit):",
+      currentColorsJson
+    ].filter(Boolean).join("\n");
+  }
+
+  function parseThemeGenerationPayload(rawModelText, payload = {}) {
+    const parsed = extractJsonFromText(rawModelText) || {};
+    const sourceTheme = (parsed?.theme && typeof parsed.theme === "object") ? parsed.theme : parsed;
+    const sourceColors = (sourceTheme?.colors && typeof sourceTheme.colors === "object") ? sourceTheme.colors : {};
+    const currentColors = payload.currentColors && typeof payload.currentColors === "object"
+      ? payload.currentColors
+      : {};
+
+    const defaults = {
+      bgPrimary: "#1e1e1e",
+      bgSecondary: "#2d2d2d",
+      bgTertiary: "#333333",
+      bgQuaternary: "#2b2b2b",
+      textPrimary: "#ffffff",
+      textSecondary: "#cccccc",
+      accentColor: "#66ccff",
+      borderColor: "#444444",
+      bgHeader: "#2d2d2d",
+      bgSidebar: "#333333",
+      bgActionbar: "#252525",
+      brandColor: "#2f9ec0",
+      appGradientA: "#0b1528",
+      appGradientB: "#0f2236",
+      appGradientC: "#1d2f4a",
+      appGradientAngle: "160deg",
+      successColor: "#4caf50",
+      dangerColor: "#f44336"
+    };
+
+    const colorKeys = Object.keys(defaults).filter((key) => key !== "appGradientAngle");
+    const colors = {};
+    colorKeys.forEach((key) => {
+      colors[key] = normalizeHexColor(
+        sourceColors[key],
+        normalizeHexColor(currentColors[key], defaults[key])
+      );
+    });
+    colors.appGradientAngle = (() => {
+      const source = normalizeText(sourceColors?.appGradientAngle, "");
+      const current = normalizeText(currentColors?.appGradientAngle, "");
+      const fallback = normalizeText(defaults.appGradientAngle, "160deg");
+      const pick = source || current || fallback;
+      const parsed = Number.parseInt(String(pick).replace(/deg$/i, "").trim(), 10);
+      const clamped = Number.isFinite(parsed) ? Math.max(0, Math.min(360, parsed)) : 160;
+      return `${clamped}deg`;
+    })();
+
+    const sourceTextEffect = (sourceTheme?.textEffect && typeof sourceTheme.textEffect === "object")
+      ? sourceTheme.textEffect
+      : {};
+    const requestedMode = normalizeText(sourceTextEffect.mode)
+      ? normalizeThemeTextEffectMode(sourceTextEffect.mode)
+      : (payload.preferTextEffect ? "custom" : "none");
+    const enabledFallback = payload.preferTextEffect || requestedMode !== "none";
+    const sourceCustomColors = sourceTextEffect.customColors && typeof sourceTextEffect.customColors === "object"
+      ? sourceTextEffect.customColors
+      : {};
+    const textEffect = {
+      enabled: requestedMode !== "none" && (sourceTextEffect.enabled === undefined ? enabledFallback : !!sourceTextEffect.enabled),
+      mode: requestedMode,
+      applyToLogo: sourceTextEffect.applyToLogo === undefined ? !!payload.applyEffectToLogo : !!sourceTextEffect.applyToLogo,
+      useColor4: sourceTextEffect.useColor4 === undefined ? true : !!sourceTextEffect.useColor4,
+      angle: Math.max(0, Math.min(360, Number(sourceTextEffect.angle) || 140)),
+      speed: Math.max(2, Math.min(20, Number(sourceTextEffect.speed) || 7)),
+      intensity: Math.max(0, Math.min(100, Number(sourceTextEffect.intensity) || 72)),
+      customColors: {
+        color1: normalizeHexColor(sourceCustomColors.color1, "#7cff77"),
+        color2: normalizeHexColor(sourceCustomColors.color2, "#35d74f"),
+        color3: normalizeHexColor(sourceCustomColors.color3, "#1b6f2a"),
+        color4: normalizeHexColor(sourceCustomColors.color4, "#0f3e1b")
+      }
+    };
+    if (!textEffect.enabled) {
+      textEffect.mode = "none";
+      textEffect.applyToLogo = false;
+    }
+
+    const accentGuidance = getThemeAccentGuidance(payload);
+    if (!accentGuidance.allowBlue && isBlueishHex(colors.accentColor)) {
+      const forcedAccent = deterministicPalettePick(
+        `${payload.variationSeed || ""}|${payload.mood || ""}|${payload.style || ""}`,
+        ["#ff7f50", "#ff9f1c", "#e76f51", "#e63946", "#f4a261", "#8ac926", "#b5179e", "#f72585"]
+      );
+      colors.accentColor = normalizeHexColor(forcedAccent, colors.accentColor);
+      colors.brandColor = normalizeHexColor(colors.brandColor, darkenHexSimple(colors.accentColor, 28));
+    }
+
+    const summary = normalizeText(parsed?.summary || sourceTheme?.summary, "AI theme generated.");
+    return { summary, colors, textEffect };
+  }
+
   function parseTagSuggestionPayload(rawModelText, payload) {
     const catalog = normalizeTagCatalogRows(payload?.availableTags);
     const maxTags = Math.max(1, Math.min(12, Number(payload?.maxTags) || 6));
@@ -1264,6 +1561,9 @@ function registerSuggestionsIpc(deps = {}) {
           model: normalizeText(modelName, "llama3.1"),
           prompt: buildRequestPrompt(payload),
           format: "json",
+          options: {
+            temperature: normalizeTemperature(payload?.temperature, 0.7)
+          },
           stream: false
         })
       });
@@ -1311,7 +1611,7 @@ function registerSuggestionsIpc(deps = {}) {
       },
       body: JSON.stringify({
         model: normalizeText(payload.model, "gpt-4o-mini"),
-        temperature: 0.7,
+        temperature: normalizeTemperature(payload?.temperature, 0.7),
         messages: [
           {
             role: "system",
@@ -1354,7 +1654,7 @@ function registerSuggestionsIpc(deps = {}) {
           }
         ],
         generationConfig: {
-          temperature: 0.7
+          temperature: normalizeTemperature(payload?.temperature, 0.7)
         }
       })
     });
@@ -1595,6 +1895,56 @@ function registerSuggestionsIpc(deps = {}) {
         provider,
         message: error?.message || String(error),
         answer: ""
+      };
+    }
+  });
+
+  ipcMain.handle("suggestions:generate-theme", async (_event, payload = {}) => {
+    const provider = normalizeProvider(payload.provider);
+    const safePayload = {
+      ...payload,
+      provider,
+      mood: normalizeText(payload.mood, "balanced"),
+      style: normalizeText(payload.style, "arcade"),
+      notes: normalizeText(payload.notes),
+      extraPrompt: normalizeText(payload.extraPrompt),
+      energy: Math.max(0, Math.min(100, Number(payload.energy) || 55)),
+      saturation: Math.max(0, Math.min(100, Number(payload.saturation) || 62)),
+      variationSeed: normalizeText(payload.variationSeed),
+      preferTextEffect: !!payload.preferTextEffect,
+      applyEffectToLogo: !!payload.applyEffectToLogo,
+      temperature: normalizeTemperature(payload.temperature, 1.05),
+      currentColors: payload.currentColors && typeof payload.currentColors === "object"
+        ? payload.currentColors
+        : {}
+    };
+
+    safePayload.prompt = buildThemeGenerationPrompt(safePayload);
+
+    try {
+      let rawModelText = "";
+      if (provider === "openai") {
+        rawModelText = await requestOpenAI(safePayload);
+      } else if (provider === "gemini") {
+        rawModelText = await requestGemini(safePayload);
+      } else {
+        rawModelText = await requestOllama(safePayload);
+      }
+
+      const parsed = parseThemeGenerationPayload(rawModelText, safePayload);
+      return {
+        success: true,
+        provider,
+        summary: parsed.summary,
+        colors: parsed.colors,
+        textEffect: parsed.textEffect
+      };
+    } catch (error) {
+      log.error("suggestions:generate-theme failed:", error);
+      return {
+        success: false,
+        provider,
+        message: error?.message || String(error)
       };
     }
   });

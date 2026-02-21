@@ -209,7 +209,7 @@
                         <h3 data-i18n="sidebar.library">Library</h3>
                         <ul>
                             <li class="active"><a href="#" data-view="all" data-i18n="sidebar.allGames">All Games</a></li>
-                            <li><a href="#" data-view="installed" data-i18n="sidebar.installed">Installed</a></li>
+                            <li><a href="#" data-view="favorite">Favorite</a></li>
                             <li><a href="#" data-view="recent" data-i18n="sidebar.recentlyPlayed">Recently Played</a></li>
                             <li><a href="#" data-view="suggested" data-i18n="sidebar.suggested">Suggested</a></li>
                             <li><a href="#" data-view="emulators" data-i18n="sidebar.emulators">Emulators</a></li>
@@ -504,6 +504,180 @@
                             </div>
                         </div>
 
+                        <div class="theme-brand-panel">
+                            <h4>Logo Brand Color</h4>
+                            <label class="bg-layer-checkbox theme-brand-enable" for="theme-basic-brand-use-accent">
+                                <input type="checkbox" id="theme-basic-brand-use-accent" checked>
+                                <span>Change Logo Span Color?</span>
+                            </label>
+                            <div class="theme-brand-options">
+                                <label class="theme-brand-option">
+                                    <input type="radio" name="theme-basic-brand-mode" id="theme-basic-brand-mode-accent" value="accent">
+                                    <span>Use Accent Color</span>
+                                </label>
+                                <label class="theme-brand-option">
+                                    <input type="radio" name="theme-basic-brand-mode" id="theme-basic-brand-mode-darker" value="darker" checked>
+                                    <span>Darker Accent</span>
+                                </label>
+                                <label class="theme-brand-option">
+                                    <input type="radio" name="theme-basic-brand-mode" id="theme-basic-brand-mode-lighter" value="lighter">
+                                    <span>Brighter Accent</span>
+                                </label>
+                                <div class="theme-brand-strength-row">
+                                    <input type="range" id="theme-basic-brand-strength" min="0" max="80" step="1" value="30" />
+                                    <span id="theme-basic-brand-strength-value">30%</span>
+                                </div>
+                                <label class="theme-brand-option">
+                                    <input type="radio" name="theme-basic-brand-mode" id="theme-basic-brand-mode-custom" value="custom">
+                                    <span>Custom Color</span>
+                                </label>
+                                <div class="theme-brand-custom-color-row">
+                                    <div class="color-input-group">
+                                        <input type="color" id="theme-basic-brand-color" class="color-picker" value="#2f9ec0">
+                                        <input type="text" class="color-text" placeholder="#2f9ec0" readonly>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="theme-textfx-panel">
+                            <h4>Text Animation</h4>
+                            <label class="bg-layer-checkbox theme-textfx-enable" for="theme-textfx-enabled">
+                                <input type="checkbox" id="theme-textfx-enabled">
+                                <span>Enable logo text animation</span>
+                            </label>
+                            <label class="bg-layer-checkbox theme-textfx-enable" for="theme-textfx-apply-logo">
+                                <input type="checkbox" id="theme-textfx-apply-logo">
+                                <span>Also apply effect to logo icon</span>
+                            </label>
+                            <div class="theme-textfx-grid">
+                                <div class="form-group">
+                                    <label for="theme-textfx-mode">Animation Style:</label>
+                                    <select id="theme-textfx-mode">
+                                        <option value="flowy-blood">Flowy Blood</option>
+                                        <option value="burning">Burning Red/Orange</option>
+                                        <option value="water">Water</option>
+                                        <option value="slimey-green">Slimey Green</option>
+                                        <option value="custom">Custom</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="theme-textfx-speed">Animation Speed:</label>
+                                    <div class="gradient-angle-control">
+                                        <input type="range" id="theme-textfx-speed" min="2" max="20" step="1" value="7" />
+                                        <span id="theme-textfx-speed-value">7s</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="theme-textfx-intensity">Animation Intensity:</label>
+                                    <div class="gradient-angle-control">
+                                        <input type="range" id="theme-textfx-intensity" min="0" max="100" step="1" value="72" />
+                                        <span id="theme-textfx-intensity-value">72%</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="theme-textfx-angle">Custom Angle:</label>
+                                    <div class="gradient-angle-control">
+                                        <input type="range" id="theme-textfx-angle" min="0" max="360" step="1" value="140" />
+                                        <span id="theme-textfx-angle-value">140deg</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Custom Colors:</label>
+                                    <label class="bg-layer-checkbox" for="theme-textfx-use-color-4">
+                                        <input type="checkbox" id="theme-textfx-use-color-4">
+                                        <span>Use 4th color stop</span>
+                                    </label>
+                                    <div class="theme-textfx-custom-colors">
+                                        <div class="color-input-group">
+                                            <input type="color" id="theme-textfx-color-1" class="color-picker" value="#66d8ff">
+                                            <input type="text" class="color-text" placeholder="#66D8FF" readonly>
+                                        </div>
+                                        <div class="color-input-group">
+                                            <input type="color" id="theme-textfx-color-2" class="color-picker" value="#2f7dff">
+                                            <input type="text" class="color-text" placeholder="#2F7DFF" readonly>
+                                        </div>
+                                        <div class="color-input-group">
+                                            <input type="color" id="theme-textfx-color-3" class="color-picker" value="#14306a">
+                                            <input type="text" class="color-text" placeholder="#14306A" readonly>
+                                        </div>
+                                        <div class="color-input-group">
+                                            <input type="color" id="theme-textfx-color-4" class="color-picker" value="#0d1742">
+                                            <input type="text" class="color-text" placeholder="#0D1742" readonly>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="theme-textfx-note">Applied to logo text, and optionally to the logo icon.</p>
+                        </div>
+
+                        <div class="theme-llm-panel">
+                            <h4>Change Theme With LLM</h4>
+                            <p class="theme-llm-note">Generate a full palette from mood + style guidance using your configured AI provider.</p>
+                            <div class="theme-llm-grid">
+                                <div class="theme-input-group">
+                                    <label for="theme-llm-mood">Mood:</label>
+                                    <select id="theme-llm-mood">
+                                        <option value="balanced">Balanced</option>
+                                        <option value="cozy">Cozy</option>
+                                        <option value="epic">Epic</option>
+                                        <option value="mysterious">Mysterious</option>
+                                        <option value="playful">Playful</option>
+                                        <option value="dark">Dark</option>
+                                        <option value="high-energy">High Energy</option>
+                                    </select>
+                                </div>
+                                <div class="theme-input-group">
+                                    <label for="theme-llm-style">Style:</label>
+                                    <select id="theme-llm-style">
+                                        <option value="arcade">Arcade</option>
+                                        <option value="retro">Retro</option>
+                                        <option value="cyberpunk">Cyberpunk</option>
+                                        <option value="fantasy">Fantasy</option>
+                                        <option value="nature">Nature</option>
+                                        <option value="minimal">Minimal</option>
+                                        <option value="horror">Horror</option>
+                                    </select>
+                                </div>
+                                <div class="theme-input-group">
+                                    <label for="theme-llm-energy">Energy:</label>
+                                    <div class="gradient-angle-control">
+                                        <input type="range" id="theme-llm-energy" min="0" max="100" step="1" value="60" />
+                                        <span id="theme-llm-energy-value">60%</span>
+                                    </div>
+                                </div>
+                                <div class="theme-input-group">
+                                    <label for="theme-llm-saturation">Saturation:</label>
+                                    <div class="gradient-angle-control">
+                                        <input type="range" id="theme-llm-saturation" min="0" max="100" step="1" value="65" />
+                                        <span id="theme-llm-saturation-value">65%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="theme-input-group">
+                                <label for="theme-llm-notes">Extra Notes:</label>
+                                <textarea id="theme-llm-notes" rows="2" placeholder="Optional: neon greens, avoid pure black, emphasize readability"></textarea>
+                            </div>
+                            <div class="theme-input-group">
+                                <label for="theme-llm-prompt">Custom Prompt Add-on:</label>
+                                <textarea id="theme-llm-prompt" rows="3" placeholder="Optional: additional prompt instructions for the LLM"></textarea>
+                            </div>
+                            <div class="theme-llm-toggles">
+                                <label class="bg-layer-checkbox" for="theme-llm-prefer-textfx">
+                                    <input type="checkbox" id="theme-llm-prefer-textfx" checked>
+                                    <span>Prefer logo text effect</span>
+                                </label>
+                                <label class="bg-layer-checkbox" for="theme-llm-apply-logo">
+                                    <input type="checkbox" id="theme-llm-apply-logo" checked>
+                                    <span>Apply effect to logo icon</span>
+                                </label>
+                            </div>
+                            <div class="theme-llm-actions">
+                                <button id="theme-llm-generate-btn" type="button" class="action-btn">Generate + Apply</button>
+                                <span id="theme-llm-status" class="theme-llm-status" aria-live="polite"></span>
+                            </div>
+                        </div>
+
                         <div class="theme-extended-panel">
                         <div class="color-inputs">
                             <div class="form-group">
@@ -609,6 +783,62 @@
                                     <input type="text" class="color-text" placeholder="#f44336" readonly>
                                 </div>
                             </div>
+
+                            <div class="form-group">
+                                <label for="color-text-tertiary">Tertiary Text:</label>
+                                <div class="color-input-group">
+                                    <input type="color" id="color-text-tertiary" class="color-picker">
+                                    <input type="text" class="color-text" placeholder="#8fa2bf" readonly>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="color-warning">Warning Color:</label>
+                                <div class="color-input-group">
+                                    <input type="color" id="color-warning" class="color-picker">
+                                    <input type="text" class="color-text" placeholder="#ffcc00" readonly>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="color-brand">Brand Color:</label>
+                                <div class="color-input-group">
+                                    <input type="color" id="color-brand" class="color-picker">
+                                    <input type="text" class="color-text" placeholder="#2f9ec0" readonly>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="color-accent-hover">Accent Hover:</label>
+                                <div class="color-input-group">
+                                    <input type="color" id="color-accent-hover" class="color-picker">
+                                    <input type="text" class="color-text" placeholder="#2aa7cc" readonly>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="color-glass-surface">Glass Surface:</label>
+                                <div class="color-input-group">
+                                    <input type="color" id="color-glass-surface" class="color-picker">
+                                    <input type="text" class="color-text" placeholder="#11213a" readonly>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="color-glass-surface-strong">Glass Surface Strong:</label>
+                                <div class="color-input-group">
+                                    <input type="color" id="color-glass-surface-strong" class="color-picker">
+                                    <input type="text" class="color-text" placeholder="#102037" readonly>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="color-glass-border">Glass Border:</label>
+                                <div class="color-input-group">
+                                    <input type="color" id="color-glass-border" class="color-picker">
+                                    <input type="text" class="color-text" placeholder="#4f6380" readonly>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="theme-gradient-section">
@@ -667,31 +897,45 @@
                             </div>
 
                             <div class="form-group">
-                                <label for="bg-position" data-i18n="theme.position">Position:</label>
-                                <select id="bg-position">
-                                    <option value="centered" data-i18n="theme.centered">Centered (Moves with window)</option>
-                                    <option value="fixed" data-i18n="theme.fixed">Fixed (Stays in place)</option>
+                                <label for="bg-title-image-input">Top Title Bar Image:</label>
+                                <input type="file" id="bg-title-image-input" accept="image/*">
+                                <span id="bg-title-image-name" class="image-name"></span>
+                                <button type="button" id="clear-bg-title-image-btn" class="action-btn remove-btn" style="display: none;">Clear Title Bar Image</button>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="bg-target-select">Edit Surface:</label>
+                                <select id="bg-target-select">
+                                    <option value="base">Background</option>
+                                    <option value="top">Top Banner</option>
+                                    <option value="title">Top Title Bar</option>
                                 </select>
                             </div>
 
                             <div class="form-group">
-                                <label for="bg-background-repeat">Background Repeat:</label>
-                                <select id="bg-background-repeat">
-                                    <option value="no-repeat" data-i18n="theme.bgRepeatOptions.noRepeat">No Repeat</option>
-                                    <option value="repeat" data-i18n="theme.bgRepeatOptions.repeat">Repeat</option>
-                                    <option value="repeat-x" data-i18n="theme.bgRepeatOptions.repeatX">Repeat Horizontally</option>
-                                    <option value="repeat-y" data-i18n="theme.bgRepeatOptions.repeatY">Repeat Vertically</option>
-                                </select>
+                                <label id="bg-position-label" for="bg-position" data-i18n="theme.position">Position:</label>
+                                <select id="bg-position"></select>
                             </div>
 
                             <div class="form-group">
-                                <label for="bg-scale" data-i18n="theme.scaleMode">Scale Mode:</label>
-                                <select id="bg-scale">
-                                    <option value="original" data-i18n="theme.originalSize">Original Size</option>
-                                    <option value="stretch" data-i18n="theme.stretch">Stretch (Fill)</option>
-                                    <option value="crop" data-i18n="theme.crop">Crop (Cover)</option>
-                                    <option value="zoom" data-i18n="theme.zoom">Zoom (Contain)</option>
-                                </select>
+                                <label id="bg-repeat-label" for="bg-background-repeat">Repeat:</label>
+                                <select id="bg-background-repeat"></select>
+                            </div>
+
+                            <div class="form-group">
+                                <label id="bg-scale-label" for="bg-scale" data-i18n="theme.scaleMode">Scale Mode:</label>
+                                <select id="bg-scale"></select>
+                            </div>
+
+                            <div class="bg-offset-controls">
+                                <div class="form-group">
+                                    <label for="bg-offset-x">Offset X (px):</label>
+                                    <input type="number" id="bg-offset-x" step="1" value="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="bg-offset-y">Offset Y (px):</label>
+                                    <input type="number" id="bg-offset-y" step="1" value="0">
+                                </div>
                             </div>
 
                             <div id="bg-preview" class="bg-preview" style="display: none;">
@@ -699,6 +943,9 @@
                             </div>
                             <div id="bg-top-preview" class="bg-preview" style="display: none;">
                                 <img id="bg-top-preview-img" src="" alt="Top banner preview">
+                            </div>
+                            <div id="bg-title-preview" class="bg-preview" style="display: none;">
+                                <img id="bg-title-preview-img" src="" alt="Top title bar preview">
                             </div>
 
                             <div class="bg-layers-section">

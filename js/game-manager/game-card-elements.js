@@ -68,7 +68,7 @@ export function createGameCardElements(deps = {}) {
 
         row.innerHTML = `
         <td class="table-image-cell"><img src="${lazyPlaceholderSrc}" data-lazy-src="${escapeHtml(gameImageToUse)}" alt="${safeName}" class="table-game-image lazy-game-image is-pending" loading="lazy" decoding="async" fetchpriority="low" /></td>
-        <td>${safeName}</td>
+        <td class="table-title-cell"><span class="table-title-text">${safeName}</span></td>
         <td>${safeGenre}</td>
         <td>
             <span class="rating-inline">

@@ -84,7 +84,7 @@ function t(key, fallback, data = {}) {
         : (window?.i18n && typeof window.i18n.t === 'function' ? window.i18n : null);
     if (i18nRef && typeof i18nRef.t === 'function') {
         const translated = i18nRef.t(key, data);
-        if (translated && translated !== key) return String(translated);
+        if (translated && translated !== key) return applyTemplate(String(translated), data);
     }
     return applyTemplate(String(fallback || key), data);
 }
@@ -373,9 +373,6 @@ async function renderCategoriesList() {
     const selectedBeforePrune = getActiveCategorySelectionSet();
     const selectedAfterPrune = new Set(Array.from(selectedBeforePrune).filter((tag) => available.has(tag)));
     syncCategoryStateFromSelectionSet(selectedAfterPrune);
-    if (getCategorySelectionMode() === 'single' && selectedAfterPrune.size > 1) {
-        syncCategoryStateFromSelectionSet(new Set([Array.from(selectedAfterPrune)[0]]));
-    }
 
     if (categories.length <= CATEGORY_VISIBLE_LIMIT) {
         categoriesShowAll = false;
@@ -469,8 +466,19 @@ async function renderCategoriesList() {
         link.addEventListener('click', async (event) => {
             event.preventDefault();
             const nextTag = normalizeTagCategory(link.dataset.categoryTag || 'all');
+            const temporaryMultiSelect = getCategorySelectionMode() === 'single' && (
+                !!event.ctrlKey
+                || !!event.metaKey
+                || !!event.getModifierState?.('Control')
+                || !!event.getModifierState?.('Meta')
+            );
             if (nextTag === 'all') {
                 clearCategorySelection();
+            } else if (temporaryMultiSelect) {
+                const next = new Set(getActiveCategorySelectionSet());
+                if (next.has(nextTag)) next.delete(nextTag);
+                else next.add(nextTag);
+                syncCategoryStateFromSelectionSet(next);
             } else if (getCategorySelectionMode() === 'single') {
                 const currentlySelected = getActiveCategorySelectionSet();
                 const shouldClear = currentlySelected.size === 1 && currentlySelected.has(nextTag);

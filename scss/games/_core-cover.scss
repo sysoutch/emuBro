@@ -14,6 +14,12 @@
     --theme-top-bg-position: top center;
     --theme-top-bg-height: 0px;
     --theme-top-bg-opacity: 0;
+    --theme-title-strip-image: none;
+    --theme-title-strip-size: cover;
+    --theme-title-strip-repeat: no-repeat;
+    --theme-title-strip-position: center center;
+    --theme-title-strip-opacity: 0;
+    --game-title-row-height: clamp(38px, calc(36px * var(--view-scale)), 54px);
 }
 
 .game-grid::before {
@@ -68,9 +74,28 @@
     border-bottom: 1px solid var(--glass-border);
     position: relative;
     z-index: 8;
-    background: color-mix(in srgb, var(--glass-surface-strong), transparent 10%);
+    background: color-mix(in srgb, var(--bg-header), transparent 10%);
     backdrop-filter: blur(12px) saturate(1.08);
     -webkit-backdrop-filter: blur(12px) saturate(1.08);
+    overflow: hidden;
+}
+
+.game-header::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: var(--theme-title-strip-image);
+    background-size: var(--theme-title-strip-size);
+    background-repeat: var(--theme-title-strip-repeat);
+    background-position: var(--theme-title-strip-position);
+    opacity: var(--theme-title-strip-opacity);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.game-header > * {
+    position: relative;
+    z-index: 1;
 }
 
 .game-scroll-body {
@@ -722,6 +747,7 @@ img.lazy-game-image[data-lazy-status="loaded"] {
     justify-content: space-between;
     gap: 8px;
     flex: 0 0 auto;
+    min-height: var(--game-title-row-height);
 }
 
 .game-title-box::before {

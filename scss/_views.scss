@@ -37,7 +37,7 @@
     gap: 10px;
     margin: 0;
     padding: 10px;
-    background-color: color-mix(in srgb, var(--glass-surface-strong), transparent 14%);
+    background-color: color-mix(in srgb, var(--bg-actionbar), transparent 14%);
     backdrop-filter: blur(14px) saturate(1.1);
     -webkit-backdrop-filter: blur(14px) saturate(1.1);
     border-radius: 0;

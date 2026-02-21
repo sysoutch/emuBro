@@ -167,7 +167,7 @@
 .sidebar-content {
     flex: 1;
     min-width: 0;
-    background-color: color-mix(in srgb, var(--glass-surface-strong), transparent 8%);
+    background-color: color-mix(in srgb, var(--bg-sidebar), transparent 8%);
     backdrop-filter: blur(14px) saturate(1.08);
     -webkit-backdrop-filter: blur(14px) saturate(1.08);
     padding: 20px;

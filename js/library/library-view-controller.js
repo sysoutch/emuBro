@@ -230,8 +230,8 @@ export function createLibraryViewController(options = {}) {
             return;
         }
 
-        if (normalizedSection === 'installed') {
-            gamesHeader.textContent = 'Installed Games';
+        if (normalizedSection === 'favorite') {
+            gamesHeader.textContent = 'Favorite Games';
             return;
         }
 
@@ -252,8 +252,8 @@ export function createLibraryViewController(options = {}) {
         const filtered = applyCategoryFilter(getFilteredGames());
         const section = getActiveLibrarySection();
 
-        if (section === 'installed') {
-            return filtered.filter((game) => !!game.isInstalled);
+        if (section === 'favorite') {
+            return filtered.filter((game) => Number(game?.rating || 0) > 0);
         }
 
         if (section === 'recent') {

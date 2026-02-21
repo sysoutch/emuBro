@@ -47,6 +47,9 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    min-height: var(--game-title-row-height);
+    display: flex;
+    align-items: center;
 }
 
 .list-item-platform-badge {

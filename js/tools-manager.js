@@ -224,7 +224,7 @@ async function launchCustomTool(shortcut, setStatus) {
 
 function renderCustomToolsSection() {
     const section = document.createElement('section');
-    section.className = 'custom-tools-section';
+    section.className = 'custom-tools-section glass';
     section.innerHTML = `
         <div class="custom-tools-header">
             <h3>${escapeHtml(t('tools.customShortcutsTitle', 'Custom Tool Shortcuts'))}</h3>

@@ -51,8 +51,8 @@
 
 .tools-overview .tool-card {
     background: var(--glass-surface);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
+    backdrop-filter: blur(var(--glass-blur, 14px));
+    -webkit-backdrop-filter: blur(var(--glass-blur, 14px));
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-card);
     padding: clamp(12px, 2vw, calc(24px * var(--view-scale)));
@@ -120,7 +120,9 @@
 .custom-tools-section {
     width: 100%;
     max-width: min(1200px, 100%);
-    background: var(--glass-surface);
+    background: color-mix(in srgb, var(--bg-secondary), transparent 58%);
+    backdrop-filter: blur(var(--glass-blur, 14px)) saturate(1.08);
+    -webkit-backdrop-filter: blur(var(--glass-blur, 14px)) saturate(1.08);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-card);
     padding: clamp(12px, 1.8vw, 22px);
@@ -203,7 +205,7 @@
 .custom-tool-card {
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-card);
-    background: color-mix(in srgb, var(--bg-primary), transparent 8%);
+    background: color-mix(in srgb, var(--bg-primary), transparent 34%);
     padding: 10px;
     display: flex;
     flex-direction: column;

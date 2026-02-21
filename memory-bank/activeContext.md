@@ -4,6 +4,29 @@
 The current focus is on updating project documentation and maintaining the codebase to align with the new Electron-based architecture.
 
 ## Recent Changes
+- Fixed category selection UX:
+  - Ctrl/Cmd multi-select in single mode now works logically and visually in categories list
+  - Category mode label now correctly renders template placeholders (no raw `{{mode}}`)
+- Improved library section behavior:
+  - Replaced `Installed` games section with `Favorite` games (games with `rating > 0`)
+  - Added backward compatibility mapping so stored `installed` default section resolves to `favorite`
+- Improved game view consistency:
+  - Unified title-row height semantics across Cover/List/Table with Slideshow/Random rhythm
+- Theme and branding updates:
+  - Decoupled logo span/circle coloring from global `--brand-color` into `--logo-brand-color`
+  - Prevented "Change Logo Span Color?" from affecting sidebar/global brand styling
+  - Added/extended logo text effect behavior and icon-apply flow for default themes
+- Community/theme manager polish:
+  - Added Font Awesome brand icons for community social cards
+  - Fixed broken delete icon in Theme Manager custom theme actions and aligned action icon sizing
+- Rendering/performance fixes:
+  - Restored grouped rendering behavior and improved grouped lazy loading
+  - Improved cover-view incremental loading behavior and related scroll/load edge cases
+- Support view enhancement:
+  - Added markdown rendering for "Suggested Fix Steps" content in support view
+- LLM theme generation improvements:
+  - Added prompt controls (mood/style) and improved variation/randomization
+  - Improved color propagation/update consistency and reduced repetitive blue-biased outcomes
 - Moved runtime backup rule editing from global Settings into Emulator Edit modal (`js/game-manager/emulator-config-actions.js`) via a new "Runtime Backup" tab
 - Added emulator-specific runtime backup rules (`runtimeDataRules`) to emulator local config and wired them into game launch payload creation
 - Updated launch pipeline (`js/game-manager/missing-game-recovery.js`, `js/game-manager.js`, `main/ipc/games.js`, `main/game-session-manager.js`) to accept per-launch runtime backup rules

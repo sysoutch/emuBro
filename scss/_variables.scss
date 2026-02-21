@@ -2,6 +2,7 @@
 :root {
     /* Dark Theme */
     --brand-color: #2f9ec0;
+    --logo-brand-color: var(--brand-color);
     --bg-primary: #0b1220;
     --bg-secondary: #121c2f;
     --bg-tertiary: #1a263d;
@@ -23,6 +24,13 @@
     --warning-color: #ffcc00;
     --font-body: 'Quicksand', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     --font-heading: 'Quicksand', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --logo-text-effect-speed: 7s;
+    --logo-text-effect-intensity: 72;
+    --logo-text-effect-color-1: #66d8ff;
+    --logo-text-effect-color-2: #2f7dff;
+    --logo-text-effect-color-3: #14306a;
+    --logo-text-effect-color-4: #0d1742;
+    --logo-text-effect-angle: 140deg;
 
     /* Border Radius Defaults (Rounded/Modern) */
     --radius-btn: 20px;
@@ -95,6 +103,7 @@
 /* Light Theme */
 [data-theme="light"] {
     --brand-color: #2f9ec0;
+    --logo-brand-color: var(--brand-color);
     --bg-primary: #dfeaf6;
     --bg-secondary: #edf4fb;
     --bg-tertiary: #d9e6f6;

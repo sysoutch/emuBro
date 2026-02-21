@@ -83,6 +83,19 @@
     gap: clamp(6px, 0.9vw, 10px);
 }
 
+.community-card-icon {
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    color: var(--accent-color);
+    background: color-mix(in srgb, var(--accent-color) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent-color) 35%, var(--border-color));
+    font-size: 1.2rem;
+}
+
 .community-card-title {
     margin: 0;
     color: var(--text-primary);

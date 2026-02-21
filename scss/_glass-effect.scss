@@ -31,6 +31,7 @@
     .slideshow-card,
     .random-display,
     .tools-overview .tool-card,
+    .custom-tools-section,
     .emulator-card,
     .emulator-list-item,
     .emulators-table {
@@ -62,6 +63,10 @@
     .list-item:hover {
         background: color-mix(in srgb, var(--bg-secondary), transparent 30%) !important;
         transform: translateX(5px);
+    }
+
+    .custom-tool-card {
+        @include glass-bg-only(--bg-primary, 72%);
     }
 
     .games-table th {

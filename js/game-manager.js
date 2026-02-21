@@ -1094,6 +1094,7 @@ export function applyFilters(shouldRender = true, sourceRows = null) {
     const groupSameNamesToggle = document.getElementById('group-same-names-toggle');
     
     currentFilter = platformFilter ? platformFilter.value : 'all';
+    currentGroupBy = normalizeGroupByValue(groupFilter ? groupFilter.value : 'none');
     // Only update currentSort from dropdown if it wasn't set by header click recently?
     // Actually, we should keep them in sync. If dropdown changes, reset dir to asc.
     // But how do we know if dropdown changed or we are re-rendering?
@@ -1251,11 +1252,44 @@ function renderGamesGroupedAccordion(gamesToRender, activeView = 'cover') {
 
     const view = (activeView === 'list' || activeView === 'table') ? activeView : 'cover';
     const groups = getAccordionGroupRows(gamesToRender, currentGroupBy);
+    const scrollRoot = document.querySelector('.game-scroll-body') || gamesContainer.parentElement || null;
+    const groupBatchSize = Math.max(12, Math.floor((GAMES_BATCH_SIZE[view] || GAMES_BATCH_SIZE.cover) * 0.35));
+    const groupLoadObservers = [];
 
     if (!groups.length) {
         gamesContainer.innerHTML = `<p>${i18n.t('gameGrid.noGamesFound')}</p>`;
         return;
     }
+
+    const setupGroupLazyLoader = (sentinelEl, loadMore, isExpandedRef) => {
+        if (!sentinelEl || typeof loadMore !== 'function') return;
+        if (!scrollRoot || typeof IntersectionObserver === 'undefined') {
+            // Fallback: load everything when observer support/root is unavailable.
+            while (loadMore()) {}
+            return;
+        }
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (!entry.isIntersecting) return;
+                if (!isExpandedRef()) return;
+                let guard = 0;
+                while (guard < 2 && loadMore()) {
+                    guard += 1;
+                }
+                if (!loadMore()) {
+                    observer.disconnect();
+                }
+            });
+        }, {
+            root: scrollRoot,
+            rootMargin: '420px 0px',
+            threshold: 0.01
+        });
+
+        observer.observe(sentinelEl);
+        groupLoadObservers.push(observer);
+    };
 
     groups.forEach((group) => {
         const section = document.createElement('section');
@@ -1283,6 +1317,41 @@ function renderGamesGroupedAccordion(gamesToRender, activeView = 'cover') {
 
         const content = document.createElement('div');
         content.className = `games-group-content games-group-content-${view}`;
+        const rows = Array.isArray(group.rows) ? group.rows : [];
+        let renderedCount = 0;
+
+        const renderBatch = () => {
+            if (renderedCount >= rows.length) return false;
+            const nextCount = Math.min(rows.length, renderedCount + groupBatchSize);
+            const slice = rows.slice(renderedCount, nextCount);
+            if (!slice.length) return false;
+
+            if (view === 'table') {
+                const tbody = content.querySelector('tbody');
+                if (!tbody) return false;
+                slice.forEach((game) => {
+                    tbody.appendChild(createGameTableRow(game));
+                });
+                initializeLazyGameImages(tbody);
+            } else if (view === 'list') {
+                const list = content.querySelector('.games-group-list');
+                if (!list) return false;
+                slice.forEach((game) => {
+                    list.appendChild(createGameListItem(game));
+                });
+                initializeLazyGameImages(list);
+            } else {
+                const grid = content.querySelector('.games-group-grid');
+                if (!grid) return false;
+                slice.forEach((game) => {
+                    grid.appendChild(createGameCard(game));
+                });
+                initializeLazyGameImages(grid);
+            }
+
+            renderedCount = nextCount;
+            return renderedCount < rows.length;
+        };
 
         if (view === 'table') {
             const table = document.createElement('table');
@@ -1300,31 +1369,30 @@ function renderGamesGroupedAccordion(gamesToRender, activeView = 'cover') {
                 </thead>
                 <tbody></tbody>
             `;
-            const tbody = table.querySelector('tbody');
-            (Array.isArray(group.rows) ? group.rows : []).forEach((game) => {
-                tbody.appendChild(createGameTableRow(game));
-            });
             content.appendChild(table);
         } else if (view === 'list') {
             const list = document.createElement('div');
             list.className = 'games-group-list';
-            (Array.isArray(group.rows) ? group.rows : []).forEach((game) => {
-                list.appendChild(createGameListItem(game));
-            });
             content.appendChild(list);
         } else {
             const grid = document.createElement('div');
             grid.className = 'games-group-grid';
-            (Array.isArray(group.rows) ? group.rows : []).forEach((game) => {
-                grid.appendChild(createGameCard(game));
-            });
             content.appendChild(grid);
         }
+
+        const sentinel = document.createElement('div');
+        sentinel.className = 'games-group-sentinel';
+        content.appendChild(sentinel);
 
         const stateKey = getAccordionStateKey(view, group.label);
         const expanded = groupAccordionState.has(stateKey) ? !!groupAccordionState.get(stateKey) : true;
         section.classList.toggle('is-collapsed', !expanded);
         header.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+
+        if (expanded) {
+            renderBatch();
+        }
+        setupGroupLazyLoader(sentinel, renderBatch, () => header.getAttribute('aria-expanded') === 'true');
 
         header.addEventListener('click', () => {
             const isExpanded = header.getAttribute('aria-expanded') === 'true';
@@ -1332,12 +1400,21 @@ function renderGamesGroupedAccordion(gamesToRender, activeView = 'cover') {
             header.setAttribute('aria-expanded', nextExpanded ? 'true' : 'false');
             section.classList.toggle('is-collapsed', !nextExpanded);
             groupAccordionState.set(stateKey, nextExpanded);
+            if (nextExpanded && renderedCount === 0) {
+                renderBatch();
+            }
         });
 
         section.appendChild(header);
         section.appendChild(content);
         gamesContainer.appendChild(section);
     });
+
+    gamesScrollDetach = () => {
+        groupLoadObservers.forEach((observer) => {
+            try { observer.disconnect(); } catch (_error) {}
+        });
+    };
 }
 
 function renderGamesIncremental(gamesToRender, activeView = 'cover') {
@@ -1349,7 +1426,8 @@ function renderGamesIncremental(gamesToRender, activeView = 'cover') {
     const batchSize = GAMES_BATCH_SIZE[view] || GAMES_BATCH_SIZE.cover;
     const totalGames = Array.isArray(gamesToRender) ? gamesToRender.length : 0;
     const totalChunks = Math.ceil(totalGames / batchSize);
-    const maxChunksInDom = view === 'cover' ? 6 : (view === 'table' ? 8 : 9);
+    const minChunksInDom = 2;
+    const hardMaxChunksInDom = view === 'cover' ? 6 : (view === 'table' ? 8 : 9);
 
     let mountTarget = null;
     let topSpacer = null;
@@ -1467,6 +1545,23 @@ function renderGamesIncremental(gamesToRender, activeView = 'cover') {
     setSpacerHeight(bottomSpacer, 0);
 
     const getRenderedChunkCount = () => (loadedBottom >= loadedTop ? (loadedBottom - loadedTop + 1) : 0);
+    const getAverageMeasuredChunkHeight = () => {
+        const values = Array.from(chunkHeights.values()).filter((value) => Number(value) > 0);
+        if (!values.length) return 0;
+        return values.reduce((sum, value) => sum + Number(value), 0) / values.length;
+    };
+    const estimateTypicalChunkHeight = () => {
+        const measuredAverage = getAverageMeasuredChunkHeight();
+        if (measuredAverage > 0) return measuredAverage;
+        return view === 'cover' ? 720 : (view === 'table' ? 640 : 560);
+    };
+    const getMaxChunksInDom = (viewportHeight = 0) => {
+        const vp = Math.max(1, Number(viewportHeight) || 0);
+        const estimatedHeight = Math.max(1, estimateTypicalChunkHeight());
+        const visibleChunks = Math.max(1, Math.ceil(vp / estimatedHeight));
+        const target = visibleChunks * 2;
+        return Math.max(minChunksInDom, Math.min(hardMaxChunksInDom, target));
+    };
 
     const getChunkSlice = (chunkIndex) => {
         const start = chunkIndex * batchSize;
@@ -1652,7 +1747,7 @@ function renderGamesIncremental(gamesToRender, activeView = 'cover') {
         const nextChunk = loadedBottom + 1;
         const inserted = insertChunkAtBottom(nextChunk);
         if (!inserted) return false;
-        while (getRenderedChunkCount() > maxChunksInDom) {
+        while (getRenderedChunkCount() > getMaxChunksInDom()) {
             if (!removeChunkFromTop()) break;
         }
         maybeShowProgress();
@@ -1664,13 +1759,13 @@ function renderGamesIncremental(gamesToRender, activeView = 'cover') {
         const prevChunk = loadedTop - 1;
         const inserted = insertChunkAtTop(prevChunk);
         if (!inserted) return false;
-        while (getRenderedChunkCount() > maxChunksInDom) {
+        while (getRenderedChunkCount() > getMaxChunksInDom()) {
             if (!removeChunkFromBottom()) break;
         }
         return true;
     };
 
-    const initialChunks = Math.min(totalChunks, Math.max(2, Math.min(4, maxChunksInDom)));
+    const initialChunks = Math.min(totalChunks, Math.max(minChunksInDom, Math.min(4, hardMaxChunksInDom)));
     for (let i = 0; i < initialChunks; i += 1) {
         if (!stepDown()) break;
     }
@@ -1703,19 +1798,26 @@ function renderGamesIncremental(gamesToRender, activeView = 'cover') {
         const scrollTop = Number(scrollRoot.scrollTop || 0);
         const viewportHeight = Number(scrollRoot.clientHeight || 0);
         const scrollHeight = Number(scrollRoot.scrollHeight || 0);
+        const distanceToLoadedTop = Math.max(0, scrollTop - topSpacerHeight);
+        const distanceToLoadedBottom = Math.max(0, (scrollHeight - bottomSpacerHeight) - (scrollTop + viewportHeight));
+        const maxChunksInDom = getMaxChunksInDom(viewportHeight);
 
-        if ((scrollHeight - (scrollTop + viewportHeight)) <= nearEdgeThreshold) {
+        if (distanceToLoadedBottom <= nearEdgeThreshold) {
             let guard = 0;
             while (guard < 2 && stepDown()) {
                 guard += 1;
             }
         }
 
-        if (scrollTop <= nearEdgeThreshold) {
+        if (distanceToLoadedTop <= nearEdgeThreshold) {
             let guard = 0;
             while (guard < 2 && stepUp()) {
                 guard += 1;
             }
+        }
+
+        while (getRenderedChunkCount() > maxChunksInDom) {
+            if (!removeChunkFromTop()) break;
         }
     };
 

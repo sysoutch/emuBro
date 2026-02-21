@@ -40,6 +40,10 @@
     color: var(--text-primary);
     margin: 0 0 10px 0;
     font-size: calc(1.3rem * var(--view-scale));
+    min-height: var(--game-title-row-height);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .random-platform-badge {
