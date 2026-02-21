@@ -31,8 +31,11 @@ export const DEFAULT_TEXT_EFFECT_CUSTOM_COLORS = {
 export const DEFAULT_TEXT_EFFECT_ANGLE = 140;
 
 export const ARCADE_THEME_FONTS = {
-    body: FONT_STACK_MONTSERRAT,
-    heading: FONT_STACK_LUCKIEST,
+    // Keep project-wide mapping consistent:
+    // - title/headline surfaces use font 1 (body)
+    // - listings/body/buttons use font 2 (heading)
+    body: FONT_STACK_LUCKIEST,
+    heading: FONT_STACK_MONTSERRAT,
     pixelMode: false
 };
 
@@ -57,21 +60,21 @@ const BUILT_IN_PRESET_THEMES = [
         id: 'spyro',
         name: 'Spyro',
         colors: {
-            bgPrimary: '#130d26',
-            bgSecondary: '#1d1336',
-            bgTertiary: '#281a46',
-            bgQuaternary: '#1a1132',
-            textPrimary: '#f4e9ff',
-            textSecondary: '#c6b1e6',
+            bgPrimary: '#050507',
+            bgSecondary: '#0b0b11',
+            bgTertiary: '#12121a',
+            bgQuaternary: '#0a0a0f',
+            textPrimary: '#f4eeff',
+            textSecondary: '#c9b9e8',
             accentColor: '#b56dff',
-            borderColor: '#5a3a8f',
-            bgHeader: '#1f1439',
-            bgSidebar: '#281a46',
-            bgActionbar: '#1a1132',
-            appGradientA: '#1a1134',
-            appGradientB: '#2a1b52',
-            appGradientC: '#4f2d79',
-            appGradientAngle: '155deg',
+            borderColor: '#39255d',
+            bgHeader: '#100f18',
+            bgSidebar: '#14121e',
+            bgActionbar: '#0a0a0f',
+            appGradientA: '#07070b',
+            appGradientB: '#161225',
+            appGradientC: '#2a1c47',
+            appGradientAngle: '160deg',
             successColor: '#5fca81',
             dangerColor: '#ff6d7d'
         },

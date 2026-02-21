@@ -114,16 +114,40 @@ export function createLazyGameImageActions(deps = {}) {
         images.forEach((img) => prepareLazyGameImage(img));
     }
 
-    function cleanup(root) {
+    function cleanup(root, options = {}) {
         const scope = root || document;
         if (!scope) return;
+        const releaseSources = Boolean(options?.releaseSources);
 
         if (scope.matches && scope.matches('img[data-lazy-src]')) {
             unobserveLazyImage(scope);
+            if (releaseSources) {
+                scope.removeAttribute('srcset');
+                scope.removeAttribute('sizes');
+                if (lazyPlaceholderSrc) {
+                    scope.src = lazyPlaceholderSrc;
+                } else {
+                    scope.removeAttribute('src');
+                }
+                scope.dataset.lazyStatus = 'released';
+                scope.classList.add('is-pending');
+            }
         }
 
         const images = scope.querySelectorAll ? scope.querySelectorAll('img[data-lazy-src]') : [];
-        images.forEach((img) => unobserveLazyImage(img));
+        images.forEach((img) => {
+            unobserveLazyImage(img);
+            if (!releaseSources) return;
+            img.removeAttribute('srcset');
+            img.removeAttribute('sizes');
+            if (lazyPlaceholderSrc) {
+                img.src = lazyPlaceholderSrc;
+            } else {
+                img.removeAttribute('src');
+            }
+            img.dataset.lazyStatus = 'released';
+            img.classList.add('is-pending');
+        });
     }
 
     function resetObserver() {

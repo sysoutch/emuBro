@@ -91,7 +91,7 @@ const emubro = window.emubro;
 const log = console;
 
 let remoteCommunityThemes = null;
-let currentTheme = 'dark';
+let currentTheme = '';
 let editingThemeId = null;
 let hasUnsavedChanges = false;
 let shouldUseAccentColorForBrand = true;
@@ -2096,6 +2096,8 @@ export function setTheme(theme, options = {}) {
         if (themeManagerModal && themeManagerModal.classList.contains('active')) {
             syncThemeManagerActiveItem(nextTheme);
         }
+
+        syncSplashThemePreference(nextTheme);
 
         // Keep theme switching side effects minimal to avoid memory churn.
         lastAppliedThemeId = nextTheme;

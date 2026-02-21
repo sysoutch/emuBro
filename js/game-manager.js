@@ -54,6 +54,7 @@ let missingGameRecoveryActions = null;
 const groupAccordionState = new Map();
 let lastRenderSignature = '';
 let lastRenderAt = 0;
+let lastRenderedView = 'cover';
 
 function buildGamesRenderSignature(rows = [], view = 'cover') {
     const list = Array.isArray(rows) ? rows : [];
@@ -227,9 +228,9 @@ function initializeLazyGameImages(root) {
     getLazyGameImageActions().initialize(root);
 }
 
-function cleanupLazyGameImages(root) {
+function cleanupLazyGameImages(root, options = null) {
     try {
-        getLazyGameImageActions().cleanup?.(root);
+        getLazyGameImageActions().cleanup?.(root, options || undefined);
     } catch (_error) {}
 }
 
@@ -322,6 +323,13 @@ export function renderGames(gamesToRender) {
     clearGamesLoadObserver();
     gamesRenderToken += 1;
 
+    const previousView = String(lastRenderedView || '').trim().toLowerCase();
+    const nextView = String(activeView || '').trim().toLowerCase();
+    const isLeavingCover = previousView === 'cover' && nextView !== 'cover';
+    if (isLeavingCover) {
+        cleanupLazyGameImages(gamesContainer, { releaseSources: true });
+    }
+
     gamesContainer.className = `games-container ${activeView}-view`;
 
     cleanupLazyGameImages(gamesContainer);
@@ -329,13 +337,16 @@ export function renderGames(gamesToRender) {
     
     if (gamesToRender.length === 0) {
         gamesContainer.innerHTML = `<p>${i18n.t('gameGrid.noGamesFound')}</p>`;
+        lastRenderedView = activeView;
         return;
     }
 
     if (activeView === 'slideshow') {
+        lastRenderedView = activeView;
         renderGamesAsSlideshow(gamesToRender);
         return;
     } else if (activeView === 'random') {
+        lastRenderedView = activeView;
         renderGamesAsRandom(gamesToRender);
         return;
     } else if (currentGroupBy !== 'none') {
@@ -345,6 +356,7 @@ export function renderGames(gamesToRender) {
     }
 
     initializeLazyGameImages(gamesContainer);
+    lastRenderedView = activeView;
 }
 
 export function renderEmulators(emulatorsToRender = emulators, options = {}) {
@@ -1989,12 +2001,15 @@ function renderGamesIncremental(gamesToRender, activeView = 'cover') {
         const maxChunksInDom = getMaxChunksInDom(viewportHeight);
         const pruneLimit = Math.max(minChunksInDom, maxChunksInDom + 1);
 
-        // Ignore layout-only scroll events (e.g. theme/font reflow). Mutating chunks
-        // on zero-delta events can cause continuous mount/unmount churn.
-        if (scrollDirection === 0) {
-            return;
-        }
-        if (Date.now() > userScrollIntentUntil) {
+        const hardNearTop = distanceToLoadedTop <= Math.max(180, Math.round(nearEdgeThreshold * 0.28));
+        const hardNearBottom = distanceToLoadedBottom <= Math.max(180, Math.round(nearEdgeThreshold * 0.28));
+        const nearTop = distanceToLoadedTop <= nearEdgeThreshold;
+        const nearBottom = distanceToLoadedBottom <= nearEdgeThreshold;
+        const hasUserIntent = Date.now() <= userScrollIntentUntil;
+
+        // Ignore non-user layout/reflow scroll unless we're pinned to a hard edge
+        // where we still need to continue incremental loading.
+        if (!hasUserIntent && !hardNearTop && !hardNearBottom) {
             return;
         }
 
@@ -2005,14 +2020,10 @@ function renderGamesIncremental(gamesToRender, activeView = 'cover') {
             return;
         }
 
-        const hardNearTop = distanceToLoadedTop <= Math.max(180, Math.round(nearEdgeThreshold * 0.28));
-        const hardNearBottom = distanceToLoadedBottom <= Math.max(180, Math.round(nearEdgeThreshold * 0.28));
-        const nearTop = distanceToLoadedTop <= nearEdgeThreshold;
-        const nearBottom = distanceToLoadedBottom <= nearEdgeThreshold;
-
-        // Prevent idle chunk churn: only load by direction when the user actually scrolls.
-        const shouldLoadDown = nearBottom && scrollDirection > 0;
-        const shouldLoadUp = nearTop && scrollDirection < 0;
+        // At hard edges, allow loading even when scroll delta is zero (common at the
+        // physical bottom/top where extra wheel events no longer move scrollTop).
+        const shouldLoadDown = (nearBottom && scrollDirection > 0) || (hardNearBottom && loadedBottom < totalChunks - 1);
+        const shouldLoadUp = (nearTop && scrollDirection < 0) || (hardNearTop && loadedTop > 0);
 
         // Prevent chunk thrashing near boundaries: prefer one direction per tick.
         if (shouldLoadDown && (!shouldLoadUp || scrollDirection > 0 || distanceToLoadedBottom <= distanceToLoadedTop)) {

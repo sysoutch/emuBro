@@ -1,4 +1,6 @@
-const { BrowserWindow } = require("electron");
+const { BrowserWindow, nativeImage } = require("electron");
+const fs = require("fs");
+const path = require("path");
 
 function sanitizeColor(value, fallback) {
   const raw = String(value || "").trim();
@@ -58,6 +60,22 @@ function resolveSplashTheme(snapshot) {
   };
 }
 
+function loadSplashLogoDataUrl() {
+  const candidates = [
+    path.resolve(__dirname, "..", "logo.png"),
+    path.resolve(process.cwd(), "logo.png")
+  ];
+  for (const candidate of candidates) {
+    try {
+      if (!fs.existsSync(candidate)) continue;
+      const image = nativeImage.createFromPath(candidate);
+      if (!image || image.isEmpty()) continue;
+      return image.toDataURL();
+    } catch (_error) {}
+  }
+  return "";
+}
+
 function createSplashWindowManager(options = {}) {
   const getSplashTheme = (typeof options.getSplashTheme === "function")
     ? options.getSplashTheme
@@ -93,6 +111,7 @@ function createSplashWindowManager(options = {}) {
       }
     });
 
+    const logoDataUrl = loadSplashLogoDataUrl();
     const splashHtml = `
 <!doctype html>
 <html>
@@ -112,6 +131,7 @@ function createSplashWindowManager(options = {}) {
         --splash-accent: ${splashTheme.accentColor};
         --splash-accent-light: ${splashTheme.accentLight};
         --splash-font-body: ${splashTheme.fontBody};
+        --splash-brand-prefix: ${splashTheme.tone === "light" ? "#000000" : "#ffffff"};
       }
       html, body { height: 100%; margin: 0; }
       body {
@@ -139,8 +159,63 @@ function createSplashWindowManager(options = {}) {
         letter-spacing: 1px;
         font-weight: 800;
         font-family: var(--splash-font-body);
+        white-space: nowrap;
+        line-height: 1;
       }
-      .brand span { color: var(--splash-accent); }
+      .brand-row {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .logo-mark {
+        position: relative;
+        width: 42px;
+        height: 42px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .logo-mark::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        background: color-mix(in srgb, var(--splash-accent) 82%, black);
+        box-shadow: 0 0 12px color-mix(in srgb, var(--splash-accent) 45%, transparent);
+        animation: splash-logo-orb-glow 3.8s ease-in-out infinite;
+      }
+      .logo-mark img {
+        position: relative;
+        width: 42px;
+        height: 42px;
+        object-fit: contain;
+        filter: brightness(0.94) saturate(0.96);
+        animation: splash-logo-img-glow 3.8s ease-in-out infinite;
+      }
+      .brand .brand-prefix {
+        color: var(--splash-brand-prefix);
+        display: inline-block;
+      }
+      .brand .brand-suffix {
+        display: inline-block;
+        background-image: linear-gradient(
+          145deg,
+          color-mix(in srgb, #ffffff, var(--splash-accent-light) 35%) 0%,
+          var(--splash-accent-light) 36%,
+          var(--splash-accent) 72%,
+          color-mix(in srgb, var(--splash-accent), black 28%) 100%
+        );
+        background-size: 220% 220%;
+        background-position: 50% 50%;
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        -webkit-text-fill-color: transparent;
+        filter:
+          saturate(1.06)
+          drop-shadow(0 0 7px color-mix(in srgb, var(--splash-accent) 58%, transparent));
+        animation: splash-brand-glow 6.6s ease-in-out infinite;
+      }
       .sub { margin: 0 0 18px 0; color: var(--splash-sub); font-size: 14px; }
       .bar {
         width: 100%;
@@ -158,11 +233,43 @@ function createSplashWindowManager(options = {}) {
         transform: translate3d(-120%, 0, 0);
         will-change: transform;
       }
+      @keyframes splash-brand-glow {
+        0% { background-position: 0% 52%; }
+        50% { background-position: 100% 48%; }
+        100% { background-position: 0% 52%; }
+      }
+      @keyframes splash-logo-orb-glow {
+        0% {
+          box-shadow:
+            0 0 9px color-mix(in srgb, var(--splash-accent) 42%, transparent),
+            0 0 2px color-mix(in srgb, var(--splash-accent-light) 24%, transparent);
+        }
+        50% {
+          box-shadow:
+            0 0 16px color-mix(in srgb, var(--splash-accent) 62%, transparent),
+            0 0 5px color-mix(in srgb, var(--splash-accent-light) 44%, transparent);
+        }
+        100% {
+          box-shadow:
+            0 0 9px color-mix(in srgb, var(--splash-accent) 42%, transparent),
+            0 0 2px color-mix(in srgb, var(--splash-accent-light) 24%, transparent);
+        }
+      }
+      @keyframes splash-logo-img-glow {
+        0% { filter: brightness(0.92) saturate(0.95) drop-shadow(0 0 3px color-mix(in srgb, var(--splash-accent) 32%, transparent)); }
+        50% { filter: brightness(0.98) saturate(1.02) drop-shadow(0 0 8px color-mix(in srgb, var(--splash-accent-light) 56%, transparent)); }
+        100% { filter: brightness(0.92) saturate(0.95) drop-shadow(0 0 3px color-mix(in srgb, var(--splash-accent) 32%, transparent)); }
+      }
     </style>
   </head>
   <body>
     <div class="wrap">
-      <h1 class="brand">EMU<span>BRO</span></h1>
+      <h1 class="brand">
+        <span class="brand-row">
+          <span class="logo-mark">${logoDataUrl ? `<img src="${logoDataUrl}" alt="" />` : ""}</span>
+          <span><span class="brand-prefix">EMU</span><span class="brand-suffix">BRO</span></span>
+        </span>
+      </h1>
       <p class="sub">Loading library, themes, and tools...</p>
       <div class="bar"><i id="splash-progress"></i></div>
     </div>

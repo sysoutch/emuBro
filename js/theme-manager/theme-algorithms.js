@@ -337,6 +337,33 @@ export function isNearBlackHex(hexColor) {
     return rgb.r <= 8 && rgb.g <= 8 && rgb.b <= 8;
 }
 
+function inferToneFromThemeText(colors = {}, fallback = 'dark') {
+    const textPrimary = parseColorToHex(colors.textPrimary || '');
+    if (!textPrimary) return fallback;
+    const textTone = inferUiToneFromColor(textPrimary, 'light');
+    // Light text usually indicates a dark UI and vice versa.
+    return textTone === 'light' ? 'dark' : 'light';
+}
+
+function resolveThemeTargetTone(theme = null, colors = {}, fallback = 'dark') {
+    const baseColor = parseColorToHex(theme?.editor?.basicBaseColor || '')
+        || parseColorToHex(colors.accentColor || '')
+        || '#5aa9ff';
+    const requestedVariant = normalizeBasicVariant(theme?.editor?.basicVariant || 'auto');
+    if (requestedVariant === 'light' || requestedVariant === 'dark') return requestedVariant;
+
+    const bgCandidate = parseColorToHex(colors.bgPrimary || '')
+        || parseColorToHex(colors.bgSecondary || '')
+        || '';
+    if (bgCandidate && !isNearBlackHex(bgCandidate)) {
+        return inferUiToneFromColor(bgCandidate, fallback);
+    }
+
+    const textTone = inferToneFromThemeText(colors, '');
+    if (textTone === 'light' || textTone === 'dark') return textTone;
+    return resolveBasicVariantForRuntime(baseColor, requestedVariant || 'auto');
+}
+
 export function looksCorruptedBlackPalette(colors = {}) {
     const keys = [
         'bgPrimary',
@@ -360,18 +387,17 @@ export function looksCorruptedBlackPalette(colors = {}) {
 }
 
 export function normalizePaletteToActiveTone(colors = {}, theme = null) {
-    const activeTone = String(document.documentElement.getAttribute('data-theme') || '').toLowerCase();
-    if (activeTone !== 'light' && activeTone !== 'dark') return colors;
-
+    const targetTone = resolveThemeTargetTone(theme, colors, 'dark');
+    if (targetTone !== 'light' && targetTone !== 'dark') return colors;
     const bgCandidate = parseColorToHex(colors.bgPrimary) || parseColorToHex(colors.bgSecondary);
     const paletteTone = inferUiToneFromColor(bgCandidate || '#0b1220', 'dark');
-    if (paletteTone === activeTone) return colors;
+    if (paletteTone === targetTone) return colors;
 
     const baseColor = parseColorToHex(theme?.editor?.basicBaseColor)
         || parseColorToHex(colors.accentColor)
         || '#5aa9ff';
     const intensity = normalizeBasicIntensity(theme?.editor?.basicIntensity ?? 100);
-    const repaired = buildBasicPalette(baseColor, activeTone, intensity);
+    const repaired = buildBasicPalette(baseColor, targetTone, intensity);
     if (normalizeThemeCustomizationMode(theme?.editor?.customizationMode) === 'basic') {
         const brandEditor = resolveBrandEditorConfig(theme?.editor || {});
         repaired.brandColor = resolveBasicBrandColor(repaired.accentColor, brandEditor.color || colors.brandColor || '', {
@@ -391,8 +417,7 @@ export function repairBlackPaletteFromAccent(colors = {}, theme = null) {
     const baseColor = parseColorToHex(theme?.editor?.basicBaseColor)
         || parseColorToHex(colors.accentColor)
         || '#5aa9ff';
-    const activeTone = String(document.documentElement.getAttribute('data-theme') || '').toLowerCase();
-    const variant = activeTone === 'light' ? 'light' : 'dark';
+    const variant = resolveThemeTargetTone(theme, colors, 'dark');
     const intensity = normalizeBasicIntensity(theme?.editor?.basicIntensity ?? 100);
     const repaired = buildBasicPalette(baseColor, variant, intensity);
     if (normalizeThemeCustomizationMode(theme?.editor?.customizationMode) === 'basic') {
@@ -412,6 +437,14 @@ export function repairBlackPaletteFromAccent(colors = {}, theme = null) {
 
 export function resolveThemeColorsForRuntime(theme) {
     const colors = theme?.colors || {};
+    const hasEditorConfig = Boolean(theme && theme.editor && typeof theme.editor === 'object');
+    if (!hasEditorConfig) {
+        // Legacy/built-in themes without editor metadata should preserve their authored palette.
+        const repairedLegacy = looksCorruptedBlackPalette(colors)
+            ? repairBlackPaletteFromAccent(colors, theme)
+            : colors;
+        return repairedLegacy;
+    }
     const mode = normalizeThemeCustomizationMode(theme?.editor?.customizationMode);
     if (mode !== 'basic') {
         const repairedExtended = looksCorruptedBlackPalette(colors)
