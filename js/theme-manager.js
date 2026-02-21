@@ -2953,57 +2953,111 @@ export function resetThemeForm() {
 }
 
 export function clearBackgroundImage() {
-    window.currentBackgroundImage = null;
-    window.currentBackgroundImageName = '';
-    const bgInput = document.getElementById('bg-image-input');
-    if (bgInput) bgInput.value = '';
-    
-    const bgPreview = document.getElementById('bg-preview');
-    if (bgPreview) bgPreview.style.display = 'none';
-    
-    const bgName = document.getElementById('bg-image-name');
-    if (bgName) bgName.textContent = '';
-    
-    const clearBtn = document.getElementById('clear-bg-image-btn');
-    if (clearBtn) clearBtn.style.display = 'none';
-
-    applyBackgroundImage(getThemeBackgroundConfigFromForm({ image: null }));
+    clearBackgroundSlot('base');
 }
 
 export function clearTopBackgroundImage() {
-    window.currentTopBackgroundImage = null;
-    window.currentTopBackgroundImageName = '';
-    const topBgInput = document.getElementById('bg-top-image-input');
-    if (topBgInput) topBgInput.value = '';
-
-    const topPreview = document.getElementById('bg-top-preview');
-    if (topPreview) topPreview.style.display = 'none';
-
-    const topName = document.getElementById('bg-top-image-name');
-    if (topName) topName.textContent = '';
-
-    const clearTopBtn = document.getElementById('clear-bg-top-image-btn');
-    if (clearTopBtn) clearTopBtn.style.display = 'none';
-
-    applyBackgroundImage(getThemeBackgroundConfigFromForm({ topImage: null }));
+    clearBackgroundSlot('top');
 }
 
 export function clearTitleBackgroundImage() {
-    window.currentTitleBackgroundImage = null;
-    window.currentTitleBackgroundImageName = '';
-    const titleBgInput = document.getElementById('bg-title-image-input');
-    if (titleBgInput) titleBgInput.value = '';
+    clearBackgroundSlot('title');
+}
 
-    const titlePreview = document.getElementById('bg-title-preview');
-    if (titlePreview) titlePreview.style.display = 'none';
+const BACKGROUND_SLOT_META = Object.freeze({
+    base: {
+        imageProp: 'currentBackgroundImage',
+        imageNameProp: 'currentBackgroundImageName',
+        inputId: 'bg-image-input',
+        previewId: 'bg-preview',
+        previewImgId: 'bg-preview-img',
+        imageNameId: 'bg-image-name',
+        clearBtnId: 'clear-bg-image-btn',
+        overrideKey: 'image'
+    },
+    top: {
+        imageProp: 'currentTopBackgroundImage',
+        imageNameProp: 'currentTopBackgroundImageName',
+        inputId: 'bg-top-image-input',
+        previewId: 'bg-top-preview',
+        previewImgId: 'bg-top-preview-img',
+        imageNameId: 'bg-top-image-name',
+        clearBtnId: 'clear-bg-top-image-btn',
+        overrideKey: 'topImage'
+    },
+    title: {
+        imageProp: 'currentTitleBackgroundImage',
+        imageNameProp: 'currentTitleBackgroundImageName',
+        inputId: 'bg-title-image-input',
+        previewId: 'bg-title-preview',
+        previewImgId: 'bg-title-preview-img',
+        imageNameId: 'bg-title-image-name',
+        clearBtnId: 'clear-bg-title-image-btn',
+        overrideKey: 'titleImage'
+    }
+});
 
-    const titleName = document.getElementById('bg-title-image-name');
-    if (titleName) titleName.textContent = '';
+function getBackgroundSlotMeta(slot) {
+    const key = String(slot || '').trim().toLowerCase();
+    return BACKGROUND_SLOT_META[key] || BACKGROUND_SLOT_META.base;
+}
 
-    const clearTitleBtn = document.getElementById('clear-bg-title-image-btn');
-    if (clearTitleBtn) clearTitleBtn.style.display = 'none';
+function writeBackgroundSlotUi(meta, imageData, fileName) {
+    const preview = document.getElementById(meta.previewId);
+    const previewImg = document.getElementById(meta.previewImgId);
+    if (preview && previewImg && imageData) {
+        previewImg.src = imageData;
+        preview.style.display = 'block';
+    } else if (preview) {
+        preview.style.display = 'none';
+    }
 
-    applyBackgroundImage(getThemeBackgroundConfigFromForm({ titleImage: null }));
+    const name = document.getElementById(meta.imageNameId);
+    if (name) {
+        name.textContent = fileName ? `Selected: ${fileName}` : '';
+    }
+
+    const clearBtn = document.getElementById(meta.clearBtnId);
+    if (clearBtn) {
+        clearBtn.style.display = imageData ? 'inline-block' : 'none';
+    }
+}
+
+function clearBackgroundSlot(slot) {
+    const meta = getBackgroundSlotMeta(slot);
+    window[meta.imageProp] = null;
+    window[meta.imageNameProp] = '';
+
+    const input = document.getElementById(meta.inputId);
+    if (input) input.value = '';
+
+    writeBackgroundSlotUi(meta, null, '');
+
+    applyBackgroundImage(getThemeBackgroundConfigFromForm({ [meta.overrideKey]: null }));
+}
+
+function handleBackgroundSlotUpload(event, slot) {
+    const file = event?.target?.files?.[0];
+    if (!file) return;
+
+    const meta = getBackgroundSlotMeta(slot);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const imageData = typeof e?.target?.result === 'string' ? e.target.result : '';
+        if (!imageData) return;
+
+        window[meta.imageProp] = imageData;
+        window[meta.imageNameProp] = file.name;
+        writeBackgroundSlotUi(meta, imageData, file.name);
+
+        hasUnsavedChanges = true;
+        const overrides = { [meta.overrideKey]: imageData };
+        if (meta.overrideKey === 'image') {
+            overrides.imagePath = file.path || null;
+        }
+        applyBackgroundImage(getThemeBackgroundConfigFromForm(overrides));
+    };
+    reader.readAsDataURL(file);
 }
 
 export function setupColorPickerListeners() {
@@ -3480,87 +3534,15 @@ function getThemeBackgroundConfigFromForm(overrides = {}) {
 }
 
 function handleBackgroundImageUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const imageData = e.target.result;
-        window.currentBackgroundImage = imageData;
-        window.currentBackgroundImageName = file.name;
-        
-        const preview = document.getElementById('bg-preview');
-        const previewImg = document.getElementById('bg-preview-img');
-        if (preview && previewImg) {
-            previewImg.src = imageData;
-            preview.style.display = 'block';
-        }
-        
-        const name = document.getElementById('bg-image-name');
-        if (name) name.textContent = `Selected: ${file.name}`;
-        const clearBtn = document.getElementById('clear-bg-image-btn');
-        if (clearBtn) clearBtn.style.display = 'inline-block';
-
-        hasUnsavedChanges = true;
-        applyBackgroundImage(getThemeBackgroundConfigFromForm({ image: imageData, imagePath: file.path || null }));
-    };
-    reader.readAsDataURL(file);
+    handleBackgroundSlotUpload(event, 'base');
 }
 
 function handleTopBackgroundImageUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const imageData = e.target.result;
-        window.currentTopBackgroundImage = imageData;
-        window.currentTopBackgroundImageName = file.name;
-
-        const preview = document.getElementById('bg-top-preview');
-        const previewImg = document.getElementById('bg-top-preview-img');
-        if (preview && previewImg) {
-            previewImg.src = imageData;
-            preview.style.display = 'block';
-        }
-
-        const name = document.getElementById('bg-top-image-name');
-        if (name) name.textContent = `Selected: ${file.name}`;
-        const clearBtn = document.getElementById('clear-bg-top-image-btn');
-        if (clearBtn) clearBtn.style.display = 'inline-block';
-
-        hasUnsavedChanges = true;
-        applyBackgroundImage(getThemeBackgroundConfigFromForm({ topImage: imageData }));
-    };
-    reader.readAsDataURL(file);
+    handleBackgroundSlotUpload(event, 'top');
 }
 
 function handleTitleBackgroundImageUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const imageData = e.target.result;
-        window.currentTitleBackgroundImage = imageData;
-        window.currentTitleBackgroundImageName = file.name;
-
-        const preview = document.getElementById('bg-title-preview');
-        const previewImg = document.getElementById('bg-title-preview-img');
-        if (preview && previewImg) {
-            previewImg.src = imageData;
-            preview.style.display = 'block';
-        }
-
-        const name = document.getElementById('bg-title-image-name');
-        if (name) name.textContent = `Selected: ${file.name}`;
-        const clearBtn = document.getElementById('clear-bg-title-image-btn');
-        if (clearBtn) clearBtn.style.display = 'inline-block';
-
-        hasUnsavedChanges = true;
-        applyBackgroundImage(getThemeBackgroundConfigFromForm({ titleImage: imageData }));
-    };
-    reader.readAsDataURL(file);
+    handleBackgroundSlotUpload(event, 'title');
 }
 
 export function getCurrentThemeColors() {

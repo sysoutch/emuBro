@@ -1,3 +1,5 @@
+const shipEnglishOnlyLocales = String(process.env.EMUBRO_SHIP_EN_ONLY || "1").trim() !== "0";
+
 module.exports = {
   appId: "ch.sysout.emubro",
   productName: "emuBro",
@@ -20,7 +22,7 @@ module.exports = {
     "translations-loader.js",
     "js/game-session-overlay-window.js",
     "dist/**/*",        // Your Webpack output
-    "locales/**/*",
+    ...(shipEnglishOnlyLocales ? ["locales/en.json"] : ["locales/**/*"]),
     "logo.png",
     "icon.png",
     "emubro-resources/**/*", // Essential for your app to find configs/platforms

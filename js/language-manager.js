@@ -23,6 +23,7 @@ const BUNDLED_FLAG_CODES = new Set(['us', 'de', 'es', 'fr', 'it', 'jp', 'nl', 'z
 const DEFAULT_FLAG_CODES = [
     'us', 'de', 'es', 'fr', 'it', 'jp', 'nl', 'za'
 ];
+const customFlagCache = new Map();
 
 function resolveBundledFlagCode(input, fallback = 'us') {
     const code = String(input || '').trim().toLowerCase();
@@ -30,10 +31,47 @@ function resolveBundledFlagCode(input, fallback = 'us') {
     return fallback;
 }
 
+async function getCustomFlagDataUrl(flagCode) {
+    const code = String(flagCode || '').trim().toLowerCase();
+    if (!FLAG_CODE_PATTERN.test(code)) return '';
+    if (customFlagCache.has(code)) return customFlagCache.get(code) || '';
+    try {
+        const result = await window?.emubro?.locales?.getFlagDataUrl?.(code);
+        const dataUrl = String(result?.dataUrl || '').trim();
+        customFlagCache.set(code, dataUrl);
+        return dataUrl;
+    } catch (_error) {
+        customFlagCache.set(code, '');
+        return '';
+    }
+}
+
+async function applyFlagVisual(flagElement, rawFlagCode, fallback = 'us') {
+    if (!flagElement) return;
+    const rawCode = String(rawFlagCode || '').trim().toLowerCase();
+    const bundledCode = resolveBundledFlagCode(rawCode, fallback);
+    flagElement.className = 'fi';
+    flagElement.style.removeProperty('background-image');
+    flagElement.style.removeProperty('background-size');
+    flagElement.style.removeProperty('background-position');
+    flagElement.style.removeProperty('background-repeat');
+
+    const customDataUrl = await getCustomFlagDataUrl(rawCode);
+    if (customDataUrl) {
+        flagElement.style.backgroundImage = `url("${customDataUrl}")`;
+        flagElement.style.backgroundSize = 'cover';
+        flagElement.style.backgroundPosition = 'center';
+        flagElement.style.backgroundRepeat = 'no-repeat';
+        return;
+    }
+    flagElement.classList.add(`fi-${bundledCode}`);
+}
+
 export function initLanguageManager() {
     const modal = document.getElementById('language-manager-modal');
     const closeBtn = document.getElementById('close-language-manager');
     const addBtn = document.getElementById('add-language-btn');
+    const downloadBtn = document.getElementById('download-languages-btn');
     const backBtn = document.getElementById('back-to-lang-list');
     const saveBtn = document.getElementById('save-lang-btn');
     const exportAllBtn = document.getElementById('export-all-languages-btn');
@@ -140,6 +178,15 @@ export function initLanguageManager() {
         if (!payload) return;
         createNewLanguage(payload).catch((e) => console.error('Failed to create language:', e));
     });
+
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', () => {
+            downloadLanguagesFromRepoFlow().catch((error) => {
+                console.error('Failed to download locales from repo:', error);
+                alert(`Failed to download locales: ${String(error?.message || error || 'Unknown error')}`);
+            });
+        });
+    }
 
     // Close on click outside - REMOVED because it conflicts with resizing
     /*
@@ -633,6 +680,73 @@ function sanitizeFilenamePart(value, fallback = 'locale') {
     return normalized || fallback;
 }
 
+async function downloadLanguagesFromRepoFlow() {
+    if (!emubro || !emubro.locales || typeof emubro.locales.fetchRepoCatalog !== 'function') {
+        throw new Error('Locales repository API is not available.');
+    }
+
+    const currentCfg = await emubro.locales.getRepoConfig();
+    const currentManifestUrl = String(currentCfg?.manifestUrl || '').trim();
+
+    const manifestUrlInput = await showTextInputDialog({
+        title: 'Locale Repository',
+        message: 'Manifest URL',
+        placeholder: 'https://raw.githubusercontent.com/.../manifest.json',
+        initialValue: currentManifestUrl
+    });
+    if (!manifestUrlInput || !String(manifestUrlInput || '').trim()) return;
+    const manifestUrl = String(manifestUrlInput || '').trim();
+
+    await emubro.locales.setRepoConfig({ manifestUrl });
+    const catalog = await emubro.locales.fetchRepoCatalog({ manifestUrl });
+    if (!catalog?.success) {
+        throw new Error(String(catalog?.message || 'Failed to fetch locale catalog.'));
+    }
+
+    const packages = Array.isArray(catalog.packages) ? catalog.packages : [];
+    if (packages.length === 0) {
+        alert('No locale packages found in repository catalog.');
+        return;
+    }
+
+    const codeList = packages.map((entry) => String(entry.code || '').trim().toLowerCase()).filter(Boolean);
+    const defaultCodes = codeList.join(', ');
+
+    const codesInput = await showTextInputDialog({
+        title: 'Install Languages',
+        message: 'Language codes (comma-separated, blank = all)',
+        placeholder: defaultCodes,
+        initialValue: defaultCodes
+    });
+    if (!codesInput) return;
+
+    const rawCodes = String(codesInput || '').trim();
+    const requestedCodes = rawCodes
+        ? rawCodes.split(',').map((value) => String(value || '').trim().toLowerCase()).filter(Boolean)
+        : [];
+
+    const result = await emubro.locales.installFromRepo({
+        manifestUrl,
+        codes: requestedCodes
+    });
+    if (!result?.success) {
+        throw new Error(String(result?.message || 'Failed to install locale packages.'));
+    }
+
+    const installedCount = Array.isArray(result.installed) ? result.installed.length : 0;
+    const failedCount = Array.isArray(result.failed) ? result.failed.length : 0;
+    if (failedCount > 0) {
+        const failedDetails = result.failed
+            .map((entry) => `${entry.code || 'unknown'}: ${entry.message || 'Unknown error'}`)
+            .join('\n');
+        alert(`Installed ${installedCount} locale(s), ${failedCount} failed:\n${failedDetails}`);
+    } else {
+        alert(`Installed ${installedCount} locale(s) from repository.`);
+    }
+
+    loadLanguagesList();
+}
+
 function triggerJsonDownload(filename, jsonPayload) {
     const jsonText = JSON.stringify(jsonPayload, null, 2);
     const blob = new Blob([jsonText], { type: 'application/json;charset=utf-8' });
@@ -777,7 +891,7 @@ function renderLanguages(languages) {
         card.className = 'language-card';
         card.innerHTML = `
             <div class="lang-info">
-                <span class="${safeFlagClass}"></span>
+                <span class="${safeFlagClass}" data-lang-flag="${escapeHtml(String(langInfo.flag || flag))}"></span>
                 <span class="lang-name">${safeName}</span>
                 <span class="lang-code">(${safeAbbreviation})</span>
             </div>
@@ -806,6 +920,10 @@ function renderLanguages(languages) {
         });
 
         listContainer.appendChild(card);
+        const flagEl = card.querySelector('[data-lang-flag]');
+        if (flagEl) {
+            void applyFlagVisual(flagEl, langInfo.flag || flag, 'us');
+        }
     });
 }
 

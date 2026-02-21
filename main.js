@@ -240,6 +240,7 @@ registerWindowControlsIpc({
 registerLocalesIpc({
   ipcMain,
   app,
+  store,
   fs,
   fsSync,
   path,

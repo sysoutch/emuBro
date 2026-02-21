@@ -214,7 +214,6 @@
             .search-bar input { width: 100%; }
             
             /* Hide more elements */
-            #language-manager-btn,
             #theme-manager-btn {
                 display: none;
             }
@@ -588,7 +587,15 @@
     position: relative;
 }
 
-.theme-controls-toggle {
+.language-controls-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+}
+
+.theme-controls-toggle,
+.language-controls-toggle {
     display: none;
     align-items: center;
     justify-content: center;
@@ -608,18 +615,21 @@
     transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
 }
 
-.theme-controls-toggle:hover {
+.theme-controls-toggle:hover,
+.language-controls-toggle:hover {
     border-color: color-mix(in srgb, var(--accent-color), white 20%);
     color: var(--text-primary);
 }
 
-.theme-toggle-wrapper.is-open .theme-controls-toggle {
+.theme-toggle-wrapper.is-open .theme-controls-toggle,
+.language-controls-wrapper.is-open .language-controls-toggle {
     border-color: color-mix(in srgb, var(--accent-color), white 18%);
     color: var(--text-primary);
     background: color-mix(in srgb, var(--accent-color), transparent 80%);
 }
 
-.theme-controls-content {
+.theme-controls-content,
+.language-controls-content {
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -832,7 +842,36 @@
         white-space: nowrap;
     }
 
-    .theme-controls-toggle {
+    .theme-controls-toggle,
+    .language-controls-toggle {
+        display: inline-flex;
+    }
+
+    .language-controls-wrapper {
+        margin-left: 0;
+    }
+
+    .language-controls-content {
+        display: none;
+        position: absolute;
+        right: 0;
+        top: calc(100% + 6px);
+        z-index: 180;
+        padding: 8px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-card);
+        background: color-mix(in srgb, var(--bg-secondary), transparent 8%);
+        backdrop-filter: blur(10px) saturate(1.06);
+        -webkit-backdrop-filter: blur(10px) saturate(1.06);
+        box-shadow: 0 10px 26px color-mix(in srgb, var(--glass-shadow), transparent 20%);
+        gap: 6px;
+    }
+
+    .language-controls-content .dropdown-with-button-wrapper {
+        margin: 0;
+    }
+
+    .language-controls-wrapper.is-open .language-controls-content {
         display: inline-flex;
     }
 

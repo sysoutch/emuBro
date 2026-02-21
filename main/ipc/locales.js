@@ -1,6 +1,7 @@
 function registerLocalesIpc(deps = {}) {
   const ipcMain = deps.ipcMain;
   const app = deps.app;
+  const store = deps.store || null;
   const fs = deps.fs;
   const fsSync = deps.fsSync;
   const path = deps.path;
@@ -18,6 +19,9 @@ function registerLocalesIpc(deps = {}) {
   }
 
   const LOCALE_FILENAME_RE = /^[a-z]{2,3}\.json$/i;
+  const FLAG_CODE_RE = /^[a-z]{2}$/i;
+  const DEFAULT_LOCALES_REPO_MANIFEST_URL = "https://raw.githubusercontent.com/sysoutch/emubro-locales/main/manifest.json";
+  const LOCALES_REPO_MANIFEST_URL_KEY = "locales:repo-manifest-url:v1";
 
   function normalizeLocaleFilename(filename) {
     const f = String(filename || "").trim();
@@ -37,6 +41,97 @@ function registerLocalesIpc(deps = {}) {
       fsSync.mkdirSync(dir, { recursive: true });
     } catch (_e) {}
     return dir;
+  }
+
+  function getUserFlagsDir() {
+    const dir = path.join(getUserLocalesDir(), "flags");
+    try {
+      fsSync.mkdirSync(dir, { recursive: true });
+    } catch (_e) {}
+    return dir;
+  }
+
+  function normalizeRepoManifestUrl(rawUrl) {
+    const value = String(rawUrl || "").trim();
+    if (!value) return DEFAULT_LOCALES_REPO_MANIFEST_URL;
+    if (!/^https?:\/\//i.test(value)) {
+      throw new Error("Manifest URL must start with http:// or https://");
+    }
+    return value;
+  }
+
+  function getLocalesRepoManifestUrl() {
+    if (!store || typeof store.get !== "function") return DEFAULT_LOCALES_REPO_MANIFEST_URL;
+    return normalizeRepoManifestUrl(store.get(LOCALES_REPO_MANIFEST_URL_KEY, DEFAULT_LOCALES_REPO_MANIFEST_URL));
+  }
+
+  function setLocalesRepoManifestUrl(rawUrl) {
+    const normalized = normalizeRepoManifestUrl(rawUrl);
+    if (store && typeof store.set === "function") {
+      store.set(LOCALES_REPO_MANIFEST_URL_KEY, normalized);
+    }
+    return normalized;
+  }
+
+  function normalizeCatalogEntry(entry = {}) {
+    const code = String(entry?.code || "").trim().toLowerCase();
+    const localeUrl = String(entry?.localeUrl || "").trim();
+    const name = String(entry?.name || "").trim();
+    const abbreviation = String(entry?.abbreviation || "").trim();
+    const flag = String(entry?.flag || "").trim().toLowerCase();
+    const flagUrl = String(entry?.flagUrl || "").trim();
+    if (!/^[a-z]{2,3}$/.test(code)) return null;
+    if (!/^https?:\/\//i.test(localeUrl)) return null;
+    return {
+      code,
+      name: name || code.toUpperCase(),
+      abbreviation: abbreviation || code.toUpperCase(),
+      flag: FLAG_CODE_RE.test(flag) ? flag : "us",
+      localeUrl,
+      flagUrl: /^https?:\/\//i.test(flagUrl) ? flagUrl : ""
+    };
+  }
+
+  async function fetchJsonFromUrl(url) {
+    const targetUrl = String(url || "").trim();
+    if (!/^https?:\/\//i.test(targetUrl)) {
+      throw new Error("Invalid URL");
+    }
+    if (typeof fetch !== "function") {
+      throw new Error("Fetch API is not available in this runtime");
+    }
+    const response = await fetch(targetUrl, { method: "GET", redirect: "follow", cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} while fetching ${targetUrl}`);
+    }
+    return await response.json();
+  }
+
+  async function fetchTextFromUrl(url) {
+    const targetUrl = String(url || "").trim();
+    if (!/^https?:\/\//i.test(targetUrl)) {
+      throw new Error("Invalid URL");
+    }
+    if (typeof fetch !== "function") {
+      throw new Error("Fetch API is not available in this runtime");
+    }
+    const response = await fetch(targetUrl, { method: "GET", redirect: "follow", cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} while fetching ${targetUrl}`);
+    }
+    return await response.text();
+  }
+
+  async function fetchLocalesCatalog(manifestUrl = "") {
+    const normalizedManifestUrl = normalizeRepoManifestUrl(manifestUrl || getLocalesRepoManifestUrl());
+    const raw = await fetchJsonFromUrl(normalizedManifestUrl);
+    const packages = Array.isArray(raw?.packages) ? raw.packages.map(normalizeCatalogEntry).filter(Boolean) : [];
+    return {
+      manifestUrl: normalizedManifestUrl,
+      name: String(raw?.name || "emuBro Locales"),
+      version: String(raw?.version || "1"),
+      packages
+    };
   }
 
   function parseLocaleJson(content) {
@@ -136,6 +231,125 @@ function registerLocalesIpc(deps = {}) {
     const content = JSON.stringify(json, null, 2);
     await fs.writeFile(outPath, content, "utf8");
     return { success: true };
+  });
+
+  ipcMain.handle("locales:flags:get-data-url", async (_event, flagCodeRaw) => {
+    try {
+      const flagCode = String(flagCodeRaw || "").trim().toLowerCase();
+      if (!FLAG_CODE_RE.test(flagCode)) {
+        return { success: false, message: "Invalid flag code", dataUrl: "" };
+      }
+      const filePath = path.join(getUserFlagsDir(), `${flagCode}.svg`);
+      if (!fsSync.existsSync(filePath)) {
+        return { success: false, message: "Flag not found", dataUrl: "" };
+      }
+      const buf = await fs.readFile(filePath);
+      const dataUrl = `data:image/svg+xml;base64,${Buffer.from(buf).toString("base64")}`;
+      return { success: true, dataUrl };
+    } catch (error) {
+      return { success: false, message: error?.message || String(error), dataUrl: "" };
+    }
+  });
+
+  ipcMain.handle("locales:repo:get-config", async () => {
+    return {
+      success: true,
+      manifestUrl: getLocalesRepoManifestUrl()
+    };
+  });
+
+  ipcMain.handle("locales:repo:set-config", async (_event, payload = {}) => {
+    const nextUrl = normalizeRepoManifestUrl(payload?.manifestUrl || payload?.url || "");
+    return {
+      success: true,
+      manifestUrl: setLocalesRepoManifestUrl(nextUrl)
+    };
+  });
+
+  ipcMain.handle("locales:repo:fetch-catalog", async (_event, payload = {}) => {
+    try {
+      const catalog = await fetchLocalesCatalog(payload?.manifestUrl || payload?.url || "");
+      return {
+        success: true,
+        ...catalog
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error?.message || String(error),
+        manifestUrl: String(payload?.manifestUrl || payload?.url || "").trim()
+      };
+    }
+  });
+
+  ipcMain.handle("locales:repo:install", async (_event, payload = {}) => {
+    try {
+      const catalog = await fetchLocalesCatalog(payload?.manifestUrl || payload?.url || "");
+      const requestedCodes = Array.isArray(payload?.codes)
+        ? payload.codes.map((code) => String(code || "").trim().toLowerCase()).filter((code) => /^[a-z]{2,3}$/.test(code))
+        : [];
+      const selected = requestedCodes.length > 0
+        ? catalog.packages.filter((entry) => requestedCodes.includes(entry.code))
+        : catalog.packages;
+      if (selected.length === 0) {
+        return {
+          success: false,
+          message: "No locale packages selected for installation.",
+          installed: [],
+          failed: []
+        };
+      }
+
+      const installed = [];
+      const failed = [];
+      const localesDir = getUserLocalesDir();
+      const flagsDir = getUserFlagsDir();
+
+      for (const entry of selected) {
+        try {
+          const localeJson = await fetchJsonFromUrl(entry.localeUrl);
+          const localePayload = (localeJson && typeof localeJson === "object" && localeJson[entry.code])
+            ? localeJson
+            : { [entry.code]: localeJson };
+          const localePath = path.join(localesDir, `${entry.code}.json`);
+          await fs.writeFile(localePath, JSON.stringify(localePayload, null, 2), "utf8");
+
+          if (entry.flagUrl && FLAG_CODE_RE.test(entry.flag)) {
+            try {
+              const flagSvg = await fetchTextFromUrl(entry.flagUrl);
+              await fs.writeFile(path.join(flagsDir, `${entry.flag}.svg`), String(flagSvg || ""), "utf8");
+            } catch (_flagError) {
+              // Flag download is optional; locale install should still succeed.
+            }
+          }
+
+          installed.push({
+            code: entry.code,
+            localePath
+          });
+        } catch (error) {
+          failed.push({
+            code: entry.code,
+            message: error?.message || String(error)
+          });
+        }
+      }
+
+      return {
+        success: installed.length > 0,
+        manifestUrl: catalog.manifestUrl,
+        installed,
+        failed
+      };
+    } catch (error) {
+      log.error("locales:repo:install failed:", error);
+      return {
+        success: false,
+        message: error?.message || String(error),
+        installed: [],
+        failed: []
+      };
+    }
   });
 }
 

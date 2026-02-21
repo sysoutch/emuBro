@@ -1,8 +1,6 @@
 export function createLazyGameImageActions(deps = {}) {
     const lazyPlaceholderSrc = String(deps.lazyPlaceholderSrc || '').trim();
-    const resolveObserverRoot = typeof deps.resolveObserverRoot === 'function'
-        ? deps.resolveObserverRoot
-        : () => null;
+    const resolveObserverRoot = typeof deps.resolveObserverRoot === 'function' ? deps.resolveObserverRoot : () => null;
     let gameImageObserver = null;
     let gameImageObserverRoot = null;
 

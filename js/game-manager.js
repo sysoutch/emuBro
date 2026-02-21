@@ -56,6 +56,14 @@ let lastRenderSignature = '';
 let lastRenderAt = 0;
 let lastRenderedView = 'cover';
 
+function getGlobalSearchTerm() {
+    return String(
+        document.getElementById('global-game-search')?.value
+        || document.querySelector('.search-bar input')?.value
+        || ''
+    ).trim().toLowerCase();
+}
+
 function buildGamesRenderSignature(rows = [], view = 'cover') {
     const list = Array.isArray(rows) ? rows : [];
     const total = list.length;
@@ -1138,7 +1146,6 @@ export function applyFilters(shouldRender = true, sourceRows = null) {
     filteredGames = Array.isArray(sourceRows) ? [...sourceRows] : [...games];
     
     const platformFilter = document.getElementById('platform-filter');
-    const sortFilter = document.getElementById('sort-filter');
     const groupFilter = document.getElementById('group-filter');
     const languageFilter = document.getElementById('game-language-filter');
     const regionFilter = document.getElementById('game-region-filter');
@@ -1146,37 +1153,6 @@ export function applyFilters(shouldRender = true, sourceRows = null) {
     
     currentFilter = platformFilter ? platformFilter.value : 'all';
     currentGroupBy = normalizeGroupByValue(groupFilter ? groupFilter.value : 'none');
-    // Only update currentSort from dropdown if it wasn't set by header click recently?
-    // Actually, we should keep them in sync. If dropdown changes, reset dir to asc.
-    // But how do we know if dropdown changed or we are re-rendering?
-    // Let's assume dropdown is the source of truth unless overridden.
-    // Better: update dropdown value when header is clicked.
-    // For now, let's read from dropdown if it matches known values, but respect global state if custom column.
-    const dropdownSort = sortFilter ? sortFilter.value : 'name';
-    // If the dropdown value is different from currentSort, implies user changed dropdown.
-    // But we need to be careful not to overwrite a custom sort like 'genre' which isn't in dropdown.
-    // Let's rely on event listeners to set currentSort/currentSortDir.
-    // Here we just use the variables.
-    // But wait, initially applyFilters reads from dropdown.
-    // If we want dropdown to control it, we need to know when it changed.
-    // Let's stick to reading dropdown for standard sorts if currentSort is standard.
-    if (['name', 'rating', 'price', 'platform'].includes(dropdownSort) && ['name', 'rating', 'price', 'platform'].includes(currentSort)) {
-         // If dropdown changed, we might need to sync?
-         // Let's keep it simple: the dropdown change event will trigger applyFilters, which reads the value.
-         // But if we clicked a header, currentSort might be 'genre'. Dropdown might still be 'name'.
-         // We should prioritize the variable if it was set explicitly.
-    }
-    // Actually, simple approach:
-    // If the function is called from the dropdown event, we should use the dropdown value.
-    // If called from header click, use the header value.
-    // But applyFilters is called generically.
-    // Let's make applyFilters rely on the global variables, and have the dropdown listener update the global variables.
-    // But wait, the dropdown listener in renderer.js just calls applyFilters.
-    // So applyFilters must read the dropdown.
-    // Modify: if sortFilter value matches currentSort, use it. If not, use sortFilter value and reset dir?
-    // This is tricky without knowing the source.
-    // Let's change how applyFilters works: it shouldn't read DOM for sort if we want custom sorts.
-    // We will update the renderer.js listener to update currentSort before calling applyFilters.
     currentLanguageFilter = normalizeLanguageFilterValue(languageFilter ? languageFilter.value : 'all');
     currentRegionFilter = normalizeRegionFilterValue(regionFilter ? regionFilter.value : 'all');
     groupSameNamesEnabled = !!groupSameNamesToggle?.checked;
@@ -1193,7 +1169,7 @@ export function applyFilters(shouldRender = true, sourceRows = null) {
         filteredGames = filteredGames.filter((game) => getRegionCodeFromGame(game) === currentRegionFilter);
     }
 
-    const searchTerm = String(document.getElementById('global-game-search')?.value || document.querySelector('.search-bar input')?.value || '').trim().toLowerCase();
+    const searchTerm = getGlobalSearchTerm();
     if (searchTerm) {
         filteredGames = filteredGames.filter((game) => {
             const name = String(game?.name || '').toLowerCase();

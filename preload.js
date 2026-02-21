@@ -64,6 +64,11 @@ const ALLOWED_INVOKE = new Set([
   "locales:read",
   "locales:exists",
   "locales:write",
+  "locales:flags:get-data-url",
+  "locales:repo:get-config",
+  "locales:repo:set-config",
+  "locales:repo:fetch-catalog",
+  "locales:repo:install",
   "create-game-shortcut",
   "prompt-scan-subfolders",
   "import-paths",
@@ -143,7 +148,12 @@ contextBridge.exposeInMainWorld("emubro", {
     list: () => invoke("locales:list"),
     read: (filename) => invoke("locales:read", filename),
     exists: (filename) => invoke("locales:exists", filename),
-    write: (filename, json) => invoke("locales:write", filename, json)
+    write: (filename, json) => invoke("locales:write", filename, json),
+    getFlagDataUrl: (flagCode) => invoke("locales:flags:get-data-url", flagCode),
+    getRepoConfig: () => invoke("locales:repo:get-config"),
+    setRepoConfig: (payload) => invoke("locales:repo:set-config", payload),
+    fetchRepoCatalog: (payload) => invoke("locales:repo:fetch-catalog", payload),
+    installFromRepo: (payload) => invoke("locales:repo:install", payload)
   },
 
   createGameShortcut: (gameId) => invoke("create-game-shortcut", gameId),

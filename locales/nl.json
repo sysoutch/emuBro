@@ -1,4 +1,4 @@
-{
+﻿{
   "nl": {
     "app": {
       "description": "Game Bibliotheek Beheerder",
@@ -442,6 +442,7 @@
       "scaleMode": "Schaal Modus",
       "secondaryBackground": "Secundaire Achtergrond",
       "stretch": "Uitrekken",
+      "themes": "Thema's",
       "themeManager": "Thema Beheer",
       "themeName": "Thema Naam",
       "uploadImage": "Afbeelding Uploaden",

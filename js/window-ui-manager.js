@@ -52,41 +52,84 @@ export function setupWindowControls(options = {}) {
 }
 
 export function setupHeaderThemeControlsToggle(options = {}) {
-    const wrapper = document.querySelector('.theme-toggle-wrapper');
-    const toggleBtn = document.getElementById('theme-controls-toggle');
-    const panel = document.getElementById('theme-controls-content');
-    const themeSelect = options.themeSelect || document.getElementById('theme-select');
-    if (!wrapper || !toggleBtn || !panel) return;
-
     const compactQuery = window.matchMedia('(max-width: 1200px)');
+    const themeSelect = options.themeSelect || document.getElementById('theme-select');
+    const languageManagerBtn = document.getElementById('language-manager-btn');
 
-    const setOpenState = (open) => {
-        const shouldOpen = !!open && compactQuery.matches;
-        wrapper.classList.toggle('is-open', shouldOpen);
-        toggleBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+    const initCompactWrapper = ({
+        wrapperSelector,
+        toggleId,
+        panelId,
+        closeOnChangeElement = null
+    }) => {
+        const wrapper = document.querySelector(wrapperSelector);
+        const toggleBtn = document.getElementById(toggleId);
+        const panel = document.getElementById(panelId);
+        if (!wrapper || !toggleBtn || !panel) return () => {};
+
+        const setOpenState = (open) => {
+            const shouldOpen = !!open && compactQuery.matches;
+            wrapper.classList.toggle('is-open', shouldOpen);
+            toggleBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+        };
+
+        const closePanel = () => setOpenState(false);
+
+        toggleBtn.addEventListener('click', (event) => {
+            if (!compactQuery.matches) return;
+            event.preventDefault();
+            event.stopPropagation();
+            setOpenState(!wrapper.classList.contains('is-open'));
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!compactQuery.matches || !wrapper.classList.contains('is-open')) return;
+            if (wrapper.contains(event.target)) return;
+            closePanel();
+        });
+
+        if (closeOnChangeElement) {
+            closeOnChangeElement.addEventListener('change', closePanel);
+        }
+
+        return closePanel;
     };
 
-    const closePanel = () => setOpenState(false);
-
-    toggleBtn.addEventListener('click', (event) => {
-        if (!compactQuery.matches) return;
-        event.preventDefault();
-        event.stopPropagation();
-        setOpenState(!wrapper.classList.contains('is-open'));
+    const closeThemePanel = initCompactWrapper({
+        wrapperSelector: '.theme-toggle-wrapper',
+        toggleId: 'theme-controls-toggle',
+        panelId: 'theme-controls-content',
+        closeOnChangeElement: themeSelect
+    });
+    const closeLanguagePanel = initCompactWrapper({
+        wrapperSelector: '.language-controls-wrapper',
+        toggleId: 'language-controls-toggle',
+        panelId: 'language-controls-content'
     });
 
-    document.addEventListener('click', (event) => {
-        if (!compactQuery.matches || !wrapper.classList.contains('is-open')) return;
-        if (wrapper.contains(event.target)) return;
-        closePanel();
-    });
+    const languageOptions = document.getElementById('language-options');
+    if (languageOptions) {
+        languageOptions.addEventListener('click', (event) => {
+            if (!event.target?.closest?.('li')) return;
+            closeLanguagePanel();
+        });
+    }
+    if (languageManagerBtn) {
+        languageManagerBtn.addEventListener('click', () => {
+            closeLanguagePanel();
+        });
+    }
 
     document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') closePanel();
+        if (event.key !== 'Escape') return;
+        closeThemePanel();
+        closeLanguagePanel();
     });
 
     const syncLayout = () => {
-        if (!compactQuery.matches) closePanel();
+        if (compactQuery.matches) return;
+        closeThemePanel();
+        closeLanguagePanel();
     };
 
     if (typeof compactQuery.addEventListener === 'function') {
@@ -95,9 +138,6 @@ export function setupHeaderThemeControlsToggle(options = {}) {
         compactQuery.addListener(syncLayout);
     }
 
-    if (themeSelect) {
-        themeSelect.addEventListener('change', closePanel);
-    }
 }
 
 export function setupSidebarRail(options = {}) {

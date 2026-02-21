@@ -3,11 +3,48 @@
  */
 
 const BUNDLED_FLAG_CODES = new Set(['us', 'de', 'es', 'fr', 'it', 'jp', 'nl', 'za']);
+const customFlagCache = new Map();
 
 function resolveBundledFlagCode(input, fallback = 'us') {
     const code = String(input || '').trim().toLowerCase();
     if (/^[a-z]{2}$/.test(code) && BUNDLED_FLAG_CODES.has(code)) return code;
     return fallback;
+}
+
+async function getCustomFlagDataUrl(flagCode) {
+    const code = String(flagCode || '').trim().toLowerCase();
+    if (!/^[a-z]{2}$/.test(code)) return '';
+    if (customFlagCache.has(code)) return customFlagCache.get(code) || '';
+    try {
+        const result = await window?.emubro?.locales?.getFlagDataUrl?.(code);
+        const dataUrl = String(result?.dataUrl || '').trim();
+        customFlagCache.set(code, dataUrl);
+        return dataUrl;
+    } catch (_error) {
+        customFlagCache.set(code, '');
+        return '';
+    }
+}
+
+async function applyFlagVisual(flagElement, rawFlagCode, fallback = 'us') {
+    if (!flagElement) return;
+    const rawCode = String(rawFlagCode || '').trim().toLowerCase();
+    const bundledCode = resolveBundledFlagCode(rawCode, fallback);
+    flagElement.className = 'fi';
+    flagElement.style.removeProperty('background-image');
+    flagElement.style.removeProperty('background-size');
+    flagElement.style.removeProperty('background-position');
+    flagElement.style.removeProperty('background-repeat');
+
+    const customDataUrl = await getCustomFlagDataUrl(rawCode);
+    if (customDataUrl) {
+        flagElement.style.backgroundImage = `url("${customDataUrl}")`;
+        flagElement.style.backgroundSize = 'cover';
+        flagElement.style.backgroundPosition = 'center';
+        flagElement.style.backgroundRepeat = 'no-repeat';
+        return;
+    }
+    flagElement.classList.add(`fi-${bundledCode}`);
 }
 
 export function updateUILanguage() {
@@ -48,10 +85,7 @@ function updateSelectedLanguageDisplay() {
         const langData = allTranslations[currentLang].language;
         if (langData) {
             if (currentFlagElement) {
-                // Clear existing classes
-                currentFlagElement.className = 'fi';
-                const flagCode = resolveBundledFlagCode(langData.flag, 'us');
-                currentFlagElement.classList.add(`fi-${flagCode}`);
+                void applyFlagVisual(currentFlagElement, langData.flag, 'us');
             }
             if (currentNameElement) {
                 currentNameElement.textContent = langData.name || currentLang;
@@ -77,8 +111,7 @@ export function populateLanguageSelector() {
             
             const flagSpan = document.createElement('span');
             flagSpan.className = 'fi';
-            const flagCode = resolveBundledFlagCode(langData.flag, 'us');
-            flagSpan.classList.add(`fi-${flagCode}`);
+            void applyFlagVisual(flagSpan, langData.flag, 'us');
             
             const nameSpan = document.createElement('span');
             nameSpan.textContent = langData.name || langCode;

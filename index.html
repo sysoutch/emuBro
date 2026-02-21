@@ -41,32 +41,6 @@
                         title="Clear search"
                     >&times;</button>
                 </div>
-                <div class="form-group language-selector-wrapper">
-                    <div class="form-group dropdown-with-button-wrapper">
-                        <div id="language-dropdown" class="custom-select" title="Select Language" data-i18n-title="language.selectLanguage">
-                            <div class="selected-option">
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <span id="current-flag" class="fi"></span>
-                                    <span id="current-language-name" data-i18n="language.selectLanguage">Select Language</span>
-                                </div>
-                            </div>
-                            <ul id="language-options" class="options-list">
-                                <!-- populated dynamically -->
-                            </ul>
-                        </div>
-                        
-                        <button id="language-manager-btn" class="theme-manager-btn icon-only-btn" title="Manage Languages" aria-label="Manage Languages" data-i18n-title="language.managerTitle" data-i18n-aria-label="language.managerTitle">
-                            <span class="icon-svg" aria-hidden="true">
-                                <svg viewBox="0 0 24 24">
-                                    <circle cx="12" cy="12" r="9"></circle>
-                                    <path d="M3 12h18"></path>
-                                    <path d="M12 3c2.7 2.4 4.2 5.7 4.2 9s-1.5 6.6-4.2 9"></path>
-                                    <path d="M12 3c-2.7 2.4-4.2 5.7-4.2 9s1.5 6.6 4.2 9"></path>
-                                </svg>
-                            </span>
-                        </button>
-                    </div>
-                </div>
                 <div class="header-inline-drag-gap" aria-hidden="true"></div>
                 <div class="theme-toggle-wrapper">
                     <button id="theme-controls-toggle" class="theme-controls-toggle" type="button" aria-expanded="false" aria-controls="theme-controls-content" data-i18n="theme.themeManager">Theme</button>
@@ -108,6 +82,37 @@
                                 </svg>
                             </span>
                         </button>
+                    </div>
+                </div>
+                <div class="form-group language-selector-wrapper">
+                    <div class="language-controls-wrapper">
+                        <button id="language-controls-toggle" class="language-controls-toggle" type="button" aria-expanded="false" aria-controls="language-controls-content" data-i18n="language.tabs.languages">Languages</button>
+                        <div id="language-controls-content" class="language-controls-content">
+                            <div class="form-group dropdown-with-button-wrapper">
+                                <div id="language-dropdown" class="custom-select" title="Select Language" data-i18n-title="language.selectLanguage">
+                                    <div class="selected-option">
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <span id="current-flag" class="fi"></span>
+                                            <span id="current-language-name" data-i18n="language.selectLanguage">Select Language</span>
+                                        </div>
+                                    </div>
+                                    <ul id="language-options" class="options-list">
+                                        <!-- populated dynamically -->
+                                    </ul>
+                                </div>
+                                
+                                <button id="language-manager-btn" class="theme-manager-btn icon-only-btn" title="Manage Languages" aria-label="Manage Languages" data-i18n-title="language.managerTitle" data-i18n-aria-label="language.managerTitle">
+                                    <span class="icon-svg" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24">
+                                            <circle cx="12" cy="12" r="9"></circle>
+                                            <path d="M3 12h18"></path>
+                                            <path d="M12 3c2.7 2.4 4.2 5.7 4.2 9s-1.5 6.6-4.2 9"></path>
+                                            <path d="M12 3c-2.7 2.4-4.2 5.7-4.2 9s1.5 6.6 4.2 9"></path>
+                                        </svg>
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -418,7 +423,7 @@
     <div id="theme-manager-modal" class="theme-manager-modal glass">
         <div class="theme-manager-content">
             <div id="theme-manager-header" class="theme-manager-header">
-                <h2 data-i18n="theme.themeManager">Theme Manager</h2>
+                <h2 data-i18n="theme.themes">Themes</h2>
                 <div class="window-controls">
                     <button id="pin-theme-manager" class="pin-btn icon-only-btn" title="Dock to RightSide" aria-label="Dock to right side">
                         <span class="icon-svg" aria-hidden="true">
@@ -1102,6 +1107,7 @@
                         </div>
                         <div class="lang-list-actions">
                             <button id="add-language-btn" class="action-btn" data-i18n="language.addNew">+ Add New Language</button>
+                            <button id="download-languages-btn" class="action-btn small" type="button" data-i18n="language.downloadFromRepo">Download from Repo</button>
                             <button id="export-all-languages-btn" class="action-btn small" type="button" data-i18n="language.exportAllJson">Export All as JSON</button>
                         </div>
                     </div>
