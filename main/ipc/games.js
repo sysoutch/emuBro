@@ -10,6 +10,7 @@ function registerGameIpc(deps = {}) {
     BrowserWindow,
     Menu,
     screen,
+    dialog,
     shell,
     nativeImage,
     fsSync,
@@ -27,7 +28,9 @@ function registerGameIpc(deps = {}) {
     dbUpsertTags,
     dbUpdateGameFilePath,
     getPlatformConfigs,
-    getRuntimeDataRules
+    getRuntimeDataRules,
+    getGameSessionCloseBehaviorPreference,
+    setGameSessionCloseBehaviorPreference
   } = deps;
 
   if (!ipcMain) throw new Error("registerGameIpc requires ipcMain");
@@ -36,6 +39,7 @@ function registerGameIpc(deps = {}) {
   if (!BrowserWindow) throw new Error("registerGameIpc requires BrowserWindow");
   if (!Menu) throw new Error("registerGameIpc requires Menu");
   if (!screen) throw new Error("registerGameIpc requires screen");
+  if (!dialog) throw new Error("registerGameIpc requires dialog");
   if (!shell) throw new Error("registerGameIpc requires shell");
   if (!nativeImage) throw new Error("registerGameIpc requires nativeImage");
   if (!fsSync) throw new Error("registerGameIpc requires fsSync");
@@ -69,6 +73,180 @@ function registerGameIpc(deps = {}) {
   let launcherTopMostResetTimer = null;
   const OVERLAY_BUTTON_SIZE = 58;
   const OVERLAY_MARGIN = 12;
+  const SESSION_SUSPENDED_WINDOW_FLAG = "__emuBroSessionSuspended";
+  const SESSION_RESTORE_IN_PROGRESS_FLAG = "__emuBroSessionRestoreInProgress";
+  const SESSION_CLOSE_HANDLER_ATTACHED_FLAG = "__emuBroSessionCloseHandlerAttached";
+  const SESSION_CLOSE_ALLOW_ONCE_FLAG = "__emuBroSessionCloseAllowOnce";
+  const SESSION_CLOSE_PREF_ASK = "ask";
+  const SESSION_CLOSE_PREF_HIDE = "hide";
+  const SESSION_CLOSE_PREF_QUIT = "quit";
+  let sessionClosePromptInProgress = false;
+
+  function normalizeSessionClosePreference(value) {
+    const normalized = String(value || "").trim().toLowerCase();
+    if (normalized === SESSION_CLOSE_PREF_HIDE || normalized === SESSION_CLOSE_PREF_QUIT) return normalized;
+    return SESSION_CLOSE_PREF_ASK;
+  }
+
+  function getSessionClosePreference() {
+    if (typeof getGameSessionCloseBehaviorPreference !== "function") return SESSION_CLOSE_PREF_ASK;
+    try {
+      return normalizeSessionClosePreference(getGameSessionCloseBehaviorPreference());
+    } catch (_error) {
+      return SESSION_CLOSE_PREF_ASK;
+    }
+  }
+
+  function rememberSessionClosePreference(value) {
+    if (typeof setGameSessionCloseBehaviorPreference !== "function") return;
+    const normalized = normalizeSessionClosePreference(value);
+    if (normalized === SESSION_CLOSE_PREF_ASK) return;
+    try {
+      setGameSessionCloseBehaviorPreference(normalized);
+    } catch (_error) {}
+  }
+
+  function hideLauncherKeepGameAlive(mainWindow) {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    mainWindow[SESSION_SUSPENDED_WINDOW_FLAG] = true;
+    mainWindow[SESSION_RESTORE_IN_PROGRESS_FLAG] = false;
+    try {
+      if (mainWindow.webContents && !mainWindow.webContents.isDestroyed() && typeof mainWindow.webContents.setBackgroundThrottling === "function") {
+        mainWindow.webContents.setBackgroundThrottling(true);
+      }
+    } catch (_error) {}
+    try {
+      mainWindow.loadURL(getSuspendedLauncherUrl())
+        .catch((error) => {
+          log.warn("Failed to load suspended launcher placeholder while hiding:", error?.message || error);
+        });
+    } catch (_error) {}
+    try {
+      mainWindow.hide();
+    } catch (_error) {
+      try {
+        mainWindow.minimize();
+      } catch (_e) {}
+    }
+  }
+
+  function attachMainWindowSessionCloseHandler(mainWindow) {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    if (mainWindow[SESSION_CLOSE_HANDLER_ATTACHED_FLAG]) return;
+    mainWindow[SESSION_CLOSE_HANDLER_ATTACHED_FLAG] = true;
+    mainWindow[SESSION_CLOSE_ALLOW_ONCE_FLAG] = false;
+
+    mainWindow.on("close", (event) => {
+      if (mainWindow[SESSION_CLOSE_ALLOW_ONCE_FLAG]) {
+        mainWindow[SESSION_CLOSE_ALLOW_ONCE_FLAG] = false;
+        return;
+      }
+
+      let activeSession = false;
+      try {
+        activeSession = !!gameSessionManager.getStatus()?.active;
+      } catch (_error) {
+        activeSession = false;
+      }
+      if (!activeSession) return;
+
+      const closePreference = getSessionClosePreference();
+      if (closePreference === SESSION_CLOSE_PREF_HIDE) {
+        event.preventDefault();
+        hideLauncherKeepGameAlive(mainWindow);
+        return;
+      }
+      if (closePreference === SESSION_CLOSE_PREF_QUIT) {
+        // User explicitly chose this behavior and asked to remember it.
+        return;
+      }
+
+      event.preventDefault();
+      if (sessionClosePromptInProgress) return;
+      sessionClosePromptInProgress = true;
+
+      const ownerWindow = (!mainWindow.isDestroyed()) ? mainWindow : null;
+      dialog.showMessageBox(ownerWindow, {
+        type: "warning",
+        title: "Game session is active",
+        message: "A game is still running.",
+        detail: "Recommended: close only the emuBro window and keep the game process alive.\n\nIf you quit emuBro completely, game session tracking will stop and some emulators may also close the running game.",
+        buttons: ["Close Window (Keep Game Running)", "Quit emuBro", "Cancel"],
+        defaultId: 0,
+        cancelId: 2,
+        noLink: true,
+        checkboxLabel: "Remember my choice",
+        checkboxChecked: false
+      })
+        .then(({ response, checkboxChecked }) => {
+          const choice = Number(response);
+          if (choice === 0) {
+            if (checkboxChecked) rememberSessionClosePreference(SESSION_CLOSE_PREF_HIDE);
+            hideLauncherKeepGameAlive(mainWindow);
+            return;
+          }
+          if (choice === 1) {
+            if (checkboxChecked) rememberSessionClosePreference(SESSION_CLOSE_PREF_QUIT);
+            mainWindow[SESSION_CLOSE_ALLOW_ONCE_FLAG] = true;
+            setTimeout(() => {
+              if (!mainWindow || mainWindow.isDestroyed()) return;
+              try {
+                mainWindow.close();
+              } catch (_error) {}
+            }, 0);
+          }
+        })
+        .catch((error) => {
+          log.warn("Session close prompt failed:", error?.message || error);
+        })
+        .finally(() => {
+          sessionClosePromptInProgress = false;
+        });
+    });
+  }
+
+  function getSuspendedLauncherUrl() {
+    const html = `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>emuBro Session Running</title>
+    <style>
+      html, body { width: 100%; height: 100%; margin: 0; }
+      body {
+        display: grid;
+        place-items: center;
+        background: #05080f;
+        color: #7f8da3;
+        font-family: Segoe UI, system-ui, sans-serif;
+        font-size: 12px;
+        letter-spacing: 0.03em;
+      }
+      .msg { opacity: 0.82; user-select: none; }
+    </style>
+  </head>
+  <body><div class="msg">emuBro launcher is suspended while game session is active.</div></body>
+</html>`;
+    return `data:text/html;charset=UTF-8,${encodeURIComponent(html)}`;
+  }
+
+  function ensureMainWindowUiRestored(mainWindow) {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    if (!mainWindow[SESSION_SUSPENDED_WINDOW_FLAG]) return;
+    if (mainWindow[SESSION_RESTORE_IN_PROGRESS_FLAG]) return;
+
+    mainWindow[SESSION_RESTORE_IN_PROGRESS_FLAG] = true;
+    mainWindow[SESSION_SUSPENDED_WINDOW_FLAG] = false;
+    mainWindow.loadFile(path.join(appPath, "index.html"))
+      .catch((error) => {
+        log.error("Failed to restore launcher UI after game session:", error);
+      })
+      .finally(() => {
+        if (!mainWindow || mainWindow.isDestroyed()) return;
+        mainWindow[SESSION_RESTORE_IN_PROGRESS_FLAG] = false;
+      });
+  }
 
   function getOverlayWindows() {
     const out = [];
@@ -330,6 +508,15 @@ function registerGameIpc(deps = {}) {
     const runAttempt = (forcePulse = false) => {
       const mainWindow = getMainWindow();
       if (!mainWindow || mainWindow.isDestroyed()) return;
+
+      attachMainWindowSessionCloseHandler(mainWindow);
+      ensureMainWindowUiRestored(mainWindow);
+
+      try {
+        if (mainWindow.webContents && !mainWindow.webContents.isDestroyed() && typeof mainWindow.webContents.setBackgroundThrottling === "function") {
+          mainWindow.webContents.setBackgroundThrottling(false);
+        }
+      } catch (_e) {}
 
       try {
         if (mainWindow.isMinimized()) {
@@ -953,8 +1140,12 @@ function registerGameIpc(deps = {}) {
       closeSessionOverlayWindow();
       const child = spawn(launchTarget, launchArgs, {
         stdio: "ignore",
-        cwd: launchCwd || undefined
+        cwd: launchCwd || undefined,
+        detached: true
       });
+      if (child && typeof child.unref === "function") {
+        child.unref();
+      }
       const runtimeDataRules = normalizeRuntimeDataRules(options?.runtimeDataRules || {});
       gameSessionManager.startSession({
         child,
@@ -983,8 +1174,29 @@ function registerGameIpc(deps = {}) {
 
       const mainWindow = getMainWindow();
       if (mainWindow) {
-        log.info("Minimizing main window after game launch");
-        mainWindow.minimize();
+        attachMainWindowSessionCloseHandler(mainWindow);
+        mainWindow[SESSION_SUSPENDED_WINDOW_FLAG] = true;
+        mainWindow[SESSION_RESTORE_IN_PROGRESS_FLAG] = false;
+        try {
+          if (mainWindow.webContents && !mainWindow.webContents.isDestroyed() && typeof mainWindow.webContents.setBackgroundThrottling === "function") {
+            mainWindow.webContents.setBackgroundThrottling(true);
+          }
+        } catch (_e) {}
+        try {
+          mainWindow.loadURL(getSuspendedLauncherUrl())
+            .catch((error) => {
+              log.warn("Failed to load suspended launcher placeholder:", error?.message || error);
+            });
+        } catch (_e) {}
+        log.info("Hiding main window after game launch");
+        try {
+          mainWindow.hide();
+        } catch (_e) {
+          // Fallback if hide fails in a platform-specific edge-case.
+          try {
+            mainWindow.minimize();
+          } catch (_err) {}
+        }
       }
 
       showSessionOverlayWindow();

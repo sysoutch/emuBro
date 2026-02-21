@@ -14,7 +14,7 @@ export function createCategoriesListRenderer(options = {}) {
     const getActiveCategorySelectionSet = typeof options.getActiveCategorySelectionSet === 'function' ? options.getActiveCategorySelectionSet : () => new Set();
     const clearCategorySelection = typeof options.clearCategorySelection === 'function' ? options.clearCategorySelection : () => {};
     const setCategorySelectionMode = typeof options.setCategorySelectionMode === 'function' ? options.setCategorySelectionMode : () => {};
-    const getCategorySelectionMode = typeof options.getCategorySelectionMode === 'function' ? options.getCategorySelectionMode : () => 'single';
+    const getCategorySelectionMode = typeof options.getCategorySelectionMode === 'function' ? options.getCategorySelectionMode : () => 'multi';
     const syncCategoryStateFromSelectionSet = typeof options.syncCategoryStateFromSelectionSet === 'function' ? options.syncCategoryStateFromSelectionSet : () => {};
     const escapeHtml = typeof options.escapeHtml === 'function' ? options.escapeHtml : (value) => String(value || '');
     const isLlmHelpersEnabled = typeof options.isLlmHelpersEnabled === 'function' ? options.isLlmHelpersEnabled : () => true;
@@ -42,10 +42,13 @@ export function createCategoriesListRenderer(options = {}) {
 
     let tagLabelMap = new Map(options.initialTagLabelMap instanceof Map ? options.initialTagLabelMap : []);
     let categorySettingsMenuState = null;
+    let categoryModePreviewState = null;
+    let categoryModeModifierHeld = false;
+    let categoryModeModifierForceUntil = 0;
     let categoriesShowAll = !!options.initialCategoriesShowAll;
     const CATEGORY_SORT_MODE_KEY = String(options.categorySortStorageKey || 'emuBro.categorySortMode.v1');
     let categorySortMode = normalizeCategorySortMode(
-        options.initialCategorySortMode || localStorage.getItem(CATEGORY_SORT_MODE_KEY) || 'name-asc'
+        options.initialCategorySortMode || localStorage.getItem(CATEGORY_SORT_MODE_KEY) || 'count-desc'
     );
 
     if (!emubro) {
@@ -91,8 +94,8 @@ function t(key, fallback, data = {}) {
 
 function normalizeCategorySortMode(value) {
     const normalized = String(value || '').trim().toLowerCase();
-    if (normalized === 'count-desc') return 'count-desc';
-    return 'name-asc';
+    if (normalized === 'name-asc') return 'name-asc';
+    return 'count-desc';
 }
 
 function setCategorySortMode(nextMode, { persist = true } = {}) {
@@ -160,6 +163,65 @@ function closeCategorySettingsMenu() {
     window.removeEventListener('resize', categorySettingsMenuState.onResize, true);
     categorySettingsMenuState.menu.remove();
     categorySettingsMenuState = null;
+}
+
+function getSelectionModeButtonText({ forceMulti = false } = {}) {
+    const isSingle = getCategorySelectionMode() === 'single';
+    const forceWindowActive = Date.now() <= categoryModeModifierForceUntil;
+    const isMulti = forceMulti || getCategorySelectionMode() === 'multi' || (isSingle && (categoryModeModifierHeld || forceWindowActive));
+    return isMulti
+        ? t('sidebar.multiSelect', 'Multi Select')
+        : t('sidebar.singleSelect', 'Single Select');
+}
+
+function clearCategoryModePreviewHandlers() {
+    if (!categoryModePreviewState) return;
+    document.removeEventListener('keydown', categoryModePreviewState.onKeyDown, true);
+    document.removeEventListener('keyup', categoryModePreviewState.onKeyUp, true);
+    window.removeEventListener('blur', categoryModePreviewState.onReset, true);
+    document.removeEventListener('visibilitychange', categoryModePreviewState.onVisibilityChange, true);
+    categoryModePreviewState = null;
+}
+
+function setupCategoryModePreviewHandlers(buttonEl) {
+    clearCategoryModePreviewHandlers();
+    if (!buttonEl) return;
+
+    const updateText = (forceMulti = false) => {
+        if (!buttonEl.isConnected) {
+            clearCategoryModePreviewHandlers();
+            return;
+        }
+        buttonEl.textContent = getSelectionModeButtonText({ forceMulti });
+    };
+
+    const onKeyDown = (event) => {
+        if (getCategorySelectionMode() !== 'single') return;
+        if (event.ctrlKey || event.metaKey || event.key === 'Control' || event.key === 'Meta') {
+            categoryModeModifierHeld = true;
+            updateText(true);
+        }
+    };
+    const onKeyUp = (event) => {
+        if (event.ctrlKey || event.metaKey) return;
+        categoryModeModifierHeld = false;
+        updateText(false);
+    };
+    const onReset = () => {
+        categoryModeModifierHeld = false;
+        categoryModeModifierForceUntil = 0;
+        updateText(false);
+    };
+    const onVisibilityChange = () => {
+        if (document.visibilityState !== 'visible') onReset();
+    };
+
+    document.addEventListener('keydown', onKeyDown, true);
+    document.addEventListener('keyup', onKeyUp, true);
+    window.addEventListener('blur', onReset, true);
+    document.addEventListener('visibilitychange', onVisibilityChange, true);
+
+    categoryModePreviewState = { onKeyDown, onKeyUp, onReset, onVisibilityChange };
 }
 
 async function refreshAfterTagCatalogMutation() {
@@ -445,13 +507,7 @@ async function renderCategoriesList() {
             </select>
         </li>
         <li class="categories-llm-row">
-            <button class="action-btn small" type="button" data-category-action="toggle-selection-mode">${escapeHtml(t(
-                'sidebar.categoriesModeButton',
-                'Mode: {{mode}}',
-                { mode: getCategorySelectionMode() === 'multi'
-                    ? t('sidebar.multiSelect', 'Multi Select')
-                    : t('sidebar.singleSelect', 'Single Select') }
-            ))}</button>
+            <button class="action-btn small" type="button" data-category-action="toggle-selection-mode">${escapeHtml(getSelectionModeButtonText())}</button>
         </li>
         ${isLlmHelpersEnabled()
             ? `<li class="categories-llm-row"><button class="action-btn small" type="button" data-category-action="llm-global-tags">${escapeHtml(t('sidebar.addGlobalTagsWithLlm', 'Add Global Tags with LLM'))}</button></li>`
@@ -475,6 +531,7 @@ async function renderCategoriesList() {
             if (nextTag === 'all') {
                 clearCategorySelection();
             } else if (temporaryMultiSelect) {
+                categoryModeModifierForceUntil = Date.now() + 240;
                 const next = new Set(getActiveCategorySelectionSet());
                 if (next.has(nextTag)) next.delete(nextTag);
                 else next.add(nextTag);
@@ -508,6 +565,7 @@ async function renderCategoriesList() {
 
     const modeToggleBtn = listRoot.querySelector('[data-category-action="toggle-selection-mode"]');
     if (modeToggleBtn) {
+        setupCategoryModePreviewHandlers(modeToggleBtn);
         modeToggleBtn.addEventListener('click', async () => {
             const nextMode = getCategorySelectionMode() === 'single' ? 'multi' : 'single';
             setCategorySelectionMode(nextMode);
@@ -838,6 +896,10 @@ async function renderCategoriesList() {
 
     return {
         renderCategoriesList,
+        dispose: () => {
+            closeCategorySettingsMenu();
+            clearCategoryModePreviewHandlers();
+        },
         getCategoriesShowAll: () => categoriesShowAll
     };
 }

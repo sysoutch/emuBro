@@ -1,6 +1,17 @@
 export function createLazyGameImageActions(deps = {}) {
     const lazyPlaceholderSrc = String(deps.lazyPlaceholderSrc || '').trim();
+    const resolveObserverRoot = typeof deps.resolveObserverRoot === 'function'
+        ? deps.resolveObserverRoot
+        : () => null;
     let gameImageObserver = null;
+    let gameImageObserverRoot = null;
+
+    function unobserveLazyImage(img) {
+        if (!img || !gameImageObserver) return;
+        try {
+            gameImageObserver.unobserve(img);
+        } catch (_error) {}
+    }
 
     function markLazyImageLoaded(img) {
         if (!img) return;
@@ -21,8 +32,17 @@ export function createLazyGameImageActions(deps = {}) {
     }
 
     function ensureGameImageObserver() {
-        if (gameImageObserver) return gameImageObserver;
+        const nextRoot = resolveObserverRoot() || null;
+        if (gameImageObserver && gameImageObserverRoot === nextRoot) return gameImageObserver;
         if (typeof IntersectionObserver !== 'function') return null;
+
+        if (gameImageObserver) {
+            try {
+                gameImageObserver.disconnect();
+            } catch (_error) {}
+            gameImageObserver = null;
+        }
+        gameImageObserverRoot = nextRoot;
 
         gameImageObserver = new IntersectionObserver((entries) => {
             entries.forEach((entry) => {
@@ -31,12 +51,12 @@ export function createLazyGameImageActions(deps = {}) {
                 const source = String(img.dataset.lazySrc || '').trim();
                 if (!source) {
                     markLazyImageLoaded(img);
-                    gameImageObserver.unobserve(img);
+                    unobserveLazyImage(img);
                     return;
                 }
 
                 if (img.dataset.lazyStatus === 'loaded' || img.dataset.lazyStatus === 'loading') {
-                    gameImageObserver.unobserve(img);
+                    unobserveLazyImage(img);
                     return;
                 }
 
@@ -46,10 +66,10 @@ export function createLazyGameImageActions(deps = {}) {
                 if (img.complete && img.naturalWidth > 0) {
                     markLazyImageLoaded(img);
                 }
-                gameImageObserver.unobserve(img);
+                unobserveLazyImage(img);
             });
         }, {
-            root: null,
+            root: gameImageObserverRoot,
             rootMargin: '220px 0px',
             threshold: 0.01
         });
@@ -94,8 +114,31 @@ export function createLazyGameImageActions(deps = {}) {
         images.forEach((img) => prepareLazyGameImage(img));
     }
 
+    function cleanup(root) {
+        const scope = root || document;
+        if (!scope) return;
+
+        if (scope.matches && scope.matches('img[data-lazy-src]')) {
+            unobserveLazyImage(scope);
+        }
+
+        const images = scope.querySelectorAll ? scope.querySelectorAll('img[data-lazy-src]') : [];
+        images.forEach((img) => unobserveLazyImage(img));
+    }
+
+    function resetObserver() {
+        if (!gameImageObserver) return;
+        try {
+            gameImageObserver.disconnect();
+        } catch (_error) {}
+        gameImageObserver = null;
+        gameImageObserverRoot = null;
+    }
+
     return {
         initialize,
-        prepare: prepareLazyGameImage
+        prepare: prepareLazyGameImage,
+        cleanup,
+        reset: resetObserver
     };
 }

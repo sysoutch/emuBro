@@ -20,6 +20,7 @@
     --theme-title-strip-position: center center;
     --theme-title-strip-opacity: 0;
     --game-title-row-height: clamp(38px, calc(36px * var(--view-scale)), 54px);
+    --game-header-row-height: clamp(72px, calc(64px * var(--view-scale)), 96px);
 }
 
 .game-grid::before {
@@ -62,7 +63,6 @@
     background-size: cover;
     background-position: center center;
     opacity: 1;
-    will-change: transform;
 }
 
 .game-header {
@@ -78,6 +78,7 @@
     backdrop-filter: blur(12px) saturate(1.08);
     -webkit-backdrop-filter: blur(12px) saturate(1.08);
     overflow: hidden;
+    min-height: var(--game-header-row-height);
 }
 
 .game-header::before {
@@ -495,9 +496,7 @@
 /* Cover View Card */
 .game-card {
     /* Frosted glass card */
-    background: color-mix(in srgb, var(--bg-secondary), transparent 55%);
-    -webkit-backdrop-filter: blur(14px) saturate(1.18);
-    backdrop-filter: blur(14px) saturate(1.18);
+    background: color-mix(in srgb, var(--bg-secondary), black 24%);
     border-radius: var(--radius-card);
     overflow: hidden;
     position: relative;
@@ -573,7 +572,6 @@
     border: none;
     box-shadow: 0 10px 18px rgba(0, 0, 0, 0.26);
     position: relative;
-    transform: translateZ(0);
 }
 
 .game-cover .game-image {
@@ -595,10 +593,10 @@ img.lazy-game-image {
 }
 
 img.lazy-game-image.is-pending {
-    opacity: 0.48;
-    filter: blur(9px) saturate(0.85);
-    transform: scale(1.03);
-    animation: lazy-image-shimmer 1.35s linear infinite;
+    opacity: 0.55;
+    filter: saturate(0.9);
+    transform: none;
+    animation: none;
 }
 
 img.lazy-game-image:not(.is-pending),
@@ -625,9 +623,7 @@ img.lazy-game-image[data-lazy-status="loaded"] {
     height: 58px;
     border-radius: 999px;
     border: 1px solid color-mix(in srgb, var(--border-color), rgba(255,255,255,0.48));
-    background: color-mix(in srgb, var(--bg-secondary), transparent 36%);
-    -webkit-backdrop-filter: blur(8px) saturate(1.12);
-    backdrop-filter: blur(8px) saturate(1.12);
+    background: color-mix(in srgb, var(--bg-secondary), black 18%);
     box-shadow:
         0 8px 18px rgba(0, 0, 0, 0.34),
         inset 0 1px 0 rgba(255,255,255,0.18);
@@ -677,8 +673,6 @@ img.lazy-game-image[data-lazy-status="loaded"] {
     background:
         radial-gradient(900px 240px at 30% -20%, rgba(255,255,255,0.20), transparent 55%),
         radial-gradient(700px 220px at 120% 120%, rgba(255,255,255,0.10), transparent 60%);
-    -webkit-backdrop-filter: blur(3px) saturate(1.15);
-    backdrop-filter: blur(3px) saturate(1.15);
     transition: opacity 220ms ease;
 }
 

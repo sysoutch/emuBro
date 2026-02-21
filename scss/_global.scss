@@ -5,7 +5,7 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: var(--font-body);
+    font-family: var(--font-heading);
 }
 
 h1,
@@ -13,15 +13,29 @@ h2,
 h3,
 h4,
 h5,
-h6,
+h6 {
+    font-family: var(--font-body);
+}
+
+.game-title,
+.list-item-title,
+.table-title-text,
+.random-title,
+.slot-result-title,
+.slideshow-heading,
+.slot-marquee-title,
+.sidebar-section ul li a,
+#tools-list li a,
+#categories-list li a {
+    font-family: var(--font-heading);
+}
+
 .navigation a,
 .view-btn,
 .game-header h2,
 .theme-manager-header h2,
-.slideshow-heading,
-.slot-marquee-title,
 .section-header h2 {
-    font-family: var(--font-heading);
+    font-family: var(--font-body);
 }
 
 [data-font-pixel="true"] {

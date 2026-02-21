@@ -34,9 +34,9 @@ const LAZY_PLACEHOLDER_SRC = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywA
 const MAX_SLIDESHOW_POOL_SIZE = 500;
 const MAX_RANDOM_POOL_SIZE = 120;
 const GAMES_BATCH_SIZE = {
-    cover: 72,
-    list: 48,
-    table: 80
+    cover: 24,
+    list: 36,
+    table: 56
 };
 
 let gamesLoadObserver = null;
@@ -52,6 +52,26 @@ let emulatorViewRenderer = null;
 let gameCardElements = null;
 let missingGameRecoveryActions = null;
 const groupAccordionState = new Map();
+let lastRenderSignature = '';
+let lastRenderAt = 0;
+
+function buildGamesRenderSignature(rows = [], view = 'cover') {
+    const list = Array.isArray(rows) ? rows : [];
+    const total = list.length;
+    const first = total > 0 ? list[0] : null;
+    const last = total > 0 ? list[total - 1] : null;
+    const firstId = String(first?.id ?? first?.name ?? '');
+    const lastId = String(last?.id ?? last?.name ?? '');
+    return [
+        String(view || 'cover'),
+        String(currentGroupBy || 'none'),
+        String(currentSort || 'name'),
+        String(currentSortDir || 'asc'),
+        total,
+        firstId,
+        lastId
+    ].join('|');
+}
 
 function getEmulatorDownloadActions() {
     if (!emulatorDownloadActions) {
@@ -142,7 +162,8 @@ function getEmulatorConfigActions() {
 function getLazyGameImageActions() {
     if (!lazyGameImageActions) {
         lazyGameImageActions = createLazyGameImageActions({
-            lazyPlaceholderSrc: LAZY_PLACEHOLDER_SRC
+            lazyPlaceholderSrc: LAZY_PLACEHOLDER_SRC,
+            resolveObserverRoot: () => document.querySelector('.game-scroll-body') || null
         });
     }
     return lazyGameImageActions;
@@ -206,6 +227,12 @@ function initializeLazyGameImages(root) {
     getLazyGameImageActions().initialize(root);
 }
 
+function cleanupLazyGameImages(root) {
+    try {
+        getLazyGameImageActions().cleanup?.(root);
+    } catch (_error) {}
+}
+
 function clearGamesLoadObserver() {
     if (gamesLoadObserver) {
         try {
@@ -219,6 +246,9 @@ function clearGamesLoadObserver() {
         } catch (_e) {}
     }
     gamesScrollDetach = null;
+    try {
+        getLazyGameImageActions().reset?.();
+    } catch (_e) {}
 }
 
 function getGameImagePath(game) {
@@ -279,13 +309,22 @@ export function renderGames(gamesToRender) {
     const gamesContainer = document.getElementById('games-container');
     if (!gamesContainer) return;
 
+    const activeViewBtn = document.querySelector('.view-btn.active');
+    const activeView = activeViewBtn ? activeViewBtn.dataset.view : 'cover';
+    const now = Date.now();
+    const signature = buildGamesRenderSignature(gamesToRender, activeView);
+    if (signature === lastRenderSignature && (now - lastRenderAt) < 220) {
+        return;
+    }
+    lastRenderSignature = signature;
+    lastRenderAt = now;
+
     clearGamesLoadObserver();
     gamesRenderToken += 1;
 
-    const activeViewBtn = document.querySelector('.view-btn.active');
-    const activeView = activeViewBtn ? activeViewBtn.dataset.view : 'cover';
     gamesContainer.className = `games-container ${activeView}-view`;
 
+    cleanupLazyGameImages(gamesContainer);
     gamesContainer.innerHTML = '';
     
     if (gamesToRender.length === 0) {
@@ -1423,11 +1462,31 @@ function renderGamesIncremental(gamesToRender, activeView = 'cover') {
 
     const view = (activeView === 'list' || activeView === 'table') ? activeView : 'cover';
     const renderToken = gamesRenderToken;
-    const batchSize = GAMES_BATCH_SIZE[view] || GAMES_BATCH_SIZE.cover;
+    const resolveBatchSize = () => {
+        const baseBatchSize = GAMES_BATCH_SIZE[view] || GAMES_BATCH_SIZE.cover;
+        if (view !== 'cover') return baseBatchSize;
+
+        const rootStyles = getComputedStyle(document.documentElement);
+        const rawScale = Number.parseFloat(String(
+            rootStyles.getPropertyValue('--view-scale-user')
+            || rootStyles.getPropertyValue('--view-scale')
+            || '1'
+        ).trim());
+        const scale = Number.isFinite(rawScale) && rawScale > 0 ? rawScale : 1;
+        const minCardWidth = 250 * scale;
+        const gap = 20 * scale;
+        const containerWidth = Math.max(
+            280,
+            Number(gamesContainer.clientWidth || gamesContainer.getBoundingClientRect?.().width || 0)
+        );
+        const columns = Math.max(1, Math.floor((containerWidth + gap) / (minCardWidth + gap)));
+        return Math.max(columns, Math.ceil(baseBatchSize / columns) * columns);
+    };
+    const batchSize = resolveBatchSize();
     const totalGames = Array.isArray(gamesToRender) ? gamesToRender.length : 0;
     const totalChunks = Math.ceil(totalGames / batchSize);
-    const minChunksInDom = 2;
-    const hardMaxChunksInDom = view === 'cover' ? 6 : (view === 'table' ? 8 : 9);
+    const minChunksInDom = view === 'cover' ? 1 : 2;
+    const hardMaxChunksInDom = view === 'cover' ? 2 : (view === 'table' ? 6 : 6);
 
     let mountTarget = null;
     let topSpacer = null;
@@ -1559,7 +1618,7 @@ function renderGamesIncremental(gamesToRender, activeView = 'cover') {
         const vp = Math.max(1, Number(viewportHeight) || 0);
         const estimatedHeight = Math.max(1, estimateTypicalChunkHeight());
         const visibleChunks = Math.max(1, Math.ceil(vp / estimatedHeight));
-        const target = visibleChunks * 2;
+        const target = Math.max(1, Math.ceil(visibleChunks * 1.5));
         return Math.max(minChunksInDom, Math.min(hardMaxChunksInDom, target));
     };
 
@@ -1617,9 +1676,13 @@ function renderGamesIncremental(gamesToRender, activeView = 'cover') {
     const removeChunkNodes = (chunk) => {
         if (!chunk) return;
         if (isTableView) {
-            (Array.isArray(chunk.rows) ? chunk.rows : []).forEach((row) => row?.remove?.());
+            (Array.isArray(chunk.rows) ? chunk.rows : []).forEach((row) => {
+                cleanupLazyGameImages(row);
+                row?.remove?.();
+            });
             return;
         }
+        cleanupLazyGameImages(chunk.el);
         chunk.el?.remove?.();
     };
 
@@ -1742,14 +1805,63 @@ function renderGamesIncremental(gamesToRender, activeView = 'cover') {
         return true;
     };
 
+    const getChunkHeightEstimateByIndex = (chunkIndex) => {
+        const known = Number(chunkHeights.get(chunkIndex) || 0);
+        if (known > 0) return known;
+        return Math.max(1, estimateTypicalChunkHeight());
+    };
+
+    const sumChunkHeights = (startInclusive, endExclusive) => {
+        const from = Math.max(0, Number(startInclusive) || 0);
+        const to = Math.min(totalChunks, Math.max(from, Number(endExclusive) || 0));
+        let sum = 0;
+        for (let i = from; i < to; i += 1) {
+            sum += getChunkHeightEstimateByIndex(i);
+        }
+        return Math.max(0, sum);
+    };
+
+    const clearRenderedWindow = () => {
+        renderedChunks.forEach((chunk) => {
+            removeChunkNodes(chunk);
+        });
+        renderedChunks.clear();
+        loadedTop = 0;
+        loadedBottom = -1;
+    };
+
+    const resetWindowToRange = (startIndex, endIndex) => {
+        if (totalChunks <= 0) return;
+        const safeStart = Math.max(0, Math.min(totalChunks - 1, Number(startIndex) || 0));
+        const safeEnd = Math.max(safeStart, Math.min(totalChunks - 1, Number(endIndex) || safeStart));
+
+        clearRenderedWindow();
+        updateTopSpacer(sumChunkHeights(0, safeStart));
+        updateBottomSpacer(sumChunkHeights(safeEnd + 1, totalChunks));
+
+        loadedTop = safeStart;
+        loadedBottom = safeStart - 1;
+        for (let i = safeStart; i <= safeEnd; i += 1) {
+            const chunk = createChunk(i);
+            if (!chunk) continue;
+            insertChunkNodes(chunk, false);
+            renderedChunks.set(i, chunk);
+            loadedBottom = i;
+            highestLoadedChunk = Math.max(highestLoadedChunk, i);
+            requestAnimationFrame(() => {
+                if (renderToken !== gamesRenderToken) return;
+                persistChunkHeight(i, chunk);
+            });
+        }
+
+        maybeShowProgress();
+    };
+
     const stepDown = () => {
         if (loadedBottom >= totalChunks - 1) return false;
         const nextChunk = loadedBottom + 1;
         const inserted = insertChunkAtBottom(nextChunk);
         if (!inserted) return false;
-        while (getRenderedChunkCount() > getMaxChunksInDom()) {
-            if (!removeChunkFromTop()) break;
-        }
         maybeShowProgress();
         return true;
     };
@@ -1759,13 +1871,15 @@ function renderGamesIncremental(gamesToRender, activeView = 'cover') {
         const prevChunk = loadedTop - 1;
         const inserted = insertChunkAtTop(prevChunk);
         if (!inserted) return false;
-        while (getRenderedChunkCount() > getMaxChunksInDom()) {
-            if (!removeChunkFromBottom()) break;
-        }
         return true;
     };
 
-    const initialChunks = Math.min(totalChunks, Math.max(minChunksInDom, Math.min(4, hardMaxChunksInDom)));
+    const initialChunks = Math.min(
+        totalChunks,
+        view === 'cover'
+            ? Math.max(minChunksInDom, Math.min(1, hardMaxChunksInDom))
+            : Math.max(minChunksInDom, Math.min(3, hardMaxChunksInDom))
+    );
     for (let i = 0; i < initialChunks; i += 1) {
         if (!stepDown()) break;
     }
@@ -1778,8 +1892,39 @@ function renderGamesIncremental(gamesToRender, activeView = 'cover') {
     const scrollRoot = document.querySelector('.game-scroll-body') || document.querySelector('main.game-grid') || gamesContainer.parentElement || null;
     if (!scrollRoot) return;
 
-    const nearEdgeThreshold = view === 'cover' ? 900 : 520;
+    const nearEdgeThreshold = view === 'cover' ? 680 : 420;
     let scrollTicking = false;
+    let lastScrollTop = Number(scrollRoot.scrollTop || 0);
+    let userScrollIntentUntil = 0;
+
+    const markUserScrollIntent = () => {
+        userScrollIntentUntil = Date.now() + 1600;
+    };
+
+    const onUserWheelIntent = () => {
+        markUserScrollIntent();
+    };
+
+    const onUserPointerIntent = () => {
+        markUserScrollIntent();
+    };
+
+    const onUserTouchIntent = () => {
+        markUserScrollIntent();
+    };
+
+    const onUserKeyIntent = (event) => {
+        const key = String(event?.key || '').toLowerCase();
+        if (!key) return;
+        if (key === 'arrowup' || key === 'arrowdown' || key === 'pageup' || key === 'pagedown' || key === 'home' || key === 'end' || key === ' ') {
+            markUserScrollIntent();
+        }
+    };
+
+    scrollRoot.addEventListener('wheel', onUserWheelIntent, { passive: true });
+    scrollRoot.addEventListener('pointerdown', onUserPointerIntent, { passive: true });
+    scrollRoot.addEventListener('touchstart', onUserTouchIntent, { passive: true });
+    window.addEventListener('keydown', onUserKeyIntent, true);
 
     const onWheel = (e) => {
         if (!e.ctrlKey) return;
@@ -1793,31 +1938,108 @@ function renderGamesIncremental(gamesToRender, activeView = 'cover') {
     };
     gamesContainer.addEventListener('wheel', onWheel, { passive: false });
 
+    const getTargetChunkIndexForViewport = (scrollTop, viewportHeight, scrollHeight) => {
+        if (totalChunks <= 0) return 0;
+        const typical = Math.max(1, estimateTypicalChunkHeight());
+        const loadedStart = Math.max(0, topSpacerHeight);
+        const loadedEnd = Math.max(loadedStart, scrollHeight - bottomSpacerHeight);
+        const viewportBottom = scrollTop + viewportHeight;
+
+        let target = loadedTop;
+        if (loadedBottom < loadedTop) {
+            target = Math.floor(scrollTop / typical);
+        } else if (scrollTop < loadedStart) {
+            const missingPx = loadedStart - scrollTop;
+            target = loadedTop - Math.ceil(missingPx / typical);
+        } else if (viewportBottom > loadedEnd) {
+            const missingPx = viewportBottom - loadedEnd;
+            target = loadedBottom + Math.ceil(missingPx / typical);
+        } else {
+            const insideOffsetPx = scrollTop - loadedStart;
+            target = loadedTop + Math.floor(insideOffsetPx / typical);
+        }
+
+        return Math.max(0, Math.min(totalChunks - 1, target));
+    };
+
+    const getRangeAroundChunk = (chunkIndex, desiredCount) => {
+        const count = Math.max(
+            minChunksInDom,
+            Math.min(hardMaxChunksInDom, Math.max(1, Number(desiredCount) || minChunksInDom))
+        );
+        let start = Math.max(0, Math.min(totalChunks - 1, chunkIndex) - Math.floor(count / 2));
+        let end = start + count - 1;
+        if (end >= totalChunks) {
+            end = totalChunks - 1;
+            start = Math.max(0, end - count + 1);
+        }
+        return { start, end };
+    };
+
     const processScroll = () => {
         if (renderToken !== gamesRenderToken) return;
         const scrollTop = Number(scrollRoot.scrollTop || 0);
         const viewportHeight = Number(scrollRoot.clientHeight || 0);
         const scrollHeight = Number(scrollRoot.scrollHeight || 0);
+        const scrollDelta = scrollTop - lastScrollTop;
+        const scrollDirection = scrollDelta > 0 ? 1 : (scrollDelta < 0 ? -1 : 0);
+        lastScrollTop = scrollTop;
         const distanceToLoadedTop = Math.max(0, scrollTop - topSpacerHeight);
         const distanceToLoadedBottom = Math.max(0, (scrollHeight - bottomSpacerHeight) - (scrollTop + viewportHeight));
         const maxChunksInDom = getMaxChunksInDom(viewportHeight);
+        const pruneLimit = Math.max(minChunksInDom, maxChunksInDom + 1);
 
-        if (distanceToLoadedBottom <= nearEdgeThreshold) {
-            let guard = 0;
-            while (guard < 2 && stepDown()) {
-                guard += 1;
-            }
+        // Ignore layout-only scroll events (e.g. theme/font reflow). Mutating chunks
+        // on zero-delta events can cause continuous mount/unmount churn.
+        if (scrollDirection === 0) {
+            return;
+        }
+        if (Date.now() > userScrollIntentUntil) {
+            return;
         }
 
-        if (distanceToLoadedTop <= nearEdgeThreshold) {
-            let guard = 0;
-            while (guard < 2 && stepUp()) {
-                guard += 1;
-            }
+        const targetChunkIndex = getTargetChunkIndexForViewport(scrollTop, viewportHeight, scrollHeight);
+        if (targetChunkIndex < loadedTop || targetChunkIndex > loadedBottom) {
+            const { start, end } = getRangeAroundChunk(targetChunkIndex, Math.max(minChunksInDom, maxChunksInDom));
+            resetWindowToRange(start, end);
+            return;
         }
 
-        while (getRenderedChunkCount() > maxChunksInDom) {
-            if (!removeChunkFromTop()) break;
+        const hardNearTop = distanceToLoadedTop <= Math.max(180, Math.round(nearEdgeThreshold * 0.28));
+        const hardNearBottom = distanceToLoadedBottom <= Math.max(180, Math.round(nearEdgeThreshold * 0.28));
+        const nearTop = distanceToLoadedTop <= nearEdgeThreshold;
+        const nearBottom = distanceToLoadedBottom <= nearEdgeThreshold;
+
+        // Prevent idle chunk churn: only load by direction when the user actually scrolls.
+        const shouldLoadDown = nearBottom && scrollDirection > 0;
+        const shouldLoadUp = nearTop && scrollDirection < 0;
+
+        // Prevent chunk thrashing near boundaries: prefer one direction per tick.
+        if (shouldLoadDown && (!shouldLoadUp || scrollDirection > 0 || distanceToLoadedBottom <= distanceToLoadedTop)) {
+            stepDown();
+        } else if (shouldLoadUp) {
+            stepUp();
+        }
+
+        while (getRenderedChunkCount() > pruneLimit) {
+            if (scrollDirection > 0) {
+                if (!removeChunkFromTop()) break;
+                continue;
+            }
+            if (scrollDirection < 0) {
+                if (!removeChunkFromBottom()) break;
+                continue;
+            }
+            // No clear direction: prune the farther side first.
+            if (distanceToLoadedBottom > distanceToLoadedTop) {
+                if (!removeChunkFromBottom()) {
+                    if (!removeChunkFromTop()) break;
+                }
+            } else {
+                if (!removeChunkFromTop()) {
+                    if (!removeChunkFromBottom()) break;
+                }
+            }
         }
     };
 
@@ -1833,6 +2055,16 @@ function renderGamesIncremental(gamesToRender, activeView = 'cover') {
     scrollRoot.addEventListener('scroll', onScroll, { passive: true });
     gamesScrollDetach = () => {
         scrollRoot.removeEventListener('scroll', onScroll);
+        scrollRoot.removeEventListener('wheel', onUserWheelIntent);
+        scrollRoot.removeEventListener('pointerdown', onUserPointerIntent);
+        scrollRoot.removeEventListener('touchstart', onUserTouchIntent);
+        window.removeEventListener('keydown', onUserKeyIntent, true);
+        gamesContainer.removeEventListener('wheel', onWheel);
+        if (indicatorTimer) {
+            window.clearTimeout(indicatorTimer);
+            indicatorTimer = null;
+        }
+        indicator.remove();
     };
 
     // Run once to fill viewport if initial chunks are not enough.
@@ -1842,6 +2074,7 @@ function renderGamesIncremental(gamesToRender, activeView = 'cover') {
 function renderGamesAsSlideshow(gamesToRender) {
     const gamesContainer = document.getElementById('games-container');
     if (!gamesContainer) return;
+    const renderToken = gamesRenderToken;
     const slideshowContainer = document.createElement('div');
     slideshowContainer.className = 'slideshow-container';
     slideshowContainer.tabIndex = 0;
@@ -1854,6 +2087,8 @@ function renderGamesAsSlideshow(gamesToRender) {
     }
 
     const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let swapClassTimer = null;
+    let shiftTimer = null;
 
     let currentIndex = 0;
     let isAnimating = false;
@@ -1932,7 +2167,14 @@ function renderGamesAsSlideshow(gamesToRender) {
 
         if (!reduceMotion) {
             chrome.classList.add('is-swapping');
-            setTimeout(() => chrome.classList.remove('is-swapping'), 180);
+            if (swapClassTimer) {
+                window.clearTimeout(swapClassTimer);
+            }
+            swapClassTimer = window.setTimeout(() => {
+                swapClassTimer = null;
+                if (renderToken !== gamesRenderToken) return;
+                chrome.classList.remove('is-swapping');
+            }, 180);
         }
 
         setBackdropForIndex(idx);
@@ -1996,7 +2238,7 @@ function renderGamesAsSlideshow(gamesToRender) {
 
     function clearAutoAdvance() {
         if (!autoAdvanceTimer) return;
-        clearTimeout(autoAdvanceTimer);
+        window.clearTimeout(autoAdvanceTimer);
         autoAdvanceTimer = null;
     }
 
@@ -2005,8 +2247,9 @@ function renderGamesAsSlideshow(gamesToRender) {
         if (len <= 1 || autoAdvancePaused) return;
         if (!slideshowContainer.isConnected) return;
 
-        autoAdvanceTimer = setTimeout(() => {
+        autoAdvanceTimer = window.setTimeout(() => {
             autoAdvanceTimer = null;
+            if (renderToken !== gamesRenderToken) return;
             if (!slideshowContainer.isConnected || autoAdvancePaused || isAnimating || pendingSteps !== 0) {
                 scheduleAutoAdvance();
                 return;
@@ -2062,13 +2305,20 @@ function renderGamesAsSlideshow(gamesToRender) {
             return;
         }
 
-        setTimeout(() => {
+        if (shiftTimer) {
+            window.clearTimeout(shiftTimer);
+        }
+        shiftTimer = window.setTimeout(() => {
+            shiftTimer = null;
+            if (renderToken !== gamesRenderToken) return;
             isAnimating = false;
             runQueue();
         }, durationMs);
     }
 
     function runQueue() {
+        if (renderToken !== gamesRenderToken) return;
+        if (!slideshowContainer.isConnected) return;
         if (isAnimating) return;
         if (pendingSteps === 0) {
             scheduleAutoAdvance();
@@ -2081,6 +2331,8 @@ function renderGamesAsSlideshow(gamesToRender) {
     }
 
     function queueShift(steps, options = {}) {
+        if (renderToken !== gamesRenderToken) return;
+        if (!slideshowContainer.isConnected) return;
         if (!steps) return;
         if (len <= 1) return;
         if (options.rapid) rapidShiftBudget += Math.min(10, Math.abs(steps));
@@ -2260,11 +2512,25 @@ function renderGamesAsSlideshow(gamesToRender) {
     gamesContainer.appendChild(slideshowContainer);
 
     slideshowContainer.focus();
+
+    gamesScrollDetach = () => {
+        slideshowContainer.removeEventListener('wheel', onWheel);
+        clearAutoAdvance();
+        if (swapClassTimer) {
+            window.clearTimeout(swapClassTimer);
+            swapClassTimer = null;
+        }
+        if (shiftTimer) {
+            window.clearTimeout(shiftTimer);
+            shiftTimer = null;
+        }
+    };
 }
 
 function renderGamesAsRandom(gamesToRender) {
     const gamesContainer = document.getElementById('games-container');
     if (!gamesContainer) return;
+    const renderToken = gamesRenderToken;
     const randomContainer = document.createElement('div');
     randomContainer.className = 'random-container random-container--slot';
     const spinGames = buildViewGamePool(gamesToRender, MAX_RANDOM_POOL_SIZE);
@@ -2399,6 +2665,7 @@ function renderGamesAsRandom(gamesToRender) {
 
     let absPos = 0;
     let rafId = null;
+    let retrySpinTimer = null;
     let spinning = false;
 
     function measure() {
@@ -2415,6 +2682,8 @@ function renderGamesAsRandom(gamesToRender) {
     }
 
     function renderPos() {
+        if (renderToken !== gamesRenderToken) return;
+        if (!randomContainer.isConnected) return;
         if (!metricsReady) return;
         const mod = ((absPos % totalHeight) + totalHeight) % totalHeight;
         reelInner.style.transform = `translate3d(0, ${-mod}px, 0)`;
@@ -2440,6 +2709,8 @@ function renderGamesAsRandom(gamesToRender) {
         const delta = targetAbsPos - startPos;
 
         function step(ts) {
+            if (renderToken !== gamesRenderToken) return;
+            if (!randomContainer.isConnected) return;
             const t = Math.min(1, (ts - start) / durationMs);
             const e = easeOutCubic(t);
             absPos = startPos + delta * e;
@@ -2488,6 +2759,8 @@ function renderGamesAsRandom(gamesToRender) {
     }
 
     function startSpin() {
+        if (renderToken !== gamesRenderToken) return;
+        if (!randomContainer.isConnected) return;
         if (spinning) return;
         spinning = true;
         leverBtn.disabled = true;
@@ -2496,7 +2769,13 @@ function renderGamesAsRandom(gamesToRender) {
 
         if (!metricsReady) measure();
         if (!metricsReady) {
-            setTimeout(() => {
+            if (retrySpinTimer) {
+                window.clearTimeout(retrySpinTimer);
+            }
+            retrySpinTimer = window.setTimeout(() => {
+                retrySpinTimer = null;
+                if (renderToken !== gamesRenderToken) return;
+                if (!randomContainer.isConnected) return;
                 measure();
                 startSpin();
             }, 50);
@@ -2515,6 +2794,8 @@ function renderGamesAsRandom(gamesToRender) {
         let lastTs = startTs;
 
         function tick(ts) {
+            if (renderToken !== gamesRenderToken) return;
+            if (!randomContainer.isConnected) return;
             const dt = Math.min(0.05, (ts - lastTs) / 1000);
             lastTs = ts;
             absPos += speed * dt;
@@ -2545,6 +2826,7 @@ function renderGamesAsRandom(gamesToRender) {
     });
 
     const onWindowResize = () => {
+        if (renderToken !== gamesRenderToken) return;
         if (!randomContainer.isConnected) {
             window.removeEventListener('resize', onWindowResize);
             return;
@@ -2568,10 +2850,25 @@ function renderGamesAsRandom(gamesToRender) {
     window.addEventListener('resize', onWindowResize);
 
     requestAnimationFrame(() => {
+        if (renderToken !== gamesRenderToken) return;
+        if (!randomContainer.isConnected) return;
         measure();
         snapToGameIndex(selectedIndex);
         setResult(selectedIndex);
     });
+
+    gamesScrollDetach = () => {
+        window.removeEventListener('resize', onWindowResize);
+        if (rafId) {
+            window.cancelAnimationFrame(rafId);
+            rafId = null;
+        }
+        if (retrySpinTimer) {
+            window.clearTimeout(retrySpinTimer);
+            retrySpinTimer = null;
+        }
+        cleanupLazyGameImages(randomContainer);
+    };
 }
 
 function showEmulatorDetails(emulator, options = {}) {

@@ -35,6 +35,12 @@
 - Deployment procedures and packaging
 
 ## Recent Changes
+- Fixed infinite renderer RAM growth when switching themes in Library/Cover view:
+  - Confirmed issue was native renderer/compositor memory pressure rather than JS heap growth
+  - Tuned cover incremental rendering in `js/game-manager.js` to keep fewer chunks/cards resident
+  - Scoped lazy image observation to library scroll root in `js/game-manager/lazy-game-images.js` to improve load/unload behavior
+  - Removed expensive cover-view visual effects in `scss/games/_core-cover.scss` (blur/shimmer/backdrop-heavy paths)
+  - Result: memory now stabilizes after warmup instead of increasing unbounded to GBs
 - Fixed category single-mode Ctrl/Cmd multi-select behavior in sidebar categories (logic + visual state)
 - Fixed category mode button text interpolation so `{{mode}}` is always rendered to concrete text
 - Replaced Library `Installed` section with `Favorite` (games rated with stars / `rating > 0`)

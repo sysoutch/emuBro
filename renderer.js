@@ -116,7 +116,7 @@ const GAME_REGION_FILTER_KEY = 'emuBro.gameRegionFilter';
 const SUGGESTED_SECTION_KEY = 'suggested';
 const SUPPORTED_LIBRARY_SECTIONS = new Set(['all', 'favorite', 'recent', SUGGESTED_SECTION_KEY, 'emulators']);
 let suggestedCoverGames = [];
-let categorySelectionMode = normalizeCategorySelectionMode(localStorage.getItem(CATEGORY_SELECTION_MODE_KEY) || 'single');
+let categorySelectionMode = normalizeCategorySelectionMode(localStorage.getItem(CATEGORY_SELECTION_MODE_KEY) || 'multi');
 let llmHelpersEnabled = localStorage.getItem(LLM_HELPERS_ENABLED_KEY) !== 'false';
 let llmAllowUnknownTags = localStorage.getItem(LLM_ALLOW_UNKNOWN_TAGS_KEY) === 'true';
 let categoriesShowAll = false;

@@ -36,6 +36,7 @@ const LIBRARY_PATH_SETTINGS_KEY = "library:path-settings:v1";
 const SPLASH_THEME_SETTINGS_KEY = "ui:splash-theme:v1";
 const FIRST_RUN_LEGAL_NOTICE_KEY = "legal:first-run-notice-shown:v1";
 const RUNTIME_DATA_RULES_SETTINGS_KEY = "runtime:data-rules:v1";
+const GAME_SESSION_CLOSE_BEHAVIOR_SETTINGS_KEY = "game-session:close-behavior:v1";
 
 let mainWindow;
 const screen = require("electron").screen;
@@ -206,6 +207,7 @@ const appBootstrapManager = createAppBootstrapManager({
   screen,
   path,
   dialog,
+  log,
   processRef: process,
   createSplashWindow,
   closeSplashWindow,
@@ -320,6 +322,7 @@ ipcMain.handle("settings:set-splash-theme", async (_event, payload = {}) => {
       textSecondary: String(input.textSecondary || "").trim(),
       accentColor: String(input.accentColor || "").trim(),
       accentLight: String(input.accentLight || "").trim(),
+      fontBody: String(input.fontBody || "").trim(),
       appGradientA: String(input.appGradientA || "").trim(),
       appGradientB: String(input.appGradientB || "").trim(),
       appGradientC: String(input.appGradientC || "").trim()
@@ -393,6 +396,7 @@ gameIpcActions = registerGameIpc({
   BrowserWindow,
   Menu,
   screen,
+  dialog,
   shell,
   nativeImage,
   fsSync,
@@ -410,7 +414,13 @@ gameIpcActions = registerGameIpc({
   dbUpsertTags,
   dbUpdateGameFilePath,
   getPlatformConfigs,
-  getRuntimeDataRules
+  getRuntimeDataRules,
+  getGameSessionCloseBehaviorPreference: () => store.get(GAME_SESSION_CLOSE_BEHAVIOR_SETTINGS_KEY, "ask"),
+  setGameSessionCloseBehaviorPreference: (value) => {
+    const normalized = String(value || "").trim().toLowerCase();
+    if (normalized !== "hide" && normalized !== "quit" && normalized !== "ask") return;
+    store.set(GAME_SESSION_CLOSE_BEHAVIOR_SETTINGS_KEY, normalized);
+  }
 });
 
 registerThemeUploadIpc({

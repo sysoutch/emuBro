@@ -55,3 +55,9 @@ emuBro-Reloaded follows an Electron-based architecture with clear separation bet
 - **Forced State in Toggles**: The `toggleDock` function should support an optional `forceState` parameter to allow programmatic "re-docking" without accidentally triggering an "un-dock" due to simple toggling.
 - **Visibility Timing**: When re-docking a window during opening, ensure it is set to `display: flex` *before* activating the docking logic. This ensures CSS transitions for layout shifts are correctly triggered by the browser.
 - **State Cleanup**: When undocking, ensure the panel is removed from any active docking tracking Sets and that all layout-related body classes are cleaned up to prevent "stuck" padding.
+
+### Library Cover Memory/Virtualization Pattern
+- **Profile both JS and native memory**: In Electron renderer issues, `usedJSHeapSize` can stay flat while native renderer memory grows due to compositing/image paths.
+- **Keep virtualization residency small**: For cover grids, limit chunk batch size and cap resident chunks aggressively to avoid large off-screen DOM/image retention.
+- **Use container-rooted intersection observers**: Observe cover images relative to the actual scroll container (e.g., `.game-scroll-body`) and recreate observers if root changes.
+- **Avoid blanket heavy compositing on dense grids**: Repeated blur/backdrop/shimmer/forced GPU promotion across many cards can drive native memory growth; reserve these effects for sparse UI, not large cover lists.

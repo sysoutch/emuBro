@@ -9,6 +9,14 @@ function sanitizeColor(value, fallback) {
   return fallback;
 }
 
+function sanitizeFontFamily(value, fallback) {
+  const raw = String(value || "").trim();
+  if (!raw) return fallback;
+  if (raw.length > 240) return fallback;
+  if (!/^[a-z0-9\s,'"._\-()]+$/i.test(raw)) return fallback;
+  return raw;
+}
+
 function resolveSplashTheme(snapshot) {
   const tone = String(snapshot?.tone || "dark").toLowerCase() === "light" ? "light" : "dark";
 
@@ -20,7 +28,8 @@ function resolveSplashTheme(snapshot) {
         textPrimary: "#17263a",
         textSecondary: "#5d7694",
         accentColor: "#3db2d6",
-        accentLight: "#87d8ef"
+        accentLight: "#87d8ef",
+        fontBody: "'Quicksand', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
       }
     : {
         bgPrimary: "#0b1220",
@@ -29,7 +38,8 @@ function resolveSplashTheme(snapshot) {
         textPrimary: "#d8e7ff",
         textSecondary: "#9bb7d7",
         accentColor: "#32b8de",
-        accentLight: "#8fe6ff"
+        accentLight: "#8fe6ff",
+        fontBody: "'Quicksand', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
       };
 
   return {
@@ -41,6 +51,7 @@ function resolveSplashTheme(snapshot) {
     textSecondary: sanitizeColor(snapshot?.textSecondary, defaults.textSecondary),
     accentColor: sanitizeColor(snapshot?.accentColor, defaults.accentColor),
     accentLight: sanitizeColor(snapshot?.accentLight, defaults.accentLight),
+    fontBody: sanitizeFontFamily(snapshot?.fontBody, defaults.fontBody),
     appGradientA: sanitizeColor(snapshot?.appGradientA, defaults.bgPrimary),
     appGradientB: sanitizeColor(snapshot?.appGradientB, defaults.bgSecondary),
     appGradientC: sanitizeColor(snapshot?.appGradientC, defaults.bgTertiary)
@@ -100,10 +111,11 @@ function createSplashWindowManager(options = {}) {
         --splash-sub: ${splashTheme.textSecondary};
         --splash-accent: ${splashTheme.accentColor};
         --splash-accent-light: ${splashTheme.accentLight};
+        --splash-font-body: ${splashTheme.fontBody};
       }
       html, body { height: 100%; margin: 0; }
       body {
-        font-family: Segoe UI, system-ui, -apple-system, sans-serif;
+        font-family: var(--splash-font-body);
         display: grid;
         place-items: center;
         background:
@@ -126,6 +138,7 @@ function createSplashWindowManager(options = {}) {
         font-size: 34px;
         letter-spacing: 1px;
         font-weight: 800;
+        font-family: var(--splash-font-body);
       }
       .brand span { color: var(--splash-accent); }
       .sub { margin: 0 0 18px 0; color: var(--splash-sub); font-size: 14px; }

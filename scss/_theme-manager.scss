@@ -601,6 +601,27 @@ body.panel-docked:not(.docking-accordion) {
     gap: 10px;
 }
 
+.theme-font-panel {
+    border: 1px solid color-mix(in srgb, var(--border-color), rgba(255, 255, 255, 0.14));
+    border-radius: 10px;
+    padding: 14px;
+    background: color-mix(in srgb, var(--bg-secondary), transparent 6%);
+    display: grid;
+    gap: 10px;
+}
+
+.theme-font-panel h4 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+#theme-font-body-custom:disabled,
+#theme-font-heading-custom:disabled {
+    opacity: 0.58;
+    cursor: not-allowed;
+}
+
 .theme-llm-panel h4 {
     margin: 0;
     font-size: 1rem;

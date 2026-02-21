@@ -4,6 +4,12 @@
 The current focus is on updating project documentation and maintaining the codebase to align with the new Electron-based architecture.
 
 ## Recent Changes
+- Fixed the long-running renderer RAM growth that occurred when switching themes in Library/Cover view:
+  - Identified as native renderer/compositor pressure (not a JS heap leak); JS heap stayed stable while renderer RSS/private memory grew
+  - Reduced cover virtualization residency in `js/game-manager.js` (smaller cover batch and fewer resident chunks)
+  - Updated lazy image observation in `js/game-manager/lazy-game-images.js` to use `.game-scroll-body` as observer root and recreate observers when root changes
+  - Removed high-cost cover compositing/blur/shimmer effects in `scss/games/_core-cover.scss` that caused excessive native memory pressure
+  - Verified behavior now: memory may spike during decode/warmup but no longer grows infinitely after theme switches
 - Fixed category selection UX:
   - Ctrl/Cmd multi-select in single mode now works logically and visually in categories list
   - Category mode label now correctly renders template placeholders (no raw `{{mode}}`)

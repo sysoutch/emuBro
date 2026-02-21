@@ -278,7 +278,7 @@ export function setupRendererEventListeners(options = {}) {
         globalOverrideBg.addEventListener('change', (e) => {
             localStorage.setItem('globalOverrideBackground', e.target.checked);
             // Re-apply current theme to respect new override setting
-            setTheme(getCurrentTheme());
+            setTheme(getCurrentTheme(), { force: true, allowSameForce: true });
         });
     }
 
@@ -379,6 +379,8 @@ export function setupRendererEventListeners(options = {}) {
             await renderActiveLibraryView();
         }
     });
+    // Intentionally no library rerender/scroll sync on theme apply.
+    // Theme updates are CSS-driven; forcing game-grid work here caused RAM churn.
 
     // Tools
     document.querySelectorAll('[data-tool]').forEach(link => {

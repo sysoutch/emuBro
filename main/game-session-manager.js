@@ -544,6 +544,21 @@ function createGameSessionManager(deps = {}) {
       return { success: false, message: "Launcher window is not available" };
     }
     try {
+      if (mainWindow.__emuBroSessionSuspended && !mainWindow.__emuBroSessionRestoreInProgress) {
+        mainWindow.__emuBroSessionRestoreInProgress = true;
+        mainWindow.__emuBroSessionSuspended = false;
+        mainWindow.loadFile(path.join(app.getAppPath(), "index.html"))
+          .catch((error) => {
+            log.error("Failed to restore launcher UI from session overlay:", error);
+          })
+          .finally(() => {
+            if (!mainWindow || mainWindow.isDestroyed()) return;
+            mainWindow.__emuBroSessionRestoreInProgress = false;
+          });
+      }
+      if (mainWindow.webContents && !mainWindow.webContents.isDestroyed() && typeof mainWindow.webContents.setBackgroundThrottling === "function") {
+        mainWindow.webContents.setBackgroundThrottling(false);
+      }
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.show();
       mainWindow.focus();

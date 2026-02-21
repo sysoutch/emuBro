@@ -1,19 +1,91 @@
-﻿/**
+/**
  * Theme Manager
  */
 
 import { 
     parseColorToHex, 
-    rgbToHex, 
     hexToRgb, 
     invertHex, 
     rgbToHsl, 
-    hslToRgb, 
     flipLightness, 
     darkenHex 
 } from './ui-utils';
 import { requestDockLayoutRefresh } from './docking-manager';
 import { loadSuggestionSettings, normalizeSuggestionProvider } from './suggestions-settings';
+import {
+    FONT_PRESET_STACKS,
+    DEFAULT_THEME_FONTS,
+    DEFAULT_BASIC_BRAND_MODE,
+    DEFAULT_BASIC_BRAND_STRENGTH,
+    DEFAULT_TEXT_EFFECT_MODE,
+    DEFAULT_TEXT_EFFECT_SPEED,
+    DEFAULT_TEXT_EFFECT_INTENSITY,
+    DEFAULT_TEXT_EFFECT_CUSTOM_COLORS,
+    DEFAULT_TEXT_EFFECT_ANGLE,
+    getBuiltInPresetTheme,
+    getBuiltInPresetThemes
+} from './theme-manager/presets';
+import {
+    BACKGROUND_LAYER_POSITIONS,
+    BACKGROUND_LAYER_SIZE_OPTIONS,
+    BACKGROUND_LAYER_REPEAT_OPTIONS,
+    BACKGROUND_LAYER_BEHAVIOR_OPTIONS,
+    BACKGROUND_LAYER_BLEND_OPTIONS,
+    BACKGROUND_SURFACE_TARGET_OPTIONS,
+    BASE_BACKGROUND_POSITION_OPTIONS,
+    BASE_BACKGROUND_SCALE_OPTIONS,
+    clampNumber,
+    escapeHtml,
+    normalizeBackgroundLayerPosition,
+    normalizeBackgroundLayerSize,
+    normalizeBackgroundLayerRepeat,
+    normalizeBackgroundLayerBehavior,
+    normalizeBackgroundLayerBlendMode,
+    normalizeBackgroundLayerOpacity,
+    normalizeBackgroundLayerOffset,
+    resolveBackgroundPositionWithOffset,
+    mapLegacyScaleToLayerSize,
+    normalizeBackgroundSurfaceTarget,
+    normalizeBaseBackgroundPosition,
+    normalizeBaseBackgroundScale,
+    createDefaultBackgroundSurfaceDraft,
+    createBackgroundSurfaceDraftFromConfig,
+    createBackgroundLayerDraft,
+    cloneBackgroundLayerDrafts,
+    extractBackgroundLayers,
+    hasThemeBackgroundLayers,
+    extractAdditionalLayerDrafts
+} from './theme-manager/background-utils';
+import {
+    normalizeThemeCustomizationMode,
+    normalizeBasicVariant,
+    inferBasicVariantFromTheme,
+    normalizeBasicIntensity,
+    normalizeBasicBrandMode,
+    normalizeBasicBrandStrength,
+    normalizeBasicBrandUseAccent,
+    resolveBasicBrandColor,
+    resolveBrandEditorConfig,
+    normalizeToggleBoolean,
+    normalizeTextEffectMode,
+    normalizeTextEffectColor,
+    normalizeTextEffectCustomColors,
+    normalizeTextEffectAngle,
+    normalizeTextEffectSpeed,
+    normalizeTextEffectIntensity,
+    resolveThemeTextEffectConfig,
+    shiftColorHsl,
+    buildBasicPalette,
+    resolveBasicVariantForEditor,
+    resolveBasicVariantForRuntime,
+    isNearBlackHex,
+    looksCorruptedBlackPalette,
+    normalizePaletteToActiveTone,
+    repairBlackPaletteFromAccent,
+    resolveThemeColorsForRuntime,
+    buildPaletteMatchedLogoTextEffect,
+    inferUiToneFromColor
+} from './theme-manager/theme-algorithms';
 
 const emubro = window.emubro;
 const log = console;
@@ -26,277 +98,17 @@ let shouldUseAccentColorForBrand = true;
 let fixedBackgroundTracking = null;
 let backgroundLayerDrafts = [];
 let backgroundSurfaceDraft = null;
+let lastAppliedBackgroundSignature = '';
+let isApplyingTheme = false;
+let queuedThemeApply = null;
+let lastAppliedThemeId = '';
+let lastAppliedThemeAt = 0;
 const THEME_EDITOR_MODE_STORAGE_KEY = 'themeEditorCustomizationMode';
-const FONT_STACK_QUICKSAND = "'Quicksand', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
-const FONT_STACK_MONTSERRAT = "'Montserrat', 'Quicksand', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
-const FONT_STACK_LUCKIEST = "'Luckiest Guy', 'Montserrat', 'Quicksand', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
-const FONT_STACK_GAMEBOY = "'Press Start 2P', 'VT323', 'Courier New', monospace";
-const DEFAULT_THEME_FONTS = {
-    body: FONT_STACK_QUICKSAND,
-    heading: FONT_STACK_QUICKSAND,
-    pixelMode: false
-};
-const DEFAULT_BASIC_BRAND_MODE = 'darker';
-const DEFAULT_BASIC_BRAND_STRENGTH = 30;
-const DEFAULT_TEXT_EFFECT_MODE = 'none';
-const DEFAULT_TEXT_EFFECT_SPEED = 7;
-const DEFAULT_TEXT_EFFECT_INTENSITY = 72;
-const DEFAULT_TEXT_EFFECT_CUSTOM_COLORS = {
-    color1: '#66d8ff',
-    color2: '#2f7dff',
-    color3: '#14306a',
-    color4: '#0d1742'
-};
-const DEFAULT_TEXT_EFFECT_ANGLE = 140;
-const ARCADE_THEME_FONTS = {
-    body: FONT_STACK_MONTSERRAT,
-    heading: FONT_STACK_LUCKIEST,
-    pixelMode: false
-};
-const GAMEBOY_THEME_FONTS = {
-    body: FONT_STACK_GAMEBOY,
-    heading: FONT_STACK_GAMEBOY,
-    pixelMode: true
-};
-const DEFAULT_PRESET_LOGO_TEXT_EFFECT = {
-    logo: {
-        enabled: true,
-        mode: 'slimey-green',
-        speed: DEFAULT_TEXT_EFFECT_SPEED,
-        intensity: DEFAULT_TEXT_EFFECT_INTENSITY,
-        applyToLogo: true
-    }
-};
-
-const BACKGROUND_LAYER_POSITIONS = [
-    { value: 'center center', label: 'Center' },
-    { value: 'top center', label: 'Top' },
-    { value: 'top right', label: 'Top Right' },
-    { value: 'center right', label: 'Right' },
-    { value: 'bottom right', label: 'Bottom Right' },
-    { value: 'bottom center', label: 'Bottom' },
-    { value: 'bottom left', label: 'Bottom Left' },
-    { value: 'center left', label: 'Left' },
-    { value: 'top left', label: 'Top Left' }
-];
-
-const BACKGROUND_LAYER_SIZE_OPTIONS = [
-    { value: 'cover', label: 'Cover' },
-    { value: 'contain', label: 'Contain' },
-    { value: 'auto', label: 'Original' },
-    { value: '100% 100%', label: 'Stretch' },
-    { value: '100% auto', label: 'Top Banner' }
-];
-
-const BACKGROUND_LAYER_REPEAT_OPTIONS = [
-    { value: 'no-repeat', label: 'No Repeat' },
-    { value: 'repeat', label: 'Repeat' },
-    { value: 'repeat-x', label: 'Repeat X' },
-    { value: 'repeat-y', label: 'Repeat Y' }
-];
-
-const BACKGROUND_LAYER_BEHAVIOR_OPTIONS = [
-    { value: 'scroll', label: 'Scroll With View' },
-    { value: 'fixed', label: 'Fixed In Window' }
-];
-
-const BACKGROUND_LAYER_BLEND_OPTIONS = [
-    { value: 'normal', label: 'Normal' },
-    { value: 'screen', label: 'Screen' },
-    { value: 'overlay', label: 'Overlay' },
-    { value: 'multiply', label: 'Multiply' },
-    { value: 'soft-light', label: 'Soft Light' },
-    { value: 'lighten', label: 'Lighten' }
-];
-
-const BACKGROUND_SURFACE_TARGET_OPTIONS = [
-    { value: 'base', label: 'Background' },
-    { value: 'top', label: 'Top Banner' },
-    { value: 'title', label: 'Top Title Bar' }
-];
-
-const BASE_BACKGROUND_POSITION_OPTIONS = [
-    { value: 'centered', label: 'Centered (Scroll)' },
-    { value: 'fixed', label: 'Centered (Fixed)' },
-    { value: 'top center', label: 'Top' },
-    { value: 'top right', label: 'Top Right' },
-    { value: 'center right', label: 'Right' },
-    { value: 'bottom right', label: 'Bottom Right' },
-    { value: 'bottom center', label: 'Bottom' },
-    { value: 'bottom left', label: 'Bottom Left' },
-    { value: 'center left', label: 'Left' },
-    { value: 'top left', label: 'Top Left' }
-];
-
-const BASE_BACKGROUND_SCALE_OPTIONS = [
-    { value: 'crop', label: 'Crop (Cover)' },
-    { value: 'zoom', label: 'Zoom (Contain)' },
-    { value: 'stretch', label: 'Stretch (Fill)' },
-    { value: 'original', label: 'Original Size' },
-    { value: '100% auto', label: 'Top Banner' }
-];
-
-const BUILT_IN_PRESET_THEMES = [
-    {
-        id: 'spyro',
-        name: 'Spyro',
-        colors: {
-            bgPrimary: '#130d26',
-            bgSecondary: '#1d1336',
-            bgTertiary: '#281a46',
-            bgQuaternary: '#1a1132',
-            textPrimary: '#f4e9ff',
-            textSecondary: '#c6b1e6',
-            accentColor: '#b56dff',
-            borderColor: '#5a3a8f',
-            bgHeader: '#1f1439',
-            bgSidebar: '#281a46',
-            bgActionbar: '#1a1132',
-            appGradientA: '#1a1134',
-            appGradientB: '#2a1b52',
-            appGradientC: '#4f2d79',
-            appGradientAngle: '155deg',
-            successColor: '#5fca81',
-            dangerColor: '#ff6d7d'
-        },
-        background: { image: null, position: 'centered', scale: 'crop', repeat: 'no-repeat', topImage: null },
-        cardEffects: { glassEffect: true },
-        fonts: ARCADE_THEME_FONTS,
-        textEffects: DEFAULT_PRESET_LOGO_TEXT_EFFECT
-    },
-    {
-        id: 'red_bloody',
-        name: 'Red Bloody',
-        colors: {
-            bgPrimary: '#150709',
-            bgSecondary: '#220d12',
-            bgTertiary: '#2d1217',
-            bgQuaternary: '#1c0a0e',
-            textPrimary: '#ffe8ea',
-            textSecondary: '#dba6ac',
-            accentColor: '#d62d3a',
-            borderColor: '#6b2730',
-            bgHeader: '#220d12',
-            bgSidebar: '#2d1217',
-            bgActionbar: '#1c0a0e',
-            appGradientA: '#1a090d',
-            appGradientB: '#3a0f17',
-            appGradientC: '#5a111c',
-            appGradientAngle: '160deg',
-            successColor: '#6eca88',
-            dangerColor: '#ff4f5f'
-        },
-        background: { image: null, position: 'centered', scale: 'crop', repeat: 'no-repeat', topImage: null },
-        cardEffects: { glassEffect: true },
-        fonts: DEFAULT_THEME_FONTS,
-        textEffects: DEFAULT_PRESET_LOGO_TEXT_EFFECT
-    },
-    {
-        id: 'crash_bandicoot',
-        name: 'Crash Bandicoot',
-        colors: {
-            bgPrimary: '#16110a',
-            bgSecondary: '#24190e',
-            bgTertiary: '#342211',
-            bgQuaternary: '#1c140b',
-            textPrimary: '#fff2df',
-            textSecondary: '#e5c392',
-            accentColor: '#ff8d2e',
-            borderColor: '#7b4c1f',
-            bgHeader: '#2a1c0f',
-            bgSidebar: '#342211',
-            bgActionbar: '#1c140b',
-            appGradientA: '#1f140a',
-            appGradientB: '#3a230f',
-            appGradientC: '#6a3712',
-            appGradientAngle: '150deg',
-            successColor: '#73d191',
-            dangerColor: '#ff6e54'
-        },
-        background: { image: null, position: 'centered', scale: 'crop', repeat: 'no-repeat', topImage: null },
-        cardEffects: { glassEffect: true },
-        fonts: ARCADE_THEME_FONTS,
-        textEffects: DEFAULT_PRESET_LOGO_TEXT_EFFECT
-    },
-    {
-        id: 'mario',
-        name: 'Mario',
-        colors: {
-            bgPrimary: '#140b10',
-            bgSecondary: '#21111a',
-            bgTertiary: '#2d1822',
-            bgQuaternary: '#1b0f16',
-            textPrimary: '#fff5ef',
-            textSecondary: '#e6c4bc',
-            accentColor: '#ff4040',
-            borderColor: '#7f3441',
-            bgHeader: '#22121b',
-            bgSidebar: '#2d1822',
-            bgActionbar: '#1b0f16',
-            appGradientA: '#1a0d14',
-            appGradientB: '#3a1d2b',
-            appGradientC: '#174ea8',
-            appGradientAngle: '150deg',
-            successColor: '#73d98f',
-            dangerColor: '#ff4e4e'
-        },
-        background: { image: null, position: 'centered', scale: 'crop', repeat: 'no-repeat', topImage: null },
-        cardEffects: { glassEffect: true },
-        fonts: ARCADE_THEME_FONTS,
-        textEffects: DEFAULT_PRESET_LOGO_TEXT_EFFECT
-    },
-    {
-        id: 'gameboy',
-        name: 'Gameboy',
-        colors: {
-            bgPrimary: '#0f1711',
-            bgSecondary: '#162218',
-            bgTertiary: '#1f2d1f',
-            bgQuaternary: '#131e14',
-            textPrimary: '#d8f2b8',
-            textSecondary: '#9ebd7f',
-            accentColor: '#7ec850',
-            borderColor: '#486538',
-            bgHeader: '#19261b',
-            bgSidebar: '#1f2d1f',
-            bgActionbar: '#131e14',
-            appGradientA: '#10190f',
-            appGradientB: '#1d2c1a',
-            appGradientC: '#32472c',
-            appGradientAngle: '158deg',
-            successColor: '#8fe267',
-            dangerColor: '#cf6f76'
-        },
-        background: { image: null, position: 'centered', scale: 'crop', repeat: 'no-repeat', topImage: null },
-        cardEffects: { glassEffect: true },
-        fonts: GAMEBOY_THEME_FONTS,
-        textEffects: DEFAULT_PRESET_LOGO_TEXT_EFFECT
-    }
-];
 
 // Draggable state
 let isDragging = false;
 let startX, startY;
 let modalInitialX, modalInitialY;
-
-function cloneThemeDefinition(theme) {
-    if (!theme) return null;
-    try {
-        return JSON.parse(JSON.stringify(theme));
-    } catch (_e) {
-        return null;
-    }
-}
-
-function getBuiltInPresetTheme(themeId) {
-    const normalizedId = String(themeId || '').trim().toLowerCase();
-    const found = BUILT_IN_PRESET_THEMES.find((theme) => theme.id === normalizedId);
-    return cloneThemeDefinition(found);
-}
-
-function getBuiltInPresetThemes() {
-    return BUILT_IN_PRESET_THEMES.map((theme) => cloneThemeDefinition(theme)).filter(Boolean);
-}
 
 function resolveThemeFonts(fonts = null) {
     const resolved = {
@@ -315,49 +127,69 @@ function applyThemeFonts(fonts = null) {
     root.setAttribute('data-font-pixel', resolved.pixelMode ? 'true' : 'false');
 }
 
-function normalizeThemeCustomizationMode(mode) {
-    const value = String(mode || '').trim().toLowerCase();
-    return value === 'extended' ? 'extended' : 'basic';
+function getFontPresetFromStack(stackValue) {
+    const normalized = String(stackValue || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const entries = Object.entries(FONT_PRESET_STACKS);
+    for (const [preset, stack] of entries) {
+        const normalizedStack = String(stack || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        if (normalized === normalizedStack) return preset;
+    }
+    return 'custom';
 }
 
-function normalizeBasicVariant(variant) {
-    const value = String(variant || '').trim().toLowerCase();
-    if (value === 'dark' || value === 'light') return value;
-    return 'auto';
+function setThemeFontControlState() {
+    const bodyPreset = document.getElementById('theme-font-body-preset');
+    const headingPreset = document.getElementById('theme-font-heading-preset');
+    const bodyCustom = document.getElementById('theme-font-body-custom');
+    const headingCustom = document.getElementById('theme-font-heading-custom');
+    if (bodyCustom) bodyCustom.disabled = (bodyPreset?.value || 'quicksand') !== 'custom';
+    if (headingCustom) headingCustom.disabled = (headingPreset?.value || 'quicksand') !== 'custom';
 }
 
-function inferBasicVariantFromTheme(theme) {
-    const bg = parseColorToHex(theme?.colors?.bgPrimary || '') || '';
-    const rgb = bg ? hexToRgb(bg) : null;
-    if (!rgb) return 'auto';
-    const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-    return hsl.l >= 0.55 ? 'light' : 'dark';
+function setThemeFontControlsFromFonts(fonts = null) {
+    const resolved = resolveThemeFonts(fonts);
+    const bodyPreset = document.getElementById('theme-font-body-preset');
+    const headingPreset = document.getElementById('theme-font-heading-preset');
+    const bodyCustom = document.getElementById('theme-font-body-custom');
+    const headingCustom = document.getElementById('theme-font-heading-custom');
+    const pixelModeInput = document.getElementById('theme-font-pixel-mode');
+    if (bodyPreset) bodyPreset.value = getFontPresetFromStack(resolved.body);
+    if (headingPreset) headingPreset.value = getFontPresetFromStack(resolved.heading);
+    if (bodyCustom) bodyCustom.value = resolved.body;
+    if (headingCustom) headingCustom.value = resolved.heading;
+    if (pixelModeInput) pixelModeInput.checked = Boolean(resolved.pixelMode);
+    setThemeFontControlState();
 }
 
-function normalizeBasicIntensity(value) {
-    const parsed = Number.parseInt(String(value ?? '').trim(), 10);
-    if (!Number.isFinite(parsed)) return 100;
-    return clampNumber(parsed, 60, 140);
+function getThemeFontsFromForm(fallbackFonts = null) {
+    const fallback = resolveThemeFonts(fallbackFonts);
+    const bodyPreset = String(document.getElementById('theme-font-body-preset')?.value || '').trim().toLowerCase();
+    const headingPreset = String(document.getElementById('theme-font-heading-preset')?.value || '').trim().toLowerCase();
+    const bodyCustom = String(document.getElementById('theme-font-body-custom')?.value || '').trim();
+    const headingCustom = String(document.getElementById('theme-font-heading-custom')?.value || '').trim();
+    const pixelModeInput = document.getElementById('theme-font-pixel-mode');
+
+    const resolvedBody = bodyPreset === 'custom'
+        ? (bodyCustom || fallback.body)
+        : (FONT_PRESET_STACKS[bodyPreset] || fallback.body);
+    const resolvedHeading = headingPreset === 'custom'
+        ? (headingCustom || fallback.heading)
+        : (FONT_PRESET_STACKS[headingPreset] || fallback.heading);
+
+    return resolveThemeFonts({
+        body: resolvedBody,
+        heading: resolvedHeading,
+        pixelMode: Boolean(pixelModeInput?.checked)
+    });
 }
 
-function normalizeBasicBrandMode(value) {
-    const normalized = String(value || '').trim().toLowerCase();
-    if (normalized === 'accent' || normalized === 'lighter' || normalized === 'custom') return normalized;
-    return DEFAULT_BASIC_BRAND_MODE;
-}
-
-function normalizeBasicBrandStrength(value) {
-    const parsed = Number.parseInt(String(value ?? '').trim(), 10);
-    if (!Number.isFinite(parsed)) return DEFAULT_BASIC_BRAND_STRENGTH;
-    return clampNumber(parsed, 0, 80);
-}
-
-function normalizeBasicBrandUseAccent(value) {
-    if (typeof value === 'boolean') return value;
-    const normalized = String(value ?? '').trim().toLowerCase();
-    if (normalized === 'false' || normalized === '0' || normalized === 'no' || normalized === 'off') return false;
-    if (normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'on') return true;
-    return true;
+function applyThemeFontsFromForm(options = {}) {
+    const fonts = getThemeFontsFromForm(DEFAULT_THEME_FONTS);
+    applyThemeFonts(fonts);
+    setThemeFontControlState();
+    if (options.markUnsaved !== false) {
+        hasUnsavedChanges = true;
+    }
 }
 
 function updateBasicBrandStrengthValueLabel(strengthValue) {
@@ -399,139 +231,6 @@ function setBasicBrandControlState(useAccentValue, modeValue = null) {
     }
 }
 
-function resolveBasicBrandColor(accentColor, manualBrandColor, options = {}) {
-    const accent = parseColorToHex(accentColor || '') || '#66ccff';
-    const enabled = normalizeBasicBrandUseAccent(options.enabled);
-    const fallbackText = parseColorToHex(options.textSecondary || '') || '#b9c7dc';
-    if (!enabled) {
-        return fallbackText;
-    }
-
-    const mode = normalizeBasicBrandMode(options.mode);
-    const strength = normalizeBasicBrandStrength(options.strength);
-    if (mode === 'custom') {
-        return parseColorToHex(manualBrandColor || '') || accent;
-    }
-    if (mode === 'accent' || strength === 0) return accent;
-    if (mode === 'darker') {
-        return shiftColorHsl(accent, {
-            lightAdd: -Math.round(strength * 0.72),
-            satAdd: Math.round(strength * 0.12)
-        });
-    }
-    return shiftColorHsl(accent, {
-        lightAdd: Math.round(strength * 0.6),
-        satAdd: -Math.round(strength * 0.08)
-    });
-}
-
-function resolveBrandEditorConfig(editor = {}) {
-    const source = normalizeBasicBrandMode(
-        editor?.basicBrandSource
-        || (normalizeBasicBrandUseAccent(editor?.basicUseAccentForBrand ?? true)
-            ? (editor?.basicBrandFromAccentMode || DEFAULT_BASIC_BRAND_MODE)
-            : 'custom')
-    );
-    return {
-        enabled: normalizeBasicBrandUseAccent(editor?.basicBrandEnabled ?? true),
-        source,
-        strength: normalizeBasicBrandStrength(editor?.basicBrandStrength ?? editor?.basicBrandFromAccentStrength ?? DEFAULT_BASIC_BRAND_STRENGTH),
-        color: parseColorToHex(editor?.basicBrandColor || '') || ''
-    };
-}
-
-function normalizeToggleBoolean(value, fallback = false) {
-    if (typeof value === 'boolean') return value;
-    const normalized = String(value ?? '').trim().toLowerCase();
-    if (normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'on') return true;
-    if (normalized === 'false' || normalized === '0' || normalized === 'no' || normalized === 'off') return false;
-    return Boolean(fallback);
-}
-
-function normalizeTextEffectMode(value) {
-    const normalized = String(value || '').trim().toLowerCase();
-    if (normalized === 'flowy-blood' || normalized === 'burning' || normalized === 'water' || normalized === 'slimey-green' || normalized === 'custom') return normalized;
-    return DEFAULT_TEXT_EFFECT_MODE;
-}
-
-function normalizeTextEffectColor(value, fallback) {
-    return parseColorToHex(value || '') || parseColorToHex(fallback || '') || '#66d8ff';
-}
-
-function normalizeTextEffectCustomColors(colors = {}, fallbacks = DEFAULT_TEXT_EFFECT_CUSTOM_COLORS) {
-    return {
-        color1: normalizeTextEffectColor(colors?.color1 || colors?.first || colors?.a || colors?.c1, fallbacks.color1),
-        color2: normalizeTextEffectColor(colors?.color2 || colors?.second || colors?.b || colors?.c2, fallbacks.color2),
-        color3: normalizeTextEffectColor(colors?.color3 || colors?.third || colors?.c || colors?.c3, fallbacks.color3),
-        color4: normalizeTextEffectColor(colors?.color4 || colors?.fourth || colors?.d || colors?.c4, fallbacks.color4 || fallbacks.color3)
-    };
-}
-
-function normalizeTextEffectAngle(value) {
-    const parsed = Number.parseInt(String(value ?? '').trim(), 10);
-    if (!Number.isFinite(parsed)) return DEFAULT_TEXT_EFFECT_ANGLE;
-    return clampNumber(parsed, 0, 360);
-}
-
-function normalizeTextEffectSpeed(value) {
-    const parsed = Number.parseInt(String(value ?? '').trim(), 10);
-    if (!Number.isFinite(parsed)) return DEFAULT_TEXT_EFFECT_SPEED;
-    return clampNumber(parsed, 2, 20);
-}
-
-function normalizeTextEffectIntensity(value) {
-    const parsed = Number.parseInt(String(value ?? '').trim(), 10);
-    if (!Number.isFinite(parsed)) return DEFAULT_TEXT_EFFECT_INTENSITY;
-    return clampNumber(parsed, 0, 100);
-}
-
-function resolveThemeTextEffectConfig(themeOrConfig = null) {
-    const source = themeOrConfig || {};
-    const directLogo = source?.logo || null;
-    const directTextEffectsLogo = source?.textEffects?.logo || null;
-    const editorTextEffectsLogo = source?.editor?.textEffects?.logo || null;
-    const editorTextEffect = source?.editor?.textEffect || null;
-    const logo = directTextEffectsLogo || editorTextEffectsLogo || editorTextEffect || directLogo || source;
-
-    const rawMode = logo?.mode ?? source?.editor?.textEffectMode ?? source?.textEffectMode ?? DEFAULT_TEXT_EFFECT_MODE;
-    const normalizedMode = normalizeTextEffectMode(rawMode);
-    const rawEnabled = logo?.enabled ?? source?.editor?.textEffectEnabled;
-    const enabled = normalizeToggleBoolean(rawEnabled, normalizedMode !== DEFAULT_TEXT_EFFECT_MODE);
-    const mode = enabled
-        ? (normalizedMode === DEFAULT_TEXT_EFFECT_MODE ? 'flowy-blood' : normalizedMode)
-        : DEFAULT_TEXT_EFFECT_MODE;
-
-    const editorColorBag = {
-        color1: source?.editor?.textEffectColor1 ?? source?.editor?.textEffectCustomColor1,
-        color2: source?.editor?.textEffectColor2 ?? source?.editor?.textEffectCustomColor2,
-        color3: source?.editor?.textEffectColor3 ?? source?.editor?.textEffectCustomColor3,
-        color4: source?.editor?.textEffectColor4 ?? source?.editor?.textEffectCustomColor4
-    };
-    const rawCustomColors = logo?.customColors || logo?.colors || source?.editor?.textEffectCustomColors || editorColorBag;
-    const customColors = normalizeTextEffectCustomColors(rawCustomColors, DEFAULT_TEXT_EFFECT_CUSTOM_COLORS);
-    const useColor4 = normalizeToggleBoolean(
-        logo?.useColor4 ?? source?.editor?.textEffectUseColor4,
-        false
-    );
-    const applyToLogo = normalizeToggleBoolean(
-        logo?.applyToLogo ?? source?.editor?.textEffectApplyToLogo,
-        false
-    );
-    const angle = normalizeTextEffectAngle(
-        logo?.angle ?? source?.editor?.textEffectAngle ?? DEFAULT_TEXT_EFFECT_ANGLE
-    );
-
-    return {
-        enabled: mode !== DEFAULT_TEXT_EFFECT_MODE,
-        mode,
-        speed: normalizeTextEffectSpeed(logo?.speed ?? source?.editor?.textEffectSpeed ?? DEFAULT_TEXT_EFFECT_SPEED),
-        intensity: normalizeTextEffectIntensity(logo?.intensity ?? source?.editor?.textEffectIntensity ?? DEFAULT_TEXT_EFFECT_INTENSITY),
-        angle,
-        useColor4,
-        applyToLogo: mode !== DEFAULT_TEXT_EFFECT_MODE && applyToLogo,
-        customColors
-    };
-}
 
 function updateTextEffectSpeedValueLabel(speedValue) {
     const label = document.getElementById('theme-textfx-speed-value');
@@ -691,35 +390,6 @@ function applyThemeTextEffectsFromForm(options = {}) {
     return config;
 }
 
-function buildPaletteMatchedLogoTextEffect(colors = {}, options = {}) {
-    const accent = parseColorToHex(colors?.accentColor || '') || '#66ccff';
-    const brand = parseColorToHex(colors?.brandColor || '') || darkenHex(accent, 24);
-    const bgPrimary = parseColorToHex(colors?.bgPrimary || '') || '#0b1220';
-    const tone = String(options.tone || inferUiToneFromColor(bgPrimary, 'dark')).toLowerCase() === 'light' ? 'light' : 'dark';
-    const intensity = tone === 'light' ? 66 : 76;
-
-    const color1 = shiftColorHsl(accent, { satMul: 0.9, lightAdd: tone === 'light' ? -10 : 14, minLight: 40, maxLight: 84 });
-    const color2 = accent;
-    const color3 = shiftColorHsl(brand, { satMul: 1.02, lightAdd: tone === 'light' ? -16 : -8, minLight: 22, maxLight: 58 });
-    const color4 = shiftColorHsl(bgPrimary, { satMul: 0.88, lightAdd: tone === 'light' ? -24 : 12, minLight: 12, maxLight: 42 });
-
-    return {
-        enabled: true,
-        mode: 'custom',
-        speed: 7,
-        intensity,
-        angle: 140,
-        useColor4: true,
-        applyToLogo: true,
-        customColors: {
-            color1,
-            color2,
-            color3,
-            color4
-        }
-    };
-}
-
 function updateLlmThemeRangeValueLabel(inputId, valueId) {
     const input = document.getElementById(inputId);
     const value = document.getElementById(valueId);
@@ -877,14 +547,6 @@ function applyGeneratedThemeToForm(result = {}) {
     hasUnsavedChanges = true;
 }
 
-function inferUiToneFromColor(color, fallback = 'dark') {
-    const parsed = parseColorToHex(color || '');
-    const rgb = parsed ? hexToRgb(parsed) : null;
-    if (!rgb) return fallback;
-    const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-    return hsl.l >= 0.56 ? 'light' : 'dark';
-}
-
 function applyThemeToneAttribute(colors = {}) {
     const root = document.documentElement;
     const bgPrimary = parseColorToHex(colors.bgPrimary || '') || '';
@@ -926,229 +588,11 @@ function updateBasicIntensityValueLabel(intensityValue) {
     label.textContent = `${normalized}%`;
 }
 
-function clampNumber(value, min, max) {
-    return Math.max(min, Math.min(max, value));
-}
-
-function escapeHtml(value) {
-    return String(value || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
-
-function makeLayerId() {
-    return `bg_layer_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function normalizeBackgroundLayerPosition(value) {
-    const raw = String(value || '').trim().toLowerCase();
-    if (!raw || raw === 'centered' || raw === 'center') return 'center center';
-    if (raw === 'fixed') return 'center center';
-    if (raw === 'top') return 'top center';
-    if (raw === 'bottom') return 'bottom center';
-    if (raw === 'left') return 'center left';
-    if (raw === 'right') return 'center right';
-    if (raw === 'top-left') return 'top left';
-    if (raw === 'top-right') return 'top right';
-    if (raw === 'bottom-left') return 'bottom left';
-    if (raw === 'bottom-right') return 'bottom right';
-    const known = new Set(BACKGROUND_LAYER_POSITIONS.map((item) => item.value));
-    if (known.has(raw)) return raw;
-    return 'center center';
-}
-
-function normalizeBackgroundLayerSize(value) {
-    const raw = String(value || '').trim().toLowerCase();
-    if (!raw) return 'cover';
-    if (raw === 'crop') return 'cover';
-    if (raw === 'zoom') return 'contain';
-    if (raw === 'stretch') return '100% 100%';
-    if (raw === 'original') return 'auto';
-    const known = new Set(BACKGROUND_LAYER_SIZE_OPTIONS.map((item) => item.value.toLowerCase()));
-    if (known.has(raw)) {
-        if (raw === '100% 100%') return '100% 100%';
-        if (raw === '100% auto') return '100% auto';
-        return raw;
-    }
-    return 'cover';
-}
-
-function normalizeBackgroundLayerRepeat(value) {
-    const raw = String(value || '').trim().toLowerCase();
-    if (BACKGROUND_LAYER_REPEAT_OPTIONS.some((item) => item.value === raw)) return raw;
-    return 'no-repeat';
-}
-
-function normalizeBackgroundLayerBehavior(value) {
-    return String(value || '').trim().toLowerCase() === 'fixed' ? 'fixed' : 'scroll';
-}
-
-function normalizeBackgroundLayerBlendMode(value) {
-    const raw = String(value || '').trim().toLowerCase();
-    if (BACKGROUND_LAYER_BLEND_OPTIONS.some((item) => item.value === raw)) return raw;
-    return 'normal';
-}
-
-function normalizeBackgroundLayerOpacity(value) {
-    const parsed = Number.parseFloat(value);
-    if (!Number.isFinite(parsed)) return 1;
-    return clampNumber(parsed, 0, 1);
-}
-
-function normalizeBackgroundLayerOffset(value) {
-    const parsed = Number.parseInt(String(value ?? '').trim(), 10);
-    if (!Number.isFinite(parsed)) return 0;
-    return clampNumber(parsed, -5000, 5000);
-}
-
-function resolveBackgroundPositionWithOffset(positionValue, offsetX = 0, offsetY = 0) {
-    const normalized = normalizeBackgroundLayerPosition(positionValue);
-    const tokens = normalized.split(/\s+/).filter(Boolean);
-
-    const horizontalTokens = new Set(['left', 'center', 'right']);
-    const verticalTokens = new Set(['top', 'center', 'bottom']);
-    let horizontal = 'center';
-    let vertical = 'center';
-
-    tokens.forEach((token) => {
-        const value = String(token || '').trim().toLowerCase();
-        if (horizontalTokens.has(value)) horizontal = value;
-        if (verticalTokens.has(value) && value !== 'center') vertical = value;
-    });
-
-    const xBase = horizontal === 'left' ? '0%' : horizontal === 'right' ? '100%' : '50%';
-    const yBase = vertical === 'top' ? '0%' : vertical === 'bottom' ? '100%' : '50%';
-    const ox = normalizeBackgroundLayerOffset(offsetX);
-    const oy = normalizeBackgroundLayerOffset(offsetY);
-
-    const formatAxis = (base, offset) => {
-        if (offset === 0) return base;
-        const sign = offset > 0 ? '+' : '-';
-        return `calc(${base} ${sign} ${Math.abs(offset)}px)`;
-    };
-
-    return `${formatAxis(xBase, ox)} ${formatAxis(yBase, oy)}`;
-}
-
-function normalizeBackgroundLayerBelowTitleBar(value, layerId = '') {
-    if (typeof value === 'boolean') return value;
-
-    const raw = String(value ?? '').trim().toLowerCase();
-    if (raw === 'true' || raw === '1' || raw === 'yes' || raw === 'on') return true;
-    if (raw === 'false' || raw === '0' || raw === 'no' || raw === 'off') return false;
-
-    // Keep legacy base/top layers full-height unless explicitly enabled.
-    const normalizedId = String(layerId || '').trim().toLowerCase();
-    if (normalizedId === 'base' || normalizedId === 'top' || normalizedId === 'legacy_base' || normalizedId === 'legacy_top') {
-        return false;
-    }
-    return true;
-}
-
-function mapLegacyScaleToLayerSize(scale) {
-    const value = String(scale || '').trim().toLowerCase();
-    if (value === 'original') return 'auto';
-    if (value === 'stretch') return '100% 100%';
-    if (value === 'zoom') return 'contain';
-    if (value === 'crop') return 'cover';
-    return normalizeBackgroundLayerSize(value || 'cover');
-}
-
-function mapLayerSizeToLegacyScale(sizeValue) {
-    const normalized = normalizeBackgroundLayerSize(sizeValue);
-    if (normalized === 'auto') return 'original';
-    if (normalized === '100% 100%') return 'stretch';
-    if (normalized === 'contain') return 'zoom';
-    if (normalized === '100% auto') return '100% auto';
-    return 'crop';
-}
-
-function normalizeBackgroundSurfaceTarget(value) {
-    const raw = String(value || '').trim().toLowerCase();
-    if (raw === 'top' || raw === 'title') return raw;
-    return 'base';
-}
-
-function normalizeBaseBackgroundPosition(value) {
-    const raw = String(value || '').trim().toLowerCase();
-    if (raw === 'fixed') return 'fixed';
-    if (raw === 'centered') return 'centered';
-    return normalizeBackgroundLayerPosition(raw || 'center center');
-}
-
-function normalizeBaseBackgroundScale(value) {
-    const raw = String(value || '').trim().toLowerCase();
-    if (raw === 'original' || raw === 'stretch' || raw === 'crop' || raw === 'zoom') return raw;
-    return mapLayerSizeToLegacyScale(raw || 'cover');
-}
-
-function createDefaultBackgroundSurfaceDraft() {
-    return {
-        target: 'base',
-        base: {
-            position: 'centered',
-            repeat: 'no-repeat',
-            scale: 'crop',
-            offsetX: 0,
-            offsetY: 0
-        },
-        top: {
-            position: 'top center',
-            repeat: 'no-repeat',
-            scale: '100% auto',
-            offsetX: 0,
-            offsetY: 0
-        },
-        title: {
-            position: 'center center',
-            repeat: 'no-repeat',
-            scale: 'cover',
-            offsetX: 0,
-            offsetY: 0
-        }
-    };
-}
-
 function ensureBackgroundSurfaceDraft() {
     if (!backgroundSurfaceDraft) {
         backgroundSurfaceDraft = createDefaultBackgroundSurfaceDraft();
     }
     return backgroundSurfaceDraft;
-}
-
-function createBackgroundSurfaceDraftFromConfig(bgConfig = {}) {
-    const config = (bgConfig && typeof bgConfig === 'object') ? bgConfig : {};
-    const draft = createDefaultBackgroundSurfaceDraft();
-
-    const basePositionRaw = config.basePosition || config.position || draft.base.position;
-    draft.base.position = normalizeBaseBackgroundPosition(basePositionRaw);
-    draft.base.repeat = normalizeBackgroundLayerRepeat(config.baseRepeat || config.repeat || draft.base.repeat);
-    draft.base.scale = normalizeBaseBackgroundScale(config.baseScale || config.scale || draft.base.scale);
-    draft.base.offsetX = normalizeBackgroundLayerOffset(config.baseOffsetX ?? config.offsetX ?? config.base?.offsetX ?? draft.base.offsetX);
-    draft.base.offsetY = normalizeBackgroundLayerOffset(config.baseOffsetY ?? config.offsetY ?? config.base?.offsetY ?? draft.base.offsetY);
-    if (String(config.baseBehavior || '').trim().toLowerCase() === 'fixed') {
-        draft.base.position = 'fixed';
-    }
-
-    draft.top.position = normalizeBackgroundLayerPosition(config.topPosition || config.top?.position || draft.top.position);
-    draft.top.repeat = normalizeBackgroundLayerRepeat(config.topRepeat || config.top?.repeat || draft.top.repeat);
-    draft.top.scale = normalizeBackgroundLayerSize(config.topScale || config.top?.scale || draft.top.scale);
-    draft.top.offsetX = normalizeBackgroundLayerOffset(config.topOffsetX ?? config.top?.offsetX ?? draft.top.offsetX);
-    draft.top.offsetY = normalizeBackgroundLayerOffset(config.topOffsetY ?? config.top?.offsetY ?? draft.top.offsetY);
-
-    draft.title.position = normalizeBackgroundLayerPosition(config.titlePosition || config.title?.position || draft.title.position);
-    draft.title.repeat = normalizeBackgroundLayerRepeat(config.titleRepeat || config.title?.repeat || draft.title.repeat);
-    draft.title.scale = normalizeBackgroundLayerSize(
-        config.titleSize || config.titleScale || config.title?.size || config.title?.scale || draft.title.scale
-    );
-    draft.title.offsetX = normalizeBackgroundLayerOffset(config.titleOffsetX ?? config.title?.offsetX ?? draft.title.offsetX);
-    draft.title.offsetY = normalizeBackgroundLayerOffset(config.titleOffsetY ?? config.title?.offsetY ?? draft.title.offsetY);
-
-    draft.target = normalizeBackgroundSurfaceTarget(config.editTarget || draft.target);
-    return draft;
 }
 
 function setBackgroundSurfaceDraftFromConfig(bgConfig = {}) {
@@ -1247,132 +691,8 @@ function updateBackgroundSurfaceDraftFromControls() {
     }
 }
 
-function createBackgroundLayerDraft(overrides = {}) {
-    const explicitBehavior = overrides.behavior || overrides.attachment;
-    const fallbackBehavior = String(overrides.position || '').trim().toLowerCase() === 'fixed' ? 'fixed' : 'scroll';
-    const layerId = String(overrides.id || makeLayerId());
-    return {
-        id: layerId,
-        name: String(overrides.name || '').trim(),
-        image: typeof overrides.image === 'string' && overrides.image.trim().length > 0 ? overrides.image : null,
-        imageName: String(overrides.imageName || overrides.fileName || '').trim(),
-        position: normalizeBackgroundLayerPosition(overrides.position || 'center center'),
-        size: normalizeBackgroundLayerSize(overrides.size || overrides.scale || 'cover'),
-        repeat: normalizeBackgroundLayerRepeat(overrides.repeat || 'no-repeat'),
-        behavior: normalizeBackgroundLayerBehavior(explicitBehavior || fallbackBehavior),
-        opacity: normalizeBackgroundLayerOpacity(overrides.opacity ?? 1),
-        blendMode: normalizeBackgroundLayerBlendMode(overrides.blendMode || 'normal'),
-        offsetX: normalizeBackgroundLayerOffset(overrides.offsetX ?? 0),
-        offsetY: normalizeBackgroundLayerOffset(overrides.offsetY ?? 0),
-        belowTitleBar: normalizeBackgroundLayerBelowTitleBar(overrides.belowTitleBar, layerId),
-        collapsed: Boolean(overrides.collapsed)
-    };
-}
-
-function cloneBackgroundLayerDrafts(layers = []) {
-    return (Array.isArray(layers) ? layers : [])
-        .map((layer) => createBackgroundLayerDraft(layer))
-        .filter((layer) => layer && layer.image);
-}
-
-function extractBackgroundLayers(bgConfig = {}) {
-    const config = bgConfig || {};
-    if (Array.isArray(config.layers) && config.layers.length > 0) {
-        return cloneBackgroundLayerDrafts(config.layers);
-    }
-
-    const layers = [];
-    if (config.image) {
-        const baseBehavior = normalizeBackgroundLayerBehavior(config.baseBehavior || (config.position === 'fixed' ? 'fixed' : 'scroll'));
-        const basePosition = normalizeBackgroundLayerPosition(config.basePosition || config.position || 'center center');
-        layers.push(createBackgroundLayerDraft({
-            id: 'legacy_base',
-            image: config.image,
-            imageName: config.imageName || '',
-            position: basePosition,
-            size: mapLegacyScaleToLayerSize(config.baseScale || config.scale || 'crop'),
-            repeat: config.repeat || 'no-repeat',
-            behavior: baseBehavior,
-            opacity: 1,
-            blendMode: 'normal',
-            offsetX: config.baseOffsetX ?? config.offsetX ?? 0,
-            offsetY: config.baseOffsetY ?? config.offsetY ?? 0
-        }));
-    }
-
-    const topImage = config.topImage || config.top?.image || null;
-    if (topImage) {
-        layers.push(createBackgroundLayerDraft({
-            id: 'legacy_top',
-            image: topImage,
-            imageName: config.topImageName || '',
-            position: config.topPosition || config.top?.position || 'top center',
-            size: config.topScale || config.top?.scale || '100% auto',
-            repeat: config.topRepeat || config.top?.repeat || 'no-repeat',
-            behavior: config.topBehavior || config.top?.behavior || 'scroll',
-            opacity: config.topOpacity ?? config.top?.opacity ?? 1,
-            blendMode: config.topBlendMode || config.top?.blendMode || 'normal',
-            offsetX: config.topOffsetX ?? config.top?.offsetX ?? 0,
-            offsetY: config.topOffsetY ?? config.top?.offsetY ?? 0
-        }));
-    }
-
-    return layers;
-}
-
-function hasThemeBackgroundLayers(bgConfig = {}) {
-    const titleImage = bgConfig?.titleImage || bgConfig?.title?.image || null;
-    return Boolean(titleImage) || extractBackgroundLayers(bgConfig).some((layer) => layer.image);
-}
-
 function setBackgroundLayerDrafts(layers = []) {
     backgroundLayerDrafts = cloneBackgroundLayerDrafts(layers);
-}
-
-function extractAdditionalLayerDrafts(bgConfig = {}, baseImage = null, topImage = null) {
-    const allLayers = extractBackgroundLayers(bgConfig);
-    if (allLayers.length === 0) return [];
-
-    const extras = [...allLayers];
-    const removeFirstByImage = (imageValue) => {
-        if (!imageValue) return;
-        const idx = extras.findIndex((layer) => layer.image === imageValue);
-        if (idx >= 0) extras.splice(idx, 1);
-    };
-
-    removeFirstByImage(baseImage || null);
-    removeFirstByImage(topImage || null);
-    return extras;
-}
-
-function shiftColorHsl(hexColor, options = {}) {
-    const parsed = parseColorToHex(hexColor) || '#4f8cff';
-    const rgb = hexToRgb(parsed);
-    if (!rgb) return parsed;
-
-    const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-    // ui-utils uses normalized HSL (h/s/l in 0..1). Convert to degree/percent space
-    // for palette math, then convert back before hslToRgb.
-    const baseHue = hsl.h * 360;
-    const baseSat = hsl.s * 100;
-    const baseLight = hsl.l * 100;
-    const hueShift = Number(options.hueShift || 0);
-    const satMul = Number(options.satMul || 1);
-    const satAdd = Number(options.satAdd || 0);
-    const lightMul = Number(options.lightMul || 1);
-    const lightAdd = Number(options.lightAdd || 0);
-
-    let h = (baseHue + hueShift) % 360;
-    if (h < 0) h += 360;
-    let s = clampNumber((baseSat * satMul) + satAdd, 0, 100);
-    let l = clampNumber((baseLight * lightMul) + lightAdd, 0, 100);
-
-    if (Number.isFinite(options.minSat)) s = Math.max(Number(options.minSat), s);
-    if (Number.isFinite(options.maxSat)) s = Math.min(Number(options.maxSat), s);
-    if (Number.isFinite(options.minLight)) l = Math.max(Number(options.minLight), l);
-    if (Number.isFinite(options.maxLight)) l = Math.min(Number(options.maxLight), l);
-
-    return rgbToHex(...Object.values(hslToRgb(h / 360, s / 100, l / 100)));
 }
 
 function getThemeEditorMode() {
@@ -1400,217 +720,6 @@ function setThemeEditorMode(mode, options = {}) {
         localStorage.setItem(THEME_EDITOR_MODE_STORAGE_KEY, normalizedMode);
     }
     return normalizedMode;
-}
-
-function buildBasicPalette(baseColor, requestedVariant = 'auto', intensityValue = 100) {
-    const base = parseColorToHex(baseColor) || '#5aa9ff';
-    const rgb = hexToRgb(base);
-    const hsl = rgb ? rgbToHsl(rgb.r, rgb.g, rgb.b) : { h: 210 / 360, s: 0.75, l: 0.6 };
-    const variant = normalizeBasicVariant(requestedVariant);
-    const intensity = normalizeBasicIntensity(intensityValue) / 100;
-    const useLightUi = (variant === 'light') || (variant === 'auto' && hsl.l >= 0.58);
-
-    let palette;
-    if (useLightUi) {
-        palette = {
-            bgPrimary: shiftColorHsl(base, { satMul: 0.16, lightAdd: 88, minLight: 94, maxLight: 99 }),
-            bgSecondary: shiftColorHsl(base, { satMul: 0.2, lightAdd: 82, minLight: 90, maxLight: 96 }),
-            bgTertiary: shiftColorHsl(base, { satMul: 0.22, lightAdd: 78, minLight: 86, maxLight: 94 }),
-            bgQuaternary: shiftColorHsl(base, { satMul: 0.24, lightAdd: 74, minLight: 83, maxLight: 92 }),
-            bgHeader: shiftColorHsl(base, { satMul: 0.18, lightAdd: 80, minLight: 88, maxLight: 95 }),
-            bgSidebar: shiftColorHsl(base, { satMul: 0.2, lightAdd: 77, minLight: 85, maxLight: 93 }),
-            bgActionbar: shiftColorHsl(base, { satMul: 0.22, lightAdd: 73, minLight: 82, maxLight: 91 }),
-            textPrimary: '#1D2938',
-            textSecondary: shiftColorHsl(base, { satMul: 0.12, lightAdd: 30, minLight: 44, maxLight: 56 }),
-            accentColor: shiftColorHsl(base, { satMul: 1.1, satAdd: 4, lightAdd: -6, minLight: 40, maxLight: 58 }),
-            borderColor: shiftColorHsl(base, { satMul: 0.24, lightAdd: 58, minLight: 70, maxLight: 84 }),
-            appGradientA: shiftColorHsl(base, { satMul: 0.25, lightAdd: 84, minLight: 90, maxLight: 97 }),
-            appGradientB: shiftColorHsl(base, { satMul: 0.35, lightAdd: 74, minLight: 82, maxLight: 92 }),
-            appGradientC: shiftColorHsl(base, { satMul: 0.55, lightAdd: 58, minLight: 70, maxLight: 86 }),
-            appGradientAngle: '145deg',
-            successColor: '#2e9f5f',
-            dangerColor: '#d45353'
-        };
-    } else {
-        palette = {
-            bgPrimary: shiftColorHsl(base, { satMul: 0.42, lightAdd: -58, minLight: 7, maxLight: 16 }),
-            bgSecondary: shiftColorHsl(base, { satMul: 0.4, lightAdd: -50, minLight: 10, maxLight: 22 }),
-            bgTertiary: shiftColorHsl(base, { satMul: 0.36, lightAdd: -44, minLight: 13, maxLight: 26 }),
-            bgQuaternary: shiftColorHsl(base, { satMul: 0.34, lightAdd: -38, minLight: 16, maxLight: 30 }),
-            bgHeader: shiftColorHsl(base, { satMul: 0.38, lightAdd: -48, minLight: 12, maxLight: 24 }),
-            bgSidebar: shiftColorHsl(base, { satMul: 0.34, lightAdd: -42, minLight: 14, maxLight: 28 }),
-            bgActionbar: shiftColorHsl(base, { satMul: 0.32, lightAdd: -36, minLight: 17, maxLight: 32 }),
-            textPrimary: '#F2F7FF',
-            textSecondary: shiftColorHsl(base, { satMul: 0.2, lightAdd: 34, minLight: 72, maxLight: 86 }),
-            accentColor: shiftColorHsl(base, { satMul: 1.15, satAdd: 6, lightAdd: 12, minLight: 52, maxLight: 72 }),
-            borderColor: shiftColorHsl(base, { satMul: 0.3, lightAdd: -22, minLight: 22, maxLight: 38 }),
-            appGradientA: shiftColorHsl(base, { satMul: 0.65, lightAdd: -34, minLight: 16, maxLight: 28 }),
-            appGradientB: shiftColorHsl(base, { satMul: 0.78, lightAdd: -24, minLight: 22, maxLight: 36 }),
-            appGradientC: shiftColorHsl(base, { satMul: 0.95, lightAdd: -12, minLight: 30, maxLight: 48 }),
-            appGradientAngle: '160deg',
-            successColor: '#49c06e',
-            dangerColor: '#ff6464'
-        };
-    }
-
-    const delta = intensity - 1;
-    const bgKeys = ['bgPrimary', 'bgSecondary', 'bgTertiary', 'bgQuaternary', 'bgHeader', 'bgSidebar', 'bgActionbar'];
-    bgKeys.forEach((key) => {
-        if (!palette[key]) return;
-        palette[key] = shiftColorHsl(palette[key], {
-            satAdd: delta * (useLightUi ? 10 : 14),
-            lightAdd: delta * (useLightUi ? 4 : -4)
-        });
-    });
-    palette.accentColor = shiftColorHsl(palette.accentColor, {
-        satAdd: delta * 18,
-        lightAdd: delta * 5
-    });
-    palette.borderColor = shiftColorHsl(palette.borderColor, {
-        satAdd: delta * 8,
-        lightAdd: delta * (useLightUi ? 4 : -3)
-    });
-    palette.textSecondary = shiftColorHsl(palette.textSecondary, {
-        satAdd: delta * 5,
-        lightAdd: delta * (useLightUi ? -3 : 3)
-    });
-    palette.appGradientA = shiftColorHsl(palette.appGradientA, { satAdd: delta * 10, lightAdd: delta * 5 });
-    palette.appGradientB = shiftColorHsl(palette.appGradientB, { satAdd: delta * 12, lightAdd: delta * 4 });
-    palette.appGradientC = shiftColorHsl(palette.appGradientC, { satAdd: delta * 15, lightAdd: delta * 3 });
-
-    return palette;
-}
-
-function resolveBasicVariantForEditor(baseColor, requestedVariant) {
-    const normalizedRequested = normalizeBasicVariant(requestedVariant);
-    if (normalizedRequested !== 'auto') return normalizedRequested;
-
-    // Auto mode should follow the base color intent.
-    return inferUiToneFromColor(baseColor, 'dark');
-}
-
-function resolveBasicVariantForRuntime(baseColor, requestedVariant) {
-    const normalizedRequested = normalizeBasicVariant(requestedVariant);
-    if (normalizedRequested === 'auto') {
-        return inferUiToneFromColor(baseColor, 'dark');
-    }
-    return normalizedRequested;
-}
-
-function resolveThemeColorsForRuntime(theme) {
-    const colors = theme?.colors || {};
-    const mode = normalizeThemeCustomizationMode(theme?.editor?.customizationMode);
-    if (mode !== 'basic') {
-        const repairedExtended = looksCorruptedBlackPalette(colors)
-            ? repairBlackPaletteFromAccent(colors, theme)
-            : colors;
-        return normalizePaletteToActiveTone(repairedExtended, theme);
-    }
-
-    const baseColor = parseColorToHex(theme?.editor?.basicBaseColor)
-        || parseColorToHex(colors.accentColor)
-        || '#5aa9ff';
-    const variant = resolveBasicVariantForRuntime(baseColor, theme?.editor?.basicVariant || 'auto');
-    const intensity = normalizeBasicIntensity(theme?.editor?.basicIntensity ?? 100);
-    const generated = buildBasicPalette(baseColor, variant, intensity);
-    const brandEditor = resolveBrandEditorConfig(theme?.editor || {});
-    generated.brandColor = resolveBasicBrandColor(generated.accentColor, brandEditor.color || colors.brandColor || '', {
-        enabled: brandEditor.enabled,
-        mode: brandEditor.source,
-        strength: brandEditor.strength,
-        textSecondary: generated.textSecondary
-    });
-
-    // Regenerate core palette for basic mode to avoid stale/broken saved colors.
-    const basicColors = {
-        ...colors,
-        ...generated
-    };
-    const repairedBasic = looksCorruptedBlackPalette(basicColors)
-        ? repairBlackPaletteFromAccent(basicColors, theme)
-        : basicColors;
-    return normalizePaletteToActiveTone(repairedBasic, theme);
-}
-
-function normalizePaletteToActiveTone(colors = {}, theme = null) {
-    const activeTone = String(document.documentElement.getAttribute('data-theme') || '').toLowerCase();
-    if (activeTone !== 'light' && activeTone !== 'dark') return colors;
-
-    const bgCandidate = parseColorToHex(colors.bgPrimary) || parseColorToHex(colors.bgSecondary);
-    const paletteTone = inferUiToneFromColor(bgCandidate || '#0b1220', 'dark');
-    if (paletteTone === activeTone) return colors;
-
-    const baseColor = parseColorToHex(theme?.editor?.basicBaseColor)
-        || parseColorToHex(colors.accentColor)
-        || '#5aa9ff';
-    const intensity = normalizeBasicIntensity(theme?.editor?.basicIntensity ?? 100);
-    const repaired = buildBasicPalette(baseColor, activeTone, intensity);
-    if (normalizeThemeCustomizationMode(theme?.editor?.customizationMode) === 'basic') {
-        const brandEditor = resolveBrandEditorConfig(theme?.editor || {});
-        repaired.brandColor = resolveBasicBrandColor(repaired.accentColor, brandEditor.color || colors.brandColor || '', {
-            enabled: brandEditor.enabled,
-            mode: brandEditor.source,
-            strength: brandEditor.strength,
-            textSecondary: repaired.textSecondary
-        });
-    }
-    return {
-        ...colors,
-        ...repaired
-    };
-}
-
-function isNearBlackHex(hexColor) {
-    const parsed = parseColorToHex(hexColor);
-    if (!parsed) return false;
-    const rgb = hexToRgb(parsed);
-    if (!rgb || !Number.isFinite(rgb.r) || !Number.isFinite(rgb.g) || !Number.isFinite(rgb.b)) return false;
-    return rgb.r <= 8 && rgb.g <= 8 && rgb.b <= 8;
-}
-
-function looksCorruptedBlackPalette(colors = {}) {
-    const keys = [
-        'bgPrimary',
-        'bgSecondary',
-        'bgTertiary',
-        'bgHeader',
-        'bgSidebar',
-        'bgActionbar',
-        'appGradientA',
-        'appGradientB',
-        'appGradientC'
-    ];
-    let blackCount = 0;
-    keys.forEach((key) => {
-        if (isNearBlackHex(colors[key])) blackCount += 1;
-    });
-
-    const accent = parseColorToHex(colors.accentColor);
-    const accentIsDark = isNearBlackHex(accent);
-    return blackCount >= 6 && !accentIsDark;
-}
-
-function repairBlackPaletteFromAccent(colors = {}, theme = null) {
-    const baseColor = parseColorToHex(theme?.editor?.basicBaseColor)
-        || parseColorToHex(colors.accentColor)
-        || '#5aa9ff';
-    const activeTone = String(document.documentElement.getAttribute('data-theme') || '').toLowerCase();
-    const variant = activeTone === 'light' ? 'light' : 'dark';
-    const intensity = normalizeBasicIntensity(theme?.editor?.basicIntensity ?? 100);
-    const repaired = buildBasicPalette(baseColor, variant, intensity);
-    if (normalizeThemeCustomizationMode(theme?.editor?.customizationMode) === 'basic') {
-        const brandEditor = resolveBrandEditorConfig(theme?.editor || {});
-        repaired.brandColor = resolveBasicBrandColor(repaired.accentColor, brandEditor.color || colors.brandColor || '', {
-            enabled: brandEditor.enabled,
-            mode: brandEditor.source,
-            strength: brandEditor.strength,
-            textSecondary: repaired.textSecondary
-        });
-    }
-    return {
-        ...colors,
-        ...repaired
-    };
 }
 
 function collectThemeColorsFromInputs() {
@@ -2161,6 +1270,57 @@ export function setupThemeCustomizationControls() {
         });
     }
 
+    const fontBodyPresetInput = document.getElementById('theme-font-body-preset');
+    if (fontBodyPresetInput) {
+        const clone = fontBodyPresetInput.cloneNode(true);
+        fontBodyPresetInput.parentNode.replaceChild(clone, fontBodyPresetInput);
+        clone.addEventListener('change', () => {
+            applyThemeFontsFromForm();
+        });
+    }
+
+    const fontHeadingPresetInput = document.getElementById('theme-font-heading-preset');
+    if (fontHeadingPresetInput) {
+        const clone = fontHeadingPresetInput.cloneNode(true);
+        fontHeadingPresetInput.parentNode.replaceChild(clone, fontHeadingPresetInput);
+        clone.addEventListener('change', () => {
+            applyThemeFontsFromForm();
+        });
+    }
+
+    const fontBodyCustomInput = document.getElementById('theme-font-body-custom');
+    if (fontBodyCustomInput) {
+        const clone = fontBodyCustomInput.cloneNode(true);
+        fontBodyCustomInput.parentNode.replaceChild(clone, fontBodyCustomInput);
+        clone.addEventListener('input', () => {
+            applyThemeFontsFromForm();
+        });
+        clone.addEventListener('change', () => {
+            applyThemeFontsFromForm();
+        });
+    }
+
+    const fontHeadingCustomInput = document.getElementById('theme-font-heading-custom');
+    if (fontHeadingCustomInput) {
+        const clone = fontHeadingCustomInput.cloneNode(true);
+        fontHeadingCustomInput.parentNode.replaceChild(clone, fontHeadingCustomInput);
+        clone.addEventListener('input', () => {
+            applyThemeFontsFromForm();
+        });
+        clone.addEventListener('change', () => {
+            applyThemeFontsFromForm();
+        });
+    }
+
+    const fontPixelModeInput = document.getElementById('theme-font-pixel-mode');
+    if (fontPixelModeInput) {
+        const clone = fontPixelModeInput.cloneNode(true);
+        fontPixelModeInput.parentNode.replaceChild(clone, fontPixelModeInput);
+        clone.addEventListener('change', () => {
+            applyThemeFontsFromForm();
+        });
+    }
+
     const llmEnergyInput = document.getElementById('theme-llm-energy');
     if (llmEnergyInput) {
         const clone = llmEnergyInput.cloneNode(true);
@@ -2551,7 +1711,48 @@ function clearTitleBackgroundLayer(gameGrid = null) {
     grid.style.setProperty('--theme-title-strip-opacity', '0');
 }
 
-function applyTopBackgroundLayer(gameGrid, bgConfig = {}) {
+function isDataImageUrl(value) {
+    const text = String(value || '').trim();
+    return /^data:image\//i.test(text);
+}
+
+function dataUrlToBlob(dataUrl) {
+    const raw = String(dataUrl || '').trim();
+    const match = raw.match(/^data:([^;,]+)?(;base64)?,(.*)$/i);
+    if (!match) return null;
+    const mimeType = String(match[1] || 'application/octet-stream').trim() || 'application/octet-stream';
+    const isBase64 = Boolean(match[2]);
+    const payload = String(match[3] || '');
+    try {
+        if (isBase64) {
+            const binary = atob(payload);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i += 1) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            return new Blob([bytes], { type: mimeType });
+        }
+        return new Blob([decodeURIComponent(payload)], { type: mimeType });
+    } catch (_error) {
+        return null;
+    }
+}
+
+function resolveThemeBackgroundAssetUrl(source, urlsInUse = null, dataUrlCache = null) {
+    const raw = String(source || '').trim();
+    if (!raw) return '';
+    return raw;
+}
+
+function pruneThemeBackgroundAssetUrls(urlsInUse = null) {
+    void urlsInUse;
+}
+
+function releaseAllThemeBackgroundAssetUrls() {
+    pruneThemeBackgroundAssetUrls(new Set());
+}
+
+function applyTopBackgroundLayer(gameGrid, bgConfig = {}, assetUrlsInUse = null, dataUrlCache = null) {
     if (!gameGrid) return;
     const topImage = bgConfig.topImage || bgConfig.top?.image || null;
     if (!topImage) {
@@ -2559,7 +1760,7 @@ function applyTopBackgroundLayer(gameGrid, bgConfig = {}) {
         return;
     }
 
-    const safeTopImage = String(topImage).replace(/'/g, "\\'");
+    const safeTopImage = String(resolveThemeBackgroundAssetUrl(topImage, assetUrlsInUse, dataUrlCache)).replace(/'/g, "\\'");
     const topHeight = clampNumber(Number.parseInt(bgConfig.topHeight ?? bgConfig.top?.height ?? 220, 10), 60, 640);
     const topOpacity = clampNumber(Number.parseFloat(bgConfig.topOpacity ?? bgConfig.top?.opacity ?? 1), 0, 1);
     const topSize = normalizeBackgroundLayerSize(String(bgConfig.topScale ?? bgConfig.top?.scale ?? '100% auto').trim() || '100% auto');
@@ -2577,7 +1778,7 @@ function applyTopBackgroundLayer(gameGrid, bgConfig = {}) {
     gameGrid.style.setProperty('--theme-top-bg-opacity', String(topOpacity));
 }
 
-function applyTitleBackgroundLayer(gameGrid, bgConfig = {}) {
+function applyTitleBackgroundLayer(gameGrid, bgConfig = {}, assetUrlsInUse = null, dataUrlCache = null) {
     if (!gameGrid) return;
     const titleImage = bgConfig.titleImage || bgConfig.title?.image || null;
     if (!titleImage) {
@@ -2585,7 +1786,7 @@ function applyTitleBackgroundLayer(gameGrid, bgConfig = {}) {
         return;
     }
 
-    const safeTitleImage = String(titleImage).replace(/'/g, "\\'");
+    const safeTitleImage = String(resolveThemeBackgroundAssetUrl(titleImage, assetUrlsInUse, dataUrlCache)).replace(/'/g, "\\'");
     const titleOpacity = clampNumber(Number.parseFloat(bgConfig.titleOpacity ?? bgConfig.title?.opacity ?? 0.36), 0, 1);
     const titleSize = normalizeBackgroundLayerSize(String(bgConfig.titleSize ?? bgConfig.title?.size ?? 'cover').trim() || 'cover');
     const titleRepeat = String(bgConfig.titleRepeat ?? bgConfig.title?.repeat ?? 'no-repeat').trim() || 'no-repeat';
@@ -2610,6 +1811,7 @@ function applyTitleBackgroundLayer(gameGrid, bgConfig = {}) {
 function clearGameGridBackgroundLayers(gameGrid = null) {
     const grid = gameGrid || document.querySelector('main.game-grid');
     if (!grid) return;
+    lastAppliedBackgroundSignature = '';
     grid.style.backgroundImage = 'none';
     grid.style.backgroundRepeat = 'no-repeat';
     grid.style.backgroundSize = 'cover';
@@ -2619,6 +1821,7 @@ function clearGameGridBackgroundLayers(gameGrid = null) {
     clearTitleBackgroundLayer(grid);
     const host = grid.querySelector('.theme-bg-layer-host');
     if (host) host.innerHTML = '';
+    releaseAllThemeBackgroundAssetUrls();
 }
 
 function ensureThemeBackgroundLayerHost(gameGrid) {
@@ -2655,12 +1858,54 @@ function resolveLayerSizeCss(sizeValue) {
     return size;
 }
 
+function describeBackgroundAssetForSignature(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    if (!isDataImageUrl(raw)) return raw;
+    return `data:${raw.length}:${raw.slice(0, 24)}:${raw.slice(-24)}`;
+}
+
+function buildBackgroundApplySignature(config = {}, layers = []) {
+    const titleImage = config?.titleImage || config?.title?.image || '';
+    const titlePart = [
+        describeBackgroundAssetForSignature(titleImage),
+        Number(config?.titleOpacity ?? config?.title?.opacity ?? 0.36),
+        String(config?.titleSize ?? config?.title?.size ?? 'cover'),
+        String(config?.titleRepeat ?? config?.title?.repeat ?? 'no-repeat'),
+        String(config?.titlePosition ?? config?.title?.position ?? 'center center'),
+        Number(config?.titleOffsetX ?? config?.title?.offsetX ?? 0),
+        Number(config?.titleOffsetY ?? config?.title?.offsetY ?? 0)
+    ].join('|');
+    const layerParts = (Array.isArray(layers) ? layers : []).map((layer) => [
+        describeBackgroundAssetForSignature(layer?.image || ''),
+        String(layer?.position || ''),
+        String(layer?.size || ''),
+        String(layer?.repeat || ''),
+        String(layer?.behavior || ''),
+        String(layer?.blendMode || ''),
+        Number(layer?.opacity ?? 1),
+        Number(layer?.offsetX ?? 0),
+        Number(layer?.offsetY ?? 0),
+        layer?.belowTitleBar ? '1' : '0'
+    ].join('|'));
+    return `${titlePart}||${layerParts.join('||')}`;
+}
+
 export function applyBackgroundImage(bgConfig) {
     const gameGrid = document.querySelector('main.game-grid');
     if (!gameGrid) return;
     
     const config = bgConfig || {};
     const layers = extractBackgroundLayers(config);
+    const applySignature = buildBackgroundApplySignature(config, layers);
+    if (applySignature && applySignature === lastAppliedBackgroundSignature) {
+        return;
+    }
+    lastAppliedBackgroundSignature = applySignature;
+    const assetUrlsInUse = new Set();
+    const dataUrlCache = new Map();
+    // Drop stale object URLs immediately so each theme switch starts from a clean slate.
+    pruneThemeBackgroundAssetUrls(new Set());
 
     disableFixedBackgroundTracking();
     gameGrid.style.backgroundImage = 'none';
@@ -2670,13 +1915,17 @@ export function applyBackgroundImage(bgConfig) {
     gameGrid.style.backgroundPosition = 'center';
     clearTopBackgroundLayer(gameGrid);
     clearTitleBackgroundLayer(gameGrid);
-    applyTitleBackgroundLayer(gameGrid, config);
+    applyTitleBackgroundLayer(gameGrid, config, assetUrlsInUse, dataUrlCache);
 
     const host = ensureThemeBackgroundLayerHost(gameGrid);
-    if (!host) return;
+    if (!host) {
+        pruneThemeBackgroundAssetUrls(assetUrlsInUse);
+        return;
+    }
     host.innerHTML = '';
 
     if (layers.length === 0) {
+        pruneThemeBackgroundAssetUrls(assetUrlsInUse);
         return;
     }
 
@@ -2688,7 +1937,8 @@ export function applyBackgroundImage(bgConfig) {
         const layerEl = document.createElement('div');
         layerEl.className = 'theme-bg-layer';
         layerEl.style.zIndex = String(index);
-        layerEl.style.backgroundImage = `url('${String(layer.image).replace(/'/g, "\\'")}')`;
+        const layerImageUrl = resolveThemeBackgroundAssetUrl(layer.image, assetUrlsInUse, dataUrlCache);
+        layerEl.style.backgroundImage = `url('${String(layerImageUrl).replace(/'/g, "\\'")}')`;
         layerEl.style.backgroundPosition = resolveBackgroundPositionWithOffset(layer.position, layer.offsetX, layer.offsetY);
         layerEl.style.backgroundSize = resolveLayerSizeCss(layer.size);
         layerEl.style.backgroundRepeat = layer.repeat;
@@ -2712,6 +1962,8 @@ export function applyBackgroundImage(bgConfig) {
         }
         host.appendChild(layerEl);
     });
+
+    pruneThemeBackgroundAssetUrls(assetUrlsInUse);
 }
 
 export function applyCustomTheme(theme) {
@@ -2758,12 +2010,18 @@ export function applyCustomTheme(theme) {
 }
 
 export function getCustomThemes() {
-    const themes = localStorage.getItem('customThemes');
-    return themes ? JSON.parse(themes) : [];
+    const raw = localStorage.getItem('customThemes');
+    if (!raw) return [];
+    try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed.filter((theme) => theme && typeof theme === 'object') : [];
+    } catch (_error) {
+        return [];
+    }
 }
 
 export function saveCustomTheme(theme) {
-    const customThemes = getCustomThemes();
+    const customThemes = [...getCustomThemes()];
     const index = customThemes.findIndex(t => t.id === theme.id);
     
     if (index >= 0) {
@@ -2777,51 +2035,85 @@ export function saveCustomTheme(theme) {
     renderThemeManager();
 }
 
-export function setTheme(theme) {
-    currentTheme = theme;
+export function setTheme(theme, options = {}) {
+    const nextTheme = String(theme || 'dark').trim() || 'dark';
+    const force = options && options.force === true;
+    const allowSameForce = options && options.allowSameForce === true;
+    const now = Date.now();
+    if (!force && nextTheme === currentTheme) {
+        const themeManagerModal = document.getElementById('theme-manager-modal');
+        if (themeManagerModal && themeManagerModal.classList.contains('active')) {
+            syncThemeManagerActiveItem(nextTheme);
+        }
+        return;
+    }
+    // Hard guard against accidental re-application loops.
+    if (nextTheme === lastAppliedThemeId) {
+        if (!force) return;
+        if (force && !allowSameForce) return;
+    }
+    if (nextTheme === currentTheme && (now - lastAppliedThemeAt) < 400) return;
+    if (isApplyingTheme) {
+        queuedThemeApply = null;
+        return;
+    }
+    isApplyingTheme = true;
+    currentTheme = nextTheme;
     const root = document.documentElement;
     const themeManagerModal = document.getElementById('theme-manager-modal');
 
-    clearThemeInlineVariables(root);
-    disableFixedBackgroundTracking();
-    applyThemeFonts(DEFAULT_THEME_FONTS);
-    applyThemeTextEffects(null);
+    try {
+        clearThemeInlineVariables(root);
+        disableFixedBackgroundTracking();
+        applyThemeFonts(DEFAULT_THEME_FONTS);
+        applyThemeTextEffects(null);
 
-    if (theme === 'dark' || theme === 'light') {
-        root.setAttribute('data-theme', theme);
-        clearGameGridBackgroundLayers();
-        const styles = getComputedStyle(root);
-        const matched = buildPaletteMatchedLogoTextEffect({
-            bgPrimary: styles.getPropertyValue('--bg-primary'),
-            accentColor: styles.getPropertyValue('--accent-color'),
-            brandColor: styles.getPropertyValue('--brand-color')
-        }, { tone: theme });
-        applyThemeTextEffects({ logo: matched });
-    } else {
-        const builtInTheme = getBuiltInPresetTheme(theme);
-        if (builtInTheme) {
-            applyCustomTheme(builtInTheme);
+        if (nextTheme === 'dark' || nextTheme === 'light') {
+            root.setAttribute('data-theme', nextTheme);
+            clearGameGridBackgroundLayers();
+            const styles = getComputedStyle(root);
+            const matched = buildPaletteMatchedLogoTextEffect({
+                bgPrimary: styles.getPropertyValue('--bg-primary'),
+                accentColor: styles.getPropertyValue('--accent-color'),
+                brandColor: styles.getPropertyValue('--brand-color')
+            }, { tone: nextTheme });
+            applyThemeTextEffects({ logo: matched });
         } else {
-            const customThemes = getCustomThemes();
-            const customTheme = customThemes.find(t => t.id === theme);
-            if (customTheme) {
-                applyCustomTheme(customTheme);
+            const builtInTheme = getBuiltInPresetTheme(nextTheme);
+            if (builtInTheme) {
+                applyCustomTheme(builtInTheme);
             } else {
-                root.setAttribute('data-theme', 'dark');
-                clearGameGridBackgroundLayers();
+                const customTheme = getCustomThemes().find((entry) => String(entry?.id || '').trim() === nextTheme);
+                if (customTheme) {
+                    applyCustomTheme(customTheme);
+                } else {
+                    root.setAttribute('data-theme', 'dark');
+                    clearGameGridBackgroundLayers();
+                }
             }
         }
-    }
-    
-    if (themeManagerModal && themeManagerModal.classList.contains('active')) {
-        renderThemeManager();
-    }
 
-    requestDockLayoutRefresh();
-    window.setTimeout(() => requestDockLayoutRefresh(), 32);
-    window.setTimeout(() => requestDockLayoutRefresh(), 180);
+        if (themeManagerModal && themeManagerModal.classList.contains('active')) {
+            syncThemeManagerActiveItem(nextTheme);
+        }
 
-    syncSplashThemePreference(theme);
+        // Keep theme switching side effects minimal to avoid memory churn.
+        lastAppliedThemeId = nextTheme;
+        lastAppliedThemeAt = Date.now();
+    } finally {
+        isApplyingTheme = false;
+        queuedThemeApply = null;
+    }
+}
+
+function syncThemeManagerActiveItem(themeId = currentTheme) {
+    const modal = document.getElementById('theme-manager-modal');
+    if (!modal) return;
+    const selectedId = String(themeId || '').trim();
+    modal.querySelectorAll('.theme-item[data-theme-id]').forEach((item) => {
+        const itemId = String(item?.dataset?.themeId || '').trim();
+        item.classList.toggle('active', itemId === selectedId);
+    });
 }
 
 function readThemeColorForSplash(styles, cssVar, fallback) {
@@ -2865,6 +2157,7 @@ function syncSplashThemePreference(themeId) {
         textSecondary: readThemeColorForSplash(styles, '--text-secondary', fallback.textSecondary),
         accentColor: readThemeColorForSplash(styles, '--accent-color', fallback.accentColor),
         accentLight: readThemeColorForSplash(styles, '--accent-light', fallback.accentLight),
+        fontBody: String(styles.getPropertyValue('--font-body') || '').trim() || DEFAULT_THEME_FONTS.body,
         appGradientA: readThemeColorForSplash(styles, '--app-gradient-a', fallback.bgPrimary),
         appGradientB: readThemeColorForSplash(styles, '--app-gradient-b', fallback.bgSecondary),
         appGradientC: readThemeColorForSplash(styles, '--app-gradient-c', fallback.bgTertiary)
@@ -2950,7 +2243,7 @@ function getThemeDisplayName(themeId) {
 }
 
 export function deleteCustomTheme(id) {
-    const customThemes = getCustomThemes();
+    const customThemes = [...getCustomThemes()];
     const theme = customThemes.find(t => t.id === id);
     const themeName = theme ? theme.name : 'this theme';
 
@@ -2985,6 +2278,7 @@ export function renderThemeManager() {
             id: 'dark',
             name: getThemeDisplayName('dark'),
             data: {
+                fonts: DEFAULT_THEME_FONTS,
                 colors: {
                     appGradientA: '#0b1528',
                     appGradientB: '#0f2236',
@@ -2996,6 +2290,7 @@ export function renderThemeManager() {
             id: 'light',
             name: getThemeDisplayName('light'),
             data: {
+                fonts: DEFAULT_THEME_FONTS,
                 colors: {
                     appGradientA: '#dbe9f7',
                     appGradientB: '#e7f3ff',
@@ -3040,6 +2335,7 @@ export function renderThemeManager() {
 function createThemeItem(id, name, type, isActive, themeData) {
     const item = document.createElement('div');
     item.className = `theme-item ${isActive ? 'active' : ''}`;
+    item.dataset.themeId = String(id);
     
     const preview = document.createElement('div');
     preview.className = 'theme-preview';
@@ -3087,7 +2383,7 @@ function createThemeItem(id, name, type, isActive, themeData) {
         localStorage.setItem('theme', id);
         const themeSelect = document.getElementById('theme-select');
         if (themeSelect) themeSelect.value = id;
-        renderThemeManager();
+        syncThemeManagerActiveItem(id);
     });
 
     if (type === 'custom') {
@@ -3480,6 +2776,8 @@ export function editTheme(theme) {
     }
     setTextEffectControlState(textFx.enabled, textFx.mode, textFx.useColor4);
     applyThemeTextEffects({ logo: textFx });
+    setThemeFontControlsFromFonts(theme?.fonts || DEFAULT_THEME_FONTS);
+    applyThemeFontsFromForm({ markUnsaved: false });
 
     setThemeEditorMode(theme?.editor?.customizationMode || localStorage.getItem(THEME_EDITOR_MODE_STORAGE_KEY), { persist: false });
     
@@ -3507,7 +2805,7 @@ export function showThemeForm() {
 export function hideThemeForm() {
     document.getElementById('theme-form').style.display = 'none';
     editingThemeId = null;
-    setTheme(currentTheme); 
+    setTheme(currentTheme, { force: true, allowSameForce: true }); 
 }
 
 export function resetThemeForm() {
@@ -3639,6 +2937,8 @@ export function resetThemeForm() {
     setBackgroundLayerDrafts([]);
     renderBackgroundLayerEditor();
     applyBackgroundImage(getThemeBackgroundConfigFromForm());
+    setThemeFontControlsFromFonts(DEFAULT_THEME_FONTS);
+    applyThemeFontsFromForm({ markUnsaved: false });
 
     const startMode = normalizeThemeCustomizationMode(localStorage.getItem(THEME_EDITOR_MODE_STORAGE_KEY));
     setThemeEditorMode(startMode, { persist: false });
@@ -4307,6 +3607,7 @@ export function saveTheme() {
 
     const existingTheme = editingThemeId ? getCustomThemes().find((t) => t.id === editingThemeId) : null;
     const existingFonts = resolveThemeFonts(existingTheme?.fonts || null);
+    const formFonts = getThemeFontsFromForm(existingFonts);
     const backgroundConfig = getThemeBackgroundConfigFromForm();
     const textFxConfig = getTextEffectConfigFromForm();
     
@@ -4344,9 +3645,9 @@ export function saveTheme() {
             glassEffect: document.getElementById('glass-effect-toggle').checked
         },
         fonts: {
-            body: existingFonts.body,
-            heading: existingFonts.heading,
-            pixelMode: existingFonts.pixelMode
+            body: formFonts.body,
+            heading: formFonts.heading,
+            pixelMode: formFonts.pixelMode
         },
         textEffects: {
             logo: {
