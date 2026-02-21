@@ -1,0 +1,21 @@
+.fi {
+    display: inline-block;
+    width: 1.333333em;
+    line-height: 1em;
+    background-size: contain;
+    background-position: 50%;
+    background-repeat: no-repeat;
+}
+
+.fi::before {
+    content: "\00a0";
+}
+
+.fi-us { background-image: url('../node_modules/flag-icons/flags/4x3/us.svg'); }
+.fi-de { background-image: url('../node_modules/flag-icons/flags/4x3/de.svg'); }
+.fi-es { background-image: url('../node_modules/flag-icons/flags/4x3/es.svg'); }
+.fi-fr { background-image: url('../node_modules/flag-icons/flags/4x3/fr.svg'); }
+.fi-it { background-image: url('../node_modules/flag-icons/flags/4x3/it.svg'); }
+.fi-jp { background-image: url('../node_modules/flag-icons/flags/4x3/jp.svg'); }
+.fi-nl { background-image: url('../node_modules/flag-icons/flags/4x3/nl.svg'); }
+.fi-za { background-image: url('../node_modules/flag-icons/flags/4x3/za.svg'); }

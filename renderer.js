@@ -620,7 +620,7 @@ function getFilteredEmulatorsForSection(sourceRows = getEmulators()) {
         rows = rows.filter((emu) => !!emu.isInstalled);
     }
 
-    const searchTerm = String(document.querySelector('.search-bar input')?.value || '').trim().toLowerCase();
+    const searchTerm = String(document.getElementById('global-game-search')?.value || document.querySelector('.search-bar input')?.value || '').trim().toLowerCase();
     if (searchTerm) {
         rows = rows.filter((emu) => {
             const name = String(emu.name || '').toLowerCase();
@@ -753,6 +753,12 @@ function getSectionFilteredGames() {
     const filtered = applyCategoryFilter(getFilteredGames());
 
     if (activeLibrarySection === 'favorite') {
+        const hasRatingField = filtered.some((game) =>
+            game && Object.prototype.hasOwnProperty.call(game, 'rating')
+        );
+        if (!hasRatingField) {
+            return filtered;
+        }
         return filtered.filter((game) => Number(game?.rating || 0) > 0);
     }
 

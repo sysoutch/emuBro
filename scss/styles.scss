@@ -1,7 +1,6 @@
 // Import all SCSS partials
-$flag-icons-path: '../node_modules/flag-icons/flags';
 @import "../node_modules/@fortawesome/fontawesome-free/css/all.min.css";
-@import "../node_modules/flag-icons/sass/flag-icons";
+@import "flags";
 @import "variables";
 @import "global";
 @import "header";

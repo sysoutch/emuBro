@@ -105,7 +105,7 @@ export function createSuggestionsPanelController(options = {}) {
     function applySuggestionSearchTerm(rawValue) {
         const term = String(rawValue || '').trim();
         if (!term) return;
-        const searchInput = document.querySelector('.search-bar input');
+        const searchInput = document.getElementById('global-game-search') || document.querySelector('.search-bar input');
         if (!searchInput) return;
         searchInput.value = term;
         searchInput.dispatchEvent(new Event('input', { bubbles: true }));

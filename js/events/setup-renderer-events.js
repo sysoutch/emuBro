@@ -109,10 +109,24 @@ export function setupRendererEventListeners(options = {}) {
         getActiveLibrarySection: () => getActiveLibrarySection()
     });
 
+    const getGlobalSearchInput = () => (
+        document.getElementById('global-game-search')
+        || document.querySelector('.global-search-bar input')
+        || document.querySelector('.search-bar input')
+    );
+
     // Search
-    const searchInput = document.querySelector('.search-bar input');
+    const searchInput = getGlobalSearchInput();
+    const clearSearchBtn = document.getElementById('global-search-clear-btn');
+    const syncSearchClearVisibility = () => {
+        if (!searchInput || !clearSearchBtn) return;
+        const hasValue = String(searchInput.value || '').trim().length > 0;
+        clearSearchBtn.classList.toggle('is-visible', hasValue);
+        clearSearchBtn.disabled = !hasValue;
+    };
     if (searchInput) {
         searchInput.addEventListener('input', () => {
+            syncSearchClearVisibility();
             if (getActiveTopSection() !== 'library') return;
 
             if (getActiveLibrarySection() === 'emulators') {
@@ -124,6 +138,26 @@ export function setupRendererEventListeners(options = {}) {
             renderGames(getSectionFilteredGames());
         });
     }
+    if (clearSearchBtn && searchInput) {
+        clearSearchBtn.addEventListener('click', () => {
+            if (!searchInput.value) return;
+            searchInput.value = '';
+            syncSearchClearVisibility();
+            searchInput.focus();
+            searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        syncSearchClearVisibility();
+    }
+
+    document.addEventListener('keydown', (event) => {
+        const isFindShortcut = (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && String(event.key || '').toLowerCase() === 'f';
+        if (!isFindShortcut) return;
+        const targetSearch = getGlobalSearchInput();
+        if (!targetSearch) return;
+        event.preventDefault();
+        targetSearch.focus();
+        targetSearch.select();
+    });
 
     // Filters
     const platformFilter = document.getElementById('platform-filter');

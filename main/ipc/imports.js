@@ -68,6 +68,85 @@ function registerImportIpc(deps = {}) {
     return out;
   }
 
+  let cachedAppIconDataUrl = "";
+
+  async function resolveFileIconDataUrl(filePath) {
+    try {
+      const p = String(filePath || "").trim();
+      if (!p) return "";
+      if (!app || typeof app.getFileIcon !== "function") return "";
+      const icon = await app.getFileIcon(p, { size: "normal" });
+      if (!icon || typeof icon.isEmpty !== "function" || icon.isEmpty()) return "";
+      return typeof icon.toDataURL === "function" ? String(icon.toDataURL() || "").trim() : "";
+    } catch (_error) {
+      return "";
+    }
+  }
+
+  function toPngDataUrlFromFile(filePath) {
+    try {
+      const p = String(filePath || "").trim();
+      if (!p) return "";
+      if (!fsSync.existsSync(p)) return "";
+      const buf = fsSync.readFileSync(p);
+      if (!buf || !buf.length) return "";
+      const ext = path.extname(p).toLowerCase();
+      const mime = ext === ".jpg" || ext === ".jpeg"
+        ? "image/jpeg"
+        : ext === ".svg"
+          ? "image/svg+xml"
+          : "image/png";
+      return `data:${mime};base64,${buf.toString("base64")}`;
+    } catch (_error) {
+      return "";
+    }
+  }
+
+  async function resolveAppIconDataUrl() {
+    if (cachedAppIconDataUrl) return cachedAppIconDataUrl;
+    const appPath = String(app?.getAppPath?.() || "").trim() || process.cwd();
+    const execDir = path.dirname(String(process.execPath || "").trim() || process.cwd());
+    const candidates = [
+      path.join(appPath, "icon.png"),
+      path.join(appPath, "logo.png"),
+      path.join(appPath, "assets", "logo.png"),
+      path.join(appPath, "build", "icon.png"),
+      path.join(process.cwd(), "icon.png"),
+      path.join(process.cwd(), "logo.png"),
+      path.join(process.cwd(), "assets", "logo.png"),
+      path.join(execDir, "resources", "icon.png"),
+      path.join(execDir, "resources", "logo.png")
+    ];
+    for (const candidate of candidates) {
+      const dataUrl = toPngDataUrlFromFile(candidate);
+      if (dataUrl) {
+        cachedAppIconDataUrl = dataUrl;
+        return cachedAppIconDataUrl;
+      }
+    }
+    const execIconDataUrl = await resolveFileIconDataUrl(process.execPath);
+    if (execIconDataUrl) {
+      cachedAppIconDataUrl = execIconDataUrl;
+      return cachedAppIconDataUrl;
+    }
+    const svgFallback = [
+      "<svg xmlns='http://www.w3.org/2000/svg' width='128' height='128' viewBox='0 0 128 128'>",
+      "<defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>",
+      "<stop offset='0%' stop-color='#66d8ff'/><stop offset='100%' stop-color='#2f7dff'/>",
+      "</linearGradient></defs>",
+      "<rect width='128' height='128' rx='24' fill='#0e1a2b'/>",
+      "<circle cx='40' cy='64' r='22' fill='url(#g)'/>",
+      "<text x='64' y='73' fill='#dff5ff' font-family='Segoe UI, Arial, sans-serif' font-size='24' font-weight='700'>BRO</text>",
+      "</svg>"
+    ].join("");
+    cachedAppIconDataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svgFallback)}`;
+    return cachedAppIconDataUrl;
+  }
+
+  async function resolveExecutableIconDataUrl(exePath) {
+    return resolveFileIconDataUrl(exePath);
+  }
+
   function osSetupMatchKey() {
     if (process.platform === "win32") return "setupFileMatchWin";
     if (process.platform === "darwin") return "setupFileMatchMac";
@@ -759,6 +838,7 @@ ipcMain.handle("import-exe", async (_event, payload) => {
 
     const results = { success: true, addedEmulator: null, addedGame: null, skipped: [], errors: [] };
 
+    let knownEmulatorMatch = false;
     if (addEmulator) {
       let platformShortName = emuPsn;
       let platformName = "Unknown";
@@ -769,10 +849,15 @@ ipcMain.handle("import-exe", async (_event, payload) => {
         if (cfg) {
           platformShortName = String(cfg.shortName || "").trim().toLowerCase();
           platformName = cfg.name || "Unknown";
+          knownEmulatorMatch = true;
         }
       } else {
         const cfg = findPlatform(platformShortName);
         if (cfg) platformName = cfg.name || platformName;
+        const matchedCfg = determinePlatformFromFilenameEmus(path.basename(p), p, platformConfigs);
+        if (matchedCfg && String(matchedCfg.shortName || "").trim().toLowerCase() === platformShortName) {
+          knownEmulatorMatch = true;
+        }
       }
 
       if (!platformShortName) {
@@ -808,7 +893,16 @@ ipcMain.handle("import-exe", async (_event, payload) => {
         } else {
           const name = path.basename(p, path.extname(p));
           const code = inferGameCode({ name, filePath: p });
-          const image = discoverCoverImageRelative(platformShortName, code, name);
+          const discoveredImage = discoverCoverImageRelative(platformShortName, code, name);
+          let image = discoveredImage || (await resolveAppIconDataUrl());
+          if (addEmulator && knownEmulatorMatch) {
+            const exeIconDataUrl = await resolveExecutableIconDataUrl(p);
+            if (exeIconDataUrl) {
+              image = exeIconDataUrl;
+            } else if (!image) {
+              image = await resolveAppIconDataUrl();
+            }
+          }
           const { row, existed } = dbUpsertGame({
             name,
             platform: platformName,

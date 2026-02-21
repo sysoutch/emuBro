@@ -2,6 +2,14 @@
  * Internationalization Manager
  */
 
+const BUNDLED_FLAG_CODES = new Set(['us', 'de', 'es', 'fr', 'it', 'jp', 'nl', 'za']);
+
+function resolveBundledFlagCode(input, fallback = 'us') {
+    const code = String(input || '').trim().toLowerCase();
+    if (/^[a-z]{2}$/.test(code) && BUNDLED_FLAG_CODES.has(code)) return code;
+    return fallback;
+}
+
 export function updateUILanguage() {
     // Update elements with data-i18n attribute
     document.querySelectorAll('[data-i18n]').forEach(element => {
@@ -42,9 +50,8 @@ function updateSelectedLanguageDisplay() {
             if (currentFlagElement) {
                 // Clear existing classes
                 currentFlagElement.className = 'fi';
-                if (langData.flag) {
-                     currentFlagElement.classList.add(`fi-${langData.flag}`);
-                }
+                const flagCode = resolveBundledFlagCode(langData.flag, 'us');
+                currentFlagElement.classList.add(`fi-${flagCode}`);
             }
             if (currentNameElement) {
                 currentNameElement.textContent = langData.name || currentLang;
@@ -70,9 +77,8 @@ export function populateLanguageSelector() {
             
             const flagSpan = document.createElement('span');
             flagSpan.className = 'fi';
-            if (langData.flag) {
-                flagSpan.classList.add(`fi-${langData.flag}`);
-            }
+            const flagCode = resolveBundledFlagCode(langData.flag, 'us');
+            flagSpan.classList.add(`fi-${flagCode}`);
             
             const nameSpan = document.createElement('span');
             nameSpan.textContent = langData.name || langCode;

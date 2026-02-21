@@ -701,6 +701,48 @@
     box-shadow: 0 0 0 2px var(--accent-color);
 }
 
+.global-search-bar {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.global-search-bar .global-search-input {
+    padding-right: 34px;
+}
+
+.search-clear-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    border: 0;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--bg-secondary), transparent 25%);
+    color: var(--text-secondary);
+    cursor: pointer;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.16s ease, color 0.16s ease, background-color 0.16s ease;
+}
+
+.search-clear-btn.is-visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.search-clear-btn:hover {
+    background: color-mix(in srgb, var(--accent-color), transparent 78%);
+    color: var(--text-primary);
+}
+
 .user-info {
     display: flex;
     align-items: center;

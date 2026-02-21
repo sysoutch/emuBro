@@ -19,12 +19,16 @@ const LLM_TRANSLATION_MODE_ONE_BY_ONE = 'one-by-one';
 const LLM_TRANSLATION_MODE_ALL_IN_ONE_JSON = 'all-in-one-json';
 const LANGUAGE_CODE_PATTERN = /^[a-z]{2,3}$/;
 const FLAG_CODE_PATTERN = /^[a-z]{2}$/;
+const BUNDLED_FLAG_CODES = new Set(['us', 'de', 'es', 'fr', 'it', 'jp', 'nl', 'za']);
 const DEFAULT_FLAG_CODES = [
-    'us', 'gb', 'de', 'fr', 'es', 'it', 'pt', 'nl', 'be', 'at', 'ch', 'ie',
-    'se', 'no', 'dk', 'fi', 'pl', 'cz', 'sk', 'hu', 'ro', 'bg', 'gr', 'tr',
-    'ru', 'ua', 'jp', 'kr', 'cn', 'tw', 'hk', 'in', 'id', 'th', 'vn', 'my',
-    'ph', 'sg', 'au', 'nz', 'ca', 'mx', 'br', 'ar', 'cl', 'co', 'za'
+    'us', 'de', 'es', 'fr', 'it', 'jp', 'nl', 'za'
 ];
+
+function resolveBundledFlagCode(input, fallback = 'us') {
+    const code = String(input || '').trim().toLowerCase();
+    if (FLAG_CODE_PATTERN.test(code) && BUNDLED_FLAG_CODES.has(code)) return code;
+    return fallback;
+}
 
 export function initLanguageManager() {
     const modal = document.getElementById('language-manager-modal');
@@ -433,8 +437,8 @@ function collectAvailableFlagCodes() {
 
     if (typeof allTranslations !== 'undefined' && allTranslations && typeof allTranslations === 'object') {
         Object.values(allTranslations).forEach((entry) => {
-            const flag = String(entry?.language?.flag || '').trim().toLowerCase();
-            if (FLAG_CODE_PATTERN.test(flag)) {
+            const flag = resolveBundledFlagCode(entry?.language?.flag || '', '');
+            if (flag) {
                 flags.add(flag);
             }
         });
@@ -564,7 +568,7 @@ function showAddLanguageDialog() {
         const updateFlagPreview = () => {
             const flagCode = String(flagSelect?.value || 'us').trim().toLowerCase();
             if (!flagPreview) return;
-            flagPreview.className = `fi fi-${FLAG_CODE_PATTERN.test(flagCode) ? flagCode : 'us'}`;
+            flagPreview.className = `fi fi-${resolveBundledFlagCode(flagCode, 'us')}`;
         };
 
         const tryConfirm = () => {
@@ -763,12 +767,11 @@ function renderLanguages(languages) {
         const progress = calculateProgress(lang.data, lang.code);
         const langInfo = lang.data[lang.code].language || {};
         const name = String(langInfo.name || lang.code || '');
-        const rawFlag = String(langInfo.flag || '').trim().toLowerCase();
-        const flag = FLAG_CODE_PATTERN.test(rawFlag) ? rawFlag : '';
+        const flag = resolveBundledFlagCode(langInfo.flag || '', 'us');
         const abbreviation = String(langInfo.abbreviation || lang.code || '').trim();
         const safeName = escapeHtml(name);
         const safeAbbreviation = escapeHtml(abbreviation || lang.code);
-        const safeFlagClass = flag ? `fi fi-${flag}` : 'fi';
+        const safeFlagClass = `fi fi-${flag}`;
 
         const card = document.createElement('div');
         card.className = 'language-card';

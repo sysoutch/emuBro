@@ -25,8 +25,21 @@
                 </ul>
             </nav>
             <div class="user-actions">
-                <div class="search-bar">
-                    <input type="text" placeholder="Search games..." data-i18n-placeholder="filters.search">
+                <div class="search-bar global-search-bar">
+                    <input
+                        type="text"
+                        id="global-game-search"
+                        class="global-search-input"
+                        placeholder="Search games..."
+                        data-i18n-placeholder="filters.search"
+                    >
+                    <button
+                        type="button"
+                        id="global-search-clear-btn"
+                        class="search-clear-btn"
+                        aria-label="Clear search"
+                        title="Clear search"
+                    >&times;</button>
                 </div>
                 <div class="form-group language-selector-wrapper">
                     <div class="form-group dropdown-with-button-wrapper">

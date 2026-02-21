@@ -42,7 +42,10 @@ module.exports = {
   // electron-builder will now automatically include production 
   // dependencies from package.json in the final build.
   win: {
-    target: "nsis",
+    target: [
+      "nsis",
+      "nsis-web"
+    ],
     asar: true
   },
   linux: {

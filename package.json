@@ -4,6 +4,7 @@
   "description": "A Steam-like Electron application",
   "main": "main.js",
   "scripts": {
+    "postinstall": "electron-builder install-app-deps",
     "start": "npm run build && node scripts/run-electron.js",
     "start:fast": "node scripts/run-electron.js",
     "prebuild:win": "taskkill /F /IM emuBro.exe /T || exit 0",
@@ -12,9 +13,13 @@
     "preelectron-builder": "node -e \"const fs=require('fs'); try{fs.rmSync('build_out/win-unpacked',{recursive:true,force:true});}catch(e){console.error('[clean] failed to remove build_out/win-unpacked:', e.message); process.exit(1);}\"",
     "electron-builder": "electron-builder",
     "build:win": "npm run sync:resources && npm run electron-builder -- --win --config=electron-builder.config.js --publish=never",
+    "build:win:offline": "npm run sync:resources && npm run electron-builder -- --win nsis --config=electron-builder.config.js --publish=never",
+    "build:win:web": "npm run sync:resources && npm run electron-builder -- --win nsis-web --config=electron-builder.config.js --publish=never",
     "build:linux": "npm run sync:resources && npm run electron-builder -- --linux --x64 --config=electron-builder.config.js --publish=never",
     "build:mac": "npm run sync:resources && npm run electron-builder -- --mac --x64 --config=electron-builder.config.js --publish=never",
     "dist:win": "npm run sync:resources && npm run build && npm run build:win",
+    "dist:win:offline": "npm run sync:resources && npm run build && npm run build:win:offline",
+    "dist:win:web": "npm run sync:resources && npm run build && npm run build:win:web",
     "dist:linux": "npm run sync:resources && npm run build && npm run build:linux",
     "dist:mac": "npm run sync:resources && npm run build && npm run build:mac"
   },
@@ -54,7 +59,6 @@
     "electron-log": "^4.4.8",
     "electron-store": "^8.2.0",
     "flag-icons": "^7.5.0",
-    "gamepad.js": "^2.1.0",
-    "node-ipc": "^10.1.0"
+    "gamepad.js": "^2.1.0"
   }
 }

@@ -1193,7 +1193,7 @@ export function applyFilters(shouldRender = true, sourceRows = null) {
         filteredGames = filteredGames.filter((game) => getRegionCodeFromGame(game) === currentRegionFilter);
     }
 
-    const searchTerm = String(document.querySelector('.search-bar input')?.value || '').trim().toLowerCase();
+    const searchTerm = String(document.getElementById('global-game-search')?.value || document.querySelector('.search-bar input')?.value || '').trim().toLowerCase();
     if (searchTerm) {
         filteredGames = filteredGames.filter((game) => {
             const name = String(game?.name || '').toLowerCase();
