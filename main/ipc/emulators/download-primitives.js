@@ -48,12 +48,72 @@ function createDownloadPrimitives(deps = {}) {
     return next;
   }
 
+  function normalizeUrlList(rawValue) {
+    const input = Array.isArray(rawValue) ? rawValue : [rawValue];
+    const out = [];
+    const seen = new Set();
+    input.forEach((entry) => {
+      const url = ensureHttpUrl(entry);
+      if (!url) return;
+      const key = url.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push(url);
+    });
+    return out;
+  }
+
+  function firstUrlFromList(list) {
+    const items = Array.isArray(list) ? list : [];
+    return items.length > 0 ? String(items[0] || "") : "";
+  }
+
+  function normalizeDownloadUrlMap(rawDownloadUrl) {
+    const empty = {
+      windows: [],
+      linux: [],
+      mac: []
+    };
+
+    if (!rawDownloadUrl) return empty;
+
+    if (typeof rawDownloadUrl === "string" || Array.isArray(rawDownloadUrl)) {
+      const shared = normalizeUrlList(rawDownloadUrl);
+      return {
+        windows: [...shared],
+        linux: [...shared],
+        mac: [...shared]
+      };
+    }
+
+    if (typeof rawDownloadUrl !== "object") return empty;
+
+    const sharedFallback = normalizeUrlList(
+      rawDownloadUrl.all
+      || rawDownloadUrl.default
+      || rawDownloadUrl.any
+      || ""
+    );
+    const windows = normalizeUrlList(rawDownloadUrl.windows || rawDownloadUrl.win || rawDownloadUrl.win32 || "");
+    const linux = normalizeUrlList(rawDownloadUrl.linux || "");
+    const mac = normalizeUrlList(rawDownloadUrl.mac || rawDownloadUrl.macos || rawDownloadUrl.darwin || rawDownloadUrl.osx || "");
+
+    return {
+      windows: windows.length ? windows : [...sharedFallback],
+      linux: linux.length ? linux : [...sharedFallback],
+      mac: mac.length ? mac : [...sharedFallback]
+    };
+  }
+
   function normalizeDownloadLinks(rawLinks) {
     const links = (rawLinks && typeof rawLinks === "object") ? rawLinks : {};
+    const windowsLinks = normalizeUrlList(links.windows || links.win || links.win32 || "");
+    const linuxLinks = normalizeUrlList(links.linux || "");
+    const macLinks = normalizeUrlList(links.mac || links.macos || links.darwin || "");
     return {
-      windows: ensureHttpUrl(links.windows || links.win || links.win32 || ""),
-      linux: ensureHttpUrl(links.linux || ""),
-      mac: ensureHttpUrl(links.mac || links.macos || links.darwin || "")
+      windows: firstUrlFromList(windowsLinks),
+      linux: firstUrlFromList(linuxLinks),
+      mac: firstUrlFromList(macLinks)
     };
   }
 
@@ -74,21 +134,29 @@ function createDownloadPrimitives(deps = {}) {
     }
   }
 
-  function getDownloadSourceUrl(_name, website, downloadUrl) {
-    const explicitDownloadUrl = ensureHttpUrl(downloadUrl);
-    if (explicitDownloadUrl) return explicitDownloadUrl;
+  function getDownloadSourceUrl(_name, website, downloadUrl, osKey) {
+    const normalizedOs = normalizeDownloadOsKey(osKey);
+    const mapped = normalizeDownloadUrlMap(downloadUrl);
+    const osPreferred = firstUrlFromList(mapped[normalizedOs]);
+    if (osPreferred) return osPreferred;
+
+    const fallback = firstUrlFromList(mapped.windows) || firstUrlFromList(mapped.linux) || firstUrlFromList(mapped.mac);
+    if (fallback) return fallback;
     return ensureHttpUrl(website);
   }
 
   function buildEmulatorDownloadLinks(name, website, rawLinks, downloadUrl) {
     const explicit = normalizeDownloadLinks(rawLinks);
-    const source = getDownloadSourceUrl(name, website, downloadUrl);
-    if (!source) return explicit;
+    const mapped = normalizeDownloadUrlMap(downloadUrl);
+    const source = getDownloadSourceUrl(name, website, downloadUrl, "windows");
+    if (!source && !firstUrlFromList(mapped.windows) && !firstUrlFromList(mapped.linux) && !firstUrlFromList(mapped.mac)) {
+      return explicit;
+    }
 
     return {
-      windows: explicit.windows || source,
-      linux: explicit.linux || source,
-      mac: explicit.mac || source
+      windows: explicit.windows || firstUrlFromList(mapped.windows) || source,
+      linux: explicit.linux || firstUrlFromList(mapped.linux) || source,
+      mac: explicit.mac || firstUrlFromList(mapped.mac) || source
     };
   }
 
@@ -327,15 +395,45 @@ function createDownloadPrimitives(deps = {}) {
     }
   }
 
-  function getPreferredEmulatorDownloadUrl(emulator, osKey) {
+  function getEmulatorDownloadUrlCandidates(emulator, osKey) {
     const normalizedOs = normalizeDownloadOsKey(osKey);
-    const downloadLinks = buildEmulatorDownloadLinks(
+    const mapped = normalizeDownloadUrlMap(emulator?.downloadUrl);
+    const links = buildEmulatorDownloadLinks(
       emulator?.name,
       emulator?.website,
       emulator?.downloadLinks,
       emulator?.downloadUrl
     );
-    return ensureHttpUrl(downloadLinks[normalizedOs] || emulator?.downloadUrl || emulator?.website || "");
+    const out = [];
+    const seen = new Set();
+    const push = (value) => {
+      const url = ensureHttpUrl(value);
+      if (!url) return;
+      const key = url.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push(url);
+    };
+
+    const primaryList = Array.isArray(mapped[normalizedOs]) ? mapped[normalizedOs] : [];
+    primaryList.forEach(push);
+
+    if (normalizedOs !== "windows") (mapped.windows || []).forEach(push);
+    if (normalizedOs !== "linux") (mapped.linux || []).forEach(push);
+    if (normalizedOs !== "mac") (mapped.mac || []).forEach(push);
+
+    push(links[normalizedOs]);
+    if (normalizedOs !== "windows") push(links.windows);
+    if (normalizedOs !== "linux") push(links.linux);
+    if (normalizedOs !== "mac") push(links.mac);
+    push(emulator?.website);
+
+    return out;
+  }
+
+  function getPreferredEmulatorDownloadUrl(emulator, osKey) {
+    const urls = getEmulatorDownloadUrlCandidates(emulator, osKey);
+    return urls[0] || "";
   }
 
   function buildWaybackMachineUrl(rawUrl) {
@@ -350,6 +448,7 @@ function createDownloadPrimitives(deps = {}) {
     normalizeDownloadOsKey,
     sanitizePathSegment,
     ensureHttpUrl,
+    normalizeDownloadUrlMap,
     parseGitHubRepoFromUrl,
     buildEmulatorDownloadLinks,
     normalizeDownloadPackageType,
@@ -362,6 +461,7 @@ function createDownloadPrimitives(deps = {}) {
     selectDownloadOptionsByType,
     isInstallerLikeName,
     getFilenameFromUrl,
+    getEmulatorDownloadUrlCandidates,
     getPreferredEmulatorDownloadUrl,
     buildWaybackMachineUrl
   };

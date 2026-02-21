@@ -47,6 +47,7 @@ import {
     searchForGamesAndEmulators
 } from './js/game-manager';
 import { showToolView } from './js/tools-manager';
+import { showSupportView } from './js/support-manager';
 import { showCommunityView } from './js/community-manager';
 import { showGlassMessageDialog } from './js/ui/glass-message-dialog';
 import { openGlobalLlmTaggingSetupModal, createGlobalLlmProgressDialog } from './js/ui/llm-tagging-dialogs';
@@ -125,10 +126,22 @@ let suggestionsPanelController = null;
 let browseFooterController = null;
 let libraryViewController = null;
 
+// Forward declarations for functions that might be used before their full definition due to circular dependencies
+// This is a common pattern in large JS files that get refactored into modules
+// Declare functions that need to be hoisted and potentially overwritten by local variables
+// These are assigned later in the file.
+let renderActiveLibraryView;
+let setActiveLibrarySection;
+let refreshEmulatorsState;
+let updateLibraryCounters;
+
 function normalizeCategorySelectionMode(value) {
-    const mode = String(value || '').trim().toLowerCase();
-    return mode === 'multi' ? 'multi' : 'single';
+    const mode = String(value || "").trim().toLowerCase();
+    return mode === "multi" ? "multi" : "single";
 }
+
+// Redefine functions to ensure they are available before assignments
+// (This section should be empty after initial forward declarations)
 
 function getActiveCategorySelectionSet() {
     if (categorySelectionMode === 'multi') {
@@ -248,8 +261,6 @@ function escapeHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
-
-
 function syncCategoryStateFromSelectionSet(selectedSet) {
     const normalized = new Set(Array.from(selectedSet || []).map((tag) => normalizeTagCategory(tag)).filter((tag) => tag !== 'all'));
     activeTagCategories = normalized;
@@ -261,7 +272,11 @@ categoriesListRenderer = createCategoriesListRenderer({
     getGames,
     setGames,
     setFilteredGames,
-    renderActiveLibraryView,
+    renderActiveLibraryView: async () => {
+        if (typeof renderActiveLibraryView === 'function') {
+            await renderActiveLibraryView();
+        }
+    },
     isLibraryTopSection: () => activeTopSection === 'library',
     isEmulatorsSection: () => activeLibrarySection === 'emulators',
     showGlassMessageDialog,
@@ -295,9 +310,6 @@ async function renderCategoriesList() {
     categoriesShowAll = !!categoriesListRenderer.getCategoriesShowAll();
 }
 
-
-
-
 function applyCategoryFilter(rows) {
     const source = Array.isArray(rows) ? rows : [];
     const selected = getActiveCategorySelectionSet();
@@ -324,7 +336,6 @@ function updateSuggestedPanelVisibility() {
     if (!suggestionsPanelController) return;
     suggestionsPanelController.updateSuggestedPanelVisibility();
 }
-
 
 browseFooterController = createBrowseFooterController({
     emubro,
@@ -451,7 +462,7 @@ function setAppMode(mode) {
 
     setActiveTopNavLink(activeTopSection);
 
-    if (activeTopSection === 'library' || activeTopSection === 'tools' || activeTopSection === 'community') {
+    if (activeTopSection === 'library' || activeTopSection === 'tools' || activeTopSection === 'support' || activeTopSection === 'community') {
         setActiveRailTarget(activeTopSection);
     }
 
@@ -469,14 +480,14 @@ async function getLibraryPathSettings() {
 }
 
 async function saveLibraryPathSettings(settings) {
-    const payload = {
-        scanFolders: Array.isArray(settings?.scanFolders) ? settings.scanFolders : [],
-        gameFolders: Array.isArray(settings?.gameFolders) ? settings.gameFolders : [],
+  const payload = {
+    scanFolders: Array.isArray(settings?.scanFolders) ? settings.scanFolders : [],
+    gameFolders: Array.isArray(settings?.gameFolders) ? settings.gameFolders : [],
         emulatorFolders: Array.isArray(settings?.emulatorFolders) ? settings.emulatorFolders : []
     };
     const result = await emubro.invoke('settings:set-library-paths', payload);
-    if (!result?.success) throw new Error(result?.message || 'Failed to save path settings.');
-    return result.settings || payload;
+  if (!result?.success) throw new Error(result?.message || 'Failed to save path settings.');
+  return result.settings || payload;
 }
 
 function normalizePathList(values) {
@@ -519,7 +530,9 @@ async function openLibraryPathSettingsModal() {
         setActiveLibrarySection,
         llmHelpersEnabledKey: LLM_HELPERS_ENABLED_KEY,
         llmAllowUnknownTagsKey: LLM_ALLOW_UNKNOWN_TAGS_KEY,
-        suggestedSectionKey: SUGGESTED_SECTION_KEY
+        suggestedSectionKey: SUGGESTED_SECTION_KEY,
+        loadSuggestionSettings,
+        saveSuggestionSettings
     });
 }
 
@@ -529,7 +542,6 @@ async function openProfileModal() {
         openLibraryPathSettingsModal
     });
 }
-
 
 function normalizeEmulatorType(type) {
     const value = String(type || '').trim().toLowerCase();
@@ -747,62 +759,72 @@ function getSectionFilteredGames() {
     }
 
     if (activeLibrarySection === SUGGESTED_SECTION_KEY) {
-        const suggestedRows = Array.isArray(suggestedCoverGames) ? [...suggestedCoverGames] : [];
-        if (!suggestedRows.length) return [];
-        applyFilters(false, suggestedRows);
-        return applyCategoryFilter(getFilteredGames());
+        // The suggestions controller is responsible for setting suggestedCoverGames.
+        // We just ensure the main grid gets rendered with whatever it has.
+        // The `applyFilters` will process `suggestedCoverGames` (if any).
+        const currentSuggestedGames = suggestedCoverGames;
+        if (!currentSuggestedGames.length) return [];
+        // No need to applyFilters here, as renderGames (which calls applyFilters) is called next.
+        return applyCategoryFilter(currentSuggestedGames);
     }
 
     return filtered;
 }
 
-function updateLibraryCounters() {
-    if (totalGamesElement) totalGamesElement.textContent = String(getGames().length);
-    if (totalEmulatorsElement) totalEmulatorsElement.textContent = String(getEmulators().length);
-}
+libraryViewController = createLibraryViewController({
+    getActiveTopSection: () => activeTopSection,
+    getActiveLibrarySection: () => activeLibrarySection,
+    setActiveLibrarySectionState: (section) => {
+        activeLibrarySection = normalizeLibrarySection(section || 'all');
+    },
+    getActiveEmulatorTypeTab: () => activeEmulatorTypeTab,
+    setActiveEmulatorTypeTab: (nextType) => {
+        activeEmulatorTypeTab = normalizeEmulatorType(nextType) || 'standalone';
+    },
+    getSuggestedCoverGames: () => suggestedCoverGames,
+    getGames,
+    getFilteredGames,
+    setFilteredGames,
+    getEmulators,
+    setEmulators,
+    fetchEmulators,
+    initializePlatformFilterOptions,
+    renderEmulators,
+    applyFilters,
+    applyCategoryFilter,
+    renderGames,
+    normalizeLibrarySection,
+    setAppMode,
+    setActiveSidebarLibraryLink,
+    updateSuggestedPanelVisibility,
+    gamesContainer,
+    totalGamesElement,
+    totalEmulatorsElement,
+    emulatorsInstalledToggle,
+    emulatorsInstalledToggleWrap,
+    groupFilterSelect,
+    gameLanguageFilterSelect,
+    gameRegionFilterSelect,
+    groupSameNamesToggleWrap,
+    i18n,
+    suggestedSectionKey: SUGGESTED_SECTION_KEY,
+});
 
-async function refreshEmulatorsState() {
-    const rows = await fetchEmulators();
-    setEmulators(rows);
-    updateLibraryCounters();
-    return rows;
-}
+renderActiveLibraryView = async () => {
+    await libraryViewController.renderActiveLibraryView();
+};
 
-async function renderActiveLibraryView() {
-    if (activeTopSection !== 'library') return;
-    updateSuggestedPanelVisibility();
+setActiveLibrarySection = async (section) => {
+    await libraryViewController.setActiveLibrarySection(section);
+};
 
-    if (activeLibrarySection === 'emulators') {
-        if (!getEmulators().length) await refreshEmulatorsState();
-        initializePlatformFilterOptions(getEmulators());
-        renderEmulators(getFilteredEmulatorsForSection(), getEmulatorRenderOptions());
-        return;
-    }
+updateLibraryCounters = () => {
+    libraryViewController.updateLibraryCounters();
+};
 
-    initializePlatformFilterOptions(getGames());
-    applyFilters(false);
-    if (activeLibrarySection === SUGGESTED_SECTION_KEY) {
-        const suggestedRows = getSectionFilteredGames();
-        if (suggestedRows.length === 0) {
-            const activeView = document.querySelector('.view-btn.active')?.dataset?.view || 'cover';
-            gamesContainer.className = `games-container ${activeView}-view`;
-            gamesContainer.innerHTML = '<p class="suggested-empty-state">Generate suggestions to show recommended games here.</p>';
-            return;
-        }
-    }
-    renderGames(getSectionFilteredGames());
-}
-
-async function setActiveLibrarySection(section) {
-    setAppMode('library');
-    activeLibrarySection = normalizeLibrarySection(section || 'all');
-    setActiveSidebarLibraryLink(activeLibrarySection);
-    setGamesHeaderByLibrarySection(activeLibrarySection);
-    updateEmulatorsInstalledToggleVisibility();
-    updateGroupingControlsVisibility();
-    updateSuggestedPanelVisibility();
-    await renderActiveLibraryView();
-}
+refreshEmulatorsState = async () => {
+    return libraryViewController.refreshEmulatorsState();
+};
 
 // ===== IPC Listeners (via preload) =====
 emubro.onWindowMoved((position, screenGoal) => {
@@ -828,6 +850,61 @@ async function signalRendererReady() {
     try {
         await emubro.invoke('app:renderer-ready');
     } catch (_e) {}
+}
+
+function applyLibraryStats(stats) {
+    if (!stats || typeof stats !== 'object') return;
+    if (totalGamesElement && Number.isFinite(Number(stats.totalGames))) {
+        totalGamesElement.textContent = String(stats.totalGames);
+    }
+    if (playTimeElement && stats.totalPlayTime != null) {
+        playTimeElement.textContent = String(stats.totalPlayTime);
+    }
+}
+
+async function loadInitialLibraryDataInBackground() {
+    try {
+        const [statsResult, gamesResult] = await Promise.allSettled([
+            emubro.invoke('get-library-stats'),
+            emubro.invoke('get-games')
+        ]);
+
+        if (statsResult.status === 'fulfilled') {
+            applyLibraryStats(statsResult.value);
+        } else {
+            log.error('Failed to load library stats:', statsResult.reason);
+        }
+
+        let games = [];
+        if (gamesResult.status === 'fulfilled' && Array.isArray(gamesResult.value)) {
+            games = gamesResult.value;
+        } else if (gamesResult.status === 'rejected') {
+            log.error('Failed to load games:', gamesResult.reason);
+        }
+
+        setGames(games);
+        setFilteredGames([...games]);
+        await renderCategoriesList();
+
+        initializePlatformFilterOptions();
+        updateLibraryCounters();
+        await renderActiveLibraryView();
+
+        // Keep emulator catalog hydration out of the critical path.
+        if (!(activeTopSection === 'library' && activeLibrarySection === 'emulators')) {
+            void refreshEmulatorsState()
+                .then(() => {
+                    updateLibraryCounters();
+                })
+                .catch((error) => {
+                    log.error('Failed to refresh emulators during startup:', error);
+                });
+        }
+
+        log.info('Library data hydration completed');
+    } catch (error) {
+        log.error('Failed to hydrate startup library data:', error);
+    }
 }
 
 // ===== Initialization =====
@@ -859,7 +936,11 @@ async function initializeApp() {
         // Initialize i18n
         await initI18n(() => {
             updateThemeSelector();
-            renderActiveLibraryView();
+            if (activeTopSection === 'support') {
+                showSupportView();
+            } else {
+                renderActiveLibraryView();
+            }
             renderThemeManager();
         });
         updateUILanguage();
@@ -871,8 +952,7 @@ async function initializeApp() {
 
         // Old select listener removed as it is now custom dropdown handled in i18n-manager
 
-        // Load data
-        const userInfo = await emubro.invoke('get-user-info');
+        // Restore view settings.
         const savedDefaultSection = normalizeLibrarySection(localStorage.getItem('emuBro.defaultLibrarySection') || 'all');
         if (savedDefaultSection) activeLibrarySection = savedDefaultSection;
         setActiveViewButton(localStorage.getItem('emuBro.defaultLibraryView') || 'cover');
@@ -884,29 +964,22 @@ async function initializeApp() {
         if (groupSameNamesToggle) {
             groupSameNamesToggle.checked = localStorage.getItem(GROUP_SAME_NAMES_KEY) === 'true';
         }
-        
-        const stats = await emubro.invoke('get-library-stats');
-        if (totalGamesElement) totalGamesElement.textContent = stats.totalGames;
-        if (playTimeElement) playTimeElement.textContent = stats.totalPlayTime;
-        
-        const games = await emubro.invoke('get-games');
-        setGames(games);
-        setFilteredGames([...games]);
-        await renderCategoriesList();
         setupViewScaleControl();
         setAppMode('library');
-        await refreshEmulatorsState();
-        await renderActiveLibraryView();
-        initializePlatformFilterOptions();
-        updateLibraryCounters();
-        
-        // Set up event listeners
+
+        // Set up listeners before revealing the main window.
         setupEventListeners();
-        await setActiveLibrarySection(activeLibrarySection);
-        await waitForUiSettle(650);
+        void setActiveLibrarySection(activeLibrarySection).catch((error) => {
+            log.error('Failed to apply initial library section:', error);
+        });
+
+        // Reveal as soon as shell UI is ready; data continues loading asynchronously.
+        await waitForUiSettle(0);
         await signalRendererReady();
-        
-        log.info('App initialized successfully');
+
+        void loadInitialLibraryDataInBackground();
+
+        log.info('App shell initialized; loading library data in background');
     } catch (error) {
         log.error('Failed to initialize app:', error);
         await signalRendererReady();
@@ -918,6 +991,7 @@ function setupEventListeners() {
         setupSidebarRail,
         setAppMode,
         showToolView,
+        showSupportView,
         showCommunityView,
         setActiveRailTarget,
         openLibraryPathSettingsModal,
@@ -1012,6 +1086,5 @@ function setupEventListeners() {
         themeSelect
     });
 }
-
 
 document.addEventListener('DOMContentLoaded', initializeApp);

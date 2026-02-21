@@ -39,6 +39,28 @@ export function createBrowseFooterController(options = {}) {
     const renderActiveLibraryView = typeof options.renderActiveLibraryView === 'function' ? options.renderActiveLibraryView : async () => {};
     const updateLibraryCounters = typeof options.updateLibraryCounters === 'function' ? options.updateLibraryCounters : () => {};
 
+    function applyTemplate(input, data = {}) {
+        let text = String(input ?? '');
+        Object.keys(data || {}).forEach((key) => {
+            const value = String(data[key] ?? '');
+            text = text
+                .replace(new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g'), value)
+                .replace(new RegExp(`\\{\\s*${key}\\s*\\}`, 'g'), value);
+        });
+        return text;
+    }
+
+    function t(key, fallback, data = {}) {
+        const i18nRef = (typeof i18n !== 'undefined' && i18n && typeof i18n.t === 'function')
+            ? i18n
+            : (window?.i18n && typeof window.i18n.t === 'function' ? window.i18n : null);
+        if (i18nRef && typeof i18nRef.t === 'function') {
+            const translated = i18nRef.t(key, data);
+            if (translated && translated !== key) return String(translated);
+        }
+        return applyTemplate(String(fallback || key), data);
+    }
+
     let lastBrowseDiscovery = {
         archives: [],
         setupFiles: [],
@@ -165,14 +187,14 @@ export function createBrowseFooterController(options = {}) {
         if (archivesSubtitle) {
             const count = Number(lastBrowseDiscovery?.archives?.length || 0);
             archivesSubtitle.textContent = count > 0
-                ? `Found ${count} archive file(s) in the latest scan.`
-                : 'Browse archive files in your latest search results.';
+                ? t('browseFooter.archivesFoundLatestScan', 'Found {{count}} archive file(s) in the latest scan.', { count })
+                : t('browseFooter.archivesLatestSearchHint', 'Browse archive files in your latest search results.');
         }
         if (setupSubtitle) {
             const count = Number(lastBrowseDiscovery?.setupFiles?.length || 0);
             setupSubtitle.textContent = count > 0
-                ? `Found ${count} setup file(s) matching platform config patterns.`
-                : 'Show setup/install files detected from config setupFileMatch patterns.';
+                ? t('browseFooter.setupFoundLatestScan', 'Found {{count}} setup file(s) matching platform config patterns.', { count })
+                : t('browseFooter.setupLatestSearchHint', 'Show setup/install files detected from config setupFileMatch patterns.');
         }
     }
 
@@ -184,8 +206,8 @@ export function createBrowseFooterController(options = {}) {
         if (!paths.length) {
             addFooterNotification(
                 normalizedKind === 'setup'
-                    ? 'No setup files were detected in the latest search.'
-                    : 'No archive files were detected in the latest search.',
+                    ? t('browseFooter.noSetupFilesDetected', 'No setup files were detected in the latest search.')
+                    : t('browseFooter.noArchiveFilesDetected', 'No archive files were detected in the latest search.'),
                 'warning'
             );
             openFooterPanel('notifications');
@@ -218,7 +240,9 @@ export function createBrowseFooterController(options = {}) {
             'gap:12px'
         ].join(';');
 
-        const title = normalizedKind === 'setup' ? 'Detected Setup Files' : 'Detected Archives';
+        const title = normalizedKind === 'setup'
+            ? t('browseFooter.detectedSetupFiles', 'Detected Setup Files')
+            : t('browseFooter.detectedArchives', 'Detected Archives');
         modal.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
                 <h2 style="margin:0;font-size:1.15rem;">${title}</h2>
@@ -226,15 +250,18 @@ export function createBrowseFooterController(options = {}) {
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
                 <div style="color:var(--text-secondary);font-size:0.9rem;">
-                    ${paths.length} file(s) from latest ${escapeHtml(String(lastBrowseDiscovery.scope || 'both'))} scan.
+                    ${t('browseFooter.filesFromLatestScan', '{{count}} file(s) from latest {{scope}} scan.', {
+                        count: paths.length,
+                        scope: escapeHtml(String(lastBrowseDiscovery.scope || 'both'))
+                    })}
                 </div>
-                <button type="button" class="action-btn" data-open-folder-all>Open first in Explorer</button>
+                <button type="button" class="action-btn" data-open-folder-all>${t('browseFooter.openFirstInExplorer', 'Open first in Explorer')}</button>
             </div>
             <div style="border:1px solid var(--border-color);border-radius:10px;max-height:56vh;overflow:auto;padding:8px;background:color-mix(in srgb,var(--bg-primary),transparent 14%);">
                 ${paths.map((p, idx) => `
                     <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:8px 6px;border-bottom:1px solid color-mix(in srgb,var(--border-color),transparent 40%);">
                         <div style="font-family:monospace;font-size:12px;word-break:break-all;">${escapeHtml(String(p || ''))}</div>
-                        <button type="button" class="action-btn small" data-open-item="${idx}">Show</button>
+                        <button type="button" class="action-btn small" data-open-item="${idx}">${t('browseFooter.showItem', 'Show')}</button>
                     </div>
                 `).join('')}
             </div>
@@ -275,8 +302,8 @@ export function createBrowseFooterController(options = {}) {
         quickBtn.disabled = !enabled;
         quickBtn.classList.toggle('is-disabled', !enabled);
         quickBtn.title = enabled
-            ? 'Quick Search is ready'
-            : 'Run a successful search first to enable Quick Search';
+            ? t('browseFooter.quickSearchReady', 'Quick Search is ready')
+            : t('browseFooter.quickSearchNeedInitialRun', 'Run a successful search first to enable Quick Search');
     }
 
     function getBrowseScopeSelection() {
@@ -363,7 +390,7 @@ export function createBrowseFooterController(options = {}) {
         if (normalizedMode === 'quick') {
             const quickState = loadQuickSearchState();
             if (!quickState.ready) {
-                addFooterNotification('Quick Search is disabled until a previous search found games or emulators.', 'warning');
+                addFooterNotification(t('browseFooter.quickSearchDisabled', 'Quick Search is disabled until a previous search found games or emulators.'), 'warning');
                 openFooterPanel('notifications');
                 updateQuickSearchButtonState();
                 return;
@@ -371,7 +398,7 @@ export function createBrowseFooterController(options = {}) {
             targets.push(...getQuickSearchTargetsByScope(normalizedScope));
         } else if (normalizedMode === 'custom') {
             const pick = await emubro.invoke('open-file-dialog', {
-                title: 'Select search folder',
+                title: t('browseFooter.selectSearchFolder', 'Select search folder'),
                 properties: ['openDirectory']
             });
             if (!pick || pick.canceled || !Array.isArray(pick.filePaths) || pick.filePaths.length === 0) return;
@@ -384,17 +411,20 @@ export function createBrowseFooterController(options = {}) {
 
         const deduped = normalizePathList(targets);
         if (normalizedMode === 'quick' && deduped.length === 0) {
-            addFooterNotification('Quick Search skipped: no common parent folders found yet. Run a full search first.', 'warning');
+            addFooterNotification(t('browseFooter.quickSearchSkippedNoCommonParents', 'Quick Search skipped: no common parent folders found yet. Run a full search first.'), 'warning');
             openFooterPanel('notifications');
             return;
         }
 
         try {
-            addFooterNotification(`Search started (${normalizedMode}, ${normalizedScope}).`, 'info');
+            addFooterNotification(t('browseFooter.searchStarted', 'Search started ({{mode}}, {{scope}}).', {
+                mode: normalizedMode,
+                scope: normalizedScope
+            }), 'info');
             setAppMode('library');
             const summary = await searchForGamesAndEmulators(deduped, { scope: normalizedScope, mode: normalizedMode });
             if (!summary?.success) {
-                addFooterNotification('Search finished without new results.', 'warning');
+                addFooterNotification(t('browseFooter.searchFinishedNoResults', 'Search finished without new results.'), 'warning');
                 updateQuickSearchButtonState();
                 openFooterPanel('notifications');
                 return;
@@ -410,13 +440,23 @@ export function createBrowseFooterController(options = {}) {
             const foundArchives = Number(Array.isArray(summary?.foundArchives) ? summary.foundArchives.length : 0);
             const foundSetupFiles = Number(Array.isArray(summary?.foundSetupFiles) ? summary.foundSetupFiles.length : 0);
             addFooterNotification(
-                `Search complete. ${foundGames} game(s), ${foundEmulators} emulator(s), ${foundArchives} archive(s), ${foundSetupFiles} setup file(s), ${Math.max(1, deduped.length)} location(s).`,
+                t(
+                    'browseFooter.searchCompleteSummary',
+                    'Search complete. {{games}} game(s), {{emulators}} emulator(s), {{archives}} archive(s), {{setup}} setup file(s), {{locations}} location(s).',
+                    {
+                        games: foundGames,
+                        emulators: foundEmulators,
+                        archives: foundArchives,
+                        setup: foundSetupFiles,
+                        locations: Math.max(1, deduped.length)
+                    }
+                ),
                 'success'
             );
             updateQuickSearchButtonState();
             openFooterPanel('notifications');
         } catch (error) {
-            addFooterNotification(`Search failed: ${error?.message || error}`, 'error');
+            addFooterNotification(t('browseFooter.searchFailed', 'Search failed: {{message}}', { message: error?.message || error }), 'error');
             openFooterPanel('notifications');
         }
     }

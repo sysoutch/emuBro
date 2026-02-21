@@ -1,11 +1,15 @@
 const path = require("path");
 const { spawn } = require("child_process");
+const { createGameSessionManager } = require("../game-session-manager");
 
 function registerGameIpc(deps = {}) {
   const {
     ipcMain,
     log,
     app,
+    BrowserWindow,
+    Menu,
+    screen,
     shell,
     nativeImage,
     fsSync,
@@ -22,12 +26,16 @@ function registerGameIpc(deps = {}) {
     dbUpdateGameMetadata,
     dbUpsertTags,
     dbUpdateGameFilePath,
-    getPlatformConfigs
+    getPlatformConfigs,
+    getRuntimeDataRules
   } = deps;
 
   if (!ipcMain) throw new Error("registerGameIpc requires ipcMain");
   if (!log) throw new Error("registerGameIpc requires log");
   if (!app) throw new Error("registerGameIpc requires app");
+  if (!BrowserWindow) throw new Error("registerGameIpc requires BrowserWindow");
+  if (!Menu) throw new Error("registerGameIpc requires Menu");
+  if (!screen) throw new Error("registerGameIpc requires screen");
   if (!shell) throw new Error("registerGameIpc requires shell");
   if (!nativeImage) throw new Error("registerGameIpc requires nativeImage");
   if (!fsSync) throw new Error("registerGameIpc requires fsSync");
@@ -45,8 +53,374 @@ function registerGameIpc(deps = {}) {
   if (typeof dbUpsertTags !== "function") throw new Error("registerGameIpc requires dbUpsertTags");
   if (typeof dbUpdateGameFilePath !== "function") throw new Error("registerGameIpc requires dbUpdateGameFilePath");
   if (typeof getPlatformConfigs !== "function") throw new Error("registerGameIpc requires getPlatformConfigs");
+  if (typeof getRuntimeDataRules !== "function") throw new Error("registerGameIpc requires getRuntimeDataRules");
 
   const appPath = app.getAppPath();
+  const gameSessionManager = createGameSessionManager({
+    app,
+    fsSync,
+    log,
+    getMainWindow,
+    getRuntimeDataRules
+  });
+  const sessionOverlayWindows = new Map();
+  let sessionOverlayDisplayListenerRegistered = false;
+  let overlayTopMostTimer = null;
+  let launcherTopMostResetTimer = null;
+  const OVERLAY_BUTTON_SIZE = 58;
+  const OVERLAY_MARGIN = 12;
+
+  function getOverlayWindows() {
+    const out = [];
+    const staleKeys = [];
+    sessionOverlayWindows.forEach((win, key) => {
+      if (!win || win.isDestroyed()) {
+        staleKeys.push(key);
+        return;
+      }
+      out.push(win);
+    });
+    staleKeys.forEach((key) => sessionOverlayWindows.delete(key));
+    return out;
+  }
+
+  function stopOverlayTopMostTimer() {
+    if (overlayTopMostTimer) {
+      clearInterval(overlayTopMostTimer);
+      overlayTopMostTimer = null;
+    }
+  }
+
+  function enforceSessionOverlayTopMost() {
+    const windows = getOverlayWindows();
+    windows.forEach((win) => {
+      try {
+        win.setAlwaysOnTop(true, "screen-saver", 1);
+      } catch (_e) {
+        win.setAlwaysOnTop(true);
+      }
+      try {
+        win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+      } catch (_e) {}
+      try {
+        if (typeof win.moveTop === "function") {
+          win.moveTop();
+        }
+      } catch (_e) {}
+    });
+  }
+
+  function startOverlayTopMostTimer() {
+    stopOverlayTopMostTimer();
+    overlayTopMostTimer = setInterval(() => {
+      enforceSessionOverlayTopMost();
+    }, 1100);
+    if (typeof overlayTopMostTimer.unref === "function") {
+      overlayTopMostTimer.unref();
+    }
+  }
+
+  function positionSessionOverlayWindow(win, display) {
+    if (!win || win.isDestroyed()) return;
+    const targetDisplay = display || screen.getPrimaryDisplay();
+    const workArea = targetDisplay?.workArea || { x: 0, y: 0, width: 1280, height: 720 };
+    const bounds = win.getBounds();
+    const x = Math.round(workArea.x + Math.max(0, workArea.width - bounds.width - OVERLAY_MARGIN));
+    const y = Math.round(workArea.y + OVERLAY_MARGIN);
+    try {
+      win.setPosition(x, y, false);
+    } catch (_e) {}
+  }
+
+  function createSessionOverlayWindow(display) {
+    const displayId = String(display?.id || "");
+    if (displayId && sessionOverlayWindows.has(displayId)) {
+      const existing = sessionOverlayWindows.get(displayId);
+      if (existing && !existing.isDestroyed()) {
+        positionSessionOverlayWindow(existing, display);
+        return existing;
+      }
+      sessionOverlayWindows.delete(displayId);
+    }
+
+    const overlay = new BrowserWindow({
+      show: false,
+      width: OVERLAY_BUTTON_SIZE,
+      height: OVERLAY_BUTTON_SIZE,
+      minWidth: OVERLAY_BUTTON_SIZE,
+      maxWidth: OVERLAY_BUTTON_SIZE,
+      minHeight: OVERLAY_BUTTON_SIZE,
+      maxHeight: OVERLAY_BUTTON_SIZE,
+      frame: false,
+      transparent: true,
+      backgroundColor: "#00000000",
+      hasShadow: false,
+      resizable: false,
+      minimizable: false,
+      maximizable: false,
+      fullscreenable: false,
+      skipTaskbar: true,
+      alwaysOnTop: true,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        preload: path.join(appPath, "preload.js"),
+        devTools: true
+      }
+    });
+
+    overlay.setMenuBarVisibility(false);
+
+    overlay.on("closed", () => {
+      if (displayId && sessionOverlayWindows.get(displayId) === overlay) {
+        sessionOverlayWindows.delete(displayId);
+      }
+      if (getOverlayWindows().length === 0) {
+        stopOverlayTopMostTimer();
+      }
+    });
+    overlay.on("show", () => enforceSessionOverlayTopMost());
+    overlay.on("focus", () => enforceSessionOverlayTopMost());
+    overlay.on("blur", () => enforceSessionOverlayTopMost());
+    overlay.on("restore", () => enforceSessionOverlayTopMost());
+
+    overlay.loadFile(path.join(appPath, "game-session-overlay.html"))
+      .catch((error) => {
+        log.error("Failed to load game session overlay window:", error);
+      });
+
+    if (displayId) {
+      sessionOverlayWindows.set(displayId, overlay);
+    }
+    positionSessionOverlayWindow(overlay, display);
+    return overlay;
+  }
+
+  function syncSessionOverlayWindowsToDisplays() {
+    const displays = (typeof screen.getAllDisplays === "function")
+      ? screen.getAllDisplays()
+      : [screen.getPrimaryDisplay()];
+    const targetIds = new Set(displays.map((row) => String(row?.id || "")));
+
+    // Remove orphaned windows for displays that are no longer available.
+    sessionOverlayWindows.forEach((win, id) => {
+      if (targetIds.has(String(id || ""))) return;
+      try {
+        if (win && !win.isDestroyed()) {
+          win.close();
+        }
+      } catch (_e) {}
+      sessionOverlayWindows.delete(id);
+    });
+
+    // Ensure one overlay window per active display.
+    displays.forEach((display) => {
+      const displayId = String(display?.id || "");
+      const existing = displayId ? sessionOverlayWindows.get(displayId) : null;
+      if (existing && !existing.isDestroyed()) {
+        positionSessionOverlayWindow(existing, display);
+        return;
+      }
+      createSessionOverlayWindow(display);
+    });
+
+    return getOverlayWindows();
+  }
+
+  function ensureSessionOverlayDisplayListeners() {
+    if (sessionOverlayDisplayListenerRegistered) return;
+    if (!screen || typeof screen.on !== "function") return;
+
+    const onDisplayChanged = () => {
+      if (getOverlayWindows().length <= 0) return;
+      syncSessionOverlayWindowsToDisplays();
+      enforceSessionOverlayTopMost();
+    };
+
+    screen.on("display-metrics-changed", onDisplayChanged);
+    screen.on("display-added", onDisplayChanged);
+    screen.on("display-removed", onDisplayChanged);
+    sessionOverlayDisplayListenerRegistered = true;
+  }
+
+  function showSessionOverlayWindow() {
+    try {
+      ensureSessionOverlayDisplayListeners();
+      const windows = syncSessionOverlayWindowsToDisplays();
+      if (windows.length <= 0) {
+        log.warn("No overlay windows available to show");
+        return;
+      }
+      log.info(`Showing game session overlay on ${windows.length} display(s)`);
+      windows.forEach((overlay) => {
+        if (!overlay || overlay.isDestroyed()) return;
+        if (overlay.isVisible()) return;
+        let shown = false;
+        if (typeof overlay.showInactive === "function") {
+          try {
+            overlay.showInactive();
+            shown = overlay.isVisible();
+          } catch (_e) {
+            shown = false;
+          }
+        }
+        if (!shown) {
+          overlay.show();
+        }
+      });
+      enforceSessionOverlayTopMost();
+      startOverlayTopMostTimer();
+    } catch (error) {
+      log.warn("Failed to show game session overlay window:", error?.message || error);
+    }
+  }
+
+  function closeSessionOverlayWindow() {
+    stopOverlayTopMostTimer();
+    const windows = getOverlayWindows();
+    sessionOverlayWindows.clear();
+    windows.forEach((overlay) => {
+      if (!overlay || overlay.isDestroyed()) return;
+      try {
+        overlay.close();
+      } catch (_e) {}
+      try {
+        if (!overlay.isDestroyed()) {
+          overlay.destroy();
+        }
+      } catch (_e) {}
+    });
+  }
+
+  app.on("before-quit", () => {
+    closeSessionOverlayWindow();
+  });
+
+  function bringMainWindowToFront(reason = "game-stopped") {
+    let requestedWindowsForegroundFallback = false;
+
+    const requestWindowsForegroundFallback = () => {
+      if (process.platform !== "win32") return;
+      if (requestedWindowsForegroundFallback) return;
+      requestedWindowsForegroundFallback = true;
+
+      const script = [
+        "$wshell = New-Object -ComObject WScript.Shell",
+        "Start-Sleep -Milliseconds 70",
+        `[void]$wshell.AppActivate(${Number(process.pid || 0)})`
+      ].join("; ");
+
+      try {
+        const ps = spawn("powershell", [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-Command",
+          script
+        ], {
+          windowsHide: true,
+          stdio: "ignore"
+        });
+        if (ps && typeof ps.unref === "function") {
+          ps.unref();
+        }
+      } catch (_e) {}
+    };
+
+    const runAttempt = (forcePulse = false) => {
+      const mainWindow = getMainWindow();
+      if (!mainWindow || mainWindow.isDestroyed()) return;
+
+      try {
+        if (mainWindow.isMinimized()) {
+          mainWindow.restore();
+        }
+        if (!mainWindow.isVisible()) {
+          mainWindow.show();
+        }
+      } catch (_e) {}
+
+      try {
+        if (typeof mainWindow.moveTop === "function") {
+          mainWindow.moveTop();
+        }
+      } catch (_e) {}
+
+      try {
+        if (typeof app.focus === "function") {
+          try {
+            app.focus({ steal: true });
+          } catch (_e) {
+            app.focus();
+          }
+        }
+      } catch (_e) {}
+
+      try {
+        mainWindow.focus();
+      } catch (_e) {}
+
+      let isFocused = false;
+      try {
+        isFocused = mainWindow.isFocused();
+      } catch (_e) {
+        isFocused = false;
+      }
+
+      if (forcePulse || !isFocused) {
+        try {
+          mainWindow.setAlwaysOnTop(true, "screen-saver", 1);
+        } catch (_e) {
+          try {
+            mainWindow.setAlwaysOnTop(true);
+          } catch (_err) {}
+        }
+        try {
+          mainWindow.show();
+          mainWindow.focus();
+        } catch (_e) {}
+        try {
+          if (typeof mainWindow.flashFrame === "function") {
+            mainWindow.flashFrame(true);
+          }
+        } catch (_e) {}
+
+        if (launcherTopMostResetTimer) {
+          clearTimeout(launcherTopMostResetTimer);
+          launcherTopMostResetTimer = null;
+        }
+        launcherTopMostResetTimer = setTimeout(() => {
+          const win = getMainWindow();
+          if (!win || win.isDestroyed()) return;
+          try {
+            win.setAlwaysOnTop(false);
+          } catch (_e) {}
+          try {
+            if (typeof win.flashFrame === "function") {
+              win.flashFrame(false);
+            }
+          } catch (_e) {}
+          launcherTopMostResetTimer = null;
+        }, 2600);
+
+        if (!isFocused) {
+          requestWindowsForegroundFallback();
+        }
+      } else {
+        try {
+          if (typeof mainWindow.flashFrame === "function") {
+            mainWindow.flashFrame(false);
+          }
+        } catch (_e) {}
+      }
+    };
+
+    log.info(`Bring emuBro window to front (${reason})`);
+    runAttempt(false);
+    [140, 420, 980, 1650, 2600, 4200].forEach((delay, idx) => {
+      setTimeout(() => runAttempt(idx > 0), delay);
+    });
+  }
 
   function toTitleCaseFromSlug(value) {
     return String(value || "")
@@ -279,6 +653,44 @@ function registerGameIpc(deps = {}) {
       .slice(0, 120) || "emuBro Shortcut";
   }
 
+  function normalizeRuntimeRuleValueList(values = []) {
+    const out = [];
+    const seen = new Set();
+    (Array.isArray(values) ? values : []).forEach((entry) => {
+      const value = String(entry || "").trim().toLowerCase();
+      if (!value) return;
+      if (seen.has(value)) return;
+      seen.add(value);
+      out.push(value);
+    });
+    return out;
+  }
+
+  function normalizeRuntimeExtensionList(values = []) {
+    const out = [];
+    const seen = new Set();
+    (Array.isArray(values) ? values : []).forEach((entry) => {
+      let value = String(entry || "").trim().toLowerCase();
+      if (!value) return;
+      if (!value.startsWith(".")) value = `.${value}`;
+      value = value.replace(/\s+/g, "");
+      if (!value) return;
+      if (seen.has(value)) return;
+      seen.add(value);
+      out.push(value);
+    });
+    return out;
+  }
+
+  function normalizeRuntimeDataRules(input = {}) {
+    const source = (input && typeof input === "object") ? input : {};
+    return {
+      directoryNames: normalizeRuntimeRuleValueList(source.directoryNames),
+      fileExtensions: normalizeRuntimeExtensionList(source.fileExtensions),
+      fileNameIncludes: normalizeRuntimeRuleValueList(source.fileNameIncludes)
+    };
+  }
+
   function resolvePlatformDefaultCoverPath(platformShortName) {
     const psn = normalizePlatform(platformShortName);
     return path.join(appPath, "emubro-resources", "platforms", psn, "covers", "default.jpg");
@@ -447,7 +859,7 @@ function registerGameIpc(deps = {}) {
     }
   }
 
-  function launchGameObject(game) {
+  function launchGameObject(game, options = {}) {
     const platformShortName = String(game?.platformShortName || "").trim().toLowerCase();
     let gameRow = game;
     let gamePath = String(game?.filePath || "").trim();
@@ -499,6 +911,7 @@ function registerGameIpc(deps = {}) {
     let launchArgs = [];
     let launchCwd = "";
     let launchMode = "";
+    let resolvedEmulatorPath = "";
 
     if (isWindowsExeGame) {
       const gameDir = path.dirname(gamePath);
@@ -533,26 +946,57 @@ function registerGameIpc(deps = {}) {
       launchArgs = [gamePath];
       launchCwd = path.dirname(emuPath);
       launchMode = overridePath && overridePath === emuPath ? "emulator-override" : "emulator";
+      resolvedEmulatorPath = emuPath;
     }
 
     try {
+      closeSessionOverlayWindow();
       const child = spawn(launchTarget, launchArgs, {
         stdio: "ignore",
         cwd: launchCwd || undefined
       });
-      child.on("error", (error) => log.error(`Error launching game ${gameRow?.name || game?.name}:`, error));
-      child.on("exit", () => {
-        const mainWindow = getMainWindow();
-        if (mainWindow) {
-          log.info("restore main window from minimized state after game stopped");
-          mainWindow.restore();
-        }
+      const runtimeDataRules = normalizeRuntimeDataRules(options?.runtimeDataRules || {});
+      gameSessionManager.startSession({
+        child,
+        game: gameRow || game,
+        gamePath,
+        launchTarget,
+        launchMode,
+        emulatorPath: resolvedEmulatorPath,
+        runtimeDataRules
       });
+      child.on("error", (error) => {
+        closeSessionOverlayWindow();
+        log.error(`Error launching game ${gameRow?.name || game?.name}:`, error);
+      });
+
+      let handledProcessStop = false;
+      const onProcessStopped = () => {
+        if (handledProcessStop) return;
+        handledProcessStop = true;
+        closeSessionOverlayWindow();
+        bringMainWindowToFront("game-process-exit");
+      };
+      child.once("exit", onProcessStopped);
+      child.once("close", onProcessStopped);
+      child.once("disconnect", onProcessStopped);
 
       const mainWindow = getMainWindow();
       if (mainWindow) {
         log.info("Minimizing main window after game launch");
         mainWindow.minimize();
+      }
+
+      showSessionOverlayWindow();
+
+      try {
+        const targetGameId = Number(gameRow?.id || game?.id || 0);
+        if (targetGameId) {
+          dbUpdateGameMetadata(targetGameId, { lastPlayed: new Date().toISOString() });
+          refreshLibraryFromDb();
+        }
+      } catch (error) {
+        log.warn("Failed to update lastPlayed after launch:", error?.message || error);
       }
 
       return {
@@ -562,9 +1006,9 @@ function registerGameIpc(deps = {}) {
         launchMode
       };
     } catch (error) {
+      closeSessionOverlayWindow();
       log.error(`Error launching game ${gameRow?.name || game?.name}:`, error);
-      const mainWindow = getMainWindow();
-      if (mainWindow) mainWindow.restore();
+      bringMainWindowToFront("launch-failed");
       return { success: false, message: "Failed to execute launch command" };
     }
   }
@@ -751,6 +1195,28 @@ function registerGameIpc(deps = {}) {
         }
       }
 
+      if (Object.prototype.hasOwnProperty.call(payload, "lastPlayed")) {
+        const raw = payload?.lastPlayed;
+        const value = raw == null ? "" : String(raw).trim();
+        if (value) {
+          const parsed = new Date(value);
+          if (!Number.isFinite(parsed.getTime())) {
+            return { success: false, message: "Invalid lastPlayed value" };
+          }
+          patch.lastPlayed = parsed.toISOString();
+        } else {
+          patch.lastPlayed = null;
+        }
+      }
+
+      if (Object.prototype.hasOwnProperty.call(payload, "progress")) {
+        const progress = Number(payload?.progress);
+        if (!Number.isFinite(progress)) {
+          return { success: false, message: "Invalid progress value" };
+        }
+        patch.progress = Math.max(0, Math.min(100, Math.round(progress)));
+      }
+
       const updated = dbUpdateGameMetadata(gameId, patch);
       if (!updated) return { success: false, message: "Failed to update game metadata" };
 
@@ -782,17 +1248,113 @@ function registerGameIpc(deps = {}) {
     }
   });
 
-  ipcMain.handle("launch-game", async (_event, gameId) => {
+  ipcMain.handle("launch-game", async (_event, payload = 0) => {
     try {
-      const targetId = Number(gameId);
+      const targetId = Number((payload && typeof payload === "object")
+        ? (payload.gameId || payload.id || 0)
+        : payload);
       const game = getGamesState().find((row) => Number(row.id) === targetId) || dbGetGameById(targetId);
       if (!game) return { success: false, message: "Game not found" };
-      return launchGameObject(game);
+      const runtimeDataRules = (payload && typeof payload === "object")
+        ? normalizeRuntimeDataRules(payload.runtimeDataRules || {})
+        : normalizeRuntimeDataRules({});
+      return launchGameObject(game, { runtimeDataRules });
     } catch (error) {
-      log.error(`Failed to launch game ${gameId}:`, error);
-      const mainWindow = getMainWindow();
-      if (mainWindow) mainWindow.restore();
+      log.error("Failed to launch game:", error);
+      bringMainWindowToFront("launch-game-handler-error");
       return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle("game-session:get-status", async () => {
+    try {
+      return gameSessionManager.getStatus();
+    } catch (error) {
+      log.error("game-session:get-status failed:", error);
+      return { success: false, active: false, message: error?.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("game-session:show-launcher", async () => {
+    try {
+      return gameSessionManager.showLauncher();
+    } catch (error) {
+      log.error("game-session:show-launcher failed:", error);
+      return { success: false, message: error?.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("game-session:quit", async () => {
+    try {
+      return gameSessionManager.quitActiveSession();
+    } catch (error) {
+      log.error("game-session:quit failed:", error);
+      return { success: false, message: error?.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("game-session:send-hotkey", async (_event, payload = {}) => {
+    try {
+      const action = String(payload?.action || "").trim().toLowerCase();
+      return gameSessionManager.sendHotkey(action);
+    } catch (error) {
+      log.error("game-session:send-hotkey failed:", error);
+      return { success: false, message: error?.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("game-session:capture-screenshot", async (_event, payload = {}) => {
+    try {
+      const reason = String(payload?.reason || "manual").trim().toLowerCase() || "manual";
+      return gameSessionManager.captureActiveSessionScreenshot(reason);
+    } catch (error) {
+      log.error("game-session:capture-screenshot failed:", error);
+      return { success: false, message: error?.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("game-session:show-overlay-menu", async (event) => {
+    try {
+      const senderWindow = BrowserWindow.fromWebContents(event.sender);
+      if (!senderWindow || senderWindow.isDestroyed()) {
+        return { success: false, message: "Overlay window is not available" };
+      }
+
+      const menu = Menu.buildFromTemplate([
+        {
+          label: "Show emuBro",
+          click: () => {
+            gameSessionManager.showLauncher();
+          }
+        },
+        {
+          label: "Send Alt+Enter",
+          click: () => {
+            gameSessionManager.sendHotkey("alt_enter");
+          }
+        },
+        {
+          label: "Take Screenshot",
+          click: () => {
+            gameSessionManager.captureActiveSessionScreenshot("manual-overlay");
+          }
+        },
+        { type: "separator" },
+        {
+          label: "Quit Game",
+          click: () => {
+            gameSessionManager.quitActiveSession();
+          }
+        }
+      ]);
+
+      menu.popup({
+        window: senderWindow
+      });
+      return { success: true };
+    } catch (error) {
+      log.error("game-session:show-overlay-menu failed:", error);
+      return { success: false, message: error?.message || String(error) };
     }
   });
 

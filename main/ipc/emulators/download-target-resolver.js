@@ -19,6 +19,7 @@ function createDownloadTargetResolver(deps = {}) {
     selectDownloadOptionsByType,
     selectPreferredDownloadOption,
     selectBestGitHubAsset,
+    getEmulatorDownloadUrlCandidates,
     getPreferredEmulatorDownloadUrl,
     buildWaybackMachineUrl
   } = primitives;
@@ -51,7 +52,8 @@ function createDownloadTargetResolver(deps = {}) {
 
   async function listEmulatorDownloadTargets(emulator, osKey) {
     const normalizedOs = normalizeDownloadOsKey(osKey);
-    const preferredUrl = getPreferredEmulatorDownloadUrl(emulator, normalizedOs);
+    const sourceUrls = getEmulatorDownloadUrlCandidates(emulator, normalizedOs);
+    const preferredUrl = sourceUrls[0] || getPreferredEmulatorDownloadUrl(emulator, normalizedOs);
     if (!preferredUrl) {
       throw new Error("No download URL available for this emulator");
     }
@@ -60,74 +62,82 @@ function createDownloadTargetResolver(deps = {}) {
     const candidates = [];
     let manualUrl = preferredUrl;
 
-    const repo = parseGitHubRepoFromUrl(preferredUrl);
-    if (repo) {
-      try {
-        const release = await fetchGitHubLatestRelease(repo);
-        const releaseUrl = ensureHttpUrl(release?.html_url || preferredUrl);
-        manualUrl = releaseUrl || preferredUrl;
-        const assets = Array.isArray(release?.assets) ? release.assets : [];
+    for (const sourceUrl of sourceUrls) {
+      const candidateSource = ensureHttpUrl(sourceUrl);
+      if (!candidateSource) continue;
+      if (!manualUrl) manualUrl = candidateSource;
 
-        for (const asset of assets) {
-          const assetUrl = ensureHttpUrl(asset?.browser_download_url || "");
-          if (!assetUrl) continue;
+      const repo = parseGitHubRepoFromUrl(candidateSource);
+      if (repo) {
+        try {
+          const release = await fetchGitHubLatestRelease(repo);
+          const releaseUrl = ensureHttpUrl(release?.html_url || candidateSource);
+          manualUrl = releaseUrl || candidateSource;
+          const assets = Array.isArray(release?.assets) ? release.assets : [];
 
-          const fileName = String(asset?.name || getFilenameFromUrl(assetUrl)).trim();
-          if (!fileName) continue;
+          for (const asset of assets) {
+            const assetUrl = ensureHttpUrl(asset?.browser_download_url || "");
+            if (!assetUrl) continue;
 
-          const packageType = classifyDownloadPackageType(fileName, normalizedOs, regexBundle);
-          if (!packageType) continue;
+            const fileName = String(asset?.name || getFilenameFromUrl(assetUrl)).trim();
+            if (!fileName) continue;
 
-          const score = scoreAssetForOs(fileName, normalizedOs);
-          if (score <= 0 && !(regexBundle.archive?.test(fileName) || regexBundle.installer?.test(fileName) || regexBundle.executable?.test(fileName))) {
-            continue;
+            const packageType = classifyDownloadPackageType(fileName, normalizedOs, regexBundle);
+            if (!packageType) continue;
+
+            const score = scoreAssetForOs(fileName, normalizedOs);
+            if (score <= 0 && !(regexBundle.archive?.test(fileName) || regexBundle.installer?.test(fileName) || regexBundle.executable?.test(fileName))) {
+              continue;
+            }
+
+            candidates.push({
+              packageType,
+              url: assetUrl,
+              fileName,
+              score,
+              source: "github-release",
+              releaseUrl
+            });
           }
 
-          candidates.push({
-            packageType,
-            url: assetUrl,
-            fileName,
-            score,
-            source: "github-release",
-            releaseUrl
-          });
-        }
-
-        if (candidates.length === 0) {
-          const bestAsset = selectBestGitHubAsset(release, emulator, normalizedOs);
-          if (bestAsset?.browser_download_url) {
-            const fallbackName = String(bestAsset?.name || getFilenameFromUrl(bestAsset.browser_download_url)).trim();
-            const fallbackType = classifyDownloadPackageType(fallbackName, normalizedOs, regexBundle);
-            if (fallbackType) {
-              candidates.push({
-                packageType: fallbackType,
-                url: ensureHttpUrl(bestAsset.browser_download_url),
-                fileName: fallbackName,
-                score: scoreAssetForOs(fallbackName, normalizedOs),
-                source: "github-release",
-                releaseUrl
-              });
+          if (candidates.length === 0) {
+            const bestAsset = selectBestGitHubAsset(release, emulator, normalizedOs);
+            if (bestAsset?.browser_download_url) {
+              const fallbackName = String(bestAsset?.name || getFilenameFromUrl(bestAsset.browser_download_url)).trim();
+              const fallbackType = classifyDownloadPackageType(fallbackName, normalizedOs, regexBundle);
+              if (fallbackType) {
+                candidates.push({
+                  packageType: fallbackType,
+                  url: ensureHttpUrl(bestAsset.browser_download_url),
+                  fileName: fallbackName,
+                  score: scoreAssetForOs(fallbackName, normalizedOs),
+                  source: "github-release",
+                  releaseUrl
+                });
+              }
             }
           }
+        } catch (_e) {
+          // Fall through to direct URL handling.
         }
-      } catch (_e) {
-        // Fall through to direct URL handling.
       }
-    }
 
-    if (candidates.length === 0 && isLikelyDirectDownloadUrl(preferredUrl)) {
-      const fileName = getFilenameFromUrl(preferredUrl);
-      const packageType = classifyDownloadPackageType(fileName, normalizedOs, regexBundle);
-      if (packageType) {
-        candidates.push({
-          packageType,
-          url: preferredUrl,
-          fileName,
-          score: scoreAssetForOs(fileName, normalizedOs),
-          source: "direct-link",
-          releaseUrl: ensureHttpUrl(preferredUrl)
-        });
+      if (candidates.length === 0 && isLikelyDirectDownloadUrl(candidateSource)) {
+        const fileName = getFilenameFromUrl(candidateSource);
+        const packageType = classifyDownloadPackageType(fileName, normalizedOs, regexBundle);
+        if (packageType) {
+          candidates.push({
+            packageType,
+            url: candidateSource,
+            fileName,
+            score: scoreAssetForOs(fileName, normalizedOs),
+            source: "direct-link",
+            releaseUrl: ensureHttpUrl(candidateSource)
+          });
+        }
       }
+
+      if (candidates.length > 0) break;
     }
 
     return {

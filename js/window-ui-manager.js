@@ -103,6 +103,7 @@ export function setupHeaderThemeControlsToggle(options = {}) {
 export function setupSidebarRail(options = {}) {
     const setAppMode = typeof options.setAppMode === 'function' ? options.setAppMode : () => {};
     const showToolView = typeof options.showToolView === 'function' ? options.showToolView : () => {};
+    const showSupportView = typeof options.showSupportView === 'function' ? options.showSupportView : () => {};
     const showCommunityView = typeof options.showCommunityView === 'function' ? options.showCommunityView : () => {};
     const setActiveRailTarget = typeof options.setActiveRailTarget === 'function' ? options.setActiveRailTarget : () => {};
     const openLibraryPathSettingsModal = typeof options.openLibraryPathSettingsModal === 'function'
@@ -145,6 +146,12 @@ export function setupSidebarRail(options = {}) {
             if (target === 'tools') {
                 setAppMode('tools');
                 showToolView();
+                return;
+            }
+
+            if (target === 'support') {
+                setAppMode('support');
+                showSupportView();
                 return;
             }
 

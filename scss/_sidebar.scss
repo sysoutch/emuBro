@@ -357,6 +357,29 @@ body.panel-docked {
     padding: 7px 10px;
 }
 
+#categories-list .categories-sort-row {
+    display: grid;
+    gap: 6px;
+}
+
+#categories-list .categories-sort-label {
+    display: block;
+    font-size: 0.74rem;
+    letter-spacing: 0.01em;
+    color: var(--text-secondary);
+    opacity: 0.9;
+}
+
+#categories-list .categories-sort-select {
+    width: 100%;
+    border: 1px solid color-mix(in srgb, var(--border-color), transparent 20%);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--bg-tertiary), transparent 8%);
+    color: var(--text-primary);
+    font-size: 0.78rem;
+    padding: 6px 8px;
+}
+
 #categories-list .categories-more-row {
     margin-top: 2px;
 }

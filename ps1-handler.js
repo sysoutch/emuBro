@@ -159,56 +159,74 @@ class PS1CardHandler {
     }
 
     extractIcon(dataBlock) {
-        // Palette at 0x60
+        const width = 16;
+        const height = 16;
+
+        // Icon display flags are typically 0x11, 0x12, 0x13 for 1..3 frames.
+        const iconFlag = Number(dataBlock[0x02] || 0);
+        let frameCount = iconFlag & 0x03;
+        if (frameCount < 1 || frameCount > 3) frameCount = 1;
+
+        // Palette (16 colors) starts at 0x60 in the save header.
         const palette = [];
         for (let p = 0; p < 16; p++) {
             const colorVal = dataBlock.readUInt16LE(0x60 + (p * 2));
-            // 15-bit color (R5 G5 B5)
-            // Bit 15 is STP (Transparency/Semi-transparency) usually. 
-            // If STP=1 and RGB=0 -> Transparent?
-            // Simplified:
             const r = (colorVal & 0x1F) << 3;
             const g = ((colorVal >> 5) & 0x1F) << 3;
             const b = ((colorVal >> 10) & 0x1F) << 3;
-            const a = (p === 0) ? 0 : 255; // Index 0 is usually background/transparent
+            const a = (p === 0) ? 0 : 255;
             palette.push([r, g, b, a]);
         }
 
-        // Bitmap at 0x80 (128 bytes)
-        // 16x16 pixels, 4 bits per pixel = 256 pixels * 0.5 bytes = 128 bytes
-        const bitmap = dataBlock.slice(0x80, 0x80 + 128);
-        
-        // Decode to RGBA buffer
-        const width = 16;
-        const height = 16;
-        const pixels = new Uint8ClampedArray(width * height * 4);
+        const decodeFrame = (frameOffset) => {
+            const bitmap = dataBlock.slice(frameOffset, frameOffset + 128);
+            if (bitmap.length < 128) return null;
 
-        for (let i = 0; i < bitmap.length; i++) {
-            const byte = bitmap[i];
-            const low = byte & 0x0F;
-            const high = (byte >> 4) & 0x0F;
+            const pixels = new Uint8ClampedArray(width * height * 4);
+            for (let i = 0; i < bitmap.length; i++) {
+                const byte = bitmap[i];
+                const low = byte & 0x0F;
+                const high = (byte >> 4) & 0x0F;
 
-            // Pixel 2*i
-            let col = palette[low];
-            let idx = (i * 2) * 4;
-            pixels[idx] = col[0];
-            pixels[idx+1] = col[1];
-            pixels[idx+2] = col[2];
-            pixels[idx+3] = col[3];
+                let col = palette[low];
+                let idx = (i * 2) * 4;
+                pixels[idx] = col[0];
+                pixels[idx + 1] = col[1];
+                pixels[idx + 2] = col[2];
+                pixels[idx + 3] = col[3];
 
-            // Pixel 2*i + 1
-            col = palette[high];
-            idx = (i * 2 + 1) * 4;
-            pixels[idx] = col[0];
-            pixels[idx+1] = col[1];
-            pixels[idx+2] = col[2];
-            pixels[idx+3] = col[3];
+                col = palette[high];
+                idx = (i * 2 + 1) * 4;
+                pixels[idx] = col[0];
+                pixels[idx + 1] = col[1];
+                pixels[idx + 2] = col[2];
+                pixels[idx + 3] = col[3];
+            }
+
+            return {
+                width,
+                height,
+                pixels: Array.from(pixels)
+            };
+        };
+
+        const frames = [];
+        for (let f = 0; f < frameCount; f++) {
+            const decoded = decodeFrame(0x80 + (f * 128));
+            if (!decoded) continue;
+            frames.push(decoded);
         }
 
+        if (!frames.length) return null;
+
         return {
-            width, 
-            height, 
-            pixels: Array.from(pixels) // Convert to array for JSON serialization
+            width,
+            height,
+            pixels: frames[0].pixels, // Backward-compatible first frame
+            frames,
+            frameCount: frames.length,
+            isAnimated: frames.length > 1,
+            iconFlag
         };
     }
 

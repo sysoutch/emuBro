@@ -94,6 +94,8 @@ function createLibraryDbService(deps = {}) {
         platformShortName TEXT NOT NULL,
         emulatorOverridePath TEXT,
         tags TEXT,
+        progress INTEGER DEFAULT 0,
+        lastPlayed TEXT,
         filePath TEXT NOT NULL UNIQUE,
         code TEXT,
         image TEXT,
@@ -133,6 +135,14 @@ function createLibraryDbService(deps = {}) {
       const hasTagsColumn = gameColumns.some((col) => String(col?.name || "").trim().toLowerCase() === "tags");
       if (!hasTagsColumn) {
         dbRef.exec("ALTER TABLE games ADD COLUMN tags TEXT");
+      }
+      const hasProgressColumn = gameColumns.some((col) => String(col?.name || "").trim().toLowerCase() === "progress");
+      if (!hasProgressColumn) {
+        dbRef.exec("ALTER TABLE games ADD COLUMN progress INTEGER DEFAULT 0");
+      }
+      const hasLastPlayedColumn = gameColumns.some((col) => String(col?.name || "").trim().toLowerCase() === "lastplayed");
+      if (!hasLastPlayedColumn) {
+        dbRef.exec("ALTER TABLE games ADD COLUMN lastPlayed TEXT");
       }
     } catch (error) {
       log.error("Failed to migrate games table:", error);
@@ -283,6 +293,20 @@ function createLibraryDbService(deps = {}) {
       const tags = normalizeTagList(patch.tags);
       sets.push("tags = @tags");
       params.tags = tags.length > 0 ? JSON.stringify(tags) : null;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(patch, "lastPlayed")) {
+      const raw = patch.lastPlayed;
+      const value = raw == null ? "" : String(raw).trim();
+      sets.push("lastPlayed = @lastPlayed");
+      params.lastPlayed = value || null;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(patch, "progress")) {
+      const value = Number(patch.progress);
+      if (!Number.isFinite(value)) return null;
+      sets.push("progress = @progress");
+      params.progress = Math.max(0, Math.min(100, Math.round(value)));
     }
 
     if (sets.length === 0) return dbGetGameById(targetId);

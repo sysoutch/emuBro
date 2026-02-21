@@ -1,0 +1,149 @@
+.games-container.support-view {
+    display: block;
+    min-height: 0;
+    padding-top: clamp(10px, 1.4vw, 16px);
+}
+
+.support-view-shell {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(10px, 1.4vw, 18px);
+}
+
+.support-hero {
+    border: 1px solid color-mix(in srgb, rgba(255,255,255,0.2), var(--border-color));
+    border-radius: clamp(12px, 1.6vw, 18px);
+    padding: clamp(14px, 2.2vw, 22px);
+    background:
+        radial-gradient(125% 150% at 0% 0%, color-mix(in srgb, var(--accent-color) 20%, transparent), transparent 56%),
+        radial-gradient(110% 130% at 95% 100%, color-mix(in srgb, var(--brand-color) 20%, transparent), transparent 62%),
+        color-mix(in srgb, var(--bg-secondary), transparent 14%);
+    box-shadow: 0 18px 34px -26px rgba(0, 0, 0, 0.8);
+}
+
+.support-hero-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, rgba(255,255,255,0.26), var(--border-color));
+    background: color-mix(in srgb, var(--bg-primary), transparent 28%);
+    color: var(--text-secondary);
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 10px;
+}
+
+.support-hero-title {
+    margin: 0 0 8px 0;
+    color: var(--text-primary);
+    font-size: clamp(1.35rem, 2.5vw, 1.9rem);
+    letter-spacing: 0.01em;
+}
+
+.support-hero-copy {
+    margin: 0;
+    color: var(--text-secondary);
+    line-height: 1.55;
+}
+
+.support-hero-hint {
+    margin: 10px 0 0 0;
+    color: color-mix(in srgb, var(--text-secondary), transparent 12%);
+    font-size: 0.84rem;
+}
+
+.support-form-card,
+.support-output-card {
+    border: 1px solid color-mix(in srgb, rgba(255,255,255,0.14), var(--border-color));
+    border-radius: clamp(10px, 1.4vw, 14px);
+    background: color-mix(in srgb, var(--bg-secondary), transparent 20%);
+    padding: clamp(12px, 1.8vw, 18px);
+}
+
+.support-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 10px;
+}
+
+.support-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 10px;
+
+    span {
+        color: var(--text-secondary);
+        font-size: 0.84rem;
+        font-weight: 600;
+    }
+
+    input,
+    select,
+    textarea {
+        width: 100%;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        background: color-mix(in srgb, var(--bg-primary), transparent 12%);
+        color: var(--text-primary);
+        padding: 9px 10px;
+        font-size: 0.92rem;
+    }
+
+    textarea {
+        resize: vertical;
+        min-height: 140px;
+        line-height: 1.45;
+    }
+}
+
+.support-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.support-status {
+    min-height: 1.2rem;
+    margin: 8px 0 0 0;
+    color: var(--text-secondary);
+    font-size: 0.84rem;
+}
+
+.support-output-card {
+    h3 {
+        margin: 0 0 8px 0;
+        color: var(--text-primary);
+        font-size: 1rem;
+    }
+}
+
+.support-output-pre {
+    margin: 0;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: color-mix(in srgb, var(--bg-primary), transparent 8%);
+    color: var(--text-primary);
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.84rem;
+    line-height: 1.5;
+    min-height: 180px;
+}
+
+@media (max-width: 720px) {
+    .support-hero {
+        padding: 18px 16px;
+    }
+
+    .support-actions {
+        flex-wrap: wrap;
+    }
+}

@@ -6,7 +6,8 @@ function createEmulatorCatalogService(deps = {}) {
     normalizeEmulatorName,
     normalizeEmulatorType,
     ensureHttpUrl,
-    buildEmulatorDownloadLinks
+    buildEmulatorDownloadLinks,
+    normalizeDownloadUrlMap
   } = deps;
 
   if (!path) throw new Error("createEmulatorCatalogService requires path");
@@ -16,6 +17,17 @@ function createEmulatorCatalogService(deps = {}) {
   if (typeof normalizeEmulatorType !== "function") throw new Error("createEmulatorCatalogService requires normalizeEmulatorType");
   if (typeof ensureHttpUrl !== "function") throw new Error("createEmulatorCatalogService requires ensureHttpUrl");
   if (typeof buildEmulatorDownloadLinks !== "function") throw new Error("createEmulatorCatalogService requires buildEmulatorDownloadLinks");
+  if (typeof normalizeDownloadUrlMap !== "function") throw new Error("createEmulatorCatalogService requires normalizeDownloadUrlMap");
+
+  function hasAnyDownloadUrl(input) {
+    const normalized = normalizeDownloadUrlMap(input);
+    return normalized.windows.length > 0 || normalized.linux.length > 0 || normalized.mac.length > 0;
+  }
+
+  function firstDownloadUrl(input) {
+    const normalized = normalizeDownloadUrlMap(input);
+    return normalized.windows[0] || normalized.linux[0] || normalized.mac[0] || "";
+  }
 
   function buildConfiguredEmulators(platformConfigs) {
     const out = [];
@@ -28,8 +40,9 @@ function createEmulatorCatalogService(deps = {}) {
       for (const emu of (config?.emulators || [])) {
         const name = String(emu?.name || "").trim();
         if (!name) continue;
-        const downloadUrl = ensureHttpUrl(emu?.downloadUrl || "");
-        const website = ensureHttpUrl(emu?.website || downloadUrl);
+        const normalizedDownloadUrl = normalizeDownloadUrlMap(emu?.downloadUrl);
+        const downloadUrl = hasAnyDownloadUrl(normalizedDownloadUrl) ? normalizedDownloadUrl : "";
+        const website = ensureHttpUrl(emu?.website || firstDownloadUrl(normalizedDownloadUrl));
         const downloadLinks = buildEmulatorDownloadLinks(name, website, emu?.downloadLinks, downloadUrl);
 
         const key = `${platformShortName}::${normalizeEmulatorName(name)}`;
@@ -59,6 +72,15 @@ function createEmulatorCatalogService(deps = {}) {
           executableFileMatchWin: String(emu?.executableFileMatchWin || "").trim(),
           executableFileMatchLinux: String(emu?.executableFileMatchLinux || "").trim(),
           executableFileMatchMac: String(emu?.executableFileMatchMac || "").trim(),
+          configFilePath: String(emu?.configFilePath || "").trim(),
+          runCommandsBefore: Array.isArray(emu?.runCommandsBefore)
+            ? emu.runCommandsBefore.map((cmd) => String(cmd || "").trim()).filter(Boolean)
+            : [],
+          supportedFileTypes: Array.isArray(emu?.supportedFileTypes)
+            ? emu.supportedFileTypes.map((ext) => String(ext || "").trim()).filter(Boolean)
+            : [],
+          biosRequired: !!emu?.biosRequired,
+          autoSearchEnabled: emu?.autoSearchEnabled !== false,
           iconFilename: String(emu?.iconFilename || "").trim(),
           source: "config"
         });
@@ -119,8 +141,9 @@ function createEmulatorCatalogService(deps = {}) {
     return (installedRows || []).map((emu) => {
       const filePath = String(emu?.filePath || "").trim();
       const installed = !!filePath && fsSync.existsSync(filePath);
-      const downloadUrl = ensureHttpUrl(emu?.downloadUrl || "");
-      const website = ensureHttpUrl(emu?.website || downloadUrl);
+      const normalizedDownloadUrl = normalizeDownloadUrlMap(emu?.downloadUrl);
+      const downloadUrl = hasAnyDownloadUrl(normalizedDownloadUrl) ? normalizedDownloadUrl : "";
+      const website = ensureHttpUrl(emu?.website || firstDownloadUrl(normalizedDownloadUrl));
       return {
         ...emu,
         filePath,
@@ -139,6 +162,15 @@ function createEmulatorCatalogService(deps = {}) {
         executableFileMatchWin: String(emu?.executableFileMatchWin || "").trim(),
         executableFileMatchLinux: String(emu?.executableFileMatchLinux || "").trim(),
         executableFileMatchMac: String(emu?.executableFileMatchMac || "").trim(),
+        configFilePath: String(emu?.configFilePath || "").trim(),
+        runCommandsBefore: Array.isArray(emu?.runCommandsBefore)
+          ? emu.runCommandsBefore.map((cmd) => String(cmd || "").trim()).filter(Boolean)
+          : [],
+        supportedFileTypes: Array.isArray(emu?.supportedFileTypes)
+          ? emu.supportedFileTypes.map((ext) => String(ext || "").trim()).filter(Boolean)
+          : [],
+        biosRequired: !!emu?.biosRequired,
+        autoSearchEnabled: emu?.autoSearchEnabled !== false,
         source: "library"
       };
     });

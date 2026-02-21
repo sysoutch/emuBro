@@ -15,8 +15,10 @@ module.exports = {
     "preload.js",
     "ps1-handler.js",
     "index.html",
+    "game-session-overlay.html",
     "i18n.js",
     "translations-loader.js",
+    "js/game-session-overlay-window.js",
     "dist/**/*",        // Your Webpack output
     "locales/**/*",
     "logo.png",

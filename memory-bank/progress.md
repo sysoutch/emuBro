@@ -35,6 +35,11 @@
 - Deployment procedures and packaging
 
 ## Recent Changes
+- Moved runtime backup rule editing into Emulator Edit modal and removed it from Library Settings modal
+- Added emulator-specific `runtimeDataRules` and wired launch payloads so backup matching can be controlled per emulator
+- Added game session overlay controls (show launcher, Alt+Enter, screenshot, quit) with active session polling
+- Added BIOS Manager tool implementation with platform BIOS listing, file import, and folder open actions
+- Updated launch backend to set `lastPlayed` on successful launch for Recently Played reliability
 - Refactored `renderer.js` by extracting reusable modules:
   - `js/suggestions-settings.js`
   - `js/suggestions-core.js`
@@ -73,6 +78,13 @@
     - Resolved `TypeError` crash by implementing robust undefined checks and filtering
     - Fixed Bluetooth controller detection by supporting both standard `GamepadEvent` and direct gamepad object payloads
     - Implemented `syncWithNativeAPI` polling fallback to ensure robust detection and fresh state updates for all controllers
+- Added future roadmap TODO bank in `memory-bank/activeContext.md` for:
+  - Auto save-state/memory-card backup
+  - Auto screenshot capture for future multi-cover support
+  - In-app game overlay controls
+  - BIOS management
+  - Controller-first UI navigation
+  - Emulator update + save data migration
 
 ## Current Status
 - Documentation foundation established

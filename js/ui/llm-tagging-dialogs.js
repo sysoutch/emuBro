@@ -1,4 +1,4 @@
-export function openGlobalLlmTaggingSetupModal({ totalAll = 0, totalUntagged = 0 } = {}) {
+export function openGlobalLlmTaggingSetupModal({ totalAll = 0, totalUntagged = 0, countCalculator = null } = {}) {
     return new Promise((resolve) => {
         const overlay = document.createElement('div');
         overlay.style.cssText = [
@@ -40,6 +40,10 @@ export function openGlobalLlmTaggingSetupModal({ totalAll = 0, totalUntagged = 0
                     <input type="checkbox" data-input="include-tagged" />
                     <span>Include games that already have tags</span>
                 </label>
+                <div data-skip-tagged-wrap style="display:none;grid-template-columns:1fr 180px;gap:10px;align-items:center;padding-left:24px;">
+                    <label>Max existing tags (process if ≤ X)</label>
+                    <input type="number" min="0" step="1" data-input="skip-tagged-count" value="1" />
+                </div>
                 <div style="display:grid;grid-template-columns:1fr 180px;gap:10px;align-items:center;">
                     <label style="display:flex;align-items:center;gap:10px;">
                         <input type="radio" name="llm-tag-scope" value="next" checked />
@@ -75,6 +79,8 @@ export function openGlobalLlmTaggingSetupModal({ totalAll = 0, totalUntagged = 0
         `;
 
         const includeTagged = modal.querySelector('[data-input="include-tagged"]');
+        const skipTaggedWrap = modal.querySelector('[data-skip-tagged-wrap]');
+        const skipTaggedCountInput = modal.querySelector('[data-input="skip-tagged-count"]');
         const nextCountInput = modal.querySelector('[data-input="next-count"]');
         const chunkModeSelect = modal.querySelector('[data-input="chunk-mode"]');
         const chunkValueInput = modal.querySelector('[data-input="chunk-value"]');
@@ -83,12 +89,26 @@ export function openGlobalLlmTaggingSetupModal({ totalAll = 0, totalUntagged = 0
         const chunkValueLabel = modal.querySelector('[data-label="chunk-value-label"]');
 
         const getScope = () => modal.querySelector('input[name="llm-tag-scope"]:checked')?.value === 'all' ? 'all' : 'next';
-        const getBaseCount = () => includeTagged?.checked ? Number(totalAll || 0) : Number(totalUntagged || 0);
         const getNextCount = () => Math.max(1, Number.parseInt(String(nextCountInput?.value || '1'), 10) || 1);
         const getChunkValue = () => Math.max(1, Number.parseInt(String(chunkValueInput?.value || '1'), 10) || 1);
 
         const refreshSummary = () => {
-            const baseCount = getBaseCount();
+            if (skipTaggedWrap) {
+                skipTaggedWrap.style.display = includeTagged?.checked ? 'grid' : 'none';
+            }
+            
+            let baseCount = 0;
+            if (typeof countCalculator === 'function') {
+                const rawSkip = Number.parseInt(skipTaggedCountInput?.value, 10);
+                const skipVal = Number.isFinite(rawSkip) ? rawSkip : -1;
+                baseCount = countCalculator({
+                    includeAlreadyTagged: !!includeTagged?.checked,
+                    skipTaggedCount: skipVal
+                });
+            } else {
+                baseCount = includeTagged?.checked ? Number(totalAll || 0) : Number(totalUntagged || 0);
+            }
+
             const scope = getScope();
             const estimated = scope === 'all' ? baseCount : Math.min(baseCount, getNextCount());
             const chunkMode = String(chunkModeSelect?.value || 'size');
@@ -117,7 +137,7 @@ export function openGlobalLlmTaggingSetupModal({ totalAll = 0, totalUntagged = 0
                 refreshSummary();
             });
         });
-        [includeTagged, nextCountInput, chunkModeSelect, chunkValueInput, confirmEachChunk].forEach((control) => {
+        [includeTagged, skipTaggedCountInput, nextCountInput, chunkModeSelect, chunkValueInput, confirmEachChunk].forEach((control) => {
             control?.addEventListener('input', refreshSummary);
             control?.addEventListener('change', refreshSummary);
         });
@@ -130,7 +150,19 @@ export function openGlobalLlmTaggingSetupModal({ totalAll = 0, totalUntagged = 0
         modal.querySelector('[data-close]')?.addEventListener('click', () => close(null));
         modal.querySelector('[data-cancel]')?.addEventListener('click', () => close(null));
         modal.querySelector('[data-start]')?.addEventListener('click', () => {
-            const baseCount = getBaseCount();
+            let baseCount = 0;
+            const rawSkip = Number.parseInt(skipTaggedCountInput?.value, 10);
+            const skipVal = Number.isFinite(rawSkip) ? rawSkip : -1;
+
+            if (typeof countCalculator === 'function') {
+                baseCount = countCalculator({
+                    includeAlreadyTagged: !!includeTagged?.checked,
+                    skipTaggedCount: skipVal
+                });
+            } else {
+                baseCount = includeTagged?.checked ? Number(totalAll || 0) : Number(totalUntagged || 0);
+            }
+
             if (baseCount <= 0) {
                 summaryBox.innerHTML = '<div style="color:#e8b84a;">No matching games for this selection.</div>';
                 return;
@@ -144,6 +176,7 @@ export function openGlobalLlmTaggingSetupModal({ totalAll = 0, totalUntagged = 0
             }
             close({
                 includeAlreadyTagged: !!includeTagged?.checked,
+                skipTaggedCount: includeTagged?.checked ? skipVal : -1,
                 processMode: scope,
                 nextCount: selectedCount,
                 chunkMode: String(chunkModeSelect?.value || 'size') === 'count' ? 'count' : 'size',
@@ -162,7 +195,7 @@ export function openGlobalLlmTaggingSetupModal({ totalAll = 0, totalUntagged = 0
     });
 }
 
-export function createGlobalLlmProgressDialog({ totalGames = 0, totalChunks = 0, confirmEachChunk = true } = {}) {
+export function createGlobalLlmProgressDialog({ totalGames = 0, totalChunks = 0, confirmEachChunk = true, chunkValue = 0, chunkMode = 'size' } = {}) {
     const overlay = document.createElement('div');
     overlay.style.cssText = [
         'position:fixed',
@@ -200,7 +233,20 @@ export function createGlobalLlmProgressDialog({ totalGames = 0, totalChunks = 0,
             <div data-progress-fill style="height:100%;width:0%;background:var(--accent-color);transition:width 0.2s ease;"></div>
         </div>
         <div data-progress-metrics style="display:flex;gap:12px;flex-wrap:wrap;font-size:0.9rem;color:var(--text-secondary);"></div>
-        <div data-progress-logs style="max-height:280px;overflow:auto;border:1px solid var(--border-color);border-radius:10px;padding:10px;display:grid;gap:6px;font-size:0.86rem;"></div>
+        <div data-progress-time style="display:flex;gap:12px;flex-wrap:wrap;font-size:0.82rem;color:var(--text-secondary);opacity:0.8;"></div>
+        
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;padding:10px;border:1px solid var(--border-color);border-radius:10px;background:rgba(0,0,0,0.1);">
+            <div style="display:grid;gap:4px;">
+                <label style="font-size:0.8rem;color:var(--text-secondary);">Chunk Size</label>
+                <input type="number" min="1" step="1" data-input="live-chunk-value" value="${chunkValue}" style="width:100%;" />
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding-top:14px;">
+                <input type="checkbox" id="live-confirm-toggle" ${confirmEachChunk ? 'checked' : ''} />
+                <label for="live-confirm-toggle" style="font-size:0.85rem;">Confirm each chunk</label>
+            </div>
+        </div>
+
+        <div data-progress-logs style="max-height:240px;overflow:auto;border:1px solid var(--border-color);border-radius:10px;padding:10px;display:grid;gap:6px;font-size:0.86rem;"></div>
         <div data-progress-controls style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;">
             <button type="button" class="action-btn" data-stop style="display:none;">Stop Here</button>
             <button type="button" class="action-btn launch-btn" data-next style="display:none;">Continue Next Chunk</button>
@@ -211,9 +257,12 @@ export function createGlobalLlmProgressDialog({ totalGames = 0, totalChunks = 0,
     const statusEl = modal.querySelector('[data-progress-status]');
     const fillEl = modal.querySelector('[data-progress-fill]');
     const metricsEl = modal.querySelector('[data-progress-metrics]');
+    const timeEl = modal.querySelector('[data-progress-time]');
     const logsEl = modal.querySelector('[data-progress-logs]');
     const stopBtn = modal.querySelector('[data-stop]');
     const nextBtn = modal.querySelector('[data-next]');
+    const liveChunkValueInput = modal.querySelector('[data-input="live-chunk-value"]');
+    const liveConfirmToggle = modal.querySelector('#live-confirm-toggle');
     const closeBtn = modal.querySelector('[data-close]');
     const closeFinalBtn = modal.querySelector('[data-close-final]');
 
@@ -221,6 +270,7 @@ export function createGlobalLlmProgressDialog({ totalGames = 0, totalChunks = 0,
     let updated = 0;
     let skipped = 0;
     let failed = 0;
+    let startTime = Date.now();
     let continueResolver = null;
     let completed = false;
     let canceled = false;
@@ -234,6 +284,16 @@ export function createGlobalLlmProgressDialog({ totalGames = 0, totalChunks = 0,
         logsEl.prepend(row);
     };
 
+    const formatTime = (ms) => {
+        if (ms < 0) return '0s';
+        const s = Math.floor(ms / 1000);
+        const m = Math.floor(s / 60);
+        const h = Math.floor(m / 60);
+        if (h > 0) return `${h}h ${m % 60}m ${s % 60}s`;
+        if (m > 0) return `${m}m ${s % 60}s`;
+        return `${s}s`;
+    };
+
     const renderMetrics = () => {
         const percent = totalGames > 0 ? Math.min(100, Math.round((processed / totalGames) * 100)) : 0;
         if (fillEl) fillEl.style.width = `${percent}%`;
@@ -244,6 +304,19 @@ export function createGlobalLlmProgressDialog({ totalGames = 0, totalChunks = 0,
                 <span><strong>Skipped:</strong> ${skipped}</span>
                 <span><strong>Failed:</strong> ${failed}</span>
                 <span><strong>Chunks:</strong> ${totalChunks}</span>
+            `;
+        }
+        if (timeEl) {
+            const spent = Date.now() - startTime;
+            let estimatedEnd = 'Calculating...';
+            if (processed > 0) {
+                const msPerGame = spent / processed;
+                const remaining = (totalGames - processed) * msPerGame;
+                estimatedEnd = formatTime(remaining);
+            }
+            timeEl.innerHTML = `
+                <span><strong>Time spent:</strong> ${formatTime(spent)}</span>
+                <span><strong>Estimated remaining:</strong> ${estimatedEnd}</span>
             `;
         }
     };
@@ -291,7 +364,7 @@ export function createGlobalLlmProgressDialog({ totalGames = 0, totalChunks = 0,
             addLog(text, level);
         },
         async waitForNextChunk(chunkIndex, chunkSize) {
-            if (!confirmEachChunk) return 'continue';
+            if (!confirmEachChunk && !liveConfirmToggle?.checked) return 'continue';
             if (statusEl) statusEl.textContent = `Chunk ${chunkIndex - 1} completed. Next chunk ${chunkIndex} will process ${chunkSize} game(s).`;
             if (nextBtn) nextBtn.style.display = 'inline-flex';
             if (stopBtn) stopBtn.style.display = 'inline-flex';
@@ -327,6 +400,16 @@ export function createGlobalLlmProgressDialog({ totalGames = 0, totalChunks = 0,
         },
         isCanceled() {
             return canceled;
+        },
+        getLiveChunkSize(currentRemaining) {
+            const val = Math.max(1, Number.parseInt(liveChunkValueInput?.value, 10) || 1);
+            if (chunkMode === 'count') {
+                return Math.max(1, Math.ceil(currentRemaining / val));
+            }
+            return val;
+        },
+        getLiveConfirmEachChunk() {
+            return !!liveConfirmToggle?.checked;
         },
         close: closeDialog
     };

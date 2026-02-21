@@ -4,6 +4,12 @@
 The current focus is on updating project documentation and maintaining the codebase to align with the new Electron-based architecture.
 
 ## Recent Changes
+- Moved runtime backup rule editing from global Settings into Emulator Edit modal (`js/game-manager/emulator-config-actions.js`) via a new "Runtime Backup" tab
+- Added emulator-specific runtime backup rules (`runtimeDataRules`) to emulator local config and wired them into game launch payload creation
+- Updated launch pipeline (`js/game-manager/missing-game-recovery.js`, `js/game-manager.js`, `main/ipc/games.js`, `main/game-session-manager.js`) to accept per-launch runtime backup rules
+- Added in-app game session overlay controls (`js/game-session-overlay.js`, `renderer.js`) with actions for Show emuBro, Alt+Enter, screenshot, and quit game process
+- Added BIOS Manager tool view (`js/tools-manager.js`, `index.html`, locale updates) to list BIOS folders/files per platform, add BIOS files, and open folders
+- Updated launch flow to persist `lastPlayed` directly in main process on successful launch for better Recently Played consistency
 - Implemented translation fallback to English in `js/i18n-manager.js` by overriding `i18n.t` to search in `allTranslations['en']` when a key is missing in the current language
 - Implemented logic for theme toggle button to temporally invert current theme colors (Light -> Dark, Dark -> Light) instead of switching presets
 - Improved `applyCustomTheme` to support granular color overrides (Header, Sidebar, Actionbar)
@@ -61,6 +67,13 @@ The current focus is on updating project documentation and maintaining the codeb
    - `index.js` as the compatibility entry exporting current public API
 10. Keep exports stable during refactor so `renderer.js` and other consumers do not break
 11. Refactor `main.js` into modular files under `main/` (window lifecycle, IPC handlers, library/db, launcher, download/install, locale manager) to reduce coupling and improve startup reliability
+12. Future TODO Bank (requested by user):
+   - Auto memory card / save-state backups to AppData
+   - Auto in-game screenshotter to build multi-image cover sets per game
+   - In-app game overlay controls (Alt+Enter, screenshot, show emuBro, quit game, etc.)
+   - BIOS management workflow (detect missing BIOS, import/open BIOS folders)
+   - Better controller-first UI navigation (Steam Deck / Lenovo Legion Go friendly)
+   - Emulator update flow that preserves save states and memory cards
 
 ## Active Decisions and Considerations
 - Using CSS Grid for the main `games-container` but `flex-column` or `block` overrides (via `grid-column: 1 / -1`) for non-grid views like List, Table, and Slideshow

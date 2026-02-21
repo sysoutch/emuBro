@@ -1,3 +1,5 @@
+import { normalizeInputBindingProfile } from '../gamepad-binding-utils';
+
 export function createEmulatorRuntimeActions(deps = {}) {
     const emubro = deps.emubro || window.emubro;
     const log = deps.log || console;
@@ -36,10 +38,19 @@ export function createEmulatorRuntimeActions(deps = {}) {
 
         try {
             const config = getEmulatorConfig(emulator);
+            const effectiveInputBindings = normalizeInputBindingProfile(
+                (config?.effectiveInputBindings && typeof config.effectiveInputBindings === 'object')
+                    ? config.effectiveInputBindings
+                    : ((config?.effectiveGamepadBindings && typeof config.effectiveGamepadBindings === 'object')
+                        ? config.effectiveGamepadBindings
+                        : {})
+            );
             const result = await emubro.invoke('launch-emulator', {
                 filePath: emulator.filePath,
                 args: config.launchArgs || '',
-                workingDirectory: config.workingDirectory || ''
+                workingDirectory: config.workingDirectory || '',
+                inputBindings: effectiveInputBindings,
+                gamepadBindings: effectiveInputBindings.gamepad
             });
 
             if (!result?.success) {

@@ -14,6 +14,18 @@ export function updateUILanguage() {
         const key = element.getAttribute('data-i18n-placeholder');
         element.placeholder = i18n.t(key);
     });
+
+    // Update title attribute
+    document.querySelectorAll('[data-i18n-title]').forEach(element => {
+        const key = element.getAttribute('data-i18n-title');
+        element.setAttribute('title', i18n.t(key));
+    });
+
+    // Update aria-label attribute
+    document.querySelectorAll('[data-i18n-aria-label]').forEach(element => {
+        const key = element.getAttribute('data-i18n-aria-label');
+        element.setAttribute('aria-label', i18n.t(key));
+    });
     
     // Update selected language display
     updateSelectedLanguageDisplay();

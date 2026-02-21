@@ -5,6 +5,28 @@
 
 import { gamepadManager } from '../gamepad-manager.js';
 
+function applyTemplate(input, data = {}) {
+    let text = String(input ?? '');
+    Object.keys(data || {}).forEach((key) => {
+        const value = String(data[key] ?? '');
+        text = text
+            .replace(new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g'), value)
+            .replace(new RegExp(`\\{\\s*${key}\\s*\\}`, 'g'), value);
+    });
+    return text;
+}
+
+function t(key, fallback, data = {}) {
+    const i18nRef = (typeof i18n !== 'undefined' && i18n && typeof i18n.t === 'function')
+        ? i18n
+        : (window?.i18n && typeof window.i18n.t === 'function' ? window.i18n : null);
+    if (i18nRef && typeof i18nRef.t === 'function') {
+        const translated = i18nRef.t(key, data);
+        if (translated && translated !== key) return String(translated);
+    }
+    return applyTemplate(String(fallback || key), data);
+}
+
 export class GamepadTool {
     constructor() {
         this.toolName = 'gamepad-tester';
@@ -31,6 +53,8 @@ export class GamepadTool {
 
     render(container) {
         this.init();
+        this.toolTitle = t('tools.gamepadTester', 'Gamepad Tester');
+        this.toolDescription = t('tools.gamepadTesterDesc', 'Test and map your controllers.');
         
         const toolContent = document.createElement('div');
         toolContent.className = 'tool-content gamepad-tool';
@@ -41,28 +65,28 @@ export class GamepadTool {
             <p>${this.toolDescription}</p>
             
             <div class="gamepad-tool-controls">
-                <button id="start-test-btn" class="action-btn">Start Testing</button>
-                <button id="stop-test-btn" class="action-btn remove-btn" disabled>Stop Testing</button>
-                <button id="refresh-gamepads-btn" class="action-btn">Refresh Gamepads</button>
+                <button id="start-test-btn" class="action-btn">${t('tools.gamepad.startTesting', 'Start Testing')}</button>
+                <button id="stop-test-btn" class="action-btn remove-btn" disabled>${t('tools.gamepad.stopTesting', 'Stop Testing')}</button>
+                <button id="refresh-gamepads-btn" class="action-btn">${t('tools.gamepad.refreshGamepads', 'Refresh Gamepads')}</button>
             </div>
 
             <div class="gamepad-status-section">
-                <h4>Connected Gamepads</h4>
+                <h4>${t('tools.gamepad.connectedGamepads', 'Connected Gamepads')}</h4>
                 <div id="gamepad-status-list" class="gamepad-status-list"></div>
             </div>
 
             <div class="gamepad-test-section">
-                <h4>Test Results</h4>
+                <h4>${t('tools.gamepad.testResults', 'Test Results')}</h4>
                 <div id="gamepad-test-results" class="gamepad-test-results"></div>
             </div>
 
             <div class="gamepad-mapping-section">
-                <h4>Gamepad Mapping</h4>
+                <h4>${t('tools.gamepad.mapping', 'Gamepad Mapping')}</h4>
                 <div id="gamepad-mapping-display" class="gamepad-mapping-display"></div>
             </div>
 
             <div class="gamepad-info-section">
-                <h4>Gamepad Information</h4>
+                <h4>${t('tools.gamepad.information', 'Gamepad Information')}</h4>
                 <div id="gamepad-info-display" class="gamepad-info-display"></div>
             </div>
         `;
@@ -120,7 +144,7 @@ export class GamepadTool {
         this.isTesting = true;
         
         if (testResults) {
-            testResults.innerHTML = '<p>Testing started. Please move gamepad controls to see real-time updates...</p>';
+            testResults.innerHTML = `<p>${t('tools.gamepad.testingStarted', 'Testing started. Please move gamepad controls to see real-time updates...')}</p>`;
         }
 
         this.testLoop();
@@ -141,7 +165,7 @@ export class GamepadTool {
         }
 
         if (testResults) {
-            testResults.innerHTML = '<p>Testing stopped. Click "Start Testing" to begin again.</p>';
+            testResults.innerHTML = `<p>${t('tools.gamepad.testingStopped', 'Testing stopped. Click "Start Testing" to begin again.')}</p>`;
         }
     }
 
@@ -186,7 +210,7 @@ export class GamepadTool {
         const infoDisplay = document.getElementById('gamepad-info-display');
 
         if (testResults && !testResults.querySelector('.warning')) {
-            testResults.innerHTML = `<p class="warning">No gamepads detected. Please connect a gamepad.</p>`;
+            testResults.innerHTML = `<p class="warning">${t('tools.gamepad.noGamepadsDetected', 'No gamepads detected. Please connect a gamepad.')}</p>`;
         }
         if (mappingDisplay) mappingDisplay.innerHTML = '';
         if (infoDisplay) infoDisplay.innerHTML = '';
@@ -218,14 +242,14 @@ export class GamepadTool {
         
         if (!resultElement.querySelector('.test-result-content')) {
              resultElement.innerHTML = `
-                <h5>Gamepad ${data.index}: ${data.id}</h5>
+                <h5>${t('tools.gamepad.gamepadLabel', 'Gamepad {{index}}', { index: data.index })}: ${data.id}</h5>
                 <div class="test-result-content">
                     <div class="test-result-section">
-                        <h6>Buttons</h6>
+                        <h6>${t('tools.gamepad.buttons', 'Buttons')}</h6>
                         <div class="buttons-grid" id="buttons-${data.index}"></div>
                     </div>
                     <div class="test-result-section">
-                        <h6>Axes</h6>
+                        <h6>${t('tools.gamepad.axes', 'Axes')}</h6>
                         <div class="axes-grid" id="axes-${data.index}"></div>
                     </div>
                 </div>
@@ -263,23 +287,23 @@ export class GamepadTool {
         mappingDisplay.innerHTML = `
             <div class="mapping-grid">
                 <div class="mapping-item">
-                    <span class="mapping-label">Gamepad Type:</span>
+                    <span class="mapping-label">${t('tools.gamepad.type', 'Gamepad Type')}:</span>
                     <span class="mapping-value">${gamepadManager.getGamepadType(data.id)}</span>
                 </div>
                 <div class="mapping-item">
-                    <span class="mapping-label">Mapping:</span>
-                    <span class="mapping-value">${data.mapping || 'Unknown'}</span>
+                    <span class="mapping-label">${t('tools.gamepad.mappingLabel', 'Mapping')}:</span>
+                    <span class="mapping-value">${data.mapping || t('tools.unknown', 'Unknown')}</span>
                 </div>
                 <div class="mapping-item">
-                    <span class="mapping-label">Connected:</span>
-                    <span class="mapping-value">${data.connected ? 'Yes' : 'No'}</span>
+                    <span class="mapping-label">${t('tools.gamepad.connectedLabel', 'Connected')}:</span>
+                    <span class="mapping-value">${data.connected ? t('buttons.yes', 'Yes') : t('buttons.no', 'No')}</span>
                 </div>
                 <div class="mapping-item">
-                    <span class="mapping-label">Buttons:</span>
+                    <span class="mapping-label">${t('tools.gamepad.buttons', 'Buttons')}:</span>
                     <span class="mapping-value">${data.buttons.length}</span>
                 </div>
                 <div class="mapping-item">
-                    <span class="mapping-label">Axes:</span>
+                    <span class="mapping-label">${t('tools.gamepad.axes', 'Axes')}:</span>
                     <span class="mapping-value">${data.axes.length}</span>
                 </div>
             </div>
@@ -293,15 +317,15 @@ export class GamepadTool {
         infoDisplay.innerHTML = `
             <div class="info-grid">
                 <div class="info-item">
-                    <span class="info-label">ID:</span>
+                    <span class="info-label">${t('tools.gamepad.id', 'ID')}:</span>
                     <span class="info-value">${data.id}</span>
                 </div>
                 <div class="info-item">
-                    <span class="info-label">Index:</span>
+                    <span class="info-label">${t('tools.gamepad.index', 'Index')}:</span>
                     <span class="info-value">${data.index}</span>
                 </div>
                 <div class="info-item">
-                    <span class="info-label">Timestamp:</span>
+                    <span class="info-label">${t('tools.gamepad.timestamp', 'Timestamp')}:</span>
                     <span class="info-value">${new Date().toLocaleTimeString()}</span>
                 </div>
             </div>
@@ -315,7 +339,7 @@ export class GamepadTool {
         const gamepads = gamepadManager.getConnectedGamepads();
 
         if (gamepads.length === 0) {
-            statusList.innerHTML = '<p>No gamepads detected. Please connect a gamepad.</p>';
+            statusList.innerHTML = `<p>${t('tools.gamepad.noGamepadsDetected', 'No gamepads detected. Please connect a gamepad.')}</p>`;
             return;
         }
 
@@ -325,10 +349,10 @@ export class GamepadTool {
             gamepadElement.className = 'gamepad-status-item';
             gamepadElement.innerHTML = `
                 <div class="gamepad-info">
-                    <strong>Gamepad ${gamepad.index}</strong>: ${gamepad.id}
+                    <strong>${t('tools.gamepad.gamepadLabel', 'Gamepad {{index}}', { index: gamepad.index })}</strong>: ${gamepad.id}
                     <span class="gamepad-type">(${gamepadManager.getGamepadType(gamepad.id)})</span>
                 </div>
-                <div class="gamepad-status-indicator connected">Connected</div>
+                <div class="gamepad-status-indicator connected">${t('tools.gamepad.connectedState', 'Connected')}</div>
             `;
             statusList.appendChild(gamepadElement);
         });

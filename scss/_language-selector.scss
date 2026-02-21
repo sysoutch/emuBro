@@ -87,6 +87,13 @@
     margin-bottom: 20px;
 }
 
+.lang-list-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
 .language-card {
     background-color: var(--bg-tertiary);
     border: 1px solid var(--border-color);
@@ -141,6 +148,7 @@
         margin-top: 5px;
         display: flex;
         justify-content: flex-end;
+        gap: 8px;
     }
 }
 
@@ -177,6 +185,7 @@
 .lang-editor-toolbar {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 12px;
     margin-bottom: 15px;
     flex-shrink: 0;
@@ -185,6 +194,39 @@
         flex: 1;
         margin: 0;
     }
+}
+
+.lang-translate-mode {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    font-weight: 700;
+}
+
+.lang-translate-mode-select {
+    min-width: 170px;
+    height: 30px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    padding: 0 8px;
+}
+
+.lang-llm-translate-status {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    min-height: 1em;
+}
+
+.lang-llm-translate-status.is-success {
+    color: var(--success-color);
+}
+
+.lang-llm-translate-status.is-error {
+    color: var(--danger-color);
 }
 
 .lang-live-edit-toggle {
@@ -222,23 +264,41 @@ body.live-edit-mode [data-i18n]:hover {
 body.live-edit-mode [data-i18n]:hover::after {
     content: "\270E";
     position: absolute;
-    top: -10px;
-    right: -10px;
-    width: 18px;
-    height: 18px;
+    top: 2px;
+    right: 2px;
+    width: 16px;
+    height: 16px;
     border-radius: 999px;
     background: var(--accent-color);
     color: var(--bg-primary);
-    font-size: 11px;
-    line-height: 18px;
+    font-size: 10px;
+    line-height: 16px;
     text-align: center;
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.32);
     pointer-events: none;
 }
 
 body.live-edit-mode [data-i18n-placeholder]:hover {
+    position: relative;
     outline: 1px dashed color-mix(in srgb, var(--accent-color), transparent 28%);
     outline-offset: 2px;
+}
+
+body.live-edit-mode [data-i18n-placeholder]:hover::after {
+    content: "\270E";
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    background: var(--accent-color);
+    color: var(--bg-primary);
+    font-size: 10px;
+    line-height: 16px;
+    text-align: center;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.32);
+    pointer-events: none;
 }
 
 .lang-key-row {
@@ -321,4 +381,64 @@ body.live-edit-mode [data-i18n-placeholder]:hover {
             }
         }
     }
+}
+
+.lang-key-group {
+    border: 1px solid color-mix(in srgb, var(--border-color), transparent 8%);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 10px;
+    background: color-mix(in srgb, var(--bg-secondary), transparent 10%);
+}
+
+.lang-key-group-header {
+    width: 100%;
+    border: none;
+    border-bottom: 1px solid color-mix(in srgb, var(--border-color), transparent 35%);
+    background: color-mix(in srgb, var(--bg-primary), transparent 16%);
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 9px 12px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.86rem;
+    text-transform: none;
+}
+
+.lang-key-group-header:hover {
+    color: var(--accent-color);
+}
+
+.lang-key-group-header::before {
+    content: "▾";
+    margin-right: 8px;
+    font-size: 0.78rem;
+    opacity: 0.78;
+}
+
+.lang-key-group.is-collapsed .lang-key-group-header::before {
+    content: "▸";
+}
+
+.lang-key-group-label {
+    margin-right: auto;
+}
+
+.lang-key-group-count {
+    min-width: 28px;
+    text-align: right;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    opacity: 0.9;
+}
+
+.lang-key-group-body {
+    display: block;
+}
+
+.lang-key-group.is-collapsed .lang-key-group-body {
+    display: none;
 }

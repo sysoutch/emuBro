@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>emuBro Session Overlay</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+      display: grid;
+      place-items: center;
+      -webkit-app-region: drag;
+    }
+
+    .overlay-logo-btn {
+      -webkit-app-region: no-drag;
+      width: 50px;
+      height: 50px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.42);
+      background: radial-gradient(circle at 32% 30%, rgba(255, 255, 255, 0.5), rgba(28, 39, 58, 0.28) 60%, rgba(14, 20, 30, 0.13));
+      backdrop-filter: blur(8px);
+      box-shadow: 0 0 0 1px rgba(80, 210, 255, 0.35), 0 0 14px rgba(70, 205, 255, 0.5), 0 10px 20px rgba(0, 0, 0, 0.35);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+      user-select: none;
+    }
+
+    .overlay-logo-btn:hover {
+      border-color: rgba(255, 255, 255, 0.7);
+      background: radial-gradient(circle at 32% 30%, rgba(255, 255, 255, 0.36), rgba(40, 57, 84, 0.3) 60%, rgba(18, 26, 39, 0.12));
+      transform: scale(1.04);
+    }
+
+    .overlay-logo-btn:active {
+      transform: scale(0.95);
+    }
+
+    .overlay-logo-btn img {
+      width: 28px;
+      height: 28px;
+      object-fit: contain;
+      filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.35));
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <button class="overlay-logo-btn" data-role="overlay-logo-btn" title="emuBro Overlay Menu" aria-label="emuBro Overlay Menu">
+    <img src="./logo.png" alt="emuBro">
+  </button>
+  <script src="./js/game-session-overlay-window.js"></script>
+</body>
+</html>

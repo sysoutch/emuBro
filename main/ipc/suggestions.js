@@ -34,11 +34,11 @@ function registerSuggestionsIpc(deps = {}) {
 
   function decodeHtmlEntities(value) {
     return String(value || "")
-      .replace(/&lt;/gi, "<")
-      .replace(/&gt;/gi, ">")
-      .replace(/&quot;/gi, '"')
-      .replace(/&#39;|&apos;/gi, "'")
-      .replace(/&amp;/gi, "&");
+      .replace(/</gi, "<")
+      .replace(/>/gi, ">")
+      .replace(/"/gi, '"')
+      .replace(/&#39;|'/gi, "'")
+      .replace(/&/gi, "&");
   }
 
   function replacePromptToken(template, token, value) {
@@ -106,6 +106,73 @@ function registerSuggestionsIpc(deps = {}) {
     return out;
   }
 
+  async function listOllamaModels(payload = {}) {
+    const baseUrl = normalizeOllamaBaseUrl(payload.baseUrl);
+    const endpoints = [
+      { url: getOllamaApiEndpoint(baseUrl, "tags"), type: "tags" },
+      { url: getOllamaV1Endpoint(baseUrl, "models"), type: "v1" }
+    ];
+    const errors = [];
+    const names = [];
+
+    for (const endpoint of endpoints) {
+      try {
+        const response = await fetchImpl(endpoint.url, {
+          method: "GET",
+          headers: {
+            "content-type": "application/json"
+          }
+        });
+        if (!response.ok) {
+          const text = await response.text();
+          errors.push(`${endpoint.url} -> ${response.status}: ${text.slice(0, 140)}`);
+          continue;
+        }
+
+        const json = await response.json();
+        const rows = endpoint.type === "v1"
+          ? (Array.isArray(json?.data) ? json.data : [])
+          : (Array.isArray(json?.models) ? json.models : []);
+
+        const parsed = rows
+          .map((row) => normalizeText(row?.name || row?.model || row?.id))
+          .filter(Boolean);
+
+        names.push(...parsed);
+      } catch (error) {
+        errors.push(`${endpoint.url} -> ${error?.message || String(error)}`);
+      }
+    }
+
+    if (isLocalOllamaBaseUrl(baseUrl)) {
+      try {
+        const cliNames = await listOllamaModelsViaCli(baseUrl);
+        names.push(...cliNames);
+      } catch (error) {
+        errors.push(`ollama list -> ${error?.message || String(error)}`);
+      }
+    }
+
+    if (names.length === 0) {
+      throw new Error(`Ollama model list failed. ${errors.join(" | ")}`.trim());
+    }
+
+    const seen = new Set();
+    const deduped = [];
+    names.forEach((name) => {
+      const key = name.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      deduped.push(name);
+    });
+
+    deduped.sort((a, b) => a.localeCompare(b));
+    return {
+      baseUrl,
+      models: deduped
+    };
+  }
+
   async function listOllamaModelsViaCli(baseUrl) {
     const env = {
       ...process.env,
@@ -153,8 +220,8 @@ function registerSuggestionsIpc(deps = {}) {
       "",
       "Rules:",
       "- Provide up to {{limit}} items in libraryMatches.",
-      '- Provide up to {{limit}} items in missingSuggestions only when mode is "library-plus-missing".',
-      '- If mode is "library-only", missingSuggestions must be an empty array.',
+      '- Provide up to {{limit}} items in missingSuggestions. If mode is "library-only", this array must be empty.',
+      '- When mode is "library-plus-missing", provide {{limit}} new games I do not own in missingSuggestions.',
       "- For libraryMatches, prefer exact names from the supplied library list.",
       "- Keep reasons concise (under 20 words).",
       "",
@@ -196,7 +263,8 @@ function registerSuggestionsIpc(deps = {}) {
     normalizedRows.forEach((game) => {
       const cleanName = stripBracketedTitleParts(game?.name) || normalizeText(game?.name, "Unknown game");
       const platformShortName = normalizeText(game?.platformShortName || game?.platform).toLowerCase();
-      const groupKey = `${normalizeNameForMatch(cleanName) || normalizeNameForMatch(game?.name)}::${platformShortName || "unknown"}`;
+      const normalizedNameKey = normalizeNameForMatch(cleanName || game?.name);
+      const groupKey = `${normalizedNameKey || "unknown"}::${platformShortName || "unknown"}`;
       if (!groups.has(groupKey)) {
         groups.set(groupKey, {
           id: Number(game?.id || 0),
@@ -254,39 +322,33 @@ function registerSuggestionsIpc(deps = {}) {
     const limit = Math.max(3, Math.min(12, Number(payload.limit) || 8));
     const selectedPlatformOnly = !!payload.selectedPlatformOnly;
     const selectedPlatform = normalizeText(payload.selectedPlatform);
-    const platformConstraint = (selectedPlatformOnly && selectedPlatform)
-      ? `Only suggest games for platform "${selectedPlatform}".`
-      : "No platform restriction.";
-    const libraryGames = groupLibraryGamesForPrompt(payload.libraryGames);
-    const libraryJson = JSON.stringify(libraryGames);
-    const template = decodeHtmlEntities(normalizeText(payload.promptTemplate, getDefaultPromptTemplate()));
+    
+    let platformConstraint = "";
+    if (selectedPlatformOnly && selectedPlatform) {
+       platformConstraint = `Only suggest games for platform "${selectedPlatform}".`;
+    } else {
+       platformConstraint = "Suggest games for platforms supported by emuBro (NES, SNES, N64, GameCube, Wii, Switch, GameBoy, GBA, DS, 3DS, PS1, PS2, PS3, PSP, Genesis, Dreamcast, Saturn, etc.).";
+    }
+    
+    const libraryGames = groupLibraryGamesForPrompt(payload.libraryGames || []);
+    const hasLibrary = libraryGames.length > 0;
+    const libraryJson = hasLibrary ? JSON.stringify(libraryGames) : "NO LIBRARY CONTEXT PROVIDED. Ignore the library list and use your general knowledge of popular games for the selected platform(s).";
+    
+    let template = decodeHtmlEntities(normalizeText(payload.promptTemplate, getDefaultPromptTemplate()));
+    if (!hasLibrary) {
+        template += "\n\nIMPORTANT: I have not provided my library list. Please suggest great games from your internal knowledge that are available on the specified platforms.";
+    }
     let prompt = template;
     prompt = replacePromptToken(prompt, "mode", mode);
     prompt = replacePromptToken(prompt, "query", query);
     prompt = replacePromptToken(prompt, "limit", String(limit));
     prompt = replacePromptToken(prompt, "platformConstraint", platformConstraint);
-    prompt = replacePromptToken(prompt, "selectedPlatform", selectedPlatform);
+    prompt = replacePromptToken(prompt, "selectedPlatform", selectedPlatform || "Any");
     prompt = replacePromptToken(prompt, "libraryJson", libraryJson);
 
-    if (selectedPlatformOnly && selectedPlatform) {
-      prompt += `\n- IMPORTANT: Only suggest games for platform "${selectedPlatform}".`;
-    }
-
-    if (!/\{\{\s*libraryJson\s*\}\}/i.test(template)) {
-      prompt += `\n\nLibrary games JSON:\n${libraryJson}`;
-    }
-    if (!/\{\{\s*query\s*\}\}/i.test(template)) {
-      prompt += `\nUser mood/preferences: ${query}`;
-    }
-    if (!/\{\{\s*mode\s*\}\}/i.test(template)) {
-      prompt += `\nMode: ${mode}`;
-    }
-    if (!/\{\{\s*platformConstraint\s*\}\}/i.test(template)) {
-      prompt += `\nPlatform constraint: ${platformConstraint}`;
-    }
-
-    // Always append a strict context block so custom templates still work.
-    prompt += `\n\nContext:\n- mode: ${mode}\n- query: ${query}\n- limit: ${limit}\n- platformConstraint: ${platformConstraint}\n- libraryJson: ${libraryJson}`;
+    // Always append a strict context block
+    prompt += `\n\nContext:\n- mode: ${mode}\n- query: ${query}\n- limit: ${limit}\n- platformConstraint: ${platformConstraint}\n- hasLibrary: ${hasLibrary}`;
+    
     return prompt;
   }
 
@@ -294,6 +356,38 @@ function registerSuggestionsIpc(deps = {}) {
     const directPrompt = normalizeText(payload?.prompt);
     if (directPrompt) return directPrompt;
     return buildPrompt(payload);
+  }
+
+  function buildSupportPrompt(payload = {}) {
+    const issueTypeLabel = normalizeText(payload.issueTypeLabel, "Emulation issue");
+    const issueSummary = normalizeText(payload.issueSummary, "No summary provided.");
+    const platform = normalizeText(payload.platform, "Not specified");
+    const emulator = normalizeText(payload.emulator, "Not specified");
+    const errorText = normalizeText(payload.errorText, "No explicit error message.");
+    const details = normalizeText(payload.details, "No additional details.");
+
+    return [
+      "You are emuBro's emulation troubleshooting assistant.",
+      "Give practical, safe, legal troubleshooting advice for emulator issues.",
+      "Do not suggest piracy, cracked BIOS, or illegal downloads.",
+      "",
+      "Issue context:",
+      `- Type: ${issueTypeLabel}`,
+      `- Summary: ${issueSummary}`,
+      `- Platform: ${platform}`,
+      `- Emulator: ${emulator}`,
+      `- Error message: ${errorText}`,
+      `- Extra details: ${details}`,
+      "",
+      "Output format rules:",
+      "- Keep it concise but actionable.",
+      "- Use these exact sections with plain text headings:",
+      "  1) Likely Cause",
+      "  2) Fix Steps",
+      "  3) If Still Broken",
+      "- In Fix Steps, provide numbered steps and mention where settings are usually found.",
+      "- If information is missing, list short follow-up checks under If Still Broken."
+    ].join("\n");
   }
 
   function normalizeTagCatalogRows(rows) {
@@ -951,6 +1045,213 @@ function registerSuggestionsIpc(deps = {}) {
     };
   }
 
+  function collectTemplateTokenSignature(value) {
+    const matches = String(value || "").match(/\{\{\s*[^{}]+\s*\}\}|\{[a-zA-Z0-9_]+\}/g);
+    if (!Array.isArray(matches) || matches.length === 0) return "";
+    return matches.map((token) => String(token).trim()).sort().join("||");
+  }
+
+  function normalizeLocaleTranslationEntries(rows, maxCount = 80) {
+    const out = [];
+    const seen = new Set();
+    const list = Array.isArray(rows) ? rows : [];
+    for (const row of list) {
+      const key = normalizeText(row?.key || row?.id);
+      const text = normalizeText(row?.text || row?.source || row?.value);
+      if (!key || !text) continue;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ key, text });
+      if (out.length >= Math.max(1, Number(maxCount) || 80)) break;
+    }
+    return out;
+  }
+
+  function normalizeLocaleTranslationMode(mode) {
+    const value = normalizeText(mode).toLowerCase();
+    if (value === "one-by-one" || value === "all-in-one-json") return value;
+    return "one-by-one";
+  }
+
+  function normalizeLocaleObject(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+    return value;
+  }
+
+  function flattenLocaleStringValues(value, prefix = "", target = {}) {
+    const source = normalizeLocaleObject(value);
+    Object.keys(source).forEach((key) => {
+      const nextPrefix = prefix ? `${prefix}.${key}` : key;
+      const node = source[key];
+      if (typeof node === "string") {
+        target[nextPrefix] = node;
+        return;
+      }
+      if (node && typeof node === "object" && !Array.isArray(node)) {
+        flattenLocaleStringValues(node, nextPrefix, target);
+      }
+    });
+    return target;
+  }
+
+  function buildLocaleTranslationPrompt(payload = {}) {
+    const sourceLanguageCode = normalizeText(payload.sourceLanguageCode, "en");
+    const targetLanguageCode = normalizeText(payload.targetLanguageCode, "target");
+    const targetLanguageName = normalizeText(payload.targetLanguageName, targetLanguageCode);
+    const entries = normalizeLocaleTranslationEntries(payload.entries);
+    const entriesJson = JSON.stringify(entries);
+
+    return [
+      "You are emuBro's localization assistant.",
+      `Translate UI strings from language code "${sourceLanguageCode}" to "${targetLanguageCode}" (${targetLanguageName}).`,
+      "",
+      "Return strict JSON only in this exact shape:",
+      "{",
+      '  "translations": {',
+      '    "some.key.path": "translated text"',
+      "  }",
+      "}",
+      "",
+      "Rules:",
+      "- Translate naturally for software UI labels/messages.",
+      "- Keep placeholders exactly unchanged (examples: {{count}}, {name}).",
+      "- Keep key names unchanged.",
+      "- Preserve product/brand names such as emuBro, Discord, Reddit, YouTube, OpenAI, Gemini, Ollama.",
+      "- If unsure, return the source text for that key.",
+      "",
+      "entries:",
+      entriesJson
+    ].join("\n");
+  }
+
+  function buildLocaleTranslationFullJsonPrompt(payload = {}) {
+    const sourceLanguageCode = normalizeText(payload.sourceLanguageCode, "en");
+    const targetLanguageCode = normalizeText(payload.targetLanguageCode, "target");
+    const targetLanguageName = normalizeText(payload.targetLanguageName, targetLanguageCode);
+    const retranslateExisting = !!payload.retranslateExisting;
+    const entries = normalizeLocaleTranslationEntries(payload.entries, 5000);
+    const translationKeys = entries.map((entry) => entry.key);
+    const sourceLocaleObject = normalizeLocaleObject(payload.sourceLocaleObject);
+    const targetLocaleObject = normalizeLocaleObject(payload.targetLocaleObject);
+
+    const sourceLocaleJson = JSON.stringify(sourceLocaleObject);
+    const targetLocaleJson = JSON.stringify(targetLocaleObject);
+    const translationKeysJson = JSON.stringify(translationKeys);
+
+    return [
+      "You are emuBro's localization assistant.",
+      `Translate UI strings from language code "${sourceLanguageCode}" to "${targetLanguageCode}" (${targetLanguageName}).`,
+      "",
+      "Return strict JSON only in this exact shape, minified on one line:",
+      '{"locale":{"some":{"nested":"translated text"}}}',
+      "",
+      "Rules:",
+      "- Keep the exact object structure from targetLocale.",
+      "- Only update keys listed in translationKeys.",
+      retranslateExisting
+        ? "- You may update existing non-empty targetLocale strings for keys in translationKeys."
+        : "- Keep all existing non-empty targetLocale strings unchanged.",
+      "- Keep placeholders exactly unchanged (examples: {{count}}, {name}).",
+      "- Preserve product/brand names such as emuBro, Discord, Reddit, YouTube, OpenAI, Gemini, Ollama.",
+      "- If unsure, keep the source text from sourceLocale.",
+      "",
+      "sourceLocale:",
+      sourceLocaleJson,
+      "",
+      "targetLocale:",
+      targetLocaleJson,
+      "",
+      "translationKeys:",
+      translationKeysJson
+    ].join("\n");
+  }
+
+  function parseLocaleTranslationPayload(rawModelText, entries) {
+    const requestedEntries = normalizeLocaleTranslationEntries(entries, 500);
+    const parsed = extractJsonFromText(rawModelText);
+
+    let rawTranslations = {};
+    if (parsed && typeof parsed === "object") {
+      if (parsed.translations && typeof parsed.translations === "object") {
+        rawTranslations = parsed.translations;
+      } else {
+        rawTranslations = parsed;
+      }
+    }
+
+    const out = {};
+    requestedEntries.forEach((entry) => {
+      const sourceText = normalizeText(entry?.text);
+      if (!sourceText) return;
+
+      const candidateRaw = Object.prototype.hasOwnProperty.call(rawTranslations, entry.key)
+        ? rawTranslations[entry.key]
+        : "";
+      const candidateText = normalizeText(candidateRaw);
+      let translated = candidateText || sourceText;
+
+      const sourceSignature = collectTemplateTokenSignature(sourceText);
+      const translatedSignature = collectTemplateTokenSignature(translated);
+      if (sourceSignature !== translatedSignature) {
+        translated = sourceText;
+      }
+
+      out[entry.key] = translated;
+    });
+
+    return out;
+  }
+
+  function parseLocaleTranslationFullJsonPayload(rawModelText, payload = {}) {
+    const requestedEntries = normalizeLocaleTranslationEntries(payload.entries, 5000);
+    const parsed = extractJsonFromText(rawModelText);
+
+    let localeObject = {};
+    let rawTranslations = {};
+    if (parsed && typeof parsed === "object") {
+      if (parsed.locale && typeof parsed.locale === "object" && !Array.isArray(parsed.locale)) {
+        localeObject = parsed.locale;
+      } else if (parsed.targetLocale && typeof parsed.targetLocale === "object" && !Array.isArray(parsed.targetLocale)) {
+        localeObject = parsed.targetLocale;
+      } else {
+        localeObject = parsed;
+      }
+
+      if (parsed.translations && typeof parsed.translations === "object") {
+        rawTranslations = parsed.translations;
+      }
+    }
+
+    const flattenedLocale = flattenLocaleStringValues(localeObject);
+    const out = {};
+    requestedEntries.forEach((entry) => {
+      const sourceText = normalizeText(entry?.text);
+      if (!sourceText) return;
+
+      const translationByKey = Object.prototype.hasOwnProperty.call(rawTranslations, entry.key)
+        ? rawTranslations[entry.key]
+        : "";
+      const translationByLocale = Object.prototype.hasOwnProperty.call(flattenedLocale, entry.key)
+        ? flattenedLocale[entry.key]
+        : "";
+      const candidateText = normalizeText(translationByKey || translationByLocale);
+
+      let translated = candidateText || sourceText;
+      const sourceSignature = collectTemplateTokenSignature(sourceText);
+      const translatedSignature = collectTemplateTokenSignature(translated);
+      if (sourceSignature !== translatedSignature) {
+        translated = sourceText;
+      }
+
+      out[entry.key] = translated;
+    });
+
+    return {
+      translations: out,
+      localeJsonMinified: JSON.stringify(normalizeLocaleObject(localeObject))
+    };
+  }
+
   async function requestOllama(payload) {
     const endpoint = getOllamaApiEndpoint(payload.baseUrl, "generate");
     const runWithModel = async (modelName) => {
@@ -1069,72 +1370,121 @@ function registerSuggestionsIpc(deps = {}) {
     return parts.map((part) => normalizeText(part?.text)).filter(Boolean).join("\n");
   }
 
-  async function listOllamaModels(payload = {}) {
-    const baseUrl = normalizeOllamaBaseUrl(payload.baseUrl);
-    const endpoints = [
-      { url: getOllamaApiEndpoint(baseUrl, "tags"), type: "tags" },
-      { url: getOllamaV1Endpoint(baseUrl, "models"), type: "v1" }
-    ];
-    const errors = [];
-    const names = [];
+  async function requestOllamaText(payload) {
+    const endpoint = getOllamaApiEndpoint(payload.baseUrl, "generate");
+    const runWithModel = async (modelName) => {
+      const response = await fetchImpl(endpoint, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          model: normalizeText(modelName, "llama3.1"),
+          prompt: buildSupportPrompt(payload),
+          stream: false
+        })
+      });
+      const text = await response.text();
+      return { ok: response.ok, status: response.status, text };
+    };
 
-    for (const endpoint of endpoints) {
-      try {
-        const response = await fetchImpl(endpoint.url, {
-          method: "GET",
-          headers: {
-            "content-type": "application/json"
+    const initialModel = normalizeText(payload.model, "llama3.1");
+    let firstRun = await runWithModel(initialModel);
+    if (!firstRun.ok) {
+      const modelNotFound = firstRun.status === 404 || /model\s+['"]?.+?['"]?\s+not\s+found/i.test(firstRun.text);
+      if (modelNotFound) {
+        try {
+          const listed = await listOllamaModels({ baseUrl: payload.baseUrl });
+          const fallbackModel = normalizeText(listed?.models?.[0]);
+          if (fallbackModel && fallbackModel.toLowerCase() !== initialModel.toLowerCase()) {
+            firstRun = await runWithModel(fallbackModel);
           }
-        });
-        if (!response.ok) {
-          const text = await response.text();
-          errors.push(`${endpoint.url} -> ${response.status}: ${text.slice(0, 140)}`);
-          continue;
-        }
-
-        const json = await response.json();
-        const rows = endpoint.type === "v1"
-          ? (Array.isArray(json?.data) ? json.data : [])
-          : (Array.isArray(json?.models) ? json.models : []);
-
-        const parsed = rows
-          .map((row) => normalizeText(row?.name || row?.model || row?.id))
-          .filter(Boolean);
-
-        names.push(...parsed);
-      } catch (error) {
-        errors.push(`${endpoint.url} -> ${error?.message || String(error)}`);
+        } catch (_error) {}
       }
     }
 
-    // Local fallback: query `ollama list` CLI to avoid missing models on variant APIs/proxies.
-    if (isLocalOllamaBaseUrl(baseUrl)) {
-      try {
-        const cliNames = await listOllamaModelsViaCli(baseUrl);
-        names.push(...cliNames);
-      } catch (error) {
-        errors.push(`ollama list -> ${error?.message || String(error)}`);
-      }
+    if (!firstRun.ok) {
+      throw new Error(`Ollama request failed (${firstRun.status}): ${String(firstRun.text || "").slice(0, 180)}`);
     }
 
-    if (names.length === 0) {
-      throw new Error(`Ollama model list failed. ${errors.join(" | ")}`.trim());
-    }
+    let json = null;
+    try {
+      json = JSON.parse(String(firstRun.text || "{}"));
+    } catch (_error) {}
+    return normalizeText(json?.response, String(firstRun.text || ""));
+  }
 
-    const seen = new Set();
-    const deduped = [];
-    names.forEach((name) => {
-      const key = name.toLowerCase();
-      if (seen.has(key)) return;
-      seen.add(key);
-      deduped.push(name);
+  async function requestOpenAIText(payload) {
+    const baseUrl = normalizeText(payload.baseUrl, "https://api.openai.com/v1").replace(/\/+$/g, "");
+    const endpoint = `${baseUrl}/chat/completions`;
+    const apiKey = normalizeText(payload.apiKey);
+    if (!apiKey) throw new Error("Missing API key for OpenAI provider.");
+
+    const response = await fetchImpl(endpoint, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: normalizeText(payload.model, "gpt-4o-mini"),
+        temperature: 0.3,
+        messages: [
+          {
+            role: "system",
+            content: "You are an emulator support assistant. Return plain text troubleshooting guidance."
+          },
+          {
+            role: "user",
+            content: buildSupportPrompt(payload)
+          }
+        ]
+      })
     });
 
-    deduped.sort((a, b) => a.localeCompare(b));
-    return {
-      baseUrl,
-      models: deduped
-    };
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`OpenAI request failed (${response.status}): ${text.slice(0, 180)}`);
+    }
+
+    const json = await response.json();
+    return normalizeText(json?.choices?.[0]?.message?.content);
+  }
+
+  async function requestGeminiText(payload) {
+    const apiKey = normalizeText(payload.apiKey);
+    if (!apiKey) throw new Error("Missing API key for Gemini provider.");
+
+    const model = encodeURIComponent(normalizeText(payload.model, "gemini-1.5-flash"));
+    const baseUrl = normalizeText(payload.baseUrl, "https://generativelanguage.googleapis.com/v1beta").replace(/\/+$/g, "");
+    const endpoint = `${baseUrl}/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+    const response = await fetchImpl(endpoint, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [{ text: buildSupportPrompt(payload) }]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.3
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Gemini request failed (${response.status}): ${text.slice(0, 180)}`);
+    }
+
+    const json = await response.json();
+    const parts = json?.candidates?.[0]?.content?.parts;
+    if (!Array.isArray(parts)) return "";
+    return parts.map((part) => normalizeText(part?.text)).filter(Boolean).join("\n");
   }
 
   ipcMain.handle("suggestions:recommend-games", async (_event, payload = {}) => {
@@ -1147,12 +1497,8 @@ function registerSuggestionsIpc(deps = {}) {
       limit: Math.max(3, Math.min(12, Number(payload.limit) || 8)),
       selectedPlatformOnly: !!payload.selectedPlatformOnly,
       selectedPlatform: normalizeText(payload.selectedPlatform),
-      libraryGames: normalizeLibraryGames(payload.libraryGames)
+      libraryGames: Array.isArray(payload.libraryGames) ? payload.libraryGames : []
     };
-
-    if (!safePayload.libraryGames.length) {
-      return { success: false, message: "No library games were provided.", libraryMatches: [], missingSuggestions: [] };
-    }
 
     try {
       let rawModelText = "";
@@ -1200,6 +1546,121 @@ function registerSuggestionsIpc(deps = {}) {
         success: false,
         message: error?.message || String(error),
         models: []
+      };
+    }
+  });
+
+  ipcMain.handle("suggestions:emulation-support", async (_event, payload = {}) => {
+    const provider = normalizeProvider(payload.provider);
+    const safePayload = {
+      ...payload,
+      provider,
+      issueType: normalizeText(payload.issueType, "other"),
+      issueTypeLabel: normalizeText(payload.issueTypeLabel, "Emulation issue"),
+      issueSummary: normalizeText(payload.issueSummary),
+      platform: normalizeText(payload.platform),
+      emulator: normalizeText(payload.emulator),
+      errorText: normalizeText(payload.errorText),
+      details: normalizeText(payload.details)
+    };
+
+    if (!safePayload.issueSummary) {
+      return { success: false, provider, message: "Issue summary is required.", answer: "" };
+    }
+
+    try {
+      let answer = "";
+      if (provider === "openai") {
+        answer = await requestOpenAIText(safePayload);
+      } else if (provider === "gemini") {
+        answer = await requestGeminiText(safePayload);
+      } else {
+        answer = await requestOllamaText(safePayload);
+      }
+
+      const normalizedAnswer = normalizeText(answer);
+      if (!normalizedAnswer) {
+        return { success: false, provider, message: "Provider returned an empty response.", answer: "" };
+      }
+
+      return {
+        success: true,
+        provider,
+        answer: normalizedAnswer
+      };
+    } catch (error) {
+      log.error("suggestions:emulation-support failed:", error);
+      return {
+        success: false,
+        provider,
+        message: error?.message || String(error),
+        answer: ""
+      };
+    }
+  });
+
+  ipcMain.handle("suggestions:translate-locale-missing", async (_event, payload = {}) => {
+    const provider = normalizeProvider(payload.provider);
+    const mode = normalizeLocaleTranslationMode(payload.mode);
+    const safeEntries = normalizeLocaleTranslationEntries(
+      payload.entries,
+      mode === "all-in-one-json" ? 5000 : 90
+    );
+    const safePayload = {
+      ...payload,
+      provider,
+      mode,
+      entries: safeEntries,
+      sourceLanguageCode: normalizeText(payload.sourceLanguageCode, "en"),
+      targetLanguageCode: normalizeText(payload.targetLanguageCode),
+      targetLanguageName: normalizeText(payload.targetLanguageName),
+      retranslateExisting: !!payload.retranslateExisting,
+      sourceLocaleObject: normalizeLocaleObject(payload.sourceLocaleObject),
+      targetLocaleObject: normalizeLocaleObject(payload.targetLocaleObject)
+    };
+
+    if (!safePayload.targetLanguageCode) {
+      return { success: false, provider, mode, message: "Target language code is required.", translations: {} };
+    }
+    if (!safeEntries.length) {
+      return { success: false, provider, mode, message: "No translation entries were provided.", translations: {} };
+    }
+
+    safePayload.prompt = mode === "all-in-one-json"
+      ? buildLocaleTranslationFullJsonPrompt(safePayload)
+      : buildLocaleTranslationPrompt(safePayload);
+
+    try {
+      let rawModelText = "";
+      if (provider === "openai") {
+        rawModelText = await requestOpenAI(safePayload);
+      } else if (provider === "gemini") {
+        rawModelText = await requestGemini(safePayload);
+      } else {
+        rawModelText = await requestOllama(safePayload);
+      }
+
+      const parsedResult = mode === "all-in-one-json"
+        ? parseLocaleTranslationFullJsonPayload(rawModelText, safePayload)
+        : {
+          translations: parseLocaleTranslationPayload(rawModelText, safeEntries),
+          localeJsonMinified: ""
+        };
+      return {
+        success: true,
+        provider,
+        mode,
+        translations: parsedResult.translations,
+        localeJsonMinified: parsedResult.localeJsonMinified
+      };
+    } catch (error) {
+      log.error("suggestions:translate-locale-missing failed:", error);
+      return {
+        success: false,
+        provider,
+        mode,
+        message: error?.message || String(error),
+        translations: {}
       };
     }
   });

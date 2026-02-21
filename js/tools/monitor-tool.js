@@ -5,6 +5,28 @@
 
 const emubro = window.emubro;
 
+function applyTemplate(input, data = {}) {
+    let text = String(input ?? '');
+    Object.keys(data || {}).forEach((key) => {
+        const value = String(data[key] ?? '');
+        text = text
+            .replace(new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g'), value)
+            .replace(new RegExp(`\\{\\s*${key}\\s*\\}`, 'g'), value);
+    });
+    return text;
+}
+
+function t(key, fallback, data = {}) {
+    const i18nRef = (typeof i18n !== 'undefined' && i18n && typeof i18n.t === 'function')
+        ? i18n
+        : (window?.i18n && typeof window.i18n.t === 'function' ? window.i18n : null);
+    if (i18nRef && typeof i18nRef.t === 'function') {
+        const translated = i18nRef.t(key, data);
+        if (translated && translated !== key) return String(translated);
+    }
+    return applyTemplate(String(fallback || key), data);
+}
+
 export class MonitorTool {
     constructor() {
         this.toolName = 'monitor-tool';
@@ -21,39 +43,40 @@ export class MonitorTool {
 
     render(container) {
         this.init();
-        
+        this.toolTitle = t('tools.monitorManager', 'Monitor Manager');
+        this.toolDescription = t('tools.monitorManagerDesc', 'Manage displays and orientation.');
+
         const toolContent = document.createElement('div');
         toolContent.className = 'tool-content monitor-tool';
         toolContent.id = 'monitor-tool-content';
-        
+
         toolContent.innerHTML = `
             <h3>${this.toolTitle}</h3>
             <p>${this.toolDescription}</p>
-            
+
             <div class="monitor-tool-controls">
-                <button id="refresh-monitors-btn" class="action-btn">Refresh Monitors</button>
-                <button id="detect-monitors-btn" class="action-btn">Detect Monitors</button>
+                <button id="refresh-monitors-btn" class="action-btn">${t('tools.monitor.refreshMonitors', 'Refresh Monitors')}</button>
+                <button id="detect-monitors-btn" class="action-btn">${t('tools.monitor.detectMonitors', 'Detect Monitors')}</button>
             </div>
 
             <div class="monitor-status-section">
-                <h4>Connected Monitors</h4>
+                <h4>${t('tools.monitor.connectedMonitors', 'Connected Monitors')}</h4>
                 <div id="monitor-status-list" class="monitor-status-list"></div>
             </div>
 
             <div class="monitor-controls-section">
-                <h4>Monitor Controls</h4>
+                <h4>${t('tools.monitor.monitorControls', 'Monitor Controls')}</h4>
                 <div id="monitor-controls" class="monitor-controls"></div>
             </div>
 
             <div class="monitor-actions-section">
-                <h4>Quick Actions</h4>
+                <h4>${t('tools.monitor.quickActions', 'Quick Actions')}</h4>
                 <div id="monitor-actions" class="monitor-actions"></div>
             </div>
         `;
 
         container.appendChild(toolContent);
 
-        // Setup event listeners
         this.setupEventListeners();
         this.updateMonitorStatus();
     }
@@ -75,7 +98,9 @@ export class MonitorTool {
         } catch (error) {
             console.error('Failed to get monitor info:', error);
             const statusList = document.getElementById('monitor-status-list');
-            statusList.innerHTML = '<p class="error">Failed to retrieve monitor information</p>';
+            if (statusList) {
+                statusList.innerHTML = `<p class="error">${t('tools.monitor.failedRetrieveInfo', 'Failed to retrieve monitor information')}</p>`;
+            }
         }
     }
 
@@ -83,63 +108,62 @@ export class MonitorTool {
         const statusList = document.getElementById('monitor-status-list');
         const controls = document.getElementById('monitor-controls');
         const actions = document.getElementById('monitor-actions');
+        if (!statusList || !controls || !actions) return;
 
         if (!monitors || monitors.length === 0) {
-            statusList.innerHTML = '<p>No monitors detected</p>';
+            statusList.innerHTML = `<p>${t('tools.monitor.noMonitorsDetected', 'No monitors detected')}</p>`;
             controls.innerHTML = '';
             actions.innerHTML = '';
             return;
         }
 
-        // Display monitor status
         statusList.innerHTML = `
             <div class="monitors-grid">
                 ${monitors.map((monitor, index) => `
                     <div class="monitor-item" data-monitor-id="${index}">
                         <div class="monitor-header">
-                            <h5>Monitor ${index + 1}</h5>
+                            <h5>${t('tools.monitor.monitorN', 'Monitor {{number}}', { number: index + 1 })}</h5>
                             <span class="monitor-status ${monitor.connected ? 'connected' : 'disconnected'}">
-                                ${monitor.connected ? 'Connected' : 'Disconnected'}
+                                ${monitor.connected ? t('tools.monitor.connected', 'Connected') : t('tools.monitor.disconnected', 'Disconnected')}
                             </span>
                         </div>
                         <div class="monitor-details">
-                            <p><strong>Device ID:</strong> ${monitor.deviceId || 'N/A'}</p>
-                            <p><strong>Resolution:</strong> ${monitor.width} x ${monitor.height}</p>
-                            <p><strong>Primary:</strong> ${monitor.isPrimary ? 'Yes' : 'No'}</p>
-                            <p><strong>Orientation:</strong> ${monitor.orientation || 'Normal'}</p>
+                            <p><strong>${t('tools.monitor.deviceId', 'Device ID')}:</strong> ${monitor.deviceId || t('tools.monitor.notAvailable', 'N/A')}</p>
+                            <p><strong>${t('tools.monitor.resolution', 'Resolution')}:</strong> ${monitor.width} x ${monitor.height}</p>
+                            <p><strong>${t('tools.monitor.primary', 'Primary')}:</strong> ${monitor.isPrimary ? t('buttons.yes', 'Yes') : t('buttons.no', 'No')}</p>
+                            <p><strong>${t('tools.monitor.orientation', 'Orientation')}:</strong> ${monitor.orientation || t('tools.monitor.normal', 'Normal')}</p>
                         </div>
                     </div>
                 `).join('')}
             </div>
         `;
 
-        // Display monitor controls
         controls.innerHTML = `
             <div class="monitor-controls-grid">
                 ${monitors.map((monitor, index) => `
                     <div class="monitor-control-panel" data-monitor-id="${index}">
-                        <h6>Monitor ${index + 1} Controls</h6>
+                        <h6>${t('tools.monitor.controlsForMonitor', 'Monitor {{number}} Controls', { number: index + 1 })}</h6>
                         <div class="control-group">
-                            <label>Orientation:</label>
+                            <label>${t('tools.monitor.orientation', 'Orientation')}:</label>
                             <select class="orientation-select" data-monitor="${index}">
-                                <option value="0">Normal (0°)</option>
-                                <option value="90">Landscape (90°)</option>
-                                <option value="180">Flipped (180°)</option>
-                                <option value="270">Portrait (270°)</option>
+                                <option value="0">${t('tools.monitor.orientationNormal', 'Normal (0deg)')}</option>
+                                <option value="90">${t('tools.monitor.orientationLandscape', 'Landscape (90deg)')}</option>
+                                <option value="180">${t('tools.monitor.orientationFlipped', 'Flipped (180deg)')}</option>
+                                <option value="270">${t('tools.monitor.orientationPortrait', 'Portrait (270deg)')}</option>
                             </select>
-                            <button class="action-btn" data-action="set-orientation" data-monitor="${index}">Set Orientation</button>
+                            <button class="action-btn" data-action="set-orientation" data-monitor="${index}">${t('tools.monitor.setOrientation', 'Set Orientation')}</button>
                         </div>
                         <div class="control-group">
-                            <label>Display State:</label>
+                            <label>${t('tools.monitor.displayState', 'Display State')}:</label>
                             <select class="display-state-select" data-monitor="${index}">
-                                <option value="enable">Enable</option>
-                                <option value="disable">Disable</option>
+                                <option value="enable">${t('tools.monitor.enable', 'Enable')}</option>
+                                <option value="disable">${t('tools.monitor.disable', 'Disable')}</option>
                             </select>
-                            <button class="action-btn" data-action="set-display-state" data-monitor="${index}">Apply</button>
+                            <button class="action-btn" data-action="set-display-state" data-monitor="${index}">${t('tools.monitor.apply', 'Apply')}</button>
                         </div>
                         <div class="control-group">
                             <button class="action-btn" data-action="set-primary" data-monitor="${index}" ${monitor.isPrimary ? 'disabled' : ''}>
-                                ${monitor.isPrimary ? 'Is Primary' : 'Set as Primary'}
+                                ${monitor.isPrimary ? t('tools.monitor.isPrimary', 'Is Primary') : t('tools.monitor.setAsPrimary', 'Set as Primary')}
                             </button>
                         </div>
                     </div>
@@ -147,42 +171,39 @@ export class MonitorTool {
             </div>
         `;
 
-        // Add event listeners to control buttons
-        document.querySelectorAll('[data-action="set-orientation"]').forEach(btn => {
+        document.querySelectorAll('[data-action="set-orientation"]').forEach((btn) => {
             btn.addEventListener('click', (e) => {
-                const monitorId = parseInt(e.target.dataset.monitor);
+                const monitorId = Number.parseInt(e.target.dataset.monitor, 10);
                 const select = document.querySelector(`.orientation-select[data-monitor="${monitorId}"]`);
-                this.setMonitorOrientation(monitorId, parseInt(select.value));
+                this.setMonitorOrientation(monitorId, Number.parseInt(select.value, 10));
             });
         });
 
-        document.querySelectorAll('[data-action="set-display-state"]').forEach(btn => {
+        document.querySelectorAll('[data-action="set-display-state"]').forEach((btn) => {
             btn.addEventListener('click', (e) => {
-                const monitorId = parseInt(e.target.dataset.monitor);
+                const monitorId = Number.parseInt(e.target.dataset.monitor, 10);
                 const select = document.querySelector(`.display-state-select[data-monitor="${monitorId}"]`);
                 this.setMonitorDisplayState(monitorId, select.value);
             });
         });
 
-        document.querySelectorAll('[data-action="set-primary"]').forEach(btn => {
+        document.querySelectorAll('[data-action="set-primary"]').forEach((btn) => {
             btn.addEventListener('click', (e) => {
-                const monitorId = parseInt(e.target.dataset.monitor);
+                const monitorId = Number.parseInt(e.target.dataset.monitor, 10);
                 this.setPrimaryMonitor(monitorId);
             });
         });
 
-        // Display quick actions
         actions.innerHTML = `
             <div class="quick-actions-grid">
-                <button class="action-btn" id="toggle-landscape">Toggle Landscape</button>
-                <button class="action-btn" id="toggle-portrait">Toggle Portrait</button>
-                <button class="action-btn" id="disable-monitor-2">Disable Monitor 2</button>
-                <button class="action-btn" id="enable-monitor-2">Enable Monitor 2</button>
-                <button class="action-btn" id="set-primary-monitor">Set Primary Monitor</button>
+                <button class="action-btn" id="toggle-landscape">${t('tools.monitor.toggleLandscape', 'Toggle Landscape')}</button>
+                <button class="action-btn" id="toggle-portrait">${t('tools.monitor.togglePortrait', 'Toggle Portrait')}</button>
+                <button class="action-btn" id="disable-monitor-2">${t('tools.monitor.disableMonitor2', 'Disable Monitor 2')}</button>
+                <button class="action-btn" id="enable-monitor-2">${t('tools.monitor.enableMonitor2', 'Enable Monitor 2')}</button>
+                <button class="action-btn" id="set-primary-monitor">${t('tools.monitor.setPrimaryMonitor', 'Set Primary Monitor')}</button>
             </div>
         `;
 
-        // Add event listeners to quick actions
         document.getElementById('toggle-landscape').addEventListener('click', () => this.toggleMonitorOrientation(1, 0));
         document.getElementById('toggle-portrait').addEventListener('click', () => this.toggleMonitorOrientation(1, 90));
         document.getElementById('disable-monitor-2').addEventListener('click', () => this.setMonitorDisplayState(1, 'disable'));
@@ -194,10 +215,10 @@ export class MonitorTool {
         try {
             const monitors = await emubro.invoke('detect-monitors');
             this.displayMonitorStatus(monitors);
-            alert('Monitor detection completed successfully.');
+            alert(t('tools.monitor.detectCompleted', 'Monitor detection completed successfully.'));
         } catch (error) {
             console.error('Failed to detect monitors:', error);
-            alert('Failed to detect monitors: ' + error.message);
+            alert(t('tools.monitor.detectFailed', 'Failed to detect monitors: {{message}}', { message: error.message }));
         }
     }
 
@@ -205,14 +226,17 @@ export class MonitorTool {
         try {
             const result = await emubro.invoke('set-monitor-orientation', monitorId, orientation);
             if (result.success) {
-                alert(`Monitor ${monitorId + 1} orientation set to ${orientation}°`);
+                alert(t('tools.monitor.orientationSet', 'Monitor {{number}} orientation set to {{orientation}} deg', {
+                    number: monitorId + 1,
+                    orientation
+                }));
                 this.updateMonitorStatus();
             } else {
-                alert(`Failed to set monitor orientation: ${result.message}`);
+                alert(t('tools.monitor.orientationSetFailed', 'Failed to set monitor orientation: {{message}}', { message: result.message }));
             }
         } catch (error) {
             console.error('Failed to set monitor orientation:', error);
-            alert('Failed to set monitor orientation: ' + error.message);
+            alert(t('tools.monitor.orientationSetFailed', 'Failed to set monitor orientation: {{message}}', { message: error.message }));
         }
     }
 
@@ -220,14 +244,17 @@ export class MonitorTool {
         try {
             const result = await emubro.invoke('toggle-monitor-orientation', monitorId, targetOrientation);
             if (result.success) {
-                alert(`Monitor ${monitorId + 1} orientation toggled to ${targetOrientation}°`);
+                alert(t('tools.monitor.orientationToggleSuccess', 'Monitor {{number}} orientation toggled to {{orientation}} deg', {
+                    number: monitorId + 1,
+                    orientation: targetOrientation
+                }));
                 this.updateMonitorStatus();
             } else {
-                alert(`Failed to toggle monitor orientation: ${result.message}`);
+                alert(t('tools.monitor.orientationToggleFailed', 'Failed to toggle monitor orientation: {{message}}', { message: result.message }));
             }
         } catch (error) {
             console.error('Failed to toggle monitor orientation:', error);
-            alert('Failed to toggle monitor orientation: ' + error.message);
+            alert(t('tools.monitor.orientationToggleFailed', 'Failed to toggle monitor orientation: {{message}}', { message: error.message }));
         }
     }
 
@@ -235,14 +262,17 @@ export class MonitorTool {
         try {
             const result = await emubro.invoke('set-monitor-display-state', monitorId, state);
             if (result.success) {
-                alert(`Monitor ${monitorId + 1} ${state}d successfully`);
+                alert(t('tools.monitor.stateSetSuccess', 'Monitor {{number}} {{state}}d successfully', {
+                    number: monitorId + 1,
+                    state
+                }));
                 this.updateMonitorStatus();
             } else {
-                alert(`Failed to set monitor state: ${result.message}`);
+                alert(t('tools.monitor.stateSetFailed', 'Failed to set monitor state: {{message}}', { message: result.message }));
             }
         } catch (error) {
             console.error('Failed to set monitor display state:', error);
-            alert('Failed to set monitor display state: ' + error.message);
+            alert(t('tools.monitor.stateSetFailed', 'Failed to set monitor state: {{message}}', { message: error.message }));
         }
     }
 
@@ -250,14 +280,14 @@ export class MonitorTool {
         try {
             const result = await emubro.invoke('set-primary-monitor', monitorId);
             if (result.success) {
-                alert(`Monitor ${monitorId + 1} set as primary monitor`);
+                alert(t('tools.monitor.primarySetSuccess', 'Monitor {{number}} set as primary monitor', { number: monitorId + 1 }));
                 this.updateMonitorStatus();
             } else {
-                alert(`Failed to set primary monitor: ${result.message}`);
+                alert(t('tools.monitor.primarySetFailed', 'Failed to set primary monitor: {{message}}', { message: result.message }));
             }
         } catch (error) {
             console.error('Failed to set primary monitor:', error);
-            alert('Failed to set primary monitor: ' + error.message);
+            alert(t('tools.monitor.primarySetFailed', 'Failed to set primary monitor: {{message}}', { message: error.message }));
         }
     }
 

@@ -407,16 +407,66 @@
     background: color-mix(in srgb, var(--bg-secondary), transparent 16%);
 }
 
+.emulator-config-modal--wide {
+    width: min(960px, 96vw);
+}
+
 .emulator-config-modal h3 {
     margin: 0;
     color: var(--text-primary);
     font-size: 1.05rem;
 }
 
+.emulator-config-subtitle {
+    margin: -4px 0 2px;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
 .emulator-config-form {
     display: flex;
     flex-direction: column;
     gap: 10px;
+}
+
+.emulator-config-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.emulator-config-tab-btn {
+    appearance: none;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bg-primary), transparent 24%);
+    color: var(--text-secondary);
+    padding: 6px 12px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 160ms ease, color 160ms ease, background-color 160ms ease;
+}
+
+.emulator-config-tab-btn:hover {
+    color: var(--text-primary);
+    border-color: color-mix(in srgb, var(--accent-color) 58%, var(--border-color));
+}
+
+.emulator-config-tab-btn.active {
+    color: var(--bg-primary);
+    border-color: color-mix(in srgb, var(--accent-color), white 8%);
+    background: var(--accent-color);
+}
+
+.emulator-config-tab-panel {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.emulator-config-tab-panel.is-active {
+    display: flex;
 }
 
 .emulator-config-row {
@@ -448,10 +498,123 @@
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 25%, transparent);
 }
 
+.emulator-config-inline-note {
+    border: 1px solid color-mix(in srgb, rgba(255,255,255,0.18), var(--border-color));
+    background: color-mix(in srgb, var(--bg-primary), transparent 24%);
+    border-radius: var(--radius-input);
+    padding: 8px 10px;
+    color: var(--text-secondary);
+    font-size: 0.84rem;
+    line-height: 1.4;
+}
+
+.emulator-config-bindings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 44vh;
+    overflow: auto;
+    padding-right: 2px;
+}
+
+.emulator-config-bindings-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.emulator-config-binding-row {
+    display: grid;
+    grid-template-columns: minmax(180px, 34%) 1fr;
+    gap: 8px;
+    align-items: center;
+}
+
+.emulator-config-binding-key {
+    color: var(--text-secondary);
+    font-size: 0.83rem;
+    font-family: "Consolas", "Courier New", monospace;
+    word-break: break-word;
+}
+
+.emulator-config-binding-input {
+    min-width: 0;
+}
+
+.emulator-config-gamepad-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.emulator-config-gamepad-row {
+    display: grid;
+    grid-template-columns: minmax(150px, 24%) minmax(200px, 30%) 1fr;
+    gap: 8px;
+    align-items: center;
+}
+
+.emulator-config-gamepad-action {
+    color: var(--text-primary);
+    font-size: 0.84rem;
+    font-weight: 600;
+}
+
+.emulator-config-gamepad-platform {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.emulator-config-gamepad-input {
+    min-width: 0;
+}
+
+.emulator-config-raw-text {
+    width: 100%;
+    min-height: 320px;
+    resize: vertical;
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 0.83rem;
+    line-height: 1.45;
+}
+
+.emulator-config-error {
+    display: none;
+    border: 1px solid color-mix(in srgb, #c43d3d 60%, var(--border-color));
+    background: color-mix(in srgb, #8b1f1f 22%, transparent 78%);
+    color: color-mix(in srgb, #ff9e9e 88%, #fff 12%);
+    border-radius: var(--radius-input);
+    padding: 8px 10px;
+    font-size: 0.85rem;
+}
+
+.emulator-config-error.is-visible {
+    display: block;
+}
+
 .emulator-config-actions {
     display: flex;
     justify-content: flex-end;
     gap: 10px;
+}
+
+@media (max-width: 760px) {
+    .emulator-config-binding-row {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+
+    .emulator-config-gamepad-row {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+
+    .emulator-config-gamepad-platform {
+        white-space: normal;
+    }
 }
 
 .emulator-download-choice-modal {

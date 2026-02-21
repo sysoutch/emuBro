@@ -1,3 +1,5 @@
+import { showTextInputDialog } from '../ui/text-input-dialog';
+
 export function createCategoriesListRenderer(options = {}) {
     const emubro = options.emubro;
     const getGames = typeof options.getGames === 'function' ? options.getGames : () => [];
@@ -41,6 +43,10 @@ export function createCategoriesListRenderer(options = {}) {
     let tagLabelMap = new Map(options.initialTagLabelMap instanceof Map ? options.initialTagLabelMap : []);
     let categorySettingsMenuState = null;
     let categoriesShowAll = !!options.initialCategoriesShowAll;
+    const CATEGORY_SORT_MODE_KEY = String(options.categorySortStorageKey || 'emuBro.categorySortMode.v1');
+    let categorySortMode = normalizeCategorySortMode(
+        options.initialCategorySortMode || localStorage.getItem(CATEGORY_SORT_MODE_KEY) || 'name-asc'
+    );
 
     if (!emubro) {
         return {
@@ -51,7 +57,7 @@ export function createCategoriesListRenderer(options = {}) {
 
 function formatTagLabel(tagId) {
     const key = normalizeTagCategory(tagId);
-    if (key === 'all') return 'All';
+    if (key === 'all') return t('sidebar.all', 'All');
     const mapped = tagLabelMap.get(key);
     if (mapped) return mapped;
     return key
@@ -59,6 +65,55 @@ function formatTagLabel(tagId) {
         .replace(/\s+/g, ' ')
         .trim()
         .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function applyTemplate(input, data = {}) {
+    let text = String(input ?? '');
+    Object.keys(data || {}).forEach((key) => {
+        const value = String(data[key] ?? '');
+        text = text
+            .replace(new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g'), value)
+            .replace(new RegExp(`\\{\\s*${key}\\s*\\}`, 'g'), value);
+    });
+    return text;
+}
+
+function t(key, fallback, data = {}) {
+    const i18nRef = (typeof i18n !== 'undefined' && i18n && typeof i18n.t === 'function')
+        ? i18n
+        : (window?.i18n && typeof window.i18n.t === 'function' ? window.i18n : null);
+    if (i18nRef && typeof i18nRef.t === 'function') {
+        const translated = i18nRef.t(key, data);
+        if (translated && translated !== key) return String(translated);
+    }
+    return applyTemplate(String(fallback || key), data);
+}
+
+function normalizeCategorySortMode(value) {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (normalized === 'count-desc') return 'count-desc';
+    return 'name-asc';
+}
+
+function setCategorySortMode(nextMode, { persist = true } = {}) {
+    categorySortMode = normalizeCategorySortMode(nextMode);
+    if (persist) {
+        localStorage.setItem(CATEGORY_SORT_MODE_KEY, categorySortMode);
+    }
+}
+
+function sortCategoryRows(rows = []) {
+    const list = Array.isArray(rows) ? [...rows] : [];
+    if (categorySortMode === 'count-desc') {
+        list.sort((a, b) => {
+            const countDiff = Number(b?.count || 0) - Number(a?.count || 0);
+            if (countDiff !== 0) return countDiff;
+            return String(a?.label || a?.id || '').localeCompare(String(b?.label || b?.id || ''));
+        });
+        return list;
+    }
+    list.sort((a, b) => String(a?.label || a?.id || '').localeCompare(String(b?.label || b?.id || '')));
+    return list;
 }
 
 async function loadTagLabelMap() {
@@ -120,13 +175,19 @@ async function refreshAfterTagCatalogMutation() {
 async function renameCategoryTag(tagId, currentLabel) {
     const normalizedTag = normalizeTagCategory(tagId);
     if (!normalizedTag || normalizedTag === 'all') return;
-    const proposed = window.prompt('Rename category tag', String(currentLabel || formatTagLabel(normalizedTag)));
+    const proposed = await showTextInputDialog({
+        title: t('categories.renameTagTitle', 'Rename Tag'),
+        message: t('categories.renameTagMessage', 'Enter a new category name.'),
+        initialValue: String(currentLabel || formatTagLabel(normalizedTag)),
+        confirmLabel: t('tools.rename', 'Rename'),
+        cancelLabel: t('buttons.cancel', 'Cancel')
+    });
     if (proposed === null) return;
     const nextName = String(proposed || '').trim();
     if (!nextName) {
         await showGlassMessageDialog({
-            title: 'Rename Tag',
-            message: 'Tag name cannot be empty.',
+            title: t('categories.renameTagTitle', 'Rename Tag'),
+            message: t('categories.tagNameEmpty', 'Tag name cannot be empty.'),
             level: 'warning'
         });
         return;
@@ -138,18 +199,18 @@ async function renameCategoryTag(tagId, currentLabel) {
     });
     if (!result?.success) {
         await showGlassMessageDialog({
-            title: 'Rename Tag',
-            message: result?.message || 'Failed to rename tag.',
+            title: t('categories.renameTagTitle', 'Rename Tag'),
+            message: result?.message || t('categories.failedRenameTag', 'Failed to rename tag.'),
             level: 'error'
         });
         return;
     }
 
     await refreshAfterTagCatalogMutation();
-    const mergedSuffix = result?.merged ? '\nMatching tags were merged automatically.' : '';
+    const mergedSuffix = result?.merged ? `\n${t('categories.matchingTagsMerged', 'Matching tags were merged automatically.')}` : '';
     await showGlassMessageDialog({
-        title: 'Tag Updated',
-        message: `Tag renamed to "${result?.newLabel || nextName}".${mergedSuffix}`.trim(),
+        title: t('categories.tagUpdatedTitle', 'Tag Updated'),
+        message: t('categories.tagRenamedTo', 'Tag renamed to "{{name}}".', { name: result?.newLabel || nextName }) + mergedSuffix,
         level: 'info'
     });
 }
@@ -168,8 +229,11 @@ async function deleteCategoryTags(tagIds, labelMap = new Map()) {
         .filter(Boolean);
     const hasMore = targetIds.length > 6 ? ` and ${targetIds.length - 6} more` : '';
     const confirmed = window.confirm(
-        `Delete ${targetIds.length} tag(s): ${labelPreview.join(', ')}${hasMore}?\n\n` +
-        'They will be removed from the library and all assigned games.'
+        t('categories.confirmDeleteTags', 'Delete {{count}} tag(s): {{labels}}{{hasMore}}?\n\nThey will be removed from the library and all assigned games.', {
+            count: targetIds.length,
+            labels: labelPreview.join(', '),
+            hasMore
+        })
     );
     if (!confirmed) return;
 
@@ -184,7 +248,7 @@ async function deleteCategoryTags(tagIds, labelMap = new Map()) {
 
     if (failed.length === targetIds.length) {
         await showGlassMessageDialog({
-            title: 'Delete Tag',
+            title: t('categories.deleteTagTitle', 'Delete Tag'),
             message: failed.join('\n'),
             level: 'error'
         });
@@ -194,8 +258,12 @@ async function deleteCategoryTags(tagIds, labelMap = new Map()) {
     await refreshAfterTagCatalogMutation();
     if (failed.length > 0) {
         await showGlassMessageDialog({
-            title: 'Delete Tag',
-            message: `Deleted ${targetIds.length - failed.length} tag(s), ${failed.length} failed.\n${failed.join('\n')}`,
+            title: t('categories.deleteTagTitle', 'Delete Tag'),
+            message: t('categories.deleteTagPartial', 'Deleted {{deleted}} tag(s), {{failedCount}} failed.\n{{failedList}}', {
+                deleted: targetIds.length - failed.length,
+                failedCount: failed.length,
+                failedList: failed.join('\n')
+            }),
             level: 'warning'
         });
     }
@@ -217,8 +285,8 @@ function openCategorySettingsMenu(buttonEl, { tagId, label }) {
     const menu = document.createElement('div');
     menu.className = 'category-settings-menu glass';
     menu.innerHTML = `
-        <button type="button" class="category-settings-menu-btn" data-action="rename">Rename</button>
-        <button type="button" class="category-settings-menu-btn is-danger" data-action="delete">Delete</button>
+        <button type="button" class="category-settings-menu-btn" data-action="rename">${t('tools.rename', 'Rename')}</button>
+        <button type="button" class="category-settings-menu-btn is-danger" data-action="delete">${t('buttons.delete', 'Delete')}</button>
     `;
     document.body.appendChild(menu);
 
@@ -300,7 +368,7 @@ async function renderCategoriesList() {
     closeCategorySettingsMenu();
 
     await loadTagLabelMap();
-    const categories = getTagCategoryCounts(getGames(), { getLabel: formatTagLabel });
+    const categories = sortCategoryRows(getTagCategoryCounts(getGames(), { getLabel: formatTagLabel }));
     const available = new Set(categories.map((entry) => normalizeTagCategory(entry.id)));
     const selectedBeforePrune = getActiveCategorySelectionSet();
     const selectedAfterPrune = new Set(Array.from(selectedBeforePrune).filter((tag) => available.has(tag)));
@@ -344,8 +412,8 @@ async function renderCategoriesList() {
                     type="button"
                     data-category-settings="${escapeHtml(entry.id)}"
                     data-category-label="${escapeHtml(entry.label)}"
-                    aria-label="Category settings for ${escapeHtml(entry.label)}"
-                    title="Category settings"
+                    aria-label="${escapeHtml(t('categories.categorySettingsFor', 'Category settings for {{label}}', { label: entry.label }))}"
+                    title="${escapeHtml(t('categories.categorySettings', 'Category settings'))}"
                 >
                     <span class="icon-svg" aria-hidden="true">
                         <svg viewBox="0 0 24 24">
@@ -362,18 +430,35 @@ async function renderCategoriesList() {
         ? `
             <li class="categories-llm-row categories-more-row">
                 <button class="action-btn small" type="button" data-category-action="toggle-show-more">
-                    ${categoriesShowAll ? 'Show less' : `Show more (${Math.max(0, categories.length - CATEGORY_VISIBLE_LIMIT)})`}
+                    ${categoriesShowAll
+                        ? t('sidebar.categoriesShowLess', 'Show less')
+                        : t('sidebar.categoriesShowMore', 'Show more ({{count}})', { count: Math.max(0, categories.length - CATEGORY_VISIBLE_LIMIT) })}
                 </button>
             </li>
         `
         : '';
 
     listRoot.innerHTML = `
-        <li><a href="#" data-category-tag="all">All</a></li>
-        <li class="categories-llm-row">
-            <button class="action-btn small" type="button" data-category-action="toggle-selection-mode">Mode: ${getCategorySelectionMode() === 'multi' ? 'Multi Select' : 'Single Select'}</button>
+        <li><a href="#" data-category-tag="all">${escapeHtml(t('sidebar.all', 'All'))}</a></li>
+        <li class="categories-llm-row categories-sort-row">
+            <label class="categories-sort-label" for="category-sort-mode">${escapeHtml(t('sidebar.categoriesSortBy', 'Sort by'))}</label>
+            <select id="category-sort-mode" class="categories-sort-select" data-category-action="sort-mode">
+                <option value="name-asc"${categorySortMode === 'name-asc' ? ' selected' : ''}>${escapeHtml(t('sidebar.categoriesSortNameAsc', 'Name (A-Z)'))}</option>
+                <option value="count-desc"${categorySortMode === 'count-desc' ? ' selected' : ''}>${escapeHtml(t('sidebar.categoriesSortGameCount', 'Game Count'))}</option>
+            </select>
         </li>
-        ${isLlmHelpersEnabled() ? `<li class="categories-llm-row"><button class="action-btn small" type="button" data-category-action="llm-global-tags">Add Global Tags with LLM</button></li>` : ''}
+        <li class="categories-llm-row">
+            <button class="action-btn small" type="button" data-category-action="toggle-selection-mode">${escapeHtml(t(
+                'sidebar.categoriesModeButton',
+                'Mode: {{mode}}',
+                { mode: getCategorySelectionMode() === 'multi'
+                    ? t('sidebar.multiSelect', 'Multi Select')
+                    : t('sidebar.singleSelect', 'Single Select') }
+            ))}</button>
+        </li>
+        ${isLlmHelpersEnabled()
+            ? `<li class="categories-llm-row"><button class="action-btn small" type="button" data-category-action="llm-global-tags">${escapeHtml(t('sidebar.addGlobalTagsWithLlm', 'Add Global Tags with LLM'))}</button></li>`
+            : ''}
         ${categoryItems}
         ${showMoreMarkup}
     `;
@@ -387,8 +472,9 @@ async function renderCategoriesList() {
             if (nextTag === 'all') {
                 clearCategorySelection();
             } else if (getCategorySelectionMode() === 'single') {
-                activeTagCategory = (activeTagCategory === nextTag) ? 'all' : nextTag;
-                activeTagCategories = activeTagCategory === 'all' ? new Set() : new Set([activeTagCategory]);
+                const currentlySelected = getActiveCategorySelectionSet();
+                const shouldClear = currentlySelected.size === 1 && currentlySelected.has(nextTag);
+                syncCategoryStateFromSelectionSet(shouldClear ? new Set() : new Set([nextTag]));
             } else {
                 const next = new Set(getActiveCategorySelectionSet());
                 if (next.has(nextTag)) next.delete(nextTag);
@@ -424,6 +510,14 @@ async function renderCategoriesList() {
         });
     }
 
+    const sortModeSelect = listRoot.querySelector('[data-category-action="sort-mode"]');
+    if (sortModeSelect) {
+        sortModeSelect.addEventListener('change', async () => {
+            setCategorySortMode(sortModeSelect.value);
+            await renderCategoriesList();
+        });
+    }
+
     const showMoreBtn = listRoot.querySelector('[data-category-action="toggle-show-more"]');
     if (showMoreBtn) {
         showMoreBtn.addEventListener('click', async () => {
@@ -443,16 +537,16 @@ async function renderCategoriesList() {
             const apiKey = String(settings.apiKeys?.[provider] || '').trim();
             if (!model || !baseUrl) {
                 await showGlassMessageDialog({
-                    title: 'Global LLM Tagging',
-                    message: 'Configure your LLM provider/model first in Suggested view.',
+                    title: t('categories.globalLlmTaggingTitle', 'Global LLM Tagging'),
+                    message: t('categories.configureLlmProviderFirst', 'Configure your LLM provider/model first in Suggested view.'),
                     level: 'warning'
                 });
                 return;
             }
             if ((provider === 'openai' || provider === 'gemini') && !apiKey) {
                 await showGlassMessageDialog({
-                    title: 'Global LLM Tagging',
-                    message: 'API key is missing for the selected provider.',
+                    title: t('categories.globalLlmTaggingTitle', 'Global LLM Tagging'),
+                    message: t('categories.apiKeyMissingSelectedProvider', 'API key is missing for the selected provider.'),
                     level: 'warning'
                 });
                 return;
@@ -461,8 +555,8 @@ async function renderCategoriesList() {
             const tagCatalog = await loadTagCatalogRows();
             if (!tagCatalog.length) {
                 await showGlassMessageDialog({
-                    title: 'Global LLM Tagging',
-                    message: 'No tags found in emubro-resources/tags.',
+                    title: t('categories.globalLlmTaggingTitle', 'Global LLM Tagging'),
+                    message: t('categories.noTagsFound', 'No tags found in emubro-resources/tags.'),
                     level: 'warning'
                 });
                 return;
@@ -472,8 +566,8 @@ async function renderCategoriesList() {
             const untaggedSectionGames = allSectionGames.filter((game) => getGameTagIds(game).length === 0);
             if (!allSectionGames.length) {
                 await showGlassMessageDialog({
-                    title: 'Global LLM Tagging',
-                    message: 'No matching games to tag in the current filter/category selection.',
+                    title: t('categories.globalLlmTaggingTitle', 'Global LLM Tagging'),
+                    message: t('categories.noMatchingGamesToTag', 'No matching games to tag in the current filter/category selection.'),
                     level: 'warning'
                 });
                 return;
@@ -481,17 +575,30 @@ async function renderCategoriesList() {
 
             const plan = await openGlobalLlmTaggingSetupModal({
                 totalAll: allSectionGames.length,
-                totalUntagged: untaggedSectionGames.length
+                totalUntagged: untaggedSectionGames.length,
+                countCalculator: ({ includeAlreadyTagged, skipTaggedCount }) => {
+                    if (!includeAlreadyTagged) return untaggedSectionGames.length;
+                    if (typeof skipTaggedCount === 'number' && skipTaggedCount >= 0) {
+                        return allSectionGames.reduce((acc, game) => {
+                            if (getGameTagIds(game).length <= skipTaggedCount) return acc + 1;
+                            return acc;
+                        }, 0);
+                    }
+                    return allSectionGames.length;
+                }
             });
             if (!plan) return;
 
             let candidateGames = plan.includeAlreadyTagged ? [...allSectionGames] : [...untaggedSectionGames];
+            if (plan.includeAlreadyTagged && plan.skipTaggedCount >= 0) {
+                candidateGames = candidateGames.filter((game) => getGameTagIds(game).length <= plan.skipTaggedCount);
+            }
             if (!candidateGames.length) {
                 await showGlassMessageDialog({
-                    title: 'Global LLM Tagging',
+                    title: t('categories.globalLlmTaggingTitle', 'Global LLM Tagging'),
                     message: plan.includeAlreadyTagged
-                        ? 'No games available for tagging.'
-                        : 'No untagged games found for this selection.',
+                        ? t('categories.noGamesAvailableForTagging', 'No games available for tagging.')
+                        : t('categories.noUntaggedGamesForSelection', 'No untagged games found for this selection.'),
                     level: 'warning'
                 });
                 return;
@@ -502,8 +609,8 @@ async function renderCategoriesList() {
             }
             if (!candidateGames.length) {
                 await showGlassMessageDialog({
-                    title: 'Global LLM Tagging',
-                    message: 'No games selected after applying your run settings.',
+                    title: t('categories.globalLlmTaggingTitle', 'Global LLM Tagging'),
+                    message: t('categories.noGamesAfterRunSettings', 'No games selected after applying your run settings.'),
                     level: 'warning'
                 });
                 return;
@@ -519,8 +626,8 @@ async function renderCategoriesList() {
             }
             if (!queueChunks.length) {
                 await showGlassMessageDialog({
-                    title: 'Global LLM Tagging',
-                    message: 'Unable to build processing chunks from your input.',
+                    title: t('categories.globalLlmTaggingTitle', 'Global LLM Tagging'),
+                    message: t('categories.unableBuildChunks', 'Unable to build processing chunks from your input.'),
                     level: 'error'
                 });
                 return;
@@ -528,12 +635,14 @@ async function renderCategoriesList() {
 
             const previousLabel = globalLlmBtn.textContent;
             globalLlmBtn.disabled = true;
-            globalLlmBtn.textContent = `Tagging 0 / ${candidateGames.length}...`;
+            globalLlmBtn.textContent = t('categories.taggingProgress', 'Tagging {{done}} / {{total}}...', { done: 0, total: candidateGames.length });
 
             const progressDialog = createGlobalLlmProgressDialog({
                 totalGames: candidateGames.length,
                 totalChunks: queueChunks.length,
-                confirmEachChunk: !!plan.confirmEachChunk
+                confirmEachChunk: !!plan.confirmEachChunk,
+                chunkValue: plan.chunkValue,
+                chunkMode: plan.chunkMode
             });
 
             let processed = 0;
@@ -542,19 +651,26 @@ async function renderCategoriesList() {
             let failed = 0;
             let stoppedEarly = false;
 
-            progressDialog.setStatus(`Starting chunk 1 / ${queueChunks.length}...`);
-            progressDialog.log(`Run plan: ${candidateGames.length} game(s), ${queueChunks.length} chunk(s), chunk size ${chunkSize}.`);
+            progressDialog.setStatus(t('categories.startingChunkStatus', 'Starting chunk 1 / {{totalChunks}}...', { totalChunks: queueChunks.length }));
+            progressDialog.log(t('categories.runPlanLog', 'Run plan: {{games}} game(s), {{chunks}} chunk(s), chunk size {{chunkSize}}.', {
+                games: candidateGames.length,
+                chunks: queueChunks.length,
+                chunkSize
+            }));
 
             try {
-                for (let chunkIndex = 0; chunkIndex < queueChunks.length; chunkIndex += 1) {
+                let chunkIndex = 0;
+                while (chunkIndex < candidateGames.length) {
                     if (progressDialog.isCanceled()) {
                         stoppedEarly = true;
-                        progressDialog.log('Run canceled by user.', 'warning');
+                        progressDialog.log(t('categories.runCanceledByUser', 'Run canceled by user.'), 'warning');
                         break;
                     }
-                    const chunk = queueChunks[chunkIndex];
-                    progressDialog.setStatus(`Processing chunk ${chunkIndex + 1} / ${queueChunks.length} (${chunk.length} game(s))...`);
-                    progressDialog.log(`Chunk ${chunkIndex + 1}: started (${chunk.length} game(s)).`);
+                    const currentChunkSize = progressDialog.getLiveChunkSize(candidateGames.length - chunkIndex);
+                    const chunk = candidateGames.slice(chunkIndex, chunkIndex + currentChunkSize);
+                    const chunkDisplayIndex = Math.floor(chunkIndex / chunkSize) + 1; // approximated
+                    progressDialog.setStatus(`Processing chunk... (${chunk.length} game(s), ${candidateGames.length - chunkIndex} remaining)`);
+                    progressDialog.log(t('categories.chunkStarted', 'Chunk: started ({{count}} game(s)).', { count: chunk.length }));
                     let batchResponse = null;
                     try {
                         const batchPayloadGames = chunk.map((game) => ({
@@ -586,16 +702,21 @@ async function renderCategoriesList() {
                     }
 
                     if (!batchResponse?.success) {
-                        progressDialog.log(`Chunk ${chunkIndex + 1}: batch request failed (${String(batchResponse?.message || 'unknown error')}).`, 'error');
+                        progressDialog.log(t('categories.chunkBatchRequestFailed', 'Chunk: batch request failed ({{message}}).', {
+                            message: String(batchResponse?.message || 'unknown error')
+                        }), 'error');
                         for (let gameIndex = 0; gameIndex < chunk.length; gameIndex += 1) {
                             processed += 1;
                             failed += 1;
                             progressDialog.updateCounters({ processed, updated, skipped, failed });
-                            globalLlmBtn.textContent = `Tagging ${Math.min(processed, candidateGames.length)} / ${candidateGames.length}...`;
+                            globalLlmBtn.textContent = t('categories.taggingProgress', 'Tagging {{done}} / {{total}}...', {
+                                done: Math.min(processed, candidateGames.length),
+                                total: candidateGames.length
+                            });
                         }
                         if (progressDialog.isCanceled()) {
                             stoppedEarly = true;
-                            progressDialog.log('Run canceled by user.', 'warning');
+                            progressDialog.log(t('categories.runCanceledByUser', 'Run canceled by user.'), 'warning');
                             break;
                         }
                     } else {
@@ -607,18 +728,21 @@ async function renderCategoriesList() {
                             if (resultByGameId.has(gameId)) return;
                             resultByGameId.set(gameId, row);
                         });
-                        progressDialog.log(`Chunk ${chunkIndex + 1}: received ${resultByGameId.size} result row(s).`);
+                        progressDialog.log(t('categories.chunkReceivedResults', 'Chunk: received {{count}} result row(s).', { count: resultByGameId.size }));
 
                         for (let gameIndex = 0; gameIndex < chunk.length; gameIndex += 1) {
                             if (progressDialog.isCanceled()) {
                                 stoppedEarly = true;
-                                progressDialog.log('Run canceled by user.', 'warning');
+                                progressDialog.log(t('categories.runCanceledByUser', 'Run canceled by user.'), 'warning');
                                 break;
                             }
                             const game = chunk[gameIndex];
                             const gameId = Number(game?.id || 0);
                             const gameName = String(game?.name || `Game ${processed + 1}`);
-                            globalLlmBtn.textContent = `Tagging ${processed + 1} / ${candidateGames.length}...`;
+                            globalLlmBtn.textContent = t('categories.taggingProgress', 'Tagging {{done}} / {{total}}...', {
+                                done: processed + 1,
+                                total: candidateGames.length
+                            });
                             try {
                                 const row = resultByGameId.get(gameId);
                                 if (!row) {
@@ -656,15 +780,17 @@ async function renderCategoriesList() {
                     }
                     if (stoppedEarly) break;
 
-                    progressDialog.log(`Chunk ${chunkIndex + 1}: completed.`);
-                    if (chunkIndex < queueChunks.length - 1) {
+                    chunkIndex += chunk.length;
+                    progressDialog.log(t('categories.chunkCompleted', 'Chunk completed.'));
+                    if (chunkIndex < candidateGames.length) {
+                        const nextChunkSize = progressDialog.getLiveChunkSize(candidateGames.length - chunkIndex);
                         const decision = await progressDialog.waitForNextChunk(
-                            chunkIndex + 2,
-                            queueChunks[chunkIndex + 1].length
+                            Math.floor(chunkIndex / chunkSize) + 2,
+                            nextChunkSize
                         );
                         if (decision !== 'continue') {
                             stoppedEarly = true;
-                            progressDialog.log('Run stopped by user before next chunk.', 'warning');
+                            progressDialog.log(t('categories.runStoppedBeforeNextChunk', 'Run stopped by user before next chunk.'), 'warning');
                             break;
                         }
                     }
@@ -678,7 +804,19 @@ async function renderCategoriesList() {
                     await renderActiveLibraryView();
                 }
 
-                const summaryMessage = `Global LLM tagging ${stoppedEarly ? 'stopped early' : 'finished'}. Updated: ${updated}, skipped: ${skipped}, failed: ${failed}, processed: ${processed}.`;
+                const summaryMessage = t(
+                    'categories.globalLlmTaggingSummary',
+                    'Global LLM tagging {{status}}. Updated: {{updated}}, skipped: {{skipped}}, failed: {{failed}}, processed: {{processed}}.',
+                    {
+                        status: stoppedEarly
+                            ? t('categories.statusStoppedEarly', 'stopped early')
+                            : t('categories.statusFinished', 'finished'),
+                        updated,
+                        skipped,
+                        failed,
+                        processed
+                    }
+                );
                 progressDialog.complete(summaryMessage, failed > 0 ? 'warning' : 'info');
                 addFooterNotification(summaryMessage, failed > 0 ? 'warning' : 'success');
                 openFooterPanel('notifications');

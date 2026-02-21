@@ -203,20 +203,30 @@ export function findSuggestedGameMatch(sourceGames, entry) {
 
 export function mapSuggestionLibraryMatchesToGames(response, sourceGames, options = {}) {
     const libraryMatches = Array.isArray(response?.libraryMatches) ? response.libraryMatches : [];
+    const missingSuggestions = Array.isArray(response?.missingSuggestions) ? response.missingSuggestions : [];
     const games = Array.isArray(sourceGames) ? sourceGames : [];
     const selectedPlatform = String(options?.selectedPlatform || '').trim().toLowerCase();
     const out = [];
     const seen = new Set();
 
-    libraryMatches.forEach((entry) => {
-        const match = findSuggestedGameMatch(games, entry);
-        if (!match) return;
-        if (selectedPlatform && String(match?.platformShortName || '').trim().toLowerCase() !== selectedPlatform) return;
-        const key = getGameIdentityKey(match);
-        if (seen.has(key)) return;
-        seen.add(key);
-        out.push(match);
-    });
+    const processEntries = (entries) => {
+        entries.forEach((entry) => {
+            const match = findSuggestedGameMatch(games, entry);
+            if (!match) return;
+            if (selectedPlatform && String(match?.platformShortName || '').trim().toLowerCase() !== selectedPlatform) return;
+            const key = getGameIdentityKey(match);
+            if (seen.has(key)) return;
+            seen.add(key);
+            out.push(match);
+        });
+    };
+
+    // First process what the LLM explicitly matched
+    processEntries(libraryMatches);
+    
+    // Then check if any "missing" suggestions actually exist in our library 
+    // (e.g. if we didn't send the library context, or the LLM didn't realize we had it)
+    processEntries(missingSuggestions);
 
     return out;
 }

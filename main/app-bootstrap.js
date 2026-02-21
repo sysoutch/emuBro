@@ -26,6 +26,47 @@ function createAppBootstrapManager(deps = {}) {
   const protocol = "emubro";
   const proc = processRef || process;
   const pendingDeepLinks = [];
+  let suppressMainWindowReveal = false;
+
+  function setSuppressMainWindowReveal(value) {
+    suppressMainWindowReveal = !!value;
+    if (!suppressMainWindowReveal) {
+      const revealFn = getRequestRevealMainWindow();
+      if (typeof revealFn === "function") {
+        try {
+          revealFn();
+        } catch (_e) {}
+      }
+    }
+  }
+
+  function isMainWindowRevealSuppressed() {
+    return suppressMainWindowReveal;
+  }
+
+  function findDeepLinkArg(args = []) {
+    return (Array.isArray(args) ? args : [])
+      .find((arg) => String(arg || "").toLowerCase().startsWith(`${protocol}://`)) || "";
+  }
+
+  function parseDeepLink(rawUrl) {
+    let parsed;
+    try {
+      parsed = new URL(rawUrl);
+    } catch (_e) {
+      return null;
+    }
+
+    const action = String(parsed.hostname || "").trim().toLowerCase();
+    if (!action) return null;
+
+    return {
+      action,
+      platform: parsed.searchParams.get("platform"),
+      name: parsed.searchParams.get("name"),
+      code: parsed.searchParams.get("code")
+    };
+  }
 
   if (!app) throw new Error("createAppBootstrapManager requires app");
   if (!BrowserWindow) throw new Error("createAppBootstrapManager requires BrowserWindow");
@@ -96,6 +137,7 @@ function createAppBootstrapManager(deps = {}) {
     const revealMainWindow = () => {
       const windowRef = getMainWindow();
       if (isRevealed) return;
+      if (isMainWindowRevealSuppressed()) return;
       if (!didFinishLoad || !isReadyToShow || !getMainWindowRendererReady()) return;
       if (!windowRef || windowRef.isDestroyed()) return;
 
@@ -192,37 +234,40 @@ function createAppBootstrapManager(deps = {}) {
     }
   }
 
-  function handleDeepLink(rawUrl) {
-    let parsed;
-    try {
-      parsed = new URL(rawUrl);
-    } catch (_e) {
-      return;
-    }
+  function handleDeepLink(rawUrl, options = {}) {
+    const payload = parseDeepLink(rawUrl);
+    if (!payload) return { handled: false, payload: null, launchResult: null };
 
-    const payload = {
-      action: parsed.hostname,
-      platform: parsed.searchParams.get("platform"),
-      name: parsed.searchParams.get("name"),
-      code: parsed.searchParams.get("code")
-    };
+    const keepLauncherHiddenOnLaunch = !!options.keepLauncherHiddenOnLaunch;
+    let launchResult = null;
 
     if (payload.action === "launch") {
       const game = findGameByPlatformAndCodeOrName(payload);
       if (game) {
         const launchFn = getGameLaunchHandler();
-        const result = typeof launchFn === "function"
+        launchResult = typeof launchFn === "function"
           ? launchFn(game)
           : { success: false, message: "Game launch service not ready" };
-        if (!result.success) {
+
+        if (!launchResult.success) {
+          setSuppressMainWindowReveal(false);
           dialog.showMessageBox({
             type: "error",
             title: "emuBro",
             message: "Failed to launch game",
-            detail: result.message || "Unknown error"
+            detail: launchResult.message || "Unknown error"
           });
+        } else if (keepLauncherHiddenOnLaunch) {
+          setSuppressMainWindowReveal(true);
+          const win = getMainWindow();
+          if (win && !win.isDestroyed()) {
+            try {
+              win.minimize();
+            } catch (_e) {}
+          }
         }
       } else {
+        setSuppressMainWindowReveal(false);
         dialog.showMessageBox({
           type: "warning",
           title: "emuBro",
@@ -235,13 +280,14 @@ function createAppBootstrapManager(deps = {}) {
     const mainWindow = getMainWindow();
     if (!mainWindow || mainWindow.isDestroyed() || mainWindow.webContents.isLoadingMainFrame()) {
       pendingDeepLinks.push(payload);
-      return;
+      return { handled: true, payload, launchResult };
     }
 
     mainWindow.webContents.send("emubro:launch", payload);
+    return { handled: true, payload, launchResult };
   }
 
-  function startApplicationBootstrap() {
+  function startApplicationBootstrap(options = {}) {
     if (getAppBootstrapStarted()) return;
     setAppBootstrapStarted(true);
 
@@ -249,10 +295,16 @@ function createAppBootstrapManager(deps = {}) {
       refreshLibraryFromDb();
     } catch (_e) {}
 
+    const startupDeepLink = String(options.deepLink || findDeepLinkArg(proc.argv || []) || "");
+    const startupPayload = parseDeepLink(startupDeepLink);
+    const keepLauncherHiddenOnLaunch = !!(startupPayload && startupPayload.action === "launch" && options.keepLauncherHiddenOnLaunch);
+    setSuppressMainWindowReveal(keepLauncherHiddenOnLaunch);
+
     const mainWindow = createWindow();
     createMenu();
 
     setTimeout(() => {
+      if (isMainWindowRevealSuppressed()) return;
       const windowRef = getMainWindow();
       if (windowRef && !windowRef.isDestroyed() && !windowRef.isVisible()) {
         closeSplashWindow({ force: true });
@@ -267,8 +319,9 @@ function createAppBootstrapManager(deps = {}) {
       }
     } catch (_e) {}
 
-    const deeplink = (proc.argv || []).find((arg) => String(arg || "").toLowerCase().startsWith(`${protocol}://`));
-    if (deeplink) handleDeepLink(deeplink);
+    if (startupDeepLink) {
+      handleDeepLink(startupDeepLink, { keepLauncherHiddenOnLaunch });
+    }
 
     mainWindow.on("closed", () => {
       closeSplashWindow({ force: true });
@@ -292,11 +345,21 @@ function createAppBootstrapManager(deps = {}) {
     }
 
     app.on("second-instance", (_event, commandLine) => {
-      const url = commandLine.find((arg) => String(arg || "").toLowerCase().startsWith(`${protocol}://`));
-      if (url) handleDeepLink(url);
+      const url = findDeepLinkArg(commandLine || []);
+      const payload = parseDeepLink(url);
+      const isLaunchShortcut = !!(payload && payload.action === "launch");
+      if (url) {
+        handleDeepLink(url, { keepLauncherHiddenOnLaunch: isLaunchShortcut });
+      }
 
       const mainWindow = getMainWindow();
       if (mainWindow) {
+        if (isLaunchShortcut) {
+          try {
+            mainWindow.minimize();
+          } catch (_e) {}
+          return;
+        }
         if (mainWindow.isMinimized()) mainWindow.restore();
         mainWindow.focus();
       }
@@ -304,7 +367,8 @@ function createAppBootstrapManager(deps = {}) {
 
     app.on("open-url", (event, url) => {
       event.preventDefault();
-      handleDeepLink(url);
+      const payload = parseDeepLink(url);
+      handleDeepLink(url, { keepLauncherHiddenOnLaunch: !!(payload && payload.action === "launch") });
     });
 
     app.on("before-quit", () => {
@@ -325,14 +389,27 @@ function createAppBootstrapManager(deps = {}) {
     });
 
     app.whenReady().then(() => {
-      const splash = createSplashWindow();
-      const startSoon = () => setTimeout(() => startApplicationBootstrap(), 120);
+      const startupDeepLink = findDeepLinkArg(proc.argv || []);
+      const startupPayload = parseDeepLink(startupDeepLink);
+      const isLaunchShortcutStartup = !!(startupPayload && startupPayload.action === "launch");
+      const startSoon = () => setTimeout(() => {
+        startApplicationBootstrap({
+          deepLink: startupDeepLink,
+          keepLauncherHiddenOnLaunch: isLaunchShortcutStartup
+        });
+      }, 120);
 
-      if (splash && !splash.isDestroyed()) {
-        if (splash.isVisible()) startSoon();
-        else splash.once("show", startSoon);
-      } else {
+      if (isLaunchShortcutStartup) {
+        closeSplashWindow({ force: true });
         startSoon();
+      } else {
+        const splash = createSplashWindow();
+        if (splash && !splash.isDestroyed()) {
+          if (splash.isVisible()) startSoon();
+          else splash.once("show", startSoon);
+        } else {
+          startSoon();
+        }
       }
 
       setTimeout(() => {

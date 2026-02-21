@@ -1,3 +1,11 @@
+import {
+    GAMEPAD_BINDING_ACTIONS,
+    GAMEPAD_BINDING_LABELS,
+    normalizeInputBindingProfile,
+    loadPlatformGamepadBindingsMap,
+    savePlatformGamepadBindingsMap
+} from '../gamepad-binding-utils';
+
 export async function openLibraryPathSettingsModal(options = {}) {
     const emubro = options.emubro;
     const getLibraryPathSettings = typeof options.getLibraryPathSettings === 'function'
@@ -61,6 +69,14 @@ export async function openLibraryPathSettingsModal(options = {}) {
         llmHelpersEnabled: localStorage.getItem(LLM_HELPERS_ENABLED_KEY) !== 'false',
         llmAllowUnknownTags: localStorage.getItem(LLM_ALLOW_UNKNOWN_TAGS_KEY) === 'true'
     };
+    const llmSettings = typeof options.loadSuggestionSettings === 'function' ? options.loadSuggestionSettings() : {};
+    const llmDraft = {
+        provider: String(llmSettings.provider || 'ollama'),
+        models: llmSettings.models || {},
+        baseUrls: llmSettings.baseUrls || {},
+        apiKeys: llmSettings.apiKeys || {},
+        promptTemplate: llmSettings.promptTemplate || ''
+    };
     if (!generalDraft.llmHelpersEnabled && generalDraft.defaultSection === SUGGESTED_SECTION_KEY) {
         generalDraft.defaultSection = 'all';
     }
@@ -68,6 +84,38 @@ export async function openLibraryPathSettingsModal(options = {}) {
         preferCopyExternal: localStorage.getItem('emuBro.preferCopyExternal') !== 'false',
         enableNetworkScan: localStorage.getItem('emuBro.enableNetworkScan') !== 'false'
     };
+    const platformGamepadDraft = loadPlatformGamepadBindingsMap(localStorage);
+    let platformBindingRows = [];
+    try {
+        const emulatorRows = await emubro.invoke('get-emulators');
+        const byPlatform = new Map();
+        (Array.isArray(emulatorRows) ? emulatorRows : []).forEach((row) => {
+            const shortName = String(row?.platformShortName || '').trim().toLowerCase();
+            if (!shortName || byPlatform.has(shortName)) return;
+            const displayName = String(row?.platform || '').trim() || shortName.toUpperCase();
+            byPlatform.set(shortName, displayName);
+        });
+        platformBindingRows = [...byPlatform.entries()]
+            .map(([shortName, platform]) => ({ shortName, platform }))
+            .sort((a, b) => String(a.platform).localeCompare(String(b.platform)));
+    } catch (_error) {
+        platformBindingRows = [];
+    }
+    Object.keys(platformGamepadDraft).forEach((shortName) => {
+        const key = String(shortName || '').trim().toLowerCase();
+        if (!key) return;
+        if (platformBindingRows.some((row) => row.shortName === key)) return;
+        platformBindingRows.push({ shortName: key, platform: key.toUpperCase() });
+    });
+    platformBindingRows.sort((a, b) => String(a.platform).localeCompare(String(b.platform)));
+    if (platformBindingRows.length === 0) {
+        platformBindingRows = Object.keys(platformGamepadDraft)
+            .map((shortName) => ({
+                shortName,
+                platform: shortName.toUpperCase()
+            }))
+            .sort((a, b) => String(a.platform).localeCompare(String(b.platform)));
+    }
     let activeTab = 'general';
 
     const overlay = document.createElement('div');
@@ -107,6 +155,12 @@ export async function openLibraryPathSettingsModal(options = {}) {
         `).join('')}</div>`;
     };
 
+    const escapeAttr = (value) => String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+
     const section = (key, title, subtitle, placeholder, browseLabel, entries) => `
         <section style="border:1px solid var(--border-color);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;">
             <div>
@@ -121,6 +175,61 @@ export async function openLibraryPathSettingsModal(options = {}) {
             </div>
         </section>
     `;
+
+    const renderLlmTab = () => {
+        const provider = llmDraft.provider;
+        const model = llmDraft.models[provider] || '';
+        const baseUrl = llmDraft.baseUrls[provider] || '';
+        const apiKey = llmDraft.apiKeys[provider] || '';
+        const isOllama = provider === 'ollama';
+
+        return `
+            <section style="display:grid;gap:12px;">
+                <section style="border:1px solid var(--border-color);border-radius:12px;padding:12px;display:grid;gap:10px;">
+                    <h3 style="margin:0;font-size:1rem;">AI / LLM Configuration</h3>
+                    <p style="margin:0;color:var(--text-secondary);font-size:0.85rem;">
+                        Configure providers for game suggestions and automated tagging.
+                    </p>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;">
+                        <label style="display:flex;flex-direction:column;gap:6px;">
+                            <span style="font-size:0.82rem;color:var(--text-secondary);">Provider</span>
+                            <select data-llm="provider">
+                                <option value="ollama"${provider === 'ollama' ? ' selected' : ''}>Ollama (Local)</option>
+                                <option value="openai"${provider === 'openai' ? ' selected' : ''}>ChatGPT (OpenAI)</option>
+                                <option value="gemini"${provider === 'gemini' ? ' selected' : ''}>Gemini (Google)</option>
+                            </select>
+                        </label>
+                        <label style="display:flex;flex-direction:column;gap:6px;">
+                            <span style="font-size:0.82rem;color:var(--text-secondary);">Model Name</span>
+                            ${isOllama ? `
+                            <div style="display:grid;grid-template-columns:1fr auto;gap:6px;">
+                                <select data-llm="model-select">
+                                    <option value="${model}" selected>${model || 'Select model...'}</option>
+                                </select>
+                                <button type="button" class="action-btn small" data-llm="refresh-models">Refresh</button>
+                            </div>
+                            <input type="text" data-llm="model" value="${model}" style="display:none;" />
+                            ` : `
+                            <input type="text" data-llm="model" value="${model}" placeholder="e.g. gpt-4o-mini" />
+                            `}
+                        </label>
+                    </div>
+                    <label style="display:flex;flex-direction:column;gap:6px;">
+                        <span style="font-size:0.82rem;color:var(--text-secondary);">API Base URL</span>
+                        <input type="text" data-llm="base-url" value="${baseUrl}" placeholder="${isOllama ? 'http://127.0.0.1:11434' : 'https://api.openai.com/v1'}" />
+                    </label>
+                    ${!isOllama ? `
+                    <label style="display:flex;flex-direction:column;gap:6px;">
+                        <span style="font-size:0.82rem;color:var(--text-secondary);">API Key</span>
+                        <input type="password" data-llm="api-key" value="${apiKey}" placeholder="sk-..." autocomplete="off" />
+                    </label>
+                    ` : `
+                    <div style="font-size:0.8rem;color:var(--text-secondary);opacity:0.8;" data-llm="status"></div>
+                    `}
+                </section>
+            </section>
+        `;
+    };
 
     const renderGeneralTab = () => `
         <section style="display:grid;gap:12px;">
@@ -200,39 +309,105 @@ export async function openLibraryPathSettingsModal(options = {}) {
         </section>
     `;
 
-    const render = () => {
-        const tabContent = activeTab === 'general'
-            ? renderGeneralTab()
-            : (activeTab === 'library-paths'
-                ? `
-                    <div style="display:grid;gap:12px;">
-                        ${section(
-                            'scanFolders',
-                            'Scan Folders',
-                            'Scanned when you click Search Games. Supports local folders and network shares.',
-                            '\\\\server\\share\\games or D:\\\\ROMS',
-                            'Pick Folder',
-                            draft.scanFolders
-                        )}
-                        ${section(
-                            'gameFolders',
-                            'Managed Game Folders',
-                            'Destination folders used when importing from USB/CD/network and choosing Copy/Move.',
-                            'D:\\\\EmuLibrary\\\\Games',
-                            'Pick Folder',
-                            draft.gameFolders
-                        )}
-                        ${section(
-                            'emulatorFolders',
-                            'Managed Emulator Folders',
-                            'Optional destination folders for emulator executables.',
-                            'D:\\\\EmuLibrary\\\\Emulators',
-                            'Pick Folder',
-                            draft.emulatorFolders
-                        )}
+    const renderGamepadTab = () => {
+        const platformSections = platformBindingRows.map((row) => {
+            const shortName = String(row?.shortName || '').trim().toLowerCase();
+            if (!shortName) return '';
+            const displayName = String(row?.platform || shortName.toUpperCase()).trim();
+            const current = normalizeInputBindingProfile(platformGamepadDraft[shortName] || {});
+            return `
+                <details style="border:1px solid var(--border-color);border-radius:12px;padding:10px;background:color-mix(in srgb, var(--bg-primary), transparent 14%);">
+                    <summary style="cursor:pointer;font-weight:650;">${escapeAttr(displayName)} (${escapeAttr(shortName)})</summary>
+                    <div style="display:grid;gap:8px;margin-top:10px;">
+                        <div style="display:grid;grid-template-columns:minmax(120px,220px) minmax(160px,1fr) minmax(160px,1fr);gap:8px;align-items:center;padding:0 0 4px 0;">
+                            <span style="font-size:0.8rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.04em;">Action</span>
+                            <span style="font-size:0.8rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.04em;">Keyboard</span>
+                            <span style="font-size:0.8rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.04em;">Gamepad</span>
+                        </div>
+                        ${GAMEPAD_BINDING_ACTIONS.map((action) => `
+                            <label style="display:grid;grid-template-columns:minmax(120px,220px) minmax(160px,1fr) minmax(160px,1fr);gap:8px;align-items:center;">
+                                <span style="font-size:0.85rem;color:var(--text-secondary);">${GAMEPAD_BINDING_LABELS[action] || action}</span>
+                                <input
+                                    type="text"
+                                    data-platform-gamepad-input="${escapeAttr(shortName)}"
+                                    data-platform-gamepad-action="${escapeAttr(action)}"
+                                    data-platform-gamepad-channel="keyboard"
+                                    value="${escapeAttr(current?.keyboard?.[action] || '')}"
+                                    placeholder="e.g. key:Space, 37"
+                                />
+                                <input
+                                    type="text"
+                                    data-platform-gamepad-input="${escapeAttr(shortName)}"
+                                    data-platform-gamepad-action="${escapeAttr(action)}"
+                                    data-platform-gamepad-channel="gamepad"
+                                    value="${escapeAttr(current?.gamepad?.[action] || '')}"
+                                    placeholder="e.g. button0, axis1+, 32776"
+                                />
+                            </label>
+                        `).join('')}
+                        <div style="display:flex;justify-content:flex-end;">
+                            <button type="button" class="action-btn remove-btn small" data-platform-gamepad-clear="${escapeAttr(shortName)}">Clear ${escapeAttr(displayName)}</button>
+                        </div>
                     </div>
-                `
-                : renderImportTab());
+                </details>
+            `;
+        }).join('');
+
+        return `
+            <section style="display:grid;gap:12px;">
+                <section style="border:1px solid var(--border-color);border-radius:12px;padding:12px;display:grid;gap:10px;">
+                    <h3 style="margin:0;font-size:1rem;">Platform Gamepad Profiles</h3>
+                    <p style="margin:0;color:var(--text-secondary);font-size:0.9rem;">
+                        These bindings apply to all emulators of a platform by default. Emulator-specific overrides can be set in Emulator Edit.
+                    </p>
+                    <div style="display:grid;gap:8px;">
+                        ${platformSections || '<div style="opacity:0.7;font-size:0.92rem;">No platforms available yet.</div>'}
+                    </div>
+                </section>
+            </section>
+        `;
+    };
+
+    const render = () => {
+        let tabContent = '';
+        if (activeTab === 'general') {
+            tabContent = renderGeneralTab();
+        } else if (activeTab === 'llm') {
+            tabContent = renderLlmTab();
+        } else if (activeTab === 'gamepad') {
+            tabContent = renderGamepadTab();
+        } else if (activeTab === 'library-paths') {
+            tabContent = `
+                <div style="display:grid;gap:12px;">
+                    ${section(
+                        'scanFolders',
+                        'Scan Folders',
+                        'Scanned when you click Search Games. Supports local folders and network shares.',
+                        '\\\\server\\share\\games or D:\\\\ROMS',
+                        'Pick Folder',
+                        draft.scanFolders
+                    )}
+                    ${section(
+                        'gameFolders',
+                        'Managed Game Folders',
+                        'Destination folders used when importing from USB/CD/network and choosing Copy/Move.',
+                        'D:\\\\EmuLibrary\\\\Games',
+                        'Pick Folder',
+                        draft.gameFolders
+                    )}
+                    ${section(
+                        'emulatorFolders',
+                        'Managed Emulator Folders',
+                        'Optional destination folders for emulator executables.',
+                        'D:\\\\EmuLibrary\\\\Emulators',
+                        'Pick Folder',
+                        draft.emulatorFolders
+                    )}
+                </div>
+            `;
+        } else {
+            tabContent = renderImportTab();
+        }
 
         modal.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;">
@@ -244,6 +419,8 @@ export async function openLibraryPathSettingsModal(options = {}) {
             </p>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
                 <button type="button" class="action-btn${activeTab === 'general' ? ' launch-btn' : ''}" data-settings-tab="general">General</button>
+                <button type="button" class="action-btn${activeTab === 'llm' ? ' launch-btn' : ''}" data-settings-tab="llm">AI / LLM</button>
+                <button type="button" class="action-btn${activeTab === 'gamepad' ? ' launch-btn' : ''}" data-settings-tab="gamepad">Gamepad</button>
                 <button type="button" class="action-btn${activeTab === 'library-paths' ? ' launch-btn' : ''}" data-settings-tab="library-paths">Library Paths</button>
                 <button type="button" class="action-btn${activeTab === 'import' ? ' launch-btn' : ''}" data-settings-tab="import">Import & Scan</button>
             </div>
@@ -335,6 +512,74 @@ export async function openLibraryPathSettingsModal(options = {}) {
             });
         }
 
+        const llmProviderSelect = modal.querySelector('[data-llm="provider"]');
+        if (llmProviderSelect) {
+            llmProviderSelect.addEventListener('change', () => {
+                llmDraft.provider = llmProviderSelect.value;
+                render();
+            });
+        }
+        const llmModelInput = modal.querySelector('[data-llm="model"]');
+        if (llmModelInput) {
+            llmModelInput.addEventListener('input', () => {
+                llmDraft.models[llmDraft.provider] = llmModelInput.value;
+            });
+        }
+        const llmModelSelect = modal.querySelector('[data-llm="model-select"]');
+        if (llmModelSelect) {
+            llmModelSelect.addEventListener('change', () => {
+                const val = llmModelSelect.value;
+                llmDraft.models[llmDraft.provider] = val;
+                if (llmModelInput) llmModelInput.value = val;
+            });
+        }
+        const llmBaseUrlInput = modal.querySelector('[data-llm="base-url"]');
+        if (llmBaseUrlInput) {
+            llmBaseUrlInput.addEventListener('input', () => {
+                llmDraft.baseUrls[llmDraft.provider] = llmBaseUrlInput.value;
+            });
+        }
+        const llmApiKeyInput = modal.querySelector('[data-llm="api-key"]');
+        if (llmApiKeyInput) {
+            llmApiKeyInput.addEventListener('input', () => {
+                llmDraft.apiKeys[llmDraft.provider] = llmApiKeyInput.value;
+            });
+        }
+        const llmRefreshBtn = modal.querySelector('[data-llm="refresh-models"]');
+        if (llmRefreshBtn && llmModelSelect) {
+            llmRefreshBtn.addEventListener('click', async () => {
+                const statusEl = modal.querySelector('[data-llm="status"]');
+                llmRefreshBtn.disabled = true;
+                if (statusEl) statusEl.textContent = 'Fetching models...';
+                try {
+                    const result = await emubro.invoke('suggestions:list-ollama-models', { 
+                        baseUrl: llmDraft.baseUrls['ollama'] 
+                    });
+                    if (result?.success && Array.isArray(result.models)) {
+                        const current = llmDraft.models['ollama'] || '';
+                        const deduped = Array.from(new Set(result.models.map(m => String(m).trim()).filter(Boolean)));
+                        if (current && !deduped.includes(current)) deduped.unshift(current);
+                        
+                        llmModelSelect.innerHTML = deduped.map(m => 
+                            `<option value="${m}"${m === current ? ' selected' : ''}>${m}</option>`
+                        ).join('');
+                        
+                        if (deduped.length > 0 && !current) {
+                            llmDraft.models['ollama'] = deduped[0];
+                            if (llmModelInput) llmModelInput.value = deduped[0];
+                        }
+                        if (statusEl) statusEl.textContent = `Found ${deduped.length} model(s).`;
+                    } else {
+                        if (statusEl) statusEl.textContent = 'Failed to fetch models.';
+                    }
+                } catch (e) {
+                    if (statusEl) statusEl.textContent = 'Error fetching models.';
+                } finally {
+                    llmRefreshBtn.disabled = false;
+                }
+            });
+        }
+
         const openThemeBtn = modal.querySelector('[data-settings-open-theme]');
         if (openThemeBtn) openThemeBtn.addEventListener('click', () => openThemeManager());
 
@@ -357,6 +602,35 @@ export async function openLibraryPathSettingsModal(options = {}) {
                 openFooterPanel('browse');
             });
         }
+
+        modal.querySelectorAll('[data-platform-gamepad-input]').forEach((input) => {
+            input.addEventListener('input', () => {
+                const platformShortName = String(input.dataset.platformGamepadInput || '').trim().toLowerCase();
+                const action = String(input.dataset.platformGamepadAction || '').trim();
+                const channel = String(input.dataset.platformGamepadChannel || '').trim().toLowerCase();
+                if (!platformShortName || !action || (channel !== 'keyboard' && channel !== 'gamepad')) return;
+                const nextBindings = normalizeInputBindingProfile(platformGamepadDraft[platformShortName] || {});
+                const value = String(input.value || '').trim();
+                if (value) nextBindings[channel][action] = value;
+                else delete nextBindings[channel][action];
+                platformGamepadDraft[platformShortName] = normalizeInputBindingProfile(nextBindings);
+                const nextProfile = platformGamepadDraft[platformShortName];
+                const hasKeyboardBindings = Object.keys(nextProfile.keyboard || {}).length > 0;
+                const hasGamepadBindings = Object.keys(nextProfile.gamepad || {}).length > 0;
+                if (!hasKeyboardBindings && !hasGamepadBindings) {
+                    delete platformGamepadDraft[platformShortName];
+                }
+            });
+        });
+
+        modal.querySelectorAll('[data-platform-gamepad-clear]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const platformShortName = String(btn.dataset.platformGamepadClear || '').trim().toLowerCase();
+                if (!platformShortName) return;
+                delete platformGamepadDraft[platformShortName];
+                render();
+            });
+        });
 
         const attachSectionHandlers = (key) => {
             const listWrap = modal.querySelector(`[data-list="${key}"]`);
@@ -496,6 +770,11 @@ export async function openLibraryPathSettingsModal(options = {}) {
                     setLlmAllowUnknownTagsEnabled(generalDraft.llmAllowUnknownTags, { persist: true });
                     localStorage.setItem('emuBro.preferCopyExternal', importDraft.preferCopyExternal ? 'true' : 'false');
                     localStorage.setItem('emuBro.enableNetworkScan', importDraft.enableNetworkScan ? 'true' : 'false');
+                    savePlatformGamepadBindingsMap(platformGamepadDraft, localStorage);
+                    
+                    if (typeof options.saveSuggestionSettings === 'function') {
+                        options.saveSuggestionSettings(llmDraft);
+                    }
 
                     activeLibrarySection = normalizeLibrarySection(generalDraft.defaultSection || 'all');
                     setActiveLibrarySectionState(activeLibrarySection);

@@ -4,8 +4,8 @@
   "description": "A Steam-like Electron application",
   "main": "main.js",
   "scripts": {
-    "start": "npm run build && electron .",
-    "start:fast": "electron .",
+    "start": "npm run build && node scripts/run-electron.js",
+    "start:fast": "node scripts/run-electron.js",
     "prebuild:win": "taskkill /F /IM emuBro.exe /T || exit 0",
     "build": "webpack --mode production",
     "sync:resources": "node scripts/sync-emubro-resources.js",

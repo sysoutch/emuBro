@@ -18,6 +18,9 @@ export function renderSuggestionResults(panel, response, options = {}) {
 
     const libraryMatches = Array.isArray(response?.libraryMatches) ? response.libraryMatches : [];
     const missingSuggestions = Array.isArray(response?.missingSuggestions) ? response.missingSuggestions : [];
+    
+    // Create a set of names that are matched in library for quick lookup
+    const matchedNames = new Set(libraryMatches.map(m => (m.name || m.title || '').toLowerCase()));
     const summary = String(response?.summary || '').trim();
 
     if (libraryMatches.length === 0 && missingSuggestions.length === 0) {
@@ -58,18 +61,25 @@ export function renderSuggestionResults(panel, response, options = {}) {
                 <h4 class="suggested-result-title">Recommended To Add</h4>
                 <ul class="suggested-result-list">
                     ${missingSuggestions.map((entry) => {
-                        const name = escapeHtml(entry?.name || entry?.title || 'Suggested title');
+                        const nameStr = entry?.name || entry?.title || '';
+                        const name = escapeHtml(nameStr || 'Suggested title');
                         const platform = escapeHtml(entry?.platform ? ` (${entry.platform})` : '');
                         const reason = escapeHtml(entry?.reason || '');
-                        const searchKey = escapeHtml(entry?.name || entry?.title || '');
+                        const searchKey = escapeHtml(nameStr);
+                        
+                        // Check if this "missing" suggestion was actually matched in library (locally or by AI)
+                        const isActuallyInLibrary = matchedNames.has(nameStr.toLowerCase());
+                        const btnLabel = isActuallyInLibrary ? findInLibraryLabel : searchLibraryLabel;
+                        const statusTag = isActuallyInLibrary ? `<span style="font-size:0.7rem;padding:1px 6px;background:rgba(76,175,80,0.2);color:#4caf50;border:1px solid #4caf50;border-radius:4px;margin-left:8px;text-transform:uppercase;font-weight:bold;">Found in Library</span>` : '';
+
                         return `
                             <li class="suggested-result-item">
                                 <div class="suggested-result-meta">
-                                    <span class="suggested-result-name">${name}${platform}</span>
+                                    <span class="suggested-result-name">${name}${platform}${statusTag}</span>
                                     <span class="suggested-result-reason">${reason}</span>
                                 </div>
                                 <div class="suggested-result-actions">
-                                    <button class="action-btn small" type="button" data-suggest-search="${searchKey}">${escapeHtml(searchLibraryLabel)}</button>
+                                    <button class="action-btn small" type="button" data-suggest-search="${searchKey}">${escapeHtml(btnLabel)}</button>
                                 </div>
                             </li>
                         `;

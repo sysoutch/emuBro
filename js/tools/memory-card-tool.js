@@ -1,14 +1,41 @@
 const emubro = window.emubro;
 
+function applyTemplate(input, data = {}) {
+    let text = String(input ?? '');
+    Object.keys(data || {}).forEach((key) => {
+        const value = String(data[key] ?? '');
+        text = text
+            .replace(new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g'), value)
+            .replace(new RegExp(`\\{\\s*${key}\\s*\\}`, 'g'), value);
+    });
+    return text;
+}
+
+function t(key, fallback, data = {}) {
+    const i18nRef = (typeof i18n !== 'undefined' && i18n && typeof i18n.t === 'function')
+        ? i18n
+        : (window?.i18n && typeof window.i18n.t === 'function' ? window.i18n : null);
+    if (i18nRef && typeof i18nRef.t === 'function') {
+        const translated = i18nRef.t(key, data);
+        if (translated && translated !== key) return String(translated);
+    }
+    return applyTemplate(String(fallback || key), data);
+}
+
 export class MemoryCardTool {
     constructor() {
         this.toolName = 'memory-card-editor';
         this.currentSlot1Path = null;
         this.currentSlot2Path = null;
         this.selectedSave = null; // { slotId: "slot-1"|"slot-2", index: number, save: object }
+        this.animatedSaveIcons = [];
+        this.iconAnimationTimer = null;
     }
 
     render(container) {
+        this.stopIconAnimationLoop();
+        this.animatedSaveIcons = [];
+
         const toolContent = document.createElement("div");
         toolContent.className = "tool-content memory-card-editor";
         toolContent.innerHTML = `
@@ -16,75 +43,75 @@ export class MemoryCardTool {
                 <!-- Left Card Slot -->
                 <div class="card-slot" id="slot-1">
                     <div class="slot-header">
-                        <label>${i18n.t("tools.memoryCard1") || "Memory Card 1"}:</label>
+                        <label>${t('tools.memoryCard1', 'Memory Card 1')}:</label>
                         <div class="header-controls">
-                            <div class="current-file-label">No Card Loaded</div>
-                            <button class="icon-btn open-btn" title="Open Card"><i class="fas fa-folder-open"></i></button>
+                            <div class="current-file-label">${t('tools.noCardLoaded', 'No Card Loaded')}</div>
+                            <button class="icon-btn open-btn" title="${t('tools.openCard', 'Open Card')}"><i class="fas fa-folder-open"></i></button>
                         </div>
                     </div>
                     <div class="save-table-container">
                         <table class="save-table">
                             <thead>
                                 <tr>
-                                    <th class="col-icon">Icon</th>
-                                    <th class="col-title">Title</th>
-                                    <th class="col-name">Code</th>
-                                    <th class="col-blocks">Size</th>
+                                    <th class="col-icon">${t('tools.iconColumn', 'Icon')}</th>
+                                    <th class="col-title">${t('tools.titleColumn', 'Title')}</th>
+                                    <th class="col-name">${t('tools.codeColumn', 'Code')}</th>
+                                    <th class="col-blocks">${t('tools.size', 'Size')}</th>
                                 </tr>
                             </thead>
                             <tbody class="save-list">
-                                <tr class="empty-msg"><td colspan="4">Drag & Drop Memory Card File Here</td></tr>
+                                <tr class="empty-msg"><td colspan="4">${t('tools.dragDropMemoryCard', 'Drag and drop memory card file here')}</td></tr>
                             </tbody>
                         </table>
                     </div>
                     <div class="slot-footer">
-                        <div class="card-stats">Free Blocks: <span class="free-blocks">-</span></div>
+                        <div class="card-stats">${t('tools.freeBlocks', 'Free Blocks')}: <span class="free-blocks">-</span></div>
                         <div class="slot-actions">
-                            <button class="action-btn small" disabled>Format Card</button>
-                            <button class="action-btn small" disabled>Import Save...</button>
+                            <button class="action-btn small" data-slot-action="format" disabled>${t('tools.formatCard', 'Format Card')}</button>
+                            <button class="action-btn small" data-slot-action="import" disabled>${t('tools.importSave', 'Import Save...')}</button>
                         </div>
                     </div>
                 </div>
 
                 <!-- Central Controls -->
                 <div class="central-controls">
-                    <button class="control-btn" id="delete-btn" disabled title="Delete Selected Save"><i class="fas fa-trash"></i></button>
-                    <button class="control-btn" id="undelete-btn" disabled title="Undelete Save">Undelete</button>
-                    <button class="control-btn" id="rename-btn" disabled title="Rename Save">Rename</button>
-                    <button class="control-btn" id="export-btn" disabled title="Export Save">Export</button>
-                    <button class="control-btn move-btn" id="move-left-btn" disabled title="Copy to Left"><i class="fas fa-chevron-left"></i> Copy</button>
-                    <button class="control-btn move-btn" id="move-right-btn" disabled title="Copy to Right">Copy <i class="fas fa-chevron-right"></i></button>
+                    <button class="control-btn" id="delete-btn" disabled title="${t('tools.deleteSelectedSave', 'Delete Selected Save')}"><i class="fas fa-trash"></i></button>
+                    <button class="control-btn" id="undelete-btn" disabled title="${t('tools.undeleteSave', 'Undelete Save')}">${t('tools.undelete', 'Undelete')}</button>
+                    <button class="control-btn" id="rename-btn" disabled title="${t('tools.renameSave', 'Rename Save')}">${t('tools.rename', 'Rename')}</button>
+                    <button class="control-btn" id="export-btn" disabled title="${t('tools.exportSave', 'Export Save')}">${t('tools.export', 'Export')}</button>
+                    <button class="control-btn move-btn" id="move-left-btn" disabled title="${t('tools.copyToLeft', 'Copy to Left')}"><i class="fas fa-chevron-left"></i> ${t('tools.copy', 'Copy')}</button>
+                    <button class="control-btn move-btn" id="move-right-btn" disabled title="${t('tools.copyToRight', 'Copy to Right')}">${t('tools.copy', 'Copy')} <i class="fas fa-chevron-right"></i></button>
                 </div>
 
                 <!-- Right Card Slot -->
                 <div class="card-slot" id="slot-2">
                     <div class="slot-header">
-                        <label>${i18n.t("tools.memoryCard2") || "Memory Card 2"}:</label>
+                        <label>${t('tools.memoryCard2', 'Memory Card 2')}:</label>
                         <div class="header-controls">
-                            <div class="current-file-label">No Card Loaded</div>
-                            <button class="icon-btn open-btn" title="Open Card"><i class="fas fa-folder-open"></i></button>
+                            <div class="current-file-label">${t('tools.noCardLoaded', 'No Card Loaded')}</div>
+                            <button class="icon-btn open-btn" title="${t('tools.openCard', 'Open Card')}"><i class="fas fa-folder-open"></i></button>
                         </div>
                     </div>
                     <div class="save-table-container">
                         <table class="save-table">
                             <thead>
                                 <tr>
-                                    <th class="col-icon">Icon</th>
-                                    <th class="col-title">Title</th>
-                                    <th class="col-name">Code</th>
-                                    <th class="col-blocks">Size</th>
+                                    <th class="col-icon">${t('tools.iconColumn', 'Icon')}</th>
+                                    <th class="col-title">${t('tools.titleColumn', 'Title')}</th>
+                                    <th class="col-name">${t('tools.codeColumn', 'Code')}</th>
+                                    <th class="col-blocks">${t('tools.size', 'Size')}</th>
                                 </tr>
                             </thead>
                             <tbody class="save-list">
-                                <tr class="empty-msg"><td colspan="4">Drag & Drop Memory Card File Here</td></tr>
+                                <tr class="empty-msg"><td colspan="4">${t('tools.dragDropMemoryCard', 'Drag and drop memory card file here')}</td></tr>
                             </tbody>
                         </table>
                     </div>
                     <div class="slot-footer">
-                        <div class="card-stats">Free Blocks: <span class="free-blocks">-</span></div>
+                        <div class="card-stats">${t('tools.freeBlocks', 'Free Blocks')}: <span class="free-blocks">-</span></div>
                         <div class="slot-actions">
-                            <button class="action-btn small" disabled>Format Card</button>
-                            <button class="action-btn small" disabled>Import Save...</button>
+                            <button class="action-btn small" data-slot-action="format" disabled>${t('tools.formatCard', 'Format Card')}</button>
+                            <button class="action-btn small" data-slot-action="import" disabled>${t('tools.importSave', 'Import Save...')}</button>
                         </div>
                     </div>
                 </div>
@@ -110,13 +137,11 @@ export class MemoryCardTool {
         document.getElementById('rename-btn').addEventListener('click', () => this.renameSelectedSave());
         
         // Slot Actions (Format)
-        document.querySelectorAll('.slot-actions .action-btn').forEach(btn => {
-            if (btn.textContent.includes("Format")) {
-                btn.addEventListener('click', (e) => {
-                    const slotId = e.target.closest('.card-slot').id;
-                    this.formatCard(slotId);
-                });
-            }
+        document.querySelectorAll('.slot-actions [data-slot-action="format"]').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+                const slotId = e.target.closest('.card-slot').id;
+                this.formatCard(slotId);
+            });
         });
     }
 
@@ -125,8 +150,8 @@ export class MemoryCardTool {
             const result = await emubro.invoke("open-file-dialog", {
                 properties: ["openFile"],
                 filters: [
-                    { name: "Memory Cards", extensions: ["mcr", "mcd", "gme", "ps2", "max", "psu"] },
-                    { name: "All Files", extensions: ["*"] }
+                    { name: t('tools.fileDialogMemoryCards', 'Memory Cards'), extensions: ["mcr", "mcd", "gme", "ps2", "max", "psu"] },
+                    { name: t('tools.fileDialogAllFiles', 'All Files'), extensions: ["*"] }
                 ]
             });
 
@@ -135,7 +160,7 @@ export class MemoryCardTool {
                 this.loadCard(slotId, filePath);
             }
         } catch (error) {
-            console.error("Error opening file dialog:", error);
+            console.error(t('tools.errorOpeningFileDialog', 'Error opening file dialog:'), error);
         }
     }
 
@@ -195,18 +220,22 @@ export class MemoryCardTool {
         const stats = document.querySelector(`#${slotId} .free-blocks`);
         if (!tbody) return;
 
+        this.removeAnimatedIconsForSlot(slotId);
         tbody.innerHTML = "";
 
         if (data.format === "PlayStation 1" && data.saves) {
             if (stats) stats.textContent = data.freeBlocks;
 
             if (data.saves.length === 0) {
-                 tbody.innerHTML = `<tr class="empty-msg"><td colspan="4">Empty Card</td></tr>`;
+                 tbody.innerHTML = `<tr class="empty-msg"><td colspan="4">${t('tools.emptyCard', 'Empty Card')}</td></tr>`;
             }
 
             data.saves.forEach((save, index) => {
                 const tr = document.createElement("tr");
-                const iconHtml = save.icon ? `<img src="${this.createDataURL(save.icon)}" class="save-icon-img" alt="Save Icon"/>` : `<i class="fas fa-save"></i>`;
+                const iconFrames = this.getIconFrameDataUrls(save.icon);
+                const iconHtml = iconFrames.length
+                    ? `<img src="${iconFrames[0]}" class="save-icon-img${iconFrames.length > 1 ? ' is-animated' : ''}" alt="${t('tools.saveIconAlt', 'Save Icon')}"/>`
+                    : `<i class="fas fa-save"></i>`;
                 const blocksText = save.blocks + (save.isMultiBlock ? "+" : "");
 
                 tr.innerHTML = `
@@ -219,6 +248,13 @@ export class MemoryCardTool {
                     this.selectSave(slotId, index, save, tr);
                 });
                 tbody.appendChild(tr);
+
+                if (iconFrames.length > 1) {
+                    const iconEl = tr.querySelector('.save-icon-img');
+                    if (iconEl) {
+                        this.registerAnimatedSaveIcon(slotId, iconEl, iconFrames);
+                    }
+                }
             });
         } else if (data.format === "PlayStation 2") {
             const tr = document.createElement("tr");
@@ -227,7 +263,7 @@ export class MemoryCardTool {
             if (stats) stats.textContent = "?";
         } else {
             const tr = document.createElement("tr");
-            tr.innerHTML = `<td colspan="4" class="centered">Empty or Unsupported Card</td>`;
+            tr.innerHTML = `<td colspan="4" class="centered">${t('tools.emptyOrUnsupportedCard', 'Empty or Unsupported Card')}</td>`;
             tbody.appendChild(tr);
         }
     }
@@ -259,7 +295,7 @@ export class MemoryCardTool {
         const slot = document.getElementById(slotId);
         if (!slot) return;
         
-        const formatBtn = Array.from(slot.querySelectorAll('button')).find(b => b.textContent.includes('Format'));
+        const formatBtn = slot.querySelector('[data-slot-action="format"]');
         if (formatBtn) formatBtn.disabled = !hasCard;
     }
 
@@ -280,10 +316,65 @@ export class MemoryCardTool {
         return canvas.toDataURL("image/png");
     }
 
+    getIconFrameDataUrls(icon) {
+        if (!icon) return [];
+        if (Array.isArray(icon.frames) && icon.frames.length > 0) {
+            return icon.frames
+                .map((frame) => this.createDataURL(frame))
+                .filter((url) => !!url);
+        }
+        const fallback = this.createDataURL(icon);
+        return fallback ? [fallback] : [];
+    }
+
+    removeAnimatedIconsForSlot(slotId) {
+        this.animatedSaveIcons = this.animatedSaveIcons.filter((entry) => entry.slotId !== slotId);
+        if (!this.animatedSaveIcons.length) {
+            this.stopIconAnimationLoop();
+        }
+    }
+
+    registerAnimatedSaveIcon(slotId, imgElement, frameUrls) {
+        if (!imgElement || !Array.isArray(frameUrls) || frameUrls.length < 2) return;
+        this.animatedSaveIcons.push({
+            slotId,
+            imgElement,
+            frameUrls,
+            frameIndex: 0
+        });
+        this.startIconAnimationLoop();
+    }
+
+    startIconAnimationLoop() {
+        if (this.iconAnimationTimer) return;
+        this.iconAnimationTimer = setInterval(() => {
+            const nextEntries = [];
+            this.animatedSaveIcons.forEach((entry) => {
+                if (!entry?.imgElement || !entry.imgElement.isConnected) return;
+                if (!Array.isArray(entry.frameUrls) || entry.frameUrls.length < 2) return;
+
+                entry.frameIndex = (entry.frameIndex + 1) % entry.frameUrls.length;
+                entry.imgElement.src = entry.frameUrls[entry.frameIndex];
+                nextEntries.push(entry);
+            });
+            this.animatedSaveIcons = nextEntries;
+
+            if (!this.animatedSaveIcons.length) {
+                this.stopIconAnimationLoop();
+            }
+        }, 320);
+    }
+
+    stopIconAnimationLoop() {
+        if (!this.iconAnimationTimer) return;
+        clearInterval(this.iconAnimationTimer);
+        this.iconAnimationTimer = null;
+    }
+
     async deleteSelectedSave() {
         if (!this.selectedSave) return;
         
-        const confirmMsg = `Are you sure you want to delete "${this.selectedSave.save.title}"?`;
+        const confirmMsg = t('tools.confirmDeleteSave', 'Are you sure you want to delete "{{name}}"?', { name: this.selectedSave.save.title });
         if (!confirm(confirmMsg)) return;
 
         const filePath = this.selectedSave.slotId === 'slot-1' ? this.currentSlot1Path : this.currentSlot2Path;
@@ -300,22 +391,22 @@ export class MemoryCardTool {
                 this.selectedSave = null;
                 this.updateCentralControls();
             } else {
-                alert("Failed to delete save: " + result.message);
+                alert(t('tools.failedDeleteSave', 'Failed to delete save: {{message}}', { message: result.message }));
             }
         } catch (error) {
-            console.error("Error deleting save:", error);
-            alert("Error deleting save: " + error.message);
+            console.error(t('tools.errorDeletingSave', 'Error deleting save:'), error);
+            alert(t('tools.errorDeletingSaveMessage', 'Error deleting save: {{message}}', { message: error.message }));
         }
     }
 
     async renameSelectedSave() {
         if (!this.selectedSave) return;
 
-        const newName = prompt("Enter new name:", this.selectedSave.save.title);
+        const newName = prompt(t('tools.enterNewName', 'Enter new name:'), this.selectedSave.save.title);
         if (!newName) return;
 
         if (newName.length > 60) {
-            alert("Name too long.");
+            alert(t('tools.nameTooLong', 'Name too long.'));
             return;
         }
 
@@ -333,11 +424,11 @@ export class MemoryCardTool {
                 this.selectedSave = null;
                 this.updateCentralControls();
             } else {
-                alert("Failed to rename save: " + result.message);
+                alert(t('tools.failedRenameSave', 'Failed to rename save: {{message}}', { message: result.message }));
             }
         } catch (error) {
-            console.error("Error renaming save:", error);
-            alert("Error renaming save: " + error.message);
+            console.error(t('tools.errorRenamingSave', 'Error renaming save:'), error);
+            alert(t('tools.errorRenamingSaveMessage', 'Error renaming save: {{message}}', { message: error.message }));
         }
     }
 
@@ -345,7 +436,7 @@ export class MemoryCardTool {
         const filePath = slotId === 'slot-1' ? this.currentSlot1Path : this.currentSlot2Path;
         if (!filePath) return;
 
-        if (!confirm("Are you sure you want to FORMAT this card?\nAll data will be lost!")) return;
+        if (!confirm(t('tools.confirmFormatCard', 'Are you sure you want to format this card?\nAll data will be lost!'))) return;
 
         try {
             const result = await emubro.invoke('format-card', filePath);
@@ -354,11 +445,11 @@ export class MemoryCardTool {
                 this.selectedSave = null;
                 this.updateCentralControls();
             } else {
-                alert("Failed to format card: " + result.message);
+                alert(t('tools.failedFormatCard', 'Failed to format card: {{message}}', { message: result.message }));
             }
         } catch (error) {
-            console.error("Error formatting card:", error);
-            alert("Error formatting card: " + error.message);
+            console.error(t('tools.errorFormattingCard', 'Error formatting card:'), error);
+            alert(t('tools.errorFormattingCardMessage', 'Error formatting card: {{message}}', { message: error.message }));
         }
     }
 }

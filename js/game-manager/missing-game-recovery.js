@@ -3,9 +3,17 @@ export function createMissingGameRecoveryActions(deps = {}) {
     const i18n = deps.i18n || window.i18n || { tf: (_k, vars) => String(vars?.message || '') };
     const escapeHtml = deps.escapeHtml || ((value) => String(value ?? ''));
     const reloadGamesFromMainAndRender = deps.reloadGamesFromMainAndRender || (async () => {});
+    const buildLaunchPayload = typeof deps.buildLaunchPayload === 'function'
+        ? deps.buildLaunchPayload
+        : ((gameId) => Number(gameId || 0));
     const alertUser = typeof deps.alertUser === 'function'
         ? deps.alertUser
         : ((message) => window.alert(String(message || '')));
+
+    const invokeLaunch = async (gameId) => {
+        const payload = buildLaunchPayload(gameId);
+        return emubro.invoke('launch-game', payload);
+    };
 
     function showMissingGameDialog(missingResult) {
         return new Promise((resolve) => {
@@ -137,8 +145,15 @@ export function createMissingGameRecoveryActions(deps = {}) {
                 }
 
                 await reloadGamesFromMainAndRender();
-                const retryResult = await emubro.invoke('launch-game', gameId);
-                if (retryResult?.success) return true;
+                const retryResult = await invokeLaunch(gameId);
+                if (retryResult?.success) {
+                    await emubro.invoke('update-game-metadata', {
+                        gameId: Number(gameId),
+                        lastPlayed: new Date().toISOString()
+                    });
+                    await reloadGamesFromMainAndRender();
+                    return true;
+                }
                 if (retryResult?.code === 'GAME_FILE_MISSING') {
                     currentMissing = retryResult;
                     continue;
@@ -167,8 +182,15 @@ export function createMissingGameRecoveryActions(deps = {}) {
                 }
 
                 await reloadGamesFromMainAndRender();
-                const retryResult = await emubro.invoke('launch-game', gameId);
-                if (retryResult?.success) return true;
+                const retryResult = await invokeLaunch(gameId);
+                if (retryResult?.success) {
+                    await emubro.invoke('update-game-metadata', {
+                        gameId: Number(gameId),
+                        lastPlayed: new Date().toISOString()
+                    });
+                    await reloadGamesFromMainAndRender();
+                    return true;
+                }
                 if (retryResult?.code === 'GAME_FILE_MISSING') {
                     currentMissing = retryResult;
                     continue;
@@ -182,8 +204,15 @@ export function createMissingGameRecoveryActions(deps = {}) {
     }
 
     async function launchGame(gameId) {
-        const result = await emubro.invoke('launch-game', gameId);
-        if (result?.success) return;
+        const result = await invokeLaunch(gameId);
+        if (result?.success) {
+            await emubro.invoke('update-game-metadata', {
+                gameId: Number(gameId),
+                lastPlayed: new Date().toISOString()
+            });
+            await reloadGamesFromMainAndRender();
+            return;
+        }
 
         if (result?.code === 'GAME_FILE_MISSING') {
             await handleMissingGameLaunch(gameId, result);

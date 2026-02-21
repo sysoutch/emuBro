@@ -2,6 +2,7 @@ export function setupRendererEventListeners(options = {}) {
     const setupSidebarRail = typeof options.setupSidebarRail === 'function' ? options.setupSidebarRail : () => {};
     const setAppMode = typeof options.setAppMode === 'function' ? options.setAppMode : () => {};
     const showToolView = typeof options.showToolView === 'function' ? options.showToolView : () => {};
+    const showSupportView = typeof options.showSupportView === 'function' ? options.showSupportView : () => {};
     const showCommunityView = typeof options.showCommunityView === 'function' ? options.showCommunityView : () => {};
     const setActiveRailTarget = typeof options.setActiveRailTarget === 'function' ? options.setActiveRailTarget : () => {};
     const openLibraryPathSettingsModal = typeof options.openLibraryPathSettingsModal === 'function' ? options.openLibraryPathSettingsModal : async () => {};
@@ -99,6 +100,7 @@ export function setupRendererEventListeners(options = {}) {
     setupSidebarRail({
         setAppMode,
         showToolView,
+        showSupportView,
         showCommunityView,
         setActiveRailTarget,
         openLibraryPathSettingsModal,
@@ -343,6 +345,9 @@ export function setupRendererEventListeners(options = {}) {
             if (target === 'tools') {
                 setAppMode('tools');
                 showToolView(); // Show overview
+            } else if (target === 'support') {
+                setAppMode('support');
+                showSupportView();
             } else if (target === 'community') {
                 setAppMode('community');
                 showCommunityView();

@@ -10,6 +10,8 @@ function registerSettingsPathsIpc(deps = {}) {
     getLibraryPathSettings,
     getDefaultLibraryPathSettings,
     setLibraryPathSettings,
+    getRuntimeDataRules,
+    setRuntimeDataRules,
     normalizeManagedFolderKind,
     isExistingDirectory,
     pathsEqual,
@@ -29,6 +31,8 @@ function registerSettingsPathsIpc(deps = {}) {
   if (typeof getLibraryPathSettings !== "function") throw new Error("registerSettingsPathsIpc requires getLibraryPathSettings");
   if (typeof getDefaultLibraryPathSettings !== "function") throw new Error("registerSettingsPathsIpc requires getDefaultLibraryPathSettings");
   if (typeof setLibraryPathSettings !== "function") throw new Error("registerSettingsPathsIpc requires setLibraryPathSettings");
+  if (typeof getRuntimeDataRules !== "function") throw new Error("registerSettingsPathsIpc requires getRuntimeDataRules");
+  if (typeof setRuntimeDataRules !== "function") throw new Error("registerSettingsPathsIpc requires setRuntimeDataRules");
   if (typeof normalizeManagedFolderKind !== "function") throw new Error("registerSettingsPathsIpc requires normalizeManagedFolderKind");
   if (typeof isExistingDirectory !== "function") throw new Error("registerSettingsPathsIpc requires isExistingDirectory");
   if (typeof pathsEqual !== "function") throw new Error("registerSettingsPathsIpc requires pathsEqual");
@@ -54,6 +58,33 @@ function registerSettingsPathsIpc(deps = {}) {
       return { success: true, settings: saved };
     } catch (error) {
       log.error("Failed to save library path settings:", error);
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle("settings:get-runtime-data-rules", async () => {
+    try {
+      return { success: true, rules: getRuntimeDataRules() };
+    } catch (error) {
+      log.error("Failed to read runtime data rules:", error);
+      return {
+        success: false,
+        message: error.message,
+        rules: {
+          directoryNames: [],
+          fileExtensions: [],
+          fileNameIncludes: []
+        }
+      };
+    }
+  });
+
+  ipcMain.handle("settings:set-runtime-data-rules", async (_event, payload = {}) => {
+    try {
+      const saved = setRuntimeDataRules(payload);
+      return { success: true, rules: saved };
+    } catch (error) {
+      log.error("Failed to save runtime data rules:", error);
       return { success: false, message: error.message };
     }
   });

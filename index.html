@@ -18,9 +18,10 @@
             </div>
             <nav class="navigation">
                 <ul>
-                    <li><a href="#" class="active" data-nav-target="library">Library</a></li>
-                    <li><a href="#" data-nav-target="tools">Tools</a></li>
-                    <li><a href="#" data-nav-target="community">Community</a></li>
+                    <li><a href="#" class="active" data-nav-target="library" data-i18n="header.library">Library</a></li>
+                    <li><a href="#" data-nav-target="tools" data-i18n="header.tools">Tools</a></li>
+                    <li><a href="#" data-nav-target="support" data-i18n="header.support">Support</a></li>
+                    <li><a href="#" data-nav-target="community" data-i18n="header.community">Community</a></li>
                 </ul>
             </nav>
             <div class="user-actions">
@@ -29,11 +30,11 @@
                 </div>
                 <div class="form-group language-selector-wrapper">
                     <div class="form-group dropdown-with-button-wrapper">
-                        <div id="language-dropdown" class="custom-select" title="Select Language">
+                        <div id="language-dropdown" class="custom-select" title="Select Language" data-i18n-title="language.selectLanguage">
                             <div class="selected-option">
                                 <div style="display: flex; align-items: center; gap: 8px;">
                                     <span id="current-flag" class="fi"></span>
-                                    <span id="current-language-name">Select Language</span>
+                                    <span id="current-language-name" data-i18n="language.selectLanguage">Select Language</span>
                                 </div>
                             </div>
                             <ul id="language-options" class="options-list">
@@ -41,7 +42,7 @@
                             </ul>
                         </div>
                         
-                        <button id="language-manager-btn" class="theme-manager-btn icon-only-btn" title="Manage Languages" aria-label="Manage Languages">
+                        <button id="language-manager-btn" class="theme-manager-btn icon-only-btn" title="Manage Languages" aria-label="Manage Languages" data-i18n-title="language.managerTitle" data-i18n-aria-label="language.managerTitle">
                             <span class="icon-svg" aria-hidden="true">
                                 <svg viewBox="0 0 24 24">
                                     <circle cx="12" cy="12" r="9"></circle>
@@ -55,14 +56,14 @@
                 </div>
                 <div class="header-inline-drag-gap" aria-hidden="true"></div>
                 <div class="theme-toggle-wrapper">
-                    <button id="theme-controls-toggle" class="theme-controls-toggle" type="button" aria-expanded="false" aria-controls="theme-controls-content">Theme</button>
+                    <button id="theme-controls-toggle" class="theme-controls-toggle" type="button" aria-expanded="false" aria-controls="theme-controls-content" data-i18n="theme.themeManager">Theme</button>
                     <div id="theme-controls-content" class="theme-controls-content">
                         <div class="form-group dropdown-with-button-wrapper">
                             <select id="theme-select">
                                 <option value="dark" data-i18n="theme.darkTheme"></option>
                                 <option value="light" data-i18n="theme.lightTheme"></option>
                             </select>
-                            <button id="theme-manager-btn" class="theme-manager-btn icon-only-btn" title="Manage Themes" aria-label="Manage Themes">
+                            <button id="theme-manager-btn" class="theme-manager-btn icon-only-btn" title="Manage Themes" aria-label="Manage Themes" data-i18n-title="header.manageThemes" data-i18n-aria-label="header.manageThemes">
                                 <span class="icon-svg" aria-hidden="true">
                                     <svg viewBox="0 0 24 24">
                                         <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"></path>
@@ -71,7 +72,7 @@
                                 </span>
                             </button>
                         </div>
-                        <button id="theme-toggle-btn" class="theme-toggle icon-only-btn" title="Toggle Light/Dark Mode" aria-label="Toggle Light/Dark Mode">
+                        <button id="theme-toggle-btn" class="theme-toggle icon-only-btn" title="Toggle Light/Dark Mode" aria-label="Toggle Light/Dark Mode" data-i18n-title="header.toggleTheme" data-i18n-aria-label="header.toggleTheme">
                             <span class="icon-svg" aria-hidden="true">
                                 <svg viewBox="0 0 24 24">
                                     <circle cx="12" cy="12" r="4"></circle>
@@ -86,7 +87,7 @@
                                 </svg>
                             </span>
                         </button>
-                        <button id="invert-colors-btn" class="theme-toggle icon-only-btn" title="Invert Colors" aria-label="Invert Colors">
+                        <button id="invert-colors-btn" class="theme-toggle icon-only-btn" title="Invert Colors" aria-label="Invert Colors" data-i18n-title="theme.invertColors" data-i18n-aria-label="theme.invertColors">
                             <span class="icon-svg" aria-hidden="true">
                                 <svg viewBox="0 0 24 24">
                                     <circle cx="12" cy="12" r="9"></circle>
@@ -117,7 +118,7 @@
             <!-- Sidebar: icon rail + expandable content -->
             <aside class="sidebar sidebar--collapsed" id="sidebar">
                 <div class="sidebar-rail" aria-label="Primary navigation">
-                    <button id="sidebar-toggle" class="rail-btn rail-brand" type="button" aria-expanded="false" title="Expand sidebar">
+                    <button id="sidebar-toggle" class="rail-btn rail-brand" type="button" aria-expanded="false" title="Expand sidebar" data-i18n-title="sidebar.expand">
                         <span class="rail-icon" aria-hidden="true">
                             <!-- Grid icon -->
                             <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -127,7 +128,7 @@
                     </button>
 
                     <div class="rail-group">
-                        <button class="rail-btn rail-nav is-active" type="button" data-rail-target="library" title="Library">
+                        <button class="rail-btn rail-nav is-active" type="button" data-rail-target="library" title="Library" data-i18n-title="header.library">
                             <span class="rail-icon" aria-hidden="true">
                                 <!-- Controller icon -->
                                 <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -136,10 +137,10 @@
                                     <path d="M15.9 10.6h.01M18 12.7h.01"/>
                                 </svg>
                             </span>
-                            <span class="rail-label">Library</span>
+                            <span class="rail-label" data-i18n="header.library">Library</span>
                         </button>
 
-                        <button class="rail-btn rail-nav" type="button" data-rail-target="tools" title="Tools">
+                        <button class="rail-btn rail-nav" type="button" data-rail-target="tools" title="Tools" data-i18n-title="header.tools">
                             <span class="rail-icon" aria-hidden="true">
                                 <!-- Rocket icon -->
                                 <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -148,23 +149,38 @@
                                     <path d="M9 15l-3 6 6-3"/>
                                 </svg>
                             </span>
-                            <span class="rail-label">Tools</span>
+                            <span class="rail-label" data-i18n="header.tools">Tools</span>
                         </button>
 
-                        <button class="rail-btn rail-nav" type="button" data-rail-target="community" title="Community">
+                        <button class="rail-btn rail-nav" type="button" data-rail-target="support" title="Support" data-i18n-title="header.support">
+                            <span class="rail-icon" aria-hidden="true">
+                                <!-- Life buoy icon -->
+                                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="9"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                    <path d="M18.4 5.6 14 10"/>
+                                    <path d="M10 14 5.6 18.4"/>
+                                    <path d="M18.4 18.4 14 14"/>
+                                    <path d="M10 10 5.6 5.6"/>
+                                </svg>
+                            </span>
+                            <span class="rail-label" data-i18n="header.support">Support</span>
+                        </button>
+
+                        <button class="rail-btn rail-nav" type="button" data-rail-target="community" title="Community" data-i18n-title="header.community">
                             <span class="rail-icon" aria-hidden="true">
                                 <!-- Chat icon -->
                                 <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H8l-5 3 1.5-4.5A8.5 8.5 0 1 1 21 11.5z"/>
                                 </svg>
                             </span>
-                            <span class="rail-label">Community</span>
+                            <span class="rail-label" data-i18n="header.community">Community</span>
                         </button>
                     </div>
 
                     <div class="rail-spacer"></div>
                     <div class="rail-group rail-group--bottom">
-                        <button class="rail-btn rail-nav" type="button" data-rail-target="profile" title="Profile">
+                        <button class="rail-btn rail-nav" type="button" data-rail-target="profile" title="Profile" data-i18n-title="header.profile">
                             <span class="rail-icon" aria-hidden="true">
                                 <!-- User icon -->
                                 <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -172,10 +188,10 @@
                                     <circle cx="12" cy="8" r="4"/>
                                 </svg>
                             </span>
-                            <span class="rail-label">Profile</span>
+                            <span class="rail-label" data-i18n="header.profile">Profile</span>
                         </button>
 
-                        <button class="rail-btn rail-nav" type="button" data-rail-target="settings" title="Settings">
+                        <button class="rail-btn rail-nav" type="button" data-rail-target="settings" title="Settings" data-i18n-title="header.settings">
                             <span class="rail-icon" aria-hidden="true">
                                 <!-- Gear icon -->
                                 <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -183,49 +199,50 @@
                                     <path d="M19.4 15a7.8 7.8 0 0 0 .1-1l2-1.2-2-3.5-2.3.5a8 8 0 0 0-1.6-1l-.3-2.4H8.7l-.3 2.4a8 8 0 0 0-1.6 1l-2.3-.5-2 3.5 2 1.2a7.8 7.8 0 0 0 .1 1 7.8 7.8 0 0 0-.1 1l-2 1.2 2 3.5 2.3-.5a8 8 0 0 0 1.6 1l.3 2.4h6.6l.3-2.4a8 8 0 0 0 1.6-1l2.3.5 2-3.5-2-1.2a7.8 7.8 0 0 0-.1-1z"/>
                                 </svg>
                             </span>
-                            <span class="rail-label">Settings</span>
+                            <span class="rail-label" data-i18n="header.settings">Settings</span>
                         </button>
                     </div>
                 </div>
 
                 <div class="sidebar-content" id="sidebar-content">
                     <div class="sidebar-section">
-                        <h3>Library</h3>
+                        <h3 data-i18n="sidebar.library">Library</h3>
                         <ul>
-                            <li class="active"><a href="#" data-view="all">All Games</a></li>
-                            <li><a href="#" data-view="installed">Installed</a></li>
-                            <li><a href="#" data-view="recent">Recently Played</a></li>
-                            <li><a href="#" data-view="suggested">Suggested</a></li>
-                            <li><a href="#" data-view="emulators">Emulators</a></li>
+                            <li class="active"><a href="#" data-view="all" data-i18n="sidebar.allGames">All Games</a></li>
+                            <li><a href="#" data-view="installed" data-i18n="sidebar.installed">Installed</a></li>
+                            <li><a href="#" data-view="recent" data-i18n="sidebar.recentlyPlayed">Recently Played</a></li>
+                            <li><a href="#" data-view="suggested" data-i18n="sidebar.suggested">Suggested</a></li>
+                            <li><a href="#" data-view="emulators" data-i18n="sidebar.emulators">Emulators</a></li>
                         </ul>
                     </div>
                     <div class="sidebar-section">
-                        <h3>Categories</h3>
+                        <h3 data-i18n="sidebar.categories">Categories</h3>
                         <ul id="categories-list">
-                            <li><a href="#" data-genre="all">All</a></li>
-                            <li><a href="#" data-genre="Platformer">Platformer</a></li>
-                            <li><a href="#" data-genre="Adventure">Adventure</a></li>
-                            <li><a href="#" data-genre="RPG">RPG</a></li>
-                            <li><a href="#" data-genre="Action">Action</a></li>
-                            <li><a href="#" data-genre="Puzzle">Puzzle</a></li>
-                            <li><a href="#" data-genre="Fighting">Fighting</a></li>
+                            <li><a href="#" data-genre="all" data-i18n="sidebar.all">All</a></li>
+                            <li><a href="#" data-genre="Platformer" data-i18n="sidebar.platformer">Platformer</a></li>
+                            <li><a href="#" data-genre="Adventure" data-i18n="sidebar.adventure">Adventure</a></li>
+                            <li><a href="#" data-genre="RPG" data-i18n="sidebar.rpg">RPG</a></li>
+                            <li><a href="#" data-genre="Action" data-i18n="sidebar.action">Action</a></li>
+                            <li><a href="#" data-genre="Puzzle" data-i18n="sidebar.puzzle">Puzzle</a></li>
+                            <li><a href="#" data-genre="Fighting" data-i18n="sidebar.fighting">Fighting</a></li>
                         </ul>
                     </div>
                     <div class="sidebar-section">
-                        <h3>Stats</h3>
+                        <h3 data-i18n="sidebar.stats">Stats</h3>
                         <div class="stats">
-                            <p>Total Games: <span id="total-games">0</span></p>
-                            <p>Total Emulators: <span id="total-emulators">0</span></p>
-                            <p>Play Time: <span id="play-time">0</span> hours</p>
+                            <p><span data-i18n="sidebar.totalGames">Total Games</span>: <span id="total-games">0</span></p>
+                            <p><span data-i18n="sidebar.totalEmulators">Total Emulators</span>: <span id="total-emulators">0</span></p>
+                            <p><span data-i18n="sidebar.playTime">Play Time</span>: <span id="play-time">0</span> <span data-i18n="sidebar.hours">hours</span></p>
                         </div>
                     </div>
                     <div class="sidebar-section">
-                        <h3>Tools</h3>
+                        <h3 data-i18n="sidebar.tools">Tools</h3>
                         <ul id="tools-list">
-                            <li><a href="#" data-tool="memory-card" class="active">Memory Card Reader</a></li>
-                            <li><a href="#" data-tool="rom-ripper">ROM Ripper</a></li>
-                            <li><a href="#" data-tool="game-database">Game Database</a></li>
-                            <li><a href="#" data-tool="cheat-codes">Cheat Codes</a></li>
+                            <li><a href="#" data-tool="memory-card" class="active" data-i18n="sidebar.memoryCardReader">Memory Card Reader</a></li>
+                            <li><a href="#" data-tool="bios" data-i18n="tools.biosManager">BIOS Manager</a></li>
+                            <li><a href="#" data-tool="rom-ripper" data-i18n="sidebar.romRipper">ROM Ripper</a></li>
+                            <li><a href="#" data-tool="game-database" data-i18n="sidebar.gameDatabase">Game Database</a></li>
+                            <li><a href="#" data-tool="cheat-codes" data-i18n="sidebar.cheatCodes">Cheat Codes</a></li>
                         </ul>
                     </div>
                 </div>
@@ -242,7 +259,7 @@
                     <button class="view-btn" data-view="random" data-i18n="views.random">Random</button>
 
                     <div class="view-size-control">
-                        <label for="view-size-slider">Size</label>
+                        <label for="view-size-slider" data-i18n="views.size">Size</label>
                         <input id="view-size-slider" type="range" min="70" max="140" step="5" value="100" />
                         <span id="view-size-value">100%</span>
                     </div>
@@ -251,14 +268,14 @@
                 <!-- Game Grid -->
                 <main class="game-grid">
                     <div class="game-header">
-                        <h2 id="games-header">Featured Games</h2>
+                        <h2 id="games-header" data-i18n="gameGrid.featuredGames">Featured Games</h2>
                         <div class="filters">
                             <label id="emulators-installed-toggle-wrap" class="emulators-installed-toggle is-hidden">
                                 <input id="emulators-installed-toggle" type="checkbox" />
-                                <span>Installed</span>
+                                <span data-i18n="sidebar.installed">Installed</span>
                             </label>
                             <select id="platform-filter">
-                                <option value="all">All Platforms</option>
+                                <option value="all" data-i18n="gameGrid.allPlatforms">All Platforms</option>
                                 <option value="gameboy">Gameboy</option>
                                 <option value="android">Android</option>
                                 <option value="xbox">Xbox</option>
@@ -294,18 +311,18 @@
                                 <option value="zh">Chinese</option>
                             </select>
                             <select id="group-filter">
-                                <option value="none">Group: None</option>
-                                <option value="platform">Group: Platform</option>
-                                <option value="company">Group: Company</option>
+                                <option value="none" data-i18n="filters.groupNone">Group: None</option>
+                                <option value="platform" data-i18n="filters.groupPlatform">Group: Platform</option>
+                                <option value="company" data-i18n="filters.groupCompany">Group: Company</option>
                             </select>
                             <select id="sort-filter">
-                                <option value="name">Sort by Name</option>
-                                <option value="rating">Sort by Rating</option>
-                                <option value="platform">Sort by Platform</option>
+                                <option value="name" data-i18n="gameGrid.sortByName">Sort by Name</option>
+                                <option value="rating" data-i18n="gameGrid.sortByRating">Sort by Rating</option>
+                                <option value="platform" data-i18n="gameGrid.sortByPlatform">Sort by Platform</option>
                             </select>
                             <label id="group-same-names-toggle-wrap" class="group-same-names-toggle">
                                 <input id="group-same-names-toggle" type="checkbox" />
-                                <span>Group same names</span>
+                                <span data-i18n="filters.groupSameNames">Group same names</span>
                             </label>
                         </div>
                     </div>
@@ -321,9 +338,9 @@
                 <footer id="game-details-footer" class="game-details-footer glass">
                     <div class="game-details-content">
                         <div class="game-details-header">
-                            <h3>Library Panel</h3>
+                            <h3 data-i18n="footer.libraryPanel">Library Panel</h3>
                             <div class="footer-controls">
-                                <button id="pin-footer-btn" class="action-btn small icon-only-btn" title="Pin Footer" aria-label="Pin Footer">
+                                <button id="pin-footer-btn" class="action-btn small icon-only-btn" title="Pin Footer" aria-label="Pin Footer" data-i18n-title="footer.pinFooter" data-i18n-aria-label="footer.pinFooter">
                                     <span class="icon-svg" aria-hidden="true">
                                         <svg viewBox="0 0 24 24">
                                             <path d="M8.5 4h7l-1.5 4.8v3.1l1.4 1.5h-6.8l1.4-1.5V8.8L8.5 4Z"></path>
@@ -335,36 +352,36 @@
                             </div>
                         </div>
                         <div class="game-details-tabs" role="tablist" aria-label="Footer tabs">
-                            <button class="game-details-tab is-active" type="button" role="tab" data-footer-tab="browse">Browse Computer</button>
-                            <button class="game-details-tab" type="button" role="tab" data-footer-tab="notifications">Notifications</button>
-                            <button class="game-details-tab" type="button" role="tab" data-footer-tab="covers">Find Covers</button>
+                            <button class="game-details-tab is-active" type="button" role="tab" data-footer-tab="browse" data-i18n="footer.browseComputer">Browse Computer</button>
+                            <button class="game-details-tab" type="button" role="tab" data-footer-tab="notifications" data-i18n="footer.notifications">Notifications</button>
+                            <button class="game-details-tab" type="button" role="tab" data-footer-tab="covers" data-i18n="footer.findCovers">Find Covers</button>
                         </div>
                         <div class="game-details-tab-panels">
                             <section class="game-details-tab-panel is-active" data-footer-panel="browse">
                                 <div class="browse-scope-bar">
-                                    <span class="browse-scope-label">Scope</span>
+                                    <span class="browse-scope-label" data-i18n="footer.scope">Scope</span>
                                     <div class="browse-scope-options" role="group" aria-label="Browse scope">
-                                        <button class="browse-scope-btn is-active" type="button" data-browse-scope="both">Games + Emulators</button>
-                                        <button class="browse-scope-btn" type="button" data-browse-scope="games">Games</button>
-                                        <button class="browse-scope-btn" type="button" data-browse-scope="emulators">Emulators</button>
+                                        <button class="browse-scope-btn is-active" type="button" data-browse-scope="both" data-i18n="footer.scopeBoth">Games + Emulators</button>
+                                        <button class="browse-scope-btn" type="button" data-browse-scope="games" data-i18n="footer.scopeGames">Games</button>
+                                        <button class="browse-scope-btn" type="button" data-browse-scope="emulators" data-i18n="footer.scopeEmulators">Emulators</button>
                                     </div>
                                 </div>
                                 <div class="browse-computer-grid">
                                     <button id="browse-quick-search-btn" class="browse-action-card" type="button">
-                                        <span class="browse-action-title">Quick Search</span>
-                                        <span class="browse-action-subtitle">Find new files in common parent folders from your last successful search.</span>
+                                        <span class="browse-action-title" data-i18n="footer.quickSearch">Quick Search</span>
+                                        <span class="browse-action-subtitle" data-i18n="footer.quickSearchDesc">Find new files in common parent folders from your last successful search.</span>
                                     </button>
                                     <button id="browse-search-games-btn" class="browse-action-card" type="button">
-                                        <span class="browse-action-title">Search Games/Emulators...</span>
-                                        <span class="browse-action-subtitle">Pick a folder and scan custom locations.</span>
+                                        <span class="browse-action-title" data-i18n="footer.searchGamesEmulators">Search Games/Emulators...</span>
+                                        <span class="browse-action-subtitle" data-i18n="footer.searchGamesEmulatorsDesc">Pick a folder and scan custom locations.</span>
                                     </button>
                                     <button id="browse-archives-btn" class="browse-action-card" type="button">
-                                        <span class="browse-action-title">Archives</span>
-                                        <span class="browse-action-subtitle">Browse archive files in your library paths.</span>
+                                        <span class="browse-action-title" data-i18n="footer.archives">Archives</span>
+                                        <span class="browse-action-subtitle" data-i18n="footer.archivesDesc">Browse archive files in your library paths.</span>
                                     </button>
                                     <button id="browse-zip-btn" class="browse-action-card" type="button">
-                                        <span class="browse-action-title">Zip</span>
-                                        <span class="browse-action-subtitle">Scan ZIP content and setup files.</span>
+                                        <span class="browse-action-title" data-i18n="footer.zip">Zip</span>
+                                        <span class="browse-action-subtitle" data-i18n="footer.zipDesc">Scan ZIP content and setup files.</span>
                                     </button>
                                 </div>
                             </section>
@@ -373,7 +390,7 @@
                             </section>
                             <section class="game-details-tab-panel" data-footer-panel="covers">
                                 <div class="footer-covers-placeholder">
-                                    Drop files or folders here to search for covers.
+                                    <span data-i18n="footer.coversPlaceholder">Drop files or folders here to search for covers.</span>
                                 </div>
                             </section>
                         </div>
@@ -381,14 +398,14 @@
                 </footer>
             </div>
         </div>
-        <button id="open-footer-btn" class="open-footer-btn" type="button" aria-label="Open bottom panel">Browse</button>
+        <button id="open-footer-btn" class="open-footer-btn" type="button" aria-label="Open bottom panel" data-i18n-aria-label="footer.openBottomPanel" data-i18n="footer.browse">Browse</button>
     </div>
 
     <!-- Theme Manager Modal -->
     <div id="theme-manager-modal" class="theme-manager-modal glass">
         <div class="theme-manager-content">
             <div id="theme-manager-header" class="theme-manager-header">
-                <h2>Theme Manager</h2>
+                <h2 data-i18n="theme.themeManager">Theme Manager</h2>
                 <div class="window-controls">
                     <button id="pin-theme-manager" class="pin-btn icon-only-btn" title="Dock to RightSide" aria-label="Dock to right side">
                         <span class="icon-svg" aria-hidden="true">
@@ -404,8 +421,8 @@
             
             <div class="theme-manager-body">
                 <div class="theme-manager-tabs">
-                    <button class="tab-btn active" data-tab="local">My Themes</button>
-                    <button class="tab-btn" data-tab="marketplace">Marketplace</button>
+                    <button class="tab-btn active" data-tab="local" data-i18n="theme.customThemes">My Themes</button>
+                    <button class="tab-btn" data-tab="marketplace" data-i18n="theme.marketplace">Marketplace</button>
                 </div>
 
                 <div id="local-themes-view" class="tab-content active">
@@ -439,25 +456,25 @@
                     <div class="theme-manager-section">
                         <h3 data-i18n="theme.custom">Custom Themes</h3>
                         <div id="custom-themes" class="custom-themes-list"></div>
-                        <button id="create-theme-btn" class="action-btn">+ Create New Theme</button>
+                        <button id="create-theme-btn" class="action-btn" data-i18n="theme.createNewTheme">+ Create New Theme</button>
                     </div>
 
                     <!-- Create/Edit Theme Form -->
                     <div id="theme-form" class="theme-form" style="display: none;">
-                        <h3 id="form-title">Create New Theme</h3>
+                        <h3 id="form-title" data-i18n="theme.createTitle">Create New Theme</h3>
                         
                         <div class="form-group">
-                            <label for="theme-name">Theme Name:</label>
-                            <input type="text" id="theme-name" placeholder="My Custom Theme">
+                            <label for="theme-name" data-i18n="theme.themeName">Theme Name:</label>
+                            <input type="text" id="theme-name" placeholder="My Custom Theme" data-i18n-placeholder="theme.myCustomTheme">
                         </div>
 
                         <div class="theme-editor-mode-switch">
-                            <label>Customization Mode:</label>
-                            <div class="theme-mode-toggle" role="tablist" aria-label="Theme customization mode">
-                                <button type="button" id="theme-mode-basic-btn" class="theme-mode-btn active" data-theme-mode="basic" aria-selected="true">Basic Customize</button>
-                                <button type="button" id="theme-mode-extended-btn" class="theme-mode-btn" data-theme-mode="extended" aria-selected="false">Extended Customization</button>
+                            <label data-i18n="theme.customizationMode">Customization Mode:</label>
+                            <div class="theme-mode-toggle" role="tablist" aria-label="Theme customization mode" data-i18n-aria-label="theme.customizationModeAria">
+                                <button type="button" id="theme-mode-basic-btn" class="theme-mode-btn active" data-theme-mode="basic" aria-selected="true" data-i18n="theme.basicCustomize">Basic Customize</button>
+                                <button type="button" id="theme-mode-extended-btn" class="theme-mode-btn" data-theme-mode="extended" aria-selected="false" data-i18n="theme.extendedCustomization">Extended Customization</button>
                             </div>
-                            <p class="theme-mode-help">Basic mode auto-generates the full palette from one base color. Switch to Extended to fine-tune every color.</p>
+                            <p class="theme-mode-help" data-i18n="theme.modeHelp">Basic mode auto-generates the full palette from one base color. Switch to Extended to fine-tune every color.</p>
                         </div>
 
                         <div class="theme-basic-panel">
@@ -785,14 +802,17 @@
                         <div id="language-list" class="language-list">
                             <!-- Populated dynamically -->
                         </div>
-                        <button id="add-language-btn" class="action-btn" data-i18n="language.addNew">+ Add New Language</button>
+                        <div class="lang-list-actions">
+                            <button id="add-language-btn" class="action-btn" data-i18n="language.addNew">+ Add New Language</button>
+                            <button id="export-all-languages-btn" class="action-btn small" type="button" data-i18n="language.exportAllJson">Export All as JSON</button>
+                        </div>
                     </div>
                 </div>
 
                 <div id="lang-edit-view" class="tab-content" style="display: none;">
                      <div class="manager-section">
                         <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px; flex-shrink: 0;">
-                            <button id="back-to-lang-list" class="action-btn small btn-with-icon" aria-label="Back">
+                            <button id="back-to-lang-list" class="action-btn small btn-with-icon" aria-label="Back" data-i18n-aria-label="buttons.back">
                                 <span class="icon-svg" aria-hidden="true">
                                     <svg viewBox="0 0 24 24">
                                         <path d="M15 18 9 12l6-6"></path>
@@ -804,10 +824,26 @@
                         </div>
 
                         <div class="lang-editor-toolbar">
-                            <label id="lang-live-edit-toggle-wrap" class="lang-live-edit-toggle" title="Enable direct UI label editing">
+                            <label id="lang-live-edit-toggle-wrap" class="lang-live-edit-toggle" title="Enable direct UI label editing" data-i18n-title="language.liveEditHint">
                                 <input type="checkbox" id="lang-live-edit-toggle" />
-                                <span>Live Edit</span>
+                                <span data-i18n="language.liveEdit">Live Edit</span>
                             </label>
+
+                            <label class="lang-translate-mode" for="lang-translate-llm-mode">
+                                <span data-i18n="language.translateLlmModeLabel">Translate mode</span>
+                                <select id="lang-translate-llm-mode" class="lang-translate-mode-select">
+                                    <option value="all-in-one-json" data-i18n="language.translateLlmModeAllInOneJson">All in one JSON</option>
+                                    <option value="one-by-one" data-i18n="language.translateLlmModeOneByOne">One by one</option>
+                                </select>
+                            </label>
+
+                            <label class="lang-live-edit-toggle">
+                                <input type="checkbox" id="lang-translate-llm-retranslate-existing" />
+                                <span data-i18n="language.translateLlmRetranslateExisting">Retranslate existing</span>
+                            </label>
+
+                            <button id="lang-translate-llm-btn" class="action-btn small" type="button" data-i18n="language.translateWithLlm">Translate with LLM</button>
+                            <span id="lang-translate-llm-status" class="lang-llm-translate-status" aria-live="polite"></span>
 
                             <div class="search-bar">
                                 <input type="text" id="lang-search-keys" placeholder="Search keys or values..." data-i18n-placeholder="language.searchPlaceholder">
@@ -819,6 +855,7 @@
                         </div>
                         
                         <div class="form-actions">
+                             <button id="export-current-lang-btn" class="action-btn small" type="button" data-i18n="language.exportJson">Export JSON</button>
                              <button id="save-lang-btn" class="action-btn launch-btn" data-i18n="buttons.saveChanges">Save Changes</button>
                         </div>
                      </div>

@@ -13,6 +13,7 @@ const { registerYouTubeSearchIpc } = require("./main/ipc/youtube-search");
 const { registerSuggestionsIpc } = require("./main/ipc/suggestions");
 const { registerMonitorIpc } = require("./main/ipc/monitors");
 const { registerMemoryCardIpc } = require("./main/ipc/memory-cards");
+const { registerBiosIpc } = require("./main/ipc/bios");
 const { registerEmulatorIpc } = require("./main/ipc/emulators");
 const { registerImportIpc } = require("./main/ipc/imports");
 const { registerGameIpc } = require("./main/ipc/games");
@@ -34,6 +35,7 @@ const store = new Store();
 const LIBRARY_PATH_SETTINGS_KEY = "library:path-settings:v1";
 const SPLASH_THEME_SETTINGS_KEY = "ui:splash-theme:v1";
 const FIRST_RUN_LEGAL_NOTICE_KEY = "legal:first-run-notice-shown:v1";
+const RUNTIME_DATA_RULES_SETTINGS_KEY = "runtime:data-rules:v1";
 
 let mainWindow;
 const screen = require("electron").screen;
@@ -46,6 +48,63 @@ let hasAttemptedFirstRunLegalNotice = false;
 const { createSplashWindow, closeSplashWindow } = createSplashWindowManager({
   getSplashTheme: () => store.get(SPLASH_THEME_SETTINGS_KEY, null)
 });
+
+function normalizeRuntimeRuleValueList(values = []) {
+  const out = [];
+  const seen = new Set();
+  (Array.isArray(values) ? values : []).forEach((entry) => {
+    const value = String(entry || "").trim().toLowerCase();
+    if (!value) return;
+    if (seen.has(value)) return;
+    seen.add(value);
+    out.push(value);
+  });
+  return out;
+}
+
+function normalizeRuntimeFileExtensions(values = []) {
+  const out = [];
+  const seen = new Set();
+  (Array.isArray(values) ? values : []).forEach((entry) => {
+    let value = String(entry || "").trim().toLowerCase();
+    if (!value) return;
+    if (!value.startsWith(".")) value = `.${value}`;
+    value = value.replace(/\s+/g, "");
+    if (!value) return;
+    if (seen.has(value)) return;
+    seen.add(value);
+    out.push(value);
+  });
+  return out;
+}
+
+function getDefaultRuntimeDataRules() {
+  return {
+    directoryNames: [],
+    fileExtensions: [],
+    fileNameIncludes: []
+  };
+}
+
+function normalizeRuntimeDataRules(payload = {}) {
+  const source = (payload && typeof payload === "object") ? payload : {};
+  return {
+    directoryNames: normalizeRuntimeRuleValueList(source.directoryNames),
+    fileExtensions: normalizeRuntimeFileExtensions(source.fileExtensions),
+    fileNameIncludes: normalizeRuntimeRuleValueList(source.fileNameIncludes)
+  };
+}
+
+function getRuntimeDataRules() {
+  const raw = store.get(RUNTIME_DATA_RULES_SETTINGS_KEY, getDefaultRuntimeDataRules());
+  return normalizeRuntimeDataRules(raw);
+}
+
+function setRuntimeDataRules(payload = {}) {
+  const normalized = normalizeRuntimeDataRules(payload);
+  store.set(RUNTIME_DATA_RULES_SETTINGS_KEY, normalized);
+  return normalized;
+}
 
 async function showFirstRunLegalNoticeOnce() {
   if (hasAttemptedFirstRunLegalNotice) return;
@@ -201,6 +260,7 @@ registerSuggestionsIpc({
 registerSystemActionsIpc({
   ipcMain,
   log,
+  app,
   fsSync,
   shell
 });
@@ -224,6 +284,8 @@ registerSettingsPathsIpc({
   getLibraryPathSettings,
   getDefaultLibraryPathSettings,
   setLibraryPathSettings,
+  getRuntimeDataRules,
+  setRuntimeDataRules,
   normalizeManagedFolderKind,
   isExistingDirectory,
   pathsEqual,
@@ -328,6 +390,9 @@ gameIpcActions = registerGameIpc({
   ipcMain,
   log,
   app,
+  BrowserWindow,
+  Menu,
+  screen,
   shell,
   nativeImage,
   fsSync,
@@ -344,7 +409,8 @@ gameIpcActions = registerGameIpc({
   dbUpdateGameMetadata,
   dbUpsertTags,
   dbUpdateGameFilePath,
-  getPlatformConfigs
+  getPlatformConfigs,
+  getRuntimeDataRules
 });
 
 registerThemeUploadIpc({
@@ -375,4 +441,149 @@ registerMemoryCardIpc({
   path,
   os,
   log
+});
+
+registerBiosIpc({
+  ipcMain,
+  app,
+  fsSync,
+  shell,
+  log,
+  getPlatformConfigs
+});
+
+ipcMain.handle("youtube:open-video", async (_event, url) => {
+  const YOUTUBE_HOSTS = new Set([
+    "youtube.com",
+    "www.youtube.com",
+    "m.youtube.com",
+    "music.youtube.com",
+    "youtu.be",
+    "youtube-nocookie.com",
+    "www.youtube-nocookie.com"
+  ]);
+
+  const isYouTubeHost = (hostname) => {
+    const host = String(hostname || "").trim().toLowerCase();
+    if (!host) return false;
+    if (YOUTUBE_HOSTS.has(host)) return true;
+    return host.endsWith(".youtube.com");
+  };
+
+  const extractVideoId = (parsedUrl) => {
+    const host = String(parsedUrl?.hostname || "").toLowerCase();
+    const pathPart = String(parsedUrl?.pathname || "");
+    if (host === "youtu.be") {
+      const shortId = pathPart.replace(/^\/+/, "").split("/")[0];
+      return /^[A-Za-z0-9_-]{11}$/.test(shortId) ? shortId : "";
+    }
+    if (pathPart.startsWith("/watch")) {
+      const watchId = String(parsedUrl.searchParams.get("v") || "").trim();
+      return /^[A-Za-z0-9_-]{11}$/.test(watchId) ? watchId : "";
+    }
+    if (pathPart.startsWith("/embed/")) {
+      const embedId = pathPart.split("/")[2] || "";
+      return /^[A-Za-z0-9_-]{11}$/.test(embedId) ? embedId : "";
+    }
+    if (pathPart.startsWith("/shorts/")) {
+      const shortsId = pathPart.split("/")[2] || "";
+      return /^[A-Za-z0-9_-]{11}$/.test(shortsId) ? shortsId : "";
+    }
+    return "";
+  };
+
+  try {
+    let targetUrl = String(url || "").trim();
+    if (!targetUrl) return { success: false, message: "No URL provided" };
+    if (!/^https?:\/\//i.test(targetUrl)) {
+      targetUrl = `https://${targetUrl}`;
+    }
+
+    let parsed;
+    try {
+      parsed = new URL(targetUrl);
+    } catch (_error) {
+      return { success: false, message: "Invalid YouTube URL" };
+    }
+
+    if (!isYouTubeHost(parsed.hostname)) {
+      return { success: false, message: "Only YouTube URLs are supported" };
+    }
+
+    const videoId = extractVideoId(parsed);
+    const loadUrl = videoId
+      ? `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&origin=${encodeURIComponent("https://www.youtube.com")}`
+      : parsed.toString();
+
+    const videoWindow = new BrowserWindow({
+      width: 1024,
+      height: 768,
+      title: "emuBro - YouTube",
+      backgroundColor: "#000",
+      autoHideMenuBar: true,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        sandbox: true
+      }
+    });
+
+    videoWindow.webContents.setWindowOpenHandler(({ url: nextUrl }) => {
+      try {
+        const parsedNext = new URL(nextUrl);
+        if (isYouTubeHost(parsedNext.hostname)) {
+          return { action: "allow" };
+        }
+      } catch (_error) {}
+      void shell.openExternal(nextUrl);
+      return { action: "deny" };
+    });
+
+    videoWindow.webContents.on("will-navigate", (event, nextUrl) => {
+      try {
+        const parsedNext = new URL(nextUrl);
+        if (isYouTubeHost(parsedNext.hostname)) return;
+      } catch (_error) {}
+      event.preventDefault();
+      void shell.openExternal(nextUrl);
+    });
+
+    const loadOptions = {
+      httpReferrer: "https://www.youtube.com/",
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
+    };
+
+    await videoWindow.loadURL(loadUrl, loadOptions);
+
+    if (videoId) {
+      // YouTube can reject embed playback in embedded contexts (Error 153). Fall back to watch page.
+      await new Promise((resolve) => setTimeout(resolve, 700));
+      let hasEmbedError153 = false;
+      try {
+        hasEmbedError153 = await videoWindow.webContents.executeJavaScript(
+          `(() => {
+            const text = String(document?.body?.innerText || '').toLowerCase();
+            return text.includes('error 153')
+              || text.includes('fehler 153')
+              || text.includes('player configuration')
+              || text.includes('konfiguration des videoplayers');
+          })()`,
+          true
+        );
+      } catch (_error) {
+        hasEmbedError153 = false;
+      }
+
+      if (hasEmbedError153) {
+        const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
+        await videoWindow.loadURL(watchUrl, loadOptions);
+        return { success: true, url: watchUrl, embedded: false, fallback: "watch-page" };
+      }
+    }
+
+    return { success: true, url: loadUrl, embedded: !!videoId };
+  } catch (error) {
+    log.error("youtube:open-video failed:", error);
+    return { success: false, message: error?.message || String(error) };
+  }
 });

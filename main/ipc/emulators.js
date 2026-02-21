@@ -58,7 +58,8 @@ function registerEmulatorIpc(deps = {}) {
     normalizeEmulatorName: downloadService.normalizeEmulatorName,
     normalizeEmulatorType: downloadService.normalizeEmulatorType,
     ensureHttpUrl: downloadService.ensureHttpUrl,
-    buildEmulatorDownloadLinks: downloadService.buildEmulatorDownloadLinks
+    buildEmulatorDownloadLinks: downloadService.buildEmulatorDownloadLinks,
+    normalizeDownloadUrlMap: downloadService.normalizeDownloadUrlMap
   });
 
   registerEmulatorCatalogHandlers({

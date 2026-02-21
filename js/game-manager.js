@@ -23,6 +23,7 @@ let filteredGames = [];
 let emulators = [];
 let currentFilter = 'all';
 let currentSort = 'name';
+let currentSortDir = 'asc';
 let currentGroupBy = 'none';
 let currentLanguageFilter = 'all';
 let currentRegionFilter = 'all';
@@ -129,7 +130,10 @@ function getEmulatorDetailsPopupActions() {
 function getEmulatorConfigActions() {
     if (!emulatorConfigActions) {
         emulatorConfigActions = createEmulatorConfigActions({
-            localStorageRef: localStorage
+            localStorageRef: localStorage,
+            emubro,
+            i18n,
+            log
         });
     }
     return emulatorConfigActions;
@@ -191,6 +195,7 @@ function getMissingGameRecoveryActions() {
             i18n,
             escapeHtml,
             reloadGamesFromMainAndRender,
+            buildLaunchPayload: (gameId) => buildLaunchPayloadForGameId(gameId),
             alertUser: (message) => alert(message)
         });
     }
@@ -290,8 +295,10 @@ export function renderGames(gamesToRender) {
 
     if (activeView === 'slideshow') {
         renderGamesAsSlideshow(gamesToRender);
+        return;
     } else if (activeView === 'random') {
         renderGamesAsRandom(gamesToRender);
+        return;
     } else if (currentGroupBy !== 'none') {
         renderGamesGroupedAccordion(gamesToRender, activeView);
     } else {
@@ -352,6 +359,81 @@ function getEmulatorKey(emulator) {
 
 function getEmulatorConfig(emulator) {
     return getEmulatorConfigActions().getEmulatorConfig(emulator);
+}
+
+function normalizeRuntimeRuleValueList(values = []) {
+    const out = [];
+    const seen = new Set();
+    (Array.isArray(values) ? values : []).forEach((entry) => {
+        const value = String(entry || '').trim().toLowerCase();
+        if (!value) return;
+        if (seen.has(value)) return;
+        seen.add(value);
+        out.push(value);
+    });
+    return out;
+}
+
+function normalizeRuntimeExtensionList(values = []) {
+    const out = [];
+    const seen = new Set();
+    (Array.isArray(values) ? values : []).forEach((entry) => {
+        let value = String(entry || '').trim().toLowerCase();
+        if (!value) return;
+        if (!value.startsWith('.')) value = `.${value}`;
+        value = value.replace(/\s+/g, '');
+        if (!value) return;
+        if (seen.has(value)) return;
+        seen.add(value);
+        out.push(value);
+    });
+    return out;
+}
+
+function normalizeRuntimeDataRulesForLaunch(input = {}) {
+    const source = (input && typeof input === 'object') ? input : {};
+    return {
+        directoryNames: normalizeRuntimeRuleValueList(source.directoryNames),
+        fileExtensions: normalizeRuntimeExtensionList(source.fileExtensions),
+        fileNameIncludes: normalizeRuntimeRuleValueList(source.fileNameIncludes)
+    };
+}
+
+function getGameById(gameId) {
+    const targetId = Number(gameId || 0);
+    if (!targetId) return null;
+    return (Array.isArray(games) ? games : []).find((row) => Number(row?.id || 0) === targetId) || null;
+}
+
+function resolveEmulatorForGame(game) {
+    const rows = Array.isArray(emulators) ? emulators : [];
+    if (!game || rows.length === 0) return null;
+
+    const overridePath = String(game?.emulatorOverridePath || '').trim().toLowerCase();
+    if (overridePath) {
+        const directMatch = rows.find((emu) => String(emu?.filePath || '').trim().toLowerCase() === overridePath);
+        if (directMatch) return directMatch;
+    }
+
+    const platformShortName = String(game?.platformShortName || '').trim().toLowerCase();
+    if (!platformShortName) return null;
+    return rows.find((emu) => String(emu?.platformShortName || '').trim().toLowerCase() === platformShortName) || null;
+}
+
+function buildLaunchPayloadForGameId(gameId) {
+    const targetId = Number(gameId || 0);
+    if (!targetId) return 0;
+    const game = getGameById(targetId);
+    if (!game) return targetId;
+
+    const emulator = resolveEmulatorForGame(game);
+    if (!emulator) return targetId;
+    const config = getEmulatorConfig(emulator);
+    const runtimeDataRules = normalizeRuntimeDataRulesForLaunch(config?.runtimeDataRules || {});
+    return {
+        gameId: targetId,
+        runtimeDataRules
+    };
 }
 
 async function openEmulatorConfigEditor(emulator) {
@@ -616,19 +698,32 @@ function getGroupValueForGame(game, groupBy) {
     return '';
 }
 
-function compareGamesBySort(a, b, sortMode) {
+function compareGamesBySort(a, b, sortMode, direction = 'asc') {
     const sort = String(sortMode || 'name').trim().toLowerCase();
+    const dir = direction === 'desc' ? -1 : 1;
+    let val = 0;
+
     switch (sort) {
         case 'rating':
-            return Number(b?.rating || 0) - Number(a?.rating || 0);
+            val = Number(a?.rating || 0) - Number(b?.rating || 0);
+            break;
         case 'price':
-            return Number(a?.price || 0) - Number(b?.price || 0);
+            val = Number(a?.price || 0) - Number(b?.price || 0);
+            break;
         case 'platform':
-            return String(a?.platform || a?.platformShortName || 'Unknown')
+            val = String(a?.platform || a?.platformShortName || 'Unknown')
                 .localeCompare(String(b?.platform || b?.platformShortName || 'Unknown'));
+            break;
+        case 'genre':
+            val = String(a?.genre || 'Unknown').localeCompare(String(b?.genre || 'Unknown'));
+            break;
+        case 'status':
+            val = Number(!!a?.isInstalled) - Number(!!b?.isInstalled);
+            break;
         default:
-            return String(a?.name || '').localeCompare(String(b?.name || ''));
+            val = String(a?.name || '').localeCompare(String(b?.name || ''));
     }
+    return val * dir;
 }
 
 function groupRowsBySameNames(rows) {
@@ -676,34 +771,153 @@ function groupRowsBySameNames(rows) {
     });
 }
 
-async function promptGroupedLaunchTarget(game) {
-    const members = Array.isArray(game?.__groupMembers) ? game.__groupMembers.filter((row) => Number(row?.id || 0) > 0) : [];
+function normalizeLaunchCandidateMember(row = {}) {
+    return {
+        id: Number(row?.id || 0),
+        name: String(row?.name || '').trim(),
+        filePath: String(row?.filePath || '').trim(),
+        platform: String(row?.platform || '').trim(),
+        platformShortName: String(row?.platformShortName || '').trim().toLowerCase()
+    };
+}
+
+function dedupeLaunchCandidateMembers(rows = []) {
+    const out = [];
+    const seen = new Set();
+    (Array.isArray(rows) ? rows : []).forEach((row) => {
+        const candidate = normalizeLaunchCandidateMember(row);
+        if (!candidate.id) return;
+        if (seen.has(candidate.id)) return;
+        seen.add(candidate.id);
+        out.push(candidate);
+    });
+    return out;
+}
+
+function getLaunchCandidatesForGame(game) {
+    if (!game || typeof game !== 'object') return [];
+
+    const directMembers = dedupeLaunchCandidateMembers(game?.__groupMembers);
+    if (directMembers.length > 1) return directMembers;
+
+    const normalizedName = normalizeNameKey(game?.__groupDisplayName || game?.name || '');
+    const platformShort = String(game?.platformShortName || '').trim().toLowerCase();
+    if (!normalizedName || !platformShort) return directMembers;
+
+    const fromLibrary = dedupeLaunchCandidateMembers(
+        (Array.isArray(games) ? games : []).filter((row) => {
+            if (!row || Number(row?.id || 0) <= 0) return false;
+            const rowName = normalizeNameKey(row?.name || '');
+            const rowPlatform = String(row?.platformShortName || '').trim().toLowerCase();
+            return rowName === normalizedName && rowPlatform === platformShort;
+        })
+    );
+
+    if (fromLibrary.length > 1) return fromLibrary;
+    return directMembers;
+}
+
+function showGroupedLaunchPicker(game, candidates) {
+    return new Promise((resolve) => {
+        const title = String(game?.__groupDisplayName || game?.name || 'Game').trim() || 'Game';
+        const rows = dedupeLaunchCandidateMembers(candidates);
+        if (rows.length <= 1) {
+            resolve(Number(rows[0]?.id || game?.id || 0) || 0);
+            return;
+        }
+
+        const overlay = document.createElement('div');
+        overlay.style.cssText = [
+            'position:fixed',
+            'inset:0',
+            'z-index:4100',
+            'display:flex',
+            'align-items:center',
+            'justify-content:center',
+            'padding:18px',
+            'background:rgba(0,0,0,0.56)'
+        ].join(';');
+
+        const modal = document.createElement('div');
+        modal.className = 'glass';
+        modal.style.cssText = [
+            'width:min(760px,100%)',
+            'max-height:min(78vh,640px)',
+            'overflow:auto',
+            'border:1px solid var(--border-color)',
+            'border-radius:14px',
+            'background:var(--bg-secondary)',
+            'padding:16px',
+            'box-shadow:0 16px 34px rgba(0,0,0,0.42)'
+        ].join(';');
+
+        const rowsMarkup = rows.map((member, idx) => {
+            const fileName = String(member?.filePath || '').trim().split(/[/\\]/).pop() || 'Unknown file';
+            const platformLabel = member?.platform || member?.platformShortName || '';
+            return `
+                <button type="button" data-launch-candidate-id="${member.id}" style="display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;border:1px solid var(--border-color);border-radius:10px;background:var(--bg-primary);padding:10px 12px;cursor:pointer;">
+                    <span>
+                        <strong>${escapeHtml(member?.name || `File ${idx + 1}`)}</strong>
+                        <span style="display:block;font-size:0.82rem;color:var(--text-secondary);">${escapeHtml(fileName)}</span>
+                    </span>
+                    <span style="font-size:0.78rem;color:var(--text-secondary);">${escapeHtml(platformLabel)}</span>
+                </button>
+            `;
+        }).join('');
+
+        modal.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+                <h3 style="margin:0;font-size:1.06rem;">Choose file to launch</h3>
+                <button type="button" class="close-btn" aria-label="Close">&times;</button>
+            </div>
+            <p style="margin:10px 0 12px 0;color:var(--text-secondary);">
+                "${escapeHtml(title)}" has multiple launch files. Select which one to start:
+            </p>
+            <div style="display:grid;gap:8px;">
+                ${rowsMarkup}
+            </div>
+            <div style="display:flex;justify-content:flex-end;margin-top:12px;">
+                <button type="button" class="action-btn" data-launch-cancel>Cancel</button>
+            </div>
+        `;
+
+        const close = (value = 0) => {
+            document.removeEventListener('keydown', onKeyDown, true);
+            overlay.remove();
+            resolve(Number(value || 0) || 0);
+        };
+
+        const onKeyDown = (event) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                close(0);
+            }
+        };
+
+        overlay.addEventListener('click', (event) => {
+            if (event.target === overlay) close(0);
+        });
+
+        modal.querySelector('.close-btn')?.addEventListener('click', () => close(0));
+        modal.querySelector('[data-launch-cancel]')?.addEventListener('click', () => close(0));
+        modal.querySelectorAll('[data-launch-candidate-id]').forEach((button) => {
+            button.addEventListener('click', () => {
+                close(Number(button.getAttribute('data-launch-candidate-id') || 0));
+            });
+        });
+
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        document.addEventListener('keydown', onKeyDown, true);
+    });
+}
+
+async function promptGroupedLaunchTarget(game, candidates = null) {
+    const members = Array.isArray(candidates) ? dedupeLaunchCandidateMembers(candidates) : getLaunchCandidatesForGame(game);
     if (members.length <= 1) {
         return Number(game?.id || members[0]?.id || 0) || 0;
     }
-
-    const options = members.map((member, idx) => {
-        const fileName = String(member?.filePath || '').trim().split(/[/\\]/).pop() || 'Unknown file';
-        return `${idx + 1}. ${member?.name || 'Unknown'} (${fileName})`;
-    }).join('\n');
-
-    const promptMessage = [
-        `Choose file to launch for "${game?.__groupDisplayName || game?.name || 'Game'}":`,
-        '',
-        options,
-        '',
-        `Enter number (1-${members.length})`
-    ].join('\n');
-
-    const raw = window.prompt(promptMessage, '1');
-    if (raw === null) return 0;
-    const idx = Math.max(1, Math.min(members.length, Number.parseInt(String(raw).trim(), 10) || 0)) - 1;
-    const selected = members[idx];
-    if (!selected?.id) {
-        alert('Invalid selection.');
-        return 0;
-    }
-    return Number(selected.id);
+    return showGroupedLaunchPicker(game, members);
 }
 
 export function createGameCard(game) {
@@ -851,16 +1065,20 @@ async function reloadGamesFromMainAndRender() {
 }
 
 async function launchGame(gameOrId) {
+    const gameRef = (typeof gameOrId === 'object' && gameOrId)
+        ? gameOrId
+        : getGameById(gameOrId);
+    const candidates = gameRef ? getLaunchCandidatesForGame(gameRef) : [];
+
     let gameId = 0;
-    if (typeof gameOrId === 'object' && gameOrId) {
-        if (groupSameNamesEnabled) {
-            gameId = await promptGroupedLaunchTarget(gameOrId);
-        } else {
-            gameId = Number(gameOrId?.id || 0);
-        }
+    if (candidates.length > 1) {
+        gameId = await promptGroupedLaunchTarget(gameRef, candidates);
+    } else if (gameRef && typeof gameRef === 'object') {
+        gameId = Number(gameRef?.id || 0);
     } else {
         gameId = Number(gameOrId || 0);
     }
+
     if (!gameId) return { success: false, message: 'No game selected to launch.' };
     return getMissingGameRecoveryActions().launchGame(gameId);
 }
@@ -876,8 +1094,37 @@ export function applyFilters(shouldRender = true, sourceRows = null) {
     const groupSameNamesToggle = document.getElementById('group-same-names-toggle');
     
     currentFilter = platformFilter ? platformFilter.value : 'all';
-    currentSort = sortFilter ? sortFilter.value : 'name';
-    currentGroupBy = normalizeGroupByValue(groupFilter ? groupFilter.value : 'none');
+    // Only update currentSort from dropdown if it wasn't set by header click recently?
+    // Actually, we should keep them in sync. If dropdown changes, reset dir to asc.
+    // But how do we know if dropdown changed or we are re-rendering?
+    // Let's assume dropdown is the source of truth unless overridden.
+    // Better: update dropdown value when header is clicked.
+    // For now, let's read from dropdown if it matches known values, but respect global state if custom column.
+    const dropdownSort = sortFilter ? sortFilter.value : 'name';
+    // If the dropdown value is different from currentSort, implies user changed dropdown.
+    // But we need to be careful not to overwrite a custom sort like 'genre' which isn't in dropdown.
+    // Let's rely on event listeners to set currentSort/currentSortDir.
+    // Here we just use the variables.
+    // But wait, initially applyFilters reads from dropdown.
+    // If we want dropdown to control it, we need to know when it changed.
+    // Let's stick to reading dropdown for standard sorts if currentSort is standard.
+    if (['name', 'rating', 'price', 'platform'].includes(dropdownSort) && ['name', 'rating', 'price', 'platform'].includes(currentSort)) {
+         // If dropdown changed, we might need to sync?
+         // Let's keep it simple: the dropdown change event will trigger applyFilters, which reads the value.
+         // But if we clicked a header, currentSort might be 'genre'. Dropdown might still be 'name'.
+         // We should prioritize the variable if it was set explicitly.
+    }
+    // Actually, simple approach:
+    // If the function is called from the dropdown event, we should use the dropdown value.
+    // If called from header click, use the header value.
+    // But applyFilters is called generically.
+    // Let's make applyFilters rely on the global variables, and have the dropdown listener update the global variables.
+    // But wait, the dropdown listener in renderer.js just calls applyFilters.
+    // So applyFilters must read the dropdown.
+    // Modify: if sortFilter value matches currentSort, use it. If not, use sortFilter value and reset dir?
+    // This is tricky without knowing the source.
+    // Let's change how applyFilters works: it shouldn't read DOM for sort if we want custom sorts.
+    // We will update the renderer.js listener to update currentSort before calling applyFilters.
     currentLanguageFilter = normalizeLanguageFilterValue(languageFilter ? languageFilter.value : 'all');
     currentRegionFilter = normalizeRegionFilterValue(regionFilter ? regionFilter.value : 'all');
     groupSameNamesEnabled = !!groupSameNamesToggle?.checked;
@@ -911,7 +1158,7 @@ export function applyFilters(shouldRender = true, sourceRows = null) {
             const groupCompare = aGroup.localeCompare(bGroup);
             if (groupCompare !== 0) return groupCompare;
         }
-        const sortCompare = compareGamesBySort(a, b, currentSort);
+        const sortCompare = compareGamesBySort(a, b, currentSort, currentSortDir);
         if (sortCompare !== 0) return sortCompare;
         return String(a?.name || '').localeCompare(String(b?.name || ''));
     });
@@ -1111,19 +1358,40 @@ function renderGamesIncremental(gamesToRender, activeView = 'cover') {
     if (view === 'table') {
         const table = document.createElement('table');
         table.className = 'games-table';
+        
+        const makeHeader = (label, key) => {
+             const isSort = currentSort === key;
+             const dirArrow = isSort ? (currentSortDir === 'asc' ? ' ↑' : ' ↓') : '';
+             return `<th data-sort-key="${key}" style="cursor:pointer;user-select:none;">${label}${dirArrow}</th>`;
+        };
+
         table.innerHTML = `
             <thead>
                 <tr>
                     <th>Cover</th>
-                    <th>Game</th>
-                    <th>Genre</th>
-                    <th>Rating</th>
-                    <th>Platform</th>
-                    <th>Status</th>
+                    ${makeHeader('Game', 'name')}
+                    ${makeHeader('Genre', 'genre')}
+                    ${makeHeader('Rating', 'rating')}
+                    ${makeHeader('Platform', 'platform')}
+                    ${makeHeader('Status', 'status')}
                 </tr>
             </thead>
             <tbody class="games-virtual-host-table"></tbody>
         `;
+        
+        table.querySelectorAll('th[data-sort-key]').forEach(th => {
+            th.addEventListener('click', () => {
+                const key = th.dataset.sortKey;
+                if (currentSort === key) {
+                    currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    currentSort = key;
+                    currentSortDir = 'asc';
+                }
+                applyFilters();
+            });
+        });
+
         mountTarget = table.querySelector('tbody');
         topSpacer = document.createElement('tr');
         topSpacer.className = 'games-virtual-table-spacer';
@@ -1418,6 +1686,18 @@ function renderGamesIncremental(gamesToRender, activeView = 'cover') {
     const nearEdgeThreshold = view === 'cover' ? 900 : 520;
     let scrollTicking = false;
 
+    const onWheel = (e) => {
+        if (!e.ctrlKey) return;
+        e.preventDefault();
+        const slider = document.getElementById('view-size-slider');
+        if (!slider || slider.disabled) return;
+        const current = parseInt(slider.value, 10);
+        const next = e.deltaY < 0 ? Math.min(140, current + 5) : Math.max(70, current - 5);
+        slider.value = String(next);
+        slider.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    gamesContainer.addEventListener('wheel', onWheel, { passive: false });
+
     const processScroll = () => {
         if (renderToken !== gamesRenderToken) return;
         const scrollTop = Number(scrollRoot.scrollTop || 0);
@@ -1459,6 +1739,7 @@ function renderGamesIncremental(gamesToRender, activeView = 'cover') {
 
 function renderGamesAsSlideshow(gamesToRender) {
     const gamesContainer = document.getElementById('games-container');
+    if (!gamesContainer) return;
     const slideshowContainer = document.createElement('div');
     slideshowContainer.className = 'slideshow-container';
     slideshowContainer.tabIndex = 0;
@@ -1554,6 +1835,18 @@ function renderGamesAsSlideshow(gamesToRender) {
 
         setBackdropForIndex(idx);
     }
+
+    const onWheel = (e) => {
+        if (!e.ctrlKey) return;
+        e.preventDefault();
+        const slider = document.getElementById('view-size-slider');
+        if (!slider || slider.disabled) return;
+        const current = parseInt(slider.value, 10);
+        const next = e.deltaY < 0 ? Math.min(140, current + 5) : Math.max(70, current - 5);
+        slider.value = String(next);
+        slider.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    slideshowContainer.addEventListener('wheel', onWheel, { passive: false });
 
     const len = slideshowGames.length;
     let slotOffsets = [-2, -1, 0, 1, 2];
@@ -1869,6 +2162,7 @@ function renderGamesAsSlideshow(gamesToRender) {
 
 function renderGamesAsRandom(gamesToRender) {
     const gamesContainer = document.getElementById('games-container');
+    if (!gamesContainer) return;
     const randomContainer = document.createElement('div');
     randomContainer.className = 'random-container random-container--slot';
     const spinGames = buildViewGamePool(gamesToRender, MAX_RANDOM_POOL_SIZE);

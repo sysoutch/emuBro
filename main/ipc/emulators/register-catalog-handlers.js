@@ -50,6 +50,25 @@ function registerEmulatorCatalogHandlers(deps = {}) {
     return ordered;
   }
 
+  function hasAnyDownloadUrl(value) {
+    if (typeof value === "string") return !!String(value).trim();
+    if (Array.isArray(value)) return value.some((entry) => !!String(entry || "").trim());
+    if (!value || typeof value !== "object") return false;
+
+    const keys = ["windows", "win", "win32", "linux", "mac", "macos", "darwin", "osx", "all", "default", "any"];
+    return keys.some((key) => {
+      const entry = value[key];
+      if (Array.isArray(entry)) return entry.some((item) => !!String(item || "").trim());
+      return !!String(entry || "").trim();
+    });
+  }
+
+  function pickDownloadUrl(preferred, fallback) {
+    if (hasAnyDownloadUrl(preferred)) return preferred;
+    if (hasAnyDownloadUrl(fallback)) return fallback;
+    return "";
+  }
+
   function mergeDuplicateRows(a, b) {
     const aInstalled = !!a?.isInstalled;
     const bInstalled = !!b?.isInstalled;
@@ -70,7 +89,7 @@ function registerEmulatorCatalogHandlers(deps = {}) {
       filePaths,
       isInstalled: !!(aInstalled || bInstalled),
       website: preferred?.website || fallback?.website || "",
-      downloadUrl: preferred?.downloadUrl || fallback?.downloadUrl || "",
+      downloadUrl: pickDownloadUrl(preferred?.downloadUrl, fallback?.downloadUrl),
       searchString: preferred?.searchString || fallback?.searchString || "",
       startParameters: preferred?.startParameters || fallback?.startParameters || "",
       archiveFileMatchWin: preferred?.archiveFileMatchWin || fallback?.archiveFileMatchWin || "",
@@ -82,6 +101,19 @@ function registerEmulatorCatalogHandlers(deps = {}) {
       executableFileMatchWin: preferred?.executableFileMatchWin || fallback?.executableFileMatchWin || "",
       executableFileMatchLinux: preferred?.executableFileMatchLinux || fallback?.executableFileMatchLinux || "",
       executableFileMatchMac: preferred?.executableFileMatchMac || fallback?.executableFileMatchMac || "",
+      configFilePath: preferred?.configFilePath || fallback?.configFilePath || "",
+      runCommandsBefore: Array.isArray(preferred?.runCommandsBefore) && preferred.runCommandsBefore.length > 0
+        ? preferred.runCommandsBefore
+        : (Array.isArray(fallback?.runCommandsBefore) ? fallback.runCommandsBefore : []),
+      supportedFileTypes: Array.isArray(preferred?.supportedFileTypes) && preferred.supportedFileTypes.length > 0
+        ? preferred.supportedFileTypes
+        : (Array.isArray(fallback?.supportedFileTypes) ? fallback.supportedFileTypes : []),
+      biosRequired: typeof preferred?.biosRequired === "boolean"
+        ? preferred.biosRequired
+        : !!fallback?.biosRequired,
+      autoSearchEnabled: typeof preferred?.autoSearchEnabled === "boolean"
+        ? preferred.autoSearchEnabled
+        : (typeof fallback?.autoSearchEnabled === "boolean" ? fallback.autoSearchEnabled : true),
       iconFilename: preferred?.iconFilename || fallback?.iconFilename || "",
       source
     };
@@ -123,12 +155,12 @@ function registerEmulatorCatalogHandlers(deps = {}) {
           platformShortName: cfg.platformShortName || installed.platformShortName,
           type: normalizeEmulatorType(installed.type || cfg.type) || "standalone",
           website: cfg.website || installed.website || "",
-          downloadUrl: cfg.downloadUrl || installed.downloadUrl || "",
+          downloadUrl: pickDownloadUrl(cfg.downloadUrl, installed.downloadUrl),
           downloadLinks: buildEmulatorDownloadLinks(
             cfg.name || installed.name,
             cfg.website || installed.website,
             cfg.downloadLinks || installed.downloadLinks,
-            cfg.downloadUrl || installed.downloadUrl
+            pickDownloadUrl(cfg.downloadUrl, installed.downloadUrl)
           ),
           searchString: cfg.searchString || "",
           startParameters: cfg.startParameters || "",
@@ -141,6 +173,11 @@ function registerEmulatorCatalogHandlers(deps = {}) {
           executableFileMatchWin: cfg.executableFileMatchWin || installed.executableFileMatchWin || "",
           executableFileMatchLinux: cfg.executableFileMatchLinux || installed.executableFileMatchLinux || "",
           executableFileMatchMac: cfg.executableFileMatchMac || installed.executableFileMatchMac || "",
+          configFilePath: cfg.configFilePath || installed.configFilePath || "",
+          runCommandsBefore: Array.isArray(cfg.runCommandsBefore) ? cfg.runCommandsBefore : (Array.isArray(installed.runCommandsBefore) ? installed.runCommandsBefore : []),
+          supportedFileTypes: Array.isArray(cfg.supportedFileTypes) ? cfg.supportedFileTypes : (Array.isArray(installed.supportedFileTypes) ? installed.supportedFileTypes : []),
+          biosRequired: typeof cfg.biosRequired === "boolean" ? cfg.biosRequired : !!installed.biosRequired,
+          autoSearchEnabled: typeof cfg.autoSearchEnabled === "boolean" ? cfg.autoSearchEnabled : (typeof installed.autoSearchEnabled === "boolean" ? installed.autoSearchEnabled : true),
           iconFilename: cfg.iconFilename || "",
           filePath: String(installed.filePath || cfg.filePath || "").trim(),
           filePaths: collectFilePaths(installed, cfg),

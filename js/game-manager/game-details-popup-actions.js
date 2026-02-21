@@ -2,6 +2,7 @@ import {
     normalizeSuggestionProvider,
     loadSuggestionSettings
 } from '../suggestions-settings';
+import { showTextInputDialog } from '../ui/text-input-dialog';
 
 export function createGameDetailsPopupActions(deps = {}) {
     const emubro = deps.emubro || window.emubro;
@@ -385,7 +386,13 @@ export function createGameDetailsPopupActions(deps = {}) {
 
                 const targetInfo = catalog.find((row) => normalizeTagId(row.id) === normalizeTagId(targetTagId));
                 const currentLabel = String(targetInfo?.label || targetTagId).trim();
-                const nextLabelInput = window.prompt('Rename tag', currentLabel);
+                const nextLabelInput = await showTextInputDialog({
+                    title: 'Rename Tag',
+                    message: 'Enter a new tag name.',
+                    initialValue: currentLabel,
+                    confirmLabel: 'Rename',
+                    cancelLabel: 'Cancel'
+                });
                 if (nextLabelInput === null) return;
                 const nextLabel = String(nextLabelInput || '').trim();
                 if (!nextLabel) {
@@ -715,6 +722,24 @@ export function createGameDetailsPopupActions(deps = {}) {
         const refresh = () => setYouTubePreviewResult(previewRoot, state);
         refresh();
 
+        const openYouTubeTarget = async (targetUrl) => {
+            const url = String(targetUrl || '').trim();
+            if (!url) return;
+            try {
+                const result = await emubro.invoke('youtube:open-video', url);
+                if (!result?.success) {
+                    throw new Error(result?.message || 'Failed to open YouTube window');
+                }
+            } catch (error) {
+                const statusEl = previewRoot.querySelector('[data-youtube-status]');
+                if (statusEl) {
+                    statusEl.textContent = 'Could not open embedded YouTube window. Opened externally instead.';
+                }
+                await emubro.invoke('open-external-url', url);
+                console.warn('youtube:open-video failed, fell back to external browser:', error);
+            }
+        };
+
         const loadResults = async () => {
             if (state.loading) return;
             state.loading = true;
@@ -764,7 +789,7 @@ export function createGameDetailsPopupActions(deps = {}) {
         if (searchBtn) {
             searchBtn.addEventListener('click', async () => {
                 const target = state.searchUrl || `https://www.youtube.com/results?search_query=${encodeURIComponent(state.query)}`;
-                await emubro.invoke('open-external-url', target);
+                await openYouTubeTarget(target);
             });
         }
 
@@ -772,9 +797,10 @@ export function createGameDetailsPopupActions(deps = {}) {
             mainLink.addEventListener('click', async (event) => {
                 event.preventDefault();
                 const current = state.results[state.index];
-                const target = String(current?.url || state.searchUrl || '').trim();
-                if (!target) return;
-                await emubro.invoke('open-external-url', target);
+                const url = String(current?.url || '').trim();
+                if (url) {
+                    await openYouTubeTarget(url);
+                }
             });
         }
 
