@@ -34,6 +34,13 @@ module.exports = {
       schemes: ["emubro"]
     }
   ],
+  publish: [
+    {
+      provider: "github",
+      owner: "sysoutch",
+      repo: "emuBro"
+    }
+  ],
   extraResources: [
     {
       "from": "resources",

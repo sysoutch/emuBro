@@ -18,6 +18,7 @@ const { registerEmulatorIpc } = require("./main/ipc/emulators");
 const { registerImportIpc } = require("./main/ipc/imports");
 const { registerGameIpc } = require("./main/ipc/games");
 const { registerSystemActionsIpc } = require("./main/ipc/system-actions");
+const { registerUpdatesIpc } = require("./main/ipc/updates");
 const { registerThemeUploadIpc } = require("./main/ipc/theme-upload");
 const { registerSettingsPathsIpc } = require("./main/ipc/settings-paths");
 const { registerImportStagingIpc } = require("./main/ipc/import-staging");
@@ -266,6 +267,13 @@ registerSystemActionsIpc({
   app,
   fsSync,
   shell
+});
+
+registerUpdatesIpc({
+  ipcMain,
+  app,
+  log,
+  getMainWindow: () => mainWindow
 });
 
 registerImportStagingIpc({

@@ -59,3 +59,4 @@ spec/fixtures/logo.png
 # Project specific
 /build_out/
 /emubro-resources/
+/emubro-locales-repo/

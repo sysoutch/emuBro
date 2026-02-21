@@ -93,7 +93,11 @@ const ALLOWED_INVOKE = new Set([
   "window:toggle-maximize",
   "window:close",
   "window:is-maximized",
-  "app:renderer-ready"
+  "app:renderer-ready",
+  "update:get-state",
+  "update:check",
+  "update:download",
+  "update:install"
 ]);
 
 const ALLOWED_SEND = new Set([
@@ -103,7 +107,8 @@ const ALLOWED_SEND = new Set([
 const ALLOWED_ON = new Set([
   "emubro:launch",
   "window-moved",
-  "window:maximized-changed"
+  "window:maximized-changed",
+  "app:update-status"
 ]);
 
 function invoke(channel, ...args) {
@@ -137,6 +142,7 @@ contextBridge.exposeInMainWorld("emubro", {
   onLaunch: (callback) => on("emubro:launch", callback),
   onWindowMoved: (callback) => on("window-moved", callback),
   onWindowMaximizedChanged: (callback) => on("window:maximized-changed", callback),
+  onUpdateStatus: (callback) => on("app:update-status", callback),
 
   invoke,
 
@@ -157,6 +163,12 @@ contextBridge.exposeInMainWorld("emubro", {
   },
 
   createGameShortcut: (gameId) => invoke("create-game-shortcut", gameId),
+  updates: {
+    getState: () => invoke("update:get-state"),
+    check: () => invoke("update:check"),
+    download: () => invoke("update:download"),
+    install: () => invoke("update:install")
+  },
   promptScanSubfolders: (folderPath) => invoke("prompt-scan-subfolders", folderPath),
   importPaths: (paths, options) => invoke("import-paths", paths, options),
   getPathForFile: (file) => {

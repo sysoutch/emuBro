@@ -117,6 +117,19 @@ export async function openLibraryPathSettingsModal(options = {}) {
             .sort((a, b) => String(a.platform).localeCompare(String(b.platform)));
     }
     let activeTab = 'general';
+    let updateState = {
+        checking: false,
+        downloading: false,
+        downloaded: false,
+        available: false,
+        currentVersion: '',
+        latestVersion: '',
+        releaseNotes: '',
+        lastMessage: '',
+        lastError: '',
+        progressPercent: 0
+    };
+    let detachUpdateListener = null;
 
     const overlay = document.createElement('div');
     overlay.style.cssText = [
@@ -160,6 +173,41 @@ export async function openLibraryPathSettingsModal(options = {}) {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
+
+    const closeModal = () => {
+        try {
+            if (typeof detachUpdateListener === 'function') detachUpdateListener();
+        } catch (_error) {}
+        overlay.remove();
+    };
+
+    const applyUpdateState = (payload = {}) => {
+        updateState = {
+            ...updateState,
+            checking: !!payload?.checking,
+            downloading: !!payload?.downloading,
+            downloaded: !!payload?.downloaded,
+            available: !!payload?.available,
+            currentVersion: String(payload?.currentVersion || updateState.currentVersion || ''),
+            latestVersion: String(payload?.latestVersion || updateState.latestVersion || ''),
+            releaseNotes: String(payload?.releaseNotes || updateState.releaseNotes || ''),
+            lastMessage: String(payload?.lastMessage || ''),
+            lastError: String(payload?.lastError || ''),
+            progressPercent: Number.isFinite(Number(payload?.progressPercent))
+                ? Number(payload.progressPercent)
+                : Number(updateState.progressPercent || 0)
+        };
+    };
+
+    const renderUpdateStatusText = () => {
+        if (updateState.lastError) return `Error: ${updateState.lastError}`;
+        if (updateState.downloading) return `Downloading update... ${Math.round(updateState.progressPercent || 0)}%`;
+        if (updateState.downloaded) return 'Update downloaded. Restart app to install.';
+        if (updateState.available) return `Update available${updateState.latestVersion ? `: ${updateState.latestVersion}` : ''}`;
+        if (updateState.checking) return 'Checking for updates...';
+        if (updateState.lastMessage) return updateState.lastMessage;
+        return 'Not checked yet.';
+    };
 
     const section = (key, title, subtitle, placeholder, browseLabel, entries) => `
         <section style="border:1px solid var(--border-color);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;">
@@ -309,6 +357,33 @@ export async function openLibraryPathSettingsModal(options = {}) {
         </section>
     `;
 
+    const renderUpdatesTab = () => {
+        const status = escapeAttr(renderUpdateStatusText());
+        const currentVersion = escapeAttr(updateState.currentVersion || '');
+        const latestVersion = escapeAttr(updateState.latestVersion || '');
+        const notes = String(updateState.releaseNotes || '').trim();
+        const canDownload = !!updateState.available && !updateState.downloaded && !updateState.downloading;
+        const canInstall = !!updateState.downloaded;
+        return `
+            <section style="display:grid;gap:12px;">
+                <section style="border:1px solid var(--border-color);border-radius:12px;padding:12px;display:grid;gap:10px;">
+                    <h3 style="margin:0;font-size:1rem;">App Updates</h3>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;">
+                        <div style="font-size:0.9rem;"><strong>Current:</strong> ${currentVersion || '-'}</div>
+                        <div style="font-size:0.9rem;"><strong>Latest:</strong> ${latestVersion || '-'}</div>
+                    </div>
+                    <div style="font-size:0.9rem;color:var(--text-secondary);" data-update-status>${status}</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                        <button type="button" class="action-btn" data-update-action="check"${updateState.checking ? ' disabled' : ''}>Check for Updates</button>
+                        <button type="button" class="action-btn" data-update-action="download"${canDownload ? '' : ' disabled'}>Download Update</button>
+                        <button type="button" class="action-btn launch-btn" data-update-action="install"${canInstall ? '' : ' disabled'}>Install & Restart</button>
+                    </div>
+                    ${notes ? `<pre style="margin:0;padding:10px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-primary);white-space:pre-wrap;font-family:var(--font-body);font-size:0.85rem;">${escapeAttr(notes)}</pre>` : ''}
+                </section>
+            </section>
+        `;
+    };
+
     const renderGamepadTab = () => {
         const platformSections = platformBindingRows.map((row) => {
             const shortName = String(row?.shortName || '').trim().toLowerCase();
@@ -408,6 +483,9 @@ export async function openLibraryPathSettingsModal(options = {}) {
         } else {
             tabContent = renderImportTab();
         }
+        if (activeTab === 'updates') {
+            tabContent = renderUpdatesTab();
+        }
 
         modal.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;">
@@ -423,6 +501,7 @@ export async function openLibraryPathSettingsModal(options = {}) {
                 <button type="button" class="action-btn${activeTab === 'gamepad' ? ' launch-btn' : ''}" data-settings-tab="gamepad">Gamepad</button>
                 <button type="button" class="action-btn${activeTab === 'library-paths' ? ' launch-btn' : ''}" data-settings-tab="library-paths">Library Paths</button>
                 <button type="button" class="action-btn${activeTab === 'import' ? ' launch-btn' : ''}" data-settings-tab="import">Import & Scan</button>
+                <button type="button" class="action-btn${activeTab === 'updates' ? ' launch-btn' : ''}" data-settings-tab="updates">Updates</button>
             </div>
             <div style="display:grid;gap:12px;">
                 ${tabContent}
@@ -434,7 +513,7 @@ export async function openLibraryPathSettingsModal(options = {}) {
         `;
 
         const closeBtns = modal.querySelectorAll('[data-close-modal]');
-        closeBtns.forEach((btn) => btn.addEventListener('click', () => overlay.remove()));
+        closeBtns.forEach((btn) => btn.addEventListener('click', closeModal));
 
         modal.querySelectorAll('[data-settings-tab]').forEach((btn) => {
             btn.addEventListener('click', () => {
@@ -598,10 +677,33 @@ export async function openLibraryPathSettingsModal(options = {}) {
         const openBrowseTabBtn = modal.querySelector('[data-settings-open-browse-tab]');
         if (openBrowseTabBtn) {
             openBrowseTabBtn.addEventListener('click', () => {
-                overlay.remove();
+                closeModal();
                 openFooterPanel('browse');
             });
         }
+
+        modal.querySelectorAll('[data-update-action]').forEach((button) => {
+            button.addEventListener('click', async () => {
+                const action = String(button.dataset.updateAction || '').trim().toLowerCase();
+                if (!action) return;
+                button.disabled = true;
+                try {
+                    let result = null;
+                    if (action === 'check') result = await emubro.updates?.check?.();
+                    if (action === 'download') result = await emubro.updates?.download?.();
+                    if (action === 'install') result = await emubro.updates?.install?.();
+                    if (result && typeof result === 'object') {
+                        applyUpdateState(result);
+                    }
+                    render();
+                } catch (error) {
+                    applyUpdateState({ lastError: String(error?.message || error || 'Update action failed') });
+                    render();
+                } finally {
+                    button.disabled = false;
+                }
+            });
+        });
 
         modal.querySelectorAll('[data-platform-gamepad-input]').forEach((input) => {
             input.addEventListener('input', () => {
@@ -782,7 +884,7 @@ export async function openLibraryPathSettingsModal(options = {}) {
                     if (isLibraryTopSection()) {
                         await setActiveLibrarySection(activeLibrarySection);
                     }
-                    overlay.remove();
+                    closeModal();
                     addFooterNotification('Settings saved.', 'success');
                 } catch (error) {
                     alert(error?.message || 'Failed to save settings.');
@@ -792,8 +894,21 @@ export async function openLibraryPathSettingsModal(options = {}) {
     };
 
     overlay.addEventListener('click', (event) => {
-        if (event.target === overlay) overlay.remove();
+        if (event.target === overlay) closeModal();
     });
+
+    try {
+        if (typeof emubro?.onUpdateStatus === 'function') {
+            detachUpdateListener = emubro.onUpdateStatus((payload = {}) => {
+                applyUpdateState(payload);
+                if (overlay.isConnected) render();
+            });
+        }
+        const initialUpdateState = await emubro?.updates?.getState?.();
+        if (initialUpdateState && typeof initialUpdateState === 'object') {
+            applyUpdateState(initialUpdateState);
+        }
+    } catch (_error) {}
 
     render();
     overlay.appendChild(modal);
