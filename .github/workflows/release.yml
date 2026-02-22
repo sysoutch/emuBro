@@ -50,7 +50,7 @@ jobs:
           if [[ "$RUNNER_OS" == "Windows" ]]; then
             npx electron-builder -w --publish always
           elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            npx electron-builder -m --publish always
+            npx electron-builder -m --publish always --config.mac.identity=null --config.mac.hardenedRuntime=false --config.mac.entitlements=null --config.afterSign=false
           else
             npx electron-builder -l --publish always --linux AppImage
           fi
