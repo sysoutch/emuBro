@@ -1,6 +1,6 @@
 {
   "name": "emuBro",
-  "version": "1.0.0-alpha.7",
+  "version": "1.0.0-alpha",
   "description": "A Steam-like Electron application",
   "main": "main.js",
   "scripts": {
