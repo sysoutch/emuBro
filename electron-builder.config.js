@@ -60,7 +60,7 @@ module.exports = {
     asar: true
   },
   linux: {
-    icon: "favicon.ico",
+    icon: "icon.png",
     target: [
       "AppImage",
       "deb"
