@@ -15,6 +15,7 @@ const ROOT_EDITOR_GROUP_KEY = '__root__';
 const MAX_EDITOR_ROWS_DEFAULT = 500;
 const LLM_TRANSLATION_MODE_STORAGE_KEY = 'emubro.languageManager.llmTranslationMode';
 const LLM_TRANSLATION_RETRANSLATE_EXISTING_STORAGE_KEY = 'emubro.languageManager.llmTranslationRetranslateExisting';
+const LLM_TRANSLATION_STYLE_HINT_STORAGE_KEY = 'emubro.languageManager.llmTranslationStyleHint';
 const LLM_TRANSLATION_MODE_ONE_BY_ONE = 'one-by-one';
 const LLM_TRANSLATION_MODE_ALL_IN_ONE_JSON = 'all-in-one-json';
 const LANGUAGE_CODE_PATTERN = /^[a-z]{2,3}$/;
@@ -79,6 +80,7 @@ export function initLanguageManager() {
     const translateBtn = document.getElementById('lang-translate-llm-btn');
     const translationModeSelect = document.getElementById('lang-translate-llm-mode');
     const retranslateExistingToggle = document.getElementById('lang-translate-llm-retranslate-existing');
+    const translationStyleHintInput = document.getElementById('lang-translate-llm-style-hint');
     const searchInput = document.getElementById('lang-search-keys');
     const liveEditToggle = document.getElementById('lang-live-edit-toggle');
 
@@ -159,6 +161,13 @@ export function initLanguageManager() {
                 LLM_TRANSLATION_RETRANSLATE_EXISTING_STORAGE_KEY,
                 retranslateExistingToggle.checked ? '1' : '0'
             );
+        });
+    }
+
+    if (translationStyleHintInput) {
+        translationStyleHintInput.value = String(localStorage.getItem(LLM_TRANSLATION_STYLE_HINT_STORAGE_KEY) || '');
+        translationStyleHintInput.addEventListener('input', () => {
+            localStorage.setItem(LLM_TRANSLATION_STYLE_HINT_STORAGE_KEY, translationStyleHintInput.value || '');
         });
     }
     
@@ -1306,6 +1315,13 @@ function shouldRetranslateExistingTranslations() {
     return !!toggle?.checked;
 }
 
+function getLlmTranslationStyleHint() {
+    const input = document.getElementById('lang-translate-llm-style-hint');
+    const typed = String(input?.value || '').trim();
+    if (typed) return typed.slice(0, 280);
+    return String(localStorage.getItem(LLM_TRANSLATION_STYLE_HINT_STORAGE_KEY) || '').trim().slice(0, 280);
+}
+
 function getTranslationCandidates(options = {}) {
     const includeExisting = !!options.includeExisting;
     if (!currentLangData) return [];
@@ -1390,6 +1406,7 @@ async function translateMissingKeysWithLlm(buttonEl) {
     const total = candidates.length;
     let translatedCount = 0;
     const translationMode = getLlmTranslationMode();
+    const translationStyleHint = getLlmTranslationStyleHint();
     const progressKey = retranslateExisting ? 'language.translateLlmProgressGeneric' : 'language.translateLlmProgress';
     const progressAllInOneKey = retranslateExisting ? 'language.translateLlmProgressAllInOneGeneric' : 'language.translateLlmProgressAllInOne';
 
@@ -1406,6 +1423,7 @@ async function translateMissingKeysWithLlm(buttonEl) {
                 sourceLanguageCode: 'en',
                 targetLanguageCode: currentLangData.code,
                 targetLanguageName: targetName,
+                styleHint: translationStyleHint,
                 retranslateExisting,
                 sourceLocaleObject: getBaseLanguage().en || {},
                 targetLocaleObject: currentLangData.data?.[currentLangData.code] || {},
@@ -1433,6 +1451,7 @@ async function translateMissingKeysWithLlm(buttonEl) {
                     sourceLanguageCode: 'en',
                     targetLanguageCode: currentLangData.code,
                     targetLanguageName: targetName,
+                    styleHint: translationStyleHint,
                     retranslateExisting,
                     entries: [{ key: entry.key, text: entry.sourceText }]
                 });

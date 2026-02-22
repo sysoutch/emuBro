@@ -1,5 +1,6 @@
 const path = require("path");
 const os = require("os");
+const Database = require("better-sqlite3");
 
 function registerImportIpc(deps = {}) {
   const {
@@ -21,6 +22,8 @@ function registerImportIpc(deps = {}) {
     discoverCoverImageRelative,
     resolveResourcePath,
     dbUpsertGame,
+    dbUpsertTags,
+    dbUpdateGameMetadata,
     getArchiveKind,
     extractArchiveToDir
   } = deps;
@@ -1156,6 +1159,493 @@ ipcMain.handle("import-paths", async (_event, paths, options = {}) => {
     return { success: false, message: e.message };
   }
 });
+
+  function expandUserPath(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    if (raw.startsWith("~")) {
+      const home = String(os.homedir() || "");
+      return raw.replace(/^~(?=\/|\\|$)/, home);
+    }
+    return raw;
+  }
+
+  function collectLauncherIntegrations(platformConfigs = []) {
+    for (const cfg of (platformConfigs || [])) {
+      const shortName = String(cfg?.shortName || "").trim().toLowerCase();
+      if (shortName !== "pc") continue;
+      const integrations = cfg?.launcherIntegrations;
+      if (integrations && typeof integrations === "object") return integrations;
+    }
+    return null;
+  }
+
+  function parseSteamLibraryFolders(text) {
+    const out = new Set();
+    const lines = String(text || "").split(/\r?\n/g);
+    for (const line of lines) {
+      const match = line.match(/"path"\s*"([^"]+)"/i);
+      if (match && match[1]) {
+        out.add(match[1].replace(/\\\\/g, "\\"));
+        continue;
+      }
+      const legacy = line.match(/"\d+"\s*"([^"]+)"/);
+      if (legacy && legacy[1]) {
+        out.add(legacy[1].replace(/\\\\/g, "\\"));
+      }
+    }
+    return Array.from(out);
+  }
+
+  function resolveSteamManifestDirs(configPaths = []) {
+    const dirs = new Set();
+    (Array.isArray(configPaths) ? configPaths : []).forEach((raw) => {
+      const expanded = expandUserPath(raw);
+      if (expanded) dirs.add(expanded);
+    });
+
+    const extra = new Set();
+    dirs.forEach((steamappsPath) => {
+      const libraryFile = path.join(steamappsPath, "libraryfolders.vdf");
+      if (!fsSync.existsSync(libraryFile)) return;
+      try {
+        const text = fsSync.readFileSync(libraryFile, "utf8");
+        const libs = parseSteamLibraryFolders(text);
+        libs.forEach((libPath) => {
+          if (!libPath) return;
+          const normalized = libPath.replace(/\\\\/g, "\\");
+          const steamapps = normalized.toLowerCase().endsWith("steamapps")
+            ? normalized
+            : path.join(normalized, "steamapps");
+          extra.add(steamapps);
+        });
+      } catch (_e) {}
+    });
+
+    extra.forEach((p) => dirs.add(p));
+    return Array.from(dirs).filter((p) => !!p);
+  }
+
+  function scanSteamManifests(manifestDirs = []) {
+    const results = [];
+    const seen = new Set();
+    const dirs = resolveSteamManifestDirs(manifestDirs);
+
+    dirs.forEach((dirPath) => {
+      if (!fsSync.existsSync(dirPath)) return;
+      let entries = [];
+      try {
+        entries = fsSync.readdirSync(dirPath, { withFileTypes: true });
+      } catch (_e) {
+        return;
+      }
+
+      entries.forEach((entry) => {
+        if (!entry.isFile()) return;
+        const name = String(entry.name || "");
+        if (!/^appmanifest_\d+\.acf$/i.test(name)) return;
+        const manifestPath = path.join(dirPath, name);
+        let text = "";
+        try {
+          text = fsSync.readFileSync(manifestPath, "utf8");
+        } catch (_e) {
+          return;
+        }
+        const appIdMatch = text.match(/"appid"\s*"(\d+)"/i) || name.match(/appmanifest_(\d+)\.acf/i);
+        const appId = appIdMatch ? String(appIdMatch[1] || "").trim() : "";
+        const nameMatch = text.match(/"name"\s*"([^"]+)"/i);
+        const displayName = nameMatch ? String(nameMatch[1] || "").trim() : "";
+        const dirMatch = text.match(/"installdir"\s*"([^"]+)"/i);
+        const installDir = dirMatch ? String(dirMatch[1] || "").trim() : "";
+        if (!appId || !displayName) return;
+        const key = `steam:${appId}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        const commonDir = path.join(dirPath, "common");
+        const installPath = installDir ? path.join(commonDir, installDir) : "";
+        const isInstalled = !!(installPath && fsSync.existsSync(installPath));
+        results.push({
+          launcher: "steam",
+          id: appId,
+          name: displayName,
+          launchUri: `steam://rungameid/${appId}`,
+          installDir: installPath || "",
+          installed: isInstalled
+        });
+      });
+    });
+
+    return results;
+  }
+
+  function scanEpicManifests(manifestDirs = []) {
+    const results = [];
+    const seen = new Set();
+    (Array.isArray(manifestDirs) ? manifestDirs : []).forEach((rawDir) => {
+      const dirPath = expandUserPath(rawDir);
+      if (!dirPath || !fsSync.existsSync(dirPath)) return;
+      let entries = [];
+      try {
+        entries = fsSync.readdirSync(dirPath, { withFileTypes: true });
+      } catch (_e) {
+        return;
+      }
+
+      entries.forEach((entry) => {
+        if (!entry.isFile()) return;
+        const name = String(entry.name || "");
+        if (!name.toLowerCase().endsWith(".item")) return;
+        const manifestPath = path.join(dirPath, name);
+        let raw = "";
+        try {
+          raw = fsSync.readFileSync(manifestPath, "utf8");
+        } catch (_e) {
+          return;
+        }
+        let data = null;
+        try {
+          data = JSON.parse(raw);
+        } catch (_e) {
+          return;
+        }
+        const displayName = String(data?.DisplayName || data?.AppName || "").trim();
+        const appName = String(data?.AppName || data?.CatalogItemId || "").trim();
+        const installDir = String(data?.InstallLocation || data?.InstallLocationBase || "").trim();
+        const isIncomplete = data?.bIsIncompleteInstall === true
+          || String(data?.bIsIncompleteInstall || "").toLowerCase() === "true";
+        const flagInstalled = data?.bIsInstalled === true
+          || String(data?.bIsInstalled || "").toLowerCase() === "true";
+        const hasDir = !!(installDir && fsSync.existsSync(installDir));
+        const isInstalled = !isIncomplete && (flagInstalled || hasDir);
+        if (!displayName || !appName) return;
+        const key = `epic:${appName}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        results.push({
+          launcher: "epic",
+          id: appName,
+          name: displayName,
+          launchUri: `com.epicgames.launcher://apps/${appName}?action=launch&silent=true`,
+          installDir,
+          installed: isInstalled
+        });
+      });
+    });
+    return results;
+  }
+
+  function findGogDbPaths(manifestDirs = []) {
+    const dbPaths = [];
+    (Array.isArray(manifestDirs) ? manifestDirs : []).forEach((rawDir) => {
+      const dirPath = expandUserPath(rawDir);
+      if (!dirPath || !fsSync.existsSync(dirPath)) return;
+      const candidates = [
+        path.join(dirPath, "galaxy-2.0.db"),
+        path.join(dirPath, "galaxy.db")
+      ];
+      candidates.forEach((candidate) => {
+        if (fsSync.existsSync(candidate)) dbPaths.push(candidate);
+      });
+      try {
+        const entries = fsSync.readdirSync(dirPath, { withFileTypes: true });
+        entries.forEach((entry) => {
+          if (!entry.isFile()) return;
+          const name = String(entry.name || "");
+          if (!name.toLowerCase().endsWith(".db")) return;
+          if (!name.toLowerCase().includes("galaxy")) return;
+          const candidate = path.join(dirPath, name);
+          if (fsSync.existsSync(candidate)) dbPaths.push(candidate);
+        });
+      } catch (_e) {}
+    });
+    return Array.from(new Set(dbPaths));
+  }
+
+  function scanGogGalaxy(manifestDirs = []) {
+    const results = [];
+    const seen = new Set();
+    const dbPaths = findGogDbPaths(manifestDirs);
+
+    const parseDbBool = (value) => {
+      if (value === true) return true;
+      if (value === false) return false;
+      if (value == null) return null;
+      const text = String(value).trim().toLowerCase();
+      if (!text) return null;
+      if (["1", "true", "yes", "y"].includes(text)) return true;
+      if (["0", "false", "no", "n"].includes(text)) return false;
+      return null;
+    };
+
+    dbPaths.forEach((dbPath) => {
+      let db = null;
+      try {
+        db = new Database(dbPath, { readonly: true });
+      } catch (_e) {
+        return;
+      }
+
+      try {
+        const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map((row) => String(row?.name || ""));
+        const tableName = tables.find((t) => t.toLowerCase() === "products")
+          || tables.find((t) => t.toLowerCase() === "product")
+          || tables.find((t) => t.toLowerCase().includes("product"));
+        if (!tableName) return;
+
+        const columns = db.prepare(`PRAGMA table_info(${tableName})`).all().map((row) => String(row?.name || "").toLowerCase());
+        const idCol = columns.includes("productid") ? "productId" : (columns.includes("id") ? "id" : "");
+        const nameCol = columns.includes("title") ? "title" : (columns.includes("name") ? "name" : "");
+        const pathCol = columns.includes("installationpath")
+          ? "installationPath"
+          : (columns.includes("path") ? "path" : "");
+        const installedCol = columns.includes("isinstalled")
+          ? "isInstalled"
+          : (columns.includes("installed") ? "installed" : "");
+        const ownedCol = columns.includes("owned") ? "owned" : "";
+        if (!idCol || !nameCol) return;
+
+        let installMap = new Map();
+        const installCandidates = tables.filter((t) => t.toLowerCase().includes("installed"));
+        const installTables = installCandidates.length > 0 ? installCandidates : tables;
+        for (const installTable of installTables) {
+          try {
+            const installCols = db.prepare(`PRAGMA table_info(${installTable})`).all().map((row) => String(row?.name || "").toLowerCase());
+            const installIdCol = installCols.includes("productid") ? "productId" : (installCols.includes("id") ? "id" : "");
+            const installPathCol = installCols.includes("installationpath") ? "installationPath" : (installCols.includes("path") ? "path" : "");
+            if (!installIdCol || !installPathCol) continue;
+            const rows = db.prepare(`SELECT ${installIdCol} as productId, ${installPathCol} as path FROM ${installTable}`).all();
+            if (!rows || rows.length === 0) continue;
+            installMap = new Map(rows.map((row) => [String(row?.productId || "").trim(), String(row?.path || "").trim()]));
+            break;
+          } catch (_e) {}
+        }
+
+        const rows = db.prepare(
+          `SELECT ${idCol} as productId, ${nameCol} as title`
+          + (pathCol ? `, ${pathCol} as path` : "")
+          + (installedCol ? `, ${installedCol} as installedFlag` : "")
+          + (ownedCol ? `, ${ownedCol} as ownedFlag` : "")
+          + ` FROM ${tableName}`
+        ).all();
+        rows.forEach((row) => {
+          const productId = String(row?.productId || "").trim();
+          const title = String(row?.title || "").trim();
+          if (!productId || !title) return;
+          const key = `gog:${productId}`;
+          if (seen.has(key)) return;
+          seen.add(key);
+          const directPath = String(row?.path || "").trim();
+          const installDir = installMap.get(productId) || directPath || "";
+          const installedFlag = parseDbBool(row?.installedFlag);
+          const ownedFlag = parseDbBool(row?.ownedFlag);
+          const hasDir = !!(installDir && fsSync.existsSync(installDir));
+          const isInstalled = installedFlag === null
+            ? hasDir
+            : installedFlag || hasDir;
+          results.push({
+            launcher: "gog",
+            id: productId,
+            name: title,
+            launchUri: `goggalaxy://launch/${productId}`,
+            installDir,
+            installed: isInstalled,
+            owned: ownedFlag == null ? undefined : ownedFlag
+          });
+        });
+      } catch (_e) {
+        // ignore db failures
+      } finally {
+        try { db.close(); } catch (_e) {}
+      }
+    });
+
+    return results;
+  }
+
+  function scanHeroicLibraries() {
+    const results = [];
+    const seen = new Set();
+    const cacheDir = expandUserPath("~/.config/heroic/store_cache");
+    const heroicFiles = [
+      { file: "legendary_library.json", launcher: "epic" },
+      { file: "gog_library.json", launcher: "gog" }
+    ];
+
+    heroicFiles.forEach((entry) => {
+      const filePath = path.join(cacheDir, entry.file);
+      if (!fsSync.existsSync(filePath)) return;
+      let raw = "";
+      try {
+        raw = fsSync.readFileSync(filePath, "utf8");
+      } catch (_e) {
+        return;
+      }
+      let data = null;
+      try {
+        data = JSON.parse(raw);
+      } catch (_e) {
+        return;
+      }
+
+      const list = Array.isArray(data) ? data : (Array.isArray(data?.games) ? data.games : []);
+      list.forEach((game) => {
+        const appId = String(game?.app_name || game?.appName || game?.id || "").trim();
+        const title = String(game?.title || game?.name || "").trim();
+        if (!appId || !title) return;
+        const key = `heroic:${entry.launcher}:${appId}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        const installDir = String(game?.install?.install_path || game?.install_path || game?.path || "").trim();
+        const isInstalled = !!(installDir && fsSync.existsSync(installDir));
+        results.push({
+          launcher: entry.launcher,
+          id: appId,
+          name: title,
+          launchUri: `heroic://launch/${appId}`,
+          installDir,
+          installed: isInstalled
+        });
+      });
+    });
+
+    return results;
+  }
+
+  ipcMain.handle("launcher:scan-games", async (_event, payload = {}) => {
+    try {
+      const platformConfigs = await getPlatformConfigs();
+      const integrations = collectLauncherIntegrations(platformConfigs) || {};
+      const stores = integrations?.stores || {};
+      const requestStores = payload?.stores && typeof payload.stores === "object" ? payload.stores : {};
+
+      const pickPaths = (storeKey) => {
+        const store = stores?.[storeKey] || {};
+        const manifestPaths = store?.manifestPaths || {};
+        const osKey = process.platform === "win32" ? "win" : (process.platform === "darwin" ? "mac" : "linux");
+        const paths = Array.isArray(manifestPaths?.[osKey]) ? manifestPaths[osKey] : [];
+        const base = paths.map(expandUserPath).filter(Boolean);
+        if (storeKey === "epic") {
+          const extras = [];
+          if (osKey === "win") {
+            extras.push("C:\\\\ProgramData\\\\Epic\\\\EpicGamesLauncher\\\\Data\\\\Manifests");
+            extras.push("C:\\\\ProgramData\\\\Epic\\\\UnrealEngineLauncher\\\\Data\\\\Manifests");
+          } else if (osKey === "mac") {
+            extras.push("~/Library/Application Support/Epic/EpicGamesLauncher/Data/Manifests");
+          } else if (osKey === "linux") {
+            extras.push("~/.config/Epic/EpicGamesLauncher/Data/Manifests");
+            extras.push("~/.local/share/Epic/EpicGamesLauncher/Data/Manifests");
+          }
+          extras.map(expandUserPath).forEach((p) => base.push(p));
+        }
+        if (storeKey === "gog") {
+          const extras = [];
+          if (osKey === "win") {
+            extras.push("C:\\\\ProgramData\\\\GOG.com\\\\Galaxy\\\\storage");
+            extras.push("C:\\\\Program Files (x86)\\\\GOG Galaxy\\\\storage");
+            extras.push("C:\\\\Program Files\\\\GOG Galaxy\\\\storage");
+          } else if (osKey === "mac") {
+            extras.push("~/Library/Application Support/GOG.com/Galaxy/storage");
+          }
+          extras.map(expandUserPath).forEach((p) => base.push(p));
+        }
+        return Array.from(new Set(base.filter(Boolean)));
+      };
+
+      const results = {
+        success: true,
+        stores: {
+          steam: [],
+          epic: [],
+          gog: []
+        },
+        errors: []
+      };
+
+      if (requestStores.steam !== false && stores?.steam?.enabled !== false) {
+        results.stores.steam = scanSteamManifests(pickPaths("steam"));
+      }
+
+      if (requestStores.epic !== false && stores?.epic?.enabled !== false) {
+        results.stores.epic = scanEpicManifests(pickPaths("epic"));
+      }
+
+      if (requestStores.gog !== false && stores?.gog?.enabled !== false) {
+        results.stores.gog = scanGogGalaxy(pickPaths("gog"));
+      }
+
+      if (process.platform === "linux") {
+        const heroicRows = scanHeroicLibraries();
+        if (requestStores.epic !== false && heroicRows.length) {
+          results.stores.epic = results.stores.epic.concat(heroicRows.filter((row) => row.launcher === "epic"));
+        }
+        if (requestStores.gog !== false && heroicRows.length) {
+          results.stores.gog = results.stores.gog.concat(heroicRows.filter((row) => row.launcher === "gog"));
+        }
+      }
+
+      return results;
+    } catch (error) {
+      log.error("launcher:scan-games failed:", error);
+      return { success: false, message: error.message, stores: { steam: [], epic: [], gog: [] } };
+    }
+  });
+
+  ipcMain.handle("launcher:import-games", async (_event, payload = {}) => {
+    try {
+      refreshLibraryFromDb();
+      const games = Array.isArray(payload?.games) ? payload.games : [];
+      const platformConfigs = await getPlatformConfigs();
+      const pcConfig = (platformConfigs || []).find((cfg) => String(cfg?.shortName || "").trim().toLowerCase() === "pc");
+      const platformShortName = String(pcConfig?.shortName || "pc").trim().toLowerCase() || "pc";
+      const platformName = String(pcConfig?.name || "PC").trim() || "PC";
+
+      const added = [];
+      const skipped = [];
+      const errors = [];
+      const defaultImage = await resolveAppIconDataUrl();
+
+      const tagRows = [];
+      games.forEach((entry) => {
+        const name = String(entry?.name || "").trim();
+        const launchUri = String(entry?.launchUri || "").trim();
+        const launcher = String(entry?.launcher || "").trim().toLowerCase();
+        if (!name || !launchUri) {
+          errors.push({ name, message: "Missing name or launch URI" });
+          return;
+        }
+        const { row, existed } = dbUpsertGame({
+          name,
+          platform: platformName,
+          platformShortName,
+          filePath: launchUri,
+          code: String(entry?.id || "").trim() || null,
+          image: defaultImage || null
+        });
+        if (launcher) {
+          const tagId = `launcher-${launcher}`;
+          tagRows.push({ id: tagId, label: launcher.toUpperCase(), source: "launcher" });
+          if (typeof dbUpdateGameMetadata === "function") {
+            const currentTags = Array.isArray(row?.tags) ? row.tags : [];
+            const merged = Array.from(new Set([...currentTags, tagId]));
+            dbUpdateGameMetadata(row?.id, { tags: merged });
+          }
+        }
+        if (existed) skipped.push({ name, launchUri });
+        else added.push(row);
+      });
+
+      if (tagRows.length && typeof dbUpsertTags === "function") {
+        dbUpsertTags(tagRows, { source: "launcher" });
+      }
+
+      refreshLibraryFromDb();
+      return { success: true, added, skipped, errors };
+    } catch (error) {
+      log.error("launcher:import-games failed:", error);
+      return { success: false, message: error.message, added: [], skipped: [], errors: [] };
+    }
+  });
+
 }
 
 module.exports = {

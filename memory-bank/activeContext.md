@@ -1,9 +1,36 @@
 # Active Context
 
 ## Current Work Focus
-The current focus is on updating project documentation and maintaining the codebase to align with the new Electron-based architecture.
+Refactoring `js/game-manager.js` into smaller modules while keeping the public API stable.
 
 ## Recent Changes
+- Continued game-manager refactor: moved slideshow/random views and grouped/incremental rendering into `js/game-manager/views/` and `js/game-manager/rendering/` modules with dependency injection.
+- Continued theme-manager refactor: moved LLM control helpers into `js/theme-manager/llm-utils.js`.
+- Continued theme-manager refactor: moved gradient/intensity helpers into `js/theme-manager/editor-utils.js` and background surface helpers into `js/theme-manager/background-editor-utils.js`.
+- Continued theme-manager refactor: extracted background layer editor rendering into `js/theme-manager/background-layer-editor.js`.
+- Continued theme-manager refactor: moved color collection/derived CSS variable helpers into `js/theme-manager/theme-color-utils.js` and rewired imports/exports.
+- Continued theme-manager refactor: extracted theme marketplace fetch logic into `js/theme-manager/marketplace-utils.js`, and moved theme upload/webhook handling into `js/theme-manager/theme-share-utils.js`.
+- Continued theme-manager refactor: moved basic brand control helpers into `js/theme-manager/brand-controls-utils.js`.
+- Continued theme-manager refactor: moved marketplace rendering into `js/theme-manager/marketplace-view.js`, and moved theme list UI (selector + list rendering) into `js/theme-manager/theme-library-view.js`.
+- Continued theme-manager refactor: moved glass/corner appearance helpers into `js/theme-manager/theme-style-utils.js`.
+- Continued theme-manager refactor: moved background application logic into `js/theme-manager/theme-background-apply.js`.
+- Continued theme-manager refactor: moved editor form wiring + LLM theme apply into `js/theme-manager/theme-editor-controls.js`.
+- Continued theme-manager refactor: moved background image listeners/slot handling into `js/theme-manager/theme-background-editor.js`.
+- Continued theme-manager refactor: moved save/edit/delete theme actions into `js/theme-manager/theme-actions.js`.
+- Continued theme-manager refactor: moved form helpers and color-picker listeners into `js/theme-manager/theme-form-utils.js`.
+- Continued theme-manager refactor: moved splash theme sync into `js/theme-manager/theme-splash-utils.js` and theme toggle helpers into `js/theme-manager/theme-toggle-utils.js`.
+- Extended emubro-resources configs with launcher import metadata (Steam/Epic/GOG) on Windows platform and Linux package-manager install hints for PCSX2.
+- Extended emubro-resources configs across multiple platforms with Linux Flatpak/APT install hints for RetroArch cores, Dolphin, and PPSSPP.
+- Continued refactors: extracted theme control helpers into `js/theme-manager/theme-controls-utils.js` and moved game launch picker UI into `js/game-manager/launch-picker.js`.
+- Continued game-manager refactor: moved search/filter utilities into `js/game-manager/game-search.js`, `js/game-manager/game-filters.js`, and render helpers into `js/game-manager/render-utils.js`, wiring `js/game-manager.js` to delegate.
+- Continued theme-manager refactor: extracted editor preview helpers into `js/theme-manager/theme-editor-preview.js`, editor mode toggles into `js/theme-manager/theme-editor-mode.js`, modal drag utilities into `js/theme-manager/theme-modal-utils.js`, and theme runtime logo-brand resolution into `js/theme-manager/theme-runtime-utils.js`.
+- Added Linux package-manager install wiring for emulator downloads (Flatpak/APT) with user choice prompt, and extended emulator catalog payloads to include installer metadata.
+- Added launcher import flow scaffolding: main-process scanner/importer for Steam/Epic (filesystem manifests), launcher URI launch handling, and library settings UI to trigger launcher scans/imports.
+- Added APT sudo-friendly fallback (open terminal if needed), GOG Galaxy sqlite scanning + Heroic cache scanning, and launcher import modal dedupe/badges for already-imported games.
+- Added launcher URI fallback execution (open launcher executable when scheme fails), installed-only filtering in launcher import UI, per-launcher tags on import, and preload allowlist entries for launcher scan/import IPC.
+- Adjusted header drag region sizing and search container flex so the space between search and theme controls is draggable (header spacing tweaks in `scss/_header.scss`).
+- Extracted game/filters/launch-candidate helpers from `js/game-manager.js` into `js/game-manager/game-utils.js`, `js/game-manager/filters-utils.js`, and `js/game-manager/launch-candidate-utils.js`, and rewired imports.
+- Began `js/game-manager.js` refactor by extracting runtime data rule normalization into `js/game-manager/runtime-data-utils.js` and wiring the import.
 - Fixed the long-running renderer RAM growth that occurred when switching themes in Library/Cover view:
   - Identified as native renderer/compositor pressure (not a JS heap leak); JS heap stayed stable while renderer RSS/private memory grew
   - Reduced cover virtualization residency in `js/game-manager.js` (smaller cover batch and fewer resident chunks)
@@ -46,6 +73,15 @@ The current focus is on updating project documentation and maintaining the codeb
 - Implemented automatic webhook re-configuration when theme upload fails (e.g., if webhook is deleted on Discord)
 - Fixed Language Manager UI layout issues where long text caused rows to look weird
 - Improved Language Manager editor styling (grid layout, spacing, and font sizes)
+- Fixed GitHub Release workflow:
+  - Added `permissions: contents: write` to the release job to allow artifact upload and release creation
+  - Added `npm run sync:resources` step to CI build to ensure `emubro-resources` are present during packaging
+  - Explicitly linked `electron-builder.config.js` in packaging commands
+  - Fixed Linux build error by switching to PNG icon (`icon.png`) as ICO is not supported by `app-builder` on Linux
+  - Resolved GitHub API race conditions (404 Not Found on asset delete/overwrite) by switching to `--publish onTag` and performing clean tag resets
+  - Ensured release visibility by explicitly setting `releaseType: "release"` in `electron-builder.config.js`
+  - Added explicit artifact upload step for CI debugging and fallback access
+  - Modernized `sass-loader` configuration in `webpack.config.js` to address missing CSS in production builds
 - Committed documentation and core feature enhancements to git
 - Updated `index.html` title to use localized `app.title` via i18n
 - Implemented Language Manager with progress tracking, editing, and creation capabilities

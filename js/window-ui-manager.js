@@ -15,6 +15,18 @@ export function setupWindowControls(options = {}) {
     const header = document.querySelector('header.header');
     let appUpdateAvailable = false;
     let resourcesUpdateAvailable = false;
+    const isUpdateFlagTrue = (value) => {
+        if (value === true) return true;
+        if (value === false || value == null) return false;
+        if (typeof value === 'number') return value > 0;
+        const normalized = String(value).trim().toLowerCase();
+        return normalized === 'true'
+            || normalized === '1'
+            || normalized === 'yes'
+            || normalized === 'available'
+            || normalized === 'downloaded'
+            || normalized === 'update_available';
+    };
 
     if (minBtn) minBtn.addEventListener('click', () => emubro.invoke('window:minimize'));
     if (closeBtn) closeBtn.addEventListener('click', () => emubro.invoke('window:close'));
@@ -47,7 +59,11 @@ export function setupWindowControls(options = {}) {
         const hasUpdate = appUpdateAvailable || resourcesUpdateAvailable;
         updateBtn.hidden = !hasUpdate;
         updateBtn.classList.toggle('has-update', hasUpdate);
-        if (!hasUpdate) return;
+        if (!hasUpdate) {
+            updateBtn.removeAttribute('title');
+            updateBtn.setAttribute('aria-label', 'Updates');
+            return;
+        }
 
         let label = 'Updates available';
         if (appUpdateAvailable && resourcesUpdateAvailable) label = 'App and resources updates available';
@@ -72,28 +88,28 @@ export function setupWindowControls(options = {}) {
 
     if (typeof emubro.onUpdateStatus === 'function') {
         emubro.onUpdateStatus((payload = {}) => {
-            appUpdateAvailable = !!payload?.available || !!payload?.downloaded;
+            appUpdateAvailable = isUpdateFlagTrue(payload?.available) || isUpdateFlagTrue(payload?.downloaded);
             syncUpdateBadge();
         });
     }
 
     if (typeof emubro.onResourcesUpdateStatus === 'function') {
         emubro.onResourcesUpdateStatus((payload = {}) => {
-            resourcesUpdateAvailable = !!payload?.available;
+            resourcesUpdateAvailable = isUpdateFlagTrue(payload?.available);
             syncUpdateBadge();
         });
     }
 
     Promise.resolve(emubro?.updates?.getState?.())
         .then((state) => {
-            appUpdateAvailable = !!state?.available || !!state?.downloaded;
+            appUpdateAvailable = isUpdateFlagTrue(state?.available) || isUpdateFlagTrue(state?.downloaded);
             syncUpdateBadge();
         })
         .catch(() => {});
 
     Promise.resolve(emubro?.resourcesUpdates?.getState?.())
         .then((state) => {
-            resourcesUpdateAvailable = !!state?.available;
+            resourcesUpdateAvailable = isUpdateFlagTrue(state?.available);
             syncUpdateBadge();
         })
         .catch(() => {});
@@ -111,27 +127,146 @@ export function setupHeaderThemeControlsToggle(options = {}) {
     const themeCompactQuery = window.matchMedia('(max-width: 1500px)');
     const languageCompactQuery = window.matchMedia('(max-width: 1320px)');
     const themeSelect = options.themeSelect || document.getElementById('theme-select');
+    const themeManagerBtn = document.getElementById('theme-manager-btn');
+    const themeToggleBtn = document.getElementById('theme-toggle-btn');
+    const invertColorsBtn = document.getElementById('invert-colors-btn');
     const languageManagerBtn = document.getElementById('language-manager-btn');
+    const languageOptions = document.getElementById('language-options');
 
     const initCompactWrapper = ({
         wrapperSelector,
         toggleId,
-        panelId,
         compactQuery,
+        menuAriaLabel,
+        buildBlocks,
         closeOnChangeElement = null
     }) => {
         const wrapper = document.querySelector(wrapperSelector);
         const toggleBtn = document.getElementById(toggleId);
-        const panel = document.getElementById(panelId);
-        if (!wrapper || !toggleBtn || !panel) return () => {};
+        if (!wrapper || !toggleBtn || typeof buildBlocks !== 'function') {
+            return { close: () => {}, isOpen: () => false, rerender: () => {} };
+        }
+
+        let floatingMenuEl = null;
+
+        const createOptionButton = ({ label, active = false, onClick }) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'filter-pair-compact-option';
+            if (active) btn.classList.add('is-active');
+            btn.textContent = String(label || '').trim();
+            btn.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                if (typeof onClick === 'function') onClick();
+            });
+            return btn;
+        };
+
+        const createCompactBlock = (title, options = []) => {
+            const normalizedOptions = Array.isArray(options) ? options : [];
+            if (normalizedOptions.length === 0) return null;
+
+            const block = document.createElement('div');
+            block.className = 'filter-pair-compact-block';
+
+            const label = document.createElement('div');
+            label.className = 'filter-pair-compact-label';
+            label.textContent = String(title || 'Options');
+            block.appendChild(label);
+
+            const optionsWrap = document.createElement('div');
+            optionsWrap.className = 'filter-pair-compact-options';
+            normalizedOptions.forEach((entry) => {
+                const btn = createOptionButton(entry);
+                if (!btn.textContent) return;
+                optionsWrap.appendChild(btn);
+            });
+
+            if (optionsWrap.childElementCount === 0) return null;
+            block.appendChild(optionsWrap);
+            return block;
+        };
+
+        const destroyFloatingMenu = () => {
+            if (!floatingMenuEl) return;
+            try {
+                floatingMenuEl.remove();
+            } catch (_error) {}
+            floatingMenuEl = null;
+        };
+
+        const positionFloatingMenu = () => {
+            if (!floatingMenuEl || !toggleBtn) return;
+            const rect = toggleBtn.getBoundingClientRect();
+            const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+            const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+            const margin = 8;
+
+            const maxWidth = Math.max(220, viewportWidth - (margin * 2));
+            const preferredWidth = Math.max(240, Math.min(560, Math.round(rect.width + 240)));
+            floatingMenuEl.style.width = `${Math.min(preferredWidth, maxWidth)}px`;
+            floatingMenuEl.style.maxWidth = `${maxWidth}px`;
+
+            floatingMenuEl.style.left = `${Math.max(margin, rect.left)}px`;
+            floatingMenuEl.style.top = `${Math.max(margin, rect.bottom + 6)}px`;
+
+            const menuRect = floatingMenuEl.getBoundingClientRect();
+            let left = rect.left;
+            if (left + menuRect.width > viewportWidth - margin) {
+                left = viewportWidth - margin - menuRect.width;
+            }
+            if (left < margin) left = margin;
+
+            let top = rect.bottom + 6;
+            if (top + menuRect.height > viewportHeight - margin) {
+                top = rect.top - menuRect.height - 6;
+            }
+            if (top < margin) top = margin;
+
+            floatingMenuEl.style.left = `${Math.round(left)}px`;
+            floatingMenuEl.style.top = `${Math.round(top)}px`;
+        };
 
         const setOpenState = (open) => {
             const shouldOpen = !!open && compactQuery.matches;
             wrapper.classList.toggle('is-open', shouldOpen);
             toggleBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+            if (shouldOpen) {
+                const menu = document.createElement('div');
+                menu.className = 'filter-pair-floating-menu header-compact-floating-menu';
+                menu.setAttribute('role', 'dialog');
+                menu.setAttribute('aria-label', String(menuAriaLabel || 'Options'));
+
+                const blocks = buildBlocks({
+                    close: () => setOpenState(false),
+                    createCompactBlock
+                });
+                (Array.isArray(blocks) ? blocks : []).forEach((block) => {
+                    if (block) menu.appendChild(block);
+                });
+
+                if (menu.childElementCount === 0) {
+                    wrapper.classList.remove('is-open');
+                    toggleBtn.setAttribute('aria-expanded', 'false');
+                    destroyFloatingMenu();
+                    return;
+                }
+
+                destroyFloatingMenu();
+                document.body.appendChild(menu);
+                floatingMenuEl = menu;
+                positionFloatingMenu();
+            } else {
+                destroyFloatingMenu();
+            }
         };
 
         const closePanel = () => setOpenState(false);
+        const rerenderPanel = () => {
+            if (!wrapper.classList.contains('is-open')) return;
+            setOpenState(true);
+        };
 
         toggleBtn.addEventListener('click', (event) => {
             if (!compactQuery.matches) return;
@@ -143,55 +278,220 @@ export function setupHeaderThemeControlsToggle(options = {}) {
         document.addEventListener('click', (event) => {
             if (!compactQuery.matches || !wrapper.classList.contains('is-open')) return;
             if (wrapper.contains(event.target)) return;
+            if (floatingMenuEl && floatingMenuEl.contains(event.target)) return;
             closePanel();
         });
 
         if (closeOnChangeElement) {
             closeOnChangeElement.addEventListener('change', closePanel);
+            closeOnChangeElement.addEventListener('change', rerenderPanel);
         }
 
-        return closePanel;
+        window.addEventListener('resize', () => {
+            if (!wrapper.classList.contains('is-open')) return;
+            if (!compactQuery.matches) {
+                closePanel();
+                return;
+            }
+            positionFloatingMenu();
+        });
+
+        window.addEventListener('scroll', () => {
+            if (!wrapper.classList.contains('is-open')) return;
+            positionFloatingMenu();
+        }, true);
+
+        return {
+            close: closePanel,
+            isOpen: () => wrapper.classList.contains('is-open'),
+            rerender: rerenderPanel
+        };
     };
 
-    const closeThemePanel = initCompactWrapper({
+    const themePanelController = initCompactWrapper({
         wrapperSelector: '.theme-toggle-wrapper',
         toggleId: 'theme-controls-toggle',
-        panelId: 'theme-controls-content',
         compactQuery: themeCompactQuery,
+        menuAriaLabel: 'Theme options',
+        buildBlocks: ({ close, createCompactBlock }) => {
+            const blocks = [];
+            const themeOptions = Array.from(themeSelect?.options || [])
+                .map((optionEl) => ({
+                    value: String(optionEl.value || '').trim(),
+                    label: String(optionEl.textContent || '').trim()
+                }))
+                .filter((entry) => entry.value && entry.label);
+
+            if (themeOptions.length > 0) {
+                const currentValue = String(themeSelect?.value || '').trim();
+                const themeBlock = createCompactBlock(
+                    'Theme',
+                    themeOptions.map((entry) => ({
+                        label: entry.label,
+                        active: currentValue === entry.value,
+                        onClick: () => {
+                            if (!themeSelect) {
+                                close();
+                                return;
+                            }
+                            if (themeSelect.value === entry.value) {
+                                close();
+                                return;
+                            }
+                            themeSelect.value = entry.value;
+                            themeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                            close();
+                        }
+                    }))
+                );
+                if (themeBlock) blocks.push(themeBlock);
+            }
+
+            const actionOptions = [];
+            if (themeToggleBtn) {
+                actionOptions.push({
+                    label: 'Toggle Light/Dark',
+                    active: false,
+                    onClick: () => {
+                        themeToggleBtn.click();
+                        close();
+                    }
+                });
+            }
+            if (invertColorsBtn) {
+                actionOptions.push({
+                    label: String(invertColorsBtn.title || 'Invert Colors'),
+                    active: false,
+                    onClick: () => {
+                        invertColorsBtn.click();
+                        close();
+                    }
+                });
+            }
+            if (themeManagerBtn) {
+                actionOptions.push({
+                    label: 'Manage Themes',
+                    active: false,
+                    onClick: () => {
+                        themeManagerBtn.click();
+                        close();
+                    }
+                });
+            }
+            const actionsBlock = createCompactBlock('Actions', actionOptions);
+            if (actionsBlock) blocks.push(actionsBlock);
+
+            return blocks;
+        },
         closeOnChangeElement: themeSelect
     });
-    const closeLanguagePanel = initCompactWrapper({
+    const languagePanelController = initCompactWrapper({
         wrapperSelector: '.language-controls-wrapper',
         toggleId: 'language-controls-toggle',
-        panelId: 'language-controls-content',
-        compactQuery: languageCompactQuery
+        compactQuery: languageCompactQuery,
+        menuAriaLabel: 'Language options',
+        buildBlocks: ({ close, createCompactBlock }) => {
+            const blocks = [];
+            const i18nRef = (() => {
+                if (typeof window !== 'undefined' && window.i18n) return window.i18n;
+                try {
+                    // eslint-disable-next-line no-undef
+                    return typeof i18n !== 'undefined' ? i18n : null;
+                } catch (_e) {
+                    return null;
+                }
+            })();
+            const currentLanguage = String(
+                i18nRef?.getLanguage?.()
+                || localStorage.getItem('language')
+                || ''
+            ).trim().toLowerCase();
+
+            const languageEntries = Array.from(languageOptions?.querySelectorAll?.('li[data-value]') || [])
+                .map((li) => {
+                    const value = String(li.dataset.value || '').trim().toLowerCase();
+                    const nameNode = li.querySelector('span:last-child');
+                    const label = String(nameNode?.textContent || li.textContent || '').trim();
+                    return { value, label, node: li };
+                })
+                .filter((entry) => entry.value && entry.label);
+
+            if (languageEntries.length > 0) {
+                const languageBlock = createCompactBlock(
+                    'Language',
+                    languageEntries.map((entry) => ({
+                        label: entry.label,
+                        active: currentLanguage === entry.value,
+                        onClick: () => {
+                            if (currentLanguage === entry.value) {
+                                close();
+                                return;
+                            }
+                            if (i18nRef && typeof i18nRef.setLanguage === 'function') {
+                                i18nRef.setLanguage(entry.value);
+                            } else if (entry.node) {
+                                entry.node.click();
+                            }
+                            close();
+                        }
+                    }))
+                );
+                if (languageBlock) blocks.push(languageBlock);
+            }
+
+            if (languageManagerBtn) {
+                const actionsBlock = createCompactBlock('Actions', [{
+                    label: 'Manage Languages',
+                    active: false,
+                    onClick: () => {
+                        languageManagerBtn.click();
+                        close();
+                    }
+                }]);
+                if (actionsBlock) blocks.push(actionsBlock);
+            }
+
+            return blocks;
+        }
     });
 
-    const languageOptions = document.getElementById('language-options');
     if (languageOptions) {
         languageOptions.addEventListener('click', (event) => {
             if (!event.target?.closest?.('li')) return;
-            closeLanguagePanel();
+            languagePanelController.close();
         });
     }
     if (languageManagerBtn) {
         languageManagerBtn.addEventListener('click', () => {
-            closeLanguagePanel();
+            languagePanelController.close();
+        });
+    }
+
+    const themeToggle = document.getElementById('theme-controls-toggle');
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            languagePanelController.close();
+        });
+    }
+    const languageToggle = document.getElementById('language-controls-toggle');
+    if (languageToggle) {
+        languageToggle.addEventListener('click', () => {
+            themePanelController.close();
         });
     }
 
     document.addEventListener('keydown', (event) => {
         if (event.key !== 'Escape') return;
-        closeThemePanel();
-        closeLanguagePanel();
+        themePanelController.close();
+        languagePanelController.close();
     });
 
     const syncLayout = () => {
         if (!themeCompactQuery.matches) {
-            closeThemePanel();
+            themePanelController.close();
         }
         if (!languageCompactQuery.matches) {
-            closeLanguagePanel();
+            languagePanelController.close();
         }
     };
 

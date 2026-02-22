@@ -9,7 +9,12 @@ export function createEmulatorDownloadActions(deps = {}) {
     const alertUser = typeof deps.alertUser === 'function'
         ? deps.alertUser
         : ((msg) => window.alert(String(msg || '')));
+    const getRuntimePlatform = typeof deps.getRuntimePlatform === 'function'
+        ? deps.getRuntimePlatform
+        : () => String(window?.emubro?.platform || '').trim().toLowerCase();
     const DOWNLOADED_EMULATOR_PACKAGES_STORAGE_KEY = 'emuBro.downloadedEmulatorPackages.v1';
+    const LINUX_INSTALL_METHOD_KEY = 'emuBro.linuxInstallMethod';
+    const LINUX_INSTALL_REMEMBER_KEY = 'emuBro.linuxInstallMethodRemember';
 
     function loadDownloadedPackageMap() {
         try {
@@ -61,6 +66,130 @@ export function createEmulatorDownloadActions(deps = {}) {
         if (normalized === 'archive') return 'Archive';
         if (normalized === 'executable') return 'Executable';
         return 'Package';
+    }
+
+    function getLinuxInstallerOptions(emulator) {
+        const installers = emulator?.installers && typeof emulator.installers === 'object'
+            ? emulator.installers
+            : null;
+        const linux = installers?.linux && typeof installers.linux === 'object' ? installers.linux : null;
+        const options = [];
+        if (linux?.flatpak) options.push({ method: 'flatpak', label: 'Flatpak (Flathub)' });
+        if (linux?.apt) options.push({ method: 'apt', label: 'APT/DEB repo' });
+        return options;
+    }
+
+    function loadRememberedLinuxInstallMethod() {
+        try {
+            const remember = localStorageRef.getItem(LINUX_INSTALL_REMEMBER_KEY) === 'true';
+            if (!remember) return '';
+            return String(localStorageRef.getItem(LINUX_INSTALL_METHOD_KEY) || '').trim().toLowerCase();
+        } catch (_e) {
+            return '';
+        }
+    }
+
+    function saveRememberedLinuxInstallMethod(method, remember) {
+        try {
+            localStorageRef.setItem(LINUX_INSTALL_REMEMBER_KEY, remember ? 'true' : 'false');
+            if (remember) {
+                localStorageRef.setItem(LINUX_INSTALL_METHOD_KEY, String(method || 'download'));
+            }
+        } catch (_e) {}
+    }
+
+    function promptLinuxInstallMethod(emulator) {
+        const runtimePlatform = getRuntimePlatform();
+        if (runtimePlatform !== 'linux') return Promise.resolve('download');
+        const options = getLinuxInstallerOptions(emulator);
+        if (options.length === 0) return Promise.resolve('download');
+
+        const remembered = loadRememberedLinuxInstallMethod();
+        if (remembered === 'flatpak' || remembered === 'apt' || remembered === 'download') {
+            return Promise.resolve(remembered);
+        }
+
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.className = 'emulator-config-overlay';
+
+            const modal = document.createElement('div');
+            modal.className = 'emulator-config-modal glass emulator-download-choice-modal';
+
+            const title = document.createElement('h3');
+            title.textContent = `Install on Linux: ${emulator?.name || 'Emulator'}`;
+
+            const hint = document.createElement('p');
+            hint.className = 'emulator-download-choice-hint';
+            hint.textContent = 'Choose how you want to install this emulator. APT installs may prompt for sudo.';
+
+            const list = document.createElement('div');
+            list.className = 'emulator-download-choice-list';
+
+            const directBtn = document.createElement('button');
+            directBtn.type = 'button';
+            directBtn.className = 'action-btn emulator-download-choice-btn launch-btn';
+            directBtn.dataset.installMethod = 'download';
+            directBtn.innerHTML = `
+                <span class="emulator-download-choice-label">Direct Download (Recommended)</span>
+                <span class="emulator-download-choice-file">Use the built-in download/install flow</span>
+            `;
+            list.appendChild(directBtn);
+
+            options.forEach((entry) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'action-btn emulator-download-choice-btn';
+                button.dataset.installMethod = entry.method;
+                button.innerHTML = `
+                <span class="emulator-download-choice-label">${escapeHtml(entry.label)}</span>
+                <span class="emulator-download-choice-file">Install via system package manager</span>
+            `;
+                list.appendChild(button);
+            });
+
+            const rememberRow = document.createElement('label');
+            rememberRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin-top:6px;';
+            rememberRow.innerHTML = `
+                <input type="checkbox" id="linux-install-remember" />
+                <span>Remember my choice for Linux installs</span>
+            `;
+
+            const actions = document.createElement('div');
+            actions.className = 'emulator-config-actions';
+
+            const cancelBtn = document.createElement('button');
+            cancelBtn.type = 'button';
+            cancelBtn.className = 'action-btn remove-btn';
+            cancelBtn.textContent = 'Cancel';
+
+            actions.appendChild(cancelBtn);
+            modal.appendChild(title);
+            modal.appendChild(hint);
+            modal.appendChild(list);
+            modal.appendChild(rememberRow);
+            modal.appendChild(actions);
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            const close = (value) => {
+                overlay.remove();
+                resolve(value || '');
+            };
+
+            overlay.addEventListener('click', (event) => {
+                if (event.target === overlay) close('');
+            });
+            cancelBtn.addEventListener('click', () => close(''));
+            list.querySelectorAll('[data-install-method]').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const method = String(btn.dataset.installMethod || '').trim().toLowerCase();
+                    const remember = !!modal.querySelector('#linux-install-remember')?.checked;
+                    saveRememberedLinuxInstallMethod(method, remember);
+                    close(method);
+                });
+            });
+        });
     }
 
     function promptEmulatorDownloadType(emulator, optionsPayload = {}) {
@@ -158,6 +287,8 @@ export function createEmulatorDownloadActions(deps = {}) {
 
     async function downloadAndInstallEmulatorAction(emulator) {
         try {
+            const linuxInstallChoice = await promptLinuxInstallMethod(emulator);
+            if (!linuxInstallChoice) return false;
             const payload = {
                 name: emulator?.name || '',
                 platform: emulator?.platform || '',
@@ -174,7 +305,9 @@ export function createEmulatorDownloadActions(deps = {}) {
                 setupFileMatchMac: emulator?.setupFileMatchMac || '',
                 executableFileMatchWin: emulator?.executableFileMatchWin || '',
                 executableFileMatchLinux: emulator?.executableFileMatchLinux || '',
-                executableFileMatchMac: emulator?.executableFileMatchMac || ''
+                executableFileMatchMac: emulator?.executableFileMatchMac || '',
+                installers: emulator?.installers || null,
+                installMethod: linuxInstallChoice === 'flatpak' || linuxInstallChoice === 'apt' ? linuxInstallChoice : 'download'
             };
 
             let selectedPackageType = '';
@@ -182,6 +315,19 @@ export function createEmulatorDownloadActions(deps = {}) {
             let waybackSourceUrl = '';
             let waybackUrl = '';
             try {
+                if (payload.installMethod !== 'download') {
+                    const result = await emubro.invoke('download-install-emulator', {
+                        ...payload,
+                        packageType: '',
+                        useWaybackFallback: false
+                    });
+                    if (!result?.success) {
+                        alertUser(result?.message || 'Failed to install emulator.');
+                        return false;
+                    }
+                    alertUser(result?.message || 'Emulator install finished.');
+                    return true;
+                }
                 const optionsResult = await emubro.invoke('get-emulator-download-options', payload);
                 if (optionsResult?.success) {
                     const selection = await promptEmulatorDownloadType(emulator, optionsResult);

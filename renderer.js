@@ -48,7 +48,7 @@ import {
 } from './js/game-manager';
 import { showToolView } from './js/tools-manager';
 import { showSupportView } from './js/support-manager';
-import { showCommunityView } from './js/community-manager';
+import { showCommunityView, teardownCommunityView } from './js/community-manager';
 import { showGlassMessageDialog } from './js/ui/glass-message-dialog';
 import { openGlobalLlmTaggingSetupModal, createGlobalLlmProgressDialog } from './js/ui/llm-tagging-dialogs';
 import { renderSuggestionResults as renderSuggestionResultsView } from './js/suggested-results-view';
@@ -440,8 +440,13 @@ function setActiveRailTarget(target) {
 }
 
 function setAppMode(mode) {
+    const previousTopSection = activeTopSection;
     const normalized = String(mode || 'library').trim().toLowerCase();
     activeTopSection = normalized || 'library';
+
+    if (previousTopSection === 'community' && activeTopSection !== 'community') {
+        teardownCommunityView();
+    }
 
     const isLibrary = activeTopSection === 'library';
     const viewControls = document.querySelector('.view-controls');
@@ -494,6 +499,23 @@ async function saveLibraryPathSettings(settings) {
   return result.settings || payload;
 }
 
+async function refreshGamesAfterImport() {
+    try {
+        const updatedGames = await emubro.invoke('get-games');
+        setGames(updatedGames);
+        setFilteredGames([...updatedGames]);
+        applyFilters(false);
+        if (typeof renderActiveLibraryView === 'function') {
+            await renderActiveLibraryView();
+        } else {
+            renderGames(getFilteredGames());
+        }
+        updateLibraryCounters();
+    } catch (error) {
+        log.error('Failed to refresh games after import:', error);
+    }
+}
+
 function normalizePathList(values) {
     const out = [];
     const seen = new Set();
@@ -537,7 +559,8 @@ async function openLibraryPathSettingsModal(options = {}) {
         suggestedSectionKey: SUGGESTED_SECTION_KEY,
         loadSuggestionSettings,
         saveSuggestionSettings,
-        initialTab: options?.initialTab
+        initialTab: options?.initialTab,
+        refreshGamesAfterImport
     });
 }
 

@@ -41,15 +41,38 @@
                         title="Clear search"
                     >&times;</button>
                 </div>
-                <div class="header-inline-drag-gap" aria-hidden="true"></div>
+                <div class="header-search-theme-drag-gap" aria-hidden="true"></div>
                 <div class="theme-toggle-wrapper">
                     <button id="theme-controls-toggle" class="theme-controls-toggle" type="button" aria-expanded="false" aria-controls="theme-controls-content" data-i18n="theme.themeManager">Theme</button>
-                    <div id="theme-controls-content" class="theme-controls-content">
+                    <div id="theme-controls-content" class="theme-controls-content header-compact-menu">
                         <div class="form-group dropdown-with-button-wrapper">
                             <select id="theme-select">
                                 <option value="dark" data-i18n="theme.darkTheme"></option>
                                 <option value="light" data-i18n="theme.lightTheme"></option>
                             </select>
+                            <button id="theme-toggle-btn" class="theme-toggle icon-only-btn" title="Toggle Light/Dark Mode" aria-label="Toggle Light/Dark Mode" data-i18n-title="header.toggleTheme" data-i18n-aria-label="header.toggleTheme">
+                                <span class="icon-svg" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24">
+                                        <circle cx="12" cy="12" r="4"></circle>
+                                        <path d="M12 2v2"></path>
+                                        <path d="M12 20v2"></path>
+                                        <path d="m4.9 4.9 1.4 1.4"></path>
+                                        <path d="m17.7 17.7 1.4 1.4"></path>
+                                        <path d="M2 12h2"></path>
+                                        <path d="M20 12h2"></path>
+                                        <path d="m4.9 19.1 1.4-1.4"></path>
+                                        <path d="m17.7 6.3 1.4-1.4"></path>
+                                    </svg>
+                                </span>
+                            </button>
+                            <button id="invert-colors-btn" class="theme-toggle icon-only-btn" title="Invert Colors" aria-label="Invert Colors" data-i18n-title="theme.invertColors" data-i18n-aria-label="theme.invertColors">
+                                <span class="icon-svg" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24">
+                                        <circle cx="12" cy="12" r="9"></circle>
+                                        <path d="M12 3a9 9 0 0 0 0 18V3Z"></path>
+                                    </svg>
+                                </span>
+                            </button>
                             <button id="theme-manager-btn" class="theme-manager-btn icon-only-btn" title="Manage Themes" aria-label="Manage Themes" data-i18n-title="header.manageThemes" data-i18n-aria-label="header.manageThemes">
                                 <span class="icon-svg" aria-hidden="true">
                                     <svg viewBox="0 0 24 24">
@@ -59,35 +82,13 @@
                                 </span>
                             </button>
                         </div>
-                        <button id="theme-toggle-btn" class="theme-toggle icon-only-btn" title="Toggle Light/Dark Mode" aria-label="Toggle Light/Dark Mode" data-i18n-title="header.toggleTheme" data-i18n-aria-label="header.toggleTheme">
-                            <span class="icon-svg" aria-hidden="true">
-                                <svg viewBox="0 0 24 24">
-                                    <circle cx="12" cy="12" r="4"></circle>
-                                    <path d="M12 2v2"></path>
-                                    <path d="M12 20v2"></path>
-                                    <path d="m4.9 4.9 1.4 1.4"></path>
-                                    <path d="m17.7 17.7 1.4 1.4"></path>
-                                    <path d="M2 12h2"></path>
-                                    <path d="M20 12h2"></path>
-                                    <path d="m4.9 19.1 1.4-1.4"></path>
-                                    <path d="m17.7 6.3 1.4-1.4"></path>
-                                </svg>
-                            </span>
-                        </button>
-                        <button id="invert-colors-btn" class="theme-toggle icon-only-btn" title="Invert Colors" aria-label="Invert Colors" data-i18n-title="theme.invertColors" data-i18n-aria-label="theme.invertColors">
-                            <span class="icon-svg" aria-hidden="true">
-                                <svg viewBox="0 0 24 24">
-                                    <circle cx="12" cy="12" r="9"></circle>
-                                    <path d="M12 3a9 9 0 0 0 0 18V3Z"></path>
-                                </svg>
-                            </span>
-                        </button>
                     </div>
                 </div>
+                <div class="header-inline-drag-gap" aria-hidden="true"></div>
                 <div class="form-group language-selector-wrapper">
                     <div class="language-controls-wrapper">
                         <button id="language-controls-toggle" class="language-controls-toggle" type="button" aria-expanded="false" aria-controls="language-controls-content" data-i18n="language.tabs.languages">Languages</button>
-                        <div id="language-controls-content" class="language-controls-content">
+                        <div id="language-controls-content" class="language-controls-content header-compact-menu">
                             <div class="form-group dropdown-with-button-wrapper">
                                 <div id="language-dropdown" class="custom-select" title="Select Language" data-i18n-title="language.selectLanguage">
                                     <div class="selected-option">
@@ -1168,6 +1169,15 @@
                             <label class="lang-live-edit-toggle">
                                 <input type="checkbox" id="lang-translate-llm-retranslate-existing" />
                                 <span data-i18n="language.translateLlmRetranslateExisting">Retranslate existing</span>
+                            </label>
+
+                            <label class="lang-translate-guidance" for="lang-translate-llm-style-hint">
+                                <span>Translation style</span>
+                                <input
+                                    type="text"
+                                    id="lang-translate-llm-style-hint"
+                                    placeholder="e.g. English but more casual and compact"
+                                />
                             </label>
 
                             <button id="lang-translate-llm-btn" class="action-btn small" type="button" data-i18n="language.translateWithLlm">Translate with LLM</button>

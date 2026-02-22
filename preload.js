@@ -84,6 +84,8 @@ const ALLOWED_INVOKE = new Set([
   "cue:generate-for-bin",
   "detect-emulator-exe",
   "import-exe",
+  "launcher:scan-games",
+  "launcher:import-games",
   "settings:get-library-paths",
   "settings:set-library-paths",
   "settings:get-runtime-data-rules",

@@ -76,6 +76,7 @@ function createEmulatorCatalogService(deps = {}) {
           runCommandsBefore: Array.isArray(emu?.runCommandsBefore)
             ? emu.runCommandsBefore.map((cmd) => String(cmd || "").trim()).filter(Boolean)
             : [],
+          installers: (emu?.installers && typeof emu.installers === "object") ? emu.installers : null,
           supportedFileTypes: Array.isArray(emu?.supportedFileTypes)
             ? emu.supportedFileTypes.map((ext) => String(ext || "").trim()).filter(Boolean)
             : [],
@@ -166,6 +167,7 @@ function createEmulatorCatalogService(deps = {}) {
         runCommandsBefore: Array.isArray(emu?.runCommandsBefore)
           ? emu.runCommandsBefore.map((cmd) => String(cmd || "").trim()).filter(Boolean)
           : [],
+        installers: (emu?.installers && typeof emu.installers === "object") ? emu.installers : null,
         supportedFileTypes: Array.isArray(emu?.supportedFileTypes)
           ? emu.supportedFileTypes.map((ext) => String(ext || "").trim()).filter(Boolean)
           : [],

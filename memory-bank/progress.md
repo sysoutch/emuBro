@@ -7,6 +7,8 @@
 - Language Manager (Edit, Create, Progress Tracking)
 - Custom Language Dropdown with Flag Icons
 - Language Manager UI layout fix for long text content
+- Fixed GitHub Release workflow with proper permissions, resource syncing, Linux icon fixes, and race condition prevention
+- Modernized Webpack Sass configuration to ensure CSS is correctly applied in production builds
 - Hardcoded Webhook URL base in validation to avoid translation issues
 - Implemented translation fallback to English for missing keys in other locales
 - Project structure with memory-bank documentation system
@@ -35,6 +37,33 @@
 - Deployment procedures and packaging
 
 ## Recent Changes
+- Continued game-manager refactor: moved slideshow/random views and grouped/incremental rendering into `js/game-manager/views/` and `js/game-manager/rendering/`.
+- Continued theme-manager refactor: moved LLM control helpers into `js/theme-manager/llm-utils.js`.
+- Continued theme-manager refactor: moved gradient/intensity helpers into `js/theme-manager/editor-utils.js` and background surface helpers into `js/theme-manager/background-editor-utils.js`.
+- Continued theme-manager refactor: extracted background layer editor rendering into `js/theme-manager/background-layer-editor.js`.
+- Continued theme-manager refactor: moved color collection/derived CSS variable helpers into `js/theme-manager/theme-color-utils.js` and rewired imports/exports.
+- Continued theme-manager refactor: extracted theme marketplace fetch logic into `js/theme-manager/marketplace-utils.js`, and moved theme upload/webhook handling into `js/theme-manager/theme-share-utils.js`.
+- Continued theme-manager refactor: moved basic brand control helpers into `js/theme-manager/brand-controls-utils.js`.
+- Continued theme-manager refactor: moved marketplace rendering into `js/theme-manager/marketplace-view.js`, and moved theme list UI (selector + list rendering) into `js/theme-manager/theme-library-view.js`.
+- Continued theme-manager refactor: moved glass/corner appearance helpers into `js/theme-manager/theme-style-utils.js`.
+- Continued theme-manager refactor: moved background application logic into `js/theme-manager/theme-background-apply.js`.
+- Continued theme-manager refactor: moved editor form wiring + LLM theme apply into `js/theme-manager/theme-editor-controls.js`.
+- Continued theme-manager refactor: moved background image listeners/slot handling into `js/theme-manager/theme-background-editor.js`.
+- Continued theme-manager refactor: moved save/edit/delete theme actions into `js/theme-manager/theme-actions.js`.
+- Continued theme-manager refactor: moved form helpers and color-picker listeners into `js/theme-manager/theme-form-utils.js`.
+- Continued theme-manager refactor: moved splash theme sync into `js/theme-manager/theme-splash-utils.js` and theme toggle helpers into `js/theme-manager/theme-toggle-utils.js`.
+- Extended emubro-resources configs with launcher import metadata (Steam/Epic/GOG) on Windows platform and Linux package-manager install hints for PCSX2.
+- Extended emubro-resources configs across multiple platforms with Linux Flatpak/APT install hints for RetroArch cores, Dolphin, and PPSSPP.
+- Continued refactors: moved theme control helpers into `js/theme-manager/theme-controls-utils.js` and moved game launch picker UI into `js/game-manager/launch-picker.js`.
+- Continued game-manager refactor: moved search/filter utilities into `js/game-manager/game-search.js`, `js/game-manager/game-filters.js`, and render helpers into `js/game-manager/render-utils.js`, wiring `js/game-manager.js` to delegate.
+- Continued theme-manager refactor: extracted editor preview helpers into `js/theme-manager/theme-editor-preview.js`, editor mode toggles into `js/theme-manager/theme-editor-mode.js`, modal drag utilities into `js/theme-manager/theme-modal-utils.js`, and theme runtime logo-brand resolution into `js/theme-manager/theme-runtime-utils.js`.
+- Added Linux package-manager install wiring for emulator downloads (Flatpak/APT) with user choice prompt, and extended emulator catalog payloads to include installer metadata.
+- Added launcher import flow scaffolding: main-process scanner/importer for Steam/Epic (filesystem manifests), launcher URI launch handling, and library settings UI to trigger launcher scans/imports.
+- Added APT sudo-friendly fallback (open terminal if needed), GOG Galaxy sqlite scanning + Heroic cache scanning, and launcher import modal dedupe/badges for already-imported games.
+- Added launcher URI fallback execution (open launcher executable when scheme fails), installed-only filtering in launcher import UI, per-launcher tags on import, and preload allowlist entries for launcher scan/import IPC.
+- Tweaked header drag region spacing and search container flex in `scss/_header.scss` so the search/theme gap is fully draggable.
+- Extracted `js/game-manager` helper modules: `game-utils.js`, `filters-utils.js`, and `launch-candidate-utils.js`, and rewired `js/game-manager.js` to use them.
+- Started `js/game-manager.js` refactor by moving runtime data rule normalization helpers into `js/game-manager/runtime-data-utils.js`.
 - Fixed infinite renderer RAM growth when switching themes in Library/Cover view:
   - Confirmed issue was native renderer/compositor memory pressure rather than JS heap growth
   - Tuned cover incremental rendering in `js/game-manager.js` to keep fewer chunks/cards resident

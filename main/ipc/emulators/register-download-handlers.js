@@ -32,7 +32,8 @@ function registerEmulatorDownloadHandlers(deps = {}) {
     downloadUrlToFile,
     findEmulatorBinaryInFolder,
     inferDownloadPackageTypeFromName,
-    isInstallerLikeName
+    isInstallerLikeName,
+    spawn
   } = deps;
 
   if (!ipcMain) throw new Error("registerEmulatorDownloadHandlers requires ipcMain");
@@ -64,6 +65,7 @@ function registerEmulatorDownloadHandlers(deps = {}) {
   if (typeof findEmulatorBinaryInFolder !== "function") throw new Error("registerEmulatorDownloadHandlers requires findEmulatorBinaryInFolder");
   if (typeof inferDownloadPackageTypeFromName !== "function") throw new Error("registerEmulatorDownloadHandlers requires inferDownloadPackageTypeFromName");
   if (typeof isInstallerLikeName !== "function") throw new Error("registerEmulatorDownloadHandlers requires isInstallerLikeName");
+  if (typeof spawn !== "function") throw new Error("registerEmulatorDownloadHandlers requires spawn");
 
   registerEmulatorDownloadOptionsHandler({
     ipcMain,
@@ -105,7 +107,8 @@ function registerEmulatorDownloadHandlers(deps = {}) {
     downloadUrlToFile,
     findEmulatorBinaryInFolder,
     inferDownloadPackageTypeFromName,
-    isInstallerLikeName
+    isInstallerLikeName,
+    spawn
   });
 }
 

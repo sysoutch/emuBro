@@ -38,6 +38,138 @@ function registerGameIpc(deps = {}) {
   if (!log) throw new Error("registerGameIpc requires log");
   if (!app) throw new Error("registerGameIpc requires app");
   if (!BrowserWindow) throw new Error("registerGameIpc requires BrowserWindow");
+
+  function tryLaunchExecutable(command, args = []) {
+    try {
+      const child = spawn(command, args, { stdio: "ignore", detached: true });
+      if (child && typeof child.unref === "function") child.unref();
+      return true;
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  function tryOpenLauncherFallback(gamePath) {
+    const raw = String(gamePath || "").toLowerCase();
+    const isSteam = raw.startsWith("steam://");
+    const isEpic = raw.startsWith("com.epicgames.launcher://");
+    const isGog = raw.startsWith("goggalaxy://");
+    const isHeroic = raw.startsWith("heroic://");
+    const platform = process.platform;
+
+    if (platform === "win32") {
+      const candidates = [];
+      if (isSteam) {
+        candidates.push(
+          "C:\\\\Program Files (x86)\\\\Steam\\\\steam.exe",
+          "C:\\\\Program Files\\\\Steam\\\\steam.exe"
+        );
+      }
+      if (isEpic) {
+        candidates.push(
+          "C:\\\\Program Files (x86)\\\\Epic Games\\\\Launcher\\\\Portal\\\\Binaries\\\\Win32\\\\EpicGamesLauncher.exe",
+          "C:\\\\Program Files (x86)\\\\Epic Games\\\\Launcher\\\\Portal\\\\Binaries\\\\Win64\\\\EpicGamesLauncher.exe",
+          "C:\\\\Program Files\\\\Epic Games\\\\Launcher\\\\Portal\\\\Binaries\\\\Win64\\\\EpicGamesLauncher.exe"
+        );
+      }
+      if (isGog) {
+        candidates.push(
+          "C:\\\\Program Files (x86)\\\\GOG Galaxy\\\\GalaxyClient.exe",
+          "C:\\\\Program Files\\\\GOG Galaxy\\\\GalaxyClient.exe"
+        );
+      }
+      if (isHeroic) {
+        candidates.push(
+          "C:\\\\Program Files\\\\Heroic\\\\Heroic.exe",
+          "C:\\\\Program Files (x86)\\\\Heroic\\\\Heroic.exe"
+        );
+      }
+      for (const candidate of candidates) {
+        if (fsSync.existsSync(candidate) && tryLaunchExecutable(candidate, [])) return true;
+      }
+      return false;
+    }
+
+    if (platform === "darwin") {
+      if (isSteam) return tryLaunchExecutable("open", ["-a", "Steam"]);
+      if (isEpic) return tryLaunchExecutable("open", ["-a", "Epic Games Launcher"]);
+      if (isGog) return tryLaunchExecutable("open", ["-a", "GOG Galaxy"]);
+      if (isHeroic) return tryLaunchExecutable("open", ["-a", "Heroic"]);
+      return false;
+    }
+
+    // Linux
+    if (isSteam) return tryLaunchExecutable("steam", []);
+    if (isHeroic || isEpic || isGog) return tryLaunchExecutable("heroic", []);
+    return false;
+  }
+
+  function tryOpenLauncherUri(uri) {
+    const target = String(uri || "").trim();
+    if (!target) return false;
+    if (process.platform === "win32") {
+      return tryLaunchExecutable("cmd.exe", ["/d", "/s", "/c", "start", "", target]);
+    }
+    if (process.platform === "darwin") {
+      return tryLaunchExecutable("open", [target]);
+    }
+    return tryLaunchExecutable("xdg-open", [target]);
+  }
+
+  function getGogAlternateUri(uri) {
+    const match = String(uri || "").trim().match(/^goggalaxy:\/\/launch\/(.+)$/i);
+    if (!match) return "";
+    const id = String(match[1] || "").trim();
+    if (!id) return "";
+    return `goggalaxy://openGame/${id}`;
+  }
+
+  const RUN_AS_DEFAULT = "default";
+  const RUN_AS_ADMIN = "admin";
+  const RUN_AS_USER = "user";
+
+  function normalizeRunAsMode(value) {
+    const normalized = String(value || "").trim().toLowerCase();
+    if (normalized === RUN_AS_ADMIN || normalized === RUN_AS_USER) return normalized;
+    return RUN_AS_DEFAULT;
+  }
+
+  function quoteWinArg(value) {
+    return `"${String(value ?? "").replace(/"/g, '\\"')}"`;
+  }
+
+  function buildWindowsAdminLaunch({ target, args, cwd }) {
+    const psQuote = (value) => `'${String(value ?? "").replace(/'/g, "''")}'`;
+    const argList = Array.isArray(args) && args.length > 0
+      ? `@(${args.map(psQuote).join(", ")})`
+      : "$null";
+    const cwdPart = cwd ? `-WorkingDirectory ${psQuote(cwd)}` : "";
+    const argPart = Array.isArray(args) && args.length > 0 ? `-ArgumentList ${argList}` : "";
+    const psCommand = [
+      "$ErrorActionPreference = 'Stop';",
+      `$p = Start-Process -FilePath ${psQuote(target)} ${argPart} ${cwdPart} -Verb RunAs -PassThru;`,
+      "$p.WaitForExit();"
+    ].join(" ").replace(/\s+/g, " ").trim();
+
+    return {
+      launchTarget: "powershell",
+      launchArgs: ["-NoProfile", "-Command", psCommand],
+      launchCwd: undefined
+    };
+  }
+
+  function buildWindowsRunAsUserLaunch({ target, args, cwd, username }) {
+    const commandLine = [quoteWinArg(target), ...(args || []).map(quoteWinArg)].join(" ");
+    const innerCmd = cwd
+      ? `cd /d ${quoteWinArg(cwd)} && ${commandLine}`
+      : commandLine;
+    const runasCommand = `runas /user:${username} ${quoteWinArg(innerCmd)}`;
+    return {
+      launchTarget: "cmd.exe",
+      launchArgs: ["/d", "/s", "/c", "start", "\"\"", "cmd.exe", "/k", runasCommand],
+      launchCwd: undefined
+    };
+  }
   if (!Menu) throw new Error("registerGameIpc requires Menu");
   if (!screen) throw new Error("registerGameIpc requires screen");
   if (!dialog) throw new Error("registerGameIpc requires dialog");
@@ -1053,6 +1185,99 @@ function registerGameIpc(deps = {}) {
     let gameRow = game;
     let gamePath = String(game?.filePath || "").trim();
 
+    const isLauncherUri = /^(steam|com\.epicgames\.launcher|goggalaxy|heroic):\/\//i.test(gamePath);
+    if (isLauncherUri) {
+      const runAsMode = normalizeRunAsMode(gameRow?.runAsMode || game?.runAsMode);
+      const runAsUser = String(gameRow?.runAsUser || game?.runAsUser || "").trim();
+
+      if (runAsMode !== RUN_AS_DEFAULT) {
+        if (process.platform !== "win32") {
+          return { success: false, message: "Run as admin/user is currently supported on Windows only." };
+        }
+
+        let launchTarget = "cmd.exe";
+        let launchArgs = ["/d", "/s", "/c", "start", "\"\"", gamePath];
+        let launchCwd = "";
+        let launchMode = "launcher";
+
+        if (runAsMode === RUN_AS_ADMIN) {
+          const wrapped = buildWindowsAdminLaunch({ target: launchTarget, args: launchArgs, cwd: launchCwd });
+          launchTarget = wrapped.launchTarget;
+          launchArgs = wrapped.launchArgs;
+          launchCwd = wrapped.launchCwd || "";
+          launchMode = "launcher-admin";
+        } else if (runAsMode === RUN_AS_USER) {
+          if (!runAsUser) {
+            return { success: false, message: "Run-as user is not set for this game." };
+          }
+          const wrapped = buildWindowsRunAsUserLaunch({
+            target: launchTarget,
+            args: launchArgs,
+            cwd: launchCwd,
+            username: runAsUser
+          });
+          launchTarget = wrapped.launchTarget;
+          launchArgs = wrapped.launchArgs;
+          launchCwd = wrapped.launchCwd || "";
+          launchMode = "launcher-user";
+        }
+
+        try {
+          const child = spawn(launchTarget, launchArgs, {
+            stdio: "ignore",
+            cwd: launchCwd || undefined,
+            detached: false
+          });
+          if (child && typeof child.unref === "function") {
+            child.unref();
+          }
+        } catch (error) {
+          log.error("Failed to run launcher with elevated permissions:", error);
+          return { success: false, message: "Failed to open launcher with run-as mode" };
+        }
+
+        const targetGameId = Number(gameRow?.id || game?.id || 0);
+        if (targetGameId) {
+          dbUpdateGameMetadata(targetGameId, { lastPlayed: new Date().toISOString() });
+          refreshLibraryFromDb();
+        }
+
+        return {
+          success: true,
+          message: "Launcher opened with run-as mode",
+          launchMode
+        };
+      }
+
+      let uriOk = tryOpenLauncherUri(gamePath);
+      if (!uriOk && /^goggalaxy:\/\/launch\//i.test(gamePath)) {
+        const altUri = getGogAlternateUri(gamePath);
+        if (altUri) {
+          uriOk = tryOpenLauncherUri(altUri);
+          if (!uriOk) {
+            log.warn(`GOG alternate URI failed for ${gameRow?.name || game?.name}: ${altUri}`);
+          }
+        }
+      }
+      if (!uriOk) {
+        log.warn(`Launcher URI failed for ${gameRow?.name || game?.name}: ${gamePath}`);
+      }
+      const fallbackOk = uriOk ? false : tryOpenLauncherFallback(gamePath);
+      if (!uriOk && !fallbackOk) {
+        return { success: false, message: "Failed to open launcher" };
+      }
+      const targetGameId = Number(gameRow?.id || game?.id || 0);
+      if (targetGameId) {
+        dbUpdateGameMetadata(targetGameId, { lastPlayed: new Date().toISOString() });
+        refreshLibraryFromDb();
+      }
+      return {
+        success: true,
+        message: fallbackOk ? "Launcher opened via fallback" : "Launcher opened",
+        launchMode: fallbackOk ? "launcher-fallback" : "launcher"
+      };
+    }
+
     if (!gamePath || !fsSync.existsSync(gamePath)) {
       const mediaInfo = classifyPathMedia(gamePath);
       if (mediaInfo.rootPath && !mediaInfo.rootExists) {
@@ -1138,12 +1363,48 @@ function registerGameIpc(deps = {}) {
       resolvedEmulatorPath = emuPath;
     }
 
+    const runAsMode = normalizeRunAsMode(gameRow?.runAsMode || game?.runAsMode);
+    const runAsUser = String(gameRow?.runAsUser || game?.runAsUser || "").trim();
+    let launchStdio = "ignore";
+    let launchDetached = true;
+
+    if (runAsMode !== RUN_AS_DEFAULT) {
+      if (process.platform !== "win32") {
+        return { success: false, message: "Run as admin/user is currently supported on Windows only." };
+      }
+
+      if (runAsMode === RUN_AS_ADMIN) {
+        const wrapped = buildWindowsAdminLaunch({ target: launchTarget, args: launchArgs, cwd: launchCwd });
+        launchTarget = wrapped.launchTarget;
+        launchArgs = wrapped.launchArgs;
+        launchCwd = wrapped.launchCwd || "";
+        launchMode = `${launchMode}-admin`;
+        launchDetached = false;
+      } else if (runAsMode === RUN_AS_USER) {
+        if (!runAsUser) {
+          return { success: false, message: "Run-as user is not set for this game." };
+        }
+        const wrapped = buildWindowsRunAsUserLaunch({
+          target: launchTarget,
+          args: launchArgs,
+          cwd: launchCwd,
+          username: runAsUser
+        });
+        launchTarget = wrapped.launchTarget;
+        launchArgs = wrapped.launchArgs;
+        launchCwd = wrapped.launchCwd || "";
+        launchMode = `${launchMode}-user`;
+        launchStdio = "ignore";
+        launchDetached = false;
+      }
+    }
+
     try {
       closeSessionOverlayWindow();
       const child = spawn(launchTarget, launchArgs, {
-        stdio: "ignore",
+        stdio: launchStdio,
         cwd: launchCwd || undefined,
-        detached: true
+        detached: launchDetached
       });
       if (child && typeof child.unref === "function") {
         child.unref();
@@ -1429,6 +1690,23 @@ function registerGameIpc(deps = {}) {
           return { success: false, message: "Invalid progress value" };
         }
         patch.progress = Math.max(0, Math.min(100, Math.round(progress)));
+      }
+
+      if (Object.prototype.hasOwnProperty.call(payload, "runAsMode")) {
+        const nextMode = normalizeRunAsMode(payload?.runAsMode);
+        if (nextMode === RUN_AS_USER) {
+          const nextUser = String(payload?.runAsUser || game?.runAsUser || "").trim();
+          if (!nextUser) {
+            return { success: false, message: "Run-as user is required when selecting 'Run as user'." };
+          }
+          patch.runAsUser = nextUser;
+        }
+        patch.runAsMode = nextMode;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(payload, "runAsUser")) {
+        const nextUser = String(payload?.runAsUser || "").trim();
+        patch.runAsUser = nextUser || null;
       }
 
       const updated = dbUpdateGameMetadata(gameId, patch);

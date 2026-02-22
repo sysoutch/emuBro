@@ -82,7 +82,13 @@ export async function openLibraryPathSettingsModal(options = {}) {
     }
     const importDraft = {
         preferCopyExternal: localStorage.getItem('emuBro.preferCopyExternal') !== 'false',
-        enableNetworkScan: localStorage.getItem('emuBro.enableNetworkScan') !== 'false'
+        enableNetworkScan: localStorage.getItem('emuBro.enableNetworkScan') !== 'false',
+        launcherStores: {
+            steam: localStorage.getItem('emuBro.launcherImportSteam') !== 'false',
+            epic: localStorage.getItem('emuBro.launcherImportEpic') === 'true',
+            gog: localStorage.getItem('emuBro.launcherImportGog') === 'true'
+        },
+        launcherDiscoveryMode: String(localStorage.getItem('emuBro.launcherImportMode') || 'filesystem').toLowerCase()
     };
     const platformGamepadDraft = loadPlatformGamepadBindingsMap(localStorage);
     let platformBindingRows = [];
@@ -191,6 +197,168 @@ export async function openLibraryPathSettingsModal(options = {}) {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
+
+    const refreshGamesAfterImport = typeof options.refreshGamesAfterImport === 'function'
+        ? options.refreshGamesAfterImport
+        : async () => {};
+
+    const openLauncherImportModal = async () => {
+        const stores = importDraft.launcherStores || {};
+        const scanResult = await emubro.invoke('launcher:scan-games', {
+            stores: {
+                steam: stores.steam !== false,
+                epic: !!stores.epic,
+                gog: !!stores.gog
+            },
+            discoveryMode: importDraft.launcherDiscoveryMode || 'filesystem'
+        });
+        if (!scanResult?.success) {
+            alert(scanResult?.message || 'Failed to scan launcher libraries.');
+            return;
+        }
+
+        const rows = [];
+        const addRows = (storeKey, list) => {
+            (Array.isArray(list) ? list : []).forEach((entry) => {
+                rows.push({ ...entry, launcher: storeKey });
+            });
+        };
+        addRows('steam', scanResult?.stores?.steam);
+        addRows('epic', scanResult?.stores?.epic);
+        addRows('gog', scanResult?.stores?.gog);
+
+        if (rows.length === 0) {
+            alert('No launcher games found for the selected stores.');
+            return;
+        }
+
+        let existingPaths = new Set();
+        try {
+            const existingGames = await emubro.invoke('get-games');
+            if (Array.isArray(existingGames)) {
+                existingPaths = new Set(
+                    existingGames
+                        .map((game) => String(game?.filePath || '').trim().toLowerCase())
+                        .filter(Boolean)
+                );
+            }
+        } catch (_e) {}
+        rows.forEach((row) => {
+            row.isImported = existingPaths.has(String(row.launchUri || '').trim().toLowerCase());
+        });
+
+        const overlay = document.createElement('div');
+        overlay.style.cssText = [
+            'position:fixed',
+            'inset:0',
+            'z-index:3700',
+            'display:flex',
+            'align-items:center',
+            'justify-content:center',
+            'padding:20px',
+            'background:rgba(0,0,0,0.58)'
+        ].join(';');
+
+        const modal = document.createElement('div');
+        modal.className = 'glass';
+        modal.style.cssText = [
+            'width:min(860px,100%)',
+            'max-height:80vh',
+            'overflow:auto',
+            'background:var(--bg-secondary)',
+            'border:1px solid var(--border-color)',
+            'border-radius:14px',
+            'padding:16px',
+            'box-shadow:0 18px 42px rgba(0,0,0,0.45)',
+            'display:grid',
+            'gap:12px'
+        ].join(';');
+
+        modal.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+                <h3 style="margin:0;font-size:1rem;">Import Launcher Games</h3>
+                <button type="button" class="action-btn remove-btn" data-launcher-close>Close</button>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <button type="button" class="action-btn" data-launcher-select-all>Select All</button>
+                <button type="button" class="action-btn" data-launcher-clear>Clear</button>
+                <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;">
+                    <input type="checkbox" data-launcher-installed-only />
+                    <span>Installed only</span>
+                </label>
+            </div>
+            <div data-launcher-list style="display:grid;gap:8px;max-height:52vh;overflow:auto;padding-right:4px;">
+                ${rows.map((row, idx) => `
+                    <label data-launcher-row="${idx}" data-launcher-installed="${row.installed ? '1' : '0'}" style="display:flex;gap:10px;align-items:center;border:1px solid var(--border-color);border-radius:10px;padding:8px 10px;background:var(--bg-primary);">
+                        <input type="checkbox" data-launcher-pick="${idx}"${row.isImported ? '' : ' checked'} />
+                        <div style="display:grid;gap:4px;">
+                            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                                <span style="font-weight:600;">${escapeAttr(row.name || 'Unknown')}</span>
+                                <span style="font-size:0.72rem;padding:2px 6px;border-radius:999px;background:rgba(255,255,255,0.08);text-transform:uppercase;letter-spacing:0.04em;">${escapeAttr(String(row.launcher || ''))}</span>
+                                ${row.isImported ? '<span style="font-size:0.72rem;color:var(--text-secondary);">Already in library</span>' : ''}
+                                ${row.installed ? '<span style="font-size:0.72rem;color:var(--text-secondary);">Installed</span>' : ''}
+                            </div>
+                            <div style="font-size:0.82rem;color:var(--text-secondary);">
+                                ${row.installDir ? escapeAttr(row.installDir) : ''}
+                            </div>
+                        </div>
+                    </label>
+                `).join('')}
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;">
+                <button type="button" class="action-btn launch-btn" data-launcher-import>Import Selected</button>
+            </div>
+        `;
+
+        const close = () => overlay.remove();
+        overlay.addEventListener('click', (event) => {
+            if (event.target === overlay) close();
+        });
+        modal.querySelector('[data-launcher-close]')?.addEventListener('click', close);
+        modal.querySelector('[data-launcher-select-all]')?.addEventListener('click', () => {
+            modal.querySelectorAll('[data-launcher-pick]').forEach((input) => {
+                input.checked = true;
+            });
+        });
+        modal.querySelector('[data-launcher-clear]')?.addEventListener('click', () => {
+            modal.querySelectorAll('[data-launcher-pick]').forEach((input) => {
+                input.checked = false;
+            });
+        });
+        modal.querySelector('[data-launcher-installed-only]')?.addEventListener('change', (event) => {
+            const enabled = !!event.target.checked;
+            modal.querySelectorAll('[data-launcher-row]').forEach((rowEl) => {
+                const isInstalled = rowEl.dataset.launcherInstalled === '1';
+                rowEl.style.display = enabled && !isInstalled ? 'none' : '';
+            });
+            const listEl = modal.querySelector('[data-launcher-list]');
+            if (listEl) listEl.scrollTop = 0;
+        });
+        modal.querySelector('[data-launcher-import]')?.addEventListener('click', async () => {
+            const picks = [];
+            modal.querySelectorAll('[data-launcher-pick]').forEach((input) => {
+                if (!input.checked) return;
+                const idx = Number(input.dataset.launcherPick);
+                if (!Number.isFinite(idx) || !rows[idx]) return;
+                picks.push(rows[idx]);
+            });
+            if (picks.length === 0) {
+                alert('Select at least one game to import.');
+                return;
+            }
+            const result = await emubro.invoke('launcher:import-games', { games: picks });
+            if (!result?.success) {
+                alert(result?.message || 'Failed to import launcher games.');
+                return;
+            }
+            await refreshGamesAfterImport();
+            addFooterNotification?.(`Imported ${result.added?.length || 0} games.`, 'success');
+            close();
+        });
+
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+    };
 
     const closeModal = () => {
         try {
@@ -411,6 +579,37 @@ export async function openLibraryPathSettingsModal(options = {}) {
                     <button type="button" class="action-btn launch-btn" data-settings-quick-search>Run Quick Search</button>
                     <button type="button" class="action-btn" data-settings-custom-search>Run Custom Search</button>
                     <button type="button" class="action-btn" data-settings-open-browse-tab>Open Browse Computer Tab</button>
+                </div>
+            </section>
+            <section style="border:1px solid var(--border-color);border-radius:12px;padding:12px;display:grid;gap:10px;">
+                <h3 style="margin:0;font-size:1rem;">Launcher Imports</h3>
+                <div style="display:grid;gap:8px;">
+                    <label style="display:flex;align-items:center;gap:10px;">
+                        <input type="checkbox" data-launcher-store="steam"${importDraft.launcherStores.steam ? ' checked' : ''} />
+                        <span>Steam</span>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:10px;">
+                        <input type="checkbox" data-launcher-store="epic"${importDraft.launcherStores.epic ? ' checked' : ''} />
+                        <span>Epic Games</span>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:10px;">
+                        <input type="checkbox" data-launcher-store="gog"${importDraft.launcherStores.gog ? ' checked' : ''} />
+                        <span>GOG Galaxy (experimental)</span>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:10px;">
+                        <span style="min-width:130px;">Discovery Mode</span>
+                        <select data-launcher-discovery>
+                            <option value="filesystem"${importDraft.launcherDiscoveryMode === 'filesystem' ? ' selected' : ''}>Filesystem</option>
+                            <option value="api"${importDraft.launcherDiscoveryMode === 'api' ? ' selected' : ''}>API (if available)</option>
+                            <option value="both"${importDraft.launcherDiscoveryMode === 'both' ? ' selected' : ''}>Both</option>
+                        </select>
+                    </label>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                        <button type="button" class="action-btn launch-btn" data-launcher-scan>Scan Launchers</button>
+                    </div>
+                    <div style="font-size:0.85rem;color:var(--text-secondary);">
+                        Imported launcher games will open through their official launcher (Steam/Epic/GOG).
+                    </div>
                 </div>
             </section>
         </section>
@@ -702,6 +901,28 @@ export async function openLibraryPathSettingsModal(options = {}) {
         if (networkScanToggle) {
             networkScanToggle.addEventListener('change', () => {
                 importDraft.enableNetworkScan = !!networkScanToggle.checked;
+            });
+        }
+
+        modal.querySelectorAll('[data-launcher-store]').forEach((input) => {
+            input.addEventListener('change', () => {
+                const key = String(input.dataset.launcherStore || '').trim().toLowerCase();
+                if (!key) return;
+                importDraft.launcherStores[key] = !!input.checked;
+            });
+        });
+
+        const launcherDiscoverySelect = modal.querySelector('[data-launcher-discovery]');
+        if (launcherDiscoverySelect) {
+            launcherDiscoverySelect.addEventListener('change', () => {
+                importDraft.launcherDiscoveryMode = String(launcherDiscoverySelect.value || 'filesystem').toLowerCase();
+            });
+        }
+
+        const launcherScanBtn = modal.querySelector('[data-launcher-scan]');
+        if (launcherScanBtn) {
+            launcherScanBtn.addEventListener('click', async () => {
+                await openLauncherImportModal();
             });
         }
 
@@ -1040,6 +1261,10 @@ export async function openLibraryPathSettingsModal(options = {}) {
                     setLlmAllowUnknownTagsEnabled(generalDraft.llmAllowUnknownTags, { persist: true });
                     localStorage.setItem('emuBro.preferCopyExternal', importDraft.preferCopyExternal ? 'true' : 'false');
                     localStorage.setItem('emuBro.enableNetworkScan', importDraft.enableNetworkScan ? 'true' : 'false');
+                    localStorage.setItem('emuBro.launcherImportSteam', importDraft.launcherStores.steam ? 'true' : 'false');
+                    localStorage.setItem('emuBro.launcherImportEpic', importDraft.launcherStores.epic ? 'true' : 'false');
+                    localStorage.setItem('emuBro.launcherImportGog', importDraft.launcherStores.gog ? 'true' : 'false');
+                    localStorage.setItem('emuBro.launcherImportMode', importDraft.launcherDiscoveryMode || 'filesystem');
                     savePlatformGamepadBindingsMap(platformGamepadDraft, localStorage);
                     
                     if (typeof options.saveSuggestionSettings === 'function') {

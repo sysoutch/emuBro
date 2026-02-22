@@ -1395,12 +1395,14 @@ function registerSuggestionsIpc(deps = {}) {
     const sourceLanguageCode = normalizeText(payload.sourceLanguageCode, "en");
     const targetLanguageCode = normalizeText(payload.targetLanguageCode, "target");
     const targetLanguageName = normalizeText(payload.targetLanguageName, targetLanguageCode);
+    const styleHint = normalizeText(payload.styleHint);
     const entries = normalizeLocaleTranslationEntries(payload.entries);
     const entriesJson = JSON.stringify(entries);
 
     return [
       "You are emuBro's localization assistant.",
       `Translate UI strings from language code "${sourceLanguageCode}" to "${targetLanguageCode}" (${targetLanguageName}).`,
+      styleHint ? `Translation style preference: ${styleHint}` : "Translation style preference: neutral, clear software UI language.",
       "",
       "Return strict JSON only in this exact shape:",
       "{",
@@ -1425,6 +1427,7 @@ function registerSuggestionsIpc(deps = {}) {
     const sourceLanguageCode = normalizeText(payload.sourceLanguageCode, "en");
     const targetLanguageCode = normalizeText(payload.targetLanguageCode, "target");
     const targetLanguageName = normalizeText(payload.targetLanguageName, targetLanguageCode);
+    const styleHint = normalizeText(payload.styleHint);
     const retranslateExisting = !!payload.retranslateExisting;
     const entries = normalizeLocaleTranslationEntries(payload.entries, 5000);
     const translationKeys = entries.map((entry) => entry.key);
@@ -1438,6 +1441,7 @@ function registerSuggestionsIpc(deps = {}) {
     return [
       "You are emuBro's localization assistant.",
       `Translate UI strings from language code "${sourceLanguageCode}" to "${targetLanguageCode}" (${targetLanguageName}).`,
+      styleHint ? `Translation style preference: ${styleHint}` : "Translation style preference: neutral, clear software UI language.",
       "",
       "Return strict JSON only in this exact shape, minified on one line:",
       '{"locale":{"some":{"nested":"translated text"}}}',
@@ -1964,6 +1968,7 @@ function registerSuggestionsIpc(deps = {}) {
       sourceLanguageCode: normalizeText(payload.sourceLanguageCode, "en"),
       targetLanguageCode: normalizeText(payload.targetLanguageCode),
       targetLanguageName: normalizeText(payload.targetLanguageName),
+      styleHint: normalizeText(payload.styleHint).slice(0, 280),
       retranslateExisting: !!payload.retranslateExisting,
       sourceLocaleObject: normalizeLocaleObject(payload.sourceLocaleObject),
       targetLocaleObject: normalizeLocaleObject(payload.targetLocaleObject)

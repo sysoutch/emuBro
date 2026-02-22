@@ -1,6 +1,7 @@
 const path = require("path");
 const fsSync = require("fs");
 const { Readable } = require("stream");
+const { spawn } = require("child_process");
 const { pipeline } = require("stream/promises");
 const { createEmulatorDownloadService } = require("./emulators/download-service");
 const { createEmulatorCatalogService } = require("./emulators/catalog-service");
@@ -104,7 +105,8 @@ function registerEmulatorIpc(deps = {}) {
     downloadUrlToFile: downloadService.downloadUrlToFile,
     findEmulatorBinaryInFolder: downloadService.findEmulatorBinaryInFolder,
     inferDownloadPackageTypeFromName: downloadService.inferDownloadPackageTypeFromName,
-    isInstallerLikeName: downloadService.isInstallerLikeName
+    isInstallerLikeName: downloadService.isInstallerLikeName,
+    spawn
   });
 }
 

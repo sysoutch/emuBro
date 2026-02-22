@@ -105,6 +105,7 @@ function registerEmulatorCatalogHandlers(deps = {}) {
       runCommandsBefore: Array.isArray(preferred?.runCommandsBefore) && preferred.runCommandsBefore.length > 0
         ? preferred.runCommandsBefore
         : (Array.isArray(fallback?.runCommandsBefore) ? fallback.runCommandsBefore : []),
+      installers: preferred?.installers || fallback?.installers || null,
       supportedFileTypes: Array.isArray(preferred?.supportedFileTypes) && preferred.supportedFileTypes.length > 0
         ? preferred.supportedFileTypes
         : (Array.isArray(fallback?.supportedFileTypes) ? fallback.supportedFileTypes : []),
@@ -175,6 +176,7 @@ function registerEmulatorCatalogHandlers(deps = {}) {
           executableFileMatchMac: cfg.executableFileMatchMac || installed.executableFileMatchMac || "",
           configFilePath: cfg.configFilePath || installed.configFilePath || "",
           runCommandsBefore: Array.isArray(cfg.runCommandsBefore) ? cfg.runCommandsBefore : (Array.isArray(installed.runCommandsBefore) ? installed.runCommandsBefore : []),
+          installers: cfg.installers || installed.installers || null,
           supportedFileTypes: Array.isArray(cfg.supportedFileTypes) ? cfg.supportedFileTypes : (Array.isArray(installed.supportedFileTypes) ? installed.supportedFileTypes : []),
           biosRequired: typeof cfg.biosRequired === "boolean" ? cfg.biosRequired : !!installed.biosRequired,
           autoSearchEnabled: typeof cfg.autoSearchEnabled === "boolean" ? cfg.autoSearchEnabled : (typeof installed.autoSearchEnabled === "boolean" ? installed.autoSearchEnabled : true),

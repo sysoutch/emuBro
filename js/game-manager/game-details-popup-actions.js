@@ -572,6 +572,66 @@ export function createGameDetailsPopupActions(deps = {}) {
         });
     }
 
+    function normalizeRunAsMode(value) {
+        const normalized = String(value || '').trim().toLowerCase();
+        if (normalized === 'admin' || normalized === 'user') return normalized;
+        return 'default';
+    }
+
+    function applyRunAsUiState(select, input) {
+        if (!select || !input) return;
+        const mode = normalizeRunAsMode(select.value);
+        const needsUser = mode === 'user';
+        input.disabled = !needsUser;
+        input.style.display = needsUser ? '' : 'none';
+    }
+
+    async function bindRunAsAction(select, userInput, game) {
+        if (!select || !userInput || !game) return;
+
+        const currentMode = normalizeRunAsMode(game.runAsMode || 'default');
+        const currentUser = String(game.runAsUser || '').trim();
+        select.value = currentMode;
+        userInput.value = currentUser;
+        applyRunAsUiState(select, userInput);
+
+        const saveRunAsSettings = async (nextMode, nextUser) => {
+            const payload = { gameId: game.id, runAsMode: nextMode };
+            if (nextMode === 'user') {
+                const trimmedUser = String(nextUser || '').trim();
+                if (!trimmedUser) {
+                    alertUser('Please enter a username for "Run as user".');
+                    return false;
+                }
+                payload.runAsUser = trimmedUser;
+            }
+
+            const result = await emubro.invoke('update-game-metadata', payload);
+            if (!result?.success) {
+                alertUser(result?.message || 'Failed to save run-as settings.');
+                return false;
+            }
+
+            game.runAsMode = nextMode;
+            if (Object.prototype.hasOwnProperty.call(payload, 'runAsUser')) {
+                game.runAsUser = payload.runAsUser;
+            }
+            return true;
+        };
+
+        select.addEventListener('change', async () => {
+            const nextMode = normalizeRunAsMode(select.value);
+            applyRunAsUiState(select, userInput);
+            await saveRunAsSettings(nextMode, userInput.value);
+        });
+
+        userInput.addEventListener('change', async () => {
+            const nextMode = normalizeRunAsMode(select.value);
+            if (nextMode !== 'user') return;
+            await saveRunAsSettings(nextMode, userInput.value);
+        });
+    }
+
     async function bindChangePlatformAction(select, button, game) {
         if (!select || !button || !game) return;
 
@@ -842,6 +902,11 @@ export function createGameDetailsPopupActions(deps = {}) {
         bindCreateShortcutAction(container.querySelector('[data-create-shortcut]'), game);
         bindShowInExplorerAction(container.querySelector('[data-show-in-explorer]'), game);
         bindEmulatorOverrideAction(container.querySelector('[data-game-emulator-override]'), game);
+        bindRunAsAction(
+            container.querySelector('[data-game-runas-select]'),
+            container.querySelector('[data-game-runas-user]'),
+            game
+        );
         bindTagAssignmentAction(
             tagsSelect,
             tagsSaveBtn,
@@ -876,6 +941,8 @@ export function createGameDetailsPopupActions(deps = {}) {
         const ratingLabel = escapeHtml(i18n.t('gameDetails.rating') || 'Rating');
         const genreLabel = escapeHtml(i18n.t('gameDetails.genre') || 'Genre');
         const priceLabel = escapeHtml(i18n.t('gameDetails.price') || 'Price');
+        const runAsMode = normalizeRunAsMode(game.runAsMode || 'default');
+        const runAsUser = escapeHtml(game.runAsUser || '');
         const llmButtonMarkup = isLlmHelpersEnabled()
             ? '<button class="action-btn launch-btn" data-game-tags-llm type="button">Let LLM add tags</button>'
             : '';
@@ -895,6 +962,18 @@ export function createGameDetailsPopupActions(deps = {}) {
             <select id="game-emulator-override-${Number(game.id)}" data-game-emulator-override>
                 <option value="">Loading emulators...</option>
             </select>
+        </div>
+        <div class="game-detail-row game-detail-runas-control">
+            <label for="game-runas-select-${Number(game.id)}">Run As</label>
+            <div class="game-detail-runas-inline">
+                <select id="game-runas-select-${Number(game.id)}" data-game-runas-select>
+                    <option value="default"${runAsMode === 'default' ? ' selected' : ''}>Default</option>
+                    <option value="admin"${runAsMode === 'admin' ? ' selected' : ''}>Administrator</option>
+                    <option value="user"${runAsMode === 'user' ? ' selected' : ''}>Another user</option>
+                </select>
+                <input id="game-runas-user-${Number(game.id)}" data-game-runas-user type="text" placeholder="DOMAIN\\User" value="${runAsUser}" />
+            </div>
+            <small class="game-detail-runas-hint">Windows only. "Run as user" will prompt for credentials.</small>
         </div>
         <div class="game-detail-row game-detail-platform-control">
             <label for="game-platform-select-${Number(game.id)}">Platform</label>

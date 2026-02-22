@@ -98,6 +98,8 @@ function createLibraryDbService(deps = {}) {
         tags TEXT,
         progress INTEGER DEFAULT 0,
         lastPlayed TEXT,
+        runAsMode TEXT,
+        runAsUser TEXT,
         filePath TEXT NOT NULL UNIQUE,
         code TEXT,
         image TEXT,
@@ -145,6 +147,14 @@ function createLibraryDbService(deps = {}) {
       const hasLastPlayedColumn = gameColumns.some((col) => String(col?.name || "").trim().toLowerCase() === "lastplayed");
       if (!hasLastPlayedColumn) {
         dbRef.exec("ALTER TABLE games ADD COLUMN lastPlayed TEXT");
+      }
+      const hasRunAsModeColumn = gameColumns.some((col) => String(col?.name || "").trim().toLowerCase() === "runasmode");
+      if (!hasRunAsModeColumn) {
+        dbRef.exec("ALTER TABLE games ADD COLUMN runAsMode TEXT");
+      }
+      const hasRunAsUserColumn = gameColumns.some((col) => String(col?.name || "").trim().toLowerCase() === "runasuser");
+      if (!hasRunAsUserColumn) {
+        dbRef.exec("ALTER TABLE games ADD COLUMN runAsUser TEXT");
       }
     } catch (error) {
       log.error("Failed to migrate games table:", error);
@@ -309,6 +319,18 @@ function createLibraryDbService(deps = {}) {
       if (!Number.isFinite(value)) return null;
       sets.push("progress = @progress");
       params.progress = Math.max(0, Math.min(100, Math.round(value)));
+    }
+
+    if (Object.prototype.hasOwnProperty.call(patch, "runAsMode")) {
+      const value = String(patch.runAsMode || "").trim().toLowerCase();
+      sets.push("runAsMode = @runAsMode");
+      params.runAsMode = value || null;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(patch, "runAsUser")) {
+      const value = String(patch.runAsUser || "").trim();
+      sets.push("runAsUser = @runAsUser");
+      params.runAsUser = value || null;
     }
 
     if (sets.length === 0) return dbGetGameById(targetId);

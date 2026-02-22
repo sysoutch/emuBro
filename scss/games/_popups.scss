@@ -62,8 +62,16 @@
     gap: 6px;
 }
 
+#game-info-modal .game-detail-runas-control {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
 #game-info-modal .game-detail-emulator-control label,
-#game-info-modal .game-detail-platform-control label {
+#game-info-modal .game-detail-platform-control label,
+#game-info-modal .game-detail-runas-control label {
     color: var(--text-secondary);
     font-size: 0.8rem;
     text-transform: uppercase;
@@ -71,8 +79,29 @@
 }
 
 #game-info-modal .game-detail-emulator-control select,
-#game-info-modal .game-detail-platform-control select {
+#game-info-modal .game-detail-platform-control select,
+#game-info-modal .game-detail-runas-control select {
     width: 100%;
+}
+
+#game-info-modal .game-detail-runas-inline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#game-info-modal .game-detail-runas-inline select {
+    flex: 0 0 160px;
+}
+
+#game-info-modal .game-detail-runas-inline input {
+    flex: 1;
+    min-width: 0;
+}
+
+#game-info-modal .game-detail-runas-hint {
+    color: var(--text-tertiary);
+    font-size: 0.74rem;
 }
 
 #game-info-modal .game-detail-platform-inline {

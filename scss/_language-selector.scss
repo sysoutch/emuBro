@@ -227,6 +227,27 @@
     padding: 0 8px;
 }
 
+.lang-translate-guidance {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: min(340px, 100%);
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-weight: 700;
+}
+
+.lang-translate-guidance input {
+    min-width: clamp(180px, 32vw, 320px);
+    height: 30px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    padding: 0 9px;
+    font-size: 0.8rem;
+}
+
 .lang-llm-translate-status {
     font-size: 0.8rem;
     color: var(--text-secondary);

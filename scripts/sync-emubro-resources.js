@@ -4,7 +4,7 @@ const { spawnSync } = require('child_process');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 const DEFAULT_REPO_URL = 'https://github.com/sysoutch/emubro-resources.git';
-const DEFAULT_BRANCH = 'dev-master';
+const DEFAULT_BRANCH = 'master';
 const DEFAULT_TARGET_DIR = 'emubro-resources';
 
 const repoUrl = String(process.env.EMUBRO_RESOURCES_REPO || DEFAULT_REPO_URL).trim();

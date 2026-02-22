@@ -29,7 +29,8 @@ function registerEmulatorDownloadInstallHandler(deps = {}) {
     downloadUrlToFile,
     findEmulatorBinaryInFolder,
     inferDownloadPackageTypeFromName,
-    isInstallerLikeName
+    isInstallerLikeName,
+    spawn
   } = deps;
 
   if (!ipcMain) throw new Error("registerEmulatorDownloadInstallHandler requires ipcMain");
@@ -62,6 +63,99 @@ function registerEmulatorDownloadInstallHandler(deps = {}) {
   if (typeof findEmulatorBinaryInFolder !== "function") throw new Error("registerEmulatorDownloadInstallHandler requires findEmulatorBinaryInFolder");
   if (typeof inferDownloadPackageTypeFromName !== "function") throw new Error("registerEmulatorDownloadInstallHandler requires inferDownloadPackageTypeFromName");
   if (typeof isInstallerLikeName !== "function") throw new Error("registerEmulatorDownloadInstallHandler requires isInstallerLikeName");
+  if (typeof spawn !== "function") throw new Error("registerEmulatorDownloadInstallHandler requires spawn");
+
+  function normalizeInstallMethod(value) {
+    const raw = String(value || "").trim().toLowerCase();
+    if (raw === "flatpak" || raw === "apt") return raw;
+    if (raw === "download") return "download";
+    return "";
+  }
+
+  function buildInstallerCommand(installer = {}, method) {
+    const installCommand = String(installer?.install || "").trim();
+    if (installCommand) return installCommand;
+
+    if (method === "flatpak") {
+      const id = String(installer?.id || "").trim();
+      if (!id) return "";
+      const remote = String(installer?.remote || "flathub").trim() || "flathub";
+      return `flatpak install -y ${remote} ${id}`;
+    }
+
+    if (method === "apt") {
+      const packages = Array.isArray(installer?.packages)
+        ? installer.packages.map((pkg) => String(pkg || "").trim()).filter(Boolean)
+        : [];
+      if (!packages.length) return "";
+      return `sudo apt install -y ${packages.join(" ")}`;
+    }
+
+    return "";
+  }
+
+  function runShellCommand(command, osKey) {
+    return new Promise((resolve) => {
+      if (!command) {
+        resolve({ success: false, code: 1, stdout: "", stderr: "Missing command" });
+        return;
+      }
+      const useWin = osKey === "windows";
+      const exec = useWin ? "cmd.exe" : "bash";
+      const args = useWin ? ["/d", "/s", "/c", command] : ["-lc", command];
+      const child = spawn(exec, args, { stdio: ["ignore", "pipe", "pipe"] });
+      let stdout = "";
+      let stderr = "";
+      if (child.stdout) child.stdout.on("data", (data) => { stdout += data.toString(); });
+      if (child.stderr) child.stderr.on("data", (data) => { stderr += data.toString(); });
+      child.on("close", (code) => {
+        resolve({ success: code === 0, code, stdout, stderr });
+      });
+      child.on("error", (error) => {
+        resolve({ success: false, code: 1, stdout, stderr: error?.message || String(error) });
+      });
+    });
+  }
+
+  function isSudoFailure(stderr = "") {
+    const text = String(stderr || "").toLowerCase();
+    return text.includes("sudo") || text.includes("password");
+  }
+
+  async function openTerminalWithCommand(command) {
+    const candidates = [
+      { cmd: "x-terminal-emulator", args: ["-e", "bash", "-lc", command] },
+      { cmd: "gnome-terminal", args: ["--", "bash", "-lc", command] },
+      { cmd: "konsole", args: ["-e", "bash", "-lc", command] },
+      { cmd: "xfce4-terminal", args: ["-e", "bash", "-lc", command] },
+      { cmd: "xterm", args: ["-e", "bash", "-lc", command] },
+      { cmd: "alacritty", args: ["-e", "bash", "-lc", command] },
+      { cmd: "kitty", args: ["-e", "bash", "-lc", command] }
+    ];
+
+    for (const candidate of candidates) {
+      const result = await new Promise((resolve) => {
+        try {
+          const child = spawn(candidate.cmd, candidate.args, { stdio: "ignore" });
+          let settled = false;
+          child.on("error", () => {
+            if (settled) return;
+            settled = true;
+            resolve(false);
+          });
+          setTimeout(() => {
+            if (settled) return;
+            settled = true;
+            resolve(true);
+          }, 200);
+        } catch (_e) {
+          resolve(false);
+        }
+      });
+      if (result) return true;
+    }
+    return false;
+  }
 
   async function promptRedownloadWhenCached(filePath, displayName, emulatorName) {
     try {
@@ -92,6 +186,59 @@ function registerEmulatorDownloadInstallHandler(deps = {}) {
       if (!name) return { success: false, message: "Missing emulator name" };
 
       const osKey = normalizeDownloadOsKey(payload?.os || runtimePlatform);
+      const installMethod = normalizeInstallMethod(payload?.installMethod || "");
+
+      if ((installMethod === "flatpak" || installMethod === "apt") && osKey === "linux") {
+        const installers = (payload?.installers && typeof payload.installers === "object") ? payload.installers : {};
+        const linuxInstallers = (installers?.linux && typeof installers.linux === "object") ? installers.linux : {};
+        const installer = linuxInstallers?.[installMethod] || null;
+        const command = buildInstallerCommand(installer, installMethod);
+        if (!command) {
+          return { success: false, message: `No ${installMethod} installer command configured for this emulator.` };
+        }
+
+        const res = await runShellCommand(command, osKey);
+        if (!res.success) {
+          if (installMethod === "apt" && isSudoFailure(res.stderr)) {
+            const ownerWindow = getMainWindow();
+            const prompt = await dialog.showMessageBox(ownerWindow, {
+              type: "question",
+              buttons: ["Cancel", "Open Terminal"],
+              defaultId: 1,
+              cancelId: 0,
+              noLink: true,
+              title: "Permission Required",
+              message: "APT install requires admin privileges.",
+              detail: `Command:\n${command}`
+            });
+            if (prompt.response === 1) {
+              const opened = await openTerminalWithCommand(command);
+              return {
+                success: !!opened,
+                message: opened
+                  ? "Opened a terminal to complete the install."
+                  : "Failed to open terminal. Run the command manually.",
+                command
+              };
+            }
+          }
+          return {
+            success: false,
+            message: `Failed to run ${installMethod} installer.`,
+            stderr: res.stderr || "",
+            stdout: res.stdout || ""
+          };
+        }
+
+        return {
+          success: true,
+          installed: false,
+          installedBy: installMethod,
+          message: `Installer finished. Rescan emulators if the binary was not detected automatically.`,
+          command
+        };
+      }
+
       const useWaybackFallback = !!payload?.useWaybackFallback;
       if (useWaybackFallback) {
         const waybackSourceUrl = ensureHttpUrl(

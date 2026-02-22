@@ -396,6 +396,8 @@ registerImportIpc({
   discoverCoverImageRelative,
   resolveResourcePath: resourceOverrides.resolveResourcePath,
   dbUpsertGame,
+  dbUpsertTags,
+  dbUpdateGameMetadata,
   getArchiveKind,
   extractArchiveToDir
 });

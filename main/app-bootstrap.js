@@ -230,6 +230,7 @@ function createAppBootstrapManager(deps = {}) {
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
+        webviewTag: true,
         preload: path.join(app.getAppPath(), "preload.js"),
         devTools: true
       }
