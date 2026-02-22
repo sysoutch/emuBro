@@ -54,9 +54,9 @@ jobs:
       - name: Package app
         run: |
           if [[ "$RUNNER_OS" == "Windows" ]]; then
-            npx electron-builder --win --publish always --config electron-builder.config.js
+            npx electron-builder --win --publish onTag --config electron-builder.config.js
           elif [[ "$RUNNER_OS" == "Linux" ]]; then
-            npx electron-builder --linux AppImage --publish always --config electron-builder.config.js
+            npx electron-builder --linux AppImage --publish onTag --config electron-builder.config.js
           else
             echo "Skipping macOS packaging for CI"
           fi
