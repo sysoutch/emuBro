@@ -5,6 +5,7 @@ function createAppBootstrapManager(deps = {}) {
     Menu,
     screen,
     path,
+    fs = require("fs"),
     dialog,
     log,
     processRef,
@@ -191,13 +192,31 @@ function createAppBootstrapManager(deps = {}) {
     setMainWindowRendererReady(false);
     setRequestRevealMainWindow(null);
 
+    const resolveAppIcon = () => {
+      const basePath = proc.resourcesPath || app.getAppPath();
+      const candidates = [
+        path.join(basePath, "favicon.ico"),
+        path.join(basePath, "favicon.ico"),
+        path.join(app.getAppPath(), "build", "favicon.ico"),
+        path.join(app.getAppPath(), "build", "favicon.ico"),
+        path.join(app.getAppPath(), "favicon.ico")
+      ];
+      return candidates.find((p) => {
+        try {
+          return fs.existsSync(p);
+        } catch (_e) {
+          return false;
+        }
+      });
+    };
+
     const mainWindow = new BrowserWindow({
       show: false,
       width: 1200,
       height: 800,
       minWidth: 1000,
       minHeight: 700,
-      icon: path.join(app.getAppPath(), "icon.png"),
+      icon: resolveAppIcon(),
       backgroundColor: "#0b1220",
       ...(isWin
         ? {

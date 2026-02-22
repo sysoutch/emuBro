@@ -24,7 +24,7 @@ module.exports = {
     "dist/**/*",        // Your Webpack output
     ...(shipEnglishOnlyLocales ? ["locales/en.json"] : ["locales/**/*"]),
     "logo.png",
-    "icon.png",
+    "favicon.ico",
     "emubro-resources/**/*", // Essential for your app to find configs/platforms
     "!emubro-locales-repo/**/*",
     "!build_out/**/*"
@@ -52,6 +52,7 @@ module.exports = {
   // electron-builder will now automatically include production 
   // dependencies from package.json in the final build.
   win: {
+    icon: "favicon.ico",
     target: [
       "nsis",
       "nsis-web"
@@ -59,6 +60,7 @@ module.exports = {
     asar: true
   },
   linux: {
+    icon: "favicon.ico",
     target: [
       "AppImage",
       "deb"
@@ -66,6 +68,7 @@ module.exports = {
     category: "Game"
   },
   mac: {
+    icon: "favicon.ico",
     target: [
       "dmg",
       "zip"

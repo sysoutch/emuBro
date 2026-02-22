@@ -895,7 +895,7 @@ function registerGameIpc(deps = {}) {
     const fallback = resolvePlatformDefaultCoverPath(game?.platformShortName);
     if (fsSync.existsSync(fallback)) return fallback;
 
-    const appIcon = path.join(appPath, "icon.png");
+    const appIcon = path.join(appPath, "favicon.ico");
     if (fsSync.existsSync(appIcon)) return appIcon;
 
     return path.join(appPath, "logo.png");

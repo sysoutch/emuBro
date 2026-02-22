@@ -109,14 +109,14 @@ function registerImportIpc(deps = {}) {
     const appPath = String(app?.getAppPath?.() || "").trim() || process.cwd();
     const execDir = path.dirname(String(process.execPath || "").trim() || process.cwd());
     const candidates = [
-      path.join(appPath, "icon.png"),
+      path.join(appPath, "favicon.ico"),
       path.join(appPath, "logo.png"),
       path.join(appPath, "assets", "logo.png"),
-      path.join(appPath, "build", "icon.png"),
-      path.join(process.cwd(), "icon.png"),
+      path.join(appPath, "build", "favicon.ico"),
+      path.join(process.cwd(), "favicon.ico"),
       path.join(process.cwd(), "logo.png"),
       path.join(process.cwd(), "assets", "logo.png"),
-      path.join(execDir, "resources", "icon.png"),
+      path.join(execDir, "resources", "favicon.ico"),
       path.join(execDir, "resources", "logo.png")
     ];
     for (const candidate of candidates) {
