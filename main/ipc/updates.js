@@ -2,6 +2,7 @@ function registerUpdatesIpc(deps = {}) {
   let autoUpdater = null;
   const ipcMain = deps.ipcMain;
   const app = deps.app;
+  const store = deps.store || null;
   const log = deps.log || console;
   const getMainWindow = typeof deps.getMainWindow === "function" ? deps.getMainWindow : () => null;
 
@@ -23,6 +24,11 @@ function registerUpdatesIpc(deps = {}) {
   let lastMessage = "";
   let lastError = "";
   let lastProgress = 0;
+  let autoCheckOnStartup = true;
+  let autoCheckIntervalMinutes = 60;
+  let autoCheckTimer = null;
+  const AUTO_CHECK_ON_STARTUP_KEY = "updates:auto-check-on-startup:v1";
+  const AUTO_CHECK_INTERVAL_MINUTES_KEY = "updates:auto-check-interval-minutes:v1";
 
   function emitStatus(extra = {}) {
     const payload = {
@@ -36,6 +42,8 @@ function registerUpdatesIpc(deps = {}) {
       lastMessage,
       lastError,
       progressPercent: lastProgress,
+      autoCheckOnStartup,
+      autoCheckIntervalMinutes,
       ...extra
     };
     const mainWindow = getMainWindow();
@@ -129,11 +137,55 @@ function registerUpdatesIpc(deps = {}) {
     });
   }
 
+  function readAutoCheckConfigFromStore() {
+    const storedStartup = store && typeof store.get === "function"
+      ? store.get(AUTO_CHECK_ON_STARTUP_KEY, true)
+      : true;
+    autoCheckOnStartup = storedStartup !== false;
+
+    const storedMinutes = Number(store && typeof store.get === "function"
+      ? store.get(AUTO_CHECK_INTERVAL_MINUTES_KEY, 60)
+      : 60);
+    autoCheckIntervalMinutes = Number.isFinite(storedMinutes)
+      ? Math.max(5, Math.min(1440, Math.round(storedMinutes)))
+      : 60;
+  }
+
+  function writeAutoCheckConfigToStore(nextConfig = {}) {
+    const startup = nextConfig.autoCheckOnStartup !== false;
+    const parsedMinutes = Number(nextConfig.autoCheckIntervalMinutes);
+    const minutes = Number.isFinite(parsedMinutes)
+      ? Math.max(5, Math.min(1440, Math.round(parsedMinutes)))
+      : autoCheckIntervalMinutes;
+
+    autoCheckOnStartup = startup;
+    autoCheckIntervalMinutes = minutes;
+
+    if (store && typeof store.set === "function") {
+      store.set(AUTO_CHECK_ON_STARTUP_KEY, autoCheckOnStartup);
+      store.set(AUTO_CHECK_INTERVAL_MINUTES_KEY, autoCheckIntervalMinutes);
+    }
+  }
+
+  function scheduleAutoCheck() {
+    if (autoCheckTimer) {
+      clearInterval(autoCheckTimer);
+      autoCheckTimer = null;
+    }
+    if (!autoCheckOnStartup) return;
+    const periodMs = autoCheckIntervalMinutes * 60 * 1000;
+    autoCheckTimer = setInterval(() => {
+      void checkForUpdates();
+    }, periodMs);
+  }
+
   async function checkForUpdates() {
     if (!app.isPackaged) {
+      lastError = "Auto-update is available only in packaged builds.";
+      lastMessage = "";
       return {
         success: false,
-        message: "Auto-update is available only in packaged builds.",
+        message: lastError,
         ...emitStatus()
       };
     }
@@ -154,6 +206,7 @@ function registerUpdatesIpc(deps = {}) {
       };
     } catch (error) {
       lastError = String(error?.message || error || "Failed to check for updates");
+      lastMessage = "";
       return {
         success: false,
         message: lastError,
@@ -164,9 +217,11 @@ function registerUpdatesIpc(deps = {}) {
 
   async function downloadUpdate() {
     if (!app.isPackaged) {
+      lastError = "Auto-update is available only in packaged builds.";
+      lastMessage = "";
       return {
         success: false,
-        message: "Auto-update is available only in packaged builds.",
+        message: lastError,
         ...emitStatus()
       };
     }
@@ -203,6 +258,28 @@ function registerUpdatesIpc(deps = {}) {
     return await checkForUpdates();
   });
 
+  ipcMain.handle("update:get-config", async () => {
+    return {
+      success: true,
+      autoCheckOnStartup,
+      autoCheckIntervalMinutes
+    };
+  });
+
+  ipcMain.handle("update:set-config", async (_event, payload = {}) => {
+    writeAutoCheckConfigToStore({
+      autoCheckOnStartup: payload?.autoCheckOnStartup,
+      autoCheckIntervalMinutes: payload?.autoCheckIntervalMinutes
+    });
+    scheduleAutoCheck();
+    return {
+      success: true,
+      autoCheckOnStartup,
+      autoCheckIntervalMinutes,
+      ...emitStatus()
+    };
+  });
+
   ipcMain.handle("update:download", async () => {
     return await downloadUpdate();
   });
@@ -229,11 +306,13 @@ function registerUpdatesIpc(deps = {}) {
     }
   });
 
-  if (app.isPackaged) {
-    ensureInitialized();
+  readAutoCheckConfigFromStore();
+  scheduleAutoCheck();
+  if (app.isPackaged) ensureInitialized();
+  if (autoCheckOnStartup) {
     setTimeout(() => {
       void checkForUpdates();
-    }, 8000);
+    }, app.isPackaged ? 8000 : 3000);
   }
 }
 

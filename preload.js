@@ -64,7 +64,11 @@ const ALLOWED_INVOKE = new Set([
   "locales:read",
   "locales:exists",
   "locales:write",
+  "locales:delete",
+  "locales:rename",
   "locales:flags:get-data-url",
+  "locales:flags:write-data-url",
+  "locales:flags:write-from-file",
   "locales:repo:get-config",
   "locales:repo:set-config",
   "locales:repo:fetch-catalog",
@@ -95,9 +99,16 @@ const ALLOWED_INVOKE = new Set([
   "window:is-maximized",
   "app:renderer-ready",
   "update:get-state",
+  "update:get-config",
+  "update:set-config",
   "update:check",
   "update:download",
-  "update:install"
+  "update:install",
+  "resources:update:get-state",
+  "resources:update:check",
+  "resources:update:install",
+  "resources:update:get-config",
+  "resources:update:set-config"
 ]);
 
 const ALLOWED_SEND = new Set([
@@ -108,7 +119,8 @@ const ALLOWED_ON = new Set([
   "emubro:launch",
   "window-moved",
   "window:maximized-changed",
-  "app:update-status"
+  "app:update-status",
+  "resources:update-status"
 ]);
 
 function invoke(channel, ...args) {
@@ -143,6 +155,7 @@ contextBridge.exposeInMainWorld("emubro", {
   onWindowMoved: (callback) => on("window-moved", callback),
   onWindowMaximizedChanged: (callback) => on("window:maximized-changed", callback),
   onUpdateStatus: (callback) => on("app:update-status", callback),
+  onResourcesUpdateStatus: (callback) => on("resources:update-status", callback),
 
   invoke,
 
@@ -155,7 +168,11 @@ contextBridge.exposeInMainWorld("emubro", {
     read: (filename) => invoke("locales:read", filename),
     exists: (filename) => invoke("locales:exists", filename),
     write: (filename, json) => invoke("locales:write", filename, json),
+    delete: (filename) => invoke("locales:delete", filename),
+    rename: (payload) => invoke("locales:rename", payload),
     getFlagDataUrl: (flagCode) => invoke("locales:flags:get-data-url", flagCode),
+    writeFlagDataUrl: (payload) => invoke("locales:flags:write-data-url", payload),
+    writeFlagFromFile: (payload) => invoke("locales:flags:write-from-file", payload),
     getRepoConfig: () => invoke("locales:repo:get-config"),
     setRepoConfig: (payload) => invoke("locales:repo:set-config", payload),
     fetchRepoCatalog: (payload) => invoke("locales:repo:fetch-catalog", payload),
@@ -165,9 +182,18 @@ contextBridge.exposeInMainWorld("emubro", {
   createGameShortcut: (gameId) => invoke("create-game-shortcut", gameId),
   updates: {
     getState: () => invoke("update:get-state"),
+    getConfig: () => invoke("update:get-config"),
+    setConfig: (payload) => invoke("update:set-config", payload),
     check: () => invoke("update:check"),
     download: () => invoke("update:download"),
     install: () => invoke("update:install")
+  },
+  resourcesUpdates: {
+    getState: () => invoke("resources:update:get-state"),
+    check: () => invoke("resources:update:check"),
+    install: () => invoke("resources:update:install"),
+    getConfig: () => invoke("resources:update:get-config"),
+    setConfig: (payload) => invoke("resources:update:set-config", payload)
   },
   promptScanSubfolders: (folderPath) => invoke("prompt-scan-subfolders", folderPath),
   importPaths: (paths, options) => invoke("import-paths", paths, options),

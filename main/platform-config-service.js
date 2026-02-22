@@ -7,7 +7,8 @@ function createPlatformConfigService(deps = {}) {
     fsSync,
     log,
     dbUpsertEmulator,
-    refreshLibraryFromDb
+    refreshLibraryFromDb,
+    getResourceRoots
   } = deps;
 
   if (!app) throw new Error("createPlatformConfigService requires app");
@@ -16,23 +17,32 @@ function createPlatformConfigService(deps = {}) {
   if (!log) throw new Error("createPlatformConfigService requires log");
   if (typeof dbUpsertEmulator !== "function") throw new Error("createPlatformConfigService requires dbUpsertEmulator");
   if (typeof refreshLibraryFromDb !== "function") throw new Error("createPlatformConfigService requires refreshLibraryFromDb");
+  if (typeof getResourceRoots !== "function") throw new Error("createPlatformConfigService requires getResourceRoots");
 
   async function getPlatformConfigs() {
     const platformConfigs = [];
-    const platformsDir = path.join(app.getAppPath(), "emubro-resources", "platforms");
+    const resourceRoots = Array.isArray(getResourceRoots()) ? getResourceRoots() : [];
+    const platformsDirs = resourceRoots
+      .map((root) => path.join(root, "platforms"))
+      .filter((dirPath) => fsSync.existsSync(dirPath));
+    const visitedPlatforms = new Set();
 
     try {
-      const platformDirs = await fs.readdir(platformsDir);
-      for (const platformDir of platformDirs) {
-        const configPath = path.join(platformsDir, platformDir, "config.json");
-        try {
-          if (!fsSync.existsSync(configPath)) continue;
-          const configFile = fsSync.readFileSync(configPath, "utf8");
-          const config = JSON.parse(configFile);
-          config.platformDir = platformDir;
-          platformConfigs.push(config);
-        } catch (error) {
-          log.warn(`Failed to read config file for platform ${platformDir}:`, error.message);
+      for (const platformsDir of platformsDirs) {
+        const platformDirs = await fs.readdir(platformsDir);
+        for (const platformDir of platformDirs) {
+          if (visitedPlatforms.has(platformDir)) continue;
+          const configPath = path.join(platformsDir, platformDir, "config.json");
+          try {
+            if (!fsSync.existsSync(configPath)) continue;
+            const configFile = fsSync.readFileSync(configPath, "utf8");
+            const config = JSON.parse(configFile);
+            config.platformDir = platformDir;
+            platformConfigs.push(config);
+            visitedPlatforms.add(platformDir);
+          } catch (error) {
+            log.warn(`Failed to read config file for platform ${platformDir}:`, error.message);
+          }
         }
       }
     } catch (error) {

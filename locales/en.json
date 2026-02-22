@@ -108,9 +108,9 @@
       "text": "Drop Folder or Drop File"
     },
     "filters": {
-      "groupCompany": "Group: Company",
-      "groupNone": "Group: None",
-      "groupPlatform": "Group: Platform",
+      "groupCompany": "Company",
+      "groupNone": "None",
+      "groupPlatform": "Platform",
       "groupSameNames": "Group same names",
       "search": "Search games...",
       "searchGamesBtn": "Search Games",

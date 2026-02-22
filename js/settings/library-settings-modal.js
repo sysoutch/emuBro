@@ -116,7 +116,9 @@ export async function openLibraryPathSettingsModal(options = {}) {
             }))
             .sort((a, b) => String(a.platform).localeCompare(String(b.platform)));
     }
-    let activeTab = 'general';
+    const initialTab = String(options.initialTab || '').trim().toLowerCase();
+    const allowedTabs = new Set(['general', 'llm', 'gamepad', 'library-paths', 'import', 'updates']);
+    let activeTab = allowedTabs.has(initialTab) ? initialTab : 'general';
     let updateState = {
         checking: false,
         downloading: false,
@@ -127,9 +129,25 @@ export async function openLibraryPathSettingsModal(options = {}) {
         releaseNotes: '',
         lastMessage: '',
         lastError: '',
-        progressPercent: 0
+        progressPercent: 0,
+        autoCheckOnStartup: true,
+        autoCheckIntervalMinutes: 60
+    };
+    let resourcesUpdateState = {
+        checking: false,
+        installing: false,
+        available: false,
+        currentVersion: '',
+        latestVersion: '',
+        manifestUrl: '',
+        lastMessage: '',
+        lastError: '',
+        progressPercent: 0,
+        autoCheckOnStartup: true,
+        autoCheckIntervalMinutes: 60
     };
     let detachUpdateListener = null;
+    let detachResourcesUpdateListener = null;
 
     const overlay = document.createElement('div');
     overlay.style.cssText = [
@@ -178,6 +196,9 @@ export async function openLibraryPathSettingsModal(options = {}) {
         try {
             if (typeof detachUpdateListener === 'function') detachUpdateListener();
         } catch (_error) {}
+        try {
+            if (typeof detachResourcesUpdateListener === 'function') detachResourcesUpdateListener();
+        } catch (_error) {}
         overlay.remove();
     };
 
@@ -195,7 +216,13 @@ export async function openLibraryPathSettingsModal(options = {}) {
             lastError: String(payload?.lastError || ''),
             progressPercent: Number.isFinite(Number(payload?.progressPercent))
                 ? Number(payload.progressPercent)
-                : Number(updateState.progressPercent || 0)
+                : Number(updateState.progressPercent || 0),
+            autoCheckOnStartup: payload?.autoCheckOnStartup !== undefined
+                ? payload.autoCheckOnStartup !== false
+                : updateState.autoCheckOnStartup,
+            autoCheckIntervalMinutes: Number.isFinite(Number(payload?.autoCheckIntervalMinutes))
+                ? Math.max(5, Math.min(1440, Math.round(Number(payload.autoCheckIntervalMinutes))))
+                : Number(updateState.autoCheckIntervalMinutes || 60)
         };
     };
 
@@ -206,6 +233,38 @@ export async function openLibraryPathSettingsModal(options = {}) {
         if (updateState.available) return `Update available${updateState.latestVersion ? `: ${updateState.latestVersion}` : ''}`;
         if (updateState.checking) return 'Checking for updates...';
         if (updateState.lastMessage) return updateState.lastMessage;
+        return 'Not checked yet.';
+    };
+
+    const applyResourcesUpdateState = (payload = {}) => {
+        resourcesUpdateState = {
+            ...resourcesUpdateState,
+            checking: !!payload?.checking,
+            installing: !!payload?.installing,
+            available: !!payload?.available,
+            currentVersion: String(payload?.currentVersion || resourcesUpdateState.currentVersion || ''),
+            latestVersion: String(payload?.latestVersion || resourcesUpdateState.latestVersion || ''),
+            manifestUrl: String(payload?.manifestUrl || resourcesUpdateState.manifestUrl || ''),
+            lastMessage: String(payload?.lastMessage || ''),
+            lastError: String(payload?.lastError || ''),
+            progressPercent: Number.isFinite(Number(payload?.progressPercent))
+                ? Number(payload.progressPercent)
+                : Number(resourcesUpdateState.progressPercent || 0),
+            autoCheckOnStartup: payload?.autoCheckOnStartup !== undefined
+                ? payload.autoCheckOnStartup !== false
+                : resourcesUpdateState.autoCheckOnStartup,
+            autoCheckIntervalMinutes: Number.isFinite(Number(payload?.autoCheckIntervalMinutes))
+                ? Math.max(5, Math.min(1440, Math.round(Number(payload.autoCheckIntervalMinutes))))
+                : Number(resourcesUpdateState.autoCheckIntervalMinutes || 60)
+        };
+    };
+
+    const renderResourcesUpdateStatusText = () => {
+        if (resourcesUpdateState.lastError) return `Error: ${resourcesUpdateState.lastError}`;
+        if (resourcesUpdateState.installing) return `Installing resources... ${Math.round(resourcesUpdateState.progressPercent || 0)}%`;
+        if (resourcesUpdateState.available) return `Resource update available${resourcesUpdateState.latestVersion ? `: ${resourcesUpdateState.latestVersion}` : ''}`;
+        if (resourcesUpdateState.checking) return 'Checking resource updates...';
+        if (resourcesUpdateState.lastMessage) return resourcesUpdateState.lastMessage;
         return 'Not checked yet.';
     };
 
@@ -364,8 +423,40 @@ export async function openLibraryPathSettingsModal(options = {}) {
         const notes = String(updateState.releaseNotes || '').trim();
         const canDownload = !!updateState.available && !updateState.downloaded && !updateState.downloading;
         const canInstall = !!updateState.downloaded;
+        const resourcesStatus = escapeAttr(renderResourcesUpdateStatusText());
+        const resourcesCurrentVersion = escapeAttr(resourcesUpdateState.currentVersion || '');
+        const resourcesLatestVersion = escapeAttr(resourcesUpdateState.latestVersion || '');
+        const resourcesManifestUrl = escapeAttr(resourcesUpdateState.manifestUrl || '');
+        const canInstallResources = !!resourcesUpdateState.available && !resourcesUpdateState.installing;
+        const autoCheckOnStartup = !!(updateState.autoCheckOnStartup && resourcesUpdateState.autoCheckOnStartup);
+        const autoCheckIntervalMinutes = Math.max(
+            5,
+            Math.min(
+                1440,
+                Math.round(Number(updateState.autoCheckIntervalMinutes || resourcesUpdateState.autoCheckIntervalMinutes || 60))
+            )
+        );
         return `
             <section style="display:grid;gap:12px;">
+                <section style="border:1px solid var(--border-color);border-radius:12px;padding:12px;display:grid;gap:10px;">
+                    <h3 style="margin:0;font-size:1rem;">Automatic Update Checks</h3>
+                    <label style="display:flex;align-items:center;gap:10px;">
+                        <input type="checkbox" data-update-auto-check-startup${autoCheckOnStartup ? ' checked' : ''} />
+                        <span>Check for app/resources updates automatically</span>
+                    </label>
+                    <div style="display:grid;grid-template-columns:minmax(160px,280px) auto;gap:8px;align-items:center;">
+                        <input
+                            type="number"
+                            min="5"
+                            max="1440"
+                            step="1"
+                            data-update-auto-check-interval
+                            value="${autoCheckIntervalMinutes}"
+                        />
+                        <button type="button" class="action-btn" data-update-action="save-auto-config">Save Auto-Check Settings</button>
+                    </div>
+                    <div style="font-size:0.82rem;color:var(--text-secondary);">Interval is in minutes (5 - 1440).</div>
+                </section>
                 <section style="border:1px solid var(--border-color);border-radius:12px;padding:12px;display:grid;gap:10px;">
                     <h3 style="margin:0;font-size:1rem;">App Updates</h3>
                     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;">
@@ -373,12 +464,35 @@ export async function openLibraryPathSettingsModal(options = {}) {
                         <div style="font-size:0.9rem;"><strong>Latest:</strong> ${latestVersion || '-'}</div>
                     </div>
                     <div style="font-size:0.9rem;color:var(--text-secondary);" data-update-status>${status}</div>
+                    <div style="font-size:0.82rem;color:var(--text-secondary);">${!updateState.currentVersion && !updateState.latestVersion ? 'If this app is not packaged or no GitHub release artifacts are published yet, check will report that directly.' : ''}</div>
                     <div style="display:flex;flex-wrap:wrap;gap:8px;">
                         <button type="button" class="action-btn" data-update-action="check"${updateState.checking ? ' disabled' : ''}>Check for Updates</button>
                         <button type="button" class="action-btn" data-update-action="download"${canDownload ? '' : ' disabled'}>Download Update</button>
                         <button type="button" class="action-btn launch-btn" data-update-action="install"${canInstall ? '' : ' disabled'}>Install & Restart</button>
                     </div>
                     ${notes ? `<pre style="margin:0;padding:10px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-primary);white-space:pre-wrap;font-family:var(--font-body);font-size:0.85rem;">${escapeAttr(notes)}</pre>` : ''}
+                </section>
+                <section style="border:1px solid var(--border-color);border-radius:12px;padding:12px;display:grid;gap:10px;">
+                    <h3 style="margin:0;font-size:1rem;">emubro-resources Updates</h3>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;">
+                        <div style="font-size:0.9rem;"><strong>Current:</strong> ${resourcesCurrentVersion || '-'}</div>
+                        <div style="font-size:0.9rem;"><strong>Latest:</strong> ${resourcesLatestVersion || '-'}</div>
+                    </div>
+                    <div style="font-size:0.9rem;color:var(--text-secondary);" data-resource-update-status>${resourcesStatus}</div>
+                    <div style="display:grid;grid-template-columns:minmax(240px,1fr) auto;gap:8px;align-items:center;">
+                        <input
+                            type="text"
+                            data-resource-manifest-url
+                            value="${resourcesManifestUrl}"
+                            placeholder="https://.../manifest.json"
+                            style="min-width:240px;"
+                        />
+                        <button type="button" class="action-btn" data-resource-update-action="save-config">Save URL</button>
+                    </div>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                        <button type="button" class="action-btn" data-resource-update-action="check"${resourcesUpdateState.checking ? ' disabled' : ''}>Check Resource Updates</button>
+                        <button type="button" class="action-btn launch-btn" data-resource-update-action="install"${canInstallResources ? '' : ' disabled'}>Install Resource Update</button>
+                    </div>
                 </section>
             </section>
         `;
@@ -689,15 +803,69 @@ export async function openLibraryPathSettingsModal(options = {}) {
                 button.disabled = true;
                 try {
                     let result = null;
+                    if (action === 'save-auto-config') {
+                        const startupToggle = modal.querySelector('[data-update-auto-check-startup]');
+                        const intervalInput = modal.querySelector('[data-update-auto-check-interval]');
+                        const autoCheckOnStartup = !!startupToggle?.checked;
+                        const autoCheckIntervalMinutes = Number(intervalInput?.value || 60);
+                        const appConfigResult = await emubro.updates?.setConfig?.({
+                            autoCheckOnStartup,
+                            autoCheckIntervalMinutes
+                        });
+                        const resourcesConfigResult = await emubro.resourcesUpdates?.setConfig?.({
+                            manifestUrl: resourcesUpdateState.manifestUrl || '',
+                            autoCheckOnStartup,
+                            autoCheckIntervalMinutes
+                        });
+                        if (appConfigResult && typeof appConfigResult === 'object') applyUpdateState(appConfigResult);
+                        if (resourcesConfigResult && typeof resourcesConfigResult === 'object') applyResourcesUpdateState(resourcesConfigResult);
+                        result = { success: true };
+                    }
                     if (action === 'check') result = await emubro.updates?.check?.();
                     if (action === 'download') result = await emubro.updates?.download?.();
                     if (action === 'install') result = await emubro.updates?.install?.();
                     if (result && typeof result === 'object') {
                         applyUpdateState(result);
+                        if (result.success === false && result.message) {
+                            applyUpdateState({ lastError: String(result.message) });
+                        }
                     }
                     render();
                 } catch (error) {
                     applyUpdateState({ lastError: String(error?.message || error || 'Update action failed') });
+                    render();
+                } finally {
+                    button.disabled = false;
+                }
+            });
+        });
+
+        modal.querySelectorAll('[data-resource-update-action]').forEach((button) => {
+            button.addEventListener('click', async () => {
+                const action = String(button.dataset.resourceUpdateAction || '').trim().toLowerCase();
+                if (!action) return;
+                button.disabled = true;
+                try {
+                    let result = null;
+                    if (action === 'save-config') {
+                        const urlInput = modal.querySelector('[data-resource-manifest-url]');
+                        result = await emubro.resourcesUpdates?.setConfig?.({
+                            manifestUrl: String(urlInput?.value || '').trim(),
+                            autoCheckOnStartup: resourcesUpdateState.autoCheckOnStartup,
+                            autoCheckIntervalMinutes: resourcesUpdateState.autoCheckIntervalMinutes
+                        });
+                    }
+                    if (action === 'check') result = await emubro.resourcesUpdates?.check?.();
+                    if (action === 'install') result = await emubro.resourcesUpdates?.install?.();
+                    if (result && typeof result === 'object') {
+                        applyResourcesUpdateState(result);
+                        if (result.success === false && result.message) {
+                            applyResourcesUpdateState({ lastError: String(result.message) });
+                        }
+                    }
+                    render();
+                } catch (error) {
+                    applyResourcesUpdateState({ lastError: String(error?.message || error || 'Resource update action failed') });
                     render();
                 } finally {
                     button.disabled = false;
@@ -904,9 +1072,27 @@ export async function openLibraryPathSettingsModal(options = {}) {
                 if (overlay.isConnected) render();
             });
         }
+        if (typeof emubro?.onResourcesUpdateStatus === 'function') {
+            detachResourcesUpdateListener = emubro.onResourcesUpdateStatus((payload = {}) => {
+                applyResourcesUpdateState(payload);
+                if (overlay.isConnected) render();
+            });
+        }
         const initialUpdateState = await emubro?.updates?.getState?.();
         if (initialUpdateState && typeof initialUpdateState === 'object') {
             applyUpdateState(initialUpdateState);
+        }
+        const appUpdateConfig = await emubro?.updates?.getConfig?.();
+        if (appUpdateConfig && typeof appUpdateConfig === 'object') {
+            applyUpdateState(appUpdateConfig);
+        }
+        const initialResourceUpdateState = await emubro?.resourcesUpdates?.getState?.();
+        if (initialResourceUpdateState && typeof initialResourceUpdateState === 'object') {
+            applyResourcesUpdateState(initialResourceUpdateState);
+        }
+        const resourceConfig = await emubro?.resourcesUpdates?.getConfig?.();
+        if (resourceConfig && typeof resourceConfig === 'object') {
+            applyResourcesUpdateState(resourceConfig);
         }
     } catch (_error) {}
 

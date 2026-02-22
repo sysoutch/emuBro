@@ -173,6 +173,29 @@ export function setupRendererEventListeners(options = {}) {
     }
     
     const sortFilter = document.getElementById('sort-filter');
+    const normalizeGroupFilterOptionLabels = () => {
+        if (!groupFilterSelect) return;
+        Array.from(groupFilterSelect.options || []).forEach((option) => {
+            const current = String(option.textContent || '').trim();
+            if (!current) return;
+            const cleaned = current.replace(/^\s*group\s*:\s*/i, '').trim();
+            if (cleaned && cleaned !== current) {
+                option.textContent = cleaned;
+            }
+        });
+    };
+    normalizeGroupFilterOptionLabels();
+    if (groupFilterSelect && typeof MutationObserver !== 'undefined') {
+        const observer = new MutationObserver(() => {
+            normalizeGroupFilterOptionLabels();
+        });
+        observer.observe(groupFilterSelect, {
+            childList: true,
+            subtree: true,
+            characterData: true
+        });
+    }
+
     if (sortFilter) {
         sortFilter.addEventListener('change', () => {
             if (getActiveLibrarySection() === 'emulators') {
@@ -229,6 +252,221 @@ export function setupRendererEventListeners(options = {}) {
             await renderActiveLibraryView();
         });
     }
+
+    const filtersCompactQuery = window.matchMedia('(max-width: 1280px)');
+    const initCompactFilterPair = ({
+        wrapperSelector,
+        toggleId,
+        panelId,
+        compactSelectIds = [],
+        closeOnChangeElements = []
+    }) => {
+        const wrapper = document.querySelector(wrapperSelector);
+        const toggleBtn = document.getElementById(toggleId);
+        if (!wrapper || !toggleBtn) return { close: () => {}, isOpen: () => false };
+
+        let floatingMenuEl = null;
+
+        const destroyFloatingMenu = () => {
+            if (!floatingMenuEl) return;
+            try {
+                floatingMenuEl.remove();
+            } catch (_error) {}
+            floatingMenuEl = null;
+        };
+
+        const positionFloatingMenu = () => {
+            if (!floatingMenuEl) return;
+            const rect = toggleBtn.getBoundingClientRect();
+            const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+            const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+            const margin = 8;
+
+            const maxWidth = Math.max(220, viewportWidth - (margin * 2));
+            const preferredWidth = Math.max(240, Math.min(560, Math.round(rect.width + 220)));
+            floatingMenuEl.style.width = `${Math.min(preferredWidth, maxWidth)}px`;
+            floatingMenuEl.style.maxWidth = `${maxWidth}px`;
+
+            // First-pass placement
+            floatingMenuEl.style.left = `${Math.max(margin, rect.left)}px`;
+            floatingMenuEl.style.top = `${Math.max(margin, rect.bottom + 6)}px`;
+
+            // Clamp after measuring
+            const menuRect = floatingMenuEl.getBoundingClientRect();
+            let left = rect.left;
+            if (left + menuRect.width > viewportWidth - margin) {
+                left = viewportWidth - margin - menuRect.width;
+            }
+            if (left < margin) left = margin;
+
+            let top = rect.bottom + 6;
+            if (top + menuRect.height > viewportHeight - margin) {
+                top = rect.top - menuRect.height - 6;
+            }
+            if (top < margin) top = margin;
+
+            floatingMenuEl.style.left = `${Math.round(left)}px`;
+            floatingMenuEl.style.top = `${Math.round(top)}px`;
+        };
+
+        const setOpenState = (open) => {
+            const shouldOpen = !!open && filtersCompactQuery.matches;
+            wrapper.classList.toggle('is-open', shouldOpen);
+            toggleBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+            if (shouldOpen) {
+                renderCompactMenu();
+            } else {
+                destroyFloatingMenu();
+            }
+        };
+        const close = () => setOpenState(false);
+        const isOpen = () => wrapper.classList.contains('is-open');
+        const getCompactLabel = (selectId) => {
+            if (selectId === 'game-region-filter') return 'Region';
+            if (selectId === 'game-language-filter') return 'Language';
+            if (selectId === 'group-filter') return 'Group';
+            if (selectId === 'sort-filter') return 'Sort';
+            return 'Filter';
+        };
+        const renderCompactMenu = () => {
+            if (!filtersCompactQuery.matches) return;
+            destroyFloatingMenu();
+            const menu = document.createElement('div');
+            menu.className = 'filter-pair-floating-menu';
+            menu.setAttribute('role', 'dialog');
+            menu.setAttribute('aria-label', 'Compact filters');
+
+            compactSelectIds.forEach((selectId) => {
+                const selectEl = document.getElementById(selectId);
+                if (!selectEl || selectEl.classList.contains('is-hidden')) return;
+
+                const block = document.createElement('div');
+                block.className = 'filter-pair-compact-block';
+
+                const label = document.createElement('div');
+                label.className = 'filter-pair-compact-label';
+                label.textContent = getCompactLabel(selectId);
+                block.appendChild(label);
+
+                const optionsWrap = document.createElement('div');
+                optionsWrap.className = 'filter-pair-compact-options';
+
+                Array.from(selectEl.options || []).forEach((optionEl) => {
+                    const value = String(optionEl.value || '');
+                    const text = String(optionEl.textContent || '').trim();
+                    if (!text) return;
+
+                    const optionBtn = document.createElement('button');
+                    optionBtn.type = 'button';
+                    optionBtn.className = 'filter-pair-compact-option';
+                    if (selectEl.value === value) optionBtn.classList.add('is-active');
+                    optionBtn.textContent = text;
+                    optionBtn.dataset.value = value;
+                    optionBtn.addEventListener('click', () => {
+                        if (selectEl.value === value) {
+                            close();
+                            return;
+                        }
+                        selectEl.value = value;
+                        selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+                    });
+                    optionsWrap.appendChild(optionBtn);
+                });
+
+                block.appendChild(optionsWrap);
+                menu.appendChild(block);
+            });
+
+            document.body.appendChild(menu);
+            floatingMenuEl = menu;
+            positionFloatingMenu();
+        };
+
+        toggleBtn.addEventListener('click', (event) => {
+            if (!filtersCompactQuery.matches) return;
+            event.preventDefault();
+            event.stopPropagation();
+            setOpenState(!isOpen());
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!filtersCompactQuery.matches || !isOpen()) return;
+            if (wrapper.contains(event.target)) return;
+            if (floatingMenuEl && floatingMenuEl.contains(event.target)) return;
+            close();
+        });
+
+        closeOnChangeElements.forEach((el) => {
+            el?.addEventListener('change', close);
+            el?.addEventListener('change', () => {
+                if (isOpen()) renderCompactMenu();
+            });
+        });
+
+        window.addEventListener('resize', () => {
+            if (!isOpen()) return;
+            if (!filtersCompactQuery.matches) {
+                close();
+                return;
+            }
+            positionFloatingMenu();
+        });
+
+        window.addEventListener('scroll', () => {
+            if (!isOpen()) return;
+            positionFloatingMenu();
+        }, true);
+
+        return { close, isOpen, setOpenState };
+    };
+
+    const regionLanguagePair = initCompactFilterPair({
+        wrapperSelector: '.filter-pair-wrapper-region-language',
+        toggleId: 'filters-region-language-toggle',
+        panelId: 'filters-region-language-content',
+        compactSelectIds: ['game-region-filter', 'game-language-filter'],
+        closeOnChangeElements: [gameRegionFilterSelect, gameLanguageFilterSelect]
+    });
+    const groupSortPair = initCompactFilterPair({
+        wrapperSelector: '.filter-pair-wrapper-group-sort',
+        toggleId: 'filters-group-sort-toggle',
+        panelId: 'filters-group-sort-content',
+        compactSelectIds: ['group-filter', 'sort-filter'],
+        closeOnChangeElements: [groupFilterSelect, sortFilter]
+    });
+
+    const regionLanguageToggleBtn = document.getElementById('filters-region-language-toggle');
+    const groupSortToggleBtn = document.getElementById('filters-group-sort-toggle');
+    if (regionLanguageToggleBtn) {
+        regionLanguageToggleBtn.addEventListener('click', () => {
+            if (!filtersCompactQuery.matches) return;
+            if (regionLanguagePair.isOpen()) groupSortPair.close();
+        });
+    }
+    if (groupSortToggleBtn) {
+        groupSortToggleBtn.addEventListener('click', () => {
+            if (!filtersCompactQuery.matches) return;
+            if (groupSortPair.isOpen()) regionLanguagePair.close();
+        });
+    }
+
+    const syncCompactFilterPairs = () => {
+        if (filtersCompactQuery.matches) return;
+        regionLanguagePair.close();
+        groupSortPair.close();
+    };
+
+    if (typeof filtersCompactQuery.addEventListener === 'function') {
+        filtersCompactQuery.addEventListener('change', syncCompactFilterPairs);
+    } else if (typeof filtersCompactQuery.addListener === 'function') {
+        filtersCompactQuery.addListener(syncCompactFilterPairs);
+    }
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') return;
+        regionLanguagePair.close();
+        groupSortPair.close();
+    });
 
     // Theme Actions
     const themeToggleBtn = document.getElementById('theme-toggle-btn');
@@ -517,7 +755,7 @@ export function setupRendererEventListeners(options = {}) {
     setupWindowResizeHandler({
         recenterManagedModalIfMostlyOutOfView
     });
-    setupWindowControls({ emubro });
+    setupWindowControls({ emubro, openLibraryPathSettingsModal });
     setupHeaderThemeControlsToggle({ themeSelect });
 
 }

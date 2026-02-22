@@ -120,6 +120,7 @@
             <!-- Custom window controls (used when frameless on Windows) -->
             <div class="window-drag-gap" aria-hidden="true"></div>
             <div class="window-controls-main" id="window-controls-main" aria-label="Window controls">
+                <button class="win-btn win-btn-update" id="win-update-btn" title="Updates available" aria-label="Updates available" hidden>⬇</button>
                 <button class="win-btn" id="win-min-btn" title="Minimize" aria-label="Minimize">_</button>
                 <button class="win-btn" id="win-max-btn" title="Maximize" aria-label="Maximize">▢</button>
                 <button class="win-btn win-btn-close" id="win-close-btn" title="Close" aria-label="Close">×</button>
@@ -300,44 +301,67 @@
                                 <option value="nes">NES</option>
                                 <option value="snes">SNES</option>
                             </select>
-                            <select id="game-region-filter">
-                                <option value="all">All Regions</option>
-                                <option value="eu">EU</option>
-                                <option value="us">US</option>
-                                <option value="jp">JP</option>
-                            </select>
-                            <select id="game-language-filter">
-                                <option value="all">All Languages</option>
-                                <option value="en">English</option>
-                                <option value="de">German</option>
-                                <option value="fr">French</option>
-                                <option value="es">Spanish</option>
-                                <option value="it">Italian</option>
-                                <option value="jp">Japanese</option>
-                                <option value="pt">Portuguese</option>
-                                <option value="nl">Dutch</option>
-                                <option value="sv">Swedish</option>
-                                <option value="no">Norwegian</option>
-                                <option value="da">Danish</option>
-                                <option value="fi">Finnish</option>
-                                <option value="pl">Polish</option>
-                                <option value="ru">Russian</option>
-                                <option value="tr">Turkish</option>
-                                <option value="cs">Czech</option>
-                                <option value="hu">Hungarian</option>
-                                <option value="ko">Korean</option>
-                                <option value="zh">Chinese</option>
-                            </select>
-                            <select id="group-filter">
-                                <option value="none" data-i18n="filters.groupNone">Group: None</option>
-                                <option value="platform" data-i18n="filters.groupPlatform">Group: Platform</option>
-                                <option value="company" data-i18n="filters.groupCompany">Group: Company</option>
-                            </select>
-                            <select id="sort-filter">
-                                <option value="name" data-i18n="gameGrid.sortByName">Sort by Name</option>
-                                <option value="rating" data-i18n="gameGrid.sortByRating">Sort by Rating</option>
-                                <option value="platform" data-i18n="gameGrid.sortByPlatform">Sort by Platform</option>
-                            </select>
+                            <div class="filter-pair-wrapper filter-pair-wrapper-region-language">
+                                <button
+                                    id="filters-region-language-toggle"
+                                    class="filter-pair-toggle"
+                                    type="button"
+                                    aria-expanded="false"
+                                    aria-controls="filters-region-language-content"
+                                >Region + Language</button>
+                                <div id="filters-region-language-content" class="filter-pair-content">
+                                    <select id="game-region-filter">
+                                        <option value="all">All Regions</option>
+                                        <option value="eu">EU</option>
+                                        <option value="us">US</option>
+                                        <option value="jp">JP</option>
+                                    </select>
+                                    <select id="game-language-filter">
+                                        <option value="all">All Languages</option>
+                                        <option value="en">English</option>
+                                        <option value="de">German</option>
+                                        <option value="fr">French</option>
+                                        <option value="es">Spanish</option>
+                                        <option value="it">Italian</option>
+                                        <option value="jp">Japanese</option>
+                                        <option value="pt">Portuguese</option>
+                                        <option value="nl">Dutch</option>
+                                        <option value="sv">Swedish</option>
+                                        <option value="no">Norwegian</option>
+                                        <option value="da">Danish</option>
+                                        <option value="fi">Finnish</option>
+                                        <option value="pl">Polish</option>
+                                        <option value="ru">Russian</option>
+                                        <option value="tr">Turkish</option>
+                                        <option value="cs">Czech</option>
+                                        <option value="hu">Hungarian</option>
+                                        <option value="ko">Korean</option>
+                                        <option value="zh">Chinese</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="filter-pair-wrapper filter-pair-wrapper-group-sort">
+                                <button
+                                    id="filters-group-sort-toggle"
+                                    class="filter-pair-toggle"
+                                    type="button"
+                                    aria-expanded="false"
+                                    aria-controls="filters-group-sort-content"
+                                >Group + Sort</button>
+                                <div id="filters-group-sort-content" class="filter-pair-content">
+                                    <select id="group-filter">
+                                        <option value="none" data-i18n="filters.groupNone">None</option>
+                                        <option value="platform" data-i18n="filters.groupPlatform">Platform</option>
+                                        <option value="company" data-i18n="filters.groupCompany">Company</option>
+                                    </select>
+                                    <select id="sort-filter">
+                                        <option value="name" data-i18n="gameGrid.sortByName">Sort by Name</option>
+                                        <option value="rating" data-i18n="gameGrid.sortByRating">Sort by Rating</option>
+                                        <option value="platform" data-i18n="gameGrid.sortByPlatform">Sort by Platform</option>
+                                        <option value="recently-played">Recently Played</option>
+                                    </select>
+                                </div>
+                            </div>
                             <label id="group-same-names-toggle-wrap" class="group-same-names-toggle">
                                 <input id="group-same-names-toggle" type="checkbox" />
                                 <span data-i18n="filters.groupSameNames">Group same names</span>

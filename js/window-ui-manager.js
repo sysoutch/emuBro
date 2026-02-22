@@ -3,12 +3,18 @@ let lastWindowHeight = window.innerHeight;
 
 export function setupWindowControls(options = {}) {
     const emubro = options.emubro;
+    const openLibraryPathSettingsModal = typeof options.openLibraryPathSettingsModal === 'function'
+        ? options.openLibraryPathSettingsModal
+        : async () => {};
     if (!emubro) return;
 
     const minBtn = document.getElementById('win-min-btn');
     const maxBtn = document.getElementById('win-max-btn');
     const closeBtn = document.getElementById('win-close-btn');
+    const updateBtn = document.getElementById('win-update-btn');
     const header = document.querySelector('header.header');
+    let appUpdateAvailable = false;
+    let resourcesUpdateAvailable = false;
 
     if (minBtn) minBtn.addEventListener('click', () => emubro.invoke('window:minimize'));
     if (closeBtn) closeBtn.addEventListener('click', () => emubro.invoke('window:close'));
@@ -36,11 +42,61 @@ export function setupWindowControls(options = {}) {
         } catch (_e) {}
     };
 
+    const syncUpdateBadge = () => {
+        if (!updateBtn) return;
+        const hasUpdate = appUpdateAvailable || resourcesUpdateAvailable;
+        updateBtn.hidden = !hasUpdate;
+        updateBtn.classList.toggle('has-update', hasUpdate);
+        if (!hasUpdate) return;
+
+        let label = 'Updates available';
+        if (appUpdateAvailable && resourcesUpdateAvailable) label = 'App and resources updates available';
+        else if (appUpdateAvailable) label = 'App update available';
+        else if (resourcesUpdateAvailable) label = 'Resources update available';
+        updateBtn.title = label;
+        updateBtn.setAttribute('aria-label', label);
+    };
+
     updateMaxIcon();
+    syncUpdateBadge();
 
     if (typeof emubro.onWindowMaximizedChanged === 'function') {
         emubro.onWindowMaximizedChanged((isMax) => updateMaxIcon(!!isMax));
     }
+
+    if (updateBtn) {
+        updateBtn.addEventListener('click', async () => {
+            await openLibraryPathSettingsModal({ initialTab: 'updates' });
+        });
+    }
+
+    if (typeof emubro.onUpdateStatus === 'function') {
+        emubro.onUpdateStatus((payload = {}) => {
+            appUpdateAvailable = !!payload?.available || !!payload?.downloaded;
+            syncUpdateBadge();
+        });
+    }
+
+    if (typeof emubro.onResourcesUpdateStatus === 'function') {
+        emubro.onResourcesUpdateStatus((payload = {}) => {
+            resourcesUpdateAvailable = !!payload?.available;
+            syncUpdateBadge();
+        });
+    }
+
+    Promise.resolve(emubro?.updates?.getState?.())
+        .then((state) => {
+            appUpdateAvailable = !!state?.available || !!state?.downloaded;
+            syncUpdateBadge();
+        })
+        .catch(() => {});
+
+    Promise.resolve(emubro?.resourcesUpdates?.getState?.())
+        .then((state) => {
+            resourcesUpdateAvailable = !!state?.available;
+            syncUpdateBadge();
+        })
+        .catch(() => {});
 
     if (header) {
         header.addEventListener('dblclick', async (event) => {
@@ -52,7 +108,8 @@ export function setupWindowControls(options = {}) {
 }
 
 export function setupHeaderThemeControlsToggle(options = {}) {
-    const compactQuery = window.matchMedia('(max-width: 1200px)');
+    const themeCompactQuery = window.matchMedia('(max-width: 1500px)');
+    const languageCompactQuery = window.matchMedia('(max-width: 1320px)');
     const themeSelect = options.themeSelect || document.getElementById('theme-select');
     const languageManagerBtn = document.getElementById('language-manager-btn');
 
@@ -60,6 +117,7 @@ export function setupHeaderThemeControlsToggle(options = {}) {
         wrapperSelector,
         toggleId,
         panelId,
+        compactQuery,
         closeOnChangeElement = null
     }) => {
         const wrapper = document.querySelector(wrapperSelector);
@@ -99,12 +157,14 @@ export function setupHeaderThemeControlsToggle(options = {}) {
         wrapperSelector: '.theme-toggle-wrapper',
         toggleId: 'theme-controls-toggle',
         panelId: 'theme-controls-content',
+        compactQuery: themeCompactQuery,
         closeOnChangeElement: themeSelect
     });
     const closeLanguagePanel = initCompactWrapper({
         wrapperSelector: '.language-controls-wrapper',
         toggleId: 'language-controls-toggle',
-        panelId: 'language-controls-content'
+        panelId: 'language-controls-content',
+        compactQuery: languageCompactQuery
     });
 
     const languageOptions = document.getElementById('language-options');
@@ -127,15 +187,24 @@ export function setupHeaderThemeControlsToggle(options = {}) {
     });
 
     const syncLayout = () => {
-        if (compactQuery.matches) return;
-        closeThemePanel();
-        closeLanguagePanel();
+        if (!themeCompactQuery.matches) {
+            closeThemePanel();
+        }
+        if (!languageCompactQuery.matches) {
+            closeLanguagePanel();
+        }
     };
 
-    if (typeof compactQuery.addEventListener === 'function') {
-        compactQuery.addEventListener('change', syncLayout);
-    } else if (typeof compactQuery.addListener === 'function') {
-        compactQuery.addListener(syncLayout);
+    if (typeof themeCompactQuery.addEventListener === 'function') {
+        themeCompactQuery.addEventListener('change', syncLayout);
+    } else if (typeof themeCompactQuery.addListener === 'function') {
+        themeCompactQuery.addListener(syncLayout);
+    }
+
+    if (typeof languageCompactQuery.addEventListener === 'function') {
+        languageCompactQuery.addEventListener('change', syncLayout);
+    } else if (typeof languageCompactQuery.addListener === 'function') {
+        languageCompactQuery.addListener(syncLayout);
     }
 
 }

@@ -73,7 +73,7 @@
     padding: 14px 20px 15px;
     border-bottom: 1px solid var(--glass-border);
     position: relative;
-    z-index: 8;
+    z-index: 40;
     background: color-mix(in srgb, var(--bg-header), transparent 10%);
     backdrop-filter: blur(12px) saturate(1.08);
     -webkit-backdrop-filter: blur(12px) saturate(1.08);
@@ -105,11 +105,19 @@
     overflow-y: auto;
     overflow-x: hidden;
     padding: 0 20px 20px;
+    z-index: 1;
 }
 
 .game-header h2 {
     color: var(--accent-color);
     margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.05;
+    font-size: clamp(1.55rem, 2.4vw, 2.1rem);
+    flex: 0 1 auto;
+    min-width: 0;
 }
 
 .filters {
@@ -117,6 +125,185 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 10px;
+}
+
+.filter-pair-wrapper {
+    display: contents;
+}
+
+.filter-pair-toggle {
+    display: none;
+}
+
+.filter-pair-content {
+    display: contents;
+}
+
+.filter-pair-compact-menu {
+    display: none;
+}
+
+@media (max-width: 1280px) {
+    .game-header {
+        overflow: visible;
+    }
+
+    .game-header h2 {
+        max-width: clamp(140px, 24vw, 300px);
+        font-size: clamp(1.22rem, 1.8vw, 1.62rem);
+    }
+
+    .filters {
+        flex: 1 1 auto;
+        min-width: 0;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        gap: 6px;
+        overflow: visible;
+        white-space: nowrap;
+    }
+
+    .filters > * {
+        flex: 0 0 auto;
+    }
+
+    .filters #platform-filter {
+        width: clamp(146px, 20vw, 190px);
+    }
+
+    .filters .filter-pair-wrapper {
+        position: relative;
+        display: inline-flex;
+        align-items: stretch;
+        min-width: 0;
+    }
+
+    .filters .filter-pair-wrapper.is-open {
+        z-index: 140;
+    }
+
+    .filters .filter-pair-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 32px;
+        padding: 0 10px;
+        border: 1px solid color-mix(in srgb, var(--border-color), var(--accent-color) 20%);
+        border-radius: var(--radius-btn);
+        background: color-mix(in srgb, var(--bg-secondary), var(--bg-tertiary) 24%);
+        color: var(--text-secondary);
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+    }
+
+    .filters .filter-pair-wrapper.is-open .filter-pair-toggle,
+    .filters .filter-pair-toggle:hover {
+        border-color: color-mix(in srgb, var(--accent-color), white 18%);
+        color: var(--text-primary);
+    }
+
+    .filters .filter-pair-content {
+        display: none !important;
+    }
+
+    .filters .filter-pair-content select {
+        display: none;
+    }
+
+    .filter-pair-floating-menu {
+        position: fixed;
+        z-index: 3800;
+        padding: 8px;
+        border: 1px solid color-mix(in srgb, var(--border-color), var(--accent-color) 24%);
+        border-radius: var(--radius-card);
+        background: color-mix(in srgb, var(--bg-secondary), transparent 4%);
+        backdrop-filter: blur(12px) saturate(1.08);
+        -webkit-backdrop-filter: blur(12px) saturate(1.08);
+        box-shadow:
+            0 16px 34px color-mix(in srgb, var(--glass-shadow), transparent 16%),
+            0 0 0 1px color-mix(in srgb, var(--accent-color), transparent 88%) inset;
+        display: grid;
+        gap: 8px;
+        max-height: min(56vh, 420px);
+        overflow: auto;
+    }
+
+    .filter-pair-floating-menu .filter-pair-compact-block {
+        display: grid;
+        gap: 6px;
+    }
+
+    .filter-pair-floating-menu .filter-pair-compact-label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+    }
+
+    .filter-pair-floating-menu .filter-pair-compact-options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .filter-pair-floating-menu .filter-pair-compact-option {
+        border: 1px solid color-mix(in srgb, var(--border-color), var(--accent-color) 20%);
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--bg-secondary), transparent 10%);
+        color: var(--text-secondary);
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 5px 10px;
+        cursor: pointer;
+        transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+        white-space: nowrap;
+    }
+
+    .filter-pair-floating-menu .filter-pair-compact-option:hover {
+        border-color: color-mix(in srgb, var(--accent-color), white 18%);
+        color: var(--text-primary);
+    }
+
+    .filter-pair-floating-menu .filter-pair-compact-option.is-active {
+        border-color: color-mix(in srgb, var(--accent-color), white 18%);
+        background: color-mix(in srgb, var(--accent-color), transparent 78%);
+        color: var(--text-primary);
+    }
+
+    .filters .filter-pair-wrapper-region-language {
+        min-width: 0;
+    }
+
+    .filters .filter-pair-wrapper-group-sort {
+        min-width: 0;
+    }
+
+    .filters .group-same-names-toggle {
+        min-height: 32px;
+        padding: 4px 9px;
+        font-size: 0.8rem;
+        gap: 6px;
+    }
+
+    .filters .group-same-names-toggle span {
+        max-width: 155px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .filters .filter-pair-wrapper-region-language:has(.filter-pair-content > #game-region-filter.is-hidden):has(.filter-pair-content > #game-language-filter.is-hidden) {
+        display: none;
+    }
+
+    .filters .filter-pair-wrapper-group-sort:has(.filter-pair-content > #group-filter.is-hidden):has(.filter-pair-content > #sort-filter.is-hidden) {
+        display: none;
+    }
 }
 
 .suggested-panel {
@@ -875,4 +1062,3 @@ tr.game-row-clickable:hover {
     background-color: var(--danger-color, #e74c3c);
     color: white;
 }
-

@@ -508,7 +508,7 @@ function normalizePathList(values) {
     return out;
 }
 
-async function openLibraryPathSettingsModal() {
+async function openLibraryPathSettingsModal(options = {}) {
     await openLibraryPathSettingsModalView({
         emubro,
         getLibraryPathSettings,
@@ -536,7 +536,8 @@ async function openLibraryPathSettingsModal() {
         llmAllowUnknownTagsKey: LLM_ALLOW_UNKNOWN_TAGS_KEY,
         suggestedSectionKey: SUGGESTED_SECTION_KEY,
         loadSuggestionSettings,
-        saveSuggestionSettings
+        saveSuggestionSettings,
+        initialTab: options?.initialTab
     });
 }
 

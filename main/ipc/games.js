@@ -27,6 +27,7 @@ function registerGameIpc(deps = {}) {
     dbUpdateGameMetadata,
     dbUpsertTags,
     dbUpdateGameFilePath,
+    resolveResourcePath,
     getPlatformConfigs,
     getRuntimeDataRules,
     getGameSessionCloseBehaviorPreference,
@@ -56,6 +57,7 @@ function registerGameIpc(deps = {}) {
   if (typeof dbUpdateGameMetadata !== "function") throw new Error("registerGameIpc requires dbUpdateGameMetadata");
   if (typeof dbUpsertTags !== "function") throw new Error("registerGameIpc requires dbUpsertTags");
   if (typeof dbUpdateGameFilePath !== "function") throw new Error("registerGameIpc requires dbUpdateGameFilePath");
+  if (typeof resolveResourcePath !== "function") throw new Error("registerGameIpc requires resolveResourcePath");
   if (typeof getPlatformConfigs !== "function") throw new Error("registerGameIpc requires getPlatformConfigs");
   if (typeof getRuntimeDataRules !== "function") throw new Error("registerGameIpc requires getRuntimeDataRules");
 
@@ -671,7 +673,7 @@ function registerGameIpc(deps = {}) {
   }
 
   function loadTagCatalog() {
-    const tagsDir = path.join(appPath, "emubro-resources", "tags");
+    const tagsDir = resolveResourcePath("tags", { mustExist: true });
     if (!fsSync.existsSync(tagsDir)) return [];
 
     const files = fsSync.readdirSync(tagsDir, { withFileTypes: true });
@@ -880,13 +882,13 @@ function registerGameIpc(deps = {}) {
 
   function resolvePlatformDefaultCoverPath(platformShortName) {
     const psn = normalizePlatform(platformShortName);
-    return path.join(appPath, "emubro-resources", "platforms", psn, "covers", "default.jpg");
+    return resolveResourcePath(path.posix.join("platforms", psn, "covers", "default.jpg"), { mustExist: true });
   }
 
   function resolveGameCoverPath(game) {
     const img = String(game?.image || "").trim();
     if (img) {
-      const p = path.isAbsolute(img) ? img : path.join(appPath, img);
+      const p = resolveAppOrResourcePath(img);
       if (fsSync.existsSync(p)) return p;
     }
 
@@ -1704,3 +1706,13 @@ function registerGameIpc(deps = {}) {
 module.exports = {
   registerGameIpc
 };
+  function resolveAppOrResourcePath(inputPath) {
+    const rel = String(inputPath || "").trim().replace(/\\/g, "/");
+    if (!rel) return "";
+    if (rel.startsWith("emubro-resources/")) {
+      const resourceRel = rel.slice("emubro-resources/".length);
+      const resolved = resolveResourcePath(resourceRel, { mustExist: true });
+      if (resolved) return resolved;
+    }
+    return path.isAbsolute(rel) ? rel : path.join(appPath, rel);
+  }

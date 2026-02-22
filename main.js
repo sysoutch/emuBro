@@ -1,4 +1,4 @@
-﻿const { app, BrowserWindow, Menu, ipcMain, dialog, shell, nativeImage } = require("electron");
+const { app, BrowserWindow, Menu, ipcMain, dialog, shell, nativeImage, session } = require("electron");
 const path = require("path");
 const log = require("electron-log");
 const Store = require("electron-store");
@@ -19,11 +19,13 @@ const { registerImportIpc } = require("./main/ipc/imports");
 const { registerGameIpc } = require("./main/ipc/games");
 const { registerSystemActionsIpc } = require("./main/ipc/system-actions");
 const { registerUpdatesIpc } = require("./main/ipc/updates");
+const { registerResourceUpdatesIpc } = require("./main/ipc/resources-updates");
 const { registerThemeUploadIpc } = require("./main/ipc/theme-upload");
 const { registerSettingsPathsIpc } = require("./main/ipc/settings-paths");
 const { registerImportStagingIpc } = require("./main/ipc/import-staging");
 const { registerAppMetaIpc } = require("./main/ipc/app-meta");
 const { createLibraryStorageTools } = require("./main/library-storage-tools");
+const { createResourceOverrides } = require("./main/resource-overrides");
 const { createPlatformConfigService } = require("./main/platform-config-service");
 const { createLibraryDbService } = require("./main/library-db");
 const { createAppBootstrapManager } = require("./main/app-bootstrap");
@@ -49,6 +51,13 @@ let gameIpcActions = null;
 let hasAttemptedFirstRunLegalNotice = false;
 const { createSplashWindow, closeSplashWindow } = createSplashWindowManager({
   getSplashTheme: () => store.get(SPLASH_THEME_SETTINGS_KEY, null)
+});
+
+const resourceOverrides = createResourceOverrides({
+  app,
+  fsSync,
+  path,
+  log
 });
 
 function normalizeRuntimeRuleValueList(values = []) {
@@ -165,7 +174,8 @@ const libraryDbService = createLibraryDbService({
   app,
   fsSync,
   log,
-  appRootDir: __dirname
+  appRootDir: __dirname,
+  getResourceRoots: resourceOverrides.getResourceRoots
 });
 
 const {
@@ -197,7 +207,8 @@ const {
   fsSync,
   log,
   dbUpsertEmulator,
-  refreshLibraryFromDb
+  refreshLibraryFromDb,
+  getResourceRoots: resourceOverrides.getResourceRoots
 });
 
 // Create the main window
@@ -272,8 +283,21 @@ registerSystemActionsIpc({
 registerUpdatesIpc({
   ipcMain,
   app,
+  store,
   log,
   getMainWindow: () => mainWindow
+});
+
+registerResourceUpdatesIpc({
+  ipcMain,
+  app,
+  store,
+  fs,
+  fsSync,
+  path,
+  log,
+  getMainWindow: () => mainWindow,
+  resourceOverrides
 });
 
 registerImportStagingIpc({
@@ -370,6 +394,7 @@ registerImportIpc({
   processEmulatorExe,
   inferGameCode,
   discoverCoverImageRelative,
+  resolveResourcePath: resourceOverrides.resolveResourcePath,
   dbUpsertGame,
   getArchiveKind,
   extractArchiveToDir
@@ -422,6 +447,7 @@ gameIpcActions = registerGameIpc({
   dbUpdateGameMetadata,
   dbUpsertTags,
   dbUpdateGameFilePath,
+  resolveResourcePath: resourceOverrides.resolveResourcePath,
   getPlatformConfigs,
   getRuntimeDataRules,
   getGameSessionCloseBehaviorPreference: () => store.get(GAME_SESSION_CLOSE_BEHAVIOR_SETTINGS_KEY, "ask"),
@@ -469,6 +495,14 @@ registerBiosIpc({
   shell,
   log,
   getPlatformConfigs
+});
+
+app.whenReady().then(() => {
+  try {
+    resourceOverrides.installFileProtocolOverride(session.defaultSession);
+  } catch (error) {
+    log.warn("Failed to install resource file override handler:", error?.message || error);
+  }
 });
 
 ipcMain.handle("youtube:open-video", async (_event, url) => {

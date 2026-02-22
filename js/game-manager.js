@@ -572,6 +572,22 @@ function normalizeRegionFilterValue(value) {
     return 'all';
 }
 
+function normalizeSortModeValue(value) {
+    const key = String(value || '').trim().toLowerCase();
+    if (
+        key === 'name'
+        || key === 'rating'
+        || key === 'platform'
+        || key === 'price'
+        || key === 'genre'
+        || key === 'status'
+        || key === 'recently-played'
+    ) {
+        return key;
+    }
+    return 'name';
+}
+
 function getBracketedNameSegments(value) {
     const text = String(value || '');
     if (!text) return [];
@@ -763,6 +779,12 @@ function compareGamesBySort(a, b, sortMode, direction = 'asc') {
     let val = 0;
 
     switch (sort) {
+        case 'recently-played': {
+            const aTime = new Date(a?.lastPlayed || 0).getTime();
+            const bTime = new Date(b?.lastPlayed || 0).getTime();
+            val = aTime - bTime;
+            break;
+        }
         case 'rating':
             val = Number(a?.rating || 0) - Number(b?.rating || 0);
             break;
@@ -1147,11 +1169,13 @@ export function applyFilters(shouldRender = true, sourceRows = null) {
     
     const platformFilter = document.getElementById('platform-filter');
     const groupFilter = document.getElementById('group-filter');
+    const sortFilter = document.getElementById('sort-filter');
     const languageFilter = document.getElementById('game-language-filter');
     const regionFilter = document.getElementById('game-region-filter');
     const groupSameNamesToggle = document.getElementById('group-same-names-toggle');
     
     currentFilter = platformFilter ? platformFilter.value : 'all';
+    currentSort = normalizeSortModeValue(sortFilter ? sortFilter.value : currentSort);
     currentGroupBy = normalizeGroupByValue(groupFilter ? groupFilter.value : 'none');
     currentLanguageFilter = normalizeLanguageFilterValue(languageFilter ? languageFilter.value : 'all');
     currentRegionFilter = normalizeRegionFilterValue(regionFilter ? regionFilter.value : 'all');

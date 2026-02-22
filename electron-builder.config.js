@@ -26,6 +26,7 @@ module.exports = {
     "logo.png",
     "icon.png",
     "emubro-resources/**/*", // Essential for your app to find configs/platforms
+    "!emubro-locales-repo/**/*",
     "!build_out/**/*"
   ],
   protocols: [

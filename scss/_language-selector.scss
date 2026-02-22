@@ -106,6 +106,7 @@
     .lang-info {
         display: flex;
         align-items: center;
+        flex-wrap: wrap;
         gap: 10px;
         font-size: 1.1em;
         font-weight: bold;
@@ -114,6 +115,16 @@
             color: var(--text-secondary);
             font-size: 0.9em;
             font-weight: normal;
+        }
+
+        .lang-source {
+            font-size: 0.72em;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 999px;
+            padding: 2px 7px;
         }
     }
     
@@ -148,6 +159,7 @@
         margin-top: 5px;
         display: flex;
         justify-content: flex-end;
+        flex-wrap: wrap;
         gap: 8px;
     }
 }

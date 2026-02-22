@@ -248,6 +248,24 @@ export function createLibraryViewController(options = {}) {
         gamesHeader.textContent = i18n.t('gameGrid.featuredGames') || 'Featured Games';
     }
 
+    function syncDefaultSortForLibrarySection(section) {
+        const sortFilter = document.getElementById('sort-filter');
+        if (!sortFilter) return;
+        const normalizedSection = normalizeLibrarySection(section);
+        const currentValue = String(sortFilter.value || '').trim().toLowerCase();
+
+        if (normalizedSection === 'recent') {
+            if (currentValue !== 'recently-played') {
+                sortFilter.value = 'recently-played';
+            }
+            return;
+        }
+
+        if (currentValue === 'recently-played') {
+            sortFilter.value = 'name';
+        }
+    }
+
     function getSectionFilteredGames() {
         const filtered = applyCategoryFilter(getFilteredGames());
         const section = getActiveLibrarySection();
@@ -322,6 +340,7 @@ export function createLibraryViewController(options = {}) {
         setAppMode('library');
         setActiveLibrarySectionState(normalizeLibrarySection(section || 'all'));
         const activeSection = getActiveLibrarySection();
+        syncDefaultSortForLibrarySection(activeSection);
         setActiveSidebarLibraryLink(activeSection);
         setGamesHeaderByLibrarySection(activeSection);
         updateEmulatorsInstalledToggleVisibility();

@@ -5,6 +5,15 @@
 const BUNDLED_FLAG_CODES = new Set(['us', 'de', 'es', 'fr', 'it', 'jp', 'nl', 'za']);
 const customFlagCache = new Map();
 
+export function invalidateFlagCache(flagCode = '') {
+    const code = String(flagCode || '').trim().toLowerCase();
+    if (code && /^[a-z]{2}$/.test(code)) {
+        customFlagCache.delete(code);
+        return;
+    }
+    customFlagCache.clear();
+}
+
 function resolveBundledFlagCode(input, fallback = 'us') {
     const code = String(input || '').trim().toLowerCase();
     if (/^[a-z]{2}$/.test(code) && BUNDLED_FLAG_CODES.has(code)) return code;

@@ -150,6 +150,11 @@ function registerLocalesIpc(deps = {}) {
     return parseLocaleJson(content);
   }
 
+  async function readLocaleJsonByPath(fullPath) {
+    const content = await fs.readFile(fullPath, "utf8");
+    return parseLocaleJson(content);
+  }
+
   async function listLocaleFilePaths() {
     const map = new Map();
 
@@ -171,7 +176,17 @@ function registerLocalesIpc(deps = {}) {
     await addFromDir(getAppLocalesDir());
     await addFromDir(getUserLocalesDir());
 
-    return Array.from(map.entries()).map(([filename, fullPath]) => ({ filename, fullPath }));
+    return Array.from(map.entries()).map(([filename, fullPath]) => {
+      const userDir = getUserLocalesDir();
+      const normalizedPath = String(fullPath || "").toLowerCase();
+      const normalizedUserDir = String(userDir || "").toLowerCase();
+      const source = normalizedPath.startsWith(normalizedUserDir) ? "user" : "app";
+      return {
+        filename,
+        fullPath,
+        source
+      };
+    });
   }
 
   ipcMain.handle("get-all-translations", async () => {
@@ -201,7 +216,14 @@ function registerLocalesIpc(deps = {}) {
         const json = parseLocaleJson(content);
         const code = json && typeof json === "object" ? Object.keys(json)[0] : null;
         if (!code) continue;
-        languages.push({ filename: f.filename, code, data: json });
+        languages.push({
+          filename: f.filename,
+          code,
+          data: json,
+          source: f.source || "app",
+          canDelete: (f.source || "app") === "user",
+          canRename: (f.source || "app") === "user"
+        });
       } catch (e) {
         log.error(`Failed to read locale '${f.filename}':`, e);
       }
@@ -233,6 +255,88 @@ function registerLocalesIpc(deps = {}) {
     return { success: true };
   });
 
+  ipcMain.handle("locales:delete", async (_event, filename) => {
+    try {
+      const f = normalizeLocaleFilename(filename);
+      if (f === "en.json") {
+        return { success: false, message: "English locale cannot be deleted." };
+      }
+
+      const userPath = path.join(getUserLocalesDir(), f);
+      if (!fsSync.existsSync(userPath)) {
+        return { success: false, message: "Only user-installed locales can be deleted." };
+      }
+
+      await fs.unlink(userPath);
+      return { success: true };
+    } catch (error) {
+      return { success: false, message: error?.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("locales:rename", async (_event, payload = {}) => {
+    try {
+      const oldFilename = normalizeLocaleFilename(payload?.oldFilename || payload?.filename || "");
+      if (oldFilename === "en.json") {
+        return { success: false, message: "English locale cannot be renamed." };
+      }
+
+      const oldPath = path.join(getUserLocalesDir(), oldFilename);
+      if (!fsSync.existsSync(oldPath)) {
+        return { success: false, message: "Only user-installed locales can be renamed." };
+      }
+
+      const oldJson = await readLocaleJsonByPath(oldPath);
+      const oldCode = String(payload?.oldCode || Object.keys(oldJson || {})[0] || "").trim().toLowerCase();
+      const nextCode = String(payload?.newCode || oldCode || "").trim().toLowerCase();
+      if (!/^[a-z]{2,3}$/.test(nextCode)) {
+        return { success: false, message: "Invalid language code. Use 2-3 letters." };
+      }
+
+      const oldLang = oldJson?.[oldCode] && typeof oldJson[oldCode] === "object"
+        ? oldJson[oldCode]
+        : (oldJson && typeof oldJson === "object" ? Object.values(oldJson)[0] || {} : {});
+
+      const nextName = String(payload?.newName || oldLang?.language?.name || nextCode.toUpperCase()).trim();
+      const nextAbbreviation = String(payload?.newAbbreviation || oldLang?.language?.abbreviation || nextCode.toUpperCase()).trim() || nextCode.toUpperCase();
+      const nextFlag = String(payload?.newFlag || oldLang?.language?.flag || "us").trim().toLowerCase();
+      if (!/^[a-z]{2}$/.test(nextFlag)) {
+        return { success: false, message: "Invalid flag code. Use 2 letters." };
+      }
+
+      const targetFilename = `${nextCode}.json`;
+      const targetPath = path.join(getUserLocalesDir(), targetFilename);
+      if (targetFilename !== oldFilename && fsSync.existsSync(targetPath)) {
+        return { success: false, message: `Locale '${targetFilename}' already exists.` };
+      }
+
+      const nextLangPayload = {
+        ...(oldLang && typeof oldLang === "object" ? oldLang : {}),
+        language: {
+          ...(oldLang?.language && typeof oldLang.language === "object" ? oldLang.language : {}),
+          name: nextName,
+          abbreviation: nextAbbreviation,
+          flag: nextFlag
+        }
+      };
+      const nextJson = { [nextCode]: nextLangPayload };
+
+      await fs.writeFile(targetPath, JSON.stringify(nextJson, null, 2), "utf8");
+      if (targetPath !== oldPath && fsSync.existsSync(oldPath)) {
+        await fs.unlink(oldPath);
+      }
+
+      return {
+        success: true,
+        filename: targetFilename,
+        code: nextCode,
+        data: nextJson
+      };
+    } catch (error) {
+      return { success: false, message: error?.message || String(error) };
+    }
+  });
+
   ipcMain.handle("locales:flags:get-data-url", async (_event, flagCodeRaw) => {
     try {
       const flagCode = String(flagCodeRaw || "").trim().toLowerCase();
@@ -248,6 +352,49 @@ function registerLocalesIpc(deps = {}) {
       return { success: true, dataUrl };
     } catch (error) {
       return { success: false, message: error?.message || String(error), dataUrl: "" };
+    }
+  });
+
+  ipcMain.handle("locales:flags:write-data-url", async (_event, payload = {}) => {
+    try {
+      const flagCode = String(payload?.flagCode || "").trim().toLowerCase();
+      const dataUrl = String(payload?.dataUrl || "").trim();
+      if (!FLAG_CODE_RE.test(flagCode)) {
+        return { success: false, message: "Invalid flag code" };
+      }
+      if (!/^data:image\/svg\+xml;base64,/i.test(dataUrl)) {
+        return { success: false, message: "Only SVG data URLs are supported." };
+      }
+
+      const base64 = dataUrl.split(",")[1] || "";
+      const buffer = Buffer.from(base64, "base64");
+      await fs.writeFile(path.join(getUserFlagsDir(), `${flagCode}.svg`), buffer);
+      return { success: true };
+    } catch (error) {
+      return { success: false, message: error?.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("locales:flags:write-from-file", async (_event, payload = {}) => {
+    try {
+      const flagCode = String(payload?.flagCode || "").trim().toLowerCase();
+      const sourcePath = String(payload?.filePath || "").trim();
+      if (!FLAG_CODE_RE.test(flagCode)) {
+        return { success: false, message: "Invalid flag code" };
+      }
+      if (!sourcePath || !fsSync.existsSync(sourcePath)) {
+        return { success: false, message: "Source file not found." };
+      }
+      const ext = String(path.extname(sourcePath) || "").trim().toLowerCase();
+      if (ext !== ".svg") {
+        return { success: false, message: "Only SVG files are supported." };
+      }
+
+      const buffer = await fs.readFile(sourcePath);
+      await fs.writeFile(path.join(getUserFlagsDir(), `${flagCode}.svg`), buffer);
+      return { success: true };
+    } catch (error) {
+      return { success: false, message: error?.message || String(error) };
     }
   });
 

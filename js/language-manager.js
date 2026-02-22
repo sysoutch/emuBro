@@ -1,5 +1,5 @@
 import { makeDraggable } from './theme-manager';
-import { updateUILanguage } from './i18n-manager';
+import { updateUILanguage, populateLanguageSelector, invalidateFlagCache } from './i18n-manager';
 import { showTextInputDialog } from './ui/text-input-dialog';
 import { loadSuggestionSettings, normalizeSuggestionProvider } from './suggestions-settings';
 
@@ -494,6 +494,31 @@ function collectAvailableFlagCodes() {
     return Array.from(flags).sort((a, b) => a.localeCompare(b));
 }
 
+async function refreshLanguageRuntimeState() {
+    invalidateFlagCache();
+    try {
+        if (window.emubro && typeof window.emubro.getAllTranslations === 'function') {
+            window.allTranslations = await window.emubro.getAllTranslations();
+        }
+    } catch (error) {
+        console.error('Failed to refresh translation cache:', error);
+    }
+
+    try {
+        if (typeof i18n !== 'undefined' && typeof i18n.loadTranslations === 'function' && typeof allTranslations !== 'undefined') {
+            i18n.loadTranslations(allTranslations);
+        }
+    } catch (_error) {}
+
+    try {
+        populateLanguageSelector();
+    } catch (_error) {}
+
+    try {
+        updateUILanguage();
+    } catch (_error) {}
+}
+
 function normalizeLanguageCreationPayload(input = {}) {
     const code = String(input.code || '').trim().toLowerCase();
     const name = String(input.name || '').trim();
@@ -887,6 +912,10 @@ function renderLanguages(languages) {
         const safeAbbreviation = escapeHtml(abbreviation || lang.code);
         const safeFlagClass = `fi fi-${flag}`;
 
+        const source = String(lang?.source || '').trim().toLowerCase();
+        const canRename = !!lang?.canRename;
+        const canDelete = !!lang?.canDelete;
+
         const card = document.createElement('div');
         card.className = 'language-card';
         card.innerHTML = `
@@ -894,6 +923,7 @@ function renderLanguages(languages) {
                 <span class="${safeFlagClass}" data-lang-flag="${escapeHtml(String(langInfo.flag || flag))}"></span>
                 <span class="lang-name">${safeName}</span>
                 <span class="lang-code">(${safeAbbreviation})</span>
+                <span class="lang-source">${escapeHtml(source || 'app')}</span>
             </div>
             <div class="lang-progress">
                 <div class="progress-bar">
@@ -904,6 +934,9 @@ function renderLanguages(languages) {
             <div class="lang-actions">
                 <button class="action-btn small export-btn" type="button">${escapeHtml(i18n.t('language.exportJson'))}</button>
                 <button class="action-btn small edit-btn" type="button">${escapeHtml(i18n.t('language.editButton'))}</button>
+                <button class="action-btn small flag-btn" type="button">Flag</button>
+                <button class="action-btn small rename-btn" type="button"${canRename ? '' : ' disabled title="Only user-installed languages can be renamed"'}>Rename</button>
+                <button class="action-btn small remove-btn delete-btn" type="button"${canDelete ? '' : ' disabled title="Only user-installed languages can be deleted"'}>Delete</button>
             </div>
         `;
 
@@ -918,6 +951,26 @@ function renderLanguages(languages) {
                 alert(i18n.t('language.exportError', { message: String(error?.message || error || 'Unknown error') }));
             }
         });
+        card.querySelector('.flag-btn').addEventListener('click', () => {
+            changeLanguageFlagFlow(lang).catch((error) => {
+                console.error('Failed to change language flag:', error);
+                alert(`Failed to change flag: ${String(error?.message || error || 'Unknown error')}`);
+            });
+        });
+        card.querySelector('.rename-btn').addEventListener('click', () => {
+            if (!canRename) return;
+            renameLanguageFlow(lang).catch((error) => {
+                console.error('Failed to rename language:', error);
+                alert(`Failed to rename language: ${String(error?.message || error || 'Unknown error')}`);
+            });
+        });
+        card.querySelector('.delete-btn').addEventListener('click', () => {
+            if (!canDelete) return;
+            deleteLanguageFlow(lang).catch((error) => {
+                console.error('Failed to delete language:', error);
+                alert(`Failed to delete language: ${String(error?.message || error || 'Unknown error')}`);
+            });
+        });
 
         listContainer.appendChild(card);
         const flagEl = card.querySelector('[data-lang-flag]');
@@ -925,6 +978,203 @@ function renderLanguages(languages) {
             void applyFlagVisual(flagEl, langInfo.flag || flag, 'us');
         }
     });
+}
+
+function showRenameLanguageDialog(lang) {
+    return new Promise((resolve) => {
+        const langInfo = lang?.data?.[lang?.code]?.language || {};
+        const overlay = document.createElement('div');
+        overlay.style.cssText = [
+            'position:fixed',
+            'inset:0',
+            'z-index:3950',
+            'display:flex',
+            'align-items:center',
+            'justify-content:center',
+            'padding:20px',
+            'background:rgba(0,0,0,0.58)'
+        ].join(';');
+
+        const dialog = document.createElement('div');
+        dialog.className = 'glass';
+        dialog.style.cssText = [
+            'width:min(520px,100%)',
+            'max-height:90vh',
+            'overflow:auto',
+            'background:var(--bg-secondary)',
+            'border:1px solid var(--border-color)',
+            'border-radius:12px',
+            'padding:16px',
+            'display:grid',
+            'gap:10px'
+        ].join(';');
+
+        const flags = collectAvailableFlagCodes();
+        const currentFlag = String(langInfo.flag || 'us').trim().toLowerCase();
+        const flagOptions = Array.from(new Set([currentFlag, ...flags]))
+            .filter((code) => FLAG_CODE_PATTERN.test(code))
+            .sort((a, b) => a.localeCompare(b))
+            .map((code) => `<option value="${escapeHtml(code)}"${code === currentFlag ? ' selected' : ''}>${escapeHtml(code.toUpperCase())}</option>`)
+            .join('');
+
+        dialog.innerHTML = `
+            <h3 style="margin:0;">Rename Language</h3>
+            <label style="display:grid;gap:4px;">
+                <span style="font-size:0.85rem;color:var(--text-secondary);">Code (2-3 letters)</span>
+                <input id="rename-lang-code" type="text" maxlength="3" value="${escapeHtml(String(lang.code || ''))}" />
+            </label>
+            <label style="display:grid;gap:4px;">
+                <span style="font-size:0.85rem;color:var(--text-secondary);">Name</span>
+                <input id="rename-lang-name" type="text" value="${escapeHtml(String(langInfo.name || lang.code || ''))}" />
+            </label>
+            <label style="display:grid;gap:4px;">
+                <span style="font-size:0.85rem;color:var(--text-secondary);">Abbreviation</span>
+                <input id="rename-lang-abbrev" type="text" value="${escapeHtml(String(langInfo.abbreviation || lang.code || '').toUpperCase())}" />
+            </label>
+            <label style="display:grid;gap:4px;">
+                <span style="font-size:0.85rem;color:var(--text-secondary);">Flag Code</span>
+                <select id="rename-lang-flag">
+                    ${flagOptions}
+                </select>
+            </label>
+            <div style="display:flex;justify-content:flex-end;gap:8px;">
+                <button type="button" class="action-btn remove-btn" data-cancel>Cancel</button>
+                <button type="button" class="action-btn launch-btn" data-confirm>Save</button>
+            </div>
+        `;
+
+        const close = (payload = null) => {
+            overlay.remove();
+            resolve(payload);
+        };
+
+        dialog.querySelector('[data-cancel]')?.addEventListener('click', () => close(null));
+        dialog.querySelector('[data-confirm]')?.addEventListener('click', () => {
+            const code = String(dialog.querySelector('#rename-lang-code')?.value || '').trim().toLowerCase();
+            const name = String(dialog.querySelector('#rename-lang-name')?.value || '').trim();
+            const abbreviation = String(dialog.querySelector('#rename-lang-abbrev')?.value || '').trim();
+            const flag = String(dialog.querySelector('#rename-lang-flag')?.value || '').trim().toLowerCase();
+            close({ code, name, abbreviation, flag });
+        });
+
+        overlay.addEventListener('click', (event) => {
+            if (event.target === overlay) close(null);
+        });
+
+        overlay.appendChild(dialog);
+        document.body.appendChild(overlay);
+    });
+}
+
+async function renameLanguageFlow(lang) {
+    if (!lang || !lang.filename || !lang.canRename) return;
+    const next = await showRenameLanguageDialog(lang);
+    if (!next) return;
+
+    if (!LANGUAGE_CODE_PATTERN.test(next.code)) {
+        alert(i18n.t('language.invalidCode'));
+        return;
+    }
+    if (!next.name) {
+        alert(i18n.t('language.addDialogInvalidName'));
+        return;
+    }
+    if (!FLAG_CODE_PATTERN.test(next.flag)) {
+        alert(i18n.t('language.addDialogInvalidFlag'));
+        return;
+    }
+
+    const result = await emubro.locales.rename({
+        oldFilename: lang.filename,
+        oldCode: lang.code,
+        newCode: next.code,
+        newName: next.name,
+        newAbbreviation: next.abbreviation || next.code.toUpperCase(),
+        newFlag: next.flag
+    });
+    if (!result?.success) {
+        throw new Error(result?.message || 'Rename failed');
+    }
+    if (String(i18n.getLanguage() || '').trim().toLowerCase() === String(lang.code || '').trim().toLowerCase()) {
+        i18n.setLanguage(String(result.code || next.code || 'en').trim().toLowerCase());
+    }
+    await refreshLanguageRuntimeState();
+    loadLanguagesList();
+}
+
+async function changeLanguageFlagFlow(lang) {
+    if (!lang || !lang.filename || !lang.code) return;
+    const langInfo = lang?.data?.[lang?.code]?.language || {};
+    const currentFlag = String(langInfo.flag || 'us').trim().toLowerCase();
+
+    const chosenFlag = await showTextInputDialog({
+        title: 'Change Flag',
+        message: 'Enter a 2-letter flag code (example: us, de, fr).',
+        initialValue: currentFlag,
+        confirmLabel: 'Next',
+        cancelLabel: i18n.t('buttons.cancel')
+    });
+    if (chosenFlag === null) return;
+    const flagCode = String(chosenFlag || '').trim().toLowerCase();
+    if (!FLAG_CODE_PATTERN.test(flagCode)) {
+        alert(i18n.t('language.addDialogInvalidFlag'));
+        return;
+    }
+
+    let usedCustomUpload = false;
+    const pick = await emubro.invoke('open-file-dialog', {
+        title: `Optional: select custom SVG for '${flagCode}'`,
+        properties: ['openFile'],
+        filters: [{ name: 'SVG', extensions: ['svg'] }]
+    });
+    if (pick && !pick.canceled && Array.isArray(pick.filePaths) && pick.filePaths[0]) {
+        const filePath = String(pick.filePaths[0] || '').trim();
+        try {
+            const writeResult = await emubro.locales.writeFlagFromFile({ flagCode, filePath });
+            if (!writeResult?.success) {
+                throw new Error(writeResult?.message || 'Failed to save custom flag');
+            }
+            usedCustomUpload = true;
+        } catch (error) {
+            alert(`Custom flag upload failed: ${String(error?.message || error || 'Unknown error')}`);
+            return;
+        }
+    }
+
+    const nextJson = JSON.parse(JSON.stringify(lang.data || {}));
+    if (!nextJson[lang.code]) {
+        nextJson[lang.code] = {};
+    }
+    if (!nextJson[lang.code].language || typeof nextJson[lang.code].language !== 'object') {
+        nextJson[lang.code].language = {};
+    }
+    nextJson[lang.code].language.flag = flagCode;
+    await emubro.locales.write(lang.filename, nextJson);
+
+    await refreshLanguageRuntimeState();
+    loadLanguagesList();
+    if (usedCustomUpload) {
+        alert('Flag changed and custom icon uploaded.');
+    }
+}
+
+async function deleteLanguageFlow(lang) {
+    if (!lang || !lang.filename || !lang.canDelete) return;
+    const info = lang?.data?.[lang?.code]?.language || {};
+    const label = String(info?.name || lang.code || lang.filename);
+    const confirmed = window.confirm(`Delete language '${label}'?`);
+    if (!confirmed) return;
+
+    const result = await emubro.locales.delete(lang.filename);
+    if (!result?.success) {
+        throw new Error(result?.message || 'Delete failed');
+    }
+
+    if (String(i18n.getLanguage() || '').trim().toLowerCase() === String(lang.code || '').trim().toLowerCase()) {
+        i18n.setLanguage('en');
+    }
+    await refreshLanguageRuntimeState();
+    loadLanguagesList();
 }
 
 function openEditor(lang) {

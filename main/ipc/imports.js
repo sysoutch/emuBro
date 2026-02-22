@@ -19,6 +19,7 @@ function registerImportIpc(deps = {}) {
     processEmulatorExe,
     inferGameCode,
     discoverCoverImageRelative,
+    resolveResourcePath,
     dbUpsertGame,
     getArchiveKind,
     extractArchiveToDir
@@ -40,6 +41,7 @@ function registerImportIpc(deps = {}) {
   if (typeof processEmulatorExe !== "function") throw new Error("registerImportIpc requires processEmulatorExe");
   if (typeof inferGameCode !== "function") throw new Error("registerImportIpc requires inferGameCode");
   if (typeof discoverCoverImageRelative !== "function") throw new Error("registerImportIpc requires discoverCoverImageRelative");
+  if (typeof resolveResourcePath !== "function") throw new Error("registerImportIpc requires resolveResourcePath");
   if (typeof dbUpsertGame !== "function") throw new Error("registerImportIpc requires dbUpsertGame");
   if (typeof getArchiveKind !== "function") throw new Error("registerImportIpc requires getArchiveKind");
   if (typeof extractArchiveToDir !== "function") throw new Error("registerImportIpc requires extractArchiveToDir");
@@ -473,7 +475,7 @@ async function scanForGamesAndEmulators(selectedDrive, options = {}) {
     : (recursive ? 50 : 0);
 
   // load more folders to skip from ignore-folders.json
-  const ignoreFoldersPath = path.join(app.getAppPath(), "emubro-resources", "ignore-folders.json");
+  const ignoreFoldersPath = resolveResourcePath("ignore-folders.json", { mustExist: true });
   let ignoreFolders = [];
   try {
     const ignoreData = await fsSync.readFileSync(ignoreFoldersPath, "utf8");

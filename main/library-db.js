@@ -6,12 +6,14 @@ function createLibraryDbService(deps = {}) {
     app,
     fsSync,
     log,
-    appRootDir
+    appRootDir,
+    getResourceRoots
   } = deps;
 
   if (!app) throw new Error("createLibraryDbService requires app");
   if (!fsSync) throw new Error("createLibraryDbService requires fsSync");
   if (!log) throw new Error("createLibraryDbService requires log");
+  if (typeof getResourceRoots !== "function") throw new Error("createLibraryDbService requires getResourceRoots");
 
   const rootDir = String(appRootDir || app.getAppPath() || "").trim() || process.cwd();
   let dbRef = null;
@@ -418,8 +420,10 @@ function createLibraryDbService(deps = {}) {
     const psn = normalizePlatform(platformShortName);
     if (!psn) return "";
 
-    const coversDir = path.join(rootDir, "emubro-resources", "platforms", psn, "covers");
-    if (!fsSync.existsSync(coversDir)) return "";
+    const coverDirs = (Array.isArray(getResourceRoots()) ? getResourceRoots() : [])
+      .map((resourceRoot) => path.join(resourceRoot, "platforms", psn, "covers"))
+      .filter((dirPath) => fsSync.existsSync(dirPath));
+    if (!coverDirs.length) return "";
 
     const exts = [".jpg", ".jpeg", ".png", ".webp"];
     const candidates = [];
@@ -450,8 +454,9 @@ function createLibraryDbService(deps = {}) {
     }
 
     for (const file of candidates) {
-      const abs = path.join(coversDir, file);
-      if (fsSync.existsSync(abs)) {
+      for (const coversDir of coverDirs) {
+        const abs = path.join(coversDir, file);
+        if (!fsSync.existsSync(abs)) continue;
         return path.posix.join("emubro-resources", "platforms", psn, "covers", file);
       }
     }
