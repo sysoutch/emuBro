@@ -72,6 +72,12 @@ module.exports = {
     target: [
       "dmg",
       "zip"
-    ]
+    ],
+    identity: null,
+    hardenedRuntime: false,
+    gatekeeperAssess: false,
+    entitlements: null,
+    entitlementsInherit: null,
+    notarize: false
   }
 };
