@@ -39,6 +39,12 @@
         @include glass-bg-only(--bg-secondary, 50%);
     }
 
+    /* Avoid Electron/Chromium hover repaint memory growth on cover cards. */
+    .game-card {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+
     .game-card:hover,
     .tools-overview .tool-card:hover,
     .emulator-card:hover,
@@ -49,7 +55,7 @@
     }
 
     .game-card:hover {
-        transform: translateY(-5px);
+        transform: translateY(-2px);
     }
 
     .slideshow-card:hover {

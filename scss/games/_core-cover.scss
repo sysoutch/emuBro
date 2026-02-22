@@ -732,6 +732,7 @@
     display: flex;
     flex-direction: column;
     height: 100%;
+    contain: layout paint;
     transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease, background 0.22s ease;
 }
 
@@ -756,11 +757,11 @@
 }
 
 .game-card:hover {
-    transform: translateY(-4px);
+    transform: translateY(-2px);
     border-color: color-mix(in srgb, rgba(255,255,255,0.30), var(--accent-color));
-    background: color-mix(in srgb, var(--bg-secondary), transparent 62%);
+    background: color-mix(in srgb, var(--bg-secondary), transparent 54%);
     box-shadow:
-        0 30px 62px -38px rgba(0, 0, 0, 0.92),
+        0 18px 34px -26px rgba(0, 0, 0, 0.82),
         0 0 0 1px rgba(255,255,255,0.06) inset,
         0 1px 0 rgba(255,255,255,0.14) inset;
 }
@@ -796,6 +797,7 @@
     border: none;
     box-shadow: 0 10px 18px rgba(0, 0, 0, 0.26);
     position: relative;
+    contain: paint;
 }
 
 .game-cover .game-image {
@@ -903,7 +905,7 @@ img.lazy-game-image[data-lazy-status="loaded"] {
 .game-cover::after {
     content: "";
     position: absolute;
-    inset: -45% -70%;
+    inset: -30% -48%;
     opacity: 0;
     pointer-events: none;
     background: linear-gradient(
@@ -913,9 +915,8 @@ img.lazy-game-image[data-lazy-status="loaded"] {
         rgba(255,255,255,0.10) 56%,
         transparent 64%
     );
-    transform: translateX(-30%) rotate(12deg);
-    filter: blur(0.2px);
-    transition: transform 760ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 180ms ease;
+    transform: translateX(-14%) rotate(10deg);
+    transition: transform 320ms ease, opacity 160ms ease;
 }
 
 .game-card:hover .game-cover::before {
@@ -924,11 +925,11 @@ img.lazy-game-image[data-lazy-status="loaded"] {
 
 .game-card:hover .game-cover::after {
     opacity: 1;
-    transform: translateX(30%) rotate(12deg);
+    transform: translateX(14%) rotate(10deg);
 }
 
 .game-card:hover .game-cover .game-image {
-    transform: scale(1.04);
+    transform: scale(1.02);
 }
 
 .game-card:hover .game-cover-play-btn,
