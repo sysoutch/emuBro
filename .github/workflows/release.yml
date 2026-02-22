@@ -1,0 +1,58 @@
+name: Build and Release emuBro
+
+on:
+  push:
+    tags:
+      - "v*"
+      - "*-alpha*"
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: 18
+  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+  CSC_LINK: ${{ secrets.CSC_LINK }}
+  CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+  APPLE_ID: ${{ secrets.APPLE_ID }}
+  APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+  APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+  EMUBRO_SHIP_EN_ONLY: "1"
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build renderer
+        run: npm run build
+
+      - name: Package app
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            npx electron-builder -w --publish always
+          elif [[ "$RUNNER_OS" == "macOS" ]]; then
+            npx electron-builder -m --publish always
+          else
+            npx electron-builder -l --publish always
+          fi
+        shell: bash
+
+      - name: Upload artifacts (fallback)
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: emubro-${{ matrix.os }}-artifacts
+          path: dist/**
