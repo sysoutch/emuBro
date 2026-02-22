@@ -67,10 +67,10 @@
 
 .game-header {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
     margin: 0;
-    padding: 14px 20px 15px;
+    padding: 14px 20px 18px;
     border-bottom: 1px solid var(--glass-border);
     position: relative;
     z-index: 40;
@@ -125,6 +125,7 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 10px;
+    margin-left: auto;
 }
 
 .filter-pair-wrapper {
@@ -143,7 +144,8 @@
     display: none;
 }
 
-@media (max-width: 1280px) {
+/* Region+Language compact stage */
+@media (max-width: 1500px) {
     .game-header {
         overflow: visible;
     }
@@ -154,10 +156,10 @@
     }
 
     .filters {
-        flex: 1 1 auto;
+        flex: 0 1 auto;
         min-width: 0;
         flex-wrap: nowrap;
-        justify-content: flex-start;
+        justify-content: flex-end;
         gap: 6px;
         overflow: visible;
         white-space: nowrap;
@@ -180,38 +182,6 @@
 
     .filters .filter-pair-wrapper.is-open {
         z-index: 140;
-    }
-
-    .filters .filter-pair-toggle {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 32px;
-        padding: 0 10px;
-        border: 1px solid color-mix(in srgb, var(--border-color), var(--accent-color) 20%);
-        border-radius: var(--radius-btn);
-        background: color-mix(in srgb, var(--bg-secondary), var(--bg-tertiary) 24%);
-        color: var(--text-secondary);
-        font-size: 0.76rem;
-        font-weight: 700;
-        letter-spacing: 0.01em;
-        white-space: nowrap;
-        cursor: pointer;
-        transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease;
-    }
-
-    .filters .filter-pair-wrapper.is-open .filter-pair-toggle,
-    .filters .filter-pair-toggle:hover {
-        border-color: color-mix(in srgb, var(--accent-color), white 18%);
-        color: var(--text-primary);
-    }
-
-    .filters .filter-pair-content {
-        display: none !important;
-    }
-
-    .filters .filter-pair-content select {
-        display: none;
     }
 
     .filter-pair-floating-menu {
@@ -279,10 +249,6 @@
         min-width: 0;
     }
 
-    .filters .filter-pair-wrapper-group-sort {
-        min-width: 0;
-    }
-
     .filters .group-same-names-toggle {
         min-height: 32px;
         padding: 4px 9px;
@@ -297,8 +263,79 @@
         white-space: nowrap;
     }
 
+    /* Small spacing between group and sort selects only at compact widths */
+    .filter-pair-wrapper-group-sort .filter-pair-content select + select {
+        margin-left: 6px;
+    }
+
+    /* Only Region+Language goes compact at this width */
+    .filters .filter-pair-wrapper-region-language .filter-pair-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 32px;
+        padding: 0 10px;
+        border: 1px solid color-mix(in srgb, var(--border-color), var(--accent-color) 20%);
+        border-radius: var(--radius-btn);
+        background: color-mix(in srgb, var(--bg-secondary), var(--bg-tertiary) 24%);
+        color: var(--text-secondary);
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+    }
+
+    .filters .filter-pair-wrapper-region-language.is-open .filter-pair-toggle,
+    .filters .filter-pair-wrapper-region-language .filter-pair-toggle:hover {
+        border-color: color-mix(in srgb, var(--accent-color), white 18%);
+        color: var(--text-primary);
+    }
+
+    .filters .filter-pair-wrapper-region-language .filter-pair-content,
+    .filters .filter-pair-wrapper-region-language .filter-pair-content select {
+        display: none !important;
+    }
+
     .filters .filter-pair-wrapper-region-language:has(.filter-pair-content > #game-region-filter.is-hidden):has(.filter-pair-content > #game-language-filter.is-hidden) {
         display: none;
+    }
+}
+
+/* Group+Sort compact stage */
+@media (max-width: 1200px) {
+    .filters .filter-pair-wrapper-group-sort {
+        min-width: 0;
+    }
+
+    .filters .filter-pair-wrapper-group-sort .filter-pair-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 32px;
+        padding: 0 10px;
+        border: 1px solid color-mix(in srgb, var(--border-color), var(--accent-color) 20%);
+        border-radius: var(--radius-btn);
+        background: color-mix(in srgb, var(--bg-secondary), var(--bg-tertiary) 24%);
+        color: var(--text-secondary);
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+    }
+
+    .filters .filter-pair-wrapper-group-sort.is-open .filter-pair-toggle,
+    .filters .filter-pair-wrapper-group-sort .filter-pair-toggle:hover {
+        border-color: color-mix(in srgb, var(--accent-color), white 18%);
+        color: var(--text-primary);
+    }
+
+    .filters .filter-pair-wrapper-group-sort .filter-pair-content,
+    .filters .filter-pair-wrapper-group-sort .filter-pair-content select {
+        display: none !important;
     }
 
     .filters .filter-pair-wrapper-group-sort:has(.filter-pair-content > #group-filter.is-hidden):has(.filter-pair-content > #sort-filter.is-hidden) {

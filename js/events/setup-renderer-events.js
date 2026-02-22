@@ -253,17 +253,18 @@ export function setupRendererEventListeners(options = {}) {
         });
     }
 
-    const filtersCompactQuery = window.matchMedia('(max-width: 1280px)');
     const initCompactFilterPair = ({
         wrapperSelector,
         toggleId,
         panelId,
         compactSelectIds = [],
-        closeOnChangeElements = []
+        closeOnChangeElements = [],
+        compactQuery
     }) => {
         const wrapper = document.querySelector(wrapperSelector);
         const toggleBtn = document.getElementById(toggleId);
         if (!wrapper || !toggleBtn) return { close: () => {}, isOpen: () => false };
+        if (!compactQuery) return { close: () => {}, isOpen: () => false };
 
         let floatingMenuEl = null;
 
@@ -310,7 +311,7 @@ export function setupRendererEventListeners(options = {}) {
         };
 
         const setOpenState = (open) => {
-            const shouldOpen = !!open && filtersCompactQuery.matches;
+            const shouldOpen = !!open && compactQuery.matches;
             wrapper.classList.toggle('is-open', shouldOpen);
             toggleBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
             if (shouldOpen) {
@@ -329,7 +330,7 @@ export function setupRendererEventListeners(options = {}) {
             return 'Filter';
         };
         const renderCompactMenu = () => {
-            if (!filtersCompactQuery.matches) return;
+            if (!compactQuery.matches) return;
             destroyFloatingMenu();
             const menu = document.createElement('div');
             menu.className = 'filter-pair-floating-menu';
@@ -390,7 +391,7 @@ export function setupRendererEventListeners(options = {}) {
         });
 
         document.addEventListener('click', (event) => {
-            if (!filtersCompactQuery.matches || !isOpen()) return;
+            if (!compactQuery.matches || !isOpen()) return;
             if (wrapper.contains(event.target)) return;
             if (floatingMenuEl && floatingMenuEl.contains(event.target)) return;
             close();
@@ -420,19 +421,23 @@ export function setupRendererEventListeners(options = {}) {
         return { close, isOpen, setOpenState };
     };
 
+    const filtersCompactQuery = window.matchMedia('(max-width: 1500px)');
+
     const regionLanguagePair = initCompactFilterPair({
         wrapperSelector: '.filter-pair-wrapper-region-language',
         toggleId: 'filters-region-language-toggle',
         panelId: 'filters-region-language-content',
         compactSelectIds: ['game-region-filter', 'game-language-filter'],
-        closeOnChangeElements: [gameRegionFilterSelect, gameLanguageFilterSelect]
+        closeOnChangeElements: [gameRegionFilterSelect, gameLanguageFilterSelect],
+        compactQuery: window.matchMedia('(max-width: 1500px)')
     });
     const groupSortPair = initCompactFilterPair({
         wrapperSelector: '.filter-pair-wrapper-group-sort',
         toggleId: 'filters-group-sort-toggle',
         panelId: 'filters-group-sort-content',
         compactSelectIds: ['group-filter', 'sort-filter'],
-        closeOnChangeElements: [groupFilterSelect, sortFilter]
+        closeOnChangeElements: [groupFilterSelect, sortFilter],
+        compactQuery: window.matchMedia('(max-width: 1200px)')
     });
 
     const regionLanguageToggleBtn = document.getElementById('filters-region-language-toggle');
@@ -451,16 +456,21 @@ export function setupRendererEventListeners(options = {}) {
     }
 
     const syncCompactFilterPairs = () => {
-        if (filtersCompactQuery.matches) return;
         regionLanguagePair.close();
         groupSortPair.close();
     };
 
-    if (typeof filtersCompactQuery.addEventListener === 'function') {
-        filtersCompactQuery.addEventListener('change', syncCompactFilterPairs);
-    } else if (typeof filtersCompactQuery.addListener === 'function') {
-        filtersCompactQuery.addListener(syncCompactFilterPairs);
-    }
+    const queries = [
+        regionLanguagePair.compactQuery,
+        groupSortPair.compactQuery
+    ].filter(Boolean);
+    queries.forEach((mq) => {
+        if (typeof mq.addEventListener === 'function') {
+            mq.addEventListener('change', syncCompactFilterPairs);
+        } else if (typeof mq.addListener === 'function') {
+            mq.addListener(syncCompactFilterPairs);
+        }
+    });
 
     document.addEventListener('keydown', (event) => {
         if (event.key !== 'Escape') return;
