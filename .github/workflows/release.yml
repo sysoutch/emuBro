@@ -20,6 +20,8 @@ env:
 
 jobs:
   build:
+    permissions:
+      contents: write
     strategy:
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
@@ -46,16 +48,25 @@ jobs:
       - name: Build renderer
         run: npm run build
 
+      - name: Sync emuBro resources
+        run: npm run sync:resources
+
       - name: Package app
         run: |
           if [[ "$RUNNER_OS" == "Windows" ]]; then
-            npx electron-builder -w --publish always
+            npx electron-builder --win --publish always --config electron-builder.config.js
           elif [[ "$RUNNER_OS" == "Linux" ]]; then
-            npx electron-builder -l --publish always --linux AppImage
+            npx electron-builder --linux AppImage --publish always --config electron-builder.config.js
           else
             echo "Skipping macOS packaging for CI"
           fi
         shell: bash
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: emubro-${{ matrix.os }}-artifacts
+          path: build_out/*
 
       - name: Upload artifacts (fallback)
         if: ${{ failure() }}
