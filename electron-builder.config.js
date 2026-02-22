@@ -69,15 +69,6 @@ module.exports = {
   },
   mac: {
     icon: "favicon.ico",
-    target: [
-      "dmg",
-      "zip"
-    ],
-    identity: null,
-    hardenedRuntime: false,
-    gatekeeperAssess: false,
-    entitlements: null,
-    entitlementsInherit: null,
-    notarize: false
+    target: []
   }
 };

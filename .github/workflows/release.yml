@@ -50,10 +50,10 @@ jobs:
         run: |
           if [[ "$RUNNER_OS" == "Windows" ]]; then
             npx electron-builder -w --publish always
-          elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            npx electron-builder -m --publish always
-          else
+          elif [[ "$RUNNER_OS" == "Linux" ]]; then
             npx electron-builder -l --publish always --linux AppImage
+          else
+            echo "Skipping macOS packaging for CI"
           fi
         shell: bash
 
