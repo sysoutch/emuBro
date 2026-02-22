@@ -39,7 +39,8 @@ module.exports = {
     {
       provider: "github",
       owner: "sysoutch",
-      repo: "emuBro"
+      repo: "emuBro",
+      releaseType: "release"
     }
   ],
   extraResources: [
