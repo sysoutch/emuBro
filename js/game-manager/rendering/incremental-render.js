@@ -48,7 +48,7 @@ export function renderGamesIncremental(gamesToRender, activeView = 'cover', opti
     const totalGames = Array.isArray(gamesToRender) ? gamesToRender.length : 0;
     const totalChunks = Math.ceil(totalGames / batchSize);
     const minChunksInDom = view === 'cover' ? 1 : 2;
-    const hardMaxChunksInDom = view === 'cover' ? 2 : (view === 'table' ? 6 : 6);
+    const hardMaxChunksInDom = view === 'cover' ? 3 : (view === 'table' ? 6 : 6);
 
     let mountTarget = null;
     let topSpacer = null;
@@ -443,7 +443,7 @@ export function renderGamesIncremental(gamesToRender, activeView = 'cover', opti
     const initialChunks = Math.min(
         totalChunks,
         view === 'cover'
-            ? Math.max(minChunksInDom, Math.min(1, hardMaxChunksInDom))
+            ? Math.max(minChunksInDom, Math.min(2, hardMaxChunksInDom))
             : Math.max(minChunksInDom, Math.min(3, hardMaxChunksInDom))
     );
     for (let i = 0; i < initialChunks; i += 1) {
@@ -559,10 +559,11 @@ export function renderGamesIncremental(gamesToRender, activeView = 'cover', opti
         const nearTop = distanceToLoadedTop <= nearEdgeThreshold;
         const nearBottom = distanceToLoadedBottom <= nearEdgeThreshold;
         const hasUserIntent = Date.now() <= userScrollIntentUntil;
+        const underfilledViewport = scrollHeight <= (viewportHeight + 24);
 
         // Ignore non-user layout/reflow scroll unless we're pinned to a hard edge
         // where we still need to continue incremental loading.
-        if (!hasUserIntent && !hardNearTop && !hardNearBottom) {
+        if (!hasUserIntent && !hardNearTop && !hardNearBottom && !underfilledViewport) {
             return;
         }
 

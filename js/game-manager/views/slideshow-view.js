@@ -161,6 +161,8 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
     const AUTO_ADVANCE_MS = 4600;
     let autoAdvanceTimer = null;
     let autoAdvancePaused = false;
+    let suppressStripClickUntil = 0;
+    let stripInertiaFrame = null;
 
     function applySlideshowMode(nextMode, options = {}) {
         const persist = options.persist !== false;
@@ -183,6 +185,12 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
         if (!autoAdvanceTimer) return;
         window.clearTimeout(autoAdvanceTimer);
         autoAdvanceTimer = null;
+    }
+
+    function stopStripInertia() {
+        if (!stripInertiaFrame) return;
+        window.cancelAnimationFrame(stripInertiaFrame);
+        stripInertiaFrame = null;
     }
 
     function scheduleAutoAdvance() {
@@ -274,12 +282,131 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
         scheduleAutoAdvance();
     }
 
+    function getNearestStripIndex() {
+        const buttons = Array.from(stripTrack.querySelectorAll('.slideshow-strip-item[data-slideshow-index]'));
+        if (!buttons.length) return null;
+        const trackRect = stripTrack.getBoundingClientRect();
+        const targetCenter = trackRect.left + (trackRect.width / 2);
+        let bestIdx = null;
+        let bestDist = Number.POSITIVE_INFINITY;
+
+        buttons.forEach((button) => {
+            const idx = Number.parseInt(button.dataset.slideshowIndex || '-1', 10);
+            if (!Number.isFinite(idx) || idx < 0 || idx >= len) return;
+            const rect = button.getBoundingClientRect();
+            const center = rect.left + (rect.width / 2);
+            const dist = Math.abs(center - targetCenter);
+            if (dist < bestDist) {
+                bestDist = dist;
+                bestIdx = idx;
+            }
+        });
+
+        return bestIdx;
+    }
+
+    (function enableStripDragScroll() {
+        let armed = false;
+        let dragging = false;
+        let pointerId = null;
+        let startX = 0;
+        let startScrollLeft = 0;
+        let lastMoveX = 0;
+        let lastMoveT = 0;
+        let velocityPxMs = 0;
+
+        const dragThreshold = 4;
+
+        const setDraggingState = (isDragging) => {
+            stripTrack.classList.toggle('is-dragging', !!isDragging);
+        };
+
+        const onPointerDown = (event) => {
+            if (event.pointerType === 'mouse' && event.button !== 0) return;
+            armed = true;
+            dragging = false;
+            pointerId = event.pointerId;
+            startX = event.clientX;
+            startScrollLeft = stripTrack.scrollLeft;
+            lastMoveX = event.clientX;
+            lastMoveT = performance.now();
+            velocityPxMs = 0;
+            autoAdvancePaused = true;
+            clearAutoAdvance();
+            stopStripInertia();
+            try { stripTrack.setPointerCapture(pointerId); } catch (_error) {}
+        };
+
+        const onPointerMove = (event) => {
+            if (!armed || event.pointerId !== pointerId) return;
+
+            const dx = event.clientX - startX;
+            if (!dragging && Math.abs(dx) >= dragThreshold) {
+                dragging = true;
+                setDraggingState(true);
+            }
+            if (!dragging) return;
+
+            stripTrack.scrollLeft = startScrollLeft - dx;
+
+            const now = performance.now();
+            const dt = Math.max(1, now - lastMoveT);
+            const instVelocity = (event.clientX - lastMoveX) / dt;
+            velocityPxMs = (velocityPxMs * 0.7) + (instVelocity * 0.3);
+            lastMoveX = event.clientX;
+            lastMoveT = now;
+            event.preventDefault();
+        };
+
+        const onPointerEnd = (event) => {
+            if (!armed || event.pointerId !== pointerId) return;
+            armed = false;
+            try { stripTrack.releasePointerCapture(pointerId); } catch (_error) {}
+            pointerId = null;
+
+            if (!dragging) {
+                autoAdvancePaused = false;
+                scheduleAutoAdvance();
+                return;
+            }
+
+            dragging = false;
+            setDraggingState(false);
+            suppressStripClickUntil = performance.now() + 220;
+
+            let velocity = -velocityPxMs * 18;
+            const decay = 0.92;
+            const tick = () => {
+                velocity *= decay;
+                if (Math.abs(velocity) < 0.2) {
+                    stripInertiaFrame = null;
+                    const nearestIdx = getNearestStripIndex();
+                    if (nearestIdx != null) setIndex(nearestIdx);
+                    autoAdvancePaused = false;
+                    scheduleAutoAdvance();
+                    return;
+                }
+                stripTrack.scrollLeft += velocity;
+                stripInertiaFrame = requestAnimationFrame(tick);
+            };
+            stripInertiaFrame = requestAnimationFrame(tick);
+        };
+
+        stripTrack.style.touchAction = 'pan-y';
+        stripTrack.addEventListener('pointerdown', onPointerDown);
+        stripTrack.addEventListener('pointermove', onPointerMove);
+        stripTrack.addEventListener('pointerup', onPointerEnd);
+        stripTrack.addEventListener('pointercancel', onPointerEnd);
+        stripTrack.addEventListener('lostpointercapture', onPointerEnd);
+    })();
+
     heroButton.addEventListener('click', () => {
         const game = slideshowGames[currentIndex];
         if (game) showGameDetails(game);
     });
 
     stripTrack.addEventListener('click', (event) => {
+        if (performance.now() < suppressStripClickUntil) return;
         const button = event.target.closest('.slideshow-strip-item[data-slideshow-index]');
         if (!button) return;
         const idx = Number.parseInt(button.dataset.slideshowIndex || '-1', 10);
@@ -341,6 +468,7 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
 
     setGamesScrollDetach(() => {
         clearAutoAdvance();
+        stopStripInertia();
         slideshowContainer.removeEventListener('wheel', onWheel);
         cleanupLazyGameImages(slideshowContainer);
     });

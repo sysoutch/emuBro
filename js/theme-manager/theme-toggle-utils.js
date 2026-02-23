@@ -7,7 +7,9 @@ export function toggleThemeColors(options = {}) {
         getCurrentThemeColors,
         flipLightness,
         applyCustomTheme,
-        getComputedBackgroundImage
+        getComputedBackgroundImage,
+        getCurrentThemeFonts,
+        getCurrentLogoTextEffect
     } = options;
 
     const currentColors = getCurrentThemeColors();
@@ -47,11 +49,21 @@ export function toggleThemeColors(options = {}) {
     if (typeof getComputedBackgroundImage === 'function') {
         currentBgImage = getComputedBackgroundImage();
     }
+    const currentFonts = typeof getCurrentThemeFonts === 'function'
+        ? (getCurrentThemeFonts() || null)
+        : null;
+    const currentLogoTextEffect = typeof getCurrentLogoTextEffect === 'function'
+        ? (getCurrentLogoTextEffect() || null)
+        : null;
 
     const invertedTheme = {
         id: 'temp_inverted',
         name: 'Inverted (Temporary)',
         colors: invertedColors,
+        fonts: currentFonts || undefined,
+        textEffects: currentLogoTextEffect
+            ? { logo: currentLogoTextEffect }
+            : undefined,
         background: {
             image: currentBgImage || null,
             position: 'centered',
@@ -70,12 +82,24 @@ export function toggleThemeColors(options = {}) {
 
 export function toggleInvertFilter() {
     const root = document.documentElement;
-    const currentFilter = root.style.filter || '';
-    if (currentFilter.includes('invert(1)')) {
-        root.style.filter = currentFilter.replace('invert(1)', '').trim();
-    } else {
-        root.style.filter = (currentFilter + ' invert(1)').trim();
+    const currentFilter = String(root.style.filter || '').trim();
+    const hasInvert = /\binvert\(1\)/.test(currentFilter);
+    if (hasInvert) {
+        const nextFilter = currentFilter
+            .replace(/\binvert\(1\)/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (nextFilter) {
+            root.style.filter = nextFilter;
+        } else {
+            root.style.removeProperty('filter');
+        }
+        root.removeAttribute('data-invert-filter-active');
+        return;
     }
+
+    root.style.filter = currentFilter ? `${currentFilter} invert(1)` : 'invert(1)';
+    root.setAttribute('data-invert-filter-active', '1');
 }
 
 export function getBackgroundImageFromGrid() {

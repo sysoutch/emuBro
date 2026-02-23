@@ -253,7 +253,10 @@ export function setupRendererEventListeners(options = {}) {
         });
     }
 
-    const contentWidthHost = document.querySelector('.game-content-wrapper') || document.querySelector('.game-grid') || document.body;
+    const contentWidthHost = document.querySelector('.game-header .filters')
+        || document.querySelector('.game-content-wrapper')
+        || document.querySelector('.game-grid')
+        || document.body;
     const createElementWidthQuery = (maxWidthPx, hostEl) => {
         const target = hostEl || document.body;
         const listeners = new Set();

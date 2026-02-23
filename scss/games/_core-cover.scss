@@ -820,7 +820,7 @@ img.lazy-game-image {
 
 img.lazy-game-image.is-pending {
     opacity: 0.55;
-    filter: saturate(0.9);
+    filter: invert(var(--invert-media-compensation, 0)) saturate(0.9);
     transform: none;
     animation: none;
 }
@@ -828,7 +828,7 @@ img.lazy-game-image.is-pending {
 img.lazy-game-image:not(.is-pending),
 img.lazy-game-image[data-lazy-status="loaded"] {
     opacity: 1;
-    filter: none;
+    filter: invert(var(--invert-media-compensation, 0));
     animation: none;
 }
 

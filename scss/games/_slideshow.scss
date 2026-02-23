@@ -27,7 +27,7 @@
     inset: -80px -120px -80px;
     background-size: cover;
     background-position: center;
-    filter: blur(30px) saturate(1.08) brightness(0.94);
+    filter: invert(var(--invert-media-compensation, 0)) blur(30px) saturate(1.08) brightness(0.94);
     opacity: 0;
     transform: scale(1.08);
     transition: opacity 260ms ease;
@@ -108,6 +108,7 @@
     display: block;
     object-fit: cover;
     background: linear-gradient(180deg, rgba(10, 14, 22, 0.9), rgba(8, 12, 18, 0.96));
+    filter: invert(var(--invert-media-compensation, 0));
 }
 
 .slideshow-hero-frame {
@@ -190,8 +191,15 @@
     overflow-x: auto;
     overflow-y: hidden;
     padding-bottom: 4px;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
     scrollbar-width: thin;
     scrollbar-color: color-mix(in srgb, var(--accent-color), transparent 28%) transparent;
+}
+
+.slideshow-strip-track.is-dragging {
+    cursor: grabbing;
 }
 
 .slideshow-strip-track::-webkit-scrollbar {

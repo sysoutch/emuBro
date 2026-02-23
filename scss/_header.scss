@@ -322,7 +322,11 @@
 .logo img {
     height: 44px;
     -webkit-user-drag: none;
-    filter: brightness(0.94) saturate(0.96);
+    filter: invert(var(--invert-media-compensation, 0)) brightness(0.94) saturate(0.96);
+}
+
+.logo svg {
+    filter: invert(var(--invert-media-compensation, 0));
 }
 
 .logo h1 {
@@ -531,6 +535,7 @@
 
 [data-logo-effect-apply-logo="true"][data-logo-text-effect="flowy-blood"] .logo img {
     filter:
+        invert(var(--invert-media-compensation, 0))
         saturate(calc(1 + (var(--logo-text-effect-intensity, 72) / 120)))
         hue-rotate(-18deg)
         drop-shadow(0 0 calc(6px + (var(--logo-text-effect-intensity, 72) * 0.1px)) color-mix(in srgb, #d31a2f 75%, transparent));
@@ -538,6 +543,7 @@
 
 [data-logo-effect-apply-logo="true"][data-logo-text-effect="burning"] .logo img {
     filter:
+        invert(var(--invert-media-compensation, 0))
         saturate(calc(1 + (var(--logo-text-effect-intensity, 72) / 110)))
         brightness(calc(0.96 + (var(--logo-text-effect-intensity, 72) / 380)))
         hue-rotate(-28deg)
@@ -546,6 +552,7 @@
 
 [data-logo-effect-apply-logo="true"][data-logo-text-effect="water"] .logo img {
     filter:
+        invert(var(--invert-media-compensation, 0))
         saturate(calc(1 + (var(--logo-text-effect-intensity, 72) / 135)))
         hue-rotate(22deg)
         drop-shadow(0 0 calc(7px + (var(--logo-text-effect-intensity, 72) * 0.1px)) color-mix(in srgb, #53cbff 72%, transparent));
@@ -553,6 +560,7 @@
 
 [data-logo-effect-apply-logo="true"][data-logo-text-effect="slimey-green"] .logo img {
     filter:
+        invert(var(--invert-media-compensation, 0))
         saturate(calc(1 + (var(--logo-text-effect-intensity, 72) / 130)))
         hue-rotate(36deg)
         drop-shadow(0 0 calc(7px + (var(--logo-text-effect-intensity, 72) * 0.1px)) color-mix(in srgb, #67df49 72%, transparent));
@@ -560,6 +568,7 @@
 
 [data-logo-effect-apply-logo="true"][data-logo-text-effect="custom"] .logo img {
     filter:
+        invert(var(--invert-media-compensation, 0))
         saturate(calc(1 + (var(--logo-text-effect-intensity, 72) / 128)))
         drop-shadow(0 0 calc(6px + (var(--logo-text-effect-intensity, 72) * 0.1px)) color-mix(in srgb, var(--logo-text-effect-color-2, #2f7dff) 74%, transparent));
 }

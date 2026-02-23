@@ -32,7 +32,7 @@
     inset: -80px -120px;
     background-size: cover;
     background-position: center;
-    filter: blur(32px) saturate(1.08) brightness(0.94);
+    filter: invert(var(--invert-media-compensation, 0)) blur(32px) saturate(1.08) brightness(0.94);
     opacity: 0.32;
     transform: scale(1.08);
     transition: background-image 180ms ease;
@@ -259,6 +259,7 @@
     object-fit: contain;
     object-position: center top;
     display: block;
+    filter: invert(var(--invert-media-compensation, 0));
 }
 
 .focus-preview-info {

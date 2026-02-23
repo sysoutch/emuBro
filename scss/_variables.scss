@@ -98,6 +98,7 @@
     --dock-header-offset: 0px;
     --view-scale: 1;
     --view-scale-user: 1;
+    --invert-media-compensation: 0;
 }
 
 /* Light Theme */
@@ -133,4 +134,8 @@
     --app-gradient-angle: 160deg;
     --font-body: 'Quicksand', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     --font-heading: 'Montserrat', 'Quicksand', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+html[data-invert-filter-active="1"] {
+    --invert-media-compensation: 1;
 }

@@ -5,6 +5,7 @@
     background-size: contain;
     background-position: 50%;
     background-repeat: no-repeat;
+    filter: invert(var(--invert-media-compensation, 0));
 }
 
 .fi::before {

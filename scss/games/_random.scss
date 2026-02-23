@@ -219,7 +219,7 @@
     object-fit: cover;
     display: block;
     transform: scale(1.02);
-    filter: contrast(1.05) saturate(1.05);
+    filter: invert(var(--invert-media-compensation, 0)) contrast(1.05) saturate(1.05);
 }
 
 .slot-item-caption {

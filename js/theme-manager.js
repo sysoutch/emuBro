@@ -292,6 +292,10 @@ export function setupThemeCustomizationControls() {
 export function applyCustomTheme(theme) {
     const root = document.documentElement;
     const runtimeColors = resolveThemeColorsForRuntime(theme);
+    const isTemporaryTheme = /^temp_/i.test(String(theme?.id || '').trim());
+    const preserveMissingPresentation = isTemporaryTheme;
+    const fallbackFonts = preserveMissingPresentation ? getCurrentThemeFontsFromRoot() : null;
+    const fallbackLogoTextEffect = preserveMissingPresentation ? getCurrentLogoTextEffectFromRoot() : null;
     const tertiary = runtimeColors.bgTertiary || runtimeColors.bgSecondary;
     applyThemeColorsToRoot({
         ...runtimeColors,
@@ -311,12 +315,22 @@ export function applyCustomTheme(theme) {
         resolveBasicBrandColor
     });
     root.style.setProperty('--logo-brand-color', parseColorToHex(runtimeLogoBrand) || runtimeLogoBrand);
-    applyThemeFonts(theme?.fonts || null);
+    if (themeDefinesFonts(theme)) {
+        applyThemeFonts(theme?.fonts || null);
+    } else if (fallbackFonts) {
+        applyThemeFonts(fallbackFonts);
+    } else {
+        applyThemeFonts(null);
+    }
     const isBuiltInPreset = !!getBuiltInPresetTheme(theme?.id);
     if (isBuiltInPreset) {
         applyThemeTextEffects({ logo: buildPaletteMatchedLogoTextEffect(runtimeColors) });
-    } else {
+    } else if (themeDefinesLogoTextEffect(theme)) {
         applyThemeTextEffects(theme);
+    } else if (fallbackLogoTextEffect) {
+        applyThemeTextEffects({ logo: fallbackLogoTextEffect });
+    } else {
+        applyThemeTextEffects(null);
     }
     
     // Check for global background override
@@ -730,11 +744,85 @@ export function setHasUnsavedChanges(val) {
     hasUnsavedChanges = val;
 }
 
+function themeDefinesFonts(theme) {
+    return Boolean(
+        theme
+        && typeof theme === 'object'
+        && theme.fonts
+        && typeof theme.fonts === 'object'
+        && (
+            typeof theme.fonts.body === 'string'
+            || typeof theme.fonts.heading === 'string'
+            || typeof theme.fonts.pixelMode === 'boolean'
+        )
+    );
+}
+
+function themeDefinesLogoTextEffect(theme) {
+    if (!theme || typeof theme !== 'object') return false;
+    if (theme.textEffects && typeof theme.textEffects === 'object' && theme.textEffects.logo) return true;
+    if (theme.editor && typeof theme.editor === 'object') {
+        if (theme.editor.textEffects && typeof theme.editor.textEffects === 'object' && theme.editor.textEffects.logo) return true;
+        if (theme.editor.textEffect && typeof theme.editor.textEffect === 'object') return true;
+        if (Object.prototype.hasOwnProperty.call(theme.editor, 'textEffectMode')) return true;
+        if (Object.prototype.hasOwnProperty.call(theme.editor, 'textEffectEnabled')) return true;
+        if (Object.prototype.hasOwnProperty.call(theme.editor, 'textEffectApplyToLogo')) return true;
+    }
+    if (theme.logo && typeof theme.logo === 'object') return true;
+    if (Object.prototype.hasOwnProperty.call(theme, 'textEffectMode')) return true;
+    return false;
+}
+
+function readCssInt(styles, cssVarName, fallback) {
+    const raw = String(styles.getPropertyValue(cssVarName) || '').trim();
+    const parsed = Number.parseInt(raw, 10);
+    return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function getCurrentThemeFontsFromRoot() {
+    const root = document.documentElement;
+    const styles = getComputedStyle(root);
+    return {
+        body: String(styles.getPropertyValue('--font-body') || '').trim() || DEFAULT_THEME_FONTS.body,
+        heading: String(styles.getPropertyValue('--font-heading') || '').trim() || DEFAULT_THEME_FONTS.heading,
+        pixelMode: root.getAttribute('data-font-pixel') === 'true'
+    };
+}
+
+function getCurrentLogoTextEffectFromRoot() {
+    const root = document.documentElement;
+    const styles = getComputedStyle(root);
+    const modeAttr = String(root.getAttribute('data-logo-text-effect') || '').trim().toLowerCase();
+    const mode = modeAttr || DEFAULT_TEXT_EFFECT_MODE;
+    const color1 = parseColorToHex(styles.getPropertyValue('--logo-text-effect-color-1')) || DEFAULT_TEXT_EFFECT_CUSTOM_COLORS.color1;
+    const color2 = parseColorToHex(styles.getPropertyValue('--logo-text-effect-color-2')) || DEFAULT_TEXT_EFFECT_CUSTOM_COLORS.color2;
+    const color3 = parseColorToHex(styles.getPropertyValue('--logo-text-effect-color-3')) || DEFAULT_TEXT_EFFECT_CUSTOM_COLORS.color3;
+    const color4 = parseColorToHex(styles.getPropertyValue('--logo-text-effect-color-4')) || DEFAULT_TEXT_EFFECT_CUSTOM_COLORS.color4;
+    const useColor4 = mode === 'custom' && color4.toLowerCase() !== color3.toLowerCase();
+    return {
+        enabled: mode !== DEFAULT_TEXT_EFFECT_MODE,
+        mode,
+        speed: readCssInt(styles, '--logo-text-effect-speed', DEFAULT_TEXT_EFFECT_SPEED),
+        intensity: readCssInt(styles, '--logo-text-effect-intensity', DEFAULT_TEXT_EFFECT_INTENSITY),
+        angle: readCssInt(styles, '--logo-text-effect-angle', DEFAULT_TEXT_EFFECT_ANGLE),
+        useColor4,
+        applyToLogo: mode !== DEFAULT_TEXT_EFFECT_MODE && root.getAttribute('data-logo-effect-apply-logo') === 'true',
+        customColors: {
+            color1,
+            color2,
+            color3,
+            color4
+        }
+    };
+}
+
 export function toggleTheme() {
     const invertedTheme = toggleThemeColorsView({
         getCurrentThemeColors,
         flipLightness,
         applyCustomTheme,
+        getCurrentThemeFonts: getCurrentThemeFontsFromRoot,
+        getCurrentLogoTextEffect: getCurrentLogoTextEffectFromRoot,
         getComputedBackgroundImage: () => window.currentBackgroundImage || getBackgroundImageFromGrid()
     });
     currentTheme = invertedTheme?.id || 'temp_inverted';

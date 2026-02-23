@@ -46,33 +46,54 @@ export function createLazyGameImageActions(deps = {}) {
             entries.forEach((entry) => {
                 if (!entry.isIntersecting) return;
                 const img = entry.target;
-                const source = String(img.dataset.lazySrc || '').trim();
-                if (!source) {
-                    markLazyImageLoaded(img);
-                    unobserveLazyImage(img);
-                    return;
-                }
-
-                if (img.dataset.lazyStatus === 'loaded' || img.dataset.lazyStatus === 'loading') {
-                    unobserveLazyImage(img);
-                    return;
-                }
-
-                img.dataset.lazyStatus = 'loading';
-                attachLazyImageLoadHandlers(img);
-                img.src = source;
-                if (img.complete && img.naturalWidth > 0) {
-                    markLazyImageLoaded(img);
-                }
+                loadLazyImageNow(img);
                 unobserveLazyImage(img);
             });
         }, {
             root: gameImageObserverRoot,
-            rootMargin: '220px 0px',
-            threshold: 0.01
+            rootMargin: '360px 0px',
+            threshold: 0
         });
 
         return gameImageObserver;
+    }
+
+    function loadLazyImageNow(img) {
+        if (!img) return;
+        const source = String(img.dataset.lazySrc || '').trim();
+        if (!source) {
+            markLazyImageLoaded(img);
+            return;
+        }
+
+        if (img.dataset.lazyStatus === 'loaded' || img.dataset.lazyStatus === 'loading') {
+            return;
+        }
+
+        img.dataset.lazyStatus = 'loading';
+        attachLazyImageLoadHandlers(img);
+        img.src = source;
+        if (img.complete && img.naturalWidth > 0) {
+            markLazyImageLoaded(img);
+        }
+    }
+
+    function isLikelyVisibleNow(img) {
+        if (!img || typeof img.getBoundingClientRect !== 'function') return false;
+        const rect = img.getBoundingClientRect();
+        const root = resolveObserverRoot() || null;
+
+        if (!root || typeof root.getBoundingClientRect !== 'function') {
+            const vpHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+            const vpWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+            return rect.bottom >= -120 && rect.top <= (vpHeight + 120) && rect.right >= -120 && rect.left <= (vpWidth + 120);
+        }
+
+        const rootRect = root.getBoundingClientRect();
+        return rect.bottom >= (rootRect.top - 120)
+            && rect.top <= (rootRect.bottom + 120)
+            && rect.right >= (rootRect.left - 120)
+            && rect.left <= (rootRect.right + 120);
     }
 
     function prepareLazyGameImage(img) {
@@ -91,14 +112,14 @@ export function createLazyGameImageActions(deps = {}) {
             return;
         }
 
+        if (isLikelyVisibleNow(img)) {
+            loadLazyImageNow(img);
+            return;
+        }
+
         const observer = ensureGameImageObserver();
         if (!observer) {
-            img.dataset.lazyStatus = 'loading';
-            attachLazyImageLoadHandlers(img);
-            img.src = source;
-            if (img.complete && img.naturalWidth > 0) {
-                markLazyImageLoaded(img);
-            }
+            loadLazyImageNow(img);
             return;
         }
 
