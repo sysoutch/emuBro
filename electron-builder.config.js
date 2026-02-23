@@ -54,12 +54,17 @@ module.exports = {
   // dependencies from package.json in the final build.
   win: {
     icon: "favicon.ico",
-    artifactName: "${productName}-${version}-win-${arch}.${ext}",
     target: [
       "nsis",
       "nsis-web"
     ],
     asar: true
+  },
+  nsis: {
+    artifactName: "${productName}-${version}-win-${arch}-setup.${ext}"
+  },
+  nsisWeb: {
+    artifactName: "${productName}-${version}-win-${arch}-web-setup.${ext}"
   },
   linux: {
     icon: "icon.png",
