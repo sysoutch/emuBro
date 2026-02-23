@@ -57,7 +57,8 @@ const resourceOverrides = createResourceOverrides({
   app,
   fsSync,
   path,
-  log
+  log,
+  store
 });
 
 function normalizeRuntimeRuleValueList(values = []) {

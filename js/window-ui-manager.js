@@ -6,12 +6,16 @@ export function setupWindowControls(options = {}) {
     const openLibraryPathSettingsModal = typeof options.openLibraryPathSettingsModal === 'function'
         ? options.openLibraryPathSettingsModal
         : async () => {};
+    const openAboutDialog = typeof options.openAboutDialog === 'function'
+        ? options.openAboutDialog
+        : async () => {};
     if (!emubro) return;
 
     const minBtn = document.getElementById('win-min-btn');
     const maxBtn = document.getElementById('win-max-btn');
     const closeBtn = document.getElementById('win-close-btn');
     const updateBtn = document.getElementById('win-update-btn');
+    const aboutBtn = document.getElementById('win-about-btn');
     const header = document.querySelector('header.header');
     let appUpdateAvailable = false;
     let resourcesUpdateAvailable = false;
@@ -83,6 +87,11 @@ export function setupWindowControls(options = {}) {
     if (updateBtn) {
         updateBtn.addEventListener('click', async () => {
             await openLibraryPathSettingsModal({ initialTab: 'updates' });
+        });
+    }
+    if (aboutBtn) {
+        aboutBtn.addEventListener('click', async () => {
+            await openAboutDialog();
         });
     }
 

@@ -73,6 +73,7 @@ import { setupWindowControls, setupHeaderThemeControlsToggle, setupSidebarRail, 
 import { openLibraryPathSettingsModal as openLibraryPathSettingsModalView } from './js/settings/library-settings-modal';
 import { setupRendererEventListeners } from './js/events/setup-renderer-events';
 import { openProfileModalView } from './js/profile/profile-modal';
+import { openAboutDialog as openAboutDialogView } from './js/about-dialog';
 import { createCategoriesListRenderer } from './js/library/categories-list-renderer';
 import { createSuggestionsPanelController } from './js/suggestions/suggestions-panel-controller';
 import { createBrowseFooterController } from './js/library/browse-footer-controller';
@@ -569,6 +570,10 @@ async function openProfileModal() {
         emubro,
         openLibraryPathSettingsModal
     });
+}
+
+async function openAboutDialog() {
+    await openAboutDialogView({ emubro });
 }
 
 function normalizeEmulatorType(type) {
@@ -1124,6 +1129,7 @@ function setupEventListeners() {
         setupWindowResizeHandler,
         recenterManagedModalIfMostlyOutOfView,
         setupWindowControls,
+        openAboutDialog,
         setupHeaderThemeControlsToggle,
         themeSelect
     });

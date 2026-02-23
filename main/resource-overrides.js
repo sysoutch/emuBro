@@ -5,6 +5,8 @@ function createResourceOverrides(deps = {}) {
   const fsSync = deps.fsSync;
   const path = deps.path;
   const log = deps.log || console;
+  const store = deps.store || null;
+  const storageKey = String(deps.storageKey || "resources:storage-path:v1");
 
   if (!app || !fsSync || !path) {
     throw new Error("createResourceOverrides requires app/fsSync/path");
@@ -17,8 +19,24 @@ function createResourceOverrides(deps = {}) {
     return path.join(app.getAppPath(), "emubro-resources");
   }
 
+  function normalizeDirectoryPath(input) {
+    const raw = String(input || "").trim();
+    if (!raw) return "";
+    if (!path.isAbsolute(raw)) return "";
+    return path.normalize(raw);
+  }
+
+  function getDefaultUserResourcesDir() {
+    return path.join(app.getPath("userData"), "emubro-resources");
+  }
+
+  function getConfiguredResourcesDir() {
+    if (!store || typeof store.get !== "function") return "";
+    return normalizeDirectoryPath(store.get(storageKey, ""));
+  }
+
   function getUserResourcesDir() {
-    const dir = path.join(app.getPath("userData"), "emubro-resources");
+    const dir = getConfiguredResourcesDir() || getDefaultUserResourcesDir();
     try {
       fsSync.mkdirSync(dir, { recursive: true });
     } catch (_error) {}
@@ -108,6 +126,8 @@ function createResourceOverrides(deps = {}) {
 
   return {
     getBundledResourcesDir,
+    getDefaultUserResourcesDir,
+    getConfiguredResourcesDir,
     getUserResourcesDir,
     getResourceRoots,
     resolveResourcePath,

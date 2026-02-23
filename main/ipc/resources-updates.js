@@ -19,8 +19,9 @@ function registerResourceUpdatesIpc(deps = {}) {
     throw new Error("registerResourceUpdatesIpc requires resourceOverrides");
   }
 
-  const DEFAULT_RESOURCES_MANIFEST_URL = "https://raw.githubusercontent.com/sysoutch/emuBro/main/emubro-resources/manifest.json";
+  const DEFAULT_RESOURCES_MANIFEST_URL = "https://raw.githubusercontent.com/sysoutch/emubro-resources/main/manifest.json";
   const RESOURCES_MANIFEST_URL_KEY = "resources:manifest-url:v1";
+  const RESOURCES_STORAGE_PATH_KEY = "resources:storage-path:v1";
   const RESOURCES_INSTALLED_VERSION_KEY = "resources:installed-version:v1";
   const RESOURCES_AUTO_CHECK_ON_STARTUP_KEY = "resources:auto-check-on-startup:v1";
   const RESOURCES_AUTO_CHECK_INTERVAL_MINUTES_KEY = "resources:auto-check-interval-minutes:v1";
@@ -34,6 +35,7 @@ function registerResourceUpdatesIpc(deps = {}) {
   let lastError = "";
   let progressPercent = 0;
   let manifestUrl = "";
+  let storagePath = "";
   let cachedManifest = null;
   let autoCheckOnStartup = true;
   let autoCheckIntervalMinutes = 60;
@@ -50,6 +52,9 @@ function registerResourceUpdatesIpc(deps = {}) {
       lastError,
       progressPercent,
       manifestUrl,
+      storagePath,
+      effectiveStoragePath: resourceOverrides.getUserResourcesDir(),
+      defaultStoragePath: resourceOverrides.getDefaultUserResourcesDir(),
       autoCheckOnStartup,
       autoCheckIntervalMinutes,
       ...extra
@@ -85,6 +90,39 @@ function registerResourceUpdatesIpc(deps = {}) {
       store.set(RESOURCES_MANIFEST_URL_KEY, normalized);
     }
     manifestUrl = normalized;
+    return normalized;
+  }
+
+  function normalizeStoragePath(value, options = {}) {
+    const allowEmpty = options.allowEmpty !== false;
+    const raw = String(value || "").trim();
+    if (!raw) {
+      if (allowEmpty) return "";
+      throw new Error("Storage path is required");
+    }
+    if (!path.isAbsolute(raw)) {
+      throw new Error("Storage path must be an absolute directory path.");
+    }
+    return path.normalize(raw);
+  }
+
+  function getStoredStoragePath() {
+    if (!store || typeof store.get !== "function") return "";
+    return normalizeStoragePath(store.get(RESOURCES_STORAGE_PATH_KEY, ""), { allowEmpty: true });
+  }
+
+  function setStoragePath(nextPath) {
+    const normalized = normalizeStoragePath(nextPath, { allowEmpty: true });
+    if (store) {
+      if (normalized) {
+        if (typeof store.set === "function") store.set(RESOURCES_STORAGE_PATH_KEY, normalized);
+      } else if (typeof store.delete === "function") {
+        store.delete(RESOURCES_STORAGE_PATH_KEY);
+      } else if (typeof store.set === "function") {
+        store.set(RESOURCES_STORAGE_PATH_KEY, "");
+      }
+    }
+    storagePath = normalized;
     return normalized;
   }
 
@@ -137,10 +175,45 @@ function registerResourceUpdatesIpc(deps = {}) {
     return cleaned;
   }
 
-  function normalizeManifest(rawManifest = {}) {
+  function normalizeGitHubSource(source = {}) {
+    const raw = (source && typeof source === "object") ? source : {};
+    const owner = String(raw.owner || "").trim();
+    const repo = String(raw.repo || "").trim();
+    const branch = String(raw.branch || "").trim() || "main";
+    const commit = String(raw.commit || raw.sha || "").trim();
+    if (!owner || !repo) return null;
+    return { owner, repo, branch, commit };
+  }
+
+  function deriveGitHubSourceFromManifestUrl(url) {
+    const target = String(url || "").trim();
+    const match = target.match(/^https?:\/\/raw\.githubusercontent\.com\/([^/]+)\/([^/]+)\/([^/]+)\/(.+)$/i);
+    if (!match) return null;
+    const owner = decodeURIComponent(String(match[1] || "").trim());
+    const repo = decodeURIComponent(String(match[2] || "").trim());
+    const branch = decodeURIComponent(String(match[3] || "").trim()) || "main";
+    if (!owner || !repo || !branch) return null;
+    return { owner, repo, branch, commit: "" };
+  }
+
+  function encodeRawPath(relPath) {
+    return String(relPath || "")
+      .split("/")
+      .filter(Boolean)
+      .map((segment) => encodeURIComponent(segment))
+      .join("/");
+  }
+
+  function normalizeManifest(rawManifest = {}, options = {}) {
     const raw = (rawManifest && typeof rawManifest === "object") ? rawManifest : {};
+    const manifestUrlInput = String(options.manifestUrl || "").trim();
+    const explicitSource = normalizeGitHubSource(raw.source);
+    const inferredSource = deriveGitHubSourceFromManifestUrl(manifestUrlInput);
+    const source = explicitSource || inferredSource || null;
     const version = String(raw.version || "").trim();
-    if (!version) throw new Error("Manifest is missing 'version'.");
+    if (!version && !source) {
+      throw new Error("Manifest is missing 'version' and has no valid 'source'.");
+    }
 
     const files = [];
     const sourceFiles = Array.isArray(raw.files) ? raw.files : [];
@@ -158,8 +231,78 @@ function registerResourceUpdatesIpc(deps = {}) {
     return {
       name: String(raw.name || "emuBro Resources"),
       version,
+      source,
+      installedRef: String(raw.installedRef || raw.commit || raw.sha || "").trim(),
       files
     };
+  }
+
+  async function fetchLatestSourceCommit(source) {
+    const normalized = normalizeGitHubSource(source);
+    if (!normalized) throw new Error("Invalid manifest source definition.");
+    const apiUrl = `https://api.github.com/repos/${encodeURIComponent(normalized.owner)}/${encodeURIComponent(normalized.repo)}/commits/${encodeURIComponent(normalized.branch)}`;
+    if (typeof fetch !== "function") {
+      throw new Error("Fetch API is not available in this runtime");
+    }
+    const response = await fetch(apiUrl, {
+      method: "GET",
+      redirect: "follow",
+      cache: "no-store",
+      headers: {
+        Accept: "application/vnd.github+json",
+        "User-Agent": "emuBro-resources-updater"
+      }
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} while fetching ${apiUrl}`);
+    }
+    const payload = await response.json();
+    const sha = String(payload?.sha || "").trim();
+    if (!sha) {
+      throw new Error("GitHub commit response did not include a commit SHA.");
+    }
+    return sha;
+  }
+
+  async function buildFilesFromSourceTree(source, refSha) {
+    const normalized = normalizeGitHubSource(source);
+    if (!normalized) throw new Error("Invalid manifest source definition.");
+    const ref = String(refSha || normalized.commit || "").trim();
+    if (!ref) throw new Error("Missing source ref for tree listing.");
+    const apiUrl = `https://api.github.com/repos/${encodeURIComponent(normalized.owner)}/${encodeURIComponent(normalized.repo)}/git/trees/${encodeURIComponent(ref)}?recursive=1`;
+    if (typeof fetch !== "function") {
+      throw new Error("Fetch API is not available in this runtime");
+    }
+    const response = await fetch(apiUrl, {
+      method: "GET",
+      redirect: "follow",
+      cache: "no-store",
+      headers: {
+        Accept: "application/vnd.github+json",
+        "User-Agent": "emuBro-resources-updater"
+      }
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} while fetching ${apiUrl}`);
+    }
+    const payload = await response.json();
+    const tree = Array.isArray(payload?.tree) ? payload.tree : [];
+    const files = [];
+    for (const node of tree) {
+      if (String(node?.type || "") !== "blob") continue;
+      const relPath = normalizeRelativePath(node?.path || "");
+      if (!relPath) continue;
+      const fileName = String(relPath.split("/").pop() || "").toLowerCase();
+      if (fileName === "manifest.json" || fileName === ".gitignore") continue;
+      if (relPath.startsWith(".git/") || relPath.startsWith(".github/")) continue;
+      if (/^readme(\.|$)/i.test(fileName)) continue;
+      files.push({
+        path: relPath,
+        url: `https://raw.githubusercontent.com/${normalized.owner}/${normalized.repo}/${ref}/${encodeRawPath(relPath)}`
+      });
+    }
+    files.sort((a, b) => String(a.path).localeCompare(String(b.path), "en"));
+    return files;
   }
 
   async function fetchJson(url) {
@@ -177,11 +320,11 @@ function registerResourceUpdatesIpc(deps = {}) {
     return await response.json();
   }
 
-  async function readManifestFromFile(filePath) {
+  async function readManifestFromFile(filePath, options = {}) {
     try {
       if (!filePath || !fsSync.existsSync(filePath)) return null;
       const text = await fs.readFile(filePath, "utf8");
-      return normalizeManifest(JSON.parse(String(text || "{}")));
+      return normalizeManifest(JSON.parse(String(text || "{}")), options);
     } catch (_error) {
       return null;
     }
@@ -195,10 +338,12 @@ function registerResourceUpdatesIpc(deps = {}) {
 
     const userManifestPath = resourceOverrides.resolveResourcePath("manifest.json", { mustExist: true });
     const userManifest = await readManifestFromFile(userManifestPath);
+    if (userManifest?.installedRef) return String(userManifest.installedRef).trim();
     if (userManifest?.version) return userManifest.version;
 
     const bundledManifestPath = path.join(resourceOverrides.getBundledResourcesDir(), "manifest.json");
     const bundledManifest = await readManifestFromFile(bundledManifestPath);
+    if (bundledManifest?.installedRef) return String(bundledManifest.installedRef).trim();
     if (bundledManifest?.version) return bundledManifest.version;
 
     return String(app.getVersion() || "0");
@@ -219,9 +364,29 @@ function registerResourceUpdatesIpc(deps = {}) {
     try {
       manifestUrl = getManifestUrl();
       await refreshCurrentVersion();
-      const remoteManifest = normalizeManifest(await fetchJson(manifestUrl));
-      cachedManifest = remoteManifest;
-      latestVersion = remoteManifest.version;
+      const remoteManifest = normalizeManifest(await fetchJson(manifestUrl), { manifestUrl });
+      let remoteRef = String(remoteManifest.version || "").trim();
+      let sourceRef = "";
+      if (remoteManifest.source) {
+        try {
+          sourceRef = await fetchLatestSourceCommit(remoteManifest.source);
+          remoteRef = sourceRef;
+        } catch (error) {
+          if (!remoteRef) {
+            throw error;
+          }
+          log.warn("Failed to fetch latest source commit; falling back to manifest version:", String(error?.message || error));
+        }
+      }
+      if (!remoteRef) {
+        throw new Error("Unable to determine remote resources revision.");
+      }
+      cachedManifest = {
+        ...remoteManifest,
+        resolvedRef: sourceRef || "",
+        remoteRef
+      };
+      latestVersion = remoteRef;
       available = latestVersion !== currentVersion;
       lastMessage = available
         ? `Resource update available: ${latestVersion}`
@@ -256,10 +421,10 @@ function registerResourceUpdatesIpc(deps = {}) {
     }
 
     try {
-      if (!cachedManifest || !String(cachedManifest.version || "").trim()) {
+      if (!cachedManifest || !String(cachedManifest.remoteRef || cachedManifest.version || "").trim()) {
         await checkForResourceUpdates();
       }
-      if (!cachedManifest || !String(cachedManifest.version || "").trim()) {
+      if (!cachedManifest || !String(cachedManifest.remoteRef || cachedManifest.version || "").trim()) {
         throw new Error("No remote resource manifest available.");
       }
 
@@ -272,7 +437,18 @@ function registerResourceUpdatesIpc(deps = {}) {
         };
       }
 
-      const files = Array.isArray(cachedManifest.files) ? cachedManifest.files : [];
+      const installRef = String(cachedManifest.resolvedRef || cachedManifest.remoteRef || cachedManifest.version || "").trim();
+      let files = [];
+      if (cachedManifest.source && installRef) {
+        try {
+          files = await buildFilesFromSourceTree(cachedManifest.source, installRef);
+        } catch (error) {
+          log.warn("Failed to build files from source tree; falling back to manifest file list:", String(error?.message || error));
+        }
+      }
+      if (!Array.isArray(files) || files.length === 0) {
+        files = Array.isArray(cachedManifest.files) ? cachedManifest.files : [];
+      }
       if (files.length === 0) {
         throw new Error("Manifest has no downloadable files.");
       }
@@ -290,18 +466,34 @@ function registerResourceUpdatesIpc(deps = {}) {
       try {
         let downloadedCount = 0;
         const total = files.length;
+        const downloadedFiles = [];
+        const skippedFiles = [];
 
         for (const fileEntry of files) {
           const relPath = normalizeRelativePath(fileEntry.path);
           if (!relPath) continue;
-          const response = await fetch(String(fileEntry.url || "").trim(), { method: "GET", redirect: "follow", cache: "no-store" });
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status} while fetching ${fileEntry.url}`);
+          const sourceUrl = String(fileEntry.url || "").trim();
+          try {
+            const response = await fetch(sourceUrl, { method: "GET", redirect: "follow", cache: "no-store" });
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status} while fetching ${sourceUrl}`);
+            }
+            const buffer = Buffer.from(await response.arrayBuffer());
+            const tempOutPath = path.join(tempRoot, relPath);
+            fsSync.mkdirSync(path.dirname(tempOutPath), { recursive: true });
+            fsSync.writeFileSync(tempOutPath, buffer);
+            downloadedFiles.push({
+              path: relPath,
+              url: sourceUrl
+            });
+          } catch (error) {
+            skippedFiles.push({
+              path: relPath,
+              url: sourceUrl,
+              error: String(error?.message || error || "Download failed")
+            });
+            log.warn(`Skipping resource file '${relPath}':`, String(error?.message || error || "Download failed"));
           }
-          const buffer = Buffer.from(await response.arrayBuffer());
-          const tempOutPath = path.join(tempRoot, relPath);
-          fsSync.mkdirSync(path.dirname(tempOutPath), { recursive: true });
-          fsSync.writeFileSync(tempOutPath, buffer);
 
           downloadedCount += 1;
           progressPercent = Math.round((downloadedCount / total) * 100);
@@ -309,7 +501,11 @@ function registerResourceUpdatesIpc(deps = {}) {
           emitStatus();
         }
 
-        for (const fileEntry of files) {
+        if (downloadedFiles.length === 0) {
+          throw new Error("None of the manifest files could be downloaded.");
+        }
+
+        for (const fileEntry of downloadedFiles) {
           const relPath = normalizeRelativePath(fileEntry.path);
           if (!relPath) continue;
           const sourcePath = path.join(tempRoot, relPath);
@@ -319,28 +515,80 @@ function registerResourceUpdatesIpc(deps = {}) {
           fsSync.copyFileSync(sourcePath, targetPath);
         }
 
+        const previousManifestPath = path.join(targetRoot, "manifest.json");
+        let previousFiles = [];
+        try {
+          if (fsSync.existsSync(previousManifestPath)) {
+            const previousRaw = JSON.parse(String(fsSync.readFileSync(previousManifestPath, "utf8") || "{}"));
+            previousFiles = Array.isArray(previousRaw?.files) ? previousRaw.files : [];
+          }
+        } catch (_error) {}
+        const expectedPaths = new Set(
+          (Array.isArray(files) ? files : [])
+            .map((entry) => normalizeRelativePath(entry?.path || entry?.file || ""))
+            .filter(Boolean)
+        );
+        const stalePaths = (Array.isArray(previousFiles) ? previousFiles : [])
+          .map((entry) => normalizeRelativePath(entry?.path || entry?.file || ""))
+          .filter((relPath, idx, arr) => relPath && arr.indexOf(relPath) === idx && !expectedPaths.has(relPath));
+
+        for (const staleRelPath of stalePaths) {
+          try {
+            const staleAbsPath = path.resolve(path.join(targetRoot, staleRelPath));
+            const targetRootResolved = path.resolve(targetRoot);
+            const allowedPrefix = `${targetRootResolved}${path.sep}`;
+            if (staleAbsPath !== targetRootResolved && !staleAbsPath.startsWith(allowedPrefix)) continue;
+            if (fsSync.existsSync(staleAbsPath)) {
+              const stat = fsSync.statSync(staleAbsPath);
+              if (stat.isFile()) {
+                fsSync.unlinkSync(staleAbsPath);
+              } else if (stat.isDirectory()) {
+                fsSync.rmSync(staleAbsPath, { recursive: true, force: true });
+              }
+            }
+            let parentDir = path.dirname(staleAbsPath);
+            while (parentDir && parentDir.startsWith(targetRoot) && parentDir !== targetRoot) {
+              try {
+                if (!fsSync.existsSync(parentDir)) break;
+                const children = fsSync.readdirSync(parentDir);
+                if (children.length > 0) break;
+                fsSync.rmdirSync(parentDir);
+                parentDir = path.dirname(parentDir);
+              } catch (_error) {
+                break;
+              }
+            }
+          } catch (_error) {}
+        }
+
         const writtenManifest = {
           name: cachedManifest.name,
           version: cachedManifest.version,
+          source: cachedManifest.source || undefined,
           sourceManifestUrl: manifestUrl,
+          installedRef: installRef || undefined,
           installedAt: new Date().toISOString(),
-          files
+          files,
+          skippedFiles
         };
         fsSync.writeFileSync(path.join(targetRoot, "manifest.json"), JSON.stringify(writtenManifest, null, 2), "utf8");
 
         if (store && typeof store.set === "function") {
-          store.set(RESOURCES_INSTALLED_VERSION_KEY, cachedManifest.version);
+          store.set(RESOURCES_INSTALLED_VERSION_KEY, installRef || cachedManifest.version);
         }
 
         await refreshCurrentVersion();
-        latestVersion = cachedManifest.version;
+        latestVersion = installRef || cachedManifest.version;
         available = false;
         installing = false;
         progressPercent = 100;
         lastError = "";
-        lastMessage = "Resource update installed successfully.";
+        lastMessage = skippedFiles.length > 0
+          ? `Resource update installed with warnings (${downloadedFiles.length}/${files.length} files).`
+          : "Resource update installed successfully.";
         return {
           success: true,
+          skippedFiles,
           ...emitStatus()
         };
       } finally {
@@ -365,6 +613,9 @@ function registerResourceUpdatesIpc(deps = {}) {
     return {
       success: true,
       manifestUrl: getManifestUrl(),
+      storagePath,
+      effectiveStoragePath: resourceOverrides.getUserResourcesDir(),
+      defaultStoragePath: resourceOverrides.getDefaultUserResourcesDir(),
       autoCheckOnStartup,
       autoCheckIntervalMinutes
     };
@@ -372,7 +623,15 @@ function registerResourceUpdatesIpc(deps = {}) {
 
   ipcMain.handle("resources:update:set-config", async (_event, payload = {}) => {
     try {
-      const next = normalizeManifestUrl(payload?.manifestUrl || payload?.url || "");
+      const shouldUpdateManifestUrl = Object.prototype.hasOwnProperty.call(payload || {}, "manifestUrl")
+        || Object.prototype.hasOwnProperty.call(payload || {}, "url");
+      const shouldUpdateStoragePath = Object.prototype.hasOwnProperty.call(payload || {}, "storagePath");
+      const nextManifestUrl = shouldUpdateManifestUrl
+        ? normalizeManifestUrl(payload?.manifestUrl || payload?.url || "")
+        : getManifestUrl();
+      const nextStoragePath = shouldUpdateStoragePath
+        ? normalizeStoragePath(payload?.storagePath || "", { allowEmpty: true })
+        : getStoredStoragePath();
       writeAutoCheckConfigToStore({
         autoCheckOnStartup: payload?.autoCheckOnStartup,
         autoCheckIntervalMinutes: payload?.autoCheckIntervalMinutes
@@ -380,7 +639,10 @@ function registerResourceUpdatesIpc(deps = {}) {
       scheduleAutoCheck();
       return {
         success: true,
-        manifestUrl: setManifestUrl(next),
+        manifestUrl: setManifestUrl(nextManifestUrl),
+        storagePath: setStoragePath(nextStoragePath),
+        effectiveStoragePath: resourceOverrides.getUserResourcesDir(),
+        defaultStoragePath: resourceOverrides.getDefaultUserResourcesDir(),
         autoCheckOnStartup,
         autoCheckIntervalMinutes
       };
@@ -389,6 +651,9 @@ function registerResourceUpdatesIpc(deps = {}) {
         success: false,
         message: String(error?.message || error || "Invalid manifest URL"),
         manifestUrl: getManifestUrl(),
+        storagePath,
+        effectiveStoragePath: resourceOverrides.getUserResourcesDir(),
+        defaultStoragePath: resourceOverrides.getDefaultUserResourcesDir(),
         autoCheckOnStartup,
         autoCheckIntervalMinutes
       };
@@ -413,6 +678,7 @@ function registerResourceUpdatesIpc(deps = {}) {
   });
 
   manifestUrl = getManifestUrl();
+  storagePath = getStoredStoragePath();
   readAutoCheckConfigFromStore();
   scheduleAutoCheck();
   void refreshCurrentVersion().then(() => emitStatus());

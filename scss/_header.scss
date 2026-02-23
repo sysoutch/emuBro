@@ -3,7 +3,7 @@
     background-color: color-mix(in srgb, var(--bg-header), transparent 8%);
     backdrop-filter: blur(16px) saturate(1.12);
     -webkit-backdrop-filter: blur(16px) saturate(1.12);
-    --win-controls-width: 168px;
+    --win-controls-width: 210px;
     --win-controls-gap: 12px;
     --win-controls-space: calc(var(--win-controls-width) + var(--win-controls-gap));
 
@@ -139,14 +139,115 @@
     font-weight: 700;
 }
 
+.win-btn-about {
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 700;
+}
+
 .win-btn-update.has-update {
     background-color: color-mix(in srgb, var(--accent-color), transparent 82%);
     border-color: color-mix(in srgb, var(--accent-color), white 18%);
     color: var(--text-primary);
 }
 
+.about-dialog-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 3800;
+    background: rgba(0, 0, 0, 0.62);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.about-dialog {
+    width: min(680px, 100%);
+    max-height: 86vh;
+    overflow: auto;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: 0 20px 44px rgba(0, 0, 0, 0.46);
+    display: grid;
+    gap: 12px;
+    position: relative;
+}
+
+.about-close-btn {
+    justify-self: end;
+}
+
+.about-dialog-header {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.about-logo {
+    width: 62px;
+    height: 62px;
+    object-fit: contain;
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--border-color), white 10%);
+    background: color-mix(in srgb, var(--bg-primary), transparent 10%);
+    padding: 6px;
+}
+
+.about-dialog-title-wrap h2 {
+    margin: 0;
+    font-size: 1.35rem;
+}
+
+.about-version-line {
+    margin-top: 2px;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+.about-sub-line {
+    margin-top: 2px;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+}
+
+.about-dialog-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.about-changelog {
+    margin: 0;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--bg-primary);
+    padding: 12px;
+    font-family: var(--font-body);
+    font-size: 0.84rem;
+    white-space: pre-wrap;
+    color: var(--text-secondary);
+}
+
+.about-social-title {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+
+.about-social-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
 [data-os="win32"] .header {
-    --win-controls-width: 168px;
+    --win-controls-width: 210px;
     --win-controls-gap: 12px;
     min-height: 48px;
     padding: 1.5px 0 1.5px 14px;
@@ -1280,7 +1381,7 @@
 
 @media (max-width: 920px) {
     [data-os="win32"] .header {
-        --win-controls-width: 128px;
+        --win-controls-width: 160px;
         --win-controls-gap: 0px;
         padding-right: calc(var(--win-controls-width) + 0px);
     }

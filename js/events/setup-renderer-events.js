@@ -93,6 +93,7 @@ export function setupRendererEventListeners(options = {}) {
     const setupWindowResizeHandler = typeof options.setupWindowResizeHandler === 'function' ? options.setupWindowResizeHandler : () => {};
     const recenterManagedModalIfMostlyOutOfView = typeof options.recenterManagedModalIfMostlyOutOfView === 'function' ? options.recenterManagedModalIfMostlyOutOfView : () => {};
     const setupWindowControls = typeof options.setupWindowControls === 'function' ? options.setupWindowControls : () => {};
+    const openAboutDialog = typeof options.openAboutDialog === 'function' ? options.openAboutDialog : async () => {};
     const setupHeaderThemeControlsToggle = typeof options.setupHeaderThemeControlsToggle === 'function' ? options.setupHeaderThemeControlsToggle : () => {};
     const themeSelect = options.themeSelect || null;
 
@@ -833,7 +834,7 @@ export function setupRendererEventListeners(options = {}) {
     setupWindowResizeHandler({
         recenterManagedModalIfMostlyOutOfView
     });
-    setupWindowControls({ emubro, openLibraryPathSettingsModal });
+    setupWindowControls({ emubro, openLibraryPathSettingsModal, openAboutDialog });
     setupHeaderThemeControlsToggle({ themeSelect });
 
 }

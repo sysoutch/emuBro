@@ -1,6 +1,6 @@
 {
   "name": "emuBro",
-  "version": "1.0.0-alpha.1",
+  "version": "1.0.0-alpha",
   "description": "A Steam-like Electron application",
   "main": "main.js",
   "scripts": {
@@ -10,6 +10,7 @@
     "prebuild:win": "taskkill /F /IM emuBro.exe /T || exit 0",
     "build": "webpack --mode production",
     "sync:resources": "node scripts/sync-emubro-resources.js",
+    "resources:manifest:update": "node scripts/update-resources-manifest.js",
     "preelectron-builder": "node -e \"const fs=require('fs'); try{fs.rmSync('build_out/win-unpacked',{recursive:true,force:true});}catch(e){console.error('[clean] failed to remove build_out/win-unpacked:', e.message); process.exit(1);}\"",
     "electron-builder": "electron-builder",
     "build:win": "npm run sync:resources && npm run electron-builder -- --win --config=electron-builder.config.js --publish=never",

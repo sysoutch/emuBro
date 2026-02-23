@@ -146,6 +146,9 @@ export async function openLibraryPathSettingsModal(options = {}) {
         currentVersion: '',
         latestVersion: '',
         manifestUrl: '',
+        storagePath: '',
+        effectiveStoragePath: '',
+        defaultStoragePath: '',
         lastMessage: '',
         lastError: '',
         progressPercent: 0,
@@ -405,6 +408,10 @@ export async function openLibraryPathSettingsModal(options = {}) {
     };
 
     const applyResourcesUpdateState = (payload = {}) => {
+        const hasManifestUrl = Object.prototype.hasOwnProperty.call(payload || {}, 'manifestUrl');
+        const hasStoragePath = Object.prototype.hasOwnProperty.call(payload || {}, 'storagePath');
+        const hasEffectiveStoragePath = Object.prototype.hasOwnProperty.call(payload || {}, 'effectiveStoragePath');
+        const hasDefaultStoragePath = Object.prototype.hasOwnProperty.call(payload || {}, 'defaultStoragePath');
         resourcesUpdateState = {
             ...resourcesUpdateState,
             checking: !!payload?.checking,
@@ -412,7 +419,18 @@ export async function openLibraryPathSettingsModal(options = {}) {
             available: !!payload?.available,
             currentVersion: String(payload?.currentVersion || resourcesUpdateState.currentVersion || ''),
             latestVersion: String(payload?.latestVersion || resourcesUpdateState.latestVersion || ''),
-            manifestUrl: String(payload?.manifestUrl || resourcesUpdateState.manifestUrl || ''),
+            manifestUrl: hasManifestUrl
+                ? String(payload?.manifestUrl || '')
+                : String(resourcesUpdateState.manifestUrl || ''),
+            storagePath: hasStoragePath
+                ? String(payload?.storagePath || '')
+                : String(resourcesUpdateState.storagePath || ''),
+            effectiveStoragePath: hasEffectiveStoragePath
+                ? String(payload?.effectiveStoragePath || '')
+                : String(resourcesUpdateState.effectiveStoragePath || ''),
+            defaultStoragePath: hasDefaultStoragePath
+                ? String(payload?.defaultStoragePath || '')
+                : String(resourcesUpdateState.defaultStoragePath || ''),
             lastMessage: String(payload?.lastMessage || ''),
             lastError: String(payload?.lastError || ''),
             progressPercent: Number.isFinite(Number(payload?.progressPercent))
@@ -627,6 +645,9 @@ export async function openLibraryPathSettingsModal(options = {}) {
         const resourcesCurrentVersion = escapeAttr(resourcesUpdateState.currentVersion || '');
         const resourcesLatestVersion = escapeAttr(resourcesUpdateState.latestVersion || '');
         const resourcesManifestUrl = escapeAttr(resourcesUpdateState.manifestUrl || '');
+        const resourcesStoragePath = escapeAttr(resourcesUpdateState.storagePath || '');
+        const resourcesEffectiveStoragePath = escapeAttr(resourcesUpdateState.effectiveStoragePath || resourcesUpdateState.defaultStoragePath || '');
+        const resourcesDefaultStoragePath = escapeAttr(resourcesUpdateState.defaultStoragePath || '');
         const canInstallResources = !!resourcesUpdateState.available && !resourcesUpdateState.installing;
         const autoCheckOnStartup = !!(updateState.autoCheckOnStartup && resourcesUpdateState.autoCheckOnStartup);
         const autoCheckIntervalMinutes = Math.max(
@@ -687,7 +708,21 @@ export async function openLibraryPathSettingsModal(options = {}) {
                             placeholder="https://.../manifest.json"
                             style="min-width:240px;"
                         />
-                        <button type="button" class="action-btn" data-resource-update-action="save-config">Save URL</button>
+                        <button type="button" class="action-btn" data-resource-update-action="save-config">Save URL + Path</button>
+                    </div>
+                    <div style="display:grid;grid-template-columns:minmax(240px,1fr) auto auto;gap:8px;align-items:center;">
+                        <input
+                            type="text"
+                            data-resource-storage-path
+                            value="${resourcesStoragePath}"
+                            placeholder="Leave empty to use default path"
+                            style="min-width:240px;"
+                        />
+                        <button type="button" class="action-btn" data-resource-storage-action="browse">Browse...</button>
+                        <button type="button" class="action-btn" data-resource-storage-action="use-default">Use Default</button>
+                    </div>
+                    <div style="font-size:0.82rem;color:var(--text-secondary);">
+                        Active folder: ${resourcesEffectiveStoragePath || '-'}${resourcesDefaultStoragePath ? ` | Default: ${resourcesDefaultStoragePath}` : ''}
                     </div>
                     <div style="display:flex;flex-wrap:wrap;gap:8px;">
                         <button type="button" class="action-btn" data-resource-update-action="check"${resourcesUpdateState.checking ? ' disabled' : ''}>Check Resource Updates</button>
@@ -1035,7 +1070,6 @@ export async function openLibraryPathSettingsModal(options = {}) {
                             autoCheckIntervalMinutes
                         });
                         const resourcesConfigResult = await emubro.resourcesUpdates?.setConfig?.({
-                            manifestUrl: resourcesUpdateState.manifestUrl || '',
                             autoCheckOnStartup,
                             autoCheckIntervalMinutes
                         });
@@ -1071,8 +1105,10 @@ export async function openLibraryPathSettingsModal(options = {}) {
                     let result = null;
                     if (action === 'save-config') {
                         const urlInput = modal.querySelector('[data-resource-manifest-url]');
+                        const storageInput = modal.querySelector('[data-resource-storage-path]');
                         result = await emubro.resourcesUpdates?.setConfig?.({
                             manifestUrl: String(urlInput?.value || '').trim(),
+                            storagePath: String(storageInput?.value || '').trim(),
                             autoCheckOnStartup: resourcesUpdateState.autoCheckOnStartup,
                             autoCheckIntervalMinutes: resourcesUpdateState.autoCheckIntervalMinutes
                         });
@@ -1092,6 +1128,35 @@ export async function openLibraryPathSettingsModal(options = {}) {
                 } finally {
                     button.disabled = false;
                 }
+            });
+        });
+
+        modal.querySelectorAll('[data-resource-storage-action]').forEach((button) => {
+            button.addEventListener('click', async () => {
+                const action = String(button.dataset.resourceStorageAction || '').trim().toLowerCase();
+                if (!action) return;
+                const storageInput = modal.querySelector('[data-resource-storage-path]');
+                if (!storageInput) return;
+                if (action === 'use-default') {
+                    storageInput.value = '';
+                    return;
+                }
+                if (action !== 'browse') return;
+
+                const defaultPath = String(
+                    storageInput.value
+                    || resourcesUpdateState.storagePath
+                    || resourcesUpdateState.effectiveStoragePath
+                    || resourcesUpdateState.defaultStoragePath
+                    || ''
+                ).trim();
+                const pick = await emubro.invoke('open-file-dialog', {
+                    title: 'Select emubro-resources folder',
+                    properties: ['openDirectory', 'createDirectory'],
+                    defaultPath
+                });
+                if (!pick || pick.canceled || !Array.isArray(pick.filePaths) || pick.filePaths.length === 0) return;
+                storageInput.value = String(pick.filePaths[0] || '').trim();
             });
         });
 
