@@ -528,6 +528,7 @@ export async function openLibraryPathSettingsModal(options = {}) {
                             <option value="list"${generalDraft.defaultView === 'list' ? ' selected' : ''}>List</option>
                             <option value="table"${generalDraft.defaultView === 'table' ? ' selected' : ''}>Table</option>
                             <option value="slideshow"${generalDraft.defaultView === 'slideshow' ? ' selected' : ''}>Slideshow</option>
+                            <option value="focus"${generalDraft.defaultView === 'focus' ? ' selected' : ''}>Focus</option>
                             <option value="random"${generalDraft.defaultView === 'random' ? ' selected' : ''}>Random</option>
                         </select>
                     </label>

@@ -1,0 +1,345 @@
+/* =========================================
+   FOCUS VIEW (LIST + PREVIEW)
+   ========================================= */
+.games-container.focus-view {
+    --view-scale: calc(clamp(0.72, min(calc((100vw - 260px) / 1240), calc((100vh - 210px) / 760)), 1.06) * var(--view-scale-user, 1));
+    display: block;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.focus-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    padding: 8px 0 10px;
+    border-radius: 0 0 var(--radius-card) var(--radius-card);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background:
+        radial-gradient(86% 90% at 42% 32%, color-mix(in srgb, var(--accent-color), transparent 88%), transparent 72%),
+        linear-gradient(180deg, color-mix(in srgb, var(--bg-secondary), transparent 6%), color-mix(in srgb, var(--bg-primary), transparent 8%));
+}
+
+.focus-backdrop {
+    position: absolute;
+    inset: -80px -120px;
+    background-size: cover;
+    background-position: center;
+    filter: blur(32px) saturate(1.08) brightness(0.94);
+    opacity: 0.32;
+    transform: scale(1.08);
+    transition: background-image 180ms ease;
+    pointer-events: none;
+}
+
+.focus-container::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(84% 72% at 50% 44%, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.12) 62%, rgba(0, 0, 0, 0.22)),
+        linear-gradient(180deg, rgba(0, 0, 0, 0.03), rgba(0, 0, 0, 0.09));
+}
+
+.focus-layout {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: minmax(250px, 360px) minmax(0, 1fr);
+    gap: clamp(12px, 1.4vw, 20px);
+}
+
+.focus-platform-bar {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    margin: 0;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-inline: 2px;
+    padding-bottom: 2px;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--accent-color), transparent 26%) transparent;
+}
+
+.focus-platform-bar::-webkit-scrollbar {
+    height: 6px;
+}
+
+.focus-platform-bar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.focus-platform-bar::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--accent-color), transparent 26%);
+    border-radius: 999px;
+}
+
+.focus-platform-btn {
+    flex: 0 0 auto;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.24);
+    color: var(--text-secondary);
+    padding: 7px 12px;
+    font-size: 0.78rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-weight: 700;
+    cursor: pointer;
+    transition: border-color 120ms ease, color 120ms ease, background-color 120ms ease, transform 120ms ease;
+    white-space: nowrap;
+}
+
+.focus-platform-btn:hover {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--accent-color), white 16%);
+    color: var(--text-primary);
+}
+
+.focus-platform-btn.is-active {
+    background: color-mix(in srgb, var(--accent-color), black 60%);
+    border-color: color-mix(in srgb, var(--accent-color), white 16%);
+    color: color-mix(in srgb, var(--text-primary), white 10%);
+}
+
+.focus-platform-btn:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--accent-color), white 18%);
+    outline-offset: 2px;
+}
+
+.focus-empty {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 90px 20px;
+}
+
+.focus-list-panel {
+    border-radius: 14px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+    height: 100%;
+}
+
+.focus-list-heading {
+    margin: 0;
+    font-size: 0.84rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    padding: 4px 2px 0;
+}
+
+.focus-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: auto;
+    padding-right: 2px;
+    min-height: 0;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--accent-color), transparent 28%) transparent;
+}
+
+.focus-list::-webkit-scrollbar {
+    width: 7px;
+}
+
+.focus-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.focus-list::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--accent-color), transparent 26%);
+    border-radius: 999px;
+}
+
+.focus-list-item {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(4, 10, 20, 0.78);
+    border-radius: 9px;
+    color: color-mix(in srgb, var(--text-primary), white 10%);
+    text-align: left;
+    padding: 9px 13px;
+    min-height: 36px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    line-height: 1.35;
+    font-family: var(--font-body);
+    letter-spacing: 0.02em;
+    text-transform: none;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease, transform 120ms ease;
+    overflow: hidden;
+}
+
+.focus-list-item:hover {
+    border-color: color-mix(in srgb, var(--accent-color), white 14%);
+    color: color-mix(in srgb, var(--text-primary), white 16%);
+}
+
+.focus-list-item.is-active {
+    background: color-mix(in srgb, var(--accent-color), black 54%);
+    border-color: color-mix(in srgb, var(--accent-color), white 14%);
+    color: color-mix(in srgb, var(--text-primary), white 20%);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-color), transparent 62%) inset;
+}
+
+.focus-list-item:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--accent-color), white 16%);
+    outline-offset: 2px;
+}
+
+.focus-list-name {
+    display: block;
+    width: 100%;
+    font-family: var(--font-body);
+    line-height: inherit;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.focus-preview-panel {
+    border-radius: 16px;
+    padding: 14px;
+    border: 1px solid color-mix(in srgb, var(--border-color), rgba(255, 255, 255, 0.26));
+    background: color-mix(in srgb, var(--glass-surface-strong), transparent 14%);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    align-items: stretch;
+    min-height: 0;
+    height: 100%;
+    cursor: pointer;
+    text-align: left;
+}
+
+.focus-preview-panel:hover {
+    border-color: color-mix(in srgb, var(--accent-color), white 16%);
+}
+
+.focus-preview-panel:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--accent-color), white 18%);
+    outline-offset: 3px;
+}
+
+.focus-preview-image-wrap {
+    border-radius: 14px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.26);
+    min-height: 0;
+    flex: 1 1 auto;
+    max-height: 72%;
+}
+
+.focus-preview-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center top;
+    display: block;
+}
+
+.focus-preview-info {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    justify-content: flex-start;
+    flex: 0 0 auto;
+}
+
+.focus-preview-title {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: clamp(1.2rem, calc(0.95rem + 1vw), 1.98rem);
+    line-height: 1.2;
+}
+
+.focus-preview-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.focus-meta-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.28);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+}
+
+.focus-preview-desc {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 0.92rem;
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+@media (max-width: 980px) {
+    .focus-layout {
+        grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
+    }
+
+    .focus-preview-image-wrap {
+        max-height: 62%;
+    }
+}
+
+@media (max-width: 760px) {
+    .focus-container {
+        padding: 8px 0 10px;
+    }
+
+    .focus-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .focus-list-panel {
+        max-height: 260px;
+        height: auto;
+    }
+
+    .focus-preview-image-wrap {
+        max-width: 100%;
+        min-height: 220px;
+        max-height: none;
+    }
+
+    .focus-preview-title {
+        font-size: clamp(1.02rem, 4.2vw, 1.34rem);
+    }
+
+    .focus-meta-pill {
+        font-size: 0.75rem;
+        padding: 5px 8px;
+    }
+}

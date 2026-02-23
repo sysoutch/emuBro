@@ -886,6 +886,12 @@ async function signalRendererReady() {
     } catch (_e) {}
 }
 
+function revealAppShell() {
+    try {
+        document.documentElement.removeAttribute('data-booting');
+    } catch (_e) {}
+}
+
 function applyLibraryStats(stats) {
     if (!stats || typeof stats !== 'object') return;
     if (totalGamesElement && Number.isFinite(Number(stats.totalGames))) {
@@ -1008,6 +1014,7 @@ async function initializeApp() {
         });
 
         // Reveal as soon as shell UI is ready; data continues loading asynchronously.
+        revealAppShell();
         await waitForUiSettle(0);
         await signalRendererReady();
 
@@ -1016,6 +1023,7 @@ async function initializeApp() {
         log.info('App shell initialized; loading library data in background');
     } catch (error) {
         log.error('Failed to initialize app:', error);
+        revealAppShell();
         await signalRendererReady();
     }
 }

@@ -32,6 +32,7 @@ import { getGlobalSearchTerm, buildGamesRenderSignature, buildViewGamePool } fro
 import { createGameSearchActions } from './game-manager/game-search';
 import { createGameFilters } from './game-manager/game-filters';
 import { renderGamesAsSlideshow } from './game-manager/views/slideshow-view';
+import { renderGamesAsFocus } from './game-manager/views/focus-view';
 import { renderGamesAsRandom } from './game-manager/views/random-view';
 import { renderGamesGroupedAccordion } from './game-manager/rendering/grouped-accordion';
 import { renderGamesIncremental } from './game-manager/rendering/incremental-render';
@@ -57,6 +58,7 @@ let groupSameNamesEnabled = false;
 const EMULATOR_TYPE_TABS = ['standalone', 'core', 'web'];
 const LAZY_PLACEHOLDER_SRC = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
 const MAX_SLIDESHOW_POOL_SIZE = 500;
+const MAX_FOCUS_POOL_SIZE = 500;
 const MAX_RANDOM_POOL_SIZE = 120;
 const GAMES_BATCH_SIZE = {
     cover: 24,
@@ -406,6 +408,28 @@ export function renderGames(gamesToRender) {
             buildViewGamePool,
             maxPoolSize: MAX_SLIDESHOW_POOL_SIZE,
             showGameDetails,
+            escapeHtml,
+            initializeLazyGameImages,
+            cleanupLazyGameImages,
+            lazyPlaceholderSrc: LAZY_PLACEHOLDER_SRC,
+            i18n
+        });
+        return;
+    } else if (activeView === 'focus') {
+        lastRenderedView = activeView;
+        renderGamesAsFocus(gamesToRender, {
+            renderToken: gamesRenderToken,
+            getRenderToken: () => gamesRenderToken,
+            setGamesScrollDetach: (detach) => {
+                gamesScrollDetach = detach;
+            },
+            buildViewGamePool,
+            maxPoolSize: MAX_FOCUS_POOL_SIZE,
+            showGameDetails,
+            escapeHtml,
+            initializeLazyGameImages,
+            cleanupLazyGameImages,
+            lazyPlaceholderSrc: LAZY_PLACEHOLDER_SRC,
             i18n
         });
         return;
@@ -422,6 +446,7 @@ export function renderGames(gamesToRender) {
             showGameDetails,
             escapeHtml,
             cleanupLazyGameImages,
+            initializeLazyGameImages,
             lazyPlaceholderSrc: LAZY_PLACEHOLDER_SRC,
             i18n
         });

@@ -441,6 +441,88 @@
     font-size: 0.85rem;
 }
 
+.slot-strip {
+    width: min(980px, 100%);
+    padding: 10px;
+    border-radius: 14px;
+}
+
+.slot-strip-track {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 4px;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--accent-color), transparent 26%) transparent;
+}
+
+.slot-strip-track::-webkit-scrollbar {
+    height: 7px;
+}
+
+.slot-strip-track::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.slot-strip-track::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--accent-color), transparent 24%);
+    border-radius: 999px;
+}
+
+.slot-strip-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: clamp(106px, 10vw, 124px);
+    min-width: clamp(106px, 10vw, 124px);
+    background: rgba(0, 0, 0, 0.28);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 6px;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: transform 130ms ease, border-color 130ms ease, box-shadow 130ms ease;
+    scroll-snap-align: center;
+}
+
+.slot-strip-item:hover {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--accent-color), white 16%);
+}
+
+.slot-strip-item.is-active {
+    border-color: color-mix(in srgb, var(--accent-color), white 14%);
+    box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--accent-color), transparent 58%) inset,
+        0 8px 16px rgba(0, 0, 0, 0.26);
+}
+
+.slot-strip-item:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--accent-color), white 18%);
+    outline-offset: 2px;
+}
+
+.slot-strip-image {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    border-radius: 8px;
+    object-fit: cover;
+    background: rgba(0, 0, 0, 0.38);
+}
+
+.slot-strip-name {
+    font-size: 0.74rem;
+    line-height: 1.2;
+    color: var(--text-secondary);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: 2.35em;
+}
+
 .slot-result-actions {
     display: flex;
     justify-content: center;
@@ -489,6 +571,15 @@
     .slot-lever {
         width: 58px;
         height: 170px;
+    }
+
+    .slot-strip {
+        padding: 8px;
+    }
+
+    .slot-strip-item {
+        width: 102px;
+        min-width: 102px;
     }
 }
 

@@ -253,6 +253,69 @@ export function setupRendererEventListeners(options = {}) {
         });
     }
 
+    const contentWidthHost = document.querySelector('.game-content-wrapper') || document.querySelector('.game-grid') || document.body;
+    const createElementWidthQuery = (maxWidthPx, hostEl) => {
+        const target = hostEl || document.body;
+        const listeners = new Set();
+        let matches = false;
+        let observer = null;
+
+        const evaluate = () => {
+            const width = Number(target?.clientWidth || window.innerWidth || 0);
+            const nextMatches = width <= maxWidthPx;
+            if (nextMatches === matches) return;
+            matches = nextMatches;
+            const event = { matches };
+            listeners.forEach((listener) => {
+                try {
+                    listener(event);
+                } catch (_error) {}
+            });
+        };
+
+        if (typeof ResizeObserver !== 'undefined' && target) {
+            observer = new ResizeObserver(() => evaluate());
+            observer.observe(target);
+        }
+
+        window.addEventListener('resize', evaluate);
+        window.addEventListener('emubro:layout-width-changed', evaluate);
+        evaluate();
+
+        return {
+            get matches() {
+                return matches;
+            },
+            addEventListener(type, listener) {
+                if (type !== 'change' || typeof listener !== 'function') return;
+                listeners.add(listener);
+            },
+            removeEventListener(type, listener) {
+                if (type !== 'change' || typeof listener !== 'function') return;
+                listeners.delete(listener);
+            },
+            addListener(listener) {
+                if (typeof listener !== 'function') return;
+                listeners.add(listener);
+            },
+            removeListener(listener) {
+                if (typeof listener !== 'function') return;
+                listeners.delete(listener);
+            },
+            dispose() {
+                if (observer) {
+                    try {
+                        observer.disconnect();
+                    } catch (_error) {}
+                    observer = null;
+                }
+                window.removeEventListener('resize', evaluate);
+                window.removeEventListener('emubro:layout-width-changed', evaluate);
+                listeners.clear();
+            }
+        };
+    };
+
     const initCompactFilterPair = ({
         wrapperSelector,
         toggleId,
@@ -418,10 +481,12 @@ export function setupRendererEventListeners(options = {}) {
             positionFloatingMenu();
         }, true);
 
-        return { close, isOpen, setOpenState };
+        return { close, isOpen, setOpenState, compactQuery };
     };
 
-    const filtersCompactQuery = window.matchMedia('(max-width: 1500px)');
+    const filtersCompactQuery = createElementWidthQuery(1500, contentWidthHost);
+    const regionLanguageCompactQuery = createElementWidthQuery(1500, contentWidthHost);
+    const groupSortCompactQuery = createElementWidthQuery(1200, contentWidthHost);
 
     const regionLanguagePair = initCompactFilterPair({
         wrapperSelector: '.filter-pair-wrapper-region-language',
@@ -429,7 +494,7 @@ export function setupRendererEventListeners(options = {}) {
         panelId: 'filters-region-language-content',
         compactSelectIds: ['game-region-filter', 'game-language-filter'],
         closeOnChangeElements: [gameRegionFilterSelect, gameLanguageFilterSelect],
-        compactQuery: window.matchMedia('(max-width: 1500px)')
+        compactQuery: regionLanguageCompactQuery
     });
     const groupSortPair = initCompactFilterPair({
         wrapperSelector: '.filter-pair-wrapper-group-sort',
@@ -437,7 +502,7 @@ export function setupRendererEventListeners(options = {}) {
         panelId: 'filters-group-sort-content',
         compactSelectIds: ['group-filter', 'sort-filter'],
         closeOnChangeElements: [groupFilterSelect, sortFilter],
-        compactQuery: window.matchMedia('(max-width: 1200px)')
+        compactQuery: groupSortCompactQuery
     });
 
     const regionLanguageToggleBtn = document.getElementById('filters-region-language-toggle');

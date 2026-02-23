@@ -11,6 +11,9 @@ export function renderGamesAsRandom(gamesToRender, options = {}) {
     const showGameDetails = typeof options.showGameDetails === 'function' ? options.showGameDetails : () => {};
     const escapeHtml = typeof options.escapeHtml === 'function' ? options.escapeHtml : (value) => String(value ?? '');
     const cleanupLazyGameImages = typeof options.cleanupLazyGameImages === 'function' ? options.cleanupLazyGameImages : () => {};
+    const initializeLazyGameImages = typeof options.initializeLazyGameImages === 'function'
+        ? options.initializeLazyGameImages
+        : () => {};
     const lazyPlaceholderSrc = String(options.lazyPlaceholderSrc || '');
     const i18n = options.i18n;
 
@@ -71,6 +74,12 @@ export function renderGamesAsRandom(gamesToRender, options = {}) {
     const resultMeta = document.createElement('div');
     resultMeta.className = 'slot-result-meta';
 
+    const strip = document.createElement('div');
+    strip.className = 'slot-strip glass';
+    const stripTrack = document.createElement('div');
+    stripTrack.className = 'slot-strip-track';
+    strip.appendChild(stripTrack);
+
     result.appendChild(resultTitle);
     result.appendChild(resultMeta);
     result.classList.add('slot-result-clickable');
@@ -93,6 +102,7 @@ export function renderGamesAsRandom(gamesToRender, options = {}) {
     machine.appendChild(marquee);
     machine.appendChild(stage);
     machine.appendChild(result);
+    machine.appendChild(strip);
 
     randomContainer.appendChild(machine);
     gamesContainer.appendChild(randomContainer);
@@ -106,16 +116,58 @@ export function renderGamesAsRandom(gamesToRender, options = {}) {
         return gameImageToUse;
     }
 
+    function renderSelectionStrip(centerIdx) {
+        const radius = 8;
+        const preview = [];
+        for (let offset = -radius; offset <= radius; offset += 1) {
+            const gameIdx = (centerIdx + offset + baseLen) % baseLen;
+            preview.push({ offset, gameIdx });
+        }
+
+        stripTrack.innerHTML = preview.map(({ offset, gameIdx }) => {
+            const game = spinGames[gameIdx];
+            const safeName = escapeHtml(game?.name || '');
+            const safeImage = escapeHtml(getGameImage(game) || '');
+            const isActive = offset === 0;
+            const src = lazyPlaceholderSrc || safeImage;
+            return `
+                <button
+                    type="button"
+                    class="slot-strip-item${isActive ? ' is-active' : ''}"
+                    data-slot-preview-index="${gameIdx}"
+                    aria-label="${safeName}"
+                >
+                    <img class="slot-strip-image lazy-game-image is-pending" src="${src}" data-lazy-src="${safeImage}" alt="${safeName}" loading="lazy" decoding="async" fetchpriority="low" />
+                    <span class="slot-strip-name">${safeName}</span>
+                </button>
+            `;
+        }).join('');
+
+        initializeLazyGameImages(stripTrack);
+        const activeItem = stripTrack.querySelector('.slot-strip-item.is-active');
+        if (activeItem && typeof activeItem.scrollIntoView === 'function') {
+            activeItem.scrollIntoView({
+                behavior: reduceMotion ? 'auto' : 'smooth',
+                block: 'nearest',
+                inline: 'center'
+            });
+        }
+    }
+
     function setResult(idx) {
         const game = spinGames[idx];
         const platformName = game.platform || game.platformShortName || i18n.t('gameDetails.unknown');
         const ratingText = (game.rating !== undefined && game.rating !== null) ? `${game.rating}` : i18n.t('gameDetails.unknown');
+        const statusText = game.isInstalled ? 'Installed' : 'Not Installed';
 
         resultTitle.textContent = game.name;
         resultMeta.innerHTML = `
             <span class="slot-meta-pill">${platformName}</span>
             <span class="slot-meta-pill">Rating: ${ratingText}</span>
+            <span class="slot-meta-pill">${statusText}</span>
+            <span class="slot-meta-pill">${idx + 1} / ${spinGames.length}</span>
         `;
+        renderSelectionStrip(idx);
     }
 
     const baseLen = spinGames.length;
@@ -134,12 +186,14 @@ export function renderGamesAsRandom(gamesToRender, options = {}) {
         const safeImage = escapeHtml(getGameImage(game) || '');
         const item = document.createElement('div');
         item.className = 'slot-item';
+        const src = lazyPlaceholderSrc || safeImage;
         item.innerHTML = `
-            <img class="slot-item-image lazy-game-image is-pending" src="${lazyPlaceholderSrc}" data-lazy-src="${safeImage}" alt="${safeName}" loading="lazy" decoding="async" fetchpriority="low" />
+            <img class="slot-item-image lazy-game-image is-pending" src="${src}" data-lazy-src="${safeImage}" alt="${safeName}" loading="lazy" decoding="async" fetchpriority="low" />
             <div class="slot-item-caption">${safeName}</div>
         `;
         reelInner.appendChild(item);
     });
+    initializeLazyGameImages(reelInner);
 
     let metricsReady = false;
     let itemStep = 0;
@@ -306,6 +360,16 @@ export function renderGamesAsRandom(gamesToRender, options = {}) {
             const game = spinGames[selectedIndex];
             if (game) showGameDetails(game);
         }
+    });
+
+    stripTrack.addEventListener('click', (event) => {
+        const button = event.target.closest('.slot-strip-item[data-slot-preview-index]');
+        if (!button || spinning) return;
+        const idx = Number.parseInt(button.dataset.slotPreviewIndex || '-1', 10);
+        if (!Number.isFinite(idx) || idx < 0 || idx >= spinGames.length) return;
+        selectedIndex = idx;
+        setResult(selectedIndex);
+        if (metricsReady) snapToGameIndex(selectedIndex);
     });
 
     const onWindowResize = () => {

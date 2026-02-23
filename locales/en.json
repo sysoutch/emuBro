@@ -693,6 +693,7 @@
     },
     "views": {
       "cover": "Cover",
+      "focus": "Focus",
       "list": "List",
       "random": "Random",
       "size": "Size",

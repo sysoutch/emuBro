@@ -539,6 +539,11 @@ export function setupSidebarRail(options = {}) {
         toggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
         toggleBtn.title = expanded ? 'Collapse sidebar' : 'Expand sidebar';
         localStorage.setItem('emuBro.sidebarExpanded', expanded ? 'true' : 'false');
+        try {
+            window.dispatchEvent(new CustomEvent('emubro:layout-width-changed', {
+                detail: { sidebarExpanded: !!expanded }
+            }));
+        } catch (_error) {}
     };
 
     setExpanded(initialExpanded);

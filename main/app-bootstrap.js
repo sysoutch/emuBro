@@ -612,29 +612,27 @@ function createAppBootstrapManager(deps = {}) {
       const startupDeepLink = findDeepLinkArg(proc.argv || []);
       const startupPayload = parseDeepLink(startupDeepLink);
       const isLaunchShortcutStartup = !!(startupPayload && startupPayload.action === "launch");
+      const BOOTSTRAP_DELAY_MS = 40;
+      const BOOTSTRAP_FALLBACK_DELAY_MS = 900;
       const startSoon = () => setTimeout(() => {
         startApplicationBootstrap({
           deepLink: startupDeepLink,
           keepLauncherHiddenOnLaunch: isLaunchShortcutStartup
         });
-      }, 120);
+      }, BOOTSTRAP_DELAY_MS);
 
       if (isLaunchShortcutStartup) {
         closeSplashWindow({ force: true });
         startSoon();
       } else {
-        const splash = createSplashWindow();
-        if (splash && !splash.isDestroyed()) {
-          if (splash.isVisible()) startSoon();
-          else splash.once("show", startSoon);
-        } else {
-          startSoon();
-        }
+        createSplashWindow();
+        // Start bootstrap immediately after requesting splash creation so both launch in parallel.
+        startSoon();
       }
 
       setTimeout(() => {
         startApplicationBootstrap();
-      }, 1200);
+      }, BOOTSTRAP_FALLBACK_DELAY_MS);
     });
   }
 

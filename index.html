@@ -1,9 +1,21 @@
 <!DOCTYPE html>
-<html lang="en" data-glass-effect="enabled">
+<html lang="en" data-glass-effect="enabled" data-booting="1">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title data-i18n="app.title">emuBro</title>
+    <style>
+        html[data-booting="1"],
+        html[data-booting="1"] body {
+            background: #0b1220;
+            overflow: hidden;
+        }
+
+        html[data-booting="1"] .app-container {
+            opacity: 0;
+            visibility: hidden;
+        }
+    </style>
 </head>
 <body>
     <div class="win-top-drag-strip" aria-hidden="true"></div>
@@ -276,6 +288,7 @@
                     <button class="view-btn" data-view="list" data-i18n="views.list">List</button>
                     <button class="view-btn" data-view="table" data-i18n="views.table">Table</button>
                     <button class="view-btn" data-view="slideshow" data-i18n="views.slideshow">Slideshow</button>
+                    <button class="view-btn" data-view="focus" data-i18n="views.focus">Focus</button>
                     <button class="view-btn" data-view="random" data-i18n="views.random">Random</button>
 
                     <div class="view-size-control">
