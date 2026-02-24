@@ -3,11 +3,11 @@
 If you use multiple emulators across multiple platforms, you already know the pain:
 different launchers, different configs, scattered ROM folders, missing covers, and zero consistency.
 
-`emuBro` is built to solve that with one desktop app that feels like a modern game hub while still giving power users deep control.
+emuBro (yes it's "emuBro" with a lower "e", that's rly important to me) is built to solve that with one desktop app that feels like a modern game hub while still giving power users deep control.
 
 ## What emuBro Does
 
-`emuBro` combines your games, emulators, and tools in one place:
+emuBro combines your games, emulators, and tools in one place:
 
 - Unified game library with multiple views: cover, list, table, slideshow, and random.
 - Fast category filtering with single-select and multi-select workflows.
@@ -80,7 +80,7 @@ It’s designed as a complete emulator command center, not just a launcher.
 emuBro now supports:
 
 - App updates
-- Separate `emubro-resources` updates
+- Separate emubro-resources updates
 - Manual checks
 - Automatic checks on startup
 - Interval-based checks with user control

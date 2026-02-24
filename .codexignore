@@ -57,6 +57,7 @@ spec/fixtures/logo.png
 .yarn/install-state.gz
 
 # Project specific
+/node_modules/
 /build_out/
 /emubro-resources/
 /emubro-locales-repo/

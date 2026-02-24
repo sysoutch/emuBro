@@ -50,6 +50,26 @@
     gap: 10px;
 }
 
+#game-info-modal .game-detail-cover-status {
+    grid-column: 1 / -1;
+    min-height: 1.1rem;
+    margin-top: -4px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+#game-info-modal .game-detail-cover-status[data-level="success"] {
+    color: var(--success-color);
+}
+
+#game-info-modal .game-detail-cover-status[data-level="warning"] {
+    color: var(--warning-color, #f7b85f);
+}
+
+#game-info-modal .game-detail-cover-status[data-level="error"] {
+    color: var(--danger-color);
+}
+
 #game-info-modal .detail-game-image {
     max-width: 112px;
 }

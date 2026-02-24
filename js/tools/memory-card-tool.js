@@ -15,9 +15,12 @@ function t(key, fallback, data = {}) {
     const i18nRef = (typeof i18n !== 'undefined' && i18n && typeof i18n.t === 'function')
         ? i18n
         : (window?.i18n && typeof window.i18n.t === 'function' ? window.i18n : null);
+    let translated = '';
     if (i18nRef && typeof i18nRef.t === 'function') {
-        const translated = i18nRef.t(key, data);
-        if (translated && translated !== key) return String(translated);
+        translated = i18nRef.t(key);
+        if (typeof translated === 'string' && translated && translated !== key) {
+            return applyTemplate(translated, data);
+        }
     }
     return applyTemplate(String(fallback || key), data);
 }
@@ -28,6 +31,11 @@ export class MemoryCardTool {
         this.currentSlot1Path = null;
         this.currentSlot2Path = null;
         this.selectedSave = null; // { slotId: "slot-1"|"slot-2", index: number, save: object }
+        this.lastDeletedSave = null; // { slotId, filePath, slot, deletedEntry, title }
+        this.pendingChanges = {
+            'slot-1': [],
+            'slot-2': []
+        };
         this.animatedSaveIcons = [];
         this.iconAnimationTimer = null;
     }
@@ -35,6 +43,8 @@ export class MemoryCardTool {
     render(container) {
         this.stopIconAnimationLoop();
         this.animatedSaveIcons = [];
+        this.pendingChanges = { 'slot-1': [], 'slot-2': [] };
+        this.lastDeletedSave = null;
 
         const toolContent = document.createElement("div");
         toolContent.className = "tool-content memory-card-editor";
@@ -66,7 +76,13 @@ export class MemoryCardTool {
                     </div>
                     <div class="slot-footer">
                         <div class="card-stats">${t('tools.freeBlocks', 'Free Blocks')}: <span class="free-blocks">-</span></div>
+                        <div class="slot-pending-row">
+                            <span class="slot-pending-indicator" data-slot-pending-indicator>${t('tools.noPendingChanges', 'No pending changes')}</span>
+                            <button class="action-btn small" data-slot-action="apply" disabled>${t('tools.applyChanges', 'Apply')}</button>
+                            <button class="action-btn small" data-slot-action="discard" disabled>${t('tools.discardChanges', 'Discard')}</button>
+                        </div>
                         <div class="slot-actions">
+                            <button class="action-btn small" data-slot-action="create">${t('tools.createEmptyCard', 'Create Empty Card')}</button>
                             <button class="action-btn small" data-slot-action="format" disabled>${t('tools.formatCard', 'Format Card')}</button>
                             <button class="action-btn small" data-slot-action="import" disabled>${t('tools.importSave', 'Import Save...')}</button>
                         </div>
@@ -109,7 +125,13 @@ export class MemoryCardTool {
                     </div>
                     <div class="slot-footer">
                         <div class="card-stats">${t('tools.freeBlocks', 'Free Blocks')}: <span class="free-blocks">-</span></div>
+                        <div class="slot-pending-row">
+                            <span class="slot-pending-indicator" data-slot-pending-indicator>${t('tools.noPendingChanges', 'No pending changes')}</span>
+                            <button class="action-btn small" data-slot-action="apply" disabled>${t('tools.applyChanges', 'Apply')}</button>
+                            <button class="action-btn small" data-slot-action="discard" disabled>${t('tools.discardChanges', 'Discard')}</button>
+                        </div>
                         <div class="slot-actions">
+                            <button class="action-btn small" data-slot-action="create">${t('tools.createEmptyCard', 'Create Empty Card')}</button>
                             <button class="action-btn small" data-slot-action="format" disabled>${t('tools.formatCard', 'Format Card')}</button>
                             <button class="action-btn small" data-slot-action="import" disabled>${t('tools.importSave', 'Import Save...')}</button>
                         </div>
@@ -134,15 +156,42 @@ export class MemoryCardTool {
 
         // Central Controls
         document.getElementById('delete-btn').addEventListener('click', () => this.deleteSelectedSave());
+        document.getElementById('undelete-btn').addEventListener('click', () => this.undeleteLastSave());
         document.getElementById('rename-btn').addEventListener('click', () => this.renameSelectedSave());
+        document.getElementById('export-btn').addEventListener('click', () => this.exportSelectedSave());
+        document.getElementById('move-left-btn').addEventListener('click', () => this.copySelectedSaveTo('slot-1'));
+        document.getElementById('move-right-btn').addEventListener('click', () => this.copySelectedSaveTo('slot-2'));
         
-        // Slot Actions (Format)
-        document.querySelectorAll('.slot-actions [data-slot-action="format"]').forEach((btn) => {
-            btn.addEventListener('click', (e) => {
-                const slotId = e.target.closest('.card-slot').id;
-                this.formatCard(slotId);
+        // Slot Actions (Create, Format, Import)
+        document.querySelectorAll('.card-slot [data-slot-action]').forEach((btn) => {
+            btn.addEventListener('click', async (e) => {
+                const action = String(e.currentTarget.dataset.slotAction || '').trim();
+                const slotEl = e.currentTarget.closest('.card-slot');
+                const slotId = slotEl ? slotEl.id : '';
+                if (!slotId) return;
+                if (action === 'format') {
+                    await this.stageFormatCard(slotId);
+                    return;
+                }
+                if (action === 'import') {
+                    await this.stageImportSaveToSlot(slotId);
+                    return;
+                }
+                if (action === 'create') {
+                    await this.createEmptyCardForSlot(slotId);
+                    return;
+                }
+                if (action === 'apply') {
+                    await this.applyPendingChanges(slotId);
+                    return;
+                }
+                if (action === 'discard') {
+                    this.discardPendingChanges(slotId);
+                }
             });
         });
+
+        this.updateCentralControls();
     }
 
     async handleNativeOpen(slotId) {
@@ -200,6 +249,10 @@ export class MemoryCardTool {
             if (result.success) {
                 if (slotId === "slot-1") this.currentSlot1Path = filePath;
                 else this.currentSlot2Path = filePath;
+                this.pendingChanges[slotId] = [];
+                if (String(this.selectedSave?.slotId || '') === slotId) {
+                    this.selectedSave = null;
+                }
 
                 // Update UI Label
                 const label = document.querySelector(`#${slotId} .current-file-label`);
@@ -207,11 +260,13 @@ export class MemoryCardTool {
 
                 this.updateSlotControls(slotId, true);
                 this.populateSlot(slotId, result.data);
+                this.updateCentralControls();
             } else {
-                alert(i18n.t("tools.readFailed", {message: result.message}) || `Read Failed: ${result.message}`);
+                alert(t('tools.readFailed', 'Failed to read memory card: {{message}}', { message: String(result.message || '') }));
             }
         } catch (error) {
             console.error("Error reading card for " + slotId, error);
+            alert(t('tools.readFailed', 'Failed to read memory card: {{message}}', { message: String(error?.message || error) }));
         }
     }
 
@@ -240,10 +295,11 @@ export class MemoryCardTool {
 
                 tr.innerHTML = `
                     <td class="col-icon">${iconHtml}</td>
-                    <td class="col-title">${save.title}</td>
+                    <td class="col-title" data-col-title>${save.title}</td>
                     <td class="col-name">${save.productCode}</td>
                     <td class="col-blocks">${blocksText}</td>
                 `;
+                tr.dataset.saveSlot = String(save.slot || 0);
                 tr.addEventListener("click", () => {
                     this.selectSave(slotId, index, save, tr);
                 });
@@ -256,15 +312,18 @@ export class MemoryCardTool {
                     }
                 }
             });
+            this.applyPendingPreview(slotId);
         } else if (data.format === "PlayStation 2") {
             const tr = document.createElement("tr");
             tr.innerHTML = `<td colspan="4" class="centered">${data.message}</td>`;
             tbody.appendChild(tr);
             if (stats) stats.textContent = "?";
+            this.applyPendingPreview(slotId);
         } else {
             const tr = document.createElement("tr");
             tr.innerHTML = `<td colspan="4" class="centered">${t('tools.emptyOrUnsupportedCard', 'Empty or Unsupported Card')}</td>`;
             tbody.appendChild(tr);
+            this.applyPendingPreview(slotId);
         }
     }
 
@@ -281,14 +340,33 @@ export class MemoryCardTool {
 
     updateCentralControls() {
         const deleteBtn = document.getElementById('delete-btn');
+        const undeleteBtn = document.getElementById('undelete-btn');
         const renameBtn = document.getElementById('rename-btn');
         const exportBtn = document.getElementById('export-btn');
+        const moveLeftBtn = document.getElementById('move-left-btn');
+        const moveRightBtn = document.getElementById('move-right-btn');
         
         const hasSelection = !!this.selectedSave;
+        const selectedSlotId = String(this.selectedSave?.slotId || '');
+        const selectedSave = this.selectedSave?.save || null;
+        const sourcePath = this.getSlotPath(selectedSlotId);
+        const canActOnSelection = hasSelection && !!sourcePath;
+        const isSingleBlock = !!selectedSave && !selectedSave.isMultiBlock;
+        const canCopyLeft = canActOnSelection && isSingleBlock && selectedSlotId === 'slot-2' && !!this.currentSlot1Path;
+        const canCopyRight = canActOnSelection && isSingleBlock && selectedSlotId === 'slot-1' && !!this.currentSlot2Path;
         
-        deleteBtn.disabled = !hasSelection;
-        renameBtn.disabled = !hasSelection;
-        // exportBtn.disabled = !hasSelection; // Keep export disabled for now
+        if (deleteBtn) deleteBtn.disabled = !canActOnSelection;
+        if (renameBtn) renameBtn.disabled = !canActOnSelection;
+        if (exportBtn) exportBtn.disabled = !canActOnSelection || !isSingleBlock;
+        if (undeleteBtn) {
+            const hasStagedDelete = selectedSlotId
+                ? this.getPendingQueue(selectedSlotId).some((entry) => String(entry?.type || '') === 'delete')
+                : false;
+            undeleteBtn.disabled = !(hasStagedDelete || this.canUndeleteIntoSlot());
+        }
+        if (moveLeftBtn) moveLeftBtn.disabled = !canCopyLeft;
+        if (moveRightBtn) moveRightBtn.disabled = !canCopyRight;
+        this.renderAllPendingIndicators();
     }
 
     updateSlotControls(slotId, hasCard) {
@@ -296,7 +374,356 @@ export class MemoryCardTool {
         if (!slot) return;
         
         const formatBtn = slot.querySelector('[data-slot-action="format"]');
+        const importBtn = slot.querySelector('[data-slot-action="import"]');
         if (formatBtn) formatBtn.disabled = !hasCard;
+        if (importBtn) importBtn.disabled = !hasCard;
+    }
+
+    getSlotPath(slotId) {
+        return slotId === 'slot-1' ? this.currentSlot1Path : this.currentSlot2Path;
+    }
+
+    setSlotPath(slotId, filePath) {
+        if (slotId === 'slot-1') this.currentSlot1Path = filePath;
+        else this.currentSlot2Path = filePath;
+    }
+
+    canUndeleteIntoSlot() {
+        if (!this.lastDeletedSave) return false;
+        const slotPath = this.getSlotPath(this.lastDeletedSave.slotId);
+        if (!slotPath) return false;
+        return String(slotPath) === String(this.lastDeletedSave.filePath || '');
+    }
+
+    getPendingQueue(slotId) {
+        if (!this.pendingChanges || typeof this.pendingChanges !== 'object') {
+            this.pendingChanges = { 'slot-1': [], 'slot-2': [] };
+        }
+        if (!Array.isArray(this.pendingChanges[slotId])) {
+            this.pendingChanges[slotId] = [];
+        }
+        return this.pendingChanges[slotId];
+    }
+
+    renderPendingIndicator(slotId) {
+        const slot = document.getElementById(slotId);
+        if (!slot) return;
+        const queue = this.getPendingQueue(slotId);
+        const indicator = slot.querySelector('[data-slot-pending-indicator]');
+        const applyBtn = slot.querySelector('[data-slot-action="apply"]');
+        const discardBtn = slot.querySelector('[data-slot-action="discard"]');
+        const hasPending = queue.length > 0;
+        if (indicator) {
+            if (!hasPending) {
+                indicator.textContent = t('tools.noPendingChanges', 'No pending changes');
+                indicator.dataset.level = 'none';
+            } else {
+                const summary = this.getPendingOperationSummary(queue);
+                indicator.textContent = `${t('tools.pendingChangesCount', '{{count}} pending change(s)', { count: queue.length })}${summary ? ` - ${summary}` : ''}`;
+                indicator.dataset.level = 'pending';
+            }
+        }
+        if (applyBtn) applyBtn.disabled = !hasPending || !this.getSlotPath(slotId);
+        if (discardBtn) discardBtn.disabled = !hasPending;
+        this.applyPendingPreview(slotId);
+    }
+
+    renderAllPendingIndicators() {
+        this.renderPendingIndicator('slot-1');
+        this.renderPendingIndicator('slot-2');
+    }
+
+    getPendingOperationSummary(queue = []) {
+        const ops = Array.isArray(queue) ? queue : [];
+        if (!ops.length) return '';
+        const counts = new Map();
+        ops.forEach((entry) => {
+            const key = String(entry?.type || '').trim().toLowerCase();
+            if (!key) return;
+            counts.set(key, (counts.get(key) || 0) + 1);
+        });
+        const parts = [];
+        if (counts.get('rename')) parts.push(`${counts.get('rename')} rename`);
+        if (counts.get('delete')) parts.push(`${counts.get('delete')} delete`);
+        if (counts.get('copy')) parts.push(`${counts.get('copy')} copy`);
+        if (counts.get('import')) parts.push(`${counts.get('import')} import`);
+        if (counts.get('format')) parts.push(`${counts.get('format')} format`);
+        return parts.join(', ');
+    }
+
+    applyPendingPreview(slotId) {
+        const slot = document.getElementById(slotId);
+        if (!slot) return;
+        const rows = Array.from(slot.querySelectorAll('.save-list tr[data-save-slot]'));
+        const queue = this.getPendingQueue(slotId);
+
+        slot.classList.remove('has-pending-format');
+        rows.forEach((row) => {
+            row.classList.remove('pending-delete', 'pending-rename');
+            const titleCell = row.querySelector('[data-col-title]');
+            if (titleCell && typeof titleCell.dataset.originalTitle === 'string') {
+                titleCell.textContent = titleCell.dataset.originalTitle;
+            } else if (titleCell) {
+                titleCell.dataset.originalTitle = titleCell.textContent || '';
+            }
+        });
+
+        queue.forEach((op) => {
+            const type = String(op?.type || '').trim().toLowerCase();
+            if (type === 'format') {
+                slot.classList.add('has-pending-format');
+                return;
+            }
+            const targetSlot = String(op?.slot || '').trim();
+            if (!targetSlot) return;
+            const row = rows.find((entry) => String(entry.dataset.saveSlot || '') === targetSlot);
+            if (!row) return;
+            const titleCell = row.querySelector('[data-col-title]');
+            if (!titleCell) return;
+            if (type === 'delete') {
+                row.classList.add('pending-delete');
+                return;
+            }
+            if (type === 'rename') {
+                row.classList.add('pending-rename');
+                titleCell.textContent = String(op?.newName || '').trim() || titleCell.dataset.originalTitle || titleCell.textContent || '';
+            }
+        });
+    }
+
+    stageOperation(slotId, op) {
+        const queue = this.getPendingQueue(slotId);
+        if (!op || typeof op !== 'object') return;
+        if (op.type === 'format') {
+            queue.length = 0;
+            queue.push(op);
+        } else {
+            queue.push(op);
+        }
+        this.renderPendingIndicator(slotId);
+        this.updateCentralControls();
+    }
+
+    discardPendingChanges(slotId) {
+        const queue = this.getPendingQueue(slotId);
+        queue.length = 0;
+        this.renderPendingIndicator(slotId);
+        this.updateCentralControls();
+    }
+
+    popLastStagedDelete(slotId = '') {
+        const targetSlot = slotId || String(this.selectedSave?.slotId || '');
+        if (!targetSlot) return false;
+        const queue = this.getPendingQueue(targetSlot);
+        for (let i = queue.length - 1; i >= 0; i--) {
+            if (String(queue[i]?.type || '') !== 'delete') continue;
+            queue.splice(i, 1);
+            this.renderPendingIndicator(targetSlot);
+            this.updateCentralControls();
+            return true;
+        }
+        return false;
+    }
+
+    async createEmptyCardForSlot(slotId) {
+        try {
+            const saveResult = await emubro.invoke("save-file-dialog", {
+                title: t('tools.createEmptyCardTitle', 'Create Empty Memory Card'),
+                defaultPath: slotId === 'slot-1' ? 'memory-card-1.mcr' : 'memory-card-2.mcr',
+                filters: [
+                    { name: t('tools.fileDialogMemoryCards', 'Memory Cards'), extensions: ['mcr'] },
+                    { name: t('tools.fileDialogAllFiles', 'All Files'), extensions: ['*'] }
+                ]
+            });
+            const targetPath = String(saveResult?.filePath || '').trim();
+            if (saveResult?.canceled || !targetPath) return;
+
+            const createResult = await emubro.invoke('memory-card:create-empty', { filePath: targetPath });
+            if (!createResult?.success) {
+                alert(t('tools.memoryCardCreateFailed', 'Failed to create empty memory card: {{message}}', {
+                    message: String(createResult?.message || 'Unknown error')
+                }));
+                return;
+            }
+            this.pendingChanges[slotId] = [];
+            await this.loadCard(slotId, targetPath);
+        } catch (error) {
+            alert(t('tools.memoryCardCreateFailed', 'Failed to create empty memory card: {{message}}', {
+                message: String(error?.message || error || 'Unknown error')
+            }));
+        }
+    }
+
+    async stageImportSaveToSlot(slotId) {
+        const targetCardPath = this.getSlotPath(slotId);
+        if (!targetCardPath) return;
+        try {
+            const result = await emubro.invoke("open-file-dialog", {
+                properties: ["openFile"],
+                filters: [
+                    { name: t('tools.fileDialogSaveImport', 'Save Import Files'), extensions: ["mcs", "bin", "sav", "psv", "psx"] },
+                    { name: t('tools.fileDialogAllFiles', 'All Files'), extensions: ["*"] }
+                ]
+            });
+            if (result?.canceled || !Array.isArray(result?.filePaths) || !result.filePaths.length) return;
+            const importPath = String(result.filePaths[0] || '').trim();
+            if (!importPath) return;
+            this.stageOperation(slotId, { type: 'import', importPath });
+        } catch (error) {
+            alert(t('tools.failedImportSave', 'Failed to import save: {{message}}', {
+                message: String(error?.message || error || 'Unknown error')
+            }));
+        }
+    }
+
+    async stageFormatCard(slotId) {
+        const filePath = this.getSlotPath(slotId);
+        if (!filePath) return;
+        if (!confirm(t('tools.confirmFormatCard', 'Are you sure you want to format this card?\nAll data will be lost!'))) return;
+        this.stageOperation(slotId, { type: 'format' });
+    }
+
+    async applyPendingChanges(slotId) {
+        const filePath = this.getSlotPath(slotId);
+        if (!filePath) return;
+        const queue = [...this.getPendingQueue(slotId)];
+        if (!queue.length) return;
+
+        for (let i = 0; i < queue.length; i++) {
+            const op = queue[i];
+            let result = { success: false, message: t('tools.operationUnknown', 'Unknown operation.') };
+
+            if (op.type === 'delete') {
+                result = await emubro.invoke('delete-save', { filePath, slot: Number(op.slot || 0) });
+                if (result?.success) {
+                    this.lastDeletedSave = {
+                        slotId,
+                        filePath,
+                        slot: Number(result.slot || op.slot || 0),
+                        deletedEntry: String(result.deletedEntry || ''),
+                        title: String(result.deletedTitle || op.title || '')
+                    };
+                }
+            } else if (op.type === 'rename') {
+                result = await emubro.invoke('rename-save', {
+                    filePath,
+                    slot: Number(op.slot || 0),
+                    newName: String(op.newName || '')
+                });
+            } else if (op.type === 'format') {
+                result = await emubro.invoke('format-card', filePath);
+                if (result?.success) this.lastDeletedSave = null;
+            } else if (op.type === 'import') {
+                result = await emubro.invoke('import-save', {
+                    filePath,
+                    importPath: String(op.importPath || '')
+                });
+            } else if (op.type === 'copy') {
+                result = await emubro.invoke('copy-save', {
+                    sourcePath: String(op.sourcePath || ''),
+                    sourceSlot: Number(op.sourceSlot || 0),
+                    targetPath: filePath
+                });
+            }
+
+            if (!result?.success) {
+                const remaining = queue.slice(i);
+                this.pendingChanges[slotId] = remaining;
+                this.renderPendingIndicator(slotId);
+                this.updateCentralControls();
+                alert(t('tools.failedApplyChanges', 'Failed to apply changes: {{message}}', {
+                    message: String(result?.message || 'Unknown error')
+                }));
+                return;
+            }
+        }
+
+        this.pendingChanges[slotId] = [];
+        this.selectedSave = null;
+        await this.loadCard(slotId, filePath);
+        this.renderPendingIndicator(slotId);
+        this.updateCentralControls();
+    }
+
+    async exportSelectedSave() {
+        if (!this.selectedSave) return;
+        const sourcePath = this.getSlotPath(this.selectedSave.slotId);
+        if (!sourcePath) return;
+
+        const saveTitle = String(this.selectedSave.save?.title || 'save').trim() || 'save';
+        const safeFile = saveTitle.replace(/[<>:"/\\|?*]+/g, '_').slice(0, 60);
+
+        try {
+            const dialogResult = await emubro.invoke("save-file-dialog", {
+                title: t('tools.exportSave', 'Export Save'),
+                defaultPath: `${safeFile}.mcs`,
+                filters: [
+                    { name: t('tools.fileDialogSaveExport', 'Save Export Files'), extensions: ['mcs'] },
+                    { name: t('tools.fileDialogAllFiles', 'All Files'), extensions: ['*'] }
+                ]
+            });
+            const outputPath = String(dialogResult?.filePath || '').trim();
+            if (dialogResult?.canceled || !outputPath) return;
+
+            const result = await emubro.invoke('export-save', {
+                filePath: sourcePath,
+                slot: Number(this.selectedSave.save?.slot || 0),
+                outputPath
+            });
+            if (!result?.success) {
+                alert(t('tools.failedExportSave', 'Failed to export save: {{message}}', {
+                    message: String(result?.message || 'Unknown error')
+                }));
+            }
+        } catch (error) {
+            alert(t('tools.failedExportSave', 'Failed to export save: {{message}}', {
+                message: String(error?.message || error || 'Unknown error')
+            }));
+        }
+    }
+
+    async copySelectedSaveTo(targetSlotId) {
+        if (!this.selectedSave) return;
+        const sourceSlotId = String(this.selectedSave.slotId || '');
+        if (!sourceSlotId || sourceSlotId === targetSlotId) return;
+
+        const sourcePath = this.getSlotPath(sourceSlotId);
+        const targetPath = this.getSlotPath(targetSlotId);
+        const sourceSlot = Number(this.selectedSave.save?.slot || 0);
+        if (!sourcePath || !targetPath || !sourceSlot) return;
+
+        this.stageOperation(targetSlotId, {
+            type: 'copy',
+            sourcePath,
+            sourceSlot
+        });
+    }
+
+    async undeleteLastSave() {
+        const selectedSlotId = String(this.selectedSave?.slotId || '');
+        if (this.popLastStagedDelete(selectedSlotId)) return;
+        if (!this.canUndeleteIntoSlot()) return;
+        const last = this.lastDeletedSave;
+        try {
+            const result = await emubro.invoke('undelete-save', {
+                filePath: last.filePath,
+                slot: Number(last.slot || 0),
+                deletedEntry: String(last.deletedEntry || '')
+            });
+            if (!result?.success) {
+                alert(t('tools.failedUndeleteSave', 'Failed to undelete save: {{message}}', {
+                    message: String(result?.message || 'Unknown error')
+                }));
+                return;
+            }
+            await this.loadCard(last.slotId, last.filePath);
+            this.lastDeletedSave = null;
+            this.updateCentralControls();
+        } catch (error) {
+            alert(t('tools.failedUndeleteSave', 'Failed to undelete save: {{message}}', {
+                message: String(error?.message || error || 'Unknown error')
+            }));
+        }
     }
 
     createDataURL(icon) {
@@ -377,26 +804,11 @@ export class MemoryCardTool {
         const confirmMsg = t('tools.confirmDeleteSave', 'Are you sure you want to delete "{{name}}"?', { name: this.selectedSave.save.title });
         if (!confirm(confirmMsg)) return;
 
-        const filePath = this.selectedSave.slotId === 'slot-1' ? this.currentSlot1Path : this.currentSlot2Path;
-        
-        try {
-            const result = await emubro.invoke('delete-save', {
-                filePath: filePath,
-                slot: this.selectedSave.save.slot
-            });
-
-            if (result.success) {
-                // Reload the card
-                this.loadCard(this.selectedSave.slotId, filePath);
-                this.selectedSave = null;
-                this.updateCentralControls();
-            } else {
-                alert(t('tools.failedDeleteSave', 'Failed to delete save: {{message}}', { message: result.message }));
-            }
-        } catch (error) {
-            console.error(t('tools.errorDeletingSave', 'Error deleting save:'), error);
-            alert(t('tools.errorDeletingSaveMessage', 'Error deleting save: {{message}}', { message: error.message }));
-        }
+        this.stageOperation(this.selectedSave.slotId, {
+            type: 'delete',
+            slot: Number(this.selectedSave.save.slot || 0),
+            title: String(this.selectedSave.save.title || '').trim()
+        });
     }
 
     async renameSelectedSave() {
@@ -410,46 +822,10 @@ export class MemoryCardTool {
             return;
         }
 
-        const filePath = this.selectedSave.slotId === 'slot-1' ? this.currentSlot1Path : this.currentSlot2Path;
-
-        try {
-            const result = await emubro.invoke('rename-save', {
-                filePath: filePath,
-                slot: this.selectedSave.save.slot,
-                newName: newName
-            });
-
-            if (result.success) {
-                this.loadCard(this.selectedSave.slotId, filePath);
-                this.selectedSave = null;
-                this.updateCentralControls();
-            } else {
-                alert(t('tools.failedRenameSave', 'Failed to rename save: {{message}}', { message: result.message }));
-            }
-        } catch (error) {
-            console.error(t('tools.errorRenamingSave', 'Error renaming save:'), error);
-            alert(t('tools.errorRenamingSaveMessage', 'Error renaming save: {{message}}', { message: error.message }));
-        }
-    }
-
-    async formatCard(slotId) {
-        const filePath = slotId === 'slot-1' ? this.currentSlot1Path : this.currentSlot2Path;
-        if (!filePath) return;
-
-        if (!confirm(t('tools.confirmFormatCard', 'Are you sure you want to format this card?\nAll data will be lost!'))) return;
-
-        try {
-            const result = await emubro.invoke('format-card', filePath);
-            if (result.success) {
-                this.loadCard(slotId, filePath);
-                this.selectedSave = null;
-                this.updateCentralControls();
-            } else {
-                alert(t('tools.failedFormatCard', 'Failed to format card: {{message}}', { message: result.message }));
-            }
-        } catch (error) {
-            console.error(t('tools.errorFormattingCard', 'Error formatting card:'), error);
-            alert(t('tools.errorFormattingCardMessage', 'Error formatting card: {{message}}', { message: error.message }));
-        }
+        this.stageOperation(this.selectedSave.slotId, {
+            type: 'rename',
+            slot: Number(this.selectedSave.save.slot || 0),
+            newName: String(newName || '').trim()
+        });
     }
 }

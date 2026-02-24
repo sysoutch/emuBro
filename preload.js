@@ -33,6 +33,9 @@ const ALLOWED_INVOKE = new Set([
   "open-external-url",
   "youtube:search-videos",
   "youtube:open-video",
+  "covers:download-for-game",
+  "covers:download-for-library",
+  "covers:get-source-config",
   "suggestions:recommend-games",
   "suggestions:list-ollama-models",
   "suggestions:emulation-support",
@@ -43,7 +46,13 @@ const ALLOWED_INVOKE = new Set([
   "browse-games-and-emus",
   "upload-theme",
   "get-user-info",
+  "tools:ecm:get-download-info",
+  "tools:ecm:download-source-zip",
+  "tools:ecm:detect-build-env",
+  "tools:ecm:build-binaries",
   "open-file-dialog",
+  "save-file-dialog",
+  "system:get-specs",
   "get-library-stats",
   "get-monitor-info",
   "detect-monitors",
@@ -53,8 +62,13 @@ const ALLOWED_INVOKE = new Set([
   "set-primary-monitor",
   "read-memory-card",
   "delete-save",
+  "undelete-save",
   "rename-save",
   "format-card",
+  "copy-save",
+  "export-save",
+  "import-save",
+  "memory-card:create-empty",
   "browse-memory-cards",
   "bios:list",
   "bios:add-files",
@@ -76,6 +90,9 @@ const ALLOWED_INVOKE = new Set([
   "create-game-shortcut",
   "prompt-scan-subfolders",
   "import-paths",
+  "import:analyze-archives",
+  "import:analyze-web-emulator-source",
+  "import:save-web-emulator-source",
   "get-platforms",
   "get-platforms-for-extension",
   "import-files-as-platform",
@@ -110,7 +127,10 @@ const ALLOWED_INVOKE = new Set([
   "resources:update:check",
   "resources:update:install",
   "resources:update:get-config",
-  "resources:update:set-config"
+  "resources:update:set-config",
+  "help:docs:list",
+  "help:docs:get",
+  "help:docs:search"
 ]);
 
 const ALLOWED_SEND = new Set([
@@ -196,6 +216,11 @@ contextBridge.exposeInMainWorld("emubro", {
     install: () => invoke("resources:update:install"),
     getConfig: () => invoke("resources:update:get-config"),
     setConfig: (payload) => invoke("resources:update:set-config", payload)
+  },
+  helpDocs: {
+    list: (payload) => invoke("help:docs:list", payload),
+    get: (payload) => invoke("help:docs:get", payload),
+    search: (payload) => invoke("help:docs:search", payload)
   },
   promptScanSubfolders: (folderPath) => invoke("prompt-scan-subfolders", folderPath),
   importPaths: (paths, options) => invoke("import-paths", paths, options),

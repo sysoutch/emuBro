@@ -77,7 +77,7 @@ function registerEmulatorDownloadHandlers(deps = {}) {
     resolveEmulatorDownloadTarget
   });
 
-  registerEmulatorDownloadInstallHandler({
+  const installActions = registerEmulatorDownloadInstallHandler({
     ipcMain,
     log,
     app,
@@ -110,6 +110,10 @@ function registerEmulatorDownloadHandlers(deps = {}) {
     isInstallerLikeName,
     spawn
   });
+
+  return {
+    downloadInstallEmulator: installActions?.downloadInstallEmulator || null
+  };
 }
 
 module.exports = {

@@ -86,6 +86,76 @@ export function setupDragDropManager(options = {}) {
         return out;
     };
 
+    const normalizeDroppedTextEntry = (value) => {
+        let raw = String(value || '').trim();
+        if (!raw) return '';
+        raw = raw.replace(/^\uFEFF/, '').trim();
+        if ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"))) {
+            raw = raw.slice(1, -1).trim();
+        }
+        if (!raw) return '';
+
+        if (/^file:\/\//i.test(raw)) {
+            try {
+                const parsed = new URL(raw);
+                let fsPath = decodeURIComponent(parsed.pathname || '');
+                if (/^\/[a-z]:/i.test(fsPath)) {
+                    fsPath = fsPath.slice(1);
+                }
+                return fsPath;
+            } catch (_error) {
+                return raw.replace(/^file:\/\//i, '');
+            }
+        }
+
+        return raw;
+    };
+
+    const collectDroppedTextEntries = (dataTransfer) => {
+        const rows = [];
+        const seen = new Set();
+        const add = (value) => {
+            const normalized = normalizeDroppedTextEntry(value);
+            if (!normalized) return;
+            const key = normalized.toLowerCase();
+            if (seen.has(key)) return;
+            seen.add(key);
+            rows.push(normalized);
+        };
+
+        const consume = (text) => {
+            String(text || '')
+                .split(/\r?\n/g)
+                .map((line) => line.trim())
+                .filter(Boolean)
+                .forEach((line) => add(line));
+        };
+
+        try {
+            consume(dataTransfer?.getData?.('text/uri-list') || '');
+        } catch (_error) {}
+        try {
+            consume(dataTransfer?.getData?.('text/plain') || '');
+        } catch (_error) {}
+        try {
+            consume(dataTransfer?.getData?.('text') || '');
+        } catch (_error) {}
+
+        return rows;
+    };
+
+    const isTextDrag = (e) => {
+        const dt = e && e.dataTransfer;
+        if (!dt) return false;
+        try {
+            const types = Array.from(dt.types || []).map((entry) => String(entry || '').toLowerCase());
+            if (types.includes('text/plain') || types.includes('text/uri-list') || types.includes('text')) {
+                return true;
+            }
+        } catch (_error) {}
+        return false;
+    };
+
     const isFileDrag = (e) => {
         const dt = e && e.dataTransfer;
         if (!dt) return false;
@@ -108,18 +178,20 @@ export function setupDragDropManager(options = {}) {
         return false;
     };
 
+    const shouldHandleDropGesture = (e) => isFileDrag(e) || isTextDrag(e);
+
     // Prevent default browser navigation on drop (especially in packaged builds).
     document.addEventListener('dragover', (e) => {
-        if (!isFileDrag(e)) return;
+        if (!shouldHandleDropGesture(e)) return;
         e.preventDefault();
     }, true);
     document.addEventListener('drop', (e) => {
-        if (!isFileDrag(e)) return;
+        if (!shouldHandleDropGesture(e)) return;
         e.preventDefault();
     }, true);
 
     const onEnter = (e) => {
-        if (!isFileDrag(e)) return;
+        if (!shouldHandleDropGesture(e)) return;
         if (!isLibraryDropContext()) {
             dragCounter = 0;
             mainContent.classList.remove('drag-over');
@@ -131,7 +203,7 @@ export function setupDragDropManager(options = {}) {
     };
 
     const onLeave = (e) => {
-        if (!isFileDrag(e)) return;
+        if (!shouldHandleDropGesture(e)) return;
         if (!isLibraryDropContext()) {
             dragCounter = 0;
             mainContent.classList.remove('drag-over');
@@ -146,7 +218,7 @@ export function setupDragDropManager(options = {}) {
     };
 
     const onOver = (e) => {
-        if (!isFileDrag(e)) return;
+        if (!shouldHandleDropGesture(e)) return;
         e.preventDefault();
     };
 
@@ -644,8 +716,276 @@ export function setupDragDropManager(options = {}) {
         return { canceled: false, paths: normalized };
     }
 
-    async function importAndRefresh(paths, recursive) {
-        const result = await emubro.importPaths(paths, { recursive });
+    function pathExtension(filePath) {
+        const p = String(filePath || '').trim();
+        const idx = p.lastIndexOf('.');
+        if (idx < 0) return '';
+        return p.slice(idx).toLowerCase();
+    }
+
+    function isArchiveCandidatePath(filePath) {
+        const ext = pathExtension(filePath);
+        return ext === '.zip' || ext === '.rar' || ext === '.7z';
+    }
+
+    async function analyzeDroppedArchives(paths) {
+        const archivePaths = dedupePaths((Array.isArray(paths) ? paths : []).filter((entry) => isArchiveCandidatePath(entry)));
+        if (!archivePaths.length) return { success: true, archives: [] };
+        try {
+            const response = await emubro.invoke('import:analyze-archives', archivePaths);
+            if (!response?.success) {
+                return {
+                    success: false,
+                    message: String(response?.message || 'Archive analysis failed.'),
+                    archives: []
+                };
+            }
+            return {
+                success: true,
+                archives: Array.isArray(response.archives) ? response.archives : []
+            };
+        } catch (error) {
+            return {
+                success: false,
+                message: String(error?.message || error || 'Archive analysis failed.'),
+                archives: []
+            };
+        }
+    }
+
+    async function promptDirectArchiveMode(archiveRow) {
+        const row = archiveRow && typeof archiveRow === 'object' ? archiveRow : {};
+        const filePath = String(row.path || '').trim();
+        const platformName = String(row.platformName || row.platformShortName || '').trim() || 'Detected platform';
+        const extension = String(row.extension || pathExtension(filePath)).trim().toLowerCase();
+        const emulators = Array.isArray(row.directArchiveEmulators)
+            ? row.directArchiveEmulators.map((entry) => String(entry || '').trim()).filter(Boolean)
+            : [];
+
+        const body = document.createElement('div');
+        body.innerHTML = `
+            <div style="display:grid;gap:10px;">
+                <div style="font-weight:700;">Archive import mode</div>
+                <div style="opacity:0.92;">This archive matches <b>${escapeHtml(platformName)}</b>. Some emulator(s) can launch ${escapeHtml(extension || 'this archive type')} directly.</div>
+                <div style="max-height:180px;overflow:auto;border:1px solid var(--border-color);border-radius:8px;padding:8px;">
+                    <div style="font-family:monospace;font-size:12px;opacity:0.9;word-break:break-all;">${escapeHtml(filePath)}</div>
+                    ${emulators.length ? `<div style=\"margin-top:8px;font-size:12px;opacity:0.85;\">Direct-run emulators: ${escapeHtml(emulators.join(', '))}</div>` : ''}
+                </div>
+                <div style="font-size:12px;opacity:0.8;">Recommended: extract and import actual files for better compatibility and metadata.</div>
+            </div>
+        `;
+
+        const choice = await createModal({
+            title: 'Archive Import Decision',
+            body,
+            buttons: [
+                { label: 'Cancel Import', onClick: () => ({ canceled: true }) },
+                { label: 'Keep Archive Directly', onClick: () => ({ canceled: false, mode: 'direct' }) },
+                { label: 'Extract + Import', primary: true, onClick: () => ({ canceled: false, mode: 'extract' }) }
+            ]
+        });
+        if (!choice || choice.canceled) return { canceled: true, mode: 'extract' };
+        return { canceled: false, mode: choice.mode === 'direct' ? 'direct' : 'extract' };
+    }
+
+    async function resolveArchiveImportModes(paths) {
+        const archiveModes = {};
+        const analysis = await analyzeDroppedArchives(paths);
+        if (!analysis?.success) {
+            addFooterNotification(analysis?.message || 'Archive analysis failed. Using extraction fallback.', 'warning');
+            return { canceled: false, archiveImportModes: archiveModes };
+        }
+
+        const rows = Array.isArray(analysis.archives) ? analysis.archives : [];
+        for (const row of rows) {
+            const filePath = String(row?.path || '').trim();
+            if (!filePath) continue;
+            if (!row?.directArchiveSupported) {
+                archiveModes[filePath] = 'extract';
+                continue;
+            }
+            const choice = await promptDirectArchiveMode(row);
+            if (!choice || choice.canceled) {
+                return { canceled: true, archiveImportModes: archiveModes };
+            }
+            archiveModes[filePath] = choice.mode || 'extract';
+        }
+
+        return { canceled: false, archiveImportModes: archiveModes };
+    }
+
+    function isHttpUrl(value) {
+        const input = String(value || '').trim();
+        if (!input) return false;
+        try {
+            const parsed = new URL(input);
+            return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+        } catch (_error) {
+            return false;
+        }
+    }
+
+    function isHtmlSource(value) {
+        const input = String(value || '').trim();
+        if (!input) return false;
+        if (isHttpUrl(input)) {
+            try {
+                const parsed = new URL(input);
+                const pathname = String(parsed.pathname || '').toLowerCase();
+                return pathname.endsWith('.html') || pathname.endsWith('.htm');
+            } catch (_error) {
+                return false;
+            }
+        }
+        const normalized = input.toLowerCase();
+        return normalized.endsWith('.html') || normalized.endsWith('.htm');
+    }
+
+    function resolveWebMatchSummary(match) {
+        const row = match && typeof match === 'object' ? match : {};
+        const platform = String(row.platform || row.platformShortName || 'unknown').trim();
+        const name = String(row.name || 'Web Emulator').trim();
+        return `${name} (${platform})`;
+    }
+
+    async function promptWebEmulatorImportSource(source, matches = []) {
+        const safeSource = String(source || '').trim();
+        const sourceIsUrl = isHttpUrl(safeSource);
+        const rows = Array.isArray(matches) ? matches : [];
+        const preferred = rows[0] || null;
+
+        const wrap = document.createElement('div');
+        wrap.innerHTML = `
+            <div style="display:grid;gap:10px;">
+                <div style="font-weight:700;">Detected HTML Web Emulator Source</div>
+                <div style="opacity:0.9;">Choose how to import this web emulator source.</div>
+                <div style="max-height:140px;overflow:auto;border:1px solid var(--border-color);border-radius:8px;padding:8px;">
+                    <div style="font-family:monospace;font-size:12px;opacity:0.9;word-break:break-all;">${escapeHtml(safeSource)}</div>
+                </div>
+                <div id="web-emu-select-row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                    <label style="min-width:120px;">Known Emulator</label>
+                </div>
+                <div style="font-size:12px;opacity:0.85;">
+                    Save only keeps the original source path/URL. Save + Download stores a local HTML copy and registers that path.
+                </div>
+            </div>
+        `;
+
+        const selectRow = wrap.querySelector('#web-emu-select-row');
+        const select = document.createElement('select');
+        select.className = 'glass-dropdown';
+        select.style.cssText = 'min-width:280px;flex:1;';
+        select.innerHTML = rows.map((row, index) => `
+            <option value="${index}">${escapeHtml(resolveWebMatchSummary(row))}</option>
+        `).join('');
+        if (preferred) {
+            select.value = '0';
+        }
+        selectRow.appendChild(select);
+
+        const choice = await createModal({
+            title: 'Import Web Emulator',
+            body: wrap,
+            buttons: [
+                { label: 'Skip', onClick: () => ({ canceled: true }) },
+                {
+                    label: 'Save Only',
+                    onClick: () => {
+                        const idx = Number.parseInt(String(select.value || '0'), 10);
+                        const match = rows[idx] || rows[0] || null;
+                        return { canceled: false, mode: 'save', match };
+                    }
+                },
+                {
+                    label: sourceIsUrl ? 'Save + Download' : 'Save + Copy Local',
+                    primary: true,
+                    onClick: () => {
+                        const idx = Number.parseInt(String(select.value || '0'), 10);
+                        const match = rows[idx] || rows[0] || null;
+                        return { canceled: false, mode: 'save_and_download', match };
+                    }
+                }
+            ]
+        });
+
+        if (!choice || choice.canceled || !choice.match) {
+            return { canceled: true };
+        }
+
+        return {
+            canceled: false,
+            mode: String(choice.mode || 'save').trim().toLowerCase(),
+            match: choice.match
+        };
+    }
+
+    async function resolveWebEmulatorDropSources(paths) {
+        const input = dedupePaths(paths);
+        if (!input.length) {
+            return { canceled: false, remainingPaths: [], imported: [] };
+        }
+
+        const imported = [];
+        const handled = new Set();
+
+        for (const source of input) {
+            if (!isHtmlSource(source)) continue;
+            let analysis = null;
+            try {
+                analysis = await emubro.invoke('import:analyze-web-emulator-source', { source });
+            } catch (_error) {
+                analysis = null;
+            }
+            if (!analysis?.success) continue;
+            const matches = Array.isArray(analysis.matches) ? analysis.matches : [];
+            if (!matches.length) continue;
+
+            const choice = await promptWebEmulatorImportSource(source, matches);
+            if (!choice || choice.canceled) continue;
+
+            const saveResult = await emubro.invoke('import:save-web-emulator-source', {
+                source,
+                action: choice.mode,
+                match: choice.match,
+                platformShortName: choice?.match?.platformShortName,
+                platform: choice?.match?.platform,
+                name: choice?.match?.name,
+                startParameters: choice?.match?.startParameters,
+                website: choice?.match?.website
+            });
+            if (!saveResult?.success) {
+                alert(saveResult?.message || 'Failed to import web emulator source.');
+                continue;
+            }
+
+            handled.add(source.toLowerCase());
+            imported.push({
+                source,
+                mode: choice.mode,
+                emulator: saveResult.emulator || null,
+                downloadedTo: String(saveResult.downloadedTo || '').trim()
+            });
+        }
+
+        const remainingPaths = input.filter((entry) => !handled.has(String(entry || '').trim().toLowerCase()));
+        return { canceled: false, remainingPaths, imported };
+    }
+
+    async function importAndRefresh(paths, recursive, archiveImportModes = {}) {
+        const result = await emubro.importPaths(paths, { recursive, archiveImportModes });
+
+        const warnings = Array.isArray(result?.warnings) ? result.warnings : [];
+        if (warnings.length > 0) {
+            const preview = warnings
+                .slice(0, 3)
+                .map((row) => String(row?.message || row?.reason || '').trim())
+                .filter(Boolean)
+                .join(' | ');
+            addFooterNotification(
+                preview || `Import completed with ${warnings.length} warning(s).`,
+                'warning'
+            );
+        }
 
         // Unknown/unmatched: offer platform picker for direct file drops.
         const unmatched = (result?.skipped || []).filter(s => s && s.reason === 'unmatched').map(s => s.path).filter(Boolean);
@@ -715,7 +1055,7 @@ export function setupDragDropManager(options = {}) {
     }
 
     const onDrop = async (e) => {
-        if (!isFileDrag(e)) return;
+        if (!shouldHandleDropGesture(e)) return;
         e.preventDefault();
         dragCounter = 0;
         mainContent.classList.remove('drag-over');
@@ -726,13 +1066,46 @@ export function setupDragDropManager(options = {}) {
             return;
         }
 
-        const rawPaths = collectDroppedPaths(e.dataTransfer);
-        if (rawPaths.length === 0) {
-            alert('Drop failed: no filesystem paths found. Try dropping from Explorer directly.');
+        const filePaths = collectDroppedPaths(e.dataTransfer);
+        const textEntries = collectDroppedTextEntries(e.dataTransfer);
+        const rawEntries = dedupePaths([...(filePaths || []), ...(textEntries || [])]);
+        if (rawEntries.length === 0) {
+            alert('Drop failed: no file path or URL found in dropped content.');
             return;
         }
 
-        const staged = await promptImportStorageAction(rawPaths);
+        const resolvedWebSources = await resolveWebEmulatorDropSources(rawEntries);
+        if (resolvedWebSources?.canceled) return;
+        if (Array.isArray(resolvedWebSources?.imported) && resolvedWebSources.imported.length > 0) {
+            const downloadedCount = resolvedWebSources.imported.filter((row) => !!String(row.downloadedTo || '').trim()).length;
+            addFooterNotification(
+                downloadedCount > 0
+                    ? `Imported ${resolvedWebSources.imported.length} web emulator source(s) (${downloadedCount} local copy/copies).`
+                    : `Imported ${resolvedWebSources.imported.length} web emulator source(s).`,
+                'success'
+            );
+        }
+        let importEntries = dedupePaths(resolvedWebSources?.remainingPaths || rawEntries);
+        const unsupportedUrls = importEntries.filter((entry) => isHttpUrl(entry));
+        if (unsupportedUrls.length > 0) {
+            importEntries = importEntries.filter((entry) => !isHttpUrl(entry));
+            addFooterNotification(
+                `Skipped ${unsupportedUrls.length} URL drop entr${unsupportedUrls.length === 1 ? 'y' : 'ies'} (not importable as file path).`,
+                'warning'
+            );
+        }
+        if (!importEntries.length) {
+            const updatedGames = await emubro.invoke('get-games');
+            setGames(updatedGames);
+            setFilteredGames([...updatedGames]);
+            await refreshEmulatorsState();
+            await renderActiveLibraryView();
+            initializePlatformFilterOptions();
+            updateLibraryCounters();
+            return;
+        }
+
+        const staged = await promptImportStorageAction(importEntries);
         if (!staged || staged.canceled) return;
         const preparedCuePaths = await prepareCueBinPathsForImport(staged.paths);
         if (!preparedCuePaths || preparedCuePaths.canceled) return;
@@ -777,7 +1150,9 @@ export function setupDragDropManager(options = {}) {
             }
 
             if (otherPaths.length > 0) {
-                await importAndRefresh(otherPaths, recursive);
+                const archiveModeDecision = await resolveArchiveImportModes(otherPaths);
+                if (!archiveModeDecision || archiveModeDecision.canceled) return;
+                await importAndRefresh(otherPaths, recursive, archiveModeDecision.archiveImportModes || {});
             } else {
                 // Still refresh after importing executables.
                 const updatedGames = await emubro.invoke('get-games');

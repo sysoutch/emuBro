@@ -9,9 +9,63 @@ export function createMissingGameRecoveryActions(deps = {}) {
     const alertUser = typeof deps.alertUser === 'function'
         ? deps.alertUser
         : ((message) => window.alert(String(message || '')));
+    const launchWarningPrefsKey = 'emuBro.launchWarningsByGame.v1';
 
-    const invokeLaunch = async (gameId) => {
-        const payload = buildLaunchPayload(gameId);
+    const dedupeWarningTypes = (entries = []) => Array.from(new Set(
+        (Array.isArray(entries) ? entries : [])
+            .map((entry) => String(entry || '').trim().toLowerCase())
+            .filter(Boolean)
+    ));
+
+    const loadLaunchWarningPrefs = () => {
+        try {
+            const raw = localStorage.getItem(launchWarningPrefsKey);
+            if (!raw) return {};
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== 'object') return {};
+            return parsed;
+        } catch (_error) {
+            return {};
+        }
+    };
+
+    const saveLaunchWarningPrefs = (value) => {
+        try {
+            localStorage.setItem(launchWarningPrefsKey, JSON.stringify(value && typeof value === 'object' ? value : {}));
+        } catch (_error) {}
+    };
+
+    const getAllowedWarningsForGame = (gameId) => {
+        const targetId = String(Number(gameId || 0) || '');
+        if (!targetId) return [];
+        const prefs = loadLaunchWarningPrefs();
+        return dedupeWarningTypes(prefs[targetId]);
+    };
+
+    const rememberWarningForGame = (gameId, warningType) => {
+        const targetId = String(Number(gameId || 0) || '');
+        const warning = String(warningType || '').trim().toLowerCase();
+        if (!targetId || !warning) return;
+        const prefs = loadLaunchWarningPrefs();
+        const existing = dedupeWarningTypes(prefs[targetId]);
+        prefs[targetId] = dedupeWarningTypes([...existing, warning]);
+        saveLaunchWarningPrefs(prefs);
+    };
+
+    const mergeAllowWarningPayload = (gameId, payload = {}) => {
+        const allowedByPrefs = getAllowedWarningsForGame(gameId);
+        const allowedByPayload = dedupeWarningTypes(payload?.allowLaunchWarnings || []);
+        const merged = dedupeWarningTypes([...allowedByPrefs, ...allowedByPayload]);
+        if (merged.length === 0) return payload;
+        return {
+            ...(payload && typeof payload === 'object' ? payload : {}),
+            allowLaunchWarnings: merged
+        };
+    };
+
+    const invokeLaunch = async (gameId, extraPayload = {}) => {
+        const mergedPayload = mergeAllowWarningPayload(gameId, extraPayload);
+        const payload = buildLaunchPayload(gameId, mergedPayload);
         return emubro.invoke('launch-game', payload);
     };
 
@@ -102,6 +156,106 @@ export function createMissingGameRecoveryActions(deps = {}) {
             overlay.appendChild(modal);
             document.body.appendChild(overlay);
         });
+    }
+
+    function showLaunchWarningDialog(warningResult) {
+        return new Promise((resolve) => {
+            const gameName = String(warningResult?.gameName || 'Game');
+            const warningMessage = String(warningResult?.message || 'Launch warning');
+            const warningType = String(warningResult?.warningType || 'warning').trim().toLowerCase();
+
+            const overlay = document.createElement('div');
+            overlay.style.cssText = [
+                'position:fixed',
+                'inset:0',
+                'z-index:4000',
+                'display:flex',
+                'align-items:center',
+                'justify-content:center',
+                'padding:18px',
+                'background:rgba(0,0,0,0.56)'
+            ].join(';');
+
+            const modal = document.createElement('div');
+            modal.className = 'glass';
+            modal.style.cssText = [
+                'width:min(560px,100%)',
+                'border:1px solid var(--border-color)',
+                'border-radius:14px',
+                'background:var(--bg-secondary)',
+                'padding:16px',
+                'box-shadow:0 16px 34px rgba(0,0,0,0.42)'
+            ].join(';');
+
+            modal.innerHTML = `
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+                    <h3 style="margin:0;font-size:1.05rem;">Launch warning: ${escapeHtml(gameName)}</h3>
+                    <button type="button" class="close-btn" aria-label="Close">&times;</button>
+                </div>
+                <p style="margin:10px 0 10px 0;color:var(--text-secondary);">${escapeHtml(warningMessage)}</p>
+                <label style="display:flex;align-items:center;gap:8px;margin:0 0 14px 0;">
+                    <input type="checkbox" data-launch-warning-remember />
+                    <span>Remember this warning decision for this game</span>
+                </label>
+                <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
+                    <button type="button" class="action-btn" data-launch-warning-action="cancel">Cancel</button>
+                    <button type="button" class="action-btn launch-btn" data-launch-warning-action="continue">Continue Launch</button>
+                </div>
+            `;
+
+            const close = (action) => {
+                const rememberInput = modal.querySelector('[data-launch-warning-remember]');
+                overlay.remove();
+                resolve({
+                    action: String(action || 'cancel'),
+                    remember: !!rememberInput?.checked,
+                    warningType
+                });
+            };
+
+            overlay.addEventListener('click', (event) => {
+                if (event.target === overlay) close('cancel');
+            });
+            modal.querySelector('.close-btn')?.addEventListener('click', () => close('cancel'));
+            modal.querySelectorAll('[data-launch-warning-action]').forEach((btn) => {
+                btn.addEventListener('click', () => close(btn.getAttribute('data-launch-warning-action') || 'cancel'));
+            });
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+        });
+    }
+
+    async function handleLaunchWarning(gameId, warningResult) {
+        const dialogResult = await showLaunchWarningDialog(warningResult);
+        if (dialogResult.action !== 'continue') return false;
+
+        const warningType = String(dialogResult.warningType || warningResult?.warningType || '').trim().toLowerCase();
+        if (dialogResult.remember && warningType) {
+            rememberWarningForGame(gameId, warningType);
+        }
+
+        const allowLaunchWarnings = dedupeWarningTypes([
+            warningType,
+            ...getAllowedWarningsForGame(gameId)
+        ]);
+        const retryResult = await invokeLaunch(gameId, { allowLaunchWarnings });
+        if (retryResult?.success) {
+            await emubro.invoke('update-game-metadata', {
+                gameId: Number(gameId),
+                lastPlayed: new Date().toISOString()
+            });
+            await reloadGamesFromMainAndRender();
+            return true;
+        }
+
+        if (retryResult?.code === 'GAME_FILE_MISSING') {
+            await handleMissingGameLaunch(gameId, retryResult);
+            return false;
+        }
+
+        alertUser(i18n.tf('messages.launchFailed', { message: retryResult?.message || 'Unknown error' }));
+        return false;
     }
 
     async function handleMissingGameLaunch(gameId, missingResult) {
@@ -216,6 +370,11 @@ export function createMissingGameRecoveryActions(deps = {}) {
 
         if (result?.code === 'GAME_FILE_MISSING') {
             await handleMissingGameLaunch(gameId, result);
+            return;
+        }
+
+        if (result?.code === 'PSX_WARNING_CONFIRM_REQUIRED') {
+            await handleLaunchWarning(gameId, result);
             return;
         }
 

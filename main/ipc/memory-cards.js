@@ -29,6 +29,50 @@ function registerMemoryCardIpc(deps = {}) {
     return await ps1Handler.formatCard(filePath);
   });
 
+  ipcMain.handle("memory-card:create-empty", async (_event, payload = {}) => {
+    const targetPath = typeof payload === "string" ? payload : payload?.filePath;
+    return await ps1Handler.createEmptyCard(targetPath);
+  });
+
+  ipcMain.handle("copy-save", async (_event, payload = {}) => {
+    const sourcePath = String(payload?.sourcePath || "").trim();
+    const sourceSlot = Number(payload?.sourceSlot || 0);
+    const targetPath = String(payload?.targetPath || "").trim();
+    if (!sourcePath || !sourceSlot || !targetPath) {
+      return { success: false, message: "Missing source/slot/target for copy-save." };
+    }
+    return await ps1Handler.copySaveToCard(sourcePath, sourceSlot, targetPath);
+  });
+
+  ipcMain.handle("export-save", async (_event, payload = {}) => {
+    const filePath = String(payload?.filePath || "").trim();
+    const slot = Number(payload?.slot || 0);
+    const outputPath = String(payload?.outputPath || "").trim();
+    if (!filePath || !slot || !outputPath) {
+      return { success: false, message: "Missing file/slot/output for export-save." };
+    }
+    return await ps1Handler.exportSave(filePath, slot, outputPath);
+  });
+
+  ipcMain.handle("import-save", async (_event, payload = {}) => {
+    const filePath = String(payload?.filePath || "").trim();
+    const importPath = String(payload?.importPath || "").trim();
+    if (!filePath || !importPath) {
+      return { success: false, message: "Missing target card/import file for import-save." };
+    }
+    return await ps1Handler.importSave(filePath, importPath);
+  });
+
+  ipcMain.handle("undelete-save", async (_event, payload = {}) => {
+    const filePath = String(payload?.filePath || "").trim();
+    const slot = Number(payload?.slot || 0);
+    const deletedEntry = String(payload?.deletedEntry || "").trim();
+    if (!filePath || !slot || !deletedEntry) {
+      return { success: false, message: "Missing undelete payload." };
+    }
+    return await ps1Handler.undeleteSave(filePath, slot, deletedEntry);
+  });
+
   function parsePS2MemoryCard(buffer) {
     const magic = buffer.toString("ascii", 0, 28);
     if (magic !== "Sony PS2 Memory Card Format ") {

@@ -1,4 +1,5 @@
 const path = require("path");
+const { pathToFileURL } = require("url");
 const { spawn } = require("child_process");
 const { createGameSessionManager } = require("../game-session-manager");
 
@@ -1180,7 +1181,179 @@ function registerGameIpc(deps = {}) {
     }
   }
 
-  function launchGameObject(game, options = {}) {
+  function isHttpUrl(value) {
+    const input = String(value || "").trim();
+    if (!input) return false;
+    try {
+      const parsed = new URL(input);
+      return parsed.protocol === "http:" || parsed.protocol === "https:";
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  function isWebEmulatorTarget(value) {
+    const input = String(value || "").trim();
+    if (!input) return false;
+    if (isHttpUrl(input)) return true;
+    return /\.html?(?:$|[?#])/i.test(input);
+  }
+
+  function normalizeMatchKey(value) {
+    return String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "");
+  }
+
+  function toFileUrl(inputPath) {
+    const value = String(inputPath || "").trim();
+    if (!value) return "";
+    if (/^file:\/\//i.test(value)) return value;
+    try {
+      return pathToFileURL(value).toString();
+    } catch (_error) {
+      return "";
+    }
+  }
+
+  function buildWebLaunchUrl(targetPath, gamePath, startParameters = "") {
+    const baseTarget = String(targetPath || "").trim();
+    if (!baseTarget) return "";
+    let baseUrl = "";
+    if (isHttpUrl(baseTarget)) {
+      baseUrl = baseTarget;
+    } else {
+      baseUrl = toFileUrl(baseTarget);
+    }
+    if (!baseUrl) return "";
+
+    const gameRefRaw = isHttpUrl(gamePath) || /^file:\/\//i.test(String(gamePath || ""))
+      ? String(gamePath || "").trim()
+      : toFileUrl(gamePath);
+    const gameRefEncoded = encodeURIComponent(gameRefRaw || String(gamePath || "").trim());
+    const defaultParam = gameRefEncoded ? `?rom=${gameRefEncoded}` : "";
+
+    let template = String(startParameters || "").trim();
+    if (!template) {
+      return `${baseUrl}${defaultParam}`;
+    }
+
+    template = template
+      .replace(/%gamepath%/gi, gameRefEncoded)
+      .replace(/%gamepathraw%/gi, String(gameRefRaw || ""));
+
+    if (isHttpUrl(template) || /^file:\/\//i.test(template)) {
+      return template;
+    }
+    if (template.startsWith("?") || template.startsWith("&") || template.startsWith("#")) {
+      return `${baseUrl}${template}`;
+    }
+    return `${baseUrl}${defaultParam}`;
+  }
+
+  function findConfiguredWebEmulatorsForPlatform(platformConfigs, platformShortName) {
+    const targetPlatform = String(platformShortName || "").trim().toLowerCase();
+    if (!targetPlatform) return [];
+    const rows = [];
+    for (const cfg of (Array.isArray(platformConfigs) ? platformConfigs : [])) {
+      const cfgShortName = String(cfg?.shortName || "").trim().toLowerCase();
+      if (!cfgShortName || cfgShortName !== targetPlatform) continue;
+      for (const emu of (Array.isArray(cfg?.emulators) ? cfg.emulators : [])) {
+        const emuType = String(emu?.type || "").trim().toLowerCase();
+        if (emuType !== "web") continue;
+        const website = String(emu?.website || "").trim();
+        const webUrlOnline = String(emu?.webUrlOnline || "").trim();
+        const webUrlRaw = String(emu?.webUrl || "").trim();
+        let webUrl = webUrlOnline || website;
+        if (!webUrl && website && webUrlRaw.startsWith("/")) {
+          try {
+            webUrl = new URL(webUrlRaw, website).toString();
+          } catch (_error) {}
+        }
+        if (!webUrl && webUrlRaw) webUrl = webUrlRaw;
+        rows.push({
+          name: String(emu?.name || "").trim() || "Web Emulator",
+          platformShortName: targetPlatform,
+          type: "web",
+          filePath: webUrl || webUrlOnline || webUrlRaw || website,
+          website,
+          startParameters: String(emu?.startParameters || "").trim() || "?rom=%gamepath%"
+        });
+      }
+    }
+    return rows.filter((row) => String(row?.filePath || "").trim());
+  }
+
+  function parseCueReferencedBinNames(cuePath) {
+    const p = String(cuePath || "").trim();
+    if (!p || !fsSync.existsSync(p)) return [];
+    let text = "";
+    try {
+      text = fsSync.readFileSync(p, "utf8");
+    } catch (_error) {
+      try {
+        text = fsSync.readFileSync(p, "latin1");
+      } catch (_error2) {
+        return [];
+      }
+    }
+    const out = [];
+    const regex = /^\s*FILE\s+(?:"([^"]+)"|([^\r\n]+?))\s+(?:BINARY|MOTOROLA|WAVE|MP3|AIFF|FLAC)\s*$/gim;
+    let match = null;
+    while ((match = regex.exec(text)) !== null) {
+      const value = String(match[1] || match[2] || "").trim();
+      if (!value) continue;
+      const normalized = value.replace(/^["']+|["']+$/g, "").trim();
+      if (!normalized) continue;
+      out.push(normalized);
+    }
+    return Array.from(new Set(out));
+  }
+
+  function validatePsxLaunchAssets(gamePath, platformShortName) {
+    const platform = String(platformShortName || "").trim().toLowerCase();
+    if (platform !== "psx" && platform !== "ps1" && platform !== "playstation") {
+      return { ok: true, warning: "" };
+    }
+
+    const target = String(gamePath || "").trim();
+    const ext = String(path.extname(target || "") || "").trim().toLowerCase();
+    if (ext === ".cue") {
+      const refs = parseCueReferencedBinNames(target);
+      if (!refs.length) {
+        return { ok: false, message: "CUE file does not reference any BIN track." };
+      }
+      const cueDir = path.dirname(target);
+      const missing = refs.filter((entry) => {
+        const resolved = path.resolve(cueDir, entry);
+        return !fsSync.existsSync(resolved);
+      });
+      if (missing.length > 0) {
+        return {
+          ok: false,
+          message: `CUE references missing BIN file(s): ${missing.slice(0, 3).join(", ")}${missing.length > 3 ? "..." : ""}`
+        };
+      }
+      return { ok: true, warning: "" };
+    }
+
+    if (ext === ".bin") {
+      const sbiPath = path.join(path.dirname(target), `${path.basename(target, path.extname(target))}.sbi`);
+      if (!fsSync.existsSync(sbiPath)) {
+        return {
+          ok: true,
+          warningType: "missing_sbi",
+          warning: `No matching SBI file found near BIN (${path.basename(target)}).`
+        };
+      }
+      return { ok: true, warning: "" };
+    }
+
+    return { ok: true, warning: "" };
+  }
+
+  async function launchGameObject(game, options = {}) {
     const platformShortName = String(game?.platformShortName || "").trim().toLowerCase();
     let gameRow = game;
     let gamePath = String(game?.filePath || "").trim();
@@ -1320,12 +1493,41 @@ function registerGameIpc(deps = {}) {
       }
     }
 
+    const psxAssetCheck = validatePsxLaunchAssets(gamePath, platformShortName);
+    if (!psxAssetCheck?.ok) {
+      return {
+        success: false,
+        code: "PSX_ASSET_MISSING",
+        message: psxAssetCheck?.message || "PS1 game asset validation failed."
+      };
+    }
+    const psxLaunchWarning = String(psxAssetCheck?.warning || "").trim();
+    const psxWarningType = String(psxAssetCheck?.warningType || "").trim().toLowerCase();
+    const allowWarningList = Array.isArray(options?.allowLaunchWarnings)
+      ? options.allowLaunchWarnings.map((entry) => String(entry || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    const warningAllowed = !psxWarningType || allowWarningList.includes(psxWarningType) || allowWarningList.includes("*");
+    if (psxLaunchWarning && !warningAllowed) {
+      return {
+        success: false,
+        code: "PSX_WARNING_CONFIRM_REQUIRED",
+        warningType: psxWarningType || "warning",
+        message: psxLaunchWarning,
+        gameId: Number(gameRow?.id || game?.id || 0),
+        gameName: String(gameRow?.name || game?.name || "Game")
+      };
+    }
+    if (psxLaunchWarning) {
+      log.warn(`PS1 launch warning for "${gameRow?.name || game?.name}": ${psxLaunchWarning}`);
+    }
+
     const isWindowsExeGame = process.platform === "win32" && /\.exe$/i.test(gamePath);
     let launchTarget = "";
     let launchArgs = [];
     let launchCwd = "";
     let launchMode = "";
     let resolvedEmulatorPath = "";
+    let selectedWebEmulator = null;
 
     if (isWindowsExeGame) {
       const gameDir = path.dirname(gamePath);
@@ -1336,37 +1538,116 @@ function registerGameIpc(deps = {}) {
       launchMode = "cmd";
     } else {
       const overridePath = String(gameRow?.emulatorOverridePath || game?.emulatorOverridePath || "").trim();
-      let emuPath = "";
+      const platformInstalled = (Array.isArray(getEmulatorsState()) ? getEmulatorsState() : [])
+        .filter((emu) => String(emu?.platformShortName || "").trim().toLowerCase() === platformShortName)
+        .map((emu) => ({
+          ...emu,
+          filePath: String(emu?.filePath || "").trim()
+        }))
+        .filter((emu) => !!emu.filePath);
 
-      if (overridePath && fsSync.existsSync(overridePath)) {
-        emuPath = overridePath;
-      } else {
-        if (overridePath) {
-          log.warn(`Game "${gameRow?.name || game?.name}" has an emulator override path that is missing: ${overridePath}`);
-        }
-        emuPath = getEmulatorsState().find((emu) => String(emu.platformShortName || "").trim().toLowerCase() === platformShortName)?.filePath;
+      const localInstalled = platformInstalled.filter((emu) => !isWebEmulatorTarget(emu.filePath) && fsSync.existsSync(emu.filePath));
+      const webInstalled = platformInstalled.filter((emu) => isWebEmulatorTarget(emu.filePath));
+
+      let configuredWebEmulators = [];
+      try {
+        const platformConfigs = await getPlatformConfigs();
+        configuredWebEmulators = findConfiguredWebEmulatorsForPlatform(platformConfigs, platformShortName);
+      } catch (_error) {
+        configuredWebEmulators = [];
       }
 
+      let selectedEmulator = null;
+      if (overridePath) {
+        selectedEmulator = platformInstalled.find((emu) => String(emu.filePath || "").trim().toLowerCase() === overridePath.toLowerCase()) || null;
+        if (!selectedEmulator) {
+          const overrideLooksWeb = isWebEmulatorTarget(overridePath);
+          if (overrideLooksWeb || fsSync.existsSync(overridePath)) {
+            selectedEmulator = {
+              name: "Override Emulator",
+              platformShortName,
+              filePath: overridePath,
+              type: overrideLooksWeb ? "web" : "standalone",
+              startParameters: ""
+            };
+          } else {
+            log.warn(`Game "${gameRow?.name || game?.name}" has an emulator override path that is missing: ${overridePath}`);
+          }
+        }
+      }
+
+      if (!selectedEmulator) {
+        // Prefer local emulator binaries when both local and web options are available.
+        selectedEmulator = localInstalled[0] || webInstalled[0] || configuredWebEmulators[0] || null;
+      }
+
+      const emuPath = String(selectedEmulator?.filePath || "").trim();
       if (!emuPath) {
         log.error(`No emulator found for platform ${game.platformShortName}`);
         return { success: false, message: "Emulator not found for this game" };
       }
-      if (!fsSync.existsSync(emuPath)) {
+
+      const selectedIsWeb = isWebEmulatorTarget(emuPath) || String(selectedEmulator?.type || "").trim().toLowerCase() === "web";
+      if (selectedIsWeb) {
+        const startParameters = String(selectedEmulator?.startParameters || "").trim() || "?rom=%gamepath%";
+        selectedWebEmulator = {
+          ...selectedEmulator,
+          filePath: emuPath,
+          startParameters
+        };
+      } else if (!fsSync.existsSync(emuPath)) {
         log.error(`Emulator executable not found at path: ${emuPath}`);
         return { success: false, message: "Emulator executable not found" };
+      } else {
+        launchTarget = emuPath;
+        launchArgs = [gamePath];
+        launchCwd = path.dirname(emuPath);
+        launchMode = overridePath && overridePath.toLowerCase() === emuPath.toLowerCase() ? "emulator-override" : "emulator";
+        resolvedEmulatorPath = emuPath;
       }
-
-      launchTarget = emuPath;
-      launchArgs = [gamePath];
-      launchCwd = path.dirname(emuPath);
-      launchMode = overridePath && overridePath === emuPath ? "emulator-override" : "emulator";
-      resolvedEmulatorPath = emuPath;
     }
 
     const runAsMode = normalizeRunAsMode(gameRow?.runAsMode || game?.runAsMode);
     const runAsUser = String(gameRow?.runAsUser || game?.runAsUser || "").trim();
     let launchStdio = "ignore";
     let launchDetached = true;
+
+    if (selectedWebEmulator) {
+      if (runAsMode !== RUN_AS_DEFAULT) {
+        return { success: false, message: "Run-as mode is not supported for web emulator launch." };
+      }
+      const webLaunchUrl = buildWebLaunchUrl(
+        selectedWebEmulator.filePath,
+        gamePath,
+        selectedWebEmulator.startParameters
+      );
+      if (!webLaunchUrl) {
+        return { success: false, message: "Web emulator launch URL is invalid." };
+      }
+      try {
+        await shell.openExternal(webLaunchUrl);
+      } catch (error) {
+        log.error(`Error launching web emulator for ${gameRow?.name || game?.name}:`, error);
+        return { success: false, message: "Failed to launch web emulator." };
+      }
+
+      try {
+        const targetGameId = Number(gameRow?.id || game?.id || 0);
+        if (targetGameId) {
+          dbUpdateGameMetadata(targetGameId, { lastPlayed: new Date().toISOString() });
+          refreshLibraryFromDb();
+        }
+      } catch (error) {
+        log.warn("Failed to update lastPlayed after web launch:", error?.message || error);
+      }
+
+      return {
+        success: true,
+        message: "Game launched with web emulator",
+        launchMode: "web-emulator",
+        ...(psxLaunchWarning ? { warning: psxLaunchWarning } : {})
+      };
+    }
 
     if (runAsMode !== RUN_AS_DEFAULT) {
       if (process.platform !== "win32") {
@@ -1478,7 +1759,8 @@ function registerGameIpc(deps = {}) {
         success: true,
         message: "Game launched successfully",
         resolvedPath: gamePath !== String(game?.filePath || "").trim() ? gamePath : null,
-        launchMode
+        launchMode,
+        ...(psxLaunchWarning ? { warning: psxLaunchWarning } : {})
       };
     } catch (error) {
       closeSessionOverlayWindow();
@@ -1720,22 +2002,70 @@ function registerGameIpc(deps = {}) {
     }
   });
 
-  ipcMain.handle("remove-game", async (_event, gameId) => {
+  ipcMain.handle("remove-game", async (_event, payload = 0) => {
     try {
-      const targetId = Number(gameId);
+      const targetId = Number((payload && typeof payload === "object")
+        ? (payload.gameId || payload.id || 0)
+        : payload);
+      const removeFromDisk = !!(payload && typeof payload === "object" && payload.removeFromDisk);
       const game = getGamesState().find((row) => Number(row.id) === targetId) || dbGetGameById(targetId);
       if (!game) return { success: false, message: "Game not found" };
+
+      let diskRemoval = { attempted: false, removed: false, message: "" };
+      if (removeFromDisk) {
+        diskRemoval.attempted = true;
+        const rawPath = String(game?.filePath || "").trim();
+        const isLauncherUri = /^[a-z][a-z0-9+.-]*:\/\//i.test(rawPath)
+          && !rawPath.toLowerCase().startsWith("file://");
+        if (!rawPath || isLauncherUri) {
+          diskRemoval.message = "Game path is not a local filesystem path.";
+        } else {
+          try {
+            const targetPath = rawPath.toLowerCase().startsWith("file://")
+              ? decodeURIComponent(rawPath.replace(/^file:\/\//i, ""))
+              : rawPath;
+            const normalizedTargetPath = process.platform === "win32" && /^\/[a-z]:/i.test(targetPath)
+              ? targetPath.slice(1)
+              : targetPath;
+            if (!fsSync.existsSync(normalizedTargetPath)) {
+              diskRemoval.message = "Game file was not found on disk.";
+            } else {
+              const stat = fsSync.lstatSync(normalizedTargetPath);
+              if (stat.isDirectory()) {
+                fsSync.rmSync(normalizedTargetPath, { recursive: true, force: false });
+              } else {
+                fsSync.unlinkSync(normalizedTargetPath);
+              }
+              diskRemoval.removed = true;
+            }
+          } catch (error) {
+            diskRemoval.message = String(error?.message || error || "Failed to remove game path on disk.");
+          }
+        }
+      }
 
       const removed = dbDeleteGameById(targetId);
       if (removed) {
         refreshLibraryFromDb();
         log.info(`Game ${game.name} removed from library`);
-        return { success: true, message: "Game removed from library" };
+        if (!removeFromDisk) {
+          return { success: true, message: "Game removed from library" };
+        }
+        if (diskRemoval.removed) {
+          return { success: true, message: "Game removed from library and disk", removedFromDisk: true };
+        }
+        return {
+          success: true,
+          message: diskRemoval.message
+            ? `Game removed from library. Disk removal skipped/failed: ${diskRemoval.message}`
+            : "Game removed from library. Disk removal skipped/failed.",
+          removedFromDisk: false
+        };
       }
 
       return { success: false, message: "Game not found" };
     } catch (error) {
-      log.error(`Failed to remove game ${gameId}:`, error);
+      log.error("Failed to remove game:", error);
       return { success: false, message: error.message };
     }
   });
@@ -1750,7 +2080,15 @@ function registerGameIpc(deps = {}) {
       const runtimeDataRules = (payload && typeof payload === "object")
         ? normalizeRuntimeDataRules(payload.runtimeDataRules || {})
         : normalizeRuntimeDataRules({});
-      return launchGameObject(game, { runtimeDataRules });
+      const allowLaunchWarnings = (payload && typeof payload === "object" && Array.isArray(payload.allowLaunchWarnings))
+        ? payload.allowLaunchWarnings
+            .map((entry) => String(entry || "").trim().toLowerCase())
+            .filter(Boolean)
+        : [];
+      return launchGameObject(game, {
+        runtimeDataRules,
+        allowLaunchWarnings
+      });
     } catch (error) {
       log.error("Failed to launch game:", error);
       bringMainWindowToFront("launch-game-handler-error");

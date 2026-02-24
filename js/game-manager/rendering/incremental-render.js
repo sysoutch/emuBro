@@ -24,19 +24,37 @@ export function renderGamesIncremental(gamesToRender, activeView = 'cover', opti
     const setCurrentSortDir = typeof options.setCurrentSortDir === 'function' ? options.setCurrentSortDir : () => {};
 
     const view = (activeView === 'list' || activeView === 'table') ? activeView : 'cover';
-    const resolveBatchSize = () => {
-        const baseBatchSize = gameBatchSizeMap[view] || gameBatchSizeMap.cover || 0;
-        if (view !== 'cover') return baseBatchSize;
-
+    const getViewScale = () => {
         const rootStyles = getComputedStyle(document.documentElement);
         const rawScale = Number.parseFloat(String(
             rootStyles.getPropertyValue('--view-scale-user')
             || rootStyles.getPropertyValue('--view-scale')
             || '1'
         ).trim());
-        const scale = Number.isFinite(rawScale) && rawScale > 0 ? rawScale : 1;
-        const minCardWidth = 250 * scale;
-        const gap = 20 * scale;
+        return Number.isFinite(rawScale) && rawScale > 0 ? rawScale : 1;
+    };
+    const viewScale = getViewScale();
+
+    const resolveBatchSize = () => {
+        const baseBatchSize = gameBatchSizeMap[view] || gameBatchSizeMap.cover || 0;
+        if (view === 'list' || view === 'table') {
+            const scrollHost = document.querySelector('.game-scroll-body') || document.querySelector('main.game-grid') || gamesContainer.parentElement || null;
+            const viewportHeight = Math.max(360, Number(scrollHost?.clientHeight || gamesContainer.clientHeight || window.innerHeight || 0));
+            const rowHeight = view === 'table'
+                ? Math.max(68, (84 * viewScale))
+                : Math.max(96, (124 * viewScale));
+            const rowsPerViewport = Math.max(6, Math.ceil(viewportHeight / rowHeight));
+            const desiredRows = Math.ceil(rowsPerViewport * (view === 'table' ? 2.35 : 2.2));
+            const minRows = view === 'table' ? 16 : 10;
+            const maxRows = view === 'table' ? 44 : 34;
+            const limitedByConfig = baseBatchSize > 0
+                ? Math.min(baseBatchSize, desiredRows)
+                : desiredRows;
+            return Math.max(minRows, Math.min(maxRows, limitedByConfig));
+        }
+
+        const minCardWidth = 250 * viewScale;
+        const gap = 20 * viewScale;
         const containerWidth = Math.max(
             280,
             Number(gamesContainer.clientWidth || gamesContainer.getBoundingClientRect?.().width || 0)
@@ -47,12 +65,13 @@ export function renderGamesIncremental(gamesToRender, activeView = 'cover', opti
     const batchSize = resolveBatchSize();
     const totalGames = Array.isArray(gamesToRender) ? gamesToRender.length : 0;
     const totalChunks = Math.ceil(totalGames / batchSize);
-    const minChunksInDom = view === 'cover' ? 1 : 2;
-    const hardMaxChunksInDom = view === 'cover' ? 3 : (view === 'table' ? 6 : 6);
+    const minChunksInDom = view === 'cover' ? 2 : 3;
+    const hardMaxChunksInDom = view === 'cover' ? 9 : (view === 'table' ? 18 : 16);
 
     let mountTarget = null;
     let topSpacer = null;
     let bottomSpacer = null;
+    let scrollRoot = null;
 
     if (view === 'table') {
         const table = document.createElement('table');
@@ -178,13 +197,19 @@ export function renderGamesIncremental(gamesToRender, activeView = 'cover', opti
     const estimateTypicalChunkHeight = () => {
         const measuredAverage = getAverageMeasuredChunkHeight();
         if (measuredAverage > 0) return measuredAverage;
-        return view === 'cover' ? 720 : (view === 'table' ? 640 : 560);
+        if (view === 'table') {
+            return Math.max(360, Math.round(batchSize * Math.max(66, (82 * viewScale))));
+        }
+        if (view === 'list') {
+            return Math.max(360, Math.round(batchSize * Math.max(94, (118 * viewScale))));
+        }
+        return 720;
     };
     const getMaxChunksInDom = (viewportHeight = 0) => {
         const vp = Math.max(1, Number(viewportHeight) || 0);
         const estimatedHeight = Math.max(1, estimateTypicalChunkHeight());
         const visibleChunks = Math.max(1, Math.ceil(vp / estimatedHeight));
-        const target = Math.max(1, Math.ceil(visibleChunks * 1.5));
+        const target = Math.max(1, visibleChunks + (view === 'cover' ? 3 : 4));
         return Math.max(minChunksInDom, Math.min(hardMaxChunksInDom, target));
     };
 
@@ -325,10 +350,12 @@ export function renderGamesIncremental(gamesToRender, activeView = 'cover', opti
         if (chunkIndex < 0 || chunkIndex >= totalChunks) return false;
         if (renderedChunks.has(chunkIndex)) return false;
 
+        const previousTopSpacer = topSpacerHeight;
         const existingHeight = chunkHeights.get(chunkIndex) || 0;
         if (existingHeight > 0 && topSpacerHeight > 0) {
             updateTopSpacer(topSpacerHeight - existingHeight);
         }
+        const spacerReducedBy = Math.max(0, previousTopSpacer - topSpacerHeight);
 
         const chunk = createChunk(chunkIndex);
         if (!chunk) return false;
@@ -339,7 +366,13 @@ export function renderGamesIncremental(gamesToRender, activeView = 'cover', opti
 
         requestAnimationFrame(() => {
             if (renderToken !== getRenderToken()) return;
-            persistChunkHeight(chunkIndex, chunk);
+            const measuredHeight = persistChunkHeight(chunkIndex, chunk);
+            const compensation = measuredHeight - spacerReducedBy;
+            if (scrollRoot && Math.abs(compensation) >= 1) {
+                const currentTop = Number(scrollRoot.scrollTop || 0);
+                scrollRoot.scrollTop = Math.max(0, currentTop + compensation);
+                lastScrollTop = Number(scrollRoot.scrollTop || 0);
+            }
         });
 
         return true;
@@ -443,8 +476,8 @@ export function renderGamesIncremental(gamesToRender, activeView = 'cover', opti
     const initialChunks = Math.min(
         totalChunks,
         view === 'cover'
-            ? Math.max(minChunksInDom, Math.min(2, hardMaxChunksInDom))
-            : Math.max(minChunksInDom, Math.min(3, hardMaxChunksInDom))
+            ? Math.max(minChunksInDom, Math.min(3, hardMaxChunksInDom))
+            : Math.max(minChunksInDom, Math.min(5, hardMaxChunksInDom))
     );
     for (let i = 0; i < initialChunks; i += 1) {
         if (!stepDown()) break;
@@ -455,10 +488,10 @@ export function renderGamesIncremental(gamesToRender, activeView = 'cover', opti
         return;
     }
 
-    const scrollRoot = document.querySelector('.game-scroll-body') || document.querySelector('main.game-grid') || gamesContainer.parentElement || null;
+    scrollRoot = document.querySelector('.game-scroll-body') || document.querySelector('main.game-grid') || gamesContainer.parentElement || null;
     if (!scrollRoot) return;
 
-    const nearEdgeThreshold = view === 'cover' ? 680 : 420;
+    const nearEdgeThreshold = view === 'cover' ? 680 : (view === 'table' ? 760 : 840);
     let scrollTicking = false;
     let lastScrollTop = Number(scrollRoot.scrollTop || 0);
     let userScrollIntentUntil = 0;
@@ -491,18 +524,6 @@ export function renderGamesIncremental(gamesToRender, activeView = 'cover', opti
     scrollRoot.addEventListener('pointerdown', onUserPointerIntent, { passive: true });
     scrollRoot.addEventListener('touchstart', onUserTouchIntent, { passive: true });
     window.addEventListener('keydown', onUserKeyIntent, true);
-
-    const onWheel = (e) => {
-        if (!e.ctrlKey) return;
-        e.preventDefault();
-        const slider = document.getElementById('view-size-slider');
-        if (!slider || slider.disabled) return;
-        const current = parseInt(slider.value, 10);
-        const next = e.deltaY < 0 ? Math.min(140, current + 5) : Math.max(70, current - 5);
-        slider.value = String(next);
-        slider.dispatchEvent(new Event('input', { bubbles: true }));
-    };
-    gamesContainer.addEventListener('wheel', onWheel, { passive: false });
 
     const getTargetChunkIndexForViewport = (scrollTop, viewportHeight, scrollHeight) => {
         if (totalChunks <= 0) return 0;
@@ -547,6 +568,7 @@ export function renderGamesIncremental(gamesToRender, activeView = 'cover', opti
         const scrollHeight = Number(scrollRoot.scrollHeight || 0);
         const delta = scrollTop - lastScrollTop;
         lastScrollTop = scrollTop;
+        const hasMeaningfulDelta = Math.abs(delta) >= 1;
 
         const scrollDirection = delta > 0 ? 1 : (delta < 0 ? -1 : 0);
 
@@ -563,7 +585,7 @@ export function renderGamesIncremental(gamesToRender, activeView = 'cover', opti
 
         // Ignore non-user layout/reflow scroll unless we're pinned to a hard edge
         // where we still need to continue incremental loading.
-        if (!hasUserIntent && !hardNearTop && !hardNearBottom && !underfilledViewport) {
+        if (!hasUserIntent && !hasMeaningfulDelta && !hardNearTop && !hardNearBottom && !underfilledViewport) {
             return;
         }
 
@@ -571,9 +593,21 @@ export function renderGamesIncremental(gamesToRender, activeView = 'cover', opti
         const pruneLimit = Math.max(minChunksInDom, maxChunksInDom);
         const targetChunkIndex = getTargetChunkIndexForViewport(scrollTop, viewportHeight, scrollHeight);
         if (targetChunkIndex < loadedTop || targetChunkIndex > loadedBottom) {
-            const { start, end } = getRangeAroundChunk(targetChunkIndex, Math.max(minChunksInDom, maxChunksInDom));
-            resetWindowToRange(start, end);
-            return;
+            const outsideDistance = targetChunkIndex < loadedTop
+                ? (loadedTop - targetChunkIndex)
+                : (targetChunkIndex - loadedBottom);
+            const bridgeLimit = Math.max(2, pruneLimit + (view === 'cover' ? 2 : 6));
+            if (outsideDistance > bridgeLimit) {
+                const { start, end } = getRangeAroundChunk(targetChunkIndex, Math.max(minChunksInDom, maxChunksInDom));
+                resetWindowToRange(start, end);
+                return;
+            }
+            while (targetChunkIndex < loadedTop) {
+                if (!stepUp()) break;
+            }
+            while (targetChunkIndex > loadedBottom) {
+                if (!stepDown()) break;
+            }
         }
 
         // At hard edges, allow loading even when scroll delta is zero (common at the
@@ -588,7 +622,36 @@ export function renderGamesIncremental(gamesToRender, activeView = 'cover', opti
             stepUp();
         }
 
-        while (getRenderedChunkCount() > pruneLimit) {
+        const pruneGrowth = view === 'cover' ? 0.45 : 0.9;
+        const pruneThreshold = Math.min(
+            hardMaxChunksInDom,
+            pruneLimit + Math.max(1, Math.floor(pruneLimit * pruneGrowth))
+        );
+        const centerChunk = getTargetChunkIndexForViewport(
+            Math.max(0, scrollTop + Math.round(viewportHeight * 0.35)),
+            viewportHeight,
+            scrollHeight
+        );
+        const leadingKeepFactor = view === 'cover' ? 0.7 : 0.95;
+        const trailingKeepFactor = view === 'cover' ? 0.45 : 0.65;
+        const keepBefore = scrollDirection >= 0
+            ? Math.max(1, Math.ceil(pruneLimit * leadingKeepFactor))
+            : Math.max(1, Math.ceil(pruneLimit * trailingKeepFactor));
+        const keepAfter = scrollDirection <= 0
+            ? Math.max(1, Math.ceil(pruneLimit * leadingKeepFactor))
+            : Math.max(1, Math.ceil(pruneLimit * trailingKeepFactor));
+        const keepStart = Math.max(0, centerChunk - keepBefore);
+        const keepEnd = Math.min(totalChunks - 1, centerChunk + keepAfter);
+
+        while (getRenderedChunkCount() > pruneThreshold) {
+            if (loadedTop < keepStart) {
+                if (!removeChunkFromTop()) break;
+                continue;
+            }
+            if (loadedBottom > keepEnd) {
+                if (!removeChunkFromBottom()) break;
+                continue;
+            }
             if (scrollDirection > 0) {
                 if (!removeChunkFromTop()) break;
                 continue;
@@ -597,16 +660,7 @@ export function renderGamesIncremental(gamesToRender, activeView = 'cover', opti
                 if (!removeChunkFromBottom()) break;
                 continue;
             }
-            // No clear direction: prune the farther side first.
-            if (distanceToLoadedBottom > distanceToLoadedTop) {
-                if (!removeChunkFromBottom()) {
-                    if (!removeChunkFromTop()) break;
-                }
-            } else {
-                if (!removeChunkFromTop()) {
-                    if (!removeChunkFromBottom()) break;
-                }
-            }
+            break;
         }
     };
 
@@ -626,7 +680,6 @@ export function renderGamesIncremental(gamesToRender, activeView = 'cover', opti
         scrollRoot.removeEventListener('pointerdown', onUserPointerIntent);
         scrollRoot.removeEventListener('touchstart', onUserTouchIntent);
         window.removeEventListener('keydown', onUserKeyIntent, true);
-        gamesContainer.removeEventListener('wheel', onWheel);
         if (indicatorTimer) {
             window.clearTimeout(indicatorTimer);
             indicatorTimer = null;

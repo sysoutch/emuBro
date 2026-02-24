@@ -65,6 +65,36 @@
     padding: clamp(12px, 1.8vw, 18px);
 }
 
+.support-mode-switch {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+
+    > span {
+        color: var(--text-secondary);
+        font-size: 0.82rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .action-btn.small.is-active {
+        border-color: var(--accent-color);
+        color: var(--accent-color);
+        background: color-mix(in srgb, var(--accent-color), transparent 88%);
+    }
+}
+
+.support-debug-toggle {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+}
+
 .support-form-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
@@ -106,6 +136,12 @@
     display: flex;
     align-items: center;
     gap: 8px;
+
+    .action-btn.small.is-recording {
+        border-color: color-mix(in srgb, var(--accent-color), #ff4d4d 35%);
+        background: color-mix(in srgb, var(--accent-color), transparent 82%);
+        color: var(--text-primary);
+    }
 }
 
 .support-status {
@@ -136,6 +172,130 @@
     font-size: 0.9rem;
     line-height: 1.5;
     min-height: 180px;
+}
+
+.support-chat-thread {
+    display: grid;
+    gap: 10px;
+    max-height: min(52vh, 580px);
+    overflow: auto;
+    padding-right: 2px;
+}
+
+.support-chat-empty {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.support-chat-item {
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: color-mix(in srgb, var(--bg-primary), transparent 10%);
+    padding: 9px 10px;
+
+    > header {
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        font-size: 0.72rem;
+        letter-spacing: 0.05em;
+        margin-bottom: 5px;
+        font-weight: 700;
+    }
+}
+
+.support-chat-item-user {
+    border-color: color-mix(in srgb, var(--accent-color), var(--border-color) 55%);
+}
+
+.support-chat-item-assistant {
+    border-color: color-mix(in srgb, rgba(255,255,255,0.25), var(--border-color));
+}
+
+.games-container.support-mode-chat [data-support-troubleshoot-only] {
+    display: none;
+}
+
+.support-help-controls {
+    display: grid;
+    gap: 10px;
+}
+
+.support-help-list {
+    display: grid;
+    gap: 8px;
+    max-height: min(36vh, 360px);
+    overflow: auto;
+    padding-right: 2px;
+}
+
+.support-help-empty {
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+    border: 1px dashed var(--border-color);
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.support-help-item {
+    width: 100%;
+    text-align: left;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--bg-primary), transparent 8%);
+    color: var(--text-primary);
+    padding: 9px 10px;
+    cursor: pointer;
+    display: grid;
+    gap: 4px;
+
+    strong {
+        font-size: 0.84rem;
+        line-height: 1.3;
+        letter-spacing: 0.01em;
+    }
+
+    span {
+        font-size: 0.78rem;
+        line-height: 1.4;
+        color: var(--text-secondary);
+    }
+}
+
+.support-help-item.is-active {
+    border-color: var(--accent-color);
+    background: color-mix(in srgb, var(--accent-color), transparent 90%);
+}
+
+.support-help-item:hover {
+    border-color: color-mix(in srgb, var(--accent-color), var(--border-color) 45%);
+}
+
+.support-debug-panel {
+    margin-top: 10px;
+    border: 1px dashed color-mix(in srgb, var(--border-color), transparent 22%);
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: color-mix(in srgb, var(--bg-primary), transparent 8%);
+
+    summary {
+        cursor: pointer;
+        color: var(--text-secondary);
+        font-size: 0.82rem;
+        font-weight: 600;
+    }
+
+    pre {
+        margin: 8px 0 0 0;
+        max-height: min(38vh, 320px);
+        overflow: auto;
+        font-size: 0.76rem;
+        line-height: 1.4;
+        color: var(--text-primary);
+        background: color-mix(in srgb, var(--bg-secondary), transparent 14%);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 8px;
+    }
 }
 
 .support-output-markdown {

@@ -177,7 +177,7 @@ function registerEmulatorDownloadInstallHandler(deps = {}) {
     }
   }
 
-  ipcMain.handle("download-install-emulator", async (_event, payload = {}) => {
+  async function downloadInstallEmulator(payload = {}) {
     try {
       const emulator = (payload && typeof payload === "object") ? payload : {};
       const name = String(emulator?.name || "").trim();
@@ -421,7 +421,15 @@ function registerEmulatorDownloadInstallHandler(deps = {}) {
       log.error("download-install-emulator failed:", error);
       return { success: false, message: error.message };
     }
+  }
+
+  ipcMain.handle("download-install-emulator", async (_event, payload = {}) => {
+    return await downloadInstallEmulator(payload || {});
   });
+
+  return {
+    downloadInstallEmulator
+  };
 }
 
 module.exports = {

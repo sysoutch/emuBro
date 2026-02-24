@@ -19,7 +19,7 @@ function registerResourceUpdatesIpc(deps = {}) {
     throw new Error("registerResourceUpdatesIpc requires resourceOverrides");
   }
 
-  const DEFAULT_RESOURCES_MANIFEST_URL = "https://raw.githubusercontent.com/sysoutch/emubro-resources/main/manifest.json";
+  const DEFAULT_RESOURCES_MANIFEST_URL = "https://raw.githubusercontent.com/sysoutch/emubro-resources/master/manifest.json";
   const RESOURCES_MANIFEST_URL_KEY = "resources:manifest-url:v1";
   const RESOURCES_STORAGE_PATH_KEY = "resources:storage-path:v1";
   const RESOURCES_INSTALLED_VERSION_KEY = "resources:installed-version:v1";

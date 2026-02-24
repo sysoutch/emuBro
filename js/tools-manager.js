@@ -32,9 +32,12 @@ function t(key, fallback, data = {}) {
     const i18nRef = (typeof i18n !== 'undefined' && i18n && typeof i18n.t === 'function')
         ? i18n
         : (window?.i18n && typeof window.i18n.t === 'function' ? window.i18n : null);
+    let translated = '';
     if (i18nRef && typeof i18nRef.t === 'function') {
-        const translated = i18nRef.t(key, data);
-        if (translated && translated !== key) return String(translated);
+        translated = i18nRef.t(key);
+        if (typeof translated === 'string' && translated && translated !== key) {
+            return applyTemplate(translated, data);
+        }
     }
     return applyTemplate(String(fallback || key), data);
 }
@@ -404,6 +407,9 @@ export function showToolView(tool) {
     if (gamesHeader) {
         let title = t('header.tools', 'Tools');
         if (tool === 'memory-card') title = t('tools.memoryCardReader', 'Memory Card Reader');
+        else if (tool === 'cover-downloader') title = t('tools.coverDownloader', 'Cover Downloader');
+        else if (tool === 'cue-maker') title = t('tools.cueMaker', 'CUE Maker');
+        else if (tool === 'ecm-unecm') title = t('tools.ecmUnecm', 'ECM/UNECM');
         else if (tool === 'rom-ripper') title = t('tools.romRipper', 'ROM Ripper');
         else if (tool === 'game-database') title = t('tools.gameDatabase', 'Game Database');
         else if (tool === 'cheat-codes') title = t('tools.cheatCodes', 'Cheat Codes');
@@ -431,6 +437,15 @@ export function showToolView(tool) {
                 } else {
                     log.error("Memory Card tool failed to load or has no render() method");
                 }
+                break;
+            case "cover-downloader":
+                renderCoverDownloaderTool();
+                break;
+            case "cue-maker":
+                renderCueMakerTool();
+                break;
+            case "ecm-unecm":
+                renderEcmUnecmTool();
                 break;
             case "gamepad":
                 if (gamepadTool && typeof gamepadTool.render === 'function') {
@@ -472,6 +487,9 @@ function renderToolsOverview() {
     
     const tools = [
         { id: "memory-card", icon: "fas fa-memory", name: t('tools.memoryCardEditor', 'Memory Card Editor'), desc: t('tools.memoryCardEditorDesc', 'Manage PS1/PS2 save files.') },
+        { id: "cover-downloader", icon: "fas fa-image", name: t('tools.coverDownloader', 'Cover Downloader'), desc: t('tools.coverDownloaderOverviewDesc', 'Fetch PS1/PS2 covers by game serial.') },
+        { id: "cue-maker", icon: "fas fa-file-code", name: t('tools.cueMaker', 'CUE Maker'), desc: t('tools.cueMakerOverviewDesc', 'Inspect BIN files and generate missing CUE sheets.') },
+        { id: "ecm-unecm", icon: "fas fa-download", name: t('tools.ecmUnecm', 'ECM/UNECM'), desc: t('tools.ecmUnecmOverviewDesc', 'Download upstream ECM/UNECM source bundle as an external GPL tool.') },
         { id: "rom-ripper", icon: "fas fa-compact-disc", name: t('tools.romRipper', 'ROM Ripper'), desc: t('tools.romRipperOverviewDesc', 'Create backups of physical discs.') },
         { id: "game-database", icon: "fas fa-database", name: t('tools.gameDatabase', 'Game Database'), desc: t('tools.gameDatabaseOverviewDesc', 'Explore the global database.') },
         { id: "cheat-codes", icon: "fas fa-magic", name: t('tools.cheatCodes', 'Cheat Codes'), desc: t('tools.cheatCodesOverviewDesc', 'Apply GameShark or Action Replay.') },
@@ -501,6 +519,795 @@ function renderToolsOverview() {
             showToolView(card.dataset.toolId);
         });
     });
+}
+
+function normalizeCoverPlatform(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    if (!raw) return '';
+    if (raw === 'psx' || raw === 'ps2') return raw;
+    if (raw === 'ps1' || raw === 'ps') return 'psx';
+    if (raw === 'playstation' || raw === 'playstation-1') return 'psx';
+    if (raw === 'playstation2' || raw === 'playstation-2') return 'ps2';
+    return '';
+}
+
+function hasGameSerial(game) {
+    const direct = [
+        game?.code,
+        game?.productCode,
+        game?.serial,
+        game?.gameCode
+    ];
+    if (direct.some((value) => String(value || '').trim())) return true;
+    const hay = `${String(game?.name || '')} ${String(game?.filePath || '')}`.toUpperCase();
+    return /\b[A-Z]{4}[-_. ]?\d{3,7}\b/.test(hay);
+}
+
+function formatCoverDownloadResult(row) {
+    if (!row || typeof row !== 'object') return '';
+    const status = String(row.status || '').trim();
+    if (status === 'downloaded') return t('tools.coverDownloaderResultDownloaded', 'Downloaded');
+    if (status === 'reused_existing_file') return t('tools.coverDownloaderResultReused', 'Reused local cover');
+    if (status === 'skipped_existing_cover') return t('tools.coverDownloaderResultSkipped', 'Skipped');
+    if (status === 'missing_serial') return t('tools.coverDownloaderNoSerial', 'No serial/code detected for this game.');
+    if (status === 'not_found') return t('tools.coverDownloaderNotFound', 'No cover found on source repositories.');
+    return String(row.message || t('tools.coverDownloaderResultFailed', 'Failed'));
+}
+
+const COVER_SOURCE_STORAGE_KEY = 'emuBro.coverDownloader.sources.v1';
+const COVER_DEFAULT_SOURCES = Object.freeze({
+    psx: 'https://raw.githubusercontent.com/xlenore/psx-covers/main/covers/default/${serial}.jpg',
+    ps2: 'https://raw.githubusercontent.com/xlenore/ps2-covers/main/covers/default/${serial}.jpg'
+});
+
+function normalizeCoverSourceLine(value) {
+    const line = String(value || '').trim();
+    if (!line) return '';
+    if (!/^https?:\/\//i.test(line)) return '';
+    if (!line.includes('${serial}')) return '';
+    return line;
+}
+
+function parseCoverSourceTextArea(value) {
+    const seen = new Set();
+    return String(value || '')
+        .split(/\r?\n/)
+        .map((line) => normalizeCoverSourceLine(line))
+        .filter(Boolean)
+        .filter((line) => {
+            const key = line.toLowerCase();
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+}
+
+function loadCoverSourceOverrides() {
+    try {
+        const raw = localStorage.getItem(COVER_SOURCE_STORAGE_KEY);
+        if (!raw) return { psx: [], ps2: [] };
+        const parsed = JSON.parse(raw);
+        return {
+            psx: parseCoverSourceTextArea((Array.isArray(parsed?.psx) ? parsed.psx : []).join('\n')),
+            ps2: parseCoverSourceTextArea((Array.isArray(parsed?.ps2) ? parsed.ps2 : []).join('\n'))
+        };
+    } catch (_error) {
+        return { psx: [], ps2: [] };
+    }
+}
+
+function saveCoverSourceOverrides(value) {
+    const normalized = {
+        psx: parseCoverSourceTextArea((Array.isArray(value?.psx) ? value.psx : []).join('\n')),
+        ps2: parseCoverSourceTextArea((Array.isArray(value?.ps2) ? value.ps2 : []).join('\n'))
+    };
+    localStorage.setItem(COVER_SOURCE_STORAGE_KEY, JSON.stringify(normalized));
+    return normalized;
+}
+
+function renderCoverDownloaderTool() {
+    const gamesContainer = document.getElementById('games-container');
+    if (!gamesContainer) return;
+
+    const toolContent = document.createElement('div');
+    toolContent.className = 'tool-content cover-downloader-tool';
+    toolContent.innerHTML = `
+        <h3>${escapeHtml(t('tools.coverDownloader', 'Cover Downloader'))}</h3>
+        <p>${escapeHtml(t('tools.coverDownloaderDesc', 'Download PS1/PS2 covers by serial code and assign them to your games.'))}</p>
+        <p class="tool-output cover-downloader-hint">${escapeHtml(t('tools.coverDownloaderSupportedHint', 'Supports PS1 (psx-covers) and PS2 (ps2-covers) using game serials.'))}</p>
+        <div class="cover-downloader-sources">
+            <div class="cover-source-block">
+                <h4>${escapeHtml(t('tools.coverDownloaderPs1Source', 'PS1 Source'))}</h4>
+                <div class="cover-source-links" data-cover-default-links="psx"></div>
+                <label>${escapeHtml(t('tools.coverDownloaderExtraLinks', 'Extra links (one per line)'))}</label>
+                <textarea rows="3" data-cover-source-input="psx" placeholder="https://example.com/ps1/\${serial}.jpg"></textarea>
+            </div>
+            <div class="cover-source-block">
+                <h4>${escapeHtml(t('tools.coverDownloaderPs2Source', 'PS2 Source'))}</h4>
+                <div class="cover-source-links" data-cover-default-links="ps2"></div>
+                <label>${escapeHtml(t('tools.coverDownloaderExtraLinks', 'Extra links (one per line)'))}</label>
+                <textarea rows="3" data-cover-source-input="ps2" placeholder="https://example.com/ps2/\${serial}.jpg"></textarea>
+            </div>
+        </div>
+        <div class="cover-downloader-source-actions">
+            <button type="button" class="action-btn small" data-cover-action="save-sources">${escapeHtml(t('tools.coverDownloaderSaveLinks', 'Save Links'))}</button>
+            <button type="button" class="action-btn small" data-cover-action="reset-sources">${escapeHtml(t('tools.coverDownloaderResetLinks', 'Reset Extras'))}</button>
+        </div>
+
+        <div class="cover-downloader-controls">
+            <label class="cover-downloader-toggle">
+                <input type="checkbox" data-cover-only-missing checked />
+                <span>${escapeHtml(t('tools.coverDownloaderOnlyMissing', 'Only missing covers'))}</span>
+            </label>
+            <label class="cover-downloader-toggle">
+                <input type="checkbox" data-cover-overwrite />
+                <span>${escapeHtml(t('tools.coverDownloaderOverwrite', 'Overwrite existing files'))}</span>
+            </label>
+            <button type="button" class="action-btn" data-cover-action="run">${escapeHtml(t('tools.coverDownloaderRun', 'Download Covers'))}</button>
+            <button type="button" class="action-btn" data-cover-action="refresh">${escapeHtml(t('buttons.refresh', 'Refresh'))}</button>
+        </div>
+
+        <p class="tool-output" data-cover-status></p>
+        <p class="tool-output cover-downloader-stats" data-cover-stats></p>
+        <p class="tool-output cover-downloader-summary" data-cover-summary></p>
+        <div class="cover-downloader-results" data-cover-results></div>
+    `;
+    gamesContainer.appendChild(toolContent);
+
+    const statusEl = toolContent.querySelector('[data-cover-status]');
+    const statsEl = toolContent.querySelector('[data-cover-stats]');
+    const summaryEl = toolContent.querySelector('[data-cover-summary]');
+    const resultsEl = toolContent.querySelector('[data-cover-results]');
+    const onlyMissingInput = toolContent.querySelector('[data-cover-only-missing]');
+    const overwriteInput = toolContent.querySelector('[data-cover-overwrite]');
+    const runBtn = toolContent.querySelector('[data-cover-action="run"]');
+    const refreshBtn = toolContent.querySelector('[data-cover-action="refresh"]');
+    const saveSourcesBtn = toolContent.querySelector('[data-cover-action="save-sources"]');
+    const resetSourcesBtn = toolContent.querySelector('[data-cover-action="reset-sources"]');
+    const psxSourceInput = toolContent.querySelector('[data-cover-source-input="psx"]');
+    const ps2SourceInput = toolContent.querySelector('[data-cover-source-input="ps2"]');
+    const psxDefaultLinksEl = toolContent.querySelector('[data-cover-default-links="psx"]');
+    const ps2DefaultLinksEl = toolContent.querySelector('[data-cover-default-links="ps2"]');
+
+    const renderSourceLinkList = (element, links = []) => {
+        if (!element) return;
+        const rows = Array.isArray(links) ? links : [];
+        if (!rows.length) {
+            element.innerHTML = '';
+            return;
+        }
+        element.innerHTML = rows.map((link) => {
+            const safe = String(link || '').trim();
+            if (!safe) return '';
+            return `<a href="${escapeHtml(safe)}" target="_blank" rel="noopener noreferrer">${escapeHtml(safe)}</a>`;
+        }).join('');
+    };
+
+    const setStatus = (message, level = 'info') => {
+        if (!statusEl) return;
+        statusEl.textContent = String(message || '').trim();
+        statusEl.dataset.level = level;
+    };
+
+    const setSummary = (message, level = 'info') => {
+        if (!summaryEl) return;
+        summaryEl.textContent = String(message || '').trim();
+        summaryEl.dataset.level = level;
+    };
+
+    const renderResults = (rows = []) => {
+        if (!resultsEl) return;
+        const list = Array.isArray(rows) ? rows : [];
+        if (!list.length) {
+            resultsEl.innerHTML = `<div class="cover-download-row is-empty">${escapeHtml(t('tools.coverDownloaderNoResults', 'No download results yet. Click "Download Covers" to start.'))}</div>`;
+            return;
+        }
+        resultsEl.innerHTML = list.map((row) => {
+            const name = String(row?.name || `Game #${row?.gameId || '?'}`).trim();
+            const platform = String(row?.platformShortName || '').trim().toUpperCase();
+            const label = formatCoverDownloadResult(row);
+            const level = row?.success ? (row?.downloaded ? 'success' : 'info') : 'error';
+            return `
+                <div class="cover-download-row" data-level="${escapeHtml(level)}">
+                    <div class="cover-download-game">
+                        ${escapeHtml(name)} ${platform ? `<span>(${escapeHtml(platform)})</span>` : ''}
+                        ${row?.sourceUrl ? `<a href="${escapeHtml(String(row.sourceUrl))}" target="_blank" rel="noopener noreferrer">${escapeHtml(t('tools.coverDownloaderOpenSource', 'Open source'))}</a>` : ''}
+                    </div>
+                    <div class="cover-download-status">${escapeHtml(label)}</div>
+                </div>
+            `;
+        }).join('');
+    };
+
+    const getSourceOverridesFromInputs = () => ({
+        psx: parseCoverSourceTextArea(psxSourceInput?.value || ''),
+        ps2: parseCoverSourceTextArea(ps2SourceInput?.value || '')
+    });
+
+    const applySourceOverridesToInputs = (overrides) => {
+        if (psxSourceInput) psxSourceInput.value = Array.isArray(overrides?.psx) ? overrides.psx.join('\n') : '';
+        if (ps2SourceInput) ps2SourceInput.value = Array.isArray(overrides?.ps2) ? overrides.ps2.join('\n') : '';
+    };
+
+    const loadConfiguredSourceLinks = async () => {
+        renderSourceLinkList(psxDefaultLinksEl, [COVER_DEFAULT_SOURCES.psx]);
+        renderSourceLinkList(ps2DefaultLinksEl, [COVER_DEFAULT_SOURCES.ps2]);
+        try {
+            const response = await window.emubro.invoke('covers:get-source-config');
+            if (!response?.success) return;
+            const links = response?.sources || {};
+            renderSourceLinkList(psxDefaultLinksEl, Array.isArray(links.psx) && links.psx.length ? links.psx : [COVER_DEFAULT_SOURCES.psx]);
+            renderSourceLinkList(ps2DefaultLinksEl, Array.isArray(links.ps2) && links.ps2.length ? links.ps2 : [COVER_DEFAULT_SOURCES.ps2]);
+        } catch (_error) {}
+    };
+
+    const refreshStats = async () => {
+        try {
+            const games = await window.emubro.invoke('get-games');
+            const rows = Array.isArray(games) ? games : [];
+            const supported = rows.filter((game) => normalizeCoverPlatform(game?.platformShortName || game?.platform)).length;
+            const withSerial = rows.filter((game) => {
+                if (!normalizeCoverPlatform(game?.platformShortName || game?.platform)) return false;
+                return hasGameSerial(game);
+            }).length;
+            if (statsEl) {
+                statsEl.textContent = t('tools.coverDownloaderStats', 'PS1/PS2 games: {{supported}} • with serial/code: {{withSerial}}', {
+                    supported,
+                    withSerial
+                });
+            }
+        } catch (error) {
+            if (statsEl) statsEl.textContent = String(error?.message || error || '');
+        }
+    };
+
+    const setRunning = (running) => {
+        const isRunning = !!running;
+        if (runBtn) runBtn.disabled = isRunning;
+        if (refreshBtn) refreshBtn.disabled = isRunning;
+    };
+
+    if (runBtn) {
+        runBtn.addEventListener('click', async () => {
+            setRunning(true);
+            setStatus(t('tools.status.coverDownloaderRunning', 'Downloading covers...'), 'info');
+            try {
+                const result = await window.emubro.invoke('covers:download-for-library', {
+                    onlyMissing: !!onlyMissingInput?.checked,
+                    overwrite: !!overwriteInput?.checked,
+                    sourceOverrides: getSourceOverridesFromInputs()
+                });
+                if (!result?.success) {
+                    setStatus(
+                        t('tools.status.coverDownloaderFailed', 'Cover download failed: {{message}}', {
+                            message: String(result?.message || 'Unknown error')
+                        }),
+                        'error'
+                    );
+                    return;
+                }
+                setStatus('', 'info');
+                setSummary(
+                    t('tools.coverDownloaderSummary', 'Processed {{total}} game(s): {{downloaded}} downloaded, {{skipped}} skipped, {{failed}} failed.', {
+                        total: Number(result?.total || 0),
+                        downloaded: Number(result?.downloaded || 0),
+                        skipped: Number(result?.skipped || 0),
+                        failed: Number(result?.failed || 0)
+                    }),
+                    Number(result?.failed || 0) > 0 ? 'warning' : 'success'
+                );
+                renderResults(result?.results || []);
+                await refreshStats();
+            } catch (error) {
+                setStatus(
+                    t('tools.status.coverDownloaderFailed', 'Cover download failed: {{message}}', {
+                        message: String(error?.message || error || 'Unknown error')
+                    }),
+                    'error'
+                );
+            } finally {
+                setRunning(false);
+            }
+        });
+    }
+
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', async () => {
+            await refreshStats();
+        });
+    }
+
+    if (saveSourcesBtn) {
+        saveSourcesBtn.addEventListener('click', () => {
+            const saved = saveCoverSourceOverrides(getSourceOverridesFromInputs());
+            applySourceOverridesToInputs(saved);
+            setStatus(t('tools.coverDownloaderLinksSaved', 'Cover source links saved.'), 'success');
+        });
+    }
+
+    if (resetSourcesBtn) {
+        resetSourcesBtn.addEventListener('click', () => {
+            const saved = saveCoverSourceOverrides({ psx: [], ps2: [] });
+            applySourceOverridesToInputs(saved);
+            setStatus(t('tools.coverDownloaderLinksReset', 'Extra cover links reset.'), 'info');
+        });
+    }
+
+    applySourceOverridesToInputs(loadCoverSourceOverrides());
+    void loadConfiguredSourceLinks();
+    renderResults([]);
+    void refreshStats();
+}
+
+function dedupePaths(values = []) {
+    const seen = new Set();
+    return (Array.isArray(values) ? values : [])
+        .map((entry) => String(entry || '').trim())
+        .filter(Boolean)
+        .filter((entry) => {
+            const key = normalizePathForCompare(entry);
+            if (!key || seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+}
+
+function renderCueMakerTool() {
+    const gamesContainer = document.getElementById('games-container');
+    if (!gamesContainer) return;
+
+    const toolContent = document.createElement('div');
+    toolContent.className = 'tool-content cue-maker-tool';
+    toolContent.innerHTML = `
+        <h3>${escapeHtml(t('tools.cueMaker', 'CUE Maker'))}</h3>
+        <p>${escapeHtml(t('tools.cueMakerDesc', 'Inspect BIN files, detect missing CUE sheets, and generate CUE files when needed.'))}</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="action-btn" data-cue-action="pick">${escapeHtml(t('tools.cueMakerSelectBins', 'Select BIN Files'))}</button>
+            <button type="button" class="action-btn" data-cue-action="inspect">${escapeHtml(t('tools.cueMakerInspect', 'Inspect'))}</button>
+            <button type="button" class="action-btn" data-cue-action="generate">${escapeHtml(t('tools.cueMakerGenerateMissing', 'Generate Missing CUE'))}</button>
+        </div>
+        <p class="tool-output" data-cue-status></p>
+        <div class="cover-downloader-results" data-cue-results></div>
+    `;
+    gamesContainer.appendChild(toolContent);
+
+    const statusEl = toolContent.querySelector('[data-cue-status]');
+    const resultsEl = toolContent.querySelector('[data-cue-results]');
+    const pickBtn = toolContent.querySelector('[data-cue-action="pick"]');
+    const inspectBtn = toolContent.querySelector('[data-cue-action="inspect"]');
+    const generateBtn = toolContent.querySelector('[data-cue-action="generate"]');
+
+    let selectedBinPaths = [];
+    let inspectedRows = [];
+
+    const setStatus = (message, level = 'info') => {
+        if (!statusEl) return;
+        statusEl.textContent = String(message || '').trim();
+        statusEl.dataset.level = String(level || 'info');
+    };
+
+    const setRunning = (running) => {
+        const isRunning = !!running;
+        if (pickBtn) pickBtn.disabled = isRunning;
+        if (inspectBtn) inspectBtn.disabled = isRunning;
+        if (generateBtn) generateBtn.disabled = isRunning;
+    };
+
+    const renderResults = () => {
+        if (!resultsEl) return;
+        if (!Array.isArray(inspectedRows) || inspectedRows.length === 0) {
+            resultsEl.innerHTML = `<div class="cover-download-row is-empty">${escapeHtml(t('tools.cueMakerNoResults', 'No BIN files loaded yet.'))}</div>`;
+            return;
+        }
+        resultsEl.innerHTML = inspectedRows.map((row) => {
+            const binPath = String(row?.binPath || '').trim();
+            const cuePath = String(row?.cuePath || '').trim();
+            const hasCue = !!row?.hasCue;
+            return `
+                <div class="cover-download-row" data-level="${hasCue ? 'success' : 'warning'}">
+                    <div class="cover-download-game">
+                        ${escapeHtml(getFileNameFromPath(binPath) || binPath)}
+                        <span>${escapeHtml(binPath)}</span>
+                        ${cuePath ? `<span>${escapeHtml(cuePath)}</span>` : ''}
+                    </div>
+                    <div class="cover-download-status">${escapeHtml(hasCue ? t('tools.cueMakerHasCue', 'CUE found') : t('tools.cueMakerMissingCue', 'CUE missing'))}</div>
+                </div>
+            `;
+        }).join('');
+    };
+
+    const inspectPaths = async (paths = null) => {
+        const targetPaths = dedupePaths(Array.isArray(paths) ? paths : selectedBinPaths);
+        if (targetPaths.length === 0) {
+            inspectedRows = [];
+            renderResults();
+            setStatus(t('tools.cueMakerNoSelection', 'Select one or more BIN files first.'), 'warning');
+            return;
+        }
+        setRunning(true);
+        try {
+            const response = await window.emubro.invoke('cue:inspect-bin-files', targetPaths);
+            if (!response?.success) {
+                setStatus(String(response?.message || 'Failed to inspect BIN files.'), 'error');
+                return;
+            }
+            selectedBinPaths = targetPaths;
+            inspectedRows = Array.isArray(response?.results) ? response.results : [];
+            renderResults();
+            const missingCount = inspectedRows.filter((row) => !row?.hasCue).length;
+            setStatus(
+                missingCount > 0
+                    ? `${missingCount} file(s) missing CUE.`
+                    : t('tools.cueMakerAllGood', 'All selected BIN files already have CUE files.'),
+                missingCount > 0 ? 'warning' : 'success'
+            );
+        } catch (error) {
+            setStatus(String(error?.message || error || 'Failed to inspect BIN files.'), 'error');
+        } finally {
+            setRunning(false);
+        }
+    };
+
+    if (pickBtn) {
+        pickBtn.addEventListener('click', async () => {
+            try {
+                const pick = await window.emubro.invoke('open-file-dialog', {
+                    title: t('tools.cueMakerSelectBins', 'Select BIN Files'),
+                    properties: ['openFile', 'multiSelections'],
+                    filters: [
+                        { name: 'BIN Files', extensions: ['bin'] },
+                        { name: t('tools.fileDialogAllFiles', 'All Files'), extensions: ['*'] }
+                    ]
+                });
+                if (!pick || pick.canceled) return;
+                selectedBinPaths = dedupePaths(pick.filePaths);
+                await inspectPaths(selectedBinPaths);
+            } catch (error) {
+                setStatus(String(error?.message || error || 'Failed to select BIN files.'), 'error');
+            }
+        });
+    }
+
+    if (inspectBtn) {
+        inspectBtn.addEventListener('click', async () => {
+            await inspectPaths();
+        });
+    }
+
+    if (generateBtn) {
+        generateBtn.addEventListener('click', async () => {
+            const missing = inspectedRows
+                .filter((row) => !row?.hasCue)
+                .map((row) => String(row?.binPath || '').trim())
+                .filter(Boolean);
+            const target = dedupePaths(missing.length > 0 ? missing : selectedBinPaths);
+            if (target.length === 0) {
+                setStatus(t('tools.cueMakerNoSelection', 'Select one or more BIN files first.'), 'warning');
+                return;
+            }
+            setRunning(true);
+            try {
+                const result = await window.emubro.invoke('cue:generate-for-bin', target);
+                if (!result?.success) {
+                    setStatus(String(result?.message || 'Failed to generate CUE files.'), 'error');
+                    return;
+                }
+                const generatedCount = Number(result?.generated?.length || 0);
+                const existingCount = Number(result?.existing?.length || 0);
+                const failedCount = Number(result?.failed?.length || 0);
+                setStatus(
+                    t('tools.cueMakerGeneratedSummary', 'Generated {{generated}}, already existed {{existing}}, failed {{failed}}.', {
+                        generated: generatedCount,
+                        existing: existingCount,
+                        failed: failedCount
+                    }),
+                    failedCount > 0 ? 'warning' : 'success'
+                );
+                await inspectPaths(selectedBinPaths);
+            } catch (error) {
+                setStatus(String(error?.message || error || 'Failed to generate CUE files.'), 'error');
+            } finally {
+                setRunning(false);
+            }
+        });
+    }
+
+    inspectedRows = [];
+    renderResults();
+}
+
+function renderEcmUnecmTool() {
+    const gamesContainer = document.getElementById('games-container');
+    if (!gamesContainer) return;
+
+    const toolContent = document.createElement('div');
+    toolContent.className = 'tool-content ecm-unecm-tool';
+    toolContent.innerHTML = `
+        <h3>${escapeHtml(t('tools.ecmUnecm', 'ECM/UNECM'))}</h3>
+        <p>${escapeHtml(t('tools.ecmUnecmDesc', 'Download ECM/UNECM from upstream as a separate GPL tool archive (not bundled into emuBro code).'))}</p>
+        <p class="tool-output" data-ecm-note>${escapeHtml(t('tools.ecmUnecmLegalNote', 'This tool is provided by upstream under GPL. emuBro only downloads it as an external separate archive.'))}</p>
+        <p class="tool-output" data-ecm-source>${escapeHtml(t('tools.ecmUnecmNoSourceSelected', 'Source: not selected'))}</p>
+        <p class="tool-output" data-ecm-env>${escapeHtml(t('tools.ecmUnecmEnvUnknown', 'Build environment: not checked'))}</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="action-btn" data-ecm-action="download">${escapeHtml(t('tools.ecmUnecmDownloadZip', 'Download Source ZIP'))}</button>
+            <button type="button" class="action-btn" data-ecm-action="pick-source">${escapeHtml(t('tools.ecmUnecmPickSource', 'Select Source Path'))}</button>
+            <button type="button" class="action-btn" data-ecm-action="detect-env">${escapeHtml(t('tools.ecmUnecmDetectEnv', 'Detect Build Env'))}</button>
+            <button type="button" class="action-btn" data-ecm-action="build">${escapeHtml(t('tools.ecmUnecmBuild', 'Build Binaries'))}</button>
+            <button type="button" class="action-btn" data-ecm-action="repo">${escapeHtml(t('tools.ecmUnecmOpenRepo', 'Open Upstream Repo'))}</button>
+            <button type="button" class="action-btn" data-ecm-action="source-url">${escapeHtml(t('tools.ecmUnecmOpenZipUrl', 'Open ZIP URL'))}</button>
+            <button type="button" class="action-btn" data-ecm-action="show-folder" style="display:none;">${escapeHtml(t('tools.ecmUnecmShowDownload', 'Show Download'))}</button>
+            <button type="button" class="action-btn" data-ecm-action="show-build-folder" style="display:none;">${escapeHtml(t('tools.ecmUnecmShowBuild', 'Show Build Output'))}</button>
+        </div>
+        <p class="tool-output" data-ecm-status aria-live="polite"></p>
+        <div class="cover-downloader-results" data-ecm-results></div>
+    `;
+    gamesContainer.appendChild(toolContent);
+
+    const statusEl = toolContent.querySelector('[data-ecm-status]');
+    const resultsEl = toolContent.querySelector('[data-ecm-results]');
+    const noteEl = toolContent.querySelector('[data-ecm-note]');
+    const sourceEl = toolContent.querySelector('[data-ecm-source]');
+    const envEl = toolContent.querySelector('[data-ecm-env]');
+    const downloadBtn = toolContent.querySelector('[data-ecm-action="download"]');
+    const pickSourceBtn = toolContent.querySelector('[data-ecm-action="pick-source"]');
+    const detectEnvBtn = toolContent.querySelector('[data-ecm-action="detect-env"]');
+    const buildBtn = toolContent.querySelector('[data-ecm-action="build"]');
+    const repoBtn = toolContent.querySelector('[data-ecm-action="repo"]');
+    const sourceUrlBtn = toolContent.querySelector('[data-ecm-action="source-url"]');
+    const showFolderBtn = toolContent.querySelector('[data-ecm-action="show-folder"]');
+    const showBuildFolderBtn = toolContent.querySelector('[data-ecm-action="show-build-folder"]');
+
+    let lastDownloadedPath = '';
+    let selectedSourcePath = '';
+    let lastBuildOutputPath = '';
+    let info = null;
+    let detectedEnvironment = null;
+
+    const setStatus = (message, level = 'info') => {
+        if (!statusEl) return;
+        statusEl.textContent = String(message || '').trim();
+        statusEl.dataset.level = String(level || 'info');
+    };
+
+    const setSourcePath = (value) => {
+        selectedSourcePath = String(value || '').trim();
+        if (!sourceEl) return;
+        if (!selectedSourcePath) {
+            sourceEl.textContent = t('tools.ecmUnecmNoSourceSelected', 'Source: not selected');
+            return;
+        }
+        sourceEl.textContent = t('tools.ecmUnecmSourceSelected', 'Source: {{path}}', {
+            path: selectedSourcePath
+        });
+    };
+
+    const setEnvironmentSummary = (env) => {
+        detectedEnvironment = env && typeof env === 'object' ? env : null;
+        if (!envEl) return;
+        if (!detectedEnvironment) {
+            envEl.textContent = t('tools.ecmUnecmEnvUnknown', 'Build environment: not checked');
+            return;
+        }
+        const compiler = String(detectedEnvironment.recommendedCompiler || '').trim();
+        envEl.textContent = compiler
+            ? t('tools.ecmUnecmEnvDetected', 'Build environment: compiler {{compiler}} available', { compiler })
+            : t('tools.ecmUnecmEnvNoCompiler', 'Build environment detected, but no C compiler found');
+    };
+
+    const renderResults = (rows = []) => {
+        if (!resultsEl) return;
+        const list = Array.isArray(rows) ? rows : [];
+        if (list.length === 0) {
+            resultsEl.innerHTML = `<div class="cover-download-row is-empty">${escapeHtml(t('tools.ecmUnecmNoDownloadsYet', 'No downloads yet.'))}</div>`;
+            return;
+        }
+        resultsEl.innerHTML = list.map((row) => {
+            const filePath = String(row?.filePath || '').trim();
+            const sizeBytes = Number(row?.sizeBytes || 0);
+            const sizeLabel = Number.isFinite(sizeBytes) && sizeBytes > 0 ? formatBytes(sizeBytes) : '';
+            const sourceUrl = String(row?.sourceUrl || '').trim();
+            return `
+                <div class="cover-download-row" data-level="${row?.success ? 'success' : 'error'}">
+                    <div class="cover-download-game">
+                        ${escapeHtml(getFileNameFromPath(filePath) || filePath || t('tools.unknown', 'Unknown'))}
+                        <span>${escapeHtml(filePath || '')}</span>
+                        ${sourceUrl ? `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t('tools.coverDownloaderOpenSource', 'Open source'))}</a>` : ''}
+                    </div>
+                    <div class="cover-download-status">${escapeHtml(sizeLabel || (row?.success ? t('tools.coverDownloaderResultDownloaded', 'Downloaded') : t('tools.coverDownloaderResultFailed', 'Failed')))}</div>
+                </div>
+            `;
+        }).join('');
+    };
+
+    const setRunning = (running) => {
+        const isRunning = !!running;
+        if (downloadBtn) downloadBtn.disabled = isRunning;
+        if (pickSourceBtn) pickSourceBtn.disabled = isRunning;
+        if (detectEnvBtn) detectEnvBtn.disabled = isRunning;
+        if (buildBtn) buildBtn.disabled = isRunning;
+        if (repoBtn) repoBtn.disabled = isRunning;
+        if (sourceUrlBtn) sourceUrlBtn.disabled = isRunning;
+    };
+
+    const openUrl = async (url) => {
+        const target = String(url || '').trim();
+        if (!target) return;
+        try {
+            await window.emubro.invoke('open-external-url', target);
+        } catch (error) {
+            setStatus(String(error?.message || error || 'Failed to open URL.'), 'error');
+        }
+    };
+
+    const loadInfo = async () => {
+        try {
+            const response = await window.emubro.invoke('tools:ecm:get-download-info');
+            if (!response?.success) return;
+            info = response;
+            if (noteEl) {
+                noteEl.textContent = t('tools.ecmUnecmLegalNoteWithLicense', 'License: {{license}}. Downloaded separately from upstream.', {
+                    license: String(response?.license || 'GPL')
+                });
+            }
+            const envResponse = await window.emubro.invoke('tools:ecm:detect-build-env');
+            if (envResponse?.success) {
+                setEnvironmentSummary(envResponse.environment);
+            }
+        } catch (_error) {}
+    };
+
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', async () => {
+            setRunning(true);
+            setStatus(t('tools.status.ecmUnecmDownloadRunning', 'Downloading ECM/UNECM source ZIP...'), 'info');
+            try {
+                const result = await window.emubro.invoke('tools:ecm:download-source-zip', {});
+                if (!result?.success) {
+                    if (result?.canceled) {
+                        setStatus(t('tools.ecmUnecmDownloadCanceled', 'Download canceled.'), 'warning');
+                    } else {
+                        setStatus(String(result?.message || t('tools.status.ecmUnecmDownloadFailed', 'Failed to download ECM/UNECM archive.')), 'error');
+                    }
+                    return;
+                }
+                lastDownloadedPath = String(result?.filePath || '').trim();
+                if (lastDownloadedPath) {
+                    setSourcePath(lastDownloadedPath);
+                }
+                if (showFolderBtn) showFolderBtn.style.display = lastDownloadedPath ? '' : 'none';
+                renderResults([result]);
+                setStatus(t('tools.status.ecmUnecmDownloadSuccess', 'ECM/UNECM source ZIP downloaded.'), 'success');
+            } catch (error) {
+                setStatus(String(error?.message || error || t('tools.status.ecmUnecmDownloadFailed', 'Failed to download ECM/UNECM archive.')), 'error');
+            } finally {
+                setRunning(false);
+            }
+        });
+    }
+
+    if (pickSourceBtn) {
+        pickSourceBtn.addEventListener('click', async () => {
+            try {
+                const pick = await window.emubro.invoke('open-file-dialog', {
+                    title: t('tools.ecmUnecmPickSource', 'Select Source Path'),
+                    properties: ['openFile', 'openDirectory'],
+                    filters: [
+                        { name: 'ZIP Archive', extensions: ['zip'] },
+                        { name: t('tools.fileDialogAllFiles', 'All Files'), extensions: ['*'] }
+                    ]
+                });
+                if (!pick || pick.canceled || !Array.isArray(pick.filePaths) || pick.filePaths.length === 0) return;
+                const selected = String(pick.filePaths[0] || '').trim();
+                if (!selected) return;
+                setSourcePath(selected);
+                setStatus(t('tools.ecmUnecmSourcePicked', 'Source path selected.'), 'success');
+            } catch (error) {
+                setStatus(String(error?.message || error || t('tools.ecmUnecmPickSourceFailed', 'Failed to select source path.')), 'error');
+            }
+        });
+    }
+
+    if (detectEnvBtn) {
+        detectEnvBtn.addEventListener('click', async () => {
+            setRunning(true);
+            setStatus(t('tools.status.ecmUnecmDetectRunning', 'Detecting build environment...'), 'info');
+            try {
+                const response = await window.emubro.invoke('tools:ecm:detect-build-env');
+                if (!response?.success) {
+                    setStatus(String(response?.message || t('tools.status.ecmUnecmDetectFailed', 'Failed to detect build environment.')), 'error');
+                    return;
+                }
+                setEnvironmentSummary(response.environment || null);
+                setStatus(t('tools.status.ecmUnecmDetectSuccess', 'Build environment detected.'), 'success');
+            } catch (error) {
+                setStatus(String(error?.message || error || t('tools.status.ecmUnecmDetectFailed', 'Failed to detect build environment.')), 'error');
+            } finally {
+                setRunning(false);
+            }
+        });
+    }
+
+    if (buildBtn) {
+        buildBtn.addEventListener('click', async () => {
+            const sourcePath = String(selectedSourcePath || lastDownloadedPath || '').trim();
+            if (!sourcePath) {
+                setStatus(t('tools.ecmUnecmNoSourceForBuild', 'Select a source ZIP/folder first.'), 'warning');
+                return;
+            }
+            setRunning(true);
+            setStatus(t('tools.status.ecmUnecmBuildRunning', 'Building ECM/UNECM binaries...'), 'info');
+            try {
+                const result = await window.emubro.invoke('tools:ecm:build-binaries', {
+                    sourcePath,
+                    compiler: String(detectedEnvironment?.recommendedCompiler || '').trim()
+                });
+                if (!result?.success) {
+                    setStatus(String(result?.message || t('tools.status.ecmUnecmBuildFailed', 'Build failed.')), 'error');
+                    return;
+                }
+                const binaries = Array.isArray(result?.binaries) ? result.binaries : [];
+                lastBuildOutputPath = String(binaries[0] || result?.outputDir || '').trim();
+                if (showBuildFolderBtn) showBuildFolderBtn.style.display = lastBuildOutputPath ? '' : 'none';
+                const rows = binaries.map((filePath) => ({
+                    success: true,
+                    filePath,
+                    sizeBytes: 0,
+                    sourceUrl: ''
+                }));
+                renderResults(rows.length > 0 ? rows : [{
+                    success: true,
+                    filePath: String(result?.outputDir || ''),
+                    sizeBytes: 0,
+                    sourceUrl: ''
+                }]);
+                if (result?.environment) {
+                    setEnvironmentSummary(result.environment);
+                }
+                setStatus(t('tools.status.ecmUnecmBuildSuccess', 'ECM/UNECM binaries built successfully.'), 'success');
+            } catch (error) {
+                setStatus(String(error?.message || error || t('tools.status.ecmUnecmBuildFailed', 'Build failed.')), 'error');
+            } finally {
+                setRunning(false);
+            }
+        });
+    }
+
+    if (repoBtn) {
+        repoBtn.addEventListener('click', async () => {
+            await openUrl(info?.repoUrl || 'https://github.com/qeedquan/ecm/tree/master');
+        });
+    }
+
+    if (sourceUrlBtn) {
+        sourceUrlBtn.addEventListener('click', async () => {
+            await openUrl(info?.sourceZipUrl || 'https://codeload.github.com/qeedquan/ecm/zip/refs/heads/master');
+        });
+    }
+
+    if (showFolderBtn) {
+        showFolderBtn.addEventListener('click', async () => {
+            if (!lastDownloadedPath) return;
+            const result = await window.emubro.invoke('show-item-in-folder', lastDownloadedPath);
+            if (!result?.success) {
+                setStatus(String(result?.message || t('tools.status.openFolderFailed', 'Failed to open folder.')), 'error');
+            }
+        });
+    }
+
+    if (showBuildFolderBtn) {
+        showBuildFolderBtn.addEventListener('click', async () => {
+            if (!lastBuildOutputPath) return;
+            const result = await window.emubro.invoke('show-item-in-folder', lastBuildOutputPath);
+            if (!result?.success) {
+                setStatus(String(result?.message || t('tools.status.openFolderFailed', 'Failed to open folder.')), 'error');
+            }
+        });
+    }
+
+    renderResults([]);
+    setSourcePath('');
+    setEnvironmentSummary(null);
+    void loadInfo();
 }
 
 function formatBytes(byteCount) {

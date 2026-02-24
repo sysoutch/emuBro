@@ -16,8 +16,61 @@ This is a complete rewrite, now built with **Electron** and **Node.js** to provi
 - Different views
 - Export gamelist to JSON
 - Discord Rich Presence
+- **New:** LLM Support Assistant with troubleshooting + general chat modes
 - **New:** Modern architecture using Web Technologies (HTML/CSS/JS)
 - **New:** Enhanced theming engine (SASS-based)
+
+## :robot: LLM Support Assistant
+
+emuBro includes an in-app Support Assistant that can answer both emulator troubleshooting questions and app-specific "how do I use emuBro?" questions.
+
+### Support Modes
+- **Troubleshoot mode**  
+  Structured diagnostic output for emulator/runtime problems.
+- **General Chat mode**  
+  Conversational Q/A about emuBro features, workflows, settings, tools, and launcher integrations, with follow-up support.
+
+### Retrieval-Augmented Grounding (RAG-lite)
+Before sending a prompt to the LLM, emuBro builds local context from:
+- **Platform configs** in `emubro-resources/platforms/*/config.json`
+  - platform capabilities
+  - supported file/image/archive types
+  - recommended emulators
+  - emulator launch parameters
+  - BIOS-required hints
+  - Linux installer metadata (Flatpak/APT when available)
+  - launcher integration metadata (for PC config where present)
+- **Local DB state**
+  - installed emulators (name/platform/path)
+  - matching games in library (name/platform/code/path)
+  - library size and install-state summary
+
+This local context is injected into the prompt as primary grounding so answers are based on your current emuBro setup, not only model guesswork.
+
+### emuBro-aware Responses
+The assistant is designed to handle:
+- emulator issues (launch failures, graphics/audio problems, setup mistakes)
+- emuBro feature questions (views, filters, tools, imports, launcher scan flow, etc.)
+- practical next-step guidance based on your local installation and config data
+
+### Follow-up Conversation
+In **General Chat** mode:
+- user/assistant turns are kept as chat history
+- follow-up questions use prior conversation context
+- history is stored locally for continuity between sessions
+
+### Support Form Enhancements
+- **Insert PC Specs** button in Support view (Windows-focused system snapshot via WMIC/PowerShell fallback)
+- optional fields for platform, emulator, exact error text, and extra details
+- provider/model from Settings -> AI / LLM
+
+### Supported Providers
+- Ollama
+- OpenAI-compatible chat endpoints
+- Gemini-compatible endpoints
+
+### Safety Constraints
+The support prompt explicitly blocks piracy/cracked BIOS guidance and focuses on legal troubleshooting and valid setup steps.
 
 ## :warning: Prerequisites
 

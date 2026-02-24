@@ -295,6 +295,12 @@ function createLibraryDbService(deps = {}) {
       params.platform = value || null;
     }
 
+    if (Object.prototype.hasOwnProperty.call(patch, "code")) {
+      const value = String(patch.code || "").trim();
+      sets.push("code = @code");
+      params.code = value || null;
+    }
+
     if (Object.prototype.hasOwnProperty.call(patch, "emulatorOverridePath")) {
       const value = String(patch.emulatorOverridePath || "").trim();
       sets.push("emulatorOverridePath = @emulatorOverridePath");
@@ -331,6 +337,12 @@ function createLibraryDbService(deps = {}) {
       const value = String(patch.runAsUser || "").trim();
       sets.push("runAsUser = @runAsUser");
       params.runAsUser = value || null;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(patch, "image")) {
+      const value = String(patch.image || "").trim();
+      sets.push("image = @image");
+      params.image = value || null;
     }
 
     if (sets.length === 0) return dbGetGameById(targetId);

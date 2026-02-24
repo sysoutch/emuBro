@@ -274,6 +274,286 @@
     gap: 8px;
 }
 
+.cover-downloader-tool {
+    .cover-downloader-hint,
+    .cover-downloader-stats,
+    .cover-downloader-summary {
+        margin: 0;
+    }
+
+    .cover-downloader-controls {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+    }
+
+    .cover-downloader-sources {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 10px;
+        margin: 4px 0 6px;
+    }
+
+    .cover-source-block {
+        border: 1px solid color-mix(in srgb, var(--border-color), transparent 12%);
+        border-radius: var(--radius-card);
+        background: color-mix(in srgb, var(--bg-primary), transparent 14%);
+        padding: 10px;
+        display: grid;
+        gap: 6px;
+    }
+
+    .cover-source-block h4 {
+        margin: 0;
+        color: var(--text-primary);
+        font-size: 0.95rem;
+    }
+
+    .cover-source-block a {
+        color: var(--accent-light);
+        font-size: 0.78rem;
+        word-break: break-all;
+    }
+
+    .cover-source-links {
+        display: grid;
+        gap: 4px;
+    }
+
+    .cover-source-block label {
+        color: var(--text-secondary);
+        font-size: 0.82rem;
+    }
+
+    .cover-source-block textarea {
+        width: 100%;
+        border-radius: var(--radius-btn);
+        border: 1px solid var(--border-color);
+        background: color-mix(in srgb, var(--bg-secondary), transparent 18%);
+        color: var(--text-primary);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+        font-size: 0.76rem;
+        padding: 7px 8px;
+        resize: vertical;
+        min-height: 56px;
+    }
+
+    .cover-downloader-source-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 6px;
+    }
+
+    .cover-downloader-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        border: 1px solid color-mix(in srgb, var(--border-color), transparent 12%);
+        border-radius: var(--radius-btn);
+        padding: 7px 10px;
+        background: color-mix(in srgb, var(--bg-primary), transparent 18%);
+    }
+
+    .cover-downloader-results {
+        margin-top: 8px;
+        border: 1px solid color-mix(in srgb, var(--border-color), transparent 18%);
+        border-radius: var(--radius-card);
+        background: color-mix(in srgb, var(--bg-primary), transparent 14%);
+        max-height: min(50vh, 460px);
+        overflow: auto;
+    }
+
+    .cover-download-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 12px;
+        border-bottom: 1px solid color-mix(in srgb, var(--border-color), transparent 26%);
+        padding: 10px 12px;
+        font-size: 0.9rem;
+    }
+
+    .cover-download-row:last-child {
+        border-bottom: none;
+    }
+
+    .cover-download-row.is-empty {
+        color: var(--text-secondary);
+        justify-content: flex-start;
+    }
+
+    .cover-download-game {
+        color: var(--text-primary);
+        font-weight: 600;
+        overflow-wrap: anywhere;
+        display: grid;
+        gap: 4px;
+    }
+
+    .cover-download-game span {
+        color: var(--text-secondary);
+        font-weight: 500;
+        margin-left: 4px;
+    }
+
+    .cover-download-game a {
+        color: var(--accent-light);
+        font-size: 0.76rem;
+        text-decoration: underline;
+    }
+
+    .cover-download-status {
+        color: var(--text-secondary);
+        text-align: right;
+        flex-shrink: 0;
+    }
+
+    .cover-download-row[data-level="success"] .cover-download-status {
+        color: var(--success-color);
+    }
+
+    .cover-download-row[data-level="error"] .cover-download-status {
+        color: var(--danger-color);
+    }
+
+    .cover-download-row[data-level="warning"] .cover-download-status {
+        color: var(--warning-color, #f3b35a);
+    }
+}
+
+.cue-maker-tool {
+    .cover-downloader-results {
+        margin-top: 8px;
+        border: 1px solid color-mix(in srgb, var(--border-color), transparent 18%);
+        border-radius: var(--radius-card);
+        background: color-mix(in srgb, var(--bg-primary), transparent 14%);
+        max-height: min(52vh, 520px);
+        overflow: auto;
+    }
+
+    .cover-download-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 12px;
+        border-bottom: 1px solid color-mix(in srgb, var(--border-color), transparent 26%);
+        padding: 10px 12px;
+        font-size: 0.9rem;
+    }
+
+    .cover-download-row:last-child {
+        border-bottom: none;
+    }
+
+    .cover-download-row.is-empty {
+        color: var(--text-secondary);
+        justify-content: flex-start;
+    }
+
+    .cover-download-game {
+        color: var(--text-primary);
+        font-weight: 600;
+        overflow-wrap: anywhere;
+        display: grid;
+        gap: 4px;
+    }
+
+    .cover-download-game span {
+        color: var(--text-secondary);
+        font-weight: 500;
+        margin-left: 0;
+        font-size: 0.8rem;
+    }
+
+    .cover-download-status {
+        color: var(--text-secondary);
+        text-align: right;
+        flex-shrink: 0;
+    }
+
+    .cover-download-row[data-level="success"] .cover-download-status {
+        color: var(--success-color);
+    }
+
+    .cover-download-row[data-level="warning"] .cover-download-status {
+        color: var(--warning-color, #f3b35a);
+    }
+
+    .cover-download-row[data-level="error"] .cover-download-status {
+        color: var(--danger-color);
+    }
+}
+
+.ecm-unecm-tool {
+    .cover-downloader-results {
+        margin-top: 8px;
+        border: 1px solid color-mix(in srgb, var(--border-color), transparent 18%);
+        border-radius: var(--radius-card);
+        background: color-mix(in srgb, var(--bg-primary), transparent 14%);
+        max-height: min(40vh, 360px);
+        overflow: auto;
+    }
+
+    .cover-download-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 12px;
+        border-bottom: 1px solid color-mix(in srgb, var(--border-color), transparent 26%);
+        padding: 10px 12px;
+        font-size: 0.9rem;
+    }
+
+    .cover-download-row:last-child {
+        border-bottom: none;
+    }
+
+    .cover-download-row.is-empty {
+        color: var(--text-secondary);
+        justify-content: flex-start;
+    }
+
+    .cover-download-game {
+        color: var(--text-primary);
+        font-weight: 600;
+        overflow-wrap: anywhere;
+        display: grid;
+        gap: 4px;
+    }
+
+    .cover-download-game span {
+        color: var(--text-secondary);
+        font-weight: 500;
+        margin-left: 0;
+        font-size: 0.8rem;
+    }
+
+    .cover-download-game a {
+        color: var(--accent-light);
+        font-size: 0.76rem;
+        text-decoration: underline;
+    }
+
+    .cover-download-status {
+        color: var(--text-secondary);
+        text-align: right;
+        flex-shrink: 0;
+    }
+
+    .cover-download-row[data-level="success"] .cover-download-status {
+        color: var(--success-color);
+    }
+
+    .cover-download-row[data-level="error"] .cover-download-status {
+        color: var(--danger-color);
+    }
+}
+
 /* Ensure parents allow filling space */
 #games-container:has(.memory-card-editor) {
     display: block;
@@ -809,6 +1089,19 @@
         td { color: var(--accent-color); }
     }
 
+    tr.pending-delete {
+        td {
+            color: color-mix(in srgb, var(--text-secondary), var(--danger-color) 26%);
+            text-decoration: line-through;
+            opacity: 0.72;
+        }
+    }
+
+    tr.pending-rename td.col-title {
+        color: var(--warning-color, #f7b85f);
+        font-weight: 700;
+    }
+
     .centered {
         text-align: center;
         padding: 60px 20px;
@@ -833,12 +1126,38 @@
     .col-blocks { width: 70px; text-align: center; }
 }
 
+.card-slot.has-pending-format .save-table-container {
+    border-color: color-mix(in srgb, var(--warning-color, #f7b85f), var(--border-color) 58%);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warning-color, #f7b85f), transparent 45%);
+}
+
 .slot-footer {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     justify-content: flex-end;
     flex-shrink: 0;
+
+    .slot-pending-row {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-bottom: 2px;
+    }
+
+    .slot-pending-indicator {
+        margin-right: auto;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        opacity: 0.9;
+    }
+
+    .slot-pending-indicator[data-level="pending"] {
+        color: var(--warning-color, #f7b85f);
+        font-weight: 600;
+    }
 
     .action-btn.small {
         padding: 6px 12px;

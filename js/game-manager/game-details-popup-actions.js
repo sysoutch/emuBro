@@ -1165,7 +1165,7 @@ export function createGameDetailsPopupActions(deps = {}) {
 
         container.innerHTML = `
         <div class="game-detail-row game-detail-media">
-            <img src="${lazyPlaceholderSrc}" data-lazy-src="${escapeHtml(getGameImagePath(game))}" alt="${safeName}" class="detail-game-image lazy-game-image is-pending" loading="lazy" decoding="async" fetchpriority="low" />
+            <img src="${escapeHtml(getGameImagePath(game))}" alt="${safeName}" class="detail-game-image" loading="eager" decoding="async" fetchpriority="high" />
         </div>
         <div class="game-detail-row game-detail-meta">
             <p><strong>${platformLabel}:</strong> ${platformText}</p>

@@ -20,7 +20,7 @@ function registerLocalesIpc(deps = {}) {
 
   const LOCALE_FILENAME_RE = /^[a-z]{2,3}\.json$/i;
   const FLAG_CODE_RE = /^[a-z]{2}$/i;
-  const DEFAULT_LOCALES_REPO_MANIFEST_URL = "https://raw.githubusercontent.com/sysoutch/emubro-locales/main/manifest.json";
+  const DEFAULT_LOCALES_REPO_MANIFEST_URL = "https://raw.githubusercontent.com/sysoutch/emubro-locales/master/manifest.json";
   const LOCALES_REPO_MANIFEST_URL_KEY = "locales:repo-manifest-url:v1";
 
   function normalizeLocaleFilename(filename) {

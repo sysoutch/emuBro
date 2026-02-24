@@ -423,18 +423,6 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
     prevBtn.addEventListener('click', () => setIndex(currentIndex - 1));
     nextBtn.addEventListener('click', () => setIndex(currentIndex + 1));
 
-    const onWheel = (event) => {
-        if (!event.ctrlKey) return;
-        event.preventDefault();
-        const slider = document.getElementById('view-size-slider');
-        if (!slider || slider.disabled) return;
-        const current = parseInt(slider.value, 10);
-        const next = event.deltaY < 0 ? Math.min(140, current + 5) : Math.max(70, current - 5);
-        slider.value = String(next);
-        slider.dispatchEvent(new Event('input', { bubbles: true }));
-    };
-    slideshowContainer.addEventListener('wheel', onWheel, { passive: false });
-
     slideshowContainer.addEventListener('keydown', (event) => {
         if (event.key === 'ArrowLeft') {
             event.preventDefault();
@@ -469,7 +457,6 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
     setGamesScrollDetach(() => {
         clearAutoAdvance();
         stopStripInertia();
-        slideshowContainer.removeEventListener('wheel', onWheel);
         cleanupLazyGameImages(slideshowContainer);
     });
 }

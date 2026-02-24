@@ -1,5 +1,6 @@
 const fs = require('fs').promises;
 const fsSync = require('fs');
+const path = require('path');
 
 /**
  * PS1 Memory Card Handler
@@ -230,6 +231,61 @@ class PS1CardHandler {
         };
     }
 
+    async readCardBuffer(filePath) {
+        const buffer = await fs.readFile(filePath);
+        let offset = 0;
+        if (buffer.length === 131200) {
+            offset = 128;
+        } else if (buffer.length !== 131072) {
+            return { success: false, message: "Unsupported memory card size." };
+        }
+        const cardData = buffer.slice(offset, offset + 131072);
+        return { success: true, buffer, cardData, offset };
+    }
+
+    isSlotStartInUse(cardData, slot) {
+        const state = Number(cardData[slot * SECTOR_SIZE] || 0);
+        return state === 0x51;
+    }
+
+    isSlotFree(cardData, slot) {
+        const state = Number(cardData[slot * SECTOR_SIZE] || 0);
+        return state === 0xA0 || state === 0x00 || state === 0xFF;
+    }
+
+    findFirstFreeSlot(cardData) {
+        for (let slot = 1; slot <= DIR_ENTRIES; slot++) {
+            if (this.isSlotFree(cardData, slot)) return slot;
+        }
+        return 0;
+    }
+
+    getSaveBlockUsage(cardData, slot) {
+        const dirOffset = slot * SECTOR_SIZE;
+        const fileSize = Number(cardData.readUInt32LE(dirOffset + 4) || 0);
+        const blocksUsed = Math.max(1, Math.ceil(fileSize / BLOCK_SIZE));
+        return { fileSize, blocksUsed };
+    }
+
+    sanitizeAsciiName(input, maxLength = 64) {
+        const raw = String(input || "").trim();
+        if (!raw) return "Imported Save";
+        const ascii = raw.replace(/[^\x20-\x7E]+/g, " ").replace(/\s+/g, " ").trim();
+        if (!ascii) return "Imported Save";
+        return ascii.slice(0, maxLength);
+    }
+
+    buildDirectoryEntryForSingleBlock(name, fileSize = BLOCK_SIZE) {
+        const entry = Buffer.alloc(SECTOR_SIZE);
+        entry[0] = 0x51; // start of used file
+        entry.writeUInt32LE(Math.max(1, Number(fileSize || BLOCK_SIZE)), 4);
+        entry.writeUInt16LE(0xFFFF, 8); // no next block
+        const safeName = this.sanitizeAsciiName(name, 64);
+        entry.fill(0, 12, 76);
+        entry.write(safeName, 12, 64, "ascii");
+        return entry;
+    }
+
     /**
      * Delete a save from the card
      * @param {string} filePath 
@@ -237,9 +293,9 @@ class PS1CardHandler {
      */
     async deleteSave(filePath, slot) {
         try {
-            const buffer = await fs.readFile(filePath);
-            let offset = (buffer.length === 131200) ? 128 : 0;
-            const cardData = buffer.slice(offset, offset + 131072);
+            const cardView = await this.readCardBuffer(filePath);
+            if (!cardView.success) return { success: false, message: cardView.message };
+            const { buffer, cardData } = cardView;
 
             // 1. Mark Directory Frame as Free (0xA0)
             const dirOffset = slot * 128;
@@ -248,6 +304,8 @@ class PS1CardHandler {
             if (cardData[dirOffset] !== 0x51) {
                 return { success: false, message: "Slot is not the start of a file." };
             }
+            const deletedEntry = Buffer.from(cardData.slice(dirOffset, dirOffset + SECTOR_SIZE));
+            const deletedTitle = deletedEntry.slice(12, 76).toString("ascii").replace(/\0/g, "").trim();
 
             // Mark as 0xA0 (Free)
             cardData[dirOffset] = 0xA0;
@@ -263,13 +321,13 @@ class PS1CardHandler {
             
             // 3. Write back
             // If offset > 0, we need to respect it.
-            if (offset > 0) {
-                // Copy modified slice back to original buffer
-                cardData.copy(buffer, offset);
-            }
-            
             await fs.writeFile(filePath, buffer);
-            return { success: true };
+            return {
+                success: true,
+                deletedEntry: deletedEntry.toString("base64"),
+                deletedTitle: deletedTitle || "Deleted Save",
+                slot: Number(slot)
+            };
 
         } catch (error) {
             return { success: false, message: error.message };
@@ -293,9 +351,9 @@ class PS1CardHandler {
      */
     async renameSave(filePath, slot, newName) {
         try {
-            const buffer = await fs.readFile(filePath);
-            let offset = (buffer.length === 131200) ? 128 : 0;
-            const cardData = buffer.slice(offset, offset + 131072);
+            const cardView = await this.readCardBuffer(filePath);
+            if (!cardView.success) return { success: false, message: cardView.message };
+            const { buffer, cardData } = cardView;
 
             const dirOffset = slot * 128;
             if (cardData[dirOffset] !== 0x51) {
@@ -375,6 +433,183 @@ class PS1CardHandler {
             }
             
             return { success: true };
+        } catch (error) {
+            return { success: false, message: error.message };
+        }
+    }
+
+    async undeleteSave(filePath, slot, deletedEntryBase64) {
+        try {
+            const entryBuffer = Buffer.from(String(deletedEntryBase64 || ""), "base64");
+            if (entryBuffer.length !== SECTOR_SIZE) {
+                return { success: false, message: "Invalid deleted-save payload." };
+            }
+
+            const cardView = await this.readCardBuffer(filePath);
+            if (!cardView.success) return { success: false, message: cardView.message };
+            const { buffer, cardData } = cardView;
+
+            const dirOffset = Number(slot) * SECTOR_SIZE;
+            if (!this.isSlotFree(cardData, Number(slot))) {
+                return { success: false, message: "Target slot is no longer free." };
+            }
+
+            entryBuffer.copy(cardData, dirOffset);
+            if (cardData[dirOffset] !== 0x51) cardData[dirOffset] = 0x51;
+            this.updateFrameChecksum(cardData, Number(slot));
+            await fs.writeFile(filePath, buffer);
+            return { success: true };
+        } catch (error) {
+            return { success: false, message: error.message };
+        }
+    }
+
+    async createEmptyCard(filePath) {
+        try {
+            const targetPath = String(filePath || "").trim();
+            if (!targetPath) return { success: false, message: "Missing target path." };
+            await fs.mkdir(path.dirname(targetPath), { recursive: true });
+
+            const buffer = Buffer.alloc(131072);
+            buffer.write("MC", 0, "ascii");
+
+            for (let slot = 1; slot <= DIR_ENTRIES; slot++) {
+                const dirOffset = slot * SECTOR_SIZE;
+                buffer[dirOffset] = 0xA0;
+                buffer.fill(0, dirOffset + 1, dirOffset + SECTOR_SIZE);
+                this.updateFrameChecksum(buffer, slot);
+            }
+
+            await fs.writeFile(targetPath, buffer);
+            return { success: true, filePath: targetPath };
+        } catch (error) {
+            return { success: false, message: error.message };
+        }
+    }
+
+    async copySaveToCard(sourcePath, sourceSlot, targetPath) {
+        try {
+            const sourceView = await this.readCardBuffer(sourcePath);
+            if (!sourceView.success) return { success: false, message: sourceView.message };
+            const targetView = await this.readCardBuffer(targetPath);
+            if (!targetView.success) return { success: false, message: targetView.message };
+
+            const sourceCard = sourceView.cardData;
+            const targetCard = targetView.cardData;
+            const srcSlot = Number(sourceSlot);
+
+            if (!this.isSlotStartInUse(sourceCard, srcSlot)) {
+                return { success: false, message: "Source slot is empty or invalid." };
+            }
+
+            const usage = this.getSaveBlockUsage(sourceCard, srcSlot);
+            if (usage.blocksUsed !== 1) {
+                return { success: false, message: "Only single-block PS1 saves are supported for copy right now." };
+            }
+
+            const targetSlot = this.findFirstFreeSlot(targetCard);
+            if (!targetSlot) {
+                return { success: false, message: "No free slot available on target card." };
+            }
+
+            const sourceDirOffset = srcSlot * SECTOR_SIZE;
+            const sourceBlockOffset = srcSlot * BLOCK_SIZE;
+            const targetDirOffset = targetSlot * SECTOR_SIZE;
+            const targetBlockOffset = targetSlot * BLOCK_SIZE;
+
+            sourceCard.copy(targetCard, targetBlockOffset, sourceBlockOffset, sourceBlockOffset + BLOCK_SIZE);
+            sourceCard.copy(targetCard, targetDirOffset, sourceDirOffset, sourceDirOffset + SECTOR_SIZE);
+            targetCard[targetDirOffset] = 0x51;
+            this.updateFrameChecksum(targetCard, targetSlot);
+
+            await fs.writeFile(targetPath, targetView.buffer);
+            return { success: true, targetSlot };
+        } catch (error) {
+            return { success: false, message: error.message };
+        }
+    }
+
+    async exportSave(filePath, slot, outputPath) {
+        try {
+            const sourceView = await this.readCardBuffer(filePath);
+            if (!sourceView.success) return { success: false, message: sourceView.message };
+            const cardData = sourceView.cardData;
+            const srcSlot = Number(slot);
+
+            if (!this.isSlotStartInUse(cardData, srcSlot)) {
+                return { success: false, message: "Source slot is empty or invalid." };
+            }
+
+            const usage = this.getSaveBlockUsage(cardData, srcSlot);
+            if (usage.blocksUsed !== 1) {
+                return { success: false, message: "Only single-block PS1 saves can be exported right now." };
+            }
+
+            const outPath = String(outputPath || "").trim();
+            if (!outPath) return { success: false, message: "Missing output path." };
+            await fs.mkdir(path.dirname(outPath), { recursive: true });
+
+            const outBuffer = Buffer.alloc(SECTOR_SIZE + BLOCK_SIZE);
+            const dirOffset = srcSlot * SECTOR_SIZE;
+            const blockOffset = srcSlot * BLOCK_SIZE;
+            cardData.copy(outBuffer, 0, dirOffset, dirOffset + SECTOR_SIZE);
+            cardData.copy(outBuffer, SECTOR_SIZE, blockOffset, blockOffset + BLOCK_SIZE);
+            await fs.writeFile(outPath, outBuffer);
+            return { success: true, outputPath: outPath };
+        } catch (error) {
+            return { success: false, message: error.message };
+        }
+    }
+
+    async importSave(filePath, importFilePath) {
+        try {
+            const cardView = await this.readCardBuffer(filePath);
+            if (!cardView.success) return { success: false, message: cardView.message };
+            const { cardData, buffer } = cardView;
+
+            const importPath = String(importFilePath || "").trim();
+            if (!importPath) return { success: false, message: "Missing import file path." };
+            const importBuffer = await fs.readFile(importPath);
+
+            let dirEntry = null;
+            let saveBlock = null;
+
+            if (importBuffer.length >= (SECTOR_SIZE + BLOCK_SIZE)) {
+                dirEntry = Buffer.from(importBuffer.slice(0, SECTOR_SIZE));
+                saveBlock = Buffer.from(importBuffer.slice(SECTOR_SIZE, SECTOR_SIZE + BLOCK_SIZE));
+            } else if (importBuffer.length >= BLOCK_SIZE) {
+                saveBlock = Buffer.from(importBuffer.slice(0, BLOCK_SIZE));
+            } else {
+                return { success: false, message: "Import file is too small." };
+            }
+
+            if (!dirEntry) {
+                const nameFromFile = path.basename(importPath, path.extname(importPath));
+                dirEntry = this.buildDirectoryEntryForSingleBlock(nameFromFile, BLOCK_SIZE);
+            }
+
+            const fileSize = Number(dirEntry.readUInt32LE(4) || BLOCK_SIZE);
+            const blocksUsed = Math.max(1, Math.ceil(fileSize / BLOCK_SIZE));
+            if (blocksUsed !== 1) {
+                return { success: false, message: "Only single-block PS1 saves can be imported right now." };
+            }
+
+            const targetSlot = this.findFirstFreeSlot(cardData);
+            if (!targetSlot) return { success: false, message: "No free slot available on this card." };
+
+            const targetDirOffset = targetSlot * SECTOR_SIZE;
+            const targetBlockOffset = targetSlot * BLOCK_SIZE;
+
+            saveBlock.copy(cardData, targetBlockOffset, 0, BLOCK_SIZE);
+            dirEntry.copy(cardData, targetDirOffset, 0, SECTOR_SIZE);
+            cardData[targetDirOffset] = 0x51;
+            if (Number(cardData.readUInt32LE(targetDirOffset + 4) || 0) <= 0) {
+                cardData.writeUInt32LE(BLOCK_SIZE, targetDirOffset + 4);
+            }
+            this.updateFrameChecksum(cardData, targetSlot);
+
+            await fs.writeFile(filePath, buffer);
+            return { success: true, targetSlot };
         } catch (error) {
             return { success: false, message: error.message };
         }
