@@ -21,6 +21,14 @@ export function createCategoriesListRenderer(options = {}) {
     const isLlmAllowUnknownTagsEnabled = typeof options.isLlmAllowUnknownTagsEnabled === 'function' ? options.isLlmAllowUnknownTagsEnabled : () => false;
     const loadSuggestionSettings = typeof options.loadSuggestionSettings === 'function' ? options.loadSuggestionSettings : () => ({});
     const normalizeSuggestionProvider = typeof options.normalizeSuggestionProvider === 'function' ? options.normalizeSuggestionProvider : (value) => String(value || 'ollama');
+    const getSuggestionLlmRoutingSettings = typeof options.getSuggestionLlmRoutingSettings === 'function'
+        ? options.getSuggestionLlmRoutingSettings
+        : ((settings = {}) => ({
+            llmMode: String(settings?.llmMode || '').trim().toLowerCase() === 'client' ? 'client' : 'host',
+            relayHostUrl: String(settings?.relay?.hostUrl || '').trim(),
+            relayAuthToken: String(settings?.relay?.authToken || '').trim(),
+            relayPort: Number(settings?.relay?.port || 42141)
+        }));
     const openGlobalLlmTaggingSetupModal = typeof options.openGlobalLlmTaggingSetupModal === 'function' ? options.openGlobalLlmTaggingSetupModal : async () => null;
     const createGlobalLlmProgressDialog = typeof options.createGlobalLlmProgressDialog === 'function' ? options.createGlobalLlmProgressDialog : () => ({
         setStatus: () => {},
@@ -601,7 +609,16 @@ async function renderCategoriesList() {
             const model = String(settings.models?.[provider] || '').trim();
             const baseUrl = String(settings.baseUrls?.[provider] || '').trim();
             const apiKey = String(settings.apiKeys?.[provider] || '').trim();
-            if (!model || !baseUrl) {
+            const routing = getSuggestionLlmRoutingSettings(settings);
+            if (routing.llmMode === 'client' && !routing.relayHostUrl) {
+                await showGlassMessageDialog({
+                    title: t('categories.globalLlmTaggingTitle', 'Global LLM Tagging'),
+                    message: t('support.status.missingRelayHost', 'Set a relay host URL first in Settings -> AI / LLM.'),
+                    level: 'warning'
+                });
+                return;
+            }
+            if (routing.llmMode !== 'client' && (!model || !baseUrl)) {
                 await showGlassMessageDialog({
                     title: t('categories.globalLlmTaggingTitle', 'Global LLM Tagging'),
                     message: t('categories.configureLlmProviderFirst', 'Configure your LLM provider/model first in Suggested view.'),
@@ -609,7 +626,7 @@ async function renderCategoriesList() {
                 });
                 return;
             }
-            if ((provider === 'openai' || provider === 'gemini') && !apiKey) {
+            if (routing.llmMode !== 'client' && (provider === 'openai' || provider === 'gemini') && !apiKey) {
                 await showGlassMessageDialog({
                     title: t('categories.globalLlmTaggingTitle', 'Global LLM Tagging'),
                     message: t('categories.apiKeyMissingSelectedProvider', 'API key is missing for the selected provider.'),
@@ -754,6 +771,7 @@ async function renderCategoriesList() {
                             model,
                             baseUrl,
                             apiKey,
+                            ...routing,
                             maxTags: 6,
                             allowUnknownTags: isLlmAllowUnknownTagsEnabled(),
                             games: batchPayloadGames,

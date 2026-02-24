@@ -254,18 +254,20 @@ export function setupRendererEventListeners(options = {}) {
         });
     }
 
-    const contentWidthHost = document.querySelector('.game-header .filters')
-        || document.querySelector('.game-content-wrapper')
+    const contentWidthHost = document.querySelector('.game-content-wrapper')
         || document.querySelector('.game-grid')
+        || document.querySelector('.game-header')
         || document.body;
     const createElementWidthQuery = (maxWidthPx, hostEl) => {
         const target = hostEl || document.body;
         const listeners = new Set();
         let matches = false;
         let observer = null;
+        let evaluateFrame = null;
 
         const evaluate = () => {
-            const width = Number(target?.clientWidth || window.innerWidth || 0);
+            const rectWidth = Number(target?.getBoundingClientRect?.().width || 0);
+            const width = Number(rectWidth || target?.clientWidth || window.innerWidth || 0);
             const nextMatches = width <= maxWidthPx;
             if (nextMatches === matches) return;
             matches = nextMatches;
@@ -277,14 +279,22 @@ export function setupRendererEventListeners(options = {}) {
             });
         };
 
+        const scheduleEvaluate = () => {
+            if (evaluateFrame !== null) return;
+            evaluateFrame = window.requestAnimationFrame(() => {
+                evaluateFrame = null;
+                evaluate();
+            });
+        };
+
         if (typeof ResizeObserver !== 'undefined' && target) {
-            observer = new ResizeObserver(() => evaluate());
+            observer = new ResizeObserver(() => scheduleEvaluate());
             observer.observe(target);
         }
 
-        window.addEventListener('resize', evaluate);
-        window.addEventListener('emubro:layout-width-changed', evaluate);
-        evaluate();
+        window.addEventListener('resize', scheduleEvaluate);
+        window.addEventListener('emubro:layout-width-changed', scheduleEvaluate);
+        scheduleEvaluate();
 
         return {
             get matches() {
@@ -313,8 +323,12 @@ export function setupRendererEventListeners(options = {}) {
                     } catch (_error) {}
                     observer = null;
                 }
-                window.removeEventListener('resize', evaluate);
-                window.removeEventListener('emubro:layout-width-changed', evaluate);
+                if (evaluateFrame !== null) {
+                    window.cancelAnimationFrame(evaluateFrame);
+                    evaluateFrame = null;
+                }
+                window.removeEventListener('resize', scheduleEvaluate);
+                window.removeEventListener('emubro:layout-width-changed', scheduleEvaluate);
                 listeners.clear();
             }
         };
@@ -451,7 +465,7 @@ export function setupRendererEventListeners(options = {}) {
         };
 
         toggleBtn.addEventListener('click', (event) => {
-            if (!filtersCompactQuery.matches) return;
+            if (!compactQuery.matches) return;
             event.preventDefault();
             event.stopPropagation();
             setOpenState(!isOpen());
@@ -473,7 +487,7 @@ export function setupRendererEventListeners(options = {}) {
 
         window.addEventListener('resize', () => {
             if (!isOpen()) return;
-            if (!filtersCompactQuery.matches) {
+            if (!compactQuery.matches) {
                 close();
                 return;
             }
@@ -491,6 +505,23 @@ export function setupRendererEventListeners(options = {}) {
     const filtersCompactQuery = createElementWidthQuery(1500, contentWidthHost);
     const regionLanguageCompactQuery = createElementWidthQuery(1500, contentWidthHost);
     const groupSortCompactQuery = createElementWidthQuery(1200, contentWidthHost);
+    const gameHeaderEl = document.querySelector('.game-header');
+    const filtersEl = document.querySelector('.game-header .filters');
+
+    const applyFilterCompactClasses = () => {
+        const anyCompact = !!filtersCompactQuery.matches;
+        const regionCompact = !!regionLanguageCompactQuery.matches;
+        const groupCompact = !!groupSortCompactQuery.matches;
+
+        if (gameHeaderEl) {
+            gameHeaderEl.classList.toggle('is-content-compact', anyCompact);
+        }
+        if (filtersEl) {
+            filtersEl.classList.toggle('is-content-compact', anyCompact);
+            filtersEl.classList.toggle('is-region-language-compact', regionCompact);
+            filtersEl.classList.toggle('is-group-sort-compact', groupCompact);
+        }
+    };
 
     const regionLanguagePair = initCompactFilterPair({
         wrapperSelector: '.filter-pair-wrapper-region-language',
@@ -513,23 +544,27 @@ export function setupRendererEventListeners(options = {}) {
     const groupSortToggleBtn = document.getElementById('filters-group-sort-toggle');
     if (regionLanguageToggleBtn) {
         regionLanguageToggleBtn.addEventListener('click', () => {
-            if (!filtersCompactQuery.matches) return;
+            if (!regionLanguageCompactQuery.matches) return;
             if (regionLanguagePair.isOpen()) groupSortPair.close();
         });
     }
     if (groupSortToggleBtn) {
         groupSortToggleBtn.addEventListener('click', () => {
-            if (!filtersCompactQuery.matches) return;
+            if (!groupSortCompactQuery.matches) return;
             if (groupSortPair.isOpen()) regionLanguagePair.close();
         });
     }
 
     const syncCompactFilterPairs = () => {
-        regionLanguagePair.close();
-        groupSortPair.close();
+        applyFilterCompactClasses();
+        if (!regionLanguageCompactQuery.matches || !filtersCompactQuery.matches) regionLanguagePair.close();
+        if (!groupSortCompactQuery.matches || !filtersCompactQuery.matches) groupSortPair.close();
     };
 
+    applyFilterCompactClasses();
+
     const queries = [
+        filtersCompactQuery,
         regionLanguagePair.compactQuery,
         groupSortPair.compactQuery
     ].filter(Boolean);

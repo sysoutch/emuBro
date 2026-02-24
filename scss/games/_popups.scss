@@ -23,10 +23,10 @@
 
 #game-info-modal #game-info-header h2 {
     margin: 0;
-    text-transform: none;
-    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
     font-size: 1.02rem;
-    color: var(--text-primary);
+    color: var(--accent-color);
 }
 
 #game-info-modal .theme-manager-body.game-info-popup-body {
@@ -39,6 +39,20 @@
     display: grid;
     grid-template-columns: 112px 1fr;
     gap: 12px;
+}
+
+#game-info-modal .game-detail-title {
+    grid-column: 1 / -1;
+    margin-bottom: 2px;
+}
+
+#game-info-modal .game-detail-name {
+    margin: 0;
+    font-size: 1.05rem;
+    line-height: 1.28;
+    letter-spacing: 0.01em;
+    color: var(--text-primary);
+    word-break: break-word;
 }
 
 #game-info-modal .game-detail-actions {

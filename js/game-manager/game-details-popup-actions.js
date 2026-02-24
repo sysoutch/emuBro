@@ -1,6 +1,7 @@
 import {
     normalizeSuggestionProvider,
-    loadSuggestionSettings
+    loadSuggestionSettings,
+    getSuggestionLlmRoutingSettings
 } from '../suggestions-settings';
 import { showTextInputDialog } from '../ui/text-input-dialog';
 
@@ -258,13 +259,18 @@ export function createGameDetailsPopupActions(deps = {}) {
             const model = String(settings.models?.[provider] || '').trim();
             const baseUrl = String(settings.baseUrls?.[provider] || '').trim();
             const apiKey = String(settings.apiKeys?.[provider] || '').trim();
+            const routing = getSuggestionLlmRoutingSettings(settings);
             const allowUnknownTags = !!isLlmAllowUnknownTagsEnabled();
 
-            if (!model || !baseUrl) {
+            if (routing.llmMode === 'client' && !routing.relayHostUrl) {
+                alertUser('Set a relay host URL first in Settings -> AI / LLM.');
+                return;
+            }
+            if (routing.llmMode !== 'client' && (!model || !baseUrl)) {
                 alertUser('Configure your LLM provider/model first in Suggested view.');
                 return;
             }
-            if ((provider === 'openai' || provider === 'gemini') && !apiKey) {
+            if (routing.llmMode !== 'client' && (provider === 'openai' || provider === 'gemini') && !apiKey) {
                 alertUser('API key is missing for the selected provider.');
                 return;
             }
@@ -278,6 +284,7 @@ export function createGameDetailsPopupActions(deps = {}) {
                     model,
                     baseUrl,
                     apiKey,
+                    ...routing,
                     maxTags: 6,
                     allowUnknownTags,
                     game: {
@@ -1164,6 +1171,9 @@ export function createGameDetailsPopupActions(deps = {}) {
             : '';
 
         container.innerHTML = `
+        <div class="game-detail-row game-detail-title">
+            <h3 class="game-detail-name">${safeName}</h3>
+        </div>
         <div class="game-detail-row game-detail-media">
             <img src="${escapeHtml(getGameImagePath(game))}" alt="${safeName}" class="detail-game-image" loading="eager" decoding="async" fetchpriority="high" />
         </div>
@@ -1267,7 +1277,7 @@ export function createGameDetailsPopupActions(deps = {}) {
         if (!popup) return;
         const popupTitle = popup.querySelector('#game-info-popup-title');
         const popupBody = popup.querySelector('#game-info-popup-body');
-        if (popupTitle) popupTitle.textContent = game.name || 'Game Details';
+        if (popupTitle) popupTitle.textContent = 'Game Details';
         renderGameDetailsMarkup(popupBody, game);
 
         if (gameInfoPopupPinned || popup.classList.contains('docked-right')) {

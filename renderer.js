@@ -47,7 +47,7 @@ import {
     searchForGamesAndEmulators
 } from './js/game-manager';
 import { showToolView } from './js/tools-manager';
-import { showSupportView } from './js/support-manager';
+import { showSupportView, teardownSupportView } from './js/support-manager';
 import { showCommunityView, teardownCommunityView } from './js/community-manager';
 import { showGlassMessageDialog } from './js/ui/glass-message-dialog';
 import { openGlobalLlmTaggingSetupModal, createGlobalLlmProgressDialog } from './js/ui/llm-tagging-dialogs';
@@ -57,7 +57,8 @@ import {
     normalizeSuggestionScope,
     getDefaultSuggestionPromptTemplate,
     loadSuggestionSettings,
-    saveSuggestionSettings
+    saveSuggestionSettings,
+    getSuggestionLlmRoutingSettings
 } from './js/suggestions-settings';
 import {
     buildSuggestionLibraryPayloadFromRows,
@@ -297,6 +298,7 @@ categoriesListRenderer = createCategoriesListRenderer({
     isLlmAllowUnknownTagsEnabled: () => llmAllowUnknownTags,
     loadSuggestionSettings,
     normalizeSuggestionProvider,
+    getSuggestionLlmRoutingSettings,
     openGlobalLlmTaggingSetupModal,
     createGlobalLlmProgressDialog,
     getSectionFilteredGames,
@@ -448,8 +450,27 @@ function setAppMode(mode) {
     if (previousTopSection === 'community' && activeTopSection !== 'community') {
         teardownCommunityView();
     }
+    if (previousTopSection === 'support' && activeTopSection !== 'support') {
+        teardownSupportView();
+    }
 
     const isLibrary = activeTopSection === 'library';
+    if (!isLibrary) {
+        // Library detail panels should not keep the right dock reserved in non-library views.
+        ['game-info-modal', 'emulator-info-modal'].forEach((modalId) => {
+            const modal = document.getElementById(modalId);
+            if (!modal) return;
+            const isDocked = modal.classList.contains('docked-right');
+            if (isDocked) {
+                completelyRemoveFromDock(modalId);
+            } else {
+                removeFromDock(modalId);
+            }
+            modal.classList.remove('active');
+            modal.style.display = 'none';
+        });
+    }
+
     const viewControls = document.querySelector('.view-controls');
     if (viewControls) {
         viewControls.classList.toggle('is-hidden', !isLibrary);

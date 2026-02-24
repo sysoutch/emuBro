@@ -70,13 +70,57 @@ export async function openLibraryPathSettingsModal(options = {}) {
         llmAllowUnknownTags: localStorage.getItem(LLM_ALLOW_UNKNOWN_TAGS_KEY) === 'true'
     };
     const llmSettings = typeof options.loadSuggestionSettings === 'function' ? options.loadSuggestionSettings() : {};
+    const normalizeLlmMode = (value) => String(value || '').trim().toLowerCase() === 'client' ? 'client' : 'host';
+    const normalizeRelayAccessMode = (value) => {
+        const mode = String(value || '').trim().toLowerCase();
+        if (mode === 'whitelist' || mode === 'blacklist') return mode;
+        return 'open';
+    };
+    const normalizeRelayAddressList = (values) => {
+        const rows = Array.isArray(values)
+            ? values
+            : String(values || '')
+                .split(/[\r\n,;]+/g)
+                .map((row) => String(row || '').trim())
+                .filter(Boolean);
+        const seen = new Set();
+        const out = [];
+        rows.forEach((row) => {
+            const key = row.toLowerCase();
+            if (seen.has(key)) return;
+            seen.add(key);
+            out.push(row);
+        });
+        return out;
+    };
+    const normalizeRelayPort = (value, fallback = 42141) => {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed)) return fallback;
+        const rounded = Math.round(parsed);
+        if (rounded < 1 || rounded > 65535) return fallback;
+        return rounded;
+    };
     const llmDraft = {
         provider: String(llmSettings.provider || 'ollama'),
+        llmMode: normalizeLlmMode(llmSettings.llmMode),
         models: llmSettings.models || {},
         baseUrls: llmSettings.baseUrls || {},
         apiKeys: llmSettings.apiKeys || {},
+        relay: {
+            hostUrl: String(llmSettings.relay?.hostUrl || '').trim(),
+            authToken: String(llmSettings.relay?.authToken || '').trim(),
+            port: normalizeRelayPort(llmSettings.relay?.port, 42141),
+            enabled: !!llmSettings.relay?.enabled,
+            accessMode: normalizeRelayAccessMode(llmSettings.relay?.accessMode),
+            whitelist: normalizeRelayAddressList(llmSettings.relay?.whitelist),
+            blacklist: normalizeRelayAddressList(llmSettings.relay?.blacklist)
+        },
         promptTemplate: llmSettings.promptTemplate || ''
     };
+    let llmRelayScanStatus = '';
+    let llmRelayScanResults = [];
+    let llmRelayHostStatus = null;
+    let llmRelayConnections = [];
     if (!generalDraft.llmHelpersEnabled && generalDraft.defaultSection === SUGGESTED_SECTION_KEY) {
         generalDraft.defaultSection = 'all';
     }
@@ -475,6 +519,53 @@ export async function openLibraryPathSettingsModal(options = {}) {
         const baseUrl = llmDraft.baseUrls[provider] || '';
         const apiKey = llmDraft.apiKeys[provider] || '';
         const isOllama = provider === 'ollama';
+        const llmMode = normalizeLlmMode(llmDraft.llmMode);
+        const relayPort = normalizeRelayPort(llmDraft.relay?.port, 42141);
+        const relayHostUrl = String(llmDraft.relay?.hostUrl || '').trim();
+        const relayAuthToken = String(llmDraft.relay?.authToken || '').trim();
+        const relayEnabled = !!llmDraft.relay?.enabled;
+        const relayAccessMode = normalizeRelayAccessMode(llmDraft.relay?.accessMode);
+        const relayWhitelist = normalizeRelayAddressList(llmDraft.relay?.whitelist);
+        const relayBlacklist = normalizeRelayAddressList(llmDraft.relay?.blacklist);
+        const relayWhitelistText = escapeAttr(relayWhitelist.join('\n'));
+        const relayBlacklistText = escapeAttr(relayBlacklist.join('\n'));
+        const relayHostStatusText = llmRelayHostStatus?.status?.running
+            ? `Incoming relay is running on port ${Number(llmRelayHostStatus?.status?.port || relayPort)}.`
+            : 'Incoming relay is currently disabled.';
+        const relayRows = (Array.isArray(llmRelayScanResults) ? llmRelayScanResults : [])
+            .map((row) => {
+                const url = escapeAttr(String(row?.url || '').trim());
+                const host = escapeAttr(String(row?.hostname || row?.host || '').trim() || 'Unknown host');
+                const version = escapeAttr(String(row?.version || '').trim());
+                const latency = Number.isFinite(Number(row?.latencyMs)) ? `${Math.round(Number(row.latencyMs))} ms` : '';
+                return `
+                    <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-primary);">
+                        <div style="min-width:0;">
+                            <div style="font-size:0.85rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${host}${version ? ` <span style="opacity:0.75;font-weight:500;">(${version})</span>` : ''}</div>
+                            <div style="font-size:0.78rem;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${url}${latency ? ` - ${escapeAttr(latency)}` : ''}</div>
+                        </div>
+                        <button type="button" class="action-btn small" data-llm-pick-host="${url}">Use</button>
+                    </div>
+                `;
+            })
+            .join('');
+        const relayConnectionRows = (Array.isArray(llmRelayConnections) ? llmRelayConnections : [])
+            .map((row) => {
+                const remoteAddress = escapeAttr(String(row?.remoteAddress || '').trim() || 'unknown');
+                const clientName = escapeAttr(String(row?.clientName || '').trim() || 'client');
+                const lastPath = escapeAttr(String(row?.lastPath || '').trim() || '-');
+                const lastSeen = Number.isFinite(Number(row?.lastSeenAt))
+                    ? new Date(Number(row.lastSeenAt)).toLocaleString()
+                    : '-';
+                return `
+                    <div style="padding:8px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-primary);display:grid;gap:2px;">
+                        <div style="font-size:0.84rem;font-weight:600;">${remoteAddress} <span style="opacity:0.72;font-weight:500;">(${clientName})</span></div>
+                        <div style="font-size:0.75rem;color:var(--text-secondary);">last: ${lastPath} | requests: ${Number(row?.requestCount || 0)} | denied: ${Number(row?.deniedCount || 0)} | auth fail: ${Number(row?.authFailCount || 0)}</div>
+                        <div style="font-size:0.75rem;color:var(--text-secondary);">seen: ${escapeAttr(lastSeen)}</div>
+                    </div>
+                `;
+            })
+            .join('');
 
         return `
             <section style="display:grid;gap:12px;">
@@ -484,6 +575,13 @@ export async function openLibraryPathSettingsModal(options = {}) {
                         Configure providers for game suggestions and automated tagging.
                     </p>
                     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;">
+                        <label style="display:flex;flex-direction:column;gap:6px;">
+                            <span style="font-size:0.82rem;color:var(--text-secondary);">Mode</span>
+                            <select data-llm="mode">
+                                <option value="host"${llmMode === 'host' ? ' selected' : ''}>Host (default)</option>
+                                <option value="client"${llmMode === 'client' ? ' selected' : ''}>Client</option>
+                            </select>
+                        </label>
                         <label style="display:flex;flex-direction:column;gap:6px;">
                             <span style="font-size:0.82rem;color:var(--text-secondary);">Provider</span>
                             <select data-llm="provider">
@@ -507,21 +605,102 @@ export async function openLibraryPathSettingsModal(options = {}) {
                             `}
                         </label>
                     </div>
-                    <label style="display:flex;flex-direction:column;gap:6px;">
+                    <label style="display:flex;flex-direction:column;gap:6px;${llmMode === 'client' ? 'opacity:0.72;' : ''}">
                         <span style="font-size:0.82rem;color:var(--text-secondary);">API Base URL</span>
-                        <input type="text" data-llm="base-url" value="${baseUrl}" placeholder="${isOllama ? 'http://127.0.0.1:11434' : 'https://api.openai.com/v1'}" />
+                        <input type="text" data-llm="base-url" value="${baseUrl}" placeholder="${isOllama ? 'http://127.0.0.1:11434' : 'https://api.openai.com/v1'}"${llmMode === 'client' ? ' disabled' : ''} />
                     </label>
                     ${!isOllama ? `
-                    <label style="display:flex;flex-direction:column;gap:6px;">
+                    <label style="display:flex;flex-direction:column;gap:6px;${llmMode === 'client' ? 'opacity:0.72;' : ''}">
                         <span style="font-size:0.82rem;color:var(--text-secondary);">API Key</span>
-                        <input type="password" data-llm="api-key" value="${apiKey}" placeholder="sk-..." autocomplete="off" />
+                        <input type="password" data-llm="api-key" value="${apiKey}" placeholder="sk-..." autocomplete="off"${llmMode === 'client' ? ' disabled' : ''} />
                     </label>
                     ` : `
                     <div style="font-size:0.8rem;color:var(--text-secondary);opacity:0.8;" data-llm="status"></div>
                     `}
+                    <div style="border-top:1px solid var(--border-color);padding-top:10px;display:grid;gap:10px;">
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;">
+                            <label style="display:flex;flex-direction:column;gap:6px;">
+                                <span style="font-size:0.82rem;color:var(--text-secondary);">Relay Port</span>
+                                <input type="number" min="1" max="65535" step="1" data-llm="relay-port" value="${relayPort}" />
+                            </label>
+                            <label style="display:flex;flex-direction:column;gap:6px;">
+                                <span style="font-size:0.82rem;color:var(--text-secondary);">Shared Token (optional)</span>
+                                <input type="password" data-llm="relay-token" value="${escapeAttr(relayAuthToken)}" placeholder="Leave empty for open LAN access" autocomplete="off" />
+                            </label>
+                        </div>
+                        ${llmMode === 'client' ? `
+                        <div style="display:grid;gap:8px;">
+                            <label style="display:flex;flex-direction:column;gap:6px;">
+                                <span style="font-size:0.82rem;color:var(--text-secondary);">Host URL</span>
+                                <input type="text" data-llm="client-host-url" value="${escapeAttr(relayHostUrl)}" placeholder="http://192.168.1.40:42141" />
+                            </label>
+                            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                                <button type="button" class="action-btn small" data-llm="scan-network">Scan Network</button>
+                            </div>
+                            <div style="font-size:0.82rem;color:var(--text-secondary);" data-llm="scan-status">${escapeAttr(llmRelayScanStatus || 'Scan your local network for other running emuBro hosts.')}</div>
+                            ${relayRows ? `<div style="display:grid;gap:6px;max-height:220px;overflow:auto;">${relayRows}</div>` : ''}
+                        </div>
+                        ` : `
+                        <div style="display:grid;gap:8px;">
+                            <label style="display:flex;align-items:center;gap:8px;">
+                                <input type="checkbox" data-llm="relay-enabled"${relayEnabled ? ' checked' : ''} />
+                                <span>Enable incoming client connections</span>
+                            </label>
+                            <label style="display:flex;flex-direction:column;gap:6px;${relayEnabled ? '' : 'opacity:0.72;'}">
+                                <span style="font-size:0.82rem;color:var(--text-secondary);">Access Mode</span>
+                                <select data-llm="relay-access-mode"${relayEnabled ? '' : ' disabled'}>
+                                    <option value="open"${relayAccessMode === 'open' ? ' selected' : ''}>Open LAN (token recommended)</option>
+                                    <option value="whitelist"${relayAccessMode === 'whitelist' ? ' selected' : ''}>Whitelist only</option>
+                                    <option value="blacklist"${relayAccessMode === 'blacklist' ? ' selected' : ''}>Blacklist</option>
+                                </select>
+                            </label>
+                            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;${relayEnabled ? '' : 'opacity:0.72;'}">
+                                <label style="display:flex;flex-direction:column;gap:6px;">
+                                    <span style="font-size:0.82rem;color:var(--text-secondary);">Whitelist IP/Host (one per line)</span>
+                                    <textarea data-llm="relay-whitelist" rows="4"${relayEnabled ? '' : ' disabled'}>${relayWhitelistText}</textarea>
+                                </label>
+                                <label style="display:flex;flex-direction:column;gap:6px;">
+                                    <span style="font-size:0.82rem;color:var(--text-secondary);">Blacklist IP/Host (one per line)</span>
+                                    <textarea data-llm="relay-blacklist" rows="4"${relayEnabled ? '' : ' disabled'}>${relayBlacklistText}</textarea>
+                                </label>
+                            </div>
+                            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                                <button type="button" class="action-btn small" data-llm="refresh-connections">Refresh Connected Devices</button>
+                            </div>
+                            <div style="font-size:0.82rem;color:var(--text-secondary);">${escapeAttr(relayHostStatusText)}</div>
+                            ${relayConnectionRows
+                                ? `<div style="display:grid;gap:6px;max-height:240px;overflow:auto;">${relayConnectionRows}</div>`
+                                : '<div style="font-size:0.82rem;color:var(--text-secondary);">No connected devices recorded yet.</div>'}
+                        </div>
+                        `}
+                    </div>
                 </section>
             </section>
         `;
+    };
+
+    const refreshRelayHostData = async ({ skipRender = false } = {}) => {
+        try {
+            const statusResult = await emubro.invoke('suggestions:relay:get-status');
+            if (statusResult?.success) {
+                llmRelayHostStatus = statusResult;
+                if (statusResult?.relay && typeof statusResult.relay === 'object') {
+                    llmDraft.relay.enabled = !!statusResult.relay.enabled;
+                    llmDraft.relay.port = normalizeRelayPort(statusResult.relay.port, llmDraft.relay.port || 42141);
+                    llmDraft.relay.accessMode = normalizeRelayAccessMode(statusResult.relay.accessMode);
+                    llmDraft.relay.whitelist = normalizeRelayAddressList(statusResult.relay.whitelist);
+                    llmDraft.relay.blacklist = normalizeRelayAddressList(statusResult.relay.blacklist);
+                }
+            }
+            const connectionsResult = await emubro.invoke('suggestions:relay:get-connections');
+            if (connectionsResult?.success) {
+                llmRelayConnections = Array.isArray(connectionsResult.connections) ? connectionsResult.connections : [];
+            }
+        } catch (_error) {
+            llmRelayHostStatus = null;
+            llmRelayConnections = [];
+        }
+        if (!skipRender) render();
     };
 
     const renderGeneralTab = () => `
@@ -969,6 +1148,13 @@ export async function openLibraryPathSettingsModal(options = {}) {
                 render();
             });
         }
+        const llmModeSelect = modal.querySelector('[data-llm="mode"]');
+        if (llmModeSelect) {
+            llmModeSelect.addEventListener('change', () => {
+                llmDraft.llmMode = normalizeLlmMode(llmModeSelect.value);
+                render();
+            });
+        }
         const llmModelInput = modal.querySelector('[data-llm="model"]');
         if (llmModelInput) {
             llmModelInput.addEventListener('input', () => {
@@ -995,6 +1181,49 @@ export async function openLibraryPathSettingsModal(options = {}) {
                 llmDraft.apiKeys[llmDraft.provider] = llmApiKeyInput.value;
             });
         }
+        const llmRelayPortInput = modal.querySelector('[data-llm="relay-port"]');
+        if (llmRelayPortInput) {
+            llmRelayPortInput.addEventListener('input', () => {
+                llmDraft.relay.port = normalizeRelayPort(llmRelayPortInput.value, 42141);
+            });
+        }
+        const llmRelayEnabledInput = modal.querySelector('[data-llm="relay-enabled"]');
+        if (llmRelayEnabledInput) {
+            llmRelayEnabledInput.addEventListener('change', () => {
+                llmDraft.relay.enabled = !!llmRelayEnabledInput.checked;
+                render();
+            });
+        }
+        const llmRelayAccessModeInput = modal.querySelector('[data-llm="relay-access-mode"]');
+        if (llmRelayAccessModeInput) {
+            llmRelayAccessModeInput.addEventListener('change', () => {
+                llmDraft.relay.accessMode = normalizeRelayAccessMode(llmRelayAccessModeInput.value);
+            });
+        }
+        const llmRelayTokenInput = modal.querySelector('[data-llm="relay-token"]');
+        if (llmRelayTokenInput) {
+            llmRelayTokenInput.addEventListener('input', () => {
+                llmDraft.relay.authToken = String(llmRelayTokenInput.value || '').trim();
+            });
+        }
+        const llmRelayWhitelistInput = modal.querySelector('[data-llm="relay-whitelist"]');
+        if (llmRelayWhitelistInput) {
+            llmRelayWhitelistInput.addEventListener('input', () => {
+                llmDraft.relay.whitelist = normalizeRelayAddressList(llmRelayWhitelistInput.value);
+            });
+        }
+        const llmRelayBlacklistInput = modal.querySelector('[data-llm="relay-blacklist"]');
+        if (llmRelayBlacklistInput) {
+            llmRelayBlacklistInput.addEventListener('input', () => {
+                llmDraft.relay.blacklist = normalizeRelayAddressList(llmRelayBlacklistInput.value);
+            });
+        }
+        const llmClientHostUrlInput = modal.querySelector('[data-llm="client-host-url"]');
+        if (llmClientHostUrlInput) {
+            llmClientHostUrlInput.addEventListener('input', () => {
+                llmDraft.relay.hostUrl = String(llmClientHostUrlInput.value || '').trim();
+            });
+        }
         const llmRefreshBtn = modal.querySelector('[data-llm="refresh-models"]');
         if (llmRefreshBtn && llmModelSelect) {
             llmRefreshBtn.addEventListener('click', async () => {
@@ -1003,7 +1232,11 @@ export async function openLibraryPathSettingsModal(options = {}) {
                 if (statusEl) statusEl.textContent = 'Fetching models...';
                 try {
                     const result = await emubro.invoke('suggestions:list-ollama-models', { 
-                        baseUrl: llmDraft.baseUrls['ollama'] 
+                        baseUrl: llmDraft.baseUrls['ollama'],
+                        llmMode: normalizeLlmMode(llmDraft.llmMode),
+                        relayHostUrl: String(llmDraft.relay?.hostUrl || '').trim(),
+                        relayAuthToken: String(llmDraft.relay?.authToken || '').trim(),
+                        relayPort: normalizeRelayPort(llmDraft.relay?.port, 42141)
                     });
                     if (result?.success && Array.isArray(result.models)) {
                         const current = llmDraft.models['ollama'] || '';
@@ -1029,6 +1262,61 @@ export async function openLibraryPathSettingsModal(options = {}) {
                 }
             });
         }
+
+        const llmScanNetworkBtn = modal.querySelector('[data-llm="scan-network"]');
+        if (llmScanNetworkBtn) {
+            llmScanNetworkBtn.addEventListener('click', async () => {
+                llmScanNetworkBtn.disabled = true;
+                llmRelayScanStatus = 'Scanning local network...';
+                render();
+                try {
+                    const result = await emubro.invoke('suggestions:relay:scan-network', {
+                        port: normalizeRelayPort(llmDraft.relay?.port, 42141),
+                        relayAuthToken: String(llmDraft.relay?.authToken || '').trim(),
+                        timeoutMs: 280
+                    });
+                    if (!result?.success) {
+                        llmRelayScanStatus = String(result?.message || 'Network scan failed.');
+                        llmRelayScanResults = [];
+                        render();
+                        return;
+                    }
+
+                    llmRelayScanResults = Array.isArray(result.hosts) ? result.hosts : [];
+                    llmRelayScanStatus = llmRelayScanResults.length
+                        ? `Found ${llmRelayScanResults.length} host(s).`
+                        : 'No emuBro hosts found on the local network.';
+                    render();
+                } catch (error) {
+                    llmRelayScanStatus = String(error?.message || error || 'Network scan failed.');
+                    llmRelayScanResults = [];
+                    render();
+                } finally {
+                    llmScanNetworkBtn.disabled = false;
+                }
+            });
+        }
+        const llmRefreshConnectionsBtn = modal.querySelector('[data-llm="refresh-connections"]');
+        if (llmRefreshConnectionsBtn) {
+            llmRefreshConnectionsBtn.addEventListener('click', async () => {
+                llmRefreshConnectionsBtn.disabled = true;
+                try {
+                    await refreshRelayHostData({ skipRender: false });
+                } finally {
+                    llmRefreshConnectionsBtn.disabled = false;
+                }
+            });
+        }
+
+        modal.querySelectorAll('[data-llm-pick-host]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const url = String(button.getAttribute('data-llm-pick-host') || '').trim();
+                if (!url) return;
+                llmDraft.relay.hostUrl = url;
+                llmRelayScanStatus = `Selected host: ${url}`;
+                render();
+            });
+        });
 
         const openThemeBtn = modal.querySelector('[data-settings-open-theme]');
         if (openThemeBtn) openThemeBtn.addEventListener('click', () => openThemeManager());
@@ -1336,6 +1624,25 @@ export async function openLibraryPathSettingsModal(options = {}) {
                     if (typeof options.saveSuggestionSettings === 'function') {
                         options.saveSuggestionSettings(llmDraft);
                     }
+                    try {
+                        const relaySyncResult = await emubro.invoke('suggestions:relay:sync-host-settings', {
+                            provider: llmDraft.provider,
+                            models: llmDraft.models,
+                            baseUrls: llmDraft.baseUrls,
+                            apiKeys: llmDraft.apiKeys,
+                            relay: {
+                                enabled: !!llmDraft.relay?.enabled,
+                                port: normalizeRelayPort(llmDraft.relay?.port, 42141),
+                                authToken: String(llmDraft.relay?.authToken || '').trim(),
+                                accessMode: normalizeRelayAccessMode(llmDraft.relay?.accessMode),
+                                whitelist: normalizeRelayAddressList(llmDraft.relay?.whitelist),
+                                blacklist: normalizeRelayAddressList(llmDraft.relay?.blacklist)
+                            }
+                        });
+                        if (relaySyncResult?.success) {
+                            llmRelayHostStatus = relaySyncResult;
+                        }
+                    } catch (_error) {}
 
                     activeLibrarySection = normalizeLibrarySection(generalDraft.defaultSection || 'all');
                     setActiveLibrarySectionState(activeLibrarySection);
@@ -1390,4 +1697,5 @@ export async function openLibraryPathSettingsModal(options = {}) {
     render();
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
+    refreshRelayHostData({ skipRender: false }).catch(() => {});
 }

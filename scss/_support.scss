@@ -68,6 +68,7 @@
 .support-mode-switch {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 10px;
 
@@ -87,12 +88,16 @@
 }
 
 .support-debug-toggle {
-    margin-left: auto;
+    margin-left: 0;
     display: inline-flex;
     align-items: center;
     gap: 6px;
     color: var(--text-secondary);
     font-size: 0.8rem;
+}
+
+.support-mode-switch > .support-debug-toggle:first-of-type {
+    margin-left: auto;
 }
 
 .support-form-grid {
@@ -357,6 +362,10 @@
 @media (max-width: 720px) {
     .support-hero {
         padding: 18px 16px;
+    }
+
+    .support-debug-toggle {
+        margin-left: 0;
     }
 
     .support-actions {

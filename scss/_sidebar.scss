@@ -4,7 +4,10 @@
     --sidebar-expanded-width: 290px;
     --sidebar-collapsed-width: var(--sidebar-rail-width);
 
+    flex: 0 0 var(--sidebar-expanded-width);
+    flex-shrink: 0;
     width: var(--sidebar-expanded-width);
+    min-width: var(--sidebar-collapsed-width);
     padding: 0;
     overflow: hidden;
     border-right: 1px solid var(--glass-border);
@@ -15,10 +18,12 @@
 }
 
 .sidebar.sidebar--collapsed {
+    flex-basis: var(--sidebar-collapsed-width);
     width: var(--sidebar-collapsed-width);
 }
 
 .sidebar.sidebar--expanded {
+    flex-basis: var(--sidebar-expanded-width);
     width: var(--sidebar-expanded-width);
 }
 

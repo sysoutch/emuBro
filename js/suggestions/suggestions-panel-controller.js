@@ -4,7 +4,8 @@ import {
     normalizeSuggestionScope,
     getDefaultSuggestionPromptTemplate,
     loadSuggestionSettings,
-    saveSuggestionSettings
+    saveSuggestionSettings,
+    getSuggestionLlmRoutingSettings
 } from '../suggestions-settings';
 import {
     buildSuggestionLibraryPayloadFromRows,
@@ -65,9 +66,24 @@ export function createSuggestionsPanelController(options = {}) {
 
     async function fetchOllamaModels(baseUrl, options = {}) {
         const normalizedBaseUrl = String(baseUrl || '').trim();
-        if (!normalizedBaseUrl) return { success: false, models: [], message: t('suggested.status.setOllamaUrlFirst', 'Set an Ollama API URL first.') };
+        const routing = options?.routing || {};
+        const llmMode = String(routing?.llmMode || 'host').trim().toLowerCase() === 'client' ? 'client' : 'host';
+        const relayHostUrl = String(routing?.relayHostUrl || '').trim();
+        const relayPort = Number(routing?.relayPort || 42141);
 
-        const cacheKey = normalizedBaseUrl.toLowerCase();
+        if (llmMode === 'client' && !relayHostUrl) {
+            return { success: false, models: [], message: t('support.status.missingRelayHost', 'Set a relay host URL first in Settings -> AI / LLM.') };
+        }
+        if (llmMode !== 'client' && !normalizedBaseUrl) {
+            return { success: false, models: [], message: t('suggested.status.setOllamaUrlFirst', 'Set an Ollama API URL first.') };
+        }
+
+        const cacheKey = [
+            normalizedBaseUrl.toLowerCase(),
+            llmMode,
+            relayHostUrl.toLowerCase(),
+            String(relayPort)
+        ].join('::');
         if (!options.force && ollamaModelsCacheByUrl.has(cacheKey)) {
             return {
                 success: true,
@@ -76,7 +92,10 @@ export function createSuggestionsPanelController(options = {}) {
             };
         }
 
-        const result = await emubro.invoke('suggestions:list-ollama-models', { baseUrl: normalizedBaseUrl });
+        const result = await emubro.invoke('suggestions:list-ollama-models', {
+            baseUrl: normalizedBaseUrl,
+            ...routing
+        });
         if (!result?.success) {
             return {
                 success: false,
@@ -170,6 +189,7 @@ export function createSuggestionsPanelController(options = {}) {
         const model = selectedModel;
         const baseUrl = String(nextSettings.baseUrls?.[provider] || '').trim();
         const apiKey = String(nextSettings.apiKeys?.[provider] || '').trim();
+        const routing = getSuggestionLlmRoutingSettings(nextSettings);
         
         const shouldSendLibrary = !!sendLibraryToggle?.checked;
         const libraryGames = shouldSendLibrary 
@@ -179,15 +199,19 @@ export function createSuggestionsPanelController(options = {}) {
             })
             : [];
 
-        if (!model) {
+        if (routing.llmMode === 'client' && !routing.relayHostUrl) {
+            status.textContent = t('support.status.missingRelayHost', 'Set a relay host URL first in Settings -> AI / LLM.');
+            return;
+        }
+        if (routing.llmMode !== 'client' && !model) {
             status.textContent = t('suggested.status.setModelFirst', 'Set a model first.');
             return;
         }
-        if (!baseUrl) {
+        if (routing.llmMode !== 'client' && !baseUrl) {
             status.textContent = t('suggested.status.setProviderUrlFirst', 'Set a provider URL first.');
             return;
         }
-        if ((provider === 'openai' || provider === 'gemini') && !apiKey) {
+        if (routing.llmMode !== 'client' && (provider === 'openai' || provider === 'gemini') && !apiKey) {
             status.textContent = t('suggested.status.apiKeyRequired', 'API key is required for this provider.');
             return;
         }
@@ -210,6 +234,7 @@ export function createSuggestionsPanelController(options = {}) {
                 model,
                 baseUrl,
                 apiKey,
+                ...routing,
                 limit: nextSettings.limit,
                 libraryGames,
                 selectedPlatformOnly: nextSettings.selectedPlatformOnly,
@@ -419,12 +444,13 @@ export function createSuggestionsPanelController(options = {}) {
             
             const currentModel = String(modelSelect?.value || currentSettings.models?.ollama || '').trim();
             const baseUrl = String(currentSettings.baseUrls?.ollama || '').trim();
+            const routing = getSuggestionLlmRoutingSettings(currentSettings);
             
             if (refreshModelsBtn) refreshModelsBtn.disabled = true;
             if (status) status.textContent = t('suggested.status.loadingOllamaModels', 'Loading Ollama models...');
 
             try {
-                const result = await fetchOllamaModels(baseUrl, { force });
+                const result = await fetchOllamaModels(baseUrl, { force, routing });
                 if (!result?.success) {
                     populateOllamaModelSelect([], currentModel || 'llama3.1');
                     if (status) status.textContent = String(result?.message || t('suggested.status.failedFetchOllamaModels', 'Failed to fetch Ollama models.'));

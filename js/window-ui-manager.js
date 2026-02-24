@@ -133,14 +133,90 @@ export function setupWindowControls(options = {}) {
 }
 
 export function setupHeaderThemeControlsToggle(options = {}) {
-    const themeCompactQuery = window.matchMedia('(max-width: 1500px)');
-    const languageCompactQuery = window.matchMedia('(max-width: 1320px)');
+    const root = document.documentElement;
+    const header = document.querySelector('header.header');
     const themeSelect = options.themeSelect || document.getElementById('theme-select');
     const themeManagerBtn = document.getElementById('theme-manager-btn');
     const themeToggleBtn = document.getElementById('theme-toggle-btn');
     const invertColorsBtn = document.getElementById('invert-colors-btn');
     const languageManagerBtn = document.getElementById('language-manager-btn');
     const languageOptions = document.getElementById('language-options');
+
+    const getHeaderWidth = () => {
+        if (!header) return Number(window?.innerWidth || 0);
+        return Math.max(0, Math.round(header.getBoundingClientRect().width || 0));
+    };
+
+    const createHeaderWidthQuery = (maxWidth) => {
+        const listeners = new Set();
+        let match = getHeaderWidth() <= Number(maxWidth || 0);
+
+        const evaluate = () => {
+            const next = getHeaderWidth() <= Number(maxWidth || 0);
+            if (next === match) return;
+            match = next;
+            listeners.forEach((listener) => {
+                try {
+                    listener({ matches: match });
+                } catch (_error) {}
+            });
+        };
+
+        return {
+            get matches() {
+                return !!match;
+            },
+            addEventListener(type, listener) {
+                if (type !== 'change' || typeof listener !== 'function') return;
+                listeners.add(listener);
+            },
+            removeEventListener(type, listener) {
+                if (type !== 'change') return;
+                listeners.delete(listener);
+            },
+            addListener(listener) {
+                if (typeof listener !== 'function') return;
+                listeners.add(listener);
+            },
+            removeListener(listener) {
+                listeners.delete(listener);
+            },
+            evaluate
+        };
+    };
+
+    const themeCompactQuery = createHeaderWidthQuery(1460);
+    const languageCompactQuery = createHeaderWidthQuery(1260);
+
+    let densityRaf = null;
+
+    const applyHeaderDensityMode = () => {
+        if (!root || !header) return;
+
+        const headerWidth = getHeaderWidth();
+        const userActionsEl = header.querySelector('.user-actions');
+        const navList = header.querySelector('.navigation ul');
+        const navOverflow = !!(navList && navList.scrollWidth > (navList.clientWidth + 8));
+        const actionsOverflow = !!(userActionsEl && userActionsEl.scrollWidth > (userActionsEl.clientWidth + 8));
+
+        let density = 'normal';
+        if (themeCompactQuery.matches || navOverflow || headerWidth <= 1380) density = 'compact';
+        if (languageCompactQuery.matches || actionsOverflow || headerWidth <= 1180) density = 'tiny';
+        if (density === 'compact' && actionsOverflow) density = 'tiny';
+        if (root.getAttribute('data-header-density') !== density) {
+            root.setAttribute('data-header-density', density);
+        }
+    };
+
+    const scheduleHeaderDensityMode = () => {
+        if (densityRaf !== null) return;
+        densityRaf = window.requestAnimationFrame(() => {
+            densityRaf = null;
+            themeCompactQuery.evaluate();
+            languageCompactQuery.evaluate();
+            applyHeaderDensityMode();
+        });
+    };
 
     const initCompactWrapper = ({
         wrapperSelector,
@@ -515,6 +591,10 @@ export function setupHeaderThemeControlsToggle(options = {}) {
     } else if (typeof languageCompactQuery.addListener === 'function') {
         languageCompactQuery.addListener(syncLayout);
     }
+
+    applyHeaderDensityMode();
+    window.addEventListener('resize', scheduleHeaderDensityMode, { passive: true });
+    window.addEventListener('emubro:layout-width-changed', scheduleHeaderDensityMode);
 
 }
 

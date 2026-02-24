@@ -1,7 +1,11 @@
 import { makeDraggable } from './theme-manager';
 import { updateUILanguage, populateLanguageSelector, invalidateFlagCache } from './i18n-manager';
 import { showTextInputDialog } from './ui/text-input-dialog';
-import { loadSuggestionSettings, normalizeSuggestionProvider } from './suggestions-settings';
+import {
+    loadSuggestionSettings,
+    normalizeSuggestionProvider,
+    getSuggestionLlmRoutingSettings
+} from './suggestions-settings';
 
 const emubro = window.emubro;
 let baseLanguageCache = null;
@@ -1291,7 +1295,7 @@ function getLlmTranslationConfig() {
     const model = String(settings?.models?.[provider] || '').trim();
     const baseUrl = String(settings?.baseUrls?.[provider] || '').trim();
     const apiKey = String(settings?.apiKeys?.[provider] || '').trim();
-    return { provider, model, baseUrl, apiKey };
+    return { provider, model, baseUrl, apiKey, ...getSuggestionLlmRoutingSettings(settings) };
 }
 
 function normalizeLlmTranslationMode(mode, fallback = LLM_TRANSLATION_MODE_ALL_IN_ONE_JSON) {
@@ -1381,16 +1385,29 @@ async function translateMissingKeysWithLlm(buttonEl) {
         return;
     }
 
-    const { provider, model, baseUrl, apiKey } = getLlmTranslationConfig();
-    if (!model) {
+    const {
+        provider,
+        model,
+        baseUrl,
+        apiKey,
+        llmMode,
+        relayHostUrl,
+        relayAuthToken,
+        relayPort
+    } = getLlmTranslationConfig();
+    if (llmMode === 'client' && !relayHostUrl) {
+        setLlmTranslateStatus('Set a relay host URL first in Settings -> AI / LLM.', 'error');
+        return;
+    }
+    if (llmMode !== 'client' && !model) {
         setLlmTranslateStatus(i18n.t('language.translateLlmNeedModel'), 'error');
         return;
     }
-    if (!baseUrl) {
+    if (llmMode !== 'client' && !baseUrl) {
         setLlmTranslateStatus(i18n.t('language.translateLlmNeedBaseUrl'), 'error');
         return;
     }
-    if ((provider === 'openai' || provider === 'gemini') && !apiKey) {
+    if (llmMode !== 'client' && (provider === 'openai' || provider === 'gemini') && !apiKey) {
         setLlmTranslateStatus(i18n.t('language.translateLlmNeedApiKey'), 'error');
         return;
     }
@@ -1420,6 +1437,10 @@ async function translateMissingKeysWithLlm(buttonEl) {
                 model,
                 baseUrl,
                 apiKey,
+                llmMode,
+                relayHostUrl,
+                relayAuthToken,
+                relayPort,
                 sourceLanguageCode: 'en',
                 targetLanguageCode: currentLangData.code,
                 targetLanguageName: targetName,
@@ -1448,6 +1469,10 @@ async function translateMissingKeysWithLlm(buttonEl) {
                     model,
                     baseUrl,
                     apiKey,
+                    llmMode,
+                    relayHostUrl,
+                    relayAuthToken,
+                    relayPort,
                     sourceLanguageCode: 'en',
                     targetLanguageCode: currentLangData.code,
                     targetLanguageName: targetName,

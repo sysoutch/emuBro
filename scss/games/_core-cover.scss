@@ -144,6 +144,146 @@
     display: none;
 }
 
+.game-header.is-content-compact {
+    overflow: visible;
+}
+
+.game-header.is-content-compact h2 {
+    max-width: clamp(140px, 24vw, 300px);
+    font-size: clamp(1.22rem, 1.8vw, 1.62rem);
+}
+
+.filters.is-content-compact {
+    flex: 0 1 auto;
+    min-width: 0;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    gap: 6px;
+    overflow: visible;
+    white-space: nowrap;
+}
+
+.filters.is-content-compact > * {
+    flex: 0 0 auto;
+}
+
+.filters.is-content-compact #platform-filter {
+    width: clamp(146px, 20vw, 190px);
+}
+
+.filters.is-content-compact .filter-pair-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: stretch;
+    min-width: 0;
+}
+
+.filters.is-content-compact .filter-pair-wrapper.is-open {
+    z-index: 140;
+}
+
+.filter-pair-floating-menu {
+    position: fixed;
+    z-index: 3800;
+    padding: 8px;
+    border: 1px solid color-mix(in srgb, var(--border-color), var(--accent-color) 24%);
+    border-radius: var(--radius-card);
+    background: color-mix(in srgb, var(--bg-secondary), transparent 4%);
+    backdrop-filter: blur(12px) saturate(1.08);
+    -webkit-backdrop-filter: blur(12px) saturate(1.08);
+    box-shadow:
+        0 16px 34px color-mix(in srgb, var(--glass-shadow), transparent 16%),
+        0 0 0 1px color-mix(in srgb, var(--accent-color), transparent 88%) inset;
+    display: grid;
+    gap: 8px;
+    max-height: min(56vh, 420px);
+    overflow: auto;
+}
+
+.filter-pair-floating-menu .filter-pair-compact-block {
+    display: grid;
+    gap: 6px;
+}
+
+.filter-pair-floating-menu .filter-pair-compact-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+
+.filter-pair-floating-menu .filter-pair-compact-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.filter-pair-floating-menu .filter-pair-compact-option {
+    border: 1px solid color-mix(in srgb, var(--border-color), var(--accent-color) 20%);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bg-secondary), transparent 10%);
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+    white-space: nowrap;
+}
+
+.filter-pair-floating-menu .filter-pair-compact-option:hover {
+    border-color: color-mix(in srgb, var(--accent-color), white 18%);
+    color: var(--text-primary);
+}
+
+.filter-pair-floating-menu .filter-pair-compact-option.is-active {
+    border-color: color-mix(in srgb, var(--accent-color), white 18%);
+    background: color-mix(in srgb, var(--accent-color), transparent 78%);
+    color: var(--text-primary);
+}
+
+.filters.is-content-compact .filter-pair-toggle {
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 0 10px;
+    border: 1px solid color-mix(in srgb, var(--border-color), var(--accent-color) 20%);
+    border-radius: var(--radius-btn);
+    background: color-mix(in srgb, var(--bg-secondary), var(--bg-tertiary) 24%);
+    color: var(--text-secondary);
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+}
+
+.filters.is-content-compact .filter-pair-wrapper.is-open .filter-pair-toggle,
+.filters.is-content-compact .filter-pair-wrapper .filter-pair-toggle:hover {
+    border-color: color-mix(in srgb, var(--accent-color), white 18%);
+    color: var(--text-primary);
+}
+
+.filters.is-region-language-compact .filter-pair-wrapper-region-language .filter-pair-toggle {
+    display: inline-flex;
+}
+
+.filters.is-region-language-compact .filter-pair-wrapper-region-language .filter-pair-content,
+.filters.is-region-language-compact .filter-pair-wrapper-region-language .filter-pair-content select {
+    display: none !important;
+}
+
+.filters.is-group-sort-compact .filter-pair-wrapper-group-sort .filter-pair-toggle {
+    display: inline-flex;
+}
+
+.filters.is-group-sort-compact .filter-pair-wrapper-group-sort .filter-pair-content,
+.filters.is-group-sort-compact .filter-pair-wrapper-group-sort .filter-pair-content select {
+    display: none !important;
+}
+
 /* Region+Language compact stage */
 @media (max-width: 1500px) {
     .game-header {

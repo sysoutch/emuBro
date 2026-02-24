@@ -1,5 +1,6 @@
 const { execFile } = require("node:child_process");
 const { promisify } = require("node:util");
+const os = require("node:os");
 
 const execFileAsync = promisify(execFile);
 
@@ -31,6 +32,102 @@ function createSuggestionsProviderClient(deps = {}) {
 
   function normalizeOllamaBaseUrl(baseUrl) {
     return normalizeText(baseUrl, "http://127.0.0.1:11434").replace(/\/+$/g, "");
+  }
+
+  function normalizeRelayMode(mode) {
+    return String(mode || "").trim().toLowerCase() === "client" ? "client" : "host";
+  }
+
+  function normalizeRelayPort(value, fallback = 42141) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return fallback;
+    const rounded = Math.round(parsed);
+    if (rounded < 1 || rounded > 65535) return fallback;
+    return rounded;
+  }
+
+  function normalizeRelayHostUrl(payload = {}) {
+    const raw = normalizeText(
+      payload?.relayHostUrl
+      || payload?.clientHostUrl
+      || payload?.relay?.hostUrl
+    );
+    if (!raw) return "";
+
+    let text = raw;
+    if (!/^https?:\/\//i.test(text)) {
+      text = `http://${text}`;
+    }
+
+    try {
+      const parsed = new URL(text);
+      if (!parsed.port) {
+        parsed.port = String(normalizeRelayPort(payload?.relayPort || payload?.relay?.port));
+      }
+      parsed.pathname = "";
+      parsed.search = "";
+      parsed.hash = "";
+      return parsed.toString().replace(/\/+$/g, "");
+    } catch (_error) {
+      return "";
+    }
+  }
+
+  function normalizeRelayAuthToken(payload = {}) {
+    return normalizeText(payload?.relayAuthToken || payload?.relay?.authToken);
+  }
+
+  function shouldUseRelay(payload = {}) {
+    const mode = normalizeRelayMode(payload?.llmMode);
+    if (mode !== "client") return false;
+    return !!normalizeRelayHostUrl(payload);
+  }
+
+  function buildRelayHeaders(payload = {}) {
+    const headers = {
+      "content-type": "application/json"
+    };
+    const token = normalizeRelayAuthToken(payload);
+    if (token) headers["x-emubro-relay-token"] = token;
+    const clientHost = normalizeText(os?.hostname?.());
+    if (clientHost) headers["x-emubro-client-host"] = clientHost;
+    return headers;
+  }
+
+  function sanitizeRelayPayload(payload = {}) {
+    const out = {
+      ...payload,
+      llmMode: "host",
+      relayHostUrl: "",
+      relayAuthToken: "",
+      relayPort: 0
+    };
+    return out;
+  }
+
+  async function postRelayRequest(endpointPath, payload = {}, body = {}) {
+    const hostUrl = normalizeRelayHostUrl(payload);
+    if (!hostUrl) {
+      throw new Error("Client mode is enabled but no relay host URL is configured.");
+    }
+
+    const endpoint = `${hostUrl}${String(endpointPath || "").startsWith("/") ? endpointPath : `/${endpointPath}`}`;
+    const response = await fetchImpl(endpoint, {
+      method: "POST",
+      headers: buildRelayHeaders(payload),
+      body: JSON.stringify(body || {})
+    });
+    const rawText = await response.text();
+    let json = null;
+    try {
+      json = JSON.parse(String(rawText || "{}"));
+    } catch (_error) {}
+
+    if (!response.ok) {
+      const message = normalizeText(json?.message, String(rawText || "").slice(0, 220));
+      throw new Error(`Relay request failed (${response.status}): ${message || "unknown error"}`);
+    }
+    return (json && typeof json === "object") ? json : {};
   }
 
   function getOllamaApiEndpoint(baseUrl, pathPart) {
@@ -113,6 +210,19 @@ function createSuggestionsProviderClient(deps = {}) {
   }
 
   async function listOllamaModels(payload = {}) {
+    if (shouldUseRelay(payload)) {
+      const relayJson = await postRelayRequest("/api/llm/list-ollama-models", payload, {
+        payload: sanitizeRelayPayload(payload)
+      });
+      if (!relayJson?.success) {
+        throw new Error(normalizeText(relayJson?.message, "Relay model list request failed."));
+      }
+      return {
+        baseUrl: normalizeText(relayJson?.baseUrl),
+        models: Array.isArray(relayJson?.models) ? relayJson.models : []
+      };
+    }
+
     const baseUrl = normalizeOllamaBaseUrl(payload.baseUrl);
     const endpoints = [
       { url: getOllamaApiEndpoint(baseUrl, "tags"), type: "tags" },
@@ -301,6 +411,16 @@ function createSuggestionsProviderClient(deps = {}) {
   }
 
   async function requestJson(payload = {}) {
+    if (shouldUseRelay(payload)) {
+      const relayJson = await postRelayRequest("/api/llm/request-json", payload, {
+        payload: sanitizeRelayPayload(payload)
+      });
+      if (!relayJson?.success) {
+        throw new Error(normalizeText(relayJson?.message, "Relay JSON request failed."));
+      }
+      return normalizeText(relayJson?.text);
+    }
+
     const provider = normalizeProvider(payload?.provider);
     if (provider === "openai") return requestOpenAIJson(payload);
     if (provider === "gemini") return requestGeminiJson(payload);
@@ -431,6 +551,21 @@ function createSuggestionsProviderClient(deps = {}) {
   }
 
   async function requestText(payload = {}, options = {}) {
+    if (shouldUseRelay(payload)) {
+      const relayJson = await postRelayRequest("/api/llm/request-text", payload, {
+        payload: sanitizeRelayPayload(payload),
+        options: {
+          prompt: normalizeText(options?.prompt),
+          systemPrompt: normalizeText(options?.systemPrompt),
+          temperature: normalizeTemperature(options?.temperature, 0.3)
+        }
+      });
+      if (!relayJson?.success) {
+        throw new Error(normalizeText(relayJson?.message, "Relay text request failed."));
+      }
+      return normalizeText(relayJson?.text);
+    }
+
     const provider = normalizeProvider(payload?.provider);
     if (provider === "openai") return requestOpenAIText(payload, options);
     if (provider === "gemini") return requestGeminiText(payload, options);

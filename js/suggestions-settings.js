@@ -12,6 +12,61 @@ export function normalizeSuggestionProvider(provider) {
     return 'ollama';
 }
 
+export function normalizeSuggestionLlmMode(mode) {
+    return String(mode || '').trim().toLowerCase() === 'client' ? 'client' : 'host';
+}
+
+export function normalizeSuggestionRelayPort(value, fallback = 42141) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return fallback;
+    const rounded = Math.round(parsed);
+    if (rounded < 1 || rounded > 65535) return fallback;
+    return rounded;
+}
+
+export function normalizeSuggestionRelayConfig(relay) {
+    const source = relay && typeof relay === 'object' ? relay : {};
+    const normalizeAccessMode = (value) => {
+        const mode = String(value || '').trim().toLowerCase();
+        if (mode === 'whitelist' || mode === 'blacklist') return mode;
+        return 'open';
+    };
+    const normalizeAddressList = (values) => {
+        if (!Array.isArray(values)) return [];
+        const seen = new Set();
+        const out = [];
+        values.forEach((value) => {
+            const text = String(value || '').trim();
+            if (!text) return;
+            const key = text.toLowerCase();
+            if (seen.has(key)) return;
+            seen.add(key);
+            out.push(text);
+        });
+        return out;
+    };
+    return {
+        hostUrl: String(source.hostUrl || source.clientHostUrl || '').trim(),
+        authToken: String(source.authToken || '').trim(),
+        port: normalizeSuggestionRelayPort(source.port, 42141),
+        enabled: !!source.enabled,
+        accessMode: normalizeAccessMode(source.accessMode),
+        whitelist: normalizeAddressList(source.whitelist),
+        blacklist: normalizeAddressList(source.blacklist)
+    };
+}
+
+export function getSuggestionLlmRoutingSettings(settings = {}) {
+    const source = settings && typeof settings === 'object' ? settings : {};
+    const relay = normalizeSuggestionRelayConfig(source.relay);
+    return {
+        llmMode: normalizeSuggestionLlmMode(source.llmMode),
+        relayHostUrl: relay.hostUrl,
+        relayAuthToken: relay.authToken,
+        relayPort: relay.port
+    };
+}
+
 export function normalizeSuggestionScope(scope) {
     const value = String(scope || '').trim().toLowerCase();
     if (value === 'library-only' || value === 'library-plus-missing') return value;
@@ -51,10 +106,20 @@ export function getDefaultSuggestionPromptTemplate() {
 export function getDefaultSuggestionSettings() {
     return {
         provider: 'ollama',
+        llmMode: 'host',
         scope: 'library-plus-missing',
         query: '',
         promptTemplate: getDefaultSuggestionPromptTemplate(),
         selectedPlatformOnly: false,
+        relay: {
+            hostUrl: '',
+            authToken: '',
+            port: 42141,
+            enabled: false,
+            accessMode: 'open',
+            whitelist: [],
+            blacklist: []
+        },
         models: {
             ollama: 'llama3.1',
             openai: 'gpt-4o-mini',
@@ -83,10 +148,15 @@ export function loadSuggestionSettings(localStorageRef, storageKey = SUGGESTIONS
         const provider = normalizeSuggestionProvider(parsed.provider);
         return {
             provider,
+            llmMode: normalizeSuggestionLlmMode(parsed.llmMode),
             scope: normalizeSuggestionScope(parsed.scope),
             query: String(parsed.query || ''),
             promptTemplate: String(parsed.promptTemplate || defaults.promptTemplate || '').trim() || defaults.promptTemplate,
             selectedPlatformOnly: !!parsed.selectedPlatformOnly,
+            relay: {
+                ...defaults.relay,
+                ...normalizeSuggestionRelayConfig(parsed.relay)
+            },
             models: {
                 ...defaults.models,
                 ...(parsed.models && typeof parsed.models === 'object' ? parsed.models : {})
@@ -110,10 +180,15 @@ export function saveSuggestionSettings(settings, localStorageRef, storageKey = S
     const provider = normalizeSuggestionProvider(settings?.provider);
     const payload = {
         provider,
+        llmMode: normalizeSuggestionLlmMode(settings?.llmMode),
         scope: normalizeSuggestionScope(settings?.scope),
         query: String(settings?.query || ''),
         promptTemplate: String(settings?.promptTemplate || defaults.promptTemplate || '').trim() || defaults.promptTemplate,
         selectedPlatformOnly: !!settings?.selectedPlatformOnly,
+        relay: {
+            ...defaults.relay,
+            ...normalizeSuggestionRelayConfig(settings?.relay)
+        },
         models: {
             ...defaults.models,
             ...(settings?.models && typeof settings.models === 'object' ? settings.models : {})

@@ -2,6 +2,7 @@ const path = require("node:path");
 const { createSupportSuggestionsService } = require("./suggestions/support-service");
 const { createSuggestionsProviderClient } = require("./suggestions/provider-client");
 const { createThemeTagSuggestionsService } = require("./suggestions/theme-tag-service");
+const { createSuggestionsRelayService } = require("./suggestions/relay-service");
 
 function registerSuggestionsIpc(deps = {}) {
   const ipcMain = deps.ipcMain;
@@ -257,6 +258,18 @@ function registerSuggestionsIpc(deps = {}) {
     normalizeText,
     normalizeTemperature,
     buildRequestPrompt
+  });
+  const relayService = createSuggestionsRelayService({
+    log,
+    fetchImpl,
+    providerClient,
+    store: deps.store,
+    app: deps.app,
+    normalizeProvider,
+    normalizeText
+  });
+  relayService.ensureRelayServer().catch((error) => {
+    log.error("suggestions relay startup failed:", error);
   });
 
   function extractJsonFromText(rawText) {
@@ -736,6 +749,56 @@ function registerSuggestionsIpc(deps = {}) {
         success: false,
         message: error?.message || String(error),
         models: []
+      };
+    }
+  });
+
+  ipcMain.handle("suggestions:relay:sync-host-settings", async (_event, payload = {}) => {
+    try {
+      return await relayService.syncHostSettings(payload || {});
+    } catch (error) {
+      log.error("suggestions:relay:sync-host-settings failed:", error);
+      return {
+        success: false,
+        message: error?.message || String(error)
+      };
+    }
+  });
+
+  ipcMain.handle("suggestions:relay:scan-network", async (_event, payload = {}) => {
+    try {
+      return await relayService.scanNetwork(payload || {});
+    } catch (error) {
+      log.error("suggestions:relay:scan-network failed:", error);
+      return {
+        success: false,
+        message: error?.message || String(error),
+        hosts: []
+      };
+    }
+  });
+
+  ipcMain.handle("suggestions:relay:get-status", async () => {
+    try {
+      return await relayService.getStatus();
+    } catch (error) {
+      log.error("suggestions:relay:get-status failed:", error);
+      return {
+        success: false,
+        message: error?.message || String(error)
+      };
+    }
+  });
+
+  ipcMain.handle("suggestions:relay:get-connections", async () => {
+    try {
+      return await relayService.getConnections();
+    } catch (error) {
+      log.error("suggestions:relay:get-connections failed:", error);
+      return {
+        success: false,
+        message: error?.message || String(error),
+        connections: []
       };
     }
   });

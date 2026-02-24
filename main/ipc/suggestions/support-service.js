@@ -130,11 +130,50 @@ function createSupportSuggestionsService(deps = {}) {
     "library_summary",
     "tools_features",
     "theme_manager_features",
-    "help_docs"
+    "help_docs",
+    "emubro_repo_code",
+    "web_search"
   ]);
+
+  const EMUBRO_REPO_OWNER = "sysoutch";
+  const EMUBRO_REPO_NAME = "emuBro";
+  const EMUBRO_REPO_BRANCH = "emubro-electron";
+  const EMUBRO_REPO_BROWSE_URL = `https://github.com/${EMUBRO_REPO_OWNER}/${EMUBRO_REPO_NAME}/tree/${EMUBRO_REPO_BRANCH}`;
+  const EMUBRO_REPO_TREE_URL = `https://api.github.com/repos/${EMUBRO_REPO_OWNER}/${EMUBRO_REPO_NAME}/git/trees/${EMUBRO_REPO_BRANCH}?recursive=1`;
+  const EMUBRO_REPO_RAW_BASE = `https://raw.githubusercontent.com/${EMUBRO_REPO_OWNER}/${EMUBRO_REPO_NAME}/${EMUBRO_REPO_BRANCH}`;
+  const EMUBRO_REPO_TREE_TTL_MS = 15 * 60 * 1000;
+  const EMUBRO_REPO_FAIL_RETRY_MS = 2 * 60 * 1000;
+  const EMUBRO_REPO_FILE_TTL_MS = 8 * 60 * 1000;
+  const EMUBRO_REPO_FILE_MAX_CHARS = 20000;
+  const EMUBRO_REPO_SNIPPET_MAX_CHARS = 520;
+  const EMUBRO_REPO_MAX_FILES = 3;
+  const EMUBRO_REPO_ALLOWED_EXT = new Set([
+    ".js", ".ts", ".json", ".md", ".scss", ".css", ".html"
+  ]);
+  const EMUBRO_REPO_PRIORITY_PATHS = [
+    "README.md",
+    "js/support-manager.js",
+    "main/ipc/suggestions/support-service.js",
+    "main/ipc/suggestions/support-prompts.js",
+    "js/theme-manager.js",
+    "js/game-manager.js",
+    "js/window-ui-manager.js",
+    "renderer.js"
+  ];
+  let supportRepoTreeCache = {
+    paths: [],
+    loadedAt: 0,
+    failedAt: 0
+  };
+  const supportRepoFileCache = new Map();
+  const SUPPORT_WEB_SEARCH_TTL_MS = 8 * 60 * 1000;
+  const SUPPORT_WEB_SEARCH_MAX_RESULTS = 4;
+  const SUPPORT_WEB_SEARCH_QUERY_MAX_LEN = 180;
+  const supportWebSearchCache = new Map();
 
   function deriveHeuristicSupportLookups(payload = {}) {
     const mode = normalizeSupportMode(payload?.supportMode);
+    const allowWebAccess = !!payload?.allowWebAccess;
     const hay = normalizeSupportLookup(
       `${payload?.issueSummary || ""} ${payload?.details || ""} ${payload?.errorText || ""} ${payload?.platform || ""} ${payload?.emulator || ""}`
     );
@@ -148,6 +187,7 @@ function createSupportSuggestionsService(deps = {}) {
       set.add("theme_manager_features");
       set.add("library_summary");
       set.add("help_docs");
+      set.add("emubro_repo_code");
     } else {
       set.add("platform_config");
       set.add("emulator_install_paths");
@@ -158,6 +198,10 @@ function createSupportSuggestionsService(deps = {}) {
     if (/\b(path|install|folder|directory|exe|appimage)\b/.test(hay)) set.add("emulator_install_paths");
     if (/\b(view|theme|language|import|filter|sort|tool|support|settings)\b/.test(hay)) set.add("tools_features");
     if (/\b(help|how to|guide|docs?|documentation|where is|what does)\b/.test(hay)) set.add("help_docs");
+    if (/\b(code|source|github|internal|internals|implementation|how it works)\b/.test(hay)) set.add("emubro_repo_code");
+    if (allowWebAccess && /\b(latest|today|new|recent|official|wiki|reddit|github issue|driver|firmware|compatibility)\b/.test(hay)) {
+      set.add("web_search");
+    }
     if (isThemeQuestion) set.add("theme_manager_features");
 
     if (isThemeQuestion && !hasPlatformHint && !hasEmulatorHint) {
@@ -215,6 +259,7 @@ function createSupportSuggestionsService(deps = {}) {
 
   function buildSupportPlannerPrompt(payload = {}) {
     const mode = normalizeSupportMode(payload?.supportMode);
+    const allowWebAccess = !!payload?.allowWebAccess;
     const issueSummary = normalizeText(payload?.issueSummary, "No summary");
     const platform = normalizeText(payload?.platform, "Not specified");
     const emulator = normalizeText(payload?.emulator, "Not specified");
@@ -238,10 +283,16 @@ function createSupportSuggestionsService(deps = {}) {
       "- tools_features",
       "- theme_manager_features",
       "- help_docs",
+      "- emubro_repo_code",
+      ...(allowWebAccess ? ["- web_search"] : []),
       "",
       "Planning hints:",
       "- For theme/UI/theming questions, prioritize tools_features + theme_manager_features.",
       "- For emuBro feature usage/how-to questions, include help_docs.",
+      "- For questions about emuBro internals or implementation details, include emubro_repo_code.",
+      ...(allowWebAccess
+        ? ["- If local context is weak or uncertain, include web_search with focused search terms."]
+        : ["- web_search is disabled unless the user enabled Web Access toggle."]),
       "- Only request platform_config when platform/emulator compatibility or file type behavior matters.",
       "",
       "Request context:",
@@ -249,6 +300,7 @@ function createSupportSuggestionsService(deps = {}) {
       `- summary: ${issueSummary}`,
       `- platform: ${platform}`,
       `- emulator: ${emulator}`,
+      `- web access allowed: ${allowWebAccess ? "yes" : "no"}`,
       `- error: ${errorText}`,
       `- details: ${details}`,
       `- recent chat:\n${chatLines}`,
@@ -538,6 +590,373 @@ function createSupportSuggestionsService(deps = {}) {
       : ["- Theme manager capabilities: no matching local help docs found."];
   }
 
+  function extractRepoLookupTokens(payload = {}, plan = {}) {
+    const rawParts = [
+      ...(Array.isArray(plan?.searchTerms) ? plan.searchTerms : []),
+      payload?.issueSummary || "",
+      payload?.details || "",
+      payload?.errorText || "",
+      payload?.platform || "",
+      payload?.emulator || ""
+    ];
+    const joined = normalizeSupportLookup(rawParts.join(" "));
+    if (!joined) return [];
+    const baseTokens = joined
+      .split(" ")
+      .map((token) => String(token || "").trim().toLowerCase())
+      .filter(Boolean)
+      .filter((token) => token.length >= 3)
+      .slice(0, 24);
+    const deduped = Array.from(new Set(baseTokens));
+    return deduped.slice(0, 12);
+  }
+
+  async function fetchRepoTreePaths() {
+    const now = Date.now();
+    if (Array.isArray(supportRepoTreeCache.paths)
+      && supportRepoTreeCache.paths.length
+      && (now - Number(supportRepoTreeCache.loadedAt || 0)) < EMUBRO_REPO_TREE_TTL_MS) {
+      return supportRepoTreeCache.paths;
+    }
+
+    if (!payload?.allowWebAccess) {
+      const filtered = normalizedLookups.filter((entry) => entry !== "web_search");
+      normalizedLookups.length = 0;
+      normalizedLookups.push(...filtered);
+    }
+    if (!Array.isArray(supportRepoTreeCache.paths)) {
+      supportRepoTreeCache.paths = [];
+    }
+    if ((now - Number(supportRepoTreeCache.failedAt || 0)) < EMUBRO_REPO_FAIL_RETRY_MS) {
+      return supportRepoTreeCache.paths;
+    }
+    if (typeof fetch !== "function") {
+      supportRepoTreeCache.failedAt = now;
+      return supportRepoTreeCache.paths;
+    }
+
+    try {
+      const response = await fetch(EMUBRO_REPO_TREE_URL, {
+        method: "GET",
+        redirect: "follow",
+        cache: "no-store",
+        headers: {
+          "accept": "application/vnd.github+json",
+          "user-agent": "emuBro-support"
+        }
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const payload = await response.json();
+      const treeRows = Array.isArray(payload?.tree) ? payload.tree : [];
+      const paths = treeRows
+        .filter((row) => String(row?.type || "").trim().toLowerCase() === "blob")
+        .map((row) => String(row?.path || "").trim())
+        .filter(Boolean)
+        .filter((entry) => {
+          const ext = String(path.extname(entry || "") || "").toLowerCase();
+          if (!ext) return entry.toLowerCase() === "readme.md";
+          return EMUBRO_REPO_ALLOWED_EXT.has(ext);
+        });
+      supportRepoTreeCache = {
+        paths,
+        loadedAt: now,
+        failedAt: 0
+      };
+      return paths;
+    } catch (error) {
+      supportRepoTreeCache.failedAt = now;
+      log.warn("support repo tree fetch failed:", error?.message || error);
+      return supportRepoTreeCache.paths;
+    }
+  }
+
+  function pickRepoPaths(tokens = [], repoPaths = []) {
+    const tokenList = Array.isArray(tokens) ? tokens : [];
+    const paths = Array.isArray(repoPaths) ? repoPaths : [];
+    if (!paths.length) return [];
+
+    const rank = [];
+    const lowerTokens = tokenList.map((token) => String(token || "").toLowerCase());
+    paths.forEach((repoPath) => {
+      const filePath = String(repoPath || "").trim();
+      if (!filePath) return;
+      const fileLookup = normalizeSupportLookup(filePath);
+      let score = 0;
+      lowerTokens.forEach((token) => {
+        if (!token) return;
+        if (fileLookup.includes(token)) score += 24;
+      });
+      if (filePath.toLowerCase() === "readme.md") score += 6;
+      if (EMUBRO_REPO_PRIORITY_PATHS.includes(filePath)) score += 12;
+      if (/\bsupport\b/.test(fileLookup)) score += 7;
+      if (/\btheme\b/.test(fileLookup)) score += 5;
+      if (/\bcommunity\b/.test(fileLookup)) score += 4;
+      rank.push({ score, filePath });
+    });
+
+    const selected = rank
+      .sort((a, b) => b.score - a.score)
+      .slice(0, EMUBRO_REPO_MAX_FILES)
+      .map((entry) => entry.filePath)
+      .filter(Boolean);
+
+    if (selected.length) return selected;
+    return EMUBRO_REPO_PRIORITY_PATHS.filter((entry) => paths.includes(entry)).slice(0, EMUBRO_REPO_MAX_FILES);
+  }
+
+  async function fetchRepoFileText(repoPath) {
+    const safePath = String(repoPath || "").trim().replace(/^\/+/, "");
+    if (!safePath) return "";
+    const cacheEntry = supportRepoFileCache.get(safePath);
+    const now = Date.now();
+    if (cacheEntry && (now - Number(cacheEntry.at || 0)) < EMUBRO_REPO_FILE_TTL_MS) {
+      return String(cacheEntry.text || "");
+    }
+    if (typeof fetch !== "function") return "";
+
+    const targetUrl = `${EMUBRO_REPO_RAW_BASE}/${safePath}`;
+    try {
+      const response = await fetch(targetUrl, {
+        method: "GET",
+        redirect: "follow",
+        cache: "no-store",
+        headers: {
+          "user-agent": "emuBro-support"
+        }
+      });
+      if (!response.ok) return "";
+      const text = String(await response.text() || "");
+      const trimmed = text.length > EMUBRO_REPO_FILE_MAX_CHARS
+        ? text.slice(0, EMUBRO_REPO_FILE_MAX_CHARS)
+        : text;
+      supportRepoFileCache.set(safePath, { text: trimmed, at: now });
+      return trimmed;
+    } catch (_error) {
+      return "";
+    }
+  }
+
+  function buildRepoSnippet(text = "", tokens = []) {
+    const source = String(text || "");
+    if (!source.trim()) return "";
+    const lines = source.split(/\r?\n/);
+    const lowerTokens = Array.isArray(tokens)
+      ? tokens.map((entry) => String(entry || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    const hitIndexes = [];
+    lines.forEach((line, index) => {
+      if (hitIndexes.length >= 3) return;
+      const lookup = String(line || "").toLowerCase();
+      if (!lookup.trim()) return;
+      if (lowerTokens.length > 0 && !lowerTokens.some((token) => lookup.includes(token))) return;
+      hitIndexes.push(index);
+    });
+
+    const snippets = [];
+    if (hitIndexes.length > 0) {
+      hitIndexes.forEach((hitIndex) => {
+        const from = Math.max(0, hitIndex - 1);
+        const to = Math.min(lines.length - 1, hitIndex + 1);
+        for (let cursor = from; cursor <= to; cursor += 1) {
+          const row = String(lines[cursor] || "").trim();
+          if (!row) continue;
+          snippets.push(row);
+        }
+      });
+    } else {
+      lines.slice(0, 14).forEach((line) => {
+        const row = String(line || "").trim();
+        if (!row) return;
+        snippets.push(row);
+      });
+    }
+
+    const merged = snippets.join(" ").replace(/\s+/g, " ").trim();
+    if (!merged) return "";
+    return merged.length > EMUBRO_REPO_SNIPPET_MAX_CHARS
+      ? `${merged.slice(0, EMUBRO_REPO_SNIPPET_MAX_CHARS - 3)}...`
+      : merged;
+  }
+
+  async function buildRepoCodeCapabilityLines(payload = {}, plan = {}) {
+    const repoPaths = await fetchRepoTreePaths();
+    if (!Array.isArray(repoPaths) || !repoPaths.length) {
+      return {
+        lines: ["- emuBro GitHub code context: unavailable (offline or API unavailable)."],
+        matchedPaths: []
+      };
+    }
+
+    const tokens = extractRepoLookupTokens(payload, plan);
+    const selectedPaths = pickRepoPaths(tokens, repoPaths);
+    if (!selectedPaths.length) {
+      return {
+        lines: ["- emuBro GitHub code context: no matching files for current query."],
+        matchedPaths: []
+      };
+    }
+
+    const lines = [
+      `- emuBro GitHub code context (${EMUBRO_REPO_OWNER}/${EMUBRO_REPO_NAME}@${EMUBRO_REPO_BRANCH}): [${EMUBRO_REPO_BROWSE_URL}]`
+    ];
+    const matchedPaths = [];
+    for (const repoPath of selectedPaths) {
+      const fileText = await fetchRepoFileText(repoPath);
+      if (!fileText) continue;
+      const snippet = buildRepoSnippet(fileText, tokens);
+      const rawUrl = `${EMUBRO_REPO_RAW_BASE}/${repoPath}`;
+      lines.push(`  - ${repoPath}: ${snippet || "Content fetched (no direct keyword hit)."} [${rawUrl}]`);
+      matchedPaths.push(repoPath);
+    }
+
+    if (!matchedPaths.length) {
+      return {
+        lines: ["- emuBro GitHub code context: file fetch failed for selected matches."],
+        matchedPaths: []
+      };
+    }
+    return { lines, matchedPaths };
+  }
+
+  function decodeWebHtml(value = "") {
+    return String(value || "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&quot;/g, "\"")
+      .replace(/&#39;/g, "'")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function normalizeDuckDuckGoResultUrl(rawUrl = "") {
+    const text = String(rawUrl || "").trim();
+    if (!text) return "";
+    let candidate = text;
+    if (candidate.startsWith("//")) {
+      candidate = `https:${candidate}`;
+    } else if (candidate.startsWith("/")) {
+      candidate = `https://duckduckgo.com${candidate}`;
+    }
+
+    try {
+      const parsed = new URL(candidate);
+      const uddg = parsed.searchParams.get("uddg");
+      if (uddg) {
+        try {
+          return decodeURIComponent(uddg);
+        } catch (_error) {
+          return uddg;
+        }
+      }
+      return parsed.toString();
+    } catch (_error) {
+      return candidate;
+    }
+  }
+
+  function deriveSupportWebQuery(payload = {}, plan = {}) {
+    const termList = Array.isArray(plan?.searchTerms) ? plan.searchTerms : [];
+    const joinedTerms = termList
+      .map((entry) => normalizeText(entry))
+      .filter(Boolean)
+      .join(" ");
+    const fallback = [
+      normalizeText(payload?.issueSummary),
+      normalizeText(payload?.platform),
+      normalizeText(payload?.emulator),
+      normalizeText(payload?.errorText)
+    ].filter(Boolean).join(" ");
+    const raw = normalizeText(joinedTerms || fallback);
+    if (!raw) return "";
+    return raw.replace(/\s+/g, " ").trim().slice(0, SUPPORT_WEB_SEARCH_QUERY_MAX_LEN);
+  }
+
+  function parseDuckDuckGoHtmlResults(html = "") {
+    const source = String(html || "");
+    if (!source) return [];
+    const rows = [];
+    const anchorRegex = /<a[^>]*class="[^"]*result__a[^"]*"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+    let match;
+    while ((match = anchorRegex.exec(source)) && rows.length < SUPPORT_WEB_SEARCH_MAX_RESULTS) {
+      const href = normalizeDuckDuckGoResultUrl(match[1]);
+      const title = decodeWebHtml(match[2]);
+      if (!href || !title) continue;
+      const chunkStart = Math.max(0, Number(match.index || 0));
+      const chunk = source.slice(chunkStart, Math.min(source.length, chunkStart + 1600));
+      const snippetMatch = chunk.match(/class="result__snippet"[^>]*>([\s\S]*?)<\/(?:a|div)>/i);
+      const snippet = snippetMatch ? decodeWebHtml(snippetMatch[1]) : "";
+      rows.push({ title, url: href, snippet });
+    }
+    return rows;
+  }
+
+  async function fetchSupportWebResults(query = "") {
+    const normalizedQuery = normalizeText(query).toLowerCase();
+    if (!normalizedQuery) return [];
+    const cached = supportWebSearchCache.get(normalizedQuery);
+    const now = Date.now();
+    if (cached && (now - Number(cached.at || 0)) < SUPPORT_WEB_SEARCH_TTL_MS) {
+      return Array.isArray(cached.rows) ? cached.rows : [];
+    }
+    if (typeof fetch !== "function") return [];
+
+    try {
+      const targetUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(normalizedQuery)}`;
+      const response = await fetch(targetUrl, {
+        method: "GET",
+        redirect: "follow",
+        cache: "no-store",
+        headers: {
+          "user-agent": "emuBro-support"
+        }
+      });
+      if (!response.ok) return [];
+      const html = String(await response.text() || "");
+      const rows = parseDuckDuckGoHtmlResults(html);
+      supportWebSearchCache.set(normalizedQuery, {
+        at: now,
+        rows
+      });
+      return rows;
+    } catch (_error) {
+      return [];
+    }
+  }
+
+  async function buildWebSearchCapabilityLines(payload = {}, plan = {}) {
+    const query = deriveSupportWebQuery(payload, plan);
+    if (!query) {
+      return {
+        lines: ["- Web search: enabled but no usable query was derived."],
+        count: 0,
+        query: ""
+      };
+    }
+    const rows = await fetchSupportWebResults(query);
+    if (!rows.length) {
+      return {
+        lines: [`- Web search (${query}): no results or network unavailable.`],
+        count: 0,
+        query
+      };
+    }
+
+    const lines = [`- Web search results (${query}):`];
+    rows.slice(0, SUPPORT_WEB_SEARCH_MAX_RESULTS).forEach((row) => {
+      const snippet = normalizeText(row?.snippet);
+      lines.push(`  - ${normalizeText(row?.title, "Result")} - ${snippet || "No snippet."} [${normalizeText(row?.url)}]`);
+    });
+    return {
+      lines,
+      count: rows.length,
+      query
+    };
+  }
+
   let supportPlatformConfigCache = [];
   let supportPlatformConfigCacheAt = 0;
   async function getCachedSupportPlatformConfigs() {
@@ -589,6 +1008,22 @@ function createSupportSuggestionsService(deps = {}) {
     const matchedHelpDocs = lookupSet.has("help_docs")
       ? await findRelevantHelpDocs(payload, plan)
       : [];
+    const repoCodeContext = lookupSet.has("emubro_repo_code")
+      ? await buildRepoCodeCapabilityLines(payload, plan)
+      : { lines: [], matchedPaths: [] };
+    const localSignalCount = Number(rankedPlatforms.length || 0)
+      + Number(installedEmulators.length || 0)
+      + Number(matchedGames.length || 0)
+      + Number(matchedHelpDocs.length || 0)
+      + Number(Array.isArray(repoCodeContext.matchedPaths) ? repoCodeContext.matchedPaths.length : 0);
+    const webLookupReason = (
+      payload?.allowWebAccess && lookupSet.has("web_search")
+    ) ? "planned" : (
+      payload?.allowWebAccess && localSignalCount === 0
+    ) ? "auto-if-unsure" : "disabled";
+    const webSearchContext = webLookupReason !== "disabled"
+      ? await buildWebSearchCapabilityLines(payload, plan)
+      : { lines: [], count: 0, query: "" };
 
     const lines = [];
     lines.push(`- Retrieval plan: ${formatSupportLookupPlanForPrompt(plan)}`);
@@ -648,6 +1083,17 @@ function createSupportSuggestionsService(deps = {}) {
       }
     }
 
+    if (lookupSet.has("emubro_repo_code")) {
+      lines.push(...(Array.isArray(repoCodeContext.lines) ? repoCodeContext.lines : []));
+    }
+
+    if (webLookupReason === "auto-if-unsure") {
+      lines.push("- Web lookup auto-triggered because local grounding was uncertain.");
+    }
+    if (webLookupReason !== "disabled") {
+      lines.push(...(Array.isArray(webSearchContext.lines) ? webSearchContext.lines : []));
+    }
+
     if (plan.followUpQuestions.length) {
       lines.push("- Planner follow-up questions:");
       plan.followUpQuestions.forEach((question) => {
@@ -665,6 +1111,11 @@ function createSupportSuggestionsService(deps = {}) {
         installedEmulatorCount: installedEmulators.length,
         matchedGameCount: matchedGames.length,
         matchedHelpDocCount: matchedHelpDocs.length,
+        matchedRepoFileCount: Array.isArray(repoCodeContext.matchedPaths) ? repoCodeContext.matchedPaths.length : 0,
+        matchedWebSourceCount: Number(webSearchContext.count || 0),
+        webLookupTriggered: webLookupReason !== "disabled",
+        webLookupReason,
+        webLookupQuery: normalizeText(webSearchContext.query),
         libraryGameCount: Array.isArray(getGamesState()) ? getGamesState().length : 0,
         libraryEmulatorCount: Array.isArray(getEmulatorsState()) ? getEmulatorsState().length : 0
       }
@@ -842,6 +1293,7 @@ function createSupportSuggestionsService(deps = {}) {
       chatHistory: normalizeSupportChatHistory(payload.chatHistory, 20),
       debugSupport: !!payload.debugSupport,
       allowAutoSpecsFetch: !!payload.allowAutoSpecsFetch,
+      allowWebAccess: !!payload.allowWebAccess,
       issueType: normalizeText(payload.issueType, "other"),
       issueTypeLabel: normalizeText(payload.issueTypeLabel, "Emulation issue"),
       issueSummary: normalizeText(payload.issueSummary),
@@ -859,7 +1311,12 @@ function createSupportSuggestionsService(deps = {}) {
         plan: normalizeSupportLookupPlan(payload?.retrievalPlan, payload),
         matchedPlatforms: [],
         installedEmulatorCount: 0,
-        matchedGameCount: 0
+        matchedGameCount: 0,
+        matchedRepoFileCount: 0,
+        matchedWebSourceCount: 0,
+        webLookupTriggered: false,
+        webLookupReason: "disabled",
+        webLookupQuery: ""
       },
       actionPlan: normalizeSupportActionPlan(payload?.actionPlan),
       actionPlannerSource: "client",
@@ -888,7 +1345,8 @@ function createSupportSuggestionsService(deps = {}) {
       pushDebugStep("normalize-request", "ok", {
         provider,
         supportMode: safePayload.supportMode,
-        allowAutoSpecsFetch: !!safePayload.allowAutoSpecsFetch
+        allowAutoSpecsFetch: !!safePayload.allowAutoSpecsFetch,
+        allowWebAccess: !!safePayload.allowWebAccess
       });
 
       if (shouldFetchSpecsBeforeAction(safePayload)) {
@@ -986,7 +1444,9 @@ function createSupportSuggestionsService(deps = {}) {
         pushDebugStep("grounding-build", "completed", {
           matchedGameCount: Number(safePayload.groundingMeta?.matchedGameCount || 0),
           installedEmulatorCount: Number(safePayload.groundingMeta?.installedEmulatorCount || 0),
-          matchedHelpDocCount: Number(safePayload.groundingMeta?.matchedHelpDocCount || 0)
+          matchedHelpDocCount: Number(safePayload.groundingMeta?.matchedHelpDocCount || 0),
+          matchedWebSourceCount: Number(safePayload.groundingMeta?.matchedWebSourceCount || 0),
+          webLookupTriggered: !!safePayload.groundingMeta?.webLookupTriggered
         });
       } catch (groundingError) {
         log.warn("support grounding context failed:", groundingError?.message || groundingError);

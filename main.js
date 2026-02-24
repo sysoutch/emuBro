@@ -290,6 +290,8 @@ registerYouTubeSearchIpc({
 registerSuggestionsIpc({
   ipcMain,
   log,
+  app,
+  store,
   fetchImpl: fetch,
   getPlatformConfigs,
   getGamesState,

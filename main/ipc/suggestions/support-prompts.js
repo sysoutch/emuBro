@@ -22,6 +22,7 @@ function createSupportPrompts(deps = {}) {
     const emulator = normalizeText(payload.emulator, "Not specified");
     const errorText = normalizeText(payload.errorText, "No explicit error message.");
     const details = normalizeText(payload.details, "No additional details.");
+    const webAccess = payload?.allowWebAccess ? "enabled" : "disabled";
     const retrievalPlanSummary = formatSupportLookupPlanForPrompt(payload?.retrievalPlan || {});
 
     return [
@@ -37,6 +38,7 @@ function createSupportPrompts(deps = {}) {
       `- Emulator: ${emulator}`,
       `- Error message: ${errorText}`,
       `- Extra details: ${details}`,
+      `- Web access: ${webAccess}`,
       `- Retrieval plan: ${retrievalPlanSummary}`,
       "",
       "Local emuBro context:",
@@ -59,6 +61,7 @@ function createSupportPrompts(deps = {}) {
     const emulator = normalizeText(payload.emulator, "Not specified");
     const details = normalizeText(payload.details, "No extra details.");
     const errorText = normalizeText(payload.errorText, "No explicit error message.");
+    const webAccess = payload?.allowWebAccess ? "enabled" : "disabled";
     const retrievalPlanSummary = formatSupportLookupPlanForPrompt(payload?.retrievalPlan || {});
     const chatHistory = normalizeSupportChatHistory(payload.chatHistory, 20);
     const chatLines = chatHistory.length
@@ -77,6 +80,7 @@ function createSupportPrompts(deps = {}) {
       `- Emulator hint: ${emulator}`,
       `- Error hint: ${errorText}`,
       `- Additional details: ${details}`,
+      `- Web access: ${webAccess}`,
       `- Retrieval plan: ${retrievalPlanSummary}`,
       "",
       "Conversation so far:",

@@ -1,11 +1,17 @@
-import { loadSuggestionSettings, normalizeSuggestionProvider } from './suggestions-settings';
+import {
+    loadSuggestionSettings,
+    normalizeSuggestionProvider,
+    getSuggestionLlmRoutingSettings
+} from './suggestions-settings';
 
 const emubro = window.emubro;
 const SUPPORT_DRAFT_STORAGE_KEY = 'emuBro.supportDraft.v1';
 const SUPPORT_CHAT_HISTORY_STORAGE_KEY = 'emuBro.supportChatHistory.v1';
 const SUPPORT_DEBUG_STORAGE_KEY = 'emuBro.supportDebug.v1';
 const SUPPORT_AUTO_SPECS_STORAGE_KEY = 'emuBro.supportAutoSpecs.v1';
+const SUPPORT_WEB_ACCESS_STORAGE_KEY = 'emuBro.supportWebAccess.v1';
 const SUPPORT_HELP_STATE_STORAGE_KEY = 'emuBro.supportHelpState.v1';
+let activeSupportViewDisposer = null;
 
 const ISSUE_TYPES = [
     { value: 'launch', labelKey: 'support.issueTypes.launch', fallback: 'Game does not launch' },
@@ -185,6 +191,20 @@ function saveSupportAutoSpecsEnabled(enabled) {
     } catch (_error) {}
 }
 
+function loadSupportWebAccessEnabled() {
+    try {
+        return localStorage.getItem(SUPPORT_WEB_ACCESS_STORAGE_KEY) === 'true';
+    } catch (_error) {
+        return false;
+    }
+}
+
+function saveSupportWebAccessEnabled(enabled) {
+    try {
+        localStorage.setItem(SUPPORT_WEB_ACCESS_STORAGE_KEY, enabled ? 'true' : 'false');
+    } catch (_error) {}
+}
+
 function loadSupportHelpState() {
     try {
         const raw = localStorage.getItem(SUPPORT_HELP_STATE_STORAGE_KEY);
@@ -223,12 +243,14 @@ function buildSupportPayload(formState, extra = {}) {
     const model = String(settings.models?.[provider] || '').trim();
     const baseUrl = String(settings.baseUrls?.[provider] || '').trim();
     const apiKey = String(settings.apiKeys?.[provider] || '').trim();
+    const routing = getSuggestionLlmRoutingSettings(settings);
 
     return {
         provider,
         model,
         baseUrl,
         apiKey,
+        ...routing,
         issueType: String(formState.issueType || 'other'),
         issueTypeLabel: getIssueTypeLabel(formState.issueType),
         issueSummary: String(formState.issueSummary || '').trim(),
@@ -239,7 +261,8 @@ function buildSupportPayload(formState, extra = {}) {
         supportMode: String(formState.mode || 'troubleshoot').trim().toLowerCase() === 'chat' ? 'chat' : 'troubleshoot',
         chatHistory: Array.isArray(extra?.chatHistory) ? extra.chatHistory : [],
         debugSupport: !!extra?.debugSupport,
-        allowAutoSpecsFetch: !!extra?.allowAutoSpecsFetch
+        allowAutoSpecsFetch: !!extra?.allowAutoSpecsFetch,
+        allowWebAccess: !!extra?.allowWebAccess
     };
 }
 
@@ -376,7 +399,17 @@ function renderSupportChatTranscript(history = []) {
     }).join('');
 }
 
+export function teardownSupportView() {
+    if (typeof activeSupportViewDisposer === 'function') {
+        try {
+            activeSupportViewDisposer();
+        } catch (_error) {}
+    }
+    activeSupportViewDisposer = null;
+}
+
 export function showSupportView() {
+    teardownSupportView();
     const gamesContainer = document.getElementById('games-container');
     const gamesHeader = document.getElementById('games-header');
     if (!gamesContainer) return;
@@ -392,6 +425,7 @@ export function showSupportView() {
     })();
     let debugSupportEnabled = loadSupportDebugEnabled();
     let autoSpecsEnabled = loadSupportAutoSpecsEnabled();
+    let webAccessEnabled = loadSupportWebAccessEnabled();
     let helpDocsLoaded = false;
     let currentHelpDocId = String(helpState.selectedDocId || '').trim();
 
@@ -416,6 +450,10 @@ export function showSupportView() {
                     <label class="support-debug-toggle">
                         <input type="checkbox" data-support-auto-specs-toggle ${autoSpecsEnabled ? 'checked' : ''} />
                         <span>${escapeHtml(t('support.autoSpecsToggle', 'Allow auto specs fetch'))}</span>
+                    </label>
+                    <label class="support-debug-toggle">
+                        <input type="checkbox" data-support-web-access-toggle ${webAccessEnabled ? 'checked' : ''} />
+                        <span>${escapeHtml(t('support.webAccessToggle', 'Allow web access'))}</span>
                     </label>
                     <label class="support-debug-toggle">
                         <input type="checkbox" data-support-debug-toggle ${debugSupportEnabled ? 'checked' : ''} />
@@ -513,6 +551,7 @@ export function showSupportView() {
     const reloadHelpBtn = gamesContainer.querySelector('[data-support-action="reload-help"]');
     const modeButtons = Array.from(gamesContainer.querySelectorAll('[data-support-mode]'));
     const autoSpecsToggleInput = gamesContainer.querySelector('[data-support-auto-specs-toggle]');
+    const webAccessToggleInput = gamesContainer.querySelector('[data-support-web-access-toggle]');
     const debugToggleInput = gamesContainer.querySelector('[data-support-debug-toggle]');
     const debugPanelEl = gamesContainer.querySelector('[data-support-debug-panel]');
     const debugContentEl = gamesContainer.querySelector('[data-support-debug-content]');
@@ -521,7 +560,7 @@ export function showSupportView() {
     const llmOnlyEls = Array.from(gamesContainer.querySelectorAll('[data-support-llm-only]'));
     const helpOnlyEls = Array.from(gamesContainer.querySelectorAll('[data-support-help-only]'));
 
-    if (!issueTypeSelect || !issueSummaryInput || !platformInput || !emulatorInput || !errorTextInput || !detailsInput || !statusEl || !outputEl || !runBtn || !clearBtn || !insertSpecsBtn || !voiceInputBtn || !chatThreadEl || !outputTitleEl || !summaryLabelEl || !debugToggleInput || !autoSpecsToggleInput || !debugPanelEl || !debugContentEl || !helpQueryInput || !helpListEl || !searchHelpBtn || !reloadHelpBtn) {
+    if (!issueTypeSelect || !issueSummaryInput || !platformInput || !emulatorInput || !errorTextInput || !detailsInput || !statusEl || !outputEl || !runBtn || !clearBtn || !insertSpecsBtn || !voiceInputBtn || !chatThreadEl || !outputTitleEl || !summaryLabelEl || !debugToggleInput || !autoSpecsToggleInput || !webAccessToggleInput || !debugPanelEl || !debugContentEl || !helpQueryInput || !helpListEl || !searchHelpBtn || !reloadHelpBtn) {
         return;
     }
 
@@ -541,6 +580,7 @@ export function showSupportView() {
     const syncDebugToggleUi = () => {
         debugToggleInput.checked = !!debugSupportEnabled;
         autoSpecsToggleInput.checked = !!autoSpecsEnabled;
+        webAccessToggleInput.checked = !!webAccessEnabled;
         if (debugPanelEl) {
             debugPanelEl.style.display = debugSupportEnabled ? '' : 'none';
             if (debugSupportEnabled) debugPanelEl.setAttribute('open', 'open');
@@ -904,6 +944,12 @@ export function showSupportView() {
         syncDebugToggleUi();
     });
 
+    webAccessToggleInput.addEventListener('change', () => {
+        webAccessEnabled = !!webAccessToggleInput.checked;
+        saveSupportWebAccessEnabled(webAccessEnabled);
+        syncDebugToggleUi();
+    });
+
     clearBtn.addEventListener('click', () => {
         if (voiceListening) {
             stopVoiceInput(true);
@@ -997,17 +1043,25 @@ export function showSupportView() {
         const payload = buildSupportPayload(formState, {
             chatHistory,
             debugSupport: debugSupportEnabled,
-            allowAutoSpecsFetch: autoSpecsEnabled
+            allowAutoSpecsFetch: autoSpecsEnabled,
+            allowWebAccess: webAccessEnabled
         });
         if (!payload.model) {
-            statusEl.textContent = t('support.status.missingModel', 'Set an LLM model first in Settings -> AI / LLM.');
+            // In client mode the host side provider/model settings are used.
+            if (payload.llmMode !== 'client') {
+                statusEl.textContent = t('support.status.missingModel', 'Set an LLM model first in Settings -> AI / LLM.');
+                return;
+            }
+        }
+        if (payload.llmMode === 'client' && !payload.relayHostUrl) {
+            statusEl.textContent = t('support.status.missingRelayHost', 'Set a relay host URL first in Settings -> AI / LLM.');
             return;
         }
-        if (!payload.baseUrl) {
+        if (payload.llmMode !== 'client' && !payload.baseUrl) {
             statusEl.textContent = t('support.status.missingBaseUrl', 'Set a provider URL first in Settings -> AI / LLM.');
             return;
         }
-        if ((payload.provider === 'openai' || payload.provider === 'gemini') && !payload.apiKey) {
+        if (payload.llmMode !== 'client' && (payload.provider === 'openai' || payload.provider === 'gemini') && !payload.apiKey) {
             statusEl.textContent = t('support.status.missingApiKey', 'API key is required for the selected provider.');
             return;
         }
@@ -1080,4 +1134,13 @@ export function showSupportView() {
     syncDebugToggleUi();
     updateVoiceButtonState();
     renderDebugPayload(null);
+
+    activeSupportViewDisposer = () => {
+        try {
+            stopVoiceInput(true);
+        } catch (_error) {}
+        voiceRecognition = null;
+        voiceListening = false;
+        voiceStopRequested = false;
+    };
 }

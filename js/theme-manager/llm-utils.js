@@ -1,5 +1,9 @@
 import { clampNumber } from './background-utils';
-import { loadSuggestionSettings, normalizeSuggestionProvider } from '../suggestions-settings';
+import {
+    loadSuggestionSettings,
+    normalizeSuggestionProvider,
+    getSuggestionLlmRoutingSettings
+} from '../suggestions-settings';
 
 export function updateLlmThemeRangeValueLabel(inputId, valueId) {
     const input = document.getElementById(inputId);
@@ -15,5 +19,5 @@ export function getThemeLlmConfig() {
     const model = String(settings?.models?.[provider] || '').trim();
     const baseUrl = String(settings?.baseUrls?.[provider] || '').trim();
     const apiKey = String(settings?.apiKeys?.[provider] || '').trim();
-    return { provider, model, baseUrl, apiKey };
+    return { provider, model, baseUrl, apiKey, ...getSuggestionLlmRoutingSettings(settings) };
 }

@@ -424,15 +424,19 @@ export function setupThemeCustomizationControls(options = {}) {
             }
 
             const llm = getThemeLlmConfig();
-            if (!llm.model) {
+            if (llm.llmMode === 'client' && !llm.relayHostUrl) {
+                setStatus('Set a relay host URL first in Settings -> AI / LLM.', 'error');
+                return;
+            }
+            if (llm.llmMode !== 'client' && !llm.model) {
                 setStatus('Set an AI model first in Settings -> AI / LLM.', 'error');
                 return;
             }
-            if (!llm.baseUrl) {
+            if (llm.llmMode !== 'client' && !llm.baseUrl) {
                 setStatus('Set an AI provider URL first in Settings -> AI / LLM.', 'error');
                 return;
             }
-            if ((llm.provider === 'openai' || llm.provider === 'gemini') && !llm.apiKey) {
+            if (llm.llmMode !== 'client' && (llm.provider === 'openai' || llm.provider === 'gemini') && !llm.apiKey) {
                 setStatus('API key is missing for the selected provider.', 'error');
                 return;
             }
@@ -442,6 +446,10 @@ export function setupThemeCustomizationControls(options = {}) {
                 model: llm.model,
                 baseUrl: llm.baseUrl,
                 apiKey: llm.apiKey,
+                llmMode: llm.llmMode,
+                relayHostUrl: llm.relayHostUrl,
+                relayAuthToken: llm.relayAuthToken,
+                relayPort: llm.relayPort,
                 mood: String(document.getElementById('theme-llm-mood')?.value || 'balanced'),
                 style: String(document.getElementById('theme-llm-style')?.value || 'arcade'),
                 energy: Number.parseInt(String(document.getElementById('theme-llm-energy')?.value || '60'), 10),

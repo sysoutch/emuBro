@@ -77,35 +77,35 @@
 }
 
 .theme-manager-modal.docked-right {
-    --dock-edge-inset: 0px;
-
-    position: fixed !important;
-    top: calc(var(--dock-edge-inset) + var(--dock-header-offset)) !important;
-    right: var(--dock-edge-inset) !important;
-    left: auto !important;
-    bottom: var(--dock-edge-inset) !important;
-    width: var(--dock-panel-width) !important;
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
     resize: none !important;
-    max-width: calc(100vw - (var(--dock-edge-inset) * 2));
-    height: calc(100vh - (var(--dock-edge-inset) * 2) - var(--dock-header-offset)) !important;
-    max-height: calc(100vh - (var(--dock-edge-inset) * 2) - var(--dock-header-offset)) !important;
+    max-width: none !important;
+    height: 100% !important;
+    max-height: none !important;
     border-radius: 0 !important;
     transform: none !important;
-    border-top: 1px solid var(--border-color);
-    border-bottom: 1px solid var(--border-color);
-    border-right: 1px solid var(--border-color);
-    border-left: 1px solid var(--border-color);
+    border: 0 !important;
     box-shadow: none !important;
     margin: 0 !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: none;
+    animation: none;
     
     /* Ensure solid background when docked */
     background: var(--bg-primary) !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    z-index: 1000;
+    z-index: 2;
+
+    .theme-manager-content {
+        background: var(--bg-primary) !important;
+    }
 
     &.accordion-collapsed {
+        top: auto !important;
+        left: 0 !important;
+        right: 0 !important;
         height: var(--dock-accordion-header-h) !important;
         max-height: var(--dock-accordion-header-h) !important;
         overflow: hidden;
@@ -115,7 +115,8 @@
     }
 
     &.accordion-expanded {
-        height: calc(100vh - (var(--dock-edge-inset) * 2) - var(--dock-header-offset) - var(--dock-accordion-header-h)) !important;
+        left: 0 !important;
+        right: 0 !important;
         flex: 1;
         border-radius: 0 !important;
     }
@@ -129,20 +130,6 @@
     &::before {
         opacity: 0 !important;
         animation: none !important;
-    }
-}
-
-[data-os="win32"] .theme-manager-modal.docked-right {
-    --dock-edge-inset: var(--win-border-w);
-}
-
-/* Ensure single docked panel fills the entire height */
-body.panel-docked:not(.docking-accordion) {
-    .theme-manager-modal.docked-right {
-        height: calc(100vh - (var(--dock-edge-inset) * 2) - var(--dock-header-offset)) !important;
-        max-height: calc(100vh - (var(--dock-edge-inset) * 2) - var(--dock-header-offset)) !important;
-        top: calc(var(--dock-edge-inset) + var(--dock-header-offset)) !important;
-        bottom: var(--dock-edge-inset) !important;
     }
 }
 
