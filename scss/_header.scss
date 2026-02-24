@@ -33,8 +33,7 @@
 .header .custom-select,
 .header .options-list,
 .header .dropdown-with-button-wrapper,
-.header .search-bar,
-.header .navigation {
+.header .search-bar {
     -webkit-app-region: no-drag;
 }
 
@@ -1442,9 +1441,8 @@
 }
 
 .header .navigation {
-    flex: 0 1 auto;
+    flex: 1 1 auto;
     min-width: 0;
-    max-width: 56%;
     margin: 0;
     padding: 0 4px;
     overflow: hidden;
@@ -1478,16 +1476,9 @@
     flex: 0 1 auto;
     min-width: 0;
     max-width: 100%;
-    margin-left: 0;
+    margin-left: auto;
     padding-right: 0 !important;
     overflow: hidden;
-}
-
-.header .header-nav-search-drag-gap {
-    flex: 1 1 auto;
-    min-width: 18px;
-    height: 34px;
-    -webkit-app-region: drag;
 }
 
 .header .global-search-bar {
@@ -1583,10 +1574,6 @@ html[data-header-density="compact"] .header .language-controls-content {
     display: none !important;
 }
 
-html[data-header-density="compact"] .header .header-nav-search-drag-gap {
-    display: none;
-}
-
 html[data-header-density="compact"] .header .header-inline-drag-gap,
 html[data-header-density="compact"] .header .header-search-theme-drag-gap {
     display: none;
@@ -1612,10 +1599,6 @@ html[data-header-density="tiny"] .header .logo h1 {
 }
 
 html[data-header-density="tiny"] .header .navigation {
-    display: none;
-}
-
-html[data-header-density="tiny"] .header .header-nav-search-drag-gap {
     display: none;
 }
 

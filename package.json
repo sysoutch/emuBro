@@ -1,6 +1,6 @@
 {
   "name": "emuBro",
-  "version": "1.0.0-alpha",
+  "version": "1.0.0-alpha.1",
   "description": " emuBro is an open source retro game launcher that associates your retro games with your emulators such as snes9x, epsxe, pcsx2, dolphin, cemu or whatever you like. ",
   "main": "main.js",
   "scripts": {
