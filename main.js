@@ -11,6 +11,7 @@ const { registerWindowControlsIpc } = require("./main/ipc/window-controls");
 const { registerLocalesIpc } = require("./main/ipc/locales");
 const { registerYouTubeSearchIpc } = require("./main/ipc/youtube-search");
 const { registerSuggestionsIpc } = require("./main/ipc/suggestions");
+const { registerHelpDocsIpc } = require("./main/ipc/help-docs");
 const { registerMonitorIpc } = require("./main/ipc/monitors");
 const { registerMemoryCardIpc } = require("./main/ipc/memory-cards");
 const { registerBiosIpc } = require("./main/ipc/bios");
@@ -24,10 +25,13 @@ const { registerThemeUploadIpc } = require("./main/ipc/theme-upload");
 const { registerSettingsPathsIpc } = require("./main/ipc/settings-paths");
 const { registerImportStagingIpc } = require("./main/ipc/import-staging");
 const { registerAppMetaIpc } = require("./main/ipc/app-meta");
+const { registerCoverIpc } = require("./main/ipc/covers");
 const { createLibraryStorageTools } = require("./main/library-storage-tools");
 const { createResourceOverrides } = require("./main/resource-overrides");
+const { createHelpDocsService } = require("./main/help-docs-service");
 const { createPlatformConfigService } = require("./main/platform-config-service");
 const { createLibraryDbService } = require("./main/library-db");
+const { createGameListService } = require("./main/gamelist-service");
 const { createAppBootstrapManager } = require("./main/app-bootstrap");
 
 // Import handlers
@@ -48,6 +52,7 @@ let appBootstrapStarted = false;
 let mainWindowRendererReady = false;
 let requestRevealMainWindow = null;
 let gameIpcActions = null;
+let emulatorIpcActions = null;
 let hasAttemptedFirstRunLegalNotice = false;
 const { createSplashWindow, closeSplashWindow } = createSplashWindowManager({
   getSplashTheme: () => store.get(SPLASH_THEME_SETTINGS_KEY, null)
@@ -59,6 +64,14 @@ const resourceOverrides = createResourceOverrides({
   path,
   log,
   store
+});
+
+const helpDocsService = createHelpDocsService({
+  path,
+  fsSync,
+  log,
+  getResourceRoots: resourceOverrides.getResourceRoots,
+  additionalHelpRoots: [path.join(__dirname, "docs", "help")]
 });
 
 function normalizeRuntimeRuleValueList(values = []) {
@@ -179,6 +192,13 @@ const libraryDbService = createLibraryDbService({
   getResourceRoots: resourceOverrides.getResourceRoots
 });
 
+const gameListService = createGameListService({
+  app,
+  fsSync,
+  log,
+  appRootDir: __dirname
+});
+
 const {
   dbGetGameById,
   dbDeleteGameById,
@@ -270,7 +290,32 @@ registerYouTubeSearchIpc({
 registerSuggestionsIpc({
   ipcMain,
   log,
-  fetchImpl: fetch
+  fetchImpl: fetch,
+  getPlatformConfigs,
+  getGamesState,
+  getEmulatorsState,
+  launchGameObject: (game, options = {}) => {
+    if (!gameIpcActions || typeof gameIpcActions.launchGameObject !== "function") {
+      return { success: false, message: "Game launch handler is not ready." };
+    }
+    return gameIpcActions.launchGameObject(game, options);
+  },
+  downloadInstallEmulator: async (payload = {}) => {
+    if (!emulatorIpcActions || typeof emulatorIpcActions.downloadInstallEmulator !== "function") {
+      return { success: false, message: "Emulator install handler is not ready." };
+    }
+    return await emulatorIpcActions.downloadInstallEmulator(payload || {});
+  },
+  os,
+  spawnSync,
+  normalizePlatform,
+  searchHelpDocs: (query, options = {}) => helpDocsService.searchDocs(query, options)
+});
+
+registerHelpDocsIpc({
+  ipcMain,
+  log,
+  helpDocsService
 });
 
 registerSystemActionsIpc({
@@ -334,11 +379,13 @@ registerSettingsPathsIpc({
 });
 
 registerAppMetaIpc({
+  app,
   ipcMain,
   log,
   os,
   fsSync,
   dialog,
+  spawnSync,
   getMainWindow: () => mainWindow,
   getGamesState
 });
@@ -394,6 +441,7 @@ registerImportIpc({
   determinePlatformFromFilenameEmus,
   processEmulatorExe,
   inferGameCode,
+  lookupGameCodeFromCatalog: gameListService.lookupGameCode,
   discoverCoverImageRelative,
   resolveResourcePath: resourceOverrides.resolveResourcePath,
   dbUpsertGame,
@@ -403,7 +451,7 @@ registerImportIpc({
   extractArchiveToDir
 });
 
-registerEmulatorIpc({
+emulatorIpcActions = registerEmulatorIpc({
   ipcMain,
   log,
   app,
@@ -467,6 +515,21 @@ registerThemeUploadIpc({
   fetchImpl: fetch
 });
 
+registerCoverIpc({
+  ipcMain,
+  log,
+  fsSync,
+  getPlatformConfigs,
+  normalizePlatform,
+  inferGameCode,
+  getGamesState,
+  dbGetGameById,
+  dbUpdateGameMetadata,
+  refreshLibraryFromDb,
+  resolveResourcePath: resourceOverrides.resolveResourcePath,
+  fetchImpl: fetch
+});
+
 // Handle app quit
 app.on("before-quit", () => {
   log.info("Application is quitting");
@@ -501,6 +564,39 @@ registerBiosIpc({
 });
 
 app.whenReady().then(() => {
+  try {
+    const ses = session.defaultSession;
+    if (ses && typeof ses.setPermissionRequestHandler === "function") {
+      ses.setPermissionRequestHandler((webContents, permission, callback, details = {}) => {
+        const pageUrl = String(webContents?.getURL?.() || "").trim().toLowerCase();
+        const requestingUrl = String(details?.requestingUrl || "").trim().toLowerCase();
+        const origin = requestingUrl || pageUrl;
+        const isLocalAppOrigin = origin.startsWith("file://") || origin.startsWith("app://");
+        const permissionKey = String(permission || "").trim().toLowerCase();
+        if (!isLocalAppOrigin) {
+          callback(false);
+          return;
+        }
+        if (permissionKey === "audiocapture" || permissionKey === "microphone") {
+          callback(true);
+          return;
+        }
+        if (permissionKey === "media") {
+          const mediaTypes = Array.isArray(details?.mediaTypes)
+            ? details.mediaTypes.map((entry) => String(entry || "").trim().toLowerCase())
+            : [];
+          const wantsAudio = mediaTypes.length === 0 || mediaTypes.includes("audio");
+          const wantsVideo = mediaTypes.includes("video");
+          callback(wantsAudio && !wantsVideo);
+          return;
+        }
+        callback(false);
+      });
+    }
+  } catch (error) {
+    log.warn("Failed to configure media permission handler:", error?.message || error);
+  }
+
   try {
     resourceOverrides.installFileProtocolOverride(session.defaultSession);
   } catch (error) {

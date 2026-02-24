@@ -19,6 +19,7 @@ function registerImportIpc(deps = {}) {
     determinePlatformFromFilenameEmus,
     processEmulatorExe,
     inferGameCode,
+    lookupGameCodeFromCatalog,
     discoverCoverImageRelative,
     resolveResourcePath,
     dbUpsertGame,
@@ -43,11 +44,19 @@ function registerImportIpc(deps = {}) {
   if (typeof determinePlatformFromFilenameEmus !== "function") throw new Error("registerImportIpc requires determinePlatformFromFilenameEmus");
   if (typeof processEmulatorExe !== "function") throw new Error("registerImportIpc requires processEmulatorExe");
   if (typeof inferGameCode !== "function") throw new Error("registerImportIpc requires inferGameCode");
+  if (lookupGameCodeFromCatalog && typeof lookupGameCodeFromCatalog !== "function") {
+    throw new Error("registerImportIpc requires lookupGameCodeFromCatalog to be a function");
+  }
   if (typeof discoverCoverImageRelative !== "function") throw new Error("registerImportIpc requires discoverCoverImageRelative");
   if (typeof resolveResourcePath !== "function") throw new Error("registerImportIpc requires resolveResourcePath");
   if (typeof dbUpsertGame !== "function") throw new Error("registerImportIpc requires dbUpsertGame");
   if (typeof getArchiveKind !== "function") throw new Error("registerImportIpc requires getArchiveKind");
   if (typeof extractArchiveToDir !== "function") throw new Error("registerImportIpc requires extractArchiveToDir");
+
+  const lookupGameCode = typeof lookupGameCodeFromCatalog === "function"
+    ? lookupGameCodeFromCatalog
+    : () => null;
+  let loggedCatalogLookupFailure = false;
 
   function normalizeFileExtension(value) {
     const normalized = String(value || "").trim().toLowerCase();
@@ -231,6 +240,293 @@ function registerImportIpc(deps = {}) {
     return (Array.isArray(platformConfigs) ? platformConfigs : []).some((cfg) => platformSupportsExtension(cfg, ext));
   }
 
+  function getDirectArchiveEmulatorNames(config, extension) {
+    const ext = normalizeFileExtension(extension);
+    if (!ext || !config) return [];
+    const names = [];
+    for (const emu of (Array.isArray(config?.emulators) ? config.emulators : [])) {
+      const emuName = String(emu?.name || "").trim();
+      if (!emuName) continue;
+      const supportsArchive = (Array.isArray(emu?.supportedFileTypes) ? emu.supportedFileTypes : [])
+        .some((entry) => extensionIsMentioned(entry, ext));
+      if (!supportsArchive) continue;
+      names.push(emuName);
+    }
+    return Array.from(new Set(names));
+  }
+
+  function platformAllowsArchiveExtension(config, extension) {
+    const ext = normalizeFileExtension(extension);
+    if (!ext || !config) return false;
+    return (Array.isArray(config?.supportedArchiveTypes) ? config.supportedArchiveTypes : [])
+      .some((entry) => normalizeFileExtension(entry) === ext || extensionIsMentioned(entry, ext));
+  }
+
+  function analyzeArchivePath(filePath, platformConfigs = []) {
+    const p = String(filePath || "").trim();
+    if (!p) return null;
+    const archiveKind = String(getArchiveKind(p) || "").trim().toLowerCase();
+    if (!archiveKind) return null;
+    const ext = normalizeFileExtension(path.extname(p));
+    const fileName = path.basename(p);
+    const platformConfig = resolveGamePlatformConfig(fileName, p, platformConfigs);
+    const emulatorNames = platformConfig
+      ? getDirectArchiveEmulatorNames(platformConfig, ext)
+      : [];
+    const directArchiveSupported = !!platformConfig
+      && platformAllowsArchiveExtension(platformConfig, ext)
+      && emulatorNames.length > 0;
+    return {
+      path: p,
+      extension: ext,
+      archiveKind,
+      platformShortName: String(platformConfig?.shortName || "").trim().toLowerCase(),
+      platformName: String(platformConfig?.name || "").trim(),
+      directArchiveSupported,
+      directArchiveEmulators: emulatorNames,
+      recommendedMode: directArchiveSupported ? "ask" : "extract"
+    };
+  }
+
+  function isHttpUrl(value) {
+    const input = String(value || "").trim();
+    if (!input) return false;
+    try {
+      const parsed = new URL(input);
+      return parsed.protocol === "http:" || parsed.protocol === "https:";
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  function parseHttpUrl(value) {
+    const input = String(value || "").trim();
+    if (!input) return null;
+    try {
+      const parsed = new URL(input);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+      return parsed;
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function isHtmlLikeSource(value) {
+    const input = String(value || "").trim();
+    if (!input) return false;
+    if (isHttpUrl(input)) {
+      const parsed = parseHttpUrl(input);
+      const pathname = String(parsed?.pathname || "").toLowerCase();
+      return pathname.endsWith(".html") || pathname.endsWith(".htm");
+    }
+    const ext = normalizeFileExtension(path.extname(input));
+    return ext === ".html" || ext === ".htm";
+  }
+
+  function normalizeNameForMatch(value) {
+    return String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "");
+  }
+
+  function decodeFileUrl(rawUrl) {
+    const value = String(rawUrl || "").trim();
+    if (!value.toLowerCase().startsWith("file://")) return value;
+    try {
+      const parsed = new URL(value);
+      let fsPath = decodeURIComponent(parsed.pathname || "");
+      if (process.platform === "win32" && /^\/[a-z]:/i.test(fsPath)) {
+        fsPath = fsPath.slice(1);
+      }
+      return fsPath;
+    } catch (_error) {
+      return value.replace(/^file:\/\//i, "");
+    }
+  }
+
+  function getBasenameFromSource(source) {
+    const input = String(source || "").trim();
+    if (!input) return "";
+    if (isHttpUrl(input)) {
+      const parsed = parseHttpUrl(input);
+      return path.basename(String(parsed?.pathname || ""));
+    }
+    return path.basename(input);
+  }
+
+  function toAbsoluteHttpUrl(rawValue, website) {
+    const value = String(rawValue || "").trim();
+    if (!value) return "";
+    if (isHttpUrl(value)) return value;
+    if (value.startsWith("/") && isHttpUrl(website)) {
+      try {
+        return new URL(value, website).toString();
+      } catch (_error) {
+        return "";
+      }
+    }
+    return "";
+  }
+
+  function getFirstDownloadUrls(downloadUrl) {
+    const out = [];
+    if (!downloadUrl) return out;
+    if (typeof downloadUrl === "string") {
+      if (downloadUrl.trim()) out.push(downloadUrl.trim());
+      return out;
+    }
+    if (Array.isArray(downloadUrl)) {
+      downloadUrl.forEach((entry) => {
+        const value = String(entry || "").trim();
+        if (value) out.push(value);
+      });
+      return out;
+    }
+    if (typeof downloadUrl !== "object") return out;
+    const keys = ["windows", "win", "linux", "mac", "macos", "darwin", "all", "default", "any"];
+    keys.forEach((key) => {
+      const source = downloadUrl[key];
+      if (typeof source === "string") {
+        const value = source.trim();
+        if (value) out.push(value);
+        return;
+      }
+      if (!Array.isArray(source)) return;
+      source.forEach((entry) => {
+        const value = String(entry || "").trim();
+        if (value) out.push(value);
+      });
+    });
+    return out;
+  }
+
+  function resolveImportedGameCode(payload = {}) {
+    const preferredCode = String(payload?.preferredCode || "").trim();
+    if (preferredCode) {
+      return { code: preferredCode, source: "override" };
+    }
+
+    try {
+      const match = lookupGameCode({
+        platformShortName: payload?.platformShortName,
+        platformName: payload?.platformName,
+        gameName: payload?.name,
+        filePath: payload?.filePath,
+        fileName: payload?.fileName
+      });
+      const codeFromCatalog = String(match?.code || "").trim();
+      if (codeFromCatalog) {
+        return { code: codeFromCatalog, source: "gamelist", match };
+      }
+    } catch (error) {
+      if (!loggedCatalogLookupFailure) {
+        loggedCatalogLookupFailure = true;
+        log.warn("gamelist lookup failed; falling back to filename/code inference:", error?.message || error);
+      }
+    }
+
+    const fallback = String(inferGameCode({
+      name: payload?.name,
+      filePath: payload?.filePath,
+      platformShortName: payload?.platformShortName,
+      platform: payload?.platformName
+    }) || "").trim();
+    if (fallback) return { code: fallback, source: "inferred" };
+    return { code: "", source: "none" };
+  }
+
+  function collectConfiguredWebEmulators(platformConfigs = []) {
+    const rows = [];
+    for (const cfg of (Array.isArray(platformConfigs) ? platformConfigs : [])) {
+      const platformShortName = String(cfg?.shortName || "").trim().toLowerCase();
+      const platformName = String(cfg?.name || platformShortName || "Unknown").trim();
+      for (const emu of (Array.isArray(cfg?.emulators) ? cfg.emulators : [])) {
+        const type = String(emu?.type || "").trim().toLowerCase();
+        if (type !== "web") continue;
+        const name = String(emu?.name || "").trim();
+        if (!name) continue;
+        const website = String(emu?.website || "").trim();
+        const webUrl = String(emu?.webUrl || "").trim();
+        const webUrlOnline = String(emu?.webUrlOnline || "").trim();
+        const startParameters = String(emu?.startParameters || "").trim();
+        const downloadCandidates = getFirstDownloadUrls(emu?.downloadUrl);
+        const normalizedCandidates = dedupeStringPaths([
+          webUrlOnline,
+          toAbsoluteHttpUrl(webUrlOnline, website),
+          webUrl,
+          toAbsoluteHttpUrl(webUrl, website),
+          website,
+          ...downloadCandidates
+        ]).filter((entry) => isHttpUrl(entry));
+
+        rows.push({
+          platformShortName,
+          platformName,
+          name,
+          type: "web",
+          website,
+          webUrl,
+          webUrlOnline,
+          startParameters,
+          supportedFileTypes: Array.isArray(emu?.supportedFileTypes)
+            ? emu.supportedFileTypes.map((entry) => String(entry || "").trim()).filter(Boolean)
+            : [],
+          normalizedCandidates
+        });
+      }
+    }
+    return rows;
+  }
+
+  function scoreWebEmulatorMatch(source, webEmu) {
+    const src = String(source || "").trim();
+    if (!src) return 0;
+    const sourceBase = String(getBasenameFromSource(src) || "").trim().toLowerCase();
+    const sourceBaseNorm = normalizeNameForMatch(path.basename(sourceBase, path.extname(sourceBase)));
+    const sourceUrl = parseHttpUrl(src);
+    const sourceHost = String(sourceUrl?.host || "").trim().toLowerCase();
+    const sourcePath = String(sourceUrl?.pathname || "").trim().toLowerCase();
+    const nameNorm = normalizeNameForMatch(webEmu?.name);
+
+    let score = 0;
+    const candidates = Array.isArray(webEmu?.normalizedCandidates) ? webEmu.normalizedCandidates : [];
+    candidates.forEach((candidate) => {
+      const c = String(candidate || "").trim();
+      if (!c) return;
+      const parsed = parseHttpUrl(c);
+      const candidateHost = String(parsed?.host || "").trim().toLowerCase();
+      const candidatePath = String(parsed?.pathname || "").trim().toLowerCase();
+      const candidateBase = String(path.basename(candidatePath) || "").trim().toLowerCase();
+
+      if (sourceUrl) {
+        if (c.toLowerCase() === src.toLowerCase()) score += 500;
+        if (sourceHost && candidateHost && sourceHost === candidateHost) score += 120;
+        if (sourcePath && candidatePath && sourcePath === candidatePath) score += 220;
+        if (sourceBase && candidateBase && sourceBase === candidateBase) score += 140;
+      } else {
+        if (sourceBase && candidateBase && sourceBase === candidateBase) score += 180;
+      }
+    });
+
+    if (nameNorm && sourceBaseNorm) {
+      if (sourceBaseNorm === nameNorm) score += 120;
+      else if (sourceBaseNorm.includes(nameNorm) || nameNorm.includes(sourceBaseNorm)) score += 60;
+    }
+
+    return score;
+  }
+
+  function sanitizePathSegment(value, fallback = "web-emulator") {
+    const normalized = String(value || "")
+      .trim()
+      .replace(/[\\/:*?"<>|]+/g, "-")
+      .replace(/\s+/g, " ")
+      .replace(/[. ]+$/g, "")
+      .trim();
+    return normalized || fallback;
+  }
+
   function extractCodeTail(upperText) {
     const text = String(upperText || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
     if (!text) return "";
@@ -374,6 +670,78 @@ function registerImportIpc(deps = {}) {
     return Array.from(new Set(out.map((row) => String(row || "").trim()).filter(Boolean)));
   }
 
+  function normalizePlatformShortName(value) {
+    return String(value || "").trim().toLowerCase();
+  }
+
+  function validatePsxCueReferences(cuePath) {
+    const p = String(cuePath || "").trim();
+    if (!p || !fsSync.existsSync(p)) {
+      return { ok: false, message: "CUE file was not found." };
+    }
+    const dir = path.dirname(p);
+    const refs = parseCueReferencedBinNames(p);
+    if (!refs.length) {
+      return { ok: false, message: "CUE file does not reference any BIN track." };
+    }
+    const missing = refs.filter((name) => {
+      const abs = path.resolve(dir, name);
+      return !fsSync.existsSync(abs);
+    });
+    if (missing.length > 0) {
+      return {
+        ok: false,
+        message: `CUE references missing BIN file(s): ${missing.slice(0, 3).join(", ")}${missing.length > 3 ? "..." : ""}`
+      };
+    }
+    return { ok: true, referencedBins: refs };
+  }
+
+  function getSbiPathForBin(binPath) {
+    const p = String(binPath || "").trim();
+    if (!p) return "";
+    const ext = normalizeFileExtension(path.extname(p));
+    if (ext !== ".bin") return "";
+    return path.join(path.dirname(p), `${path.basename(p, path.extname(p))}.sbi`);
+  }
+
+  function validatePsxImportAssets(gameFilePath, platformShortName) {
+    const psn = normalizePlatformShortName(platformShortName);
+    if (psn !== "psx" && psn !== "ps1" && psn !== "playstation") {
+      return { ok: true, warning: "" };
+    }
+    const p = String(gameFilePath || "").trim();
+    const ext = normalizeFileExtension(path.extname(p));
+    if (ext === ".cue") {
+      return validatePsxCueReferences(p);
+    }
+    if (ext === ".bin") {
+      const sbiPath = getSbiPathForBin(p);
+      if (!sbiPath || !fsSync.existsSync(sbiPath)) {
+        return {
+          ok: true,
+          warning: `No matching SBI file found for BIN: ${path.basename(p)}`
+        };
+      }
+      return { ok: true, warning: "", sbiPath };
+    }
+    return { ok: true, warning: "" };
+  }
+
+  function buildArchiveExtractionDirectory(archivePath) {
+    const archive = String(archivePath || "").trim();
+    const parentDir = path.dirname(archive);
+    const baseName = sanitizePathSegment(path.basename(archive, path.extname(archive)), "archive");
+    const initial = path.join(parentDir, `${baseName}_extracted`);
+    let candidate = initial;
+    let suffix = 1;
+    while (fsSync.existsSync(candidate)) {
+      candidate = path.join(parentDir, `${baseName}_extracted_${suffix}`);
+      suffix += 1;
+    }
+    return candidate;
+  }
+
   function findCueForBinPath(binPath) {
     const p = String(binPath || "").trim();
     if (!p) return "";
@@ -425,6 +793,47 @@ function registerImportIpc(deps = {}) {
       "    INDEX 01 00:00:00",
       ""
     ].join("\n");
+  }
+
+  function ensureCueForBinImport(filePath) {
+    const originalPath = String(filePath || "").trim();
+    if (!originalPath) {
+      return { importPath: "", generated: false, failed: false, message: "" };
+    }
+    if (normalizeFileExtension(path.extname(originalPath)) !== ".bin") {
+      return { importPath: originalPath, generated: false, failed: false, message: "" };
+    }
+
+    const existingCue = findCueForBinPath(originalPath);
+    if (existingCue) {
+      return {
+        importPath: existingCue,
+        generated: false,
+        failed: false,
+        cuePath: existingCue,
+        message: ""
+      };
+    }
+
+    const cuePath = path.join(path.dirname(originalPath), `${path.basename(originalPath, path.extname(originalPath))}.cue`);
+    try {
+      fsSync.writeFileSync(cuePath, buildCueContentForBin(originalPath), "utf8");
+      return {
+        importPath: cuePath,
+        generated: true,
+        failed: false,
+        cuePath,
+        message: ""
+      };
+    } catch (error) {
+      return {
+        importPath: originalPath,
+        generated: false,
+        failed: true,
+        cuePath,
+        message: String(error?.message || error || "Failed to generate CUE file.")
+      };
+    }
   }
 
   ipcMain.handle("process-emulator-exe", async (_event, filePath) => {
@@ -562,7 +971,13 @@ async function scanForGamesAndEmulators(selectedDrive, options = {}) {
                 if (!exists) {
                   const name = path.basename(canonicalFileName, path.extname(canonicalFileName));
                   const platformShortName = platformConfig.shortName || "unknown";
-                  const code = inferGameCode({ name, filePath: gameFilePath });
+                  const code = resolveImportedGameCode({
+                    platformShortName,
+                    platformName: platformConfig.name || "Unknown",
+                    name,
+                    filePath: gameFilePath,
+                    fileName: canonicalFileName
+                  }).code;
                   const image = discoverCoverImageRelative(platformShortName, code, name);
 
                   const { row, existed: existedInDb } = dbUpsertGame({
@@ -713,6 +1128,182 @@ ipcMain.handle("get-platforms-for-extension", async (_event, extension) => {
   } catch (error) {
     log.error("get-platforms-for-extension failed:", error);
     return [];
+  }
+});
+
+ipcMain.handle("import:analyze-archives", async (_event, paths = []) => {
+  try {
+    const platformConfigs = await getPlatformConfigs();
+    const rows = dedupeStringPaths(paths)
+      .map((entry) => analyzeArchivePath(entry, platformConfigs))
+      .filter(Boolean);
+    return {
+      success: true,
+      archives: rows
+    };
+  } catch (error) {
+    log.error("import:analyze-archives failed:", error);
+    return {
+      success: false,
+      message: error.message,
+      archives: []
+    };
+  }
+});
+
+ipcMain.handle("import:analyze-web-emulator-source", async (_event, payload = {}) => {
+  try {
+    const source = String(
+      (payload && typeof payload === "object")
+        ? (payload.source || payload.path || payload.url || "")
+        : payload
+    ).trim();
+    if (!source) {
+      return { success: false, message: "Missing source.", source: "", htmlLike: false, matches: [] };
+    }
+
+    const resolvedSource = source.toLowerCase().startsWith("file://")
+      ? decodeFileUrl(source)
+      : source;
+    const htmlLike = isHtmlLikeSource(resolvedSource);
+    const sourceIsUrl = isHttpUrl(resolvedSource);
+    const sourceExists = !sourceIsUrl && fsSync.existsSync(resolvedSource);
+    const sourceExt = normalizeFileExtension(path.extname(getBasenameFromSource(resolvedSource)));
+
+    const platformConfigs = await getPlatformConfigs();
+    const webEmulators = collectConfiguredWebEmulators(platformConfigs);
+    const matches = webEmulators
+      .map((row) => ({
+        ...row,
+        score: scoreWebEmulatorMatch(resolvedSource, row)
+      }))
+      .filter((row) => row.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 8)
+      .map((row) => ({
+        name: row.name,
+        platform: row.platformName,
+        platformShortName: row.platformShortName,
+        website: row.website,
+        webUrl: row.webUrl,
+        webUrlOnline: row.webUrlOnline,
+        startParameters: row.startParameters,
+        supportedFileTypes: row.supportedFileTypes,
+        score: row.score
+      }));
+
+    return {
+      success: true,
+      source: resolvedSource,
+      htmlLike,
+      sourceIsUrl,
+      sourceExists,
+      sourceExtension: sourceExt,
+      matches
+    };
+  } catch (error) {
+    log.error("import:analyze-web-emulator-source failed:", error);
+    return {
+      success: false,
+      message: error?.message || String(error),
+      source: "",
+      htmlLike: false,
+      matches: []
+    };
+  }
+});
+
+ipcMain.handle("import:save-web-emulator-source", async (_event, payload = {}) => {
+  try {
+    refreshLibraryFromDb();
+    const sourceRaw = String(payload?.source || payload?.path || payload?.url || "").trim();
+    if (!sourceRaw) {
+      return { success: false, message: "Missing source." };
+    }
+    const source = sourceRaw.toLowerCase().startsWith("file://")
+      ? decodeFileUrl(sourceRaw)
+      : sourceRaw;
+    const sourceIsUrl = isHttpUrl(source);
+    const action = String(payload?.action || "save").trim().toLowerCase();
+    const shouldDownload = action === "save_and_download" || action === "download";
+
+    const match = (payload?.match && typeof payload.match === "object") ? payload.match : {};
+    const platformShortName = String(payload?.platformShortName || match?.platformShortName || "").trim().toLowerCase();
+    const platformName = String(payload?.platform || match?.platform || platformShortName || "Unknown").trim();
+    const emulatorName = String(payload?.name || match?.name || path.basename(getBasenameFromSource(source), path.extname(getBasenameFromSource(source))) || "Web Emulator").trim();
+    const startParameters = String(payload?.startParameters || match?.startParameters || "?rom=%gamepath%").trim();
+    const website = String(payload?.website || match?.website || "").trim();
+    const type = "web";
+
+    if (!platformShortName) {
+      return { success: false, message: "Missing platform for web emulator." };
+    }
+
+    let storedPath = source;
+    let downloadedTo = "";
+    if (shouldDownload) {
+      const targetRoot = path.join(app.getPath("userData"), "web-emulators", platformShortName);
+      fsSync.mkdirSync(targetRoot, { recursive: true });
+      const sourceBaseName = getBasenameFromSource(source);
+      const sourceExt = normalizeFileExtension(path.extname(sourceBaseName || "")) || ".html";
+      const baseFileName = sanitizePathSegment(emulatorName, "web-emulator");
+      const desiredPath = path.join(targetRoot, `${baseFileName}${sourceExt === ".htm" ? ".html" : sourceExt}`);
+      let targetPath = desiredPath;
+      let index = 1;
+      while (fsSync.existsSync(targetPath)) {
+        targetPath = path.join(targetRoot, `${baseFileName}-${index}${sourceExt === ".htm" ? ".html" : sourceExt}`);
+        index += 1;
+      }
+
+      if (sourceIsUrl) {
+        if (typeof fetch !== "function") {
+          return { success: false, message: "Download is not available in this runtime." };
+        }
+        const response = await fetch(source, { redirect: "follow" });
+        if (!response.ok) {
+          return { success: false, message: `Failed to download web emulator page (${response.status}).` };
+        }
+        const text = await response.text();
+        fsSync.writeFileSync(targetPath, String(text || ""), "utf8");
+      } else {
+        if (!fsSync.existsSync(source) || !fsSync.lstatSync(source).isFile()) {
+          return { success: false, message: "Source HTML file was not found." };
+        }
+        fsSync.copyFileSync(source, targetPath);
+      }
+
+      storedPath = targetPath;
+      downloadedTo = targetPath;
+    } else if (!sourceIsUrl) {
+      if (!fsSync.existsSync(source) || !fsSync.lstatSync(source).isFile()) {
+        return { success: false, message: "Source HTML file was not found." };
+      }
+    }
+
+    const upsert = dbUpsertEmulator({
+      name: emulatorName,
+      platform: platformName || platformShortName,
+      platformShortName,
+      filePath: storedPath,
+      type,
+      website,
+      startParameters
+    });
+    refreshLibraryFromDb();
+
+    return {
+      success: true,
+      emulator: upsert?.row || null,
+      downloadedTo,
+      source,
+      storedPath
+    };
+  } catch (error) {
+    log.error("import:save-web-emulator-source failed:", error);
+    return {
+      success: false,
+      message: error?.message || String(error)
+    };
   }
 });
 
@@ -897,7 +1488,13 @@ ipcMain.handle("import-exe", async (_event, payload) => {
           results.skipped.push({ path: p, reason: "game_exists" });
         } else {
           const name = path.basename(p, path.extname(p));
-          const code = inferGameCode({ name, filePath: p });
+          const code = resolveImportedGameCode({
+            platformShortName,
+            platformName,
+            name,
+            filePath: p,
+            fileName: path.basename(p)
+          }).code;
           const discoveredImage = discoverCoverImageRelative(platformShortName, code, name);
           let image = discoveredImage || (await resolveAppIconDataUrl());
           if (addEmulator && knownEmulatorMatch) {
@@ -945,7 +1542,7 @@ ipcMain.handle("import-files-as-platform", async (_event, paths, platformShortNa
     const codeOverrides = (options && typeof options === "object" && options.codeOverrides && typeof options.codeOverrides === "object")
       ? options.codeOverrides
       : {};
-    const results = { success: true, addedGames: [], skipped: [], errors: [] };
+    const results = { success: true, addedGames: [], skipped: [], errors: [], warnings: [] };
 
     for (const raw of inputPaths) {
       const p = String(raw || "").trim();
@@ -957,9 +1554,42 @@ ipcMain.handle("import-files-as-platform", async (_event, paths, platformShortNa
           continue;
         }
 
-        const canonicalPath = String(getCanonicalGameImportPath(p) || p).trim();
+        const cuePrep = ensureCueForBinImport(p);
+        if (cuePrep.generated) {
+          results.warnings.push({
+            path: p,
+            reason: "cue_generated",
+            message: `Generated missing CUE file: ${path.basename(String(cuePrep.cuePath || ""))}`
+          });
+        } else if (cuePrep.failed) {
+          results.warnings.push({
+            path: p,
+            reason: "cue_generation_failed",
+            message: cuePrep.message || "Failed to generate CUE file for BIN import."
+          });
+        }
+
+        const importPath = String(cuePrep.importPath || p).trim();
+        const canonicalPath = String(getCanonicalGameImportPath(importPath) || importPath).trim();
         if (canonicalPath.toLowerCase() !== p.toLowerCase()) {
           results.skipped.push({ path: p, reason: "bin_replaced_by_cue", cuePath: canonicalPath });
+        }
+
+        const psxValidation = validatePsxImportAssets(canonicalPath, psn);
+        if (!psxValidation?.ok) {
+          results.errors.push({
+            path: canonicalPath || p,
+            reason: "psx_assets_invalid",
+            message: psxValidation?.message || "PS1 asset validation failed."
+          });
+          continue;
+        }
+        if (psxValidation?.warning) {
+          results.warnings.push({
+            path: canonicalPath || p,
+            reason: "psx_sbi_missing",
+            message: psxValidation.warning
+          });
         }
 
         const exists = getGamesState().some((g) => String(g.filePath || "").toLowerCase() === canonicalPath.toLowerCase());
@@ -978,8 +1608,14 @@ ipcMain.handle("import-files-as-platform", async (_event, paths, platformShortNa
           || ""
         ).trim();
         const overrideVariants = gameCodeVariants(overrideCodeRaw);
-        const fallbackCode = inferGameCode({ name, filePath: canonicalPath });
-        const code = overrideCodeRaw || fallbackCode;
+        const code = resolveImportedGameCode({
+          platformShortName: psn,
+          platformName,
+          name,
+          filePath: canonicalPath,
+          fileName: base,
+          preferredCode: overrideCodeRaw
+        }).code;
 
         const imageCodes = dedupeStringPaths([
           ...overrideVariants,
@@ -1029,10 +1665,102 @@ ipcMain.handle("import-paths", async (_event, paths, options = {}) => {
       addedGames: [],
       addedEmulators: [],
       skipped: [],
-      errors: []
+      errors: [],
+      warnings: []
     };
 
     const recursive = options && options.recursive === false ? false : true;
+    const archiveImportModesRaw = options && options.archiveImportModes && typeof options.archiveImportModes === "object"
+      ? options.archiveImportModes
+      : {};
+    const archiveImportModes = new Map();
+    Object.keys(archiveImportModesRaw).forEach((key) => {
+      const normalizedKey = pathKey(key);
+      if (!normalizedKey) return;
+      const mode = String(archiveImportModesRaw[key] || "").trim().toLowerCase();
+      if (mode !== "extract" && mode !== "direct" && mode !== "skip") return;
+      archiveImportModes.set(normalizedKey, mode);
+    });
+
+    function importGameFileDirect(gameFilePath, originalPathForSkip) {
+      const cuePrep = ensureCueForBinImport(gameFilePath);
+      if (cuePrep.generated) {
+        results.warnings.push({
+          path: gameFilePath,
+          reason: "cue_generated",
+          message: `Generated missing CUE file: ${path.basename(String(cuePrep.cuePath || ""))}`
+        });
+      } else if (cuePrep.failed) {
+        results.warnings.push({
+          path: gameFilePath,
+          reason: "cue_generation_failed",
+          message: cuePrep.message || "Failed to generate CUE file for BIN import."
+        });
+      }
+
+      const importPath = String(cuePrep.importPath || gameFilePath).trim();
+      const canonicalPath = String(getCanonicalGameImportPath(importPath) || importPath).trim();
+      if (canonicalPath.toLowerCase() !== String(gameFilePath || "").trim().toLowerCase()) {
+        results.skipped.push({ path: gameFilePath, reason: "bin_replaced_by_cue", cuePath: canonicalPath });
+      }
+
+      const canonicalBase = path.basename(canonicalPath);
+      const platformConfig = resolveGamePlatformConfig(canonicalBase, canonicalPath, platformConfigs);
+      if (!platformConfig) {
+        results.skipped.push({ path: canonicalPath || gameFilePath, reason: "unmatched" });
+        return;
+      }
+
+      const exists = getGamesState().some((g) => String(g.filePath || "").toLowerCase() === canonicalPath.toLowerCase());
+      if (exists) {
+        results.skipped.push({ path: originalPathForSkip || canonicalPath, reason: "game_exists" });
+        return;
+      }
+
+      const name = path.basename(canonicalBase, path.extname(canonicalBase));
+      const platformShortName = platformConfig.shortName || "unknown";
+      const psxValidation = validatePsxImportAssets(canonicalPath, platformShortName);
+      if (!psxValidation?.ok) {
+        results.errors.push({
+          path: canonicalPath || gameFilePath,
+          reason: "psx_assets_invalid",
+          message: psxValidation?.message || "PS1 asset validation failed."
+        });
+        return;
+      }
+      if (psxValidation?.warning) {
+        results.warnings.push({
+          path: canonicalPath || gameFilePath,
+          reason: "psx_sbi_missing",
+          message: psxValidation.warning
+        });
+      }
+
+      const code = resolveImportedGameCode({
+        platformShortName,
+        platformName: platformConfig.name || "Unknown",
+        name,
+        filePath: canonicalPath,
+        fileName: canonicalBase
+      }).code;
+      const image = discoverCoverImageRelative(platformShortName, code, name);
+      const { row, existed: existedInDb } = dbUpsertGame({
+        name,
+        platform: platformConfig.name || "Unknown",
+        platformShortName,
+        filePath: canonicalPath,
+        code: code || null,
+        image: image || null
+      });
+
+      refreshLibraryFromDb();
+
+      if (!existedInDb) {
+        results.addedGames.push(row);
+      } else {
+        results.skipped.push({ path: originalPathForSkip || canonicalPath, reason: "game_exists" });
+      }
+    }
 
     for (const raw of inputPaths) {
       const p = String(raw || "").trim();
@@ -1082,17 +1810,51 @@ ipcMain.handle("import-paths", async (_event, paths, options = {}) => {
 
         const archiveKind = getArchiveKind(p);
         if (archiveKind) {
-          const destDir = path.join(
-            app.getPath("userData"),
-            "imports",
-            `${archiveKind}_${Date.now()}_${Math.floor(Math.random() * 1000)}`
-          );
+          const importMode = archiveImportModes.get(pathKey(p)) || "extract";
+          if (importMode === "skip") {
+            results.skipped.push({ path: p, reason: "archive_skipped_by_user" });
+            continue;
+          }
+
+          if (importMode === "direct") {
+            importGameFileDirect(p, p);
+            continue;
+          }
+
+          let destDir = buildArchiveExtractionDirectory(p);
+          let extracted = false;
+          let extractionError = null;
 
           try {
             await extractArchiveToDir(p, destDir);
+            extracted = true;
           } catch (e) {
-            results.skipped.push({ path: p, reason: "archive_extract_failed", message: e.message });
-            continue;
+            extractionError = e;
+          }
+
+          if (!extracted) {
+            const fallbackDestDir = path.join(
+              app.getPath("userData"),
+              "imports",
+              `${archiveKind}_${Date.now()}_${Math.floor(Math.random() * 1000)}`
+            );
+            try {
+              await extractArchiveToDir(p, fallbackDestDir);
+              extracted = true;
+              destDir = fallbackDestDir;
+              results.warnings.push({
+                path: p,
+                reason: "archive_extract_fallback",
+                message: "Archive extraction in source folder failed. Used app import cache folder instead."
+              });
+            } catch (fallbackError) {
+              results.skipped.push({
+                path: p,
+                reason: "archive_extract_failed",
+                message: fallbackError?.message || extractionError?.message || "Archive extract failed."
+              });
+              continue;
+            }
           }
 
           const scanRes = await scanForGamesAndEmulators(destDir, { recursive: true });
@@ -1111,43 +1873,7 @@ ipcMain.handle("import-paths", async (_event, paths, options = {}) => {
         }
 
         // Treat as a game file.
-        const canonicalPath = String(getCanonicalGameImportPath(p) || p).trim();
-        if (canonicalPath.toLowerCase() !== p.toLowerCase()) {
-          results.skipped.push({ path: p, reason: "bin_replaced_by_cue", cuePath: canonicalPath });
-        }
-        const canonicalBase = path.basename(canonicalPath);
-        const platformConfig = resolveGamePlatformConfig(canonicalBase, canonicalPath, platformConfigs);
-        if (!platformConfig) {
-          results.skipped.push({ path: canonicalPath || p, reason: "unmatched" });
-          continue;
-        }
-
-        const exists = getGamesState().some((g) => String(g.filePath || "").toLowerCase() === canonicalPath.toLowerCase());
-        if (exists) {
-          results.skipped.push({ path: canonicalPath, reason: "game_exists" });
-          continue;
-        }
-
-        const name = path.basename(canonicalBase, path.extname(canonicalBase));
-        const platformShortName = platformConfig.shortName || "unknown";
-        const code = inferGameCode({ name, filePath: canonicalPath });
-        const image = discoverCoverImageRelative(platformShortName, code, name);
-        const { row, existed: existedInDb } = dbUpsertGame({
-          name,
-          platform: platformConfig.name || "Unknown",
-          platformShortName,
-          filePath: canonicalPath,
-          code: code || null,
-          image: image || null
-        });
-
-        refreshLibraryFromDb();
-
-        if (!existedInDb) {
-          results.addedGames.push(row);
-        } else {
-          results.skipped.push({ path: p, reason: "game_exists" });
-        }
+        importGameFileDirect(p, p);
       } catch (e) {
         results.errors.push({ path: raw, message: e.message });
       }

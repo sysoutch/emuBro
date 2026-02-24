@@ -85,6 +85,8 @@ let lastRenderSignature = '';
 let lastRenderAt = 0;
 let lastRenderedView = 'cover';
 let launchCandidateResolver = null;
+let globalSizeWheelShortcutBound = false;
+const gameCoverCacheBusters = new Map();
 
 function getEmulatorDownloadActions() {
     if (!emulatorDownloadActions) {
@@ -114,6 +116,7 @@ function getGameDetailsPopupActions() {
             getEmulators,
             fetchEmulators,
             getGameImagePath,
+            markGameCoverUpdated,
             initializeLazyGameImages,
             reloadGamesFromMainAndRender,
             lazyPlaceholderSrc: LAZY_PLACEHOLDER_SRC,
@@ -230,7 +233,7 @@ function getMissingGameRecoveryActions() {
             i18n,
             escapeHtml,
             reloadGamesFromMainAndRender,
-            buildLaunchPayload: (gameId) => buildLaunchPayloadForGameId(gameId),
+            buildLaunchPayload: (gameId, extraPayload = {}) => buildLaunchPayloadForGameId(gameId, extraPayload),
             alertUser: (message) => alert(message)
         });
     }
@@ -316,13 +319,61 @@ function clearGamesLoadObserver() {
     } catch (_e) {}
 }
 
+function setupGlobalSizeWheelShortcut() {
+    if (globalSizeWheelShortcutBound) return;
+    globalSizeWheelShortcutBound = true;
+
+    const adjustSizeSliderFromWheel = (deltaY) => {
+        const slider = document.getElementById('view-size-slider');
+        if (!slider) return false;
+        if (slider.disabled) return true;
+        const current = Number.parseInt(String(slider.value || ''), 10);
+        if (!Number.isFinite(current)) return false;
+
+        const min = Number.parseInt(String(slider.min || '70'), 10);
+        const max = Number.parseInt(String(slider.max || '140'), 10);
+        const step = Math.max(1, Number.parseInt(String(slider.step || '5'), 10) || 5);
+        const direction = deltaY < 0 ? 1 : -1;
+        const next = Math.max(min, Math.min(max, current + (direction * step)));
+        if (next === current) return true;
+
+        slider.value = String(next);
+        slider.dispatchEvent(new Event('input', { bubbles: true }));
+        return true;
+    };
+
+    window.addEventListener('wheel', (event) => {
+        if (!event) return;
+        if (!(event.ctrlKey || event.metaKey)) return;
+        if (!adjustSizeSliderFromWheel(Number(event.deltaY || 0))) return;
+        event.preventDefault();
+    }, { passive: false, capture: true });
+}
+
 function getGameImagePath(game) {
     let gameImageToUse = game?.image;
     const platformShortName = String(game?.platformShortName || 'unknown').toLowerCase();
     if (!gameImageToUse) {
         gameImageToUse = `emubro-resources/platforms/${platformShortName}/covers/default.jpg`;
     }
+
+    const gameId = Number(game?.id || 0);
+    const cacheBuster = gameId ? Number(gameCoverCacheBusters.get(gameId) || 0) : 0;
+    if (cacheBuster > 0) {
+        const source = String(gameImageToUse || '').trim();
+        if (source && !source.startsWith('data:')) {
+            const sep = source.includes('?') ? '&' : '?';
+            gameImageToUse = `${source}${sep}cb=${cacheBuster}`;
+        }
+    }
+
     return gameImageToUse;
+}
+
+function markGameCoverUpdated(gameId) {
+    const id = Number(gameId || 0);
+    if (!id) return;
+    gameCoverCacheBusters.set(id, Date.now());
 }
 
 export function getGames() { return games; }
@@ -338,6 +389,12 @@ function dispatchGamesUpdated(reason = 'updated') {
 }
 export function setGames(val) {
     games = Array.isArray(val) ? val : [];
+    if (gameCoverCacheBusters.size > 0) {
+        const validIds = new Set(games.map((row) => Number(row?.id || 0)).filter((id) => id > 0));
+        for (const key of gameCoverCacheBusters.keys()) {
+            if (!validIds.has(Number(key || 0))) gameCoverCacheBusters.delete(key);
+        }
+    }
     dispatchGamesUpdated('set-games');
 }
 export function getFilteredGames() { return filteredGames; }
@@ -357,6 +414,8 @@ export async function fetchEmulators() {
 }
 
 export function renderGames(gamesToRender) {
+    setupGlobalSizeWheelShortcut();
+
     const gamesContainer = document.getElementById('games-container');
     if (!gamesContainer) return;
 
@@ -566,20 +625,39 @@ function resolveEmulatorForGame(game) {
     return rows.find((emu) => String(emu?.platformShortName || '').trim().toLowerCase() === platformShortName) || null;
 }
 
-function buildLaunchPayloadForGameId(gameId) {
+function buildLaunchPayloadForGameId(gameId, extraPayload = {}) {
     const targetId = Number(gameId || 0);
     if (!targetId) return 0;
     const game = getGameById(targetId);
     if (!game) return targetId;
 
     const emulator = resolveEmulatorForGame(game);
-    if (!emulator) return targetId;
-    const config = getEmulatorConfig(emulator);
-    const runtimeDataRules = normalizeRuntimeDataRulesForLaunch(config?.runtimeDataRules || {});
-    return {
+    const config = emulator ? getEmulatorConfig(emulator) : {};
+    const mergedRuntimeDataRules = normalizeRuntimeDataRulesForLaunch({
+        ...(config?.runtimeDataRules || {}),
+        ...((extraPayload && typeof extraPayload === 'object' && extraPayload.runtimeDataRules)
+            ? extraPayload.runtimeDataRules
+            : {})
+    });
+    const payload = {
         gameId: targetId,
-        runtimeDataRules
+        runtimeDataRules: mergedRuntimeDataRules
     };
+
+    if (extraPayload && typeof extraPayload === 'object') {
+        const allowLaunchWarnings = Array.isArray(extraPayload.allowLaunchWarnings)
+            ? Array.from(new Set(
+                extraPayload.allowLaunchWarnings
+                    .map((entry) => String(entry || '').trim().toLowerCase())
+                    .filter(Boolean)
+            ))
+            : [];
+        if (allowLaunchWarnings.length > 0) {
+            payload.allowLaunchWarnings = allowLaunchWarnings;
+        }
+    }
+
+    return payload;
 }
 
 async function openEmulatorConfigEditor(emulator) {

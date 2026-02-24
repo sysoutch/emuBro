@@ -59,4 +59,5 @@ spec/fixtures/logo.png
 # Project specific
 /build_out/
 /emubro-resources/
+/gamelist/
 /emubro-locales-repo/

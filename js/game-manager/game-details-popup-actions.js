@@ -13,6 +13,9 @@ export function createGameDetailsPopupActions(deps = {}) {
     const getEmulators = deps.getEmulators || (() => []);
     const fetchEmulators = deps.fetchEmulators || (async () => []);
     const getGameImagePath = deps.getGameImagePath || (() => '');
+    const markGameCoverUpdated = typeof deps.markGameCoverUpdated === 'function'
+        ? deps.markGameCoverUpdated
+        : (() => {});
     const initializeLazyGameImages = deps.initializeLazyGameImages || (() => {});
     const reloadGamesFromMainAndRender = deps.reloadGamesFromMainAndRender || (async () => {});
     const lazyPlaceholderSrc = String(deps.lazyPlaceholderSrc || '').trim();
@@ -72,6 +75,19 @@ export function createGameDetailsPopupActions(deps = {}) {
         }
     }
 
+    function hideGameInfoPopup() {
+        if (!gameInfoPopup) return;
+        gameInfoPopup.style.display = 'none';
+        gameInfoPopup.classList.remove('active');
+        if (gameInfoPopup.classList.contains('docked-right')) {
+            import('../docking-manager').then((m) => m.completelyRemoveFromDock('game-info-modal'));
+        } else {
+            import('../docking-manager').then((m) => m.removeFromDock('game-info-modal'));
+        }
+        setGameInfoPinnedStorage(false);
+        applyGameInfoPinnedState();
+    }
+
     function ensureGameInfoPopup() {
         if (gameInfoPopup && gameInfoPopup.isConnected) return gameInfoPopup;
 
@@ -82,15 +98,7 @@ export function createGameDetailsPopupActions(deps = {}) {
         const closeBtn = gameInfoPopup.querySelector('#close-game-info');
         if (closeBtn) {
             closeBtn.addEventListener('click', () => {
-                gameInfoPopup.style.display = 'none';
-                gameInfoPopup.classList.remove('active');
-                if (gameInfoPopup.classList.contains('docked-right')) {
-                    import('../docking-manager').then((m) => m.completelyRemoveFromDock('game-info-modal'));
-                } else {
-                    import('../docking-manager').then((m) => m.removeFromDock('game-info-modal'));
-                }
-                setGameInfoPinnedStorage(false);
-                applyGameInfoPinnedState();
+                hideGameInfoPopup();
             });
         }
 
@@ -520,6 +528,199 @@ export function createGameDetailsPopupActions(deps = {}) {
         });
     }
 
+    function promptRemoveGameOptions(game) {
+        return new Promise((resolve) => {
+            const safeName = String(game?.name || 'this game').trim() || 'this game';
+            const overlay = document.createElement('div');
+            overlay.style.cssText = [
+                'position:fixed',
+                'inset:0',
+                'z-index:4000',
+                'display:flex',
+                'align-items:center',
+                'justify-content:center',
+                'padding:16px',
+                'background:rgba(0,0,0,0.55)'
+            ].join(';');
+
+            const dialog = document.createElement('div');
+            dialog.className = 'glass';
+            dialog.style.cssText = [
+                'width:min(520px, 92vw)',
+                'border:1px solid var(--border-color)',
+                'border-radius:12px',
+                'background:var(--bg-secondary)',
+                'box-shadow:0 10px 30px rgba(0,0,0,0.35)',
+                'padding:16px',
+                'display:grid',
+                'gap:12px'
+            ].join(';');
+
+            const title = document.createElement('div');
+            title.style.cssText = 'font-size:18px;font-weight:700;';
+            title.textContent = i18n.t('gameDetails.removeGameTitle') || 'Remove Game';
+
+            const text = document.createElement('div');
+            text.style.cssText = 'opacity:0.92;line-height:1.45;';
+            text.textContent = (i18n.t('gameDetails.removeGameConfirm') || 'Remove "{{name}}" from library?').replace('{{name}}', safeName);
+
+            const checkboxWrap = document.createElement('label');
+            checkboxWrap.style.cssText = 'display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = false;
+            checkboxWrap.appendChild(checkbox);
+            const checkboxLabel = document.createElement('span');
+            checkboxLabel.textContent = i18n.t('gameDetails.removeGameAlsoDisk') || 'Also remove on Disk';
+            checkboxWrap.appendChild(checkboxLabel);
+
+            const buttons = document.createElement('div');
+            buttons.style.cssText = 'display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;';
+            const cancelBtn = document.createElement('button');
+            cancelBtn.className = 'action-btn';
+            cancelBtn.type = 'button';
+            cancelBtn.textContent = i18n.t('buttons.cancel') || 'Cancel';
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'action-btn remove-btn';
+            removeBtn.type = 'button';
+            removeBtn.textContent = i18n.t('gameDetails.removeGameAction') || 'Remove Game';
+            buttons.appendChild(cancelBtn);
+            buttons.appendChild(removeBtn);
+
+            const cleanup = (result) => {
+                window.removeEventListener('keydown', onKeyDown, true);
+                overlay.remove();
+                resolve(result);
+            };
+
+            const onKeyDown = (event) => {
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    cleanup({ canceled: true, removeFromDisk: false });
+                }
+            };
+
+            cancelBtn.addEventListener('click', () => cleanup({ canceled: true, removeFromDisk: false }));
+            removeBtn.addEventListener('click', () => cleanup({ canceled: false, removeFromDisk: !!checkbox.checked }));
+
+            dialog.appendChild(title);
+            dialog.appendChild(text);
+            dialog.appendChild(checkboxWrap);
+            dialog.appendChild(buttons);
+            overlay.appendChild(dialog);
+            document.body.appendChild(overlay);
+            window.addEventListener('keydown', onKeyDown, true);
+            checkbox.focus();
+        });
+    }
+
+    async function bindRemoveGameAction(button, game) {
+        if (!button || !game) return;
+        button.addEventListener('click', async () => {
+            const choice = await promptRemoveGameOptions(game);
+            if (!choice || choice.canceled) return;
+
+            button.disabled = true;
+            try {
+                const result = await emubro.invoke('remove-game', {
+                    gameId: game.id,
+                    removeFromDisk: !!choice.removeFromDisk
+                });
+                if (!result?.success) {
+                    alertUser(result?.message || 'Failed to remove game.');
+                    return;
+                }
+                hideGameInfoPopup();
+                await reloadGamesFromMainAndRender();
+                alertUser(result?.message || 'Game removed from library.');
+            } catch (error) {
+                alertUser(error?.message || 'Failed to remove game.');
+            } finally {
+                button.disabled = false;
+            }
+        });
+    }
+
+    function normalizeCoverPlatform(value) {
+        const raw = String(value || '').trim().toLowerCase();
+        if (!raw) return '';
+        if (raw === 'psx' || raw === 'ps2') return raw;
+        if (raw === 'ps1' || raw === 'ps') return 'psx';
+        if (raw === 'playstation' || raw === 'playstation-1') return 'psx';
+        if (raw === 'playstation2' || raw === 'playstation-2') return 'ps2';
+        return '';
+    }
+
+    async function bindCoverDownloadAction(button, statusEl, game) {
+        if (!button || !game) return;
+        const setStatus = (message, level = 'info') => {
+            if (!statusEl) return;
+            statusEl.textContent = String(message || '').trim();
+            statusEl.dataset.level = level;
+        };
+        const platform = normalizeCoverPlatform(game.platformShortName || game.platform);
+        if (!platform) {
+            button.disabled = true;
+            button.title = 'PS1/PS2 only';
+            setStatus('Cover download supports PS1/PS2 only.', 'warning');
+            return;
+        }
+        setStatus('', 'info');
+
+        button.addEventListener('click', async () => {
+            const previousLabel = button.textContent;
+            button.disabled = true;
+            button.textContent = 'Downloading...';
+            setStatus('Downloading cover...', 'info');
+            try {
+                const result = await emubro.invoke('covers:download-for-game', {
+                    gameId: game.id,
+                    overwrite: true
+                });
+                if (!result?.success) {
+                    const message = String(result?.message || 'Failed to download cover.');
+                    setStatus(message, 'error');
+                    alertUser(message);
+                    return;
+                }
+
+                if (result?.status === 'missing_serial') {
+                    setStatus('No serial/game code found for this game.', 'warning');
+                    return;
+                }
+                if (result?.status === 'not_found') {
+                    setStatus('No cover found in configured PS1/PS2 sources for this serial.', 'warning');
+                    return;
+                }
+
+                markGameCoverUpdated(game.id);
+                await reloadGamesFromMainAndRender();
+                const refreshedGame = getGames().find((row) => Number(row.id) === Number(game.id));
+                if (refreshedGame) showGameDetails(refreshedGame);
+
+                if (result?.status === 'reused_existing_file') {
+                    setStatus('Cover applied from local cache.', 'success');
+                } else {
+                    setStatus('Cover downloaded and applied.', 'success');
+                }
+            } catch (error) {
+                const message = String(error?.message || 'Failed to download cover.');
+                setStatus(message, 'error');
+                alertUser(message);
+            } finally {
+                button.disabled = false;
+                button.textContent = previousLabel;
+            }
+        });
+    }
+
+    function isWebEmulatorPath(value) {
+        const input = String(value || '').trim();
+        if (!input) return false;
+        if (/^https?:\/\//i.test(input)) return true;
+        return /\.html?(?:$|[?#])/i.test(input);
+    }
+
     async function bindEmulatorOverrideAction(select, game) {
         if (!select || !game) return;
 
@@ -527,15 +728,21 @@ export function createGameDetailsPopupActions(deps = {}) {
         const gamePlatformShortName = String(game.platformShortName || '').trim().toLowerCase();
         const installedEmulators = rows
             .filter((emu) => {
-                if (!emu?.isInstalled) return false;
                 const emuPath = String(emu?.filePath || '').trim();
                 if (!emuPath) return false;
+                const isWebTarget = isWebEmulatorPath(emuPath) || String(emu?.type || '').trim().toLowerCase() === 'web';
+                if (!isWebTarget && !emu?.isInstalled) return false;
                 if (!gamePlatformShortName) return true;
                 const emuPlatformShortName = String(emu?.platformShortName || emu?.platform || '').trim().toLowerCase();
                 return emuPlatformShortName === gamePlatformShortName;
             })
             .sort((a, b) => {
-                return String(a.name || '').localeCompare(String(b.name || ''));
+                const aPath = String(a?.filePath || '').trim();
+                const bPath = String(b?.filePath || '').trim();
+                const aWeb = isWebEmulatorPath(aPath) || String(a?.type || '').trim().toLowerCase() === 'web';
+                const bWeb = isWebEmulatorPath(bPath) || String(b?.type || '').trim().toLowerCase() === 'web';
+                if (aWeb !== bWeb) return aWeb ? 1 : -1;
+                return String(a?.name || '').localeCompare(String(b?.name || ''));
             });
 
         const currentOverride = String(game.emulatorOverridePath || '').trim();
@@ -546,7 +753,9 @@ export function createGameDetailsPopupActions(deps = {}) {
             const emuPath = String(emu.filePath || '').trim();
             const emuName = String(emu.name || 'Emulator').trim();
             const emuPlatform = String(emu.platformShortName || emu.platform || '').trim();
-            const label = emuPlatform ? `${emuName} (${emuPlatform})` : emuName;
+            const isWeb = isWebEmulatorPath(emuPath) || String(emu?.type || '').trim().toLowerCase() === 'web';
+            const labelBase = emuPlatform ? `${emuName} (${emuPlatform})` : emuName;
+            const label = isWeb ? `${labelBase} [Web]` : labelBase;
             const selected = currentOverride && emuPath.toLowerCase() === currentOverride.toLowerCase() ? ' selected' : '';
             return `<option value="${escapeHtml(emuPath)}"${selected}>${escapeHtml(label)}</option>`;
         }).join('');
@@ -900,7 +1109,13 @@ export function createGameDetailsPopupActions(deps = {}) {
         const tagsSaveBtn = container.querySelector('[data-game-tags-save]');
         const tagsSelectedPreview = container.querySelector('[data-game-tags-selected]');
         bindCreateShortcutAction(container.querySelector('[data-create-shortcut]'), game);
+        bindCoverDownloadAction(
+            container.querySelector('[data-download-cover]'),
+            container.querySelector('[data-cover-download-status]'),
+            game
+        );
         bindShowInExplorerAction(container.querySelector('[data-show-in-explorer]'), game);
+        bindRemoveGameAction(container.querySelector('[data-remove-game]'), game);
         bindEmulatorOverrideAction(container.querySelector('[data-game-emulator-override]'), game);
         bindRunAsAction(
             container.querySelector('[data-game-runas-select]'),
@@ -941,6 +1156,7 @@ export function createGameDetailsPopupActions(deps = {}) {
         const ratingLabel = escapeHtml(i18n.t('gameDetails.rating') || 'Rating');
         const genreLabel = escapeHtml(i18n.t('gameDetails.genre') || 'Genre');
         const priceLabel = escapeHtml(i18n.t('gameDetails.price') || 'Price');
+        const removeGameActionLabel = escapeHtml(i18n.t('gameDetails.removeGameAction') || 'Remove Game');
         const runAsMode = normalizeRunAsMode(game.runAsMode || 'default');
         const runAsUser = escapeHtml(game.runAsUser || '');
         const llmButtonMarkup = isLlmHelpersEnabled()
@@ -1001,12 +1217,15 @@ export function createGameDetailsPopupActions(deps = {}) {
         </div>
         <div class="game-detail-row game-detail-actions">
             <button class="action-btn" data-create-shortcut>Create Desktop Shortcut</button>
+            <button class="action-btn" data-download-cover>Download Cover (Serial)</button>
             <button class="action-btn" data-show-in-explorer>Show in Explorer</button>
             <button class="action-btn youtube-preview-btn" data-youtube-preview>
                 <span class="youtube-preview-btn-icon" aria-hidden="true"></span>
                 <span>YouTube Preview</span>
             </button>
+            <button class="action-btn remove-btn" data-remove-game>${removeGameActionLabel}</button>
         </div>
+        <div class="game-detail-row game-detail-cover-status" data-cover-download-status aria-live="polite"></div>
         <div class="game-detail-row game-detail-youtube-preview" data-game-youtube-preview>
             <div class="game-youtube-preview-header">
                 <h4>Video Preview</h4>

@@ -26,6 +26,7 @@ module.exports = {
     "logo.png",
     "favicon.ico",
     "emubro-resources/**/*", // Essential for your app to find configs/platforms
+    "gamelist/**/*",
     "!emubro-locales-repo/**/*",
     "!build_out/**/*"
   ],
