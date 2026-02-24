@@ -201,8 +201,18 @@ function registerImportIpc(deps = {}) {
     const ext = normalizeFileExtension(extension);
     if (!src || !ext) return false;
     if (src === ext) return true;
-    if (src.includes(ext)) return true;
-    if (src.includes(`\\${ext}`)) return true;
+
+    // Match extension tokens safely so ".h" does not match ".hdf" and ".elf" does not match ".self".
+    const escapedExt = ext.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const tokenPattern = new RegExp(`(^|[^a-z0-9])${escapedExt}($|[^a-z0-9])`, "i");
+    if (tokenPattern.test(src)) return true;
+
+    const escapedRegexExt = ext.startsWith(".")
+      ? `\\\\\\.${escapedExt.slice(2)}`
+      : `\\\\${escapedExt}`;
+    const regexPattern = new RegExp(`(^|[^a-z0-9])${escapedRegexExt}($|[^a-z0-9])`, "i");
+    if (regexPattern.test(src)) return true;
+
     return false;
   }
 
@@ -631,17 +641,8 @@ function registerImportIpc(deps = {}) {
   }
 
   function resolveGamePlatformConfig(filename, filePath, platformConfigs) {
-    const direct = determinePlatformFromFilename(filename, filePath, platformConfigs);
-    if (direct) return direct;
-
-    const ext = normalizeFileExtension(path.extname(String(filename || filePath || "")));
-    if (!ext) return null;
-
-    const matches = (Array.isArray(platformConfigs) ? platformConfigs : [])
-      .filter((cfg) => platformSupportsExtension(cfg, ext));
-
-    if (matches.length === 1) return matches[0];
-    return null;
+    // Auto platform assignment must come only from the platform searchFor regex.
+    return determinePlatformFromFilename(filename, filePath, platformConfigs);
   }
 
   function parseCueReferencedBinNames(cuePath) {

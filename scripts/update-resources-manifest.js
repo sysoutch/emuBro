@@ -100,7 +100,7 @@ function run() {
   const repoDir = path.resolve(String(args.repo || "emubro-resources"));
   const owner = String(args.owner || "sysoutch").trim();
   const repoName = String(args["repo-name"] || "emubro-resources").trim();
-  const branch = String(args.branch || "main").trim();
+  const branch = String(args.branch || "master").trim();
   const manifestPath = path.join(repoDir, "manifest.json");
 
   if (!fs.existsSync(repoDir) || !fs.statSync(repoDir).isDirectory()) {

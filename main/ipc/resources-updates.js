@@ -179,7 +179,7 @@ function registerResourceUpdatesIpc(deps = {}) {
     const raw = (source && typeof source === "object") ? source : {};
     const owner = String(raw.owner || "").trim();
     const repo = String(raw.repo || "").trim();
-    const branch = String(raw.branch || "").trim() || "main";
+    const branch = String(raw.branch || "").trim() || "master";
     const commit = String(raw.commit || raw.sha || "").trim();
     if (!owner || !repo) return null;
     return { owner, repo, branch, commit };
@@ -191,7 +191,7 @@ function registerResourceUpdatesIpc(deps = {}) {
     if (!match) return null;
     const owner = decodeURIComponent(String(match[1] || "").trim());
     const repo = decodeURIComponent(String(match[2] || "").trim());
-    const branch = decodeURIComponent(String(match[3] || "").trim()) || "main";
+    const branch = decodeURIComponent(String(match[3] || "").trim()) || "master";
     if (!owner || !repo || !branch) return null;
     return { owner, repo, branch, commit: "" };
   }
