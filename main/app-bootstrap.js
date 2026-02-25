@@ -184,6 +184,8 @@ function createAppBootstrapManager(deps = {}) {
 
   function createWindow(options = {}) {
     const isWin = proc.platform === "win32";
+    const isLinux = proc.platform === "linux";
+    const useCustomChrome = isWin || isLinux;
     const startSuspended = !!options.startSuspended;
     let didFinishLoad = false;
     let isReadyToShow = false;
@@ -218,11 +220,15 @@ function createAppBootstrapManager(deps = {}) {
       minHeight: 700,
       icon: resolveAppIcon(),
       backgroundColor: "#0b1220",
-      ...(isWin
+      ...(useCustomChrome
         ? {
             frame: false,
+            autoHideMenuBar: true
+          }
+        : {}),
+      ...(isWin
+        ? {
             thickFrame: true,
-            autoHideMenuBar: true,
             roundedCorners: true,
             backgroundMaterial: "acrylic"
           }

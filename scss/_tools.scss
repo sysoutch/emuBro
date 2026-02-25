@@ -490,6 +490,26 @@
 }
 
 .ecm-unecm-tool {
+    .ecm-tool-inline-group {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin: 8px 0;
+    }
+
+    .ecm-tool-inline-group label {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        min-width: 150px;
+    }
+
+    .ecm-tool-inline-group select {
+        min-width: min(460px, 100%);
+        flex: 1 1 260px;
+    }
+
     .cover-downloader-results {
         margin-top: 8px;
         border: 1px solid color-mix(in srgb, var(--border-color), transparent 18%);

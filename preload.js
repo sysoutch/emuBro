@@ -54,6 +54,8 @@ const ALLOWED_INVOKE = new Set([
   "tools:ecm:download-source-zip",
   "tools:ecm:detect-build-env",
   "tools:ecm:build-binaries",
+  "tools:ecm:get-compiler-install-options",
+  "tools:ecm:install-compiler",
   "open-file-dialog",
   "save-file-dialog",
   "system:get-specs",

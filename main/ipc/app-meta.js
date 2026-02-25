@@ -1,4 +1,5 @@
 const path = require("path");
+const { spawn } = require("child_process");
 
 function registerAppMetaIpc(deps = {}) {
   const {
@@ -212,6 +213,281 @@ function registerAppMetaIpc(deps = {}) {
     };
   }
 
+  function escapeShellSingleQuotes(value = "") {
+    return String(value || "").replace(/'/g, "'\"'\"'");
+  }
+
+  function detectPackageManager(command, args = ["--version"]) {
+    const probe = detectCommand(command, args);
+    return {
+      name: command,
+      available: !!probe.available,
+      version: String(probe.version || "").trim()
+    };
+  }
+
+  function buildCompilerInstallerOptions(params = {}) {
+    const platform = String(params?.platform || os.platform()).trim().toLowerCase();
+    const packageManagers = (params?.packageManagers && typeof params.packageManagers === "object")
+      ? params.packageManagers
+      : {};
+    const options = [];
+
+    const pushOption = (entry = {}) => {
+      const id = String(entry.id || "").trim();
+      if (!id) return;
+      options.push({
+        id,
+        label: String(entry.label || id).trim(),
+        description: String(entry.description || "").trim(),
+        action: String(entry.action || "command").trim(),
+        command: String(entry.command || "").trim(),
+        url: String(entry.url || "").trim(),
+        compiler: String(entry.compiler || "").trim(),
+        available: entry.available !== false,
+        recommended: !!entry.recommended
+      });
+    };
+
+    const has = (name) => !!packageManagers?.[name]?.available;
+
+    if (platform === "win32") {
+      if (has("winget")) {
+        pushOption({
+          id: "winget-llvm",
+          label: "LLVM (winget)",
+          description: "Install clang/llvm using winget.",
+          action: "command",
+          command: "winget install -e --id LLVM.LLVM --accept-source-agreements --accept-package-agreements",
+          compiler: "clang",
+          recommended: true
+        });
+      }
+      if (has("choco")) {
+        pushOption({
+          id: "choco-llvm",
+          label: "LLVM (Chocolatey)",
+          description: "Install clang/llvm using Chocolatey.",
+          action: "command",
+          command: "choco install llvm -y",
+          compiler: "clang"
+        });
+      }
+      if (has("scoop")) {
+        pushOption({
+          id: "scoop-llvm",
+          label: "LLVM (Scoop)",
+          description: "Install clang/llvm using Scoop.",
+          action: "command",
+          command: "scoop install llvm",
+          compiler: "clang"
+        });
+      }
+      pushOption({
+        id: "download-msys2",
+        label: "MSYS2 (download)",
+        description: "Download MSYS2 and install mingw-w64 gcc toolchain.",
+        action: "url",
+        url: "https://www.msys2.org/",
+        compiler: "gcc",
+        recommended: options.length === 0
+      });
+      pushOption({
+        id: "download-llvm",
+        label: "LLVM releases (download)",
+        description: "Open LLVM release page to download installer manually.",
+        action: "url",
+        url: "https://github.com/llvm/llvm-project/releases",
+        compiler: "clang"
+      });
+    } else if (platform === "darwin") {
+      pushOption({
+        id: "xcode-cli-tools",
+        label: "Xcode CLI Tools",
+        description: "Install Apple command line developer tools (includes clang).",
+        action: "command",
+        command: "xcode-select --install",
+        compiler: "clang",
+        recommended: true
+      });
+      if (has("brew")) {
+        pushOption({
+          id: "brew-llvm",
+          label: "LLVM (Homebrew)",
+          description: "Install LLVM with Homebrew.",
+          action: "command",
+          command: "brew install llvm",
+          compiler: "clang"
+        });
+      }
+    } else {
+      if (has("apt-get") || has("apt")) {
+        pushOption({
+          id: "apt-build-essential",
+          label: "build-essential (APT)",
+          description: "Install gcc/make using APT.",
+          action: "command",
+          command: "sudo apt update && sudo apt install -y build-essential",
+          compiler: "gcc",
+          recommended: true
+        });
+        pushOption({
+          id: "apt-clang",
+          label: "clang (APT)",
+          description: "Install clang using APT.",
+          action: "command",
+          command: "sudo apt update && sudo apt install -y clang",
+          compiler: "clang"
+        });
+      }
+      if (has("dnf")) {
+        pushOption({
+          id: "dnf-gcc",
+          label: "GCC toolchain (DNF)",
+          description: "Install gcc/g++/make using DNF.",
+          action: "command",
+          command: "sudo dnf install -y gcc gcc-c++ make",
+          compiler: "gcc",
+          recommended: options.length === 0
+        });
+      }
+      if (has("pacman")) {
+        pushOption({
+          id: "pacman-base-devel",
+          label: "base-devel (pacman)",
+          description: "Install gcc/make toolchain using pacman.",
+          action: "command",
+          command: "sudo pacman -S --needed base-devel",
+          compiler: "gcc",
+          recommended: options.length === 0
+        });
+      }
+      if (has("zypper")) {
+        pushOption({
+          id: "zypper-gcc",
+          label: "GCC toolchain (zypper)",
+          description: "Install gcc/g++/make using zypper.",
+          action: "command",
+          command: "sudo zypper install -y gcc gcc-c++ make",
+          compiler: "gcc",
+          recommended: options.length === 0
+        });
+      }
+      if (has("apk")) {
+        pushOption({
+          id: "apk-build-base",
+          label: "build-base (apk)",
+          description: "Install gcc/make toolchain using apk.",
+          action: "command",
+          command: "sudo apk add build-base",
+          compiler: "gcc",
+          recommended: options.length === 0
+        });
+      }
+      if (options.length === 0) {
+        pushOption({
+          id: "compiler-docs",
+          label: "Compiler setup guide",
+          description: "Open GCC installation docs for Linux.",
+          action: "url",
+          url: "https://gcc.gnu.org/install/",
+          compiler: "gcc",
+          recommended: true
+        });
+      }
+    }
+
+    if (!options.some((entry) => entry.recommended) && options.length > 0) {
+      options[0].recommended = true;
+    }
+    return options;
+  }
+
+  function runShellCommandDetailed(command, options = {}) {
+    const cmd = String(command || "").trim();
+    if (!cmd) {
+      return {
+        ok: false,
+        status: 1,
+        stdout: "",
+        stderr: "Missing command",
+        error: "",
+        command: "",
+        args: []
+      };
+    }
+    if (os.platform() === "win32") {
+      return runCommandDetailed("cmd.exe", ["/d", "/s", "/c", cmd], options);
+    }
+    const shellExe = detectCommand("bash").available ? "bash" : "sh";
+    return runCommandDetailed(shellExe, ["-lc", cmd], options);
+  }
+
+  function openTerminalWithCommand(command) {
+    const cmd = String(command || "").trim();
+    if (!cmd || os.platform() === "win32") return false;
+    const terminals = [
+      { exe: "x-terminal-emulator", args: ["-e", "bash", "-lc", cmd] },
+      { exe: "gnome-terminal", args: ["--", "bash", "-lc", cmd] },
+      { exe: "konsole", args: ["-e", "bash", "-lc", cmd] },
+      { exe: "xfce4-terminal", args: ["-e", "bash", "-lc", cmd] },
+      { exe: "xterm", args: ["-e", "bash", "-lc", cmd] },
+      { exe: "kitty", args: ["-e", "bash", "-lc", cmd] },
+      { exe: "alacritty", args: ["-e", "bash", "-lc", cmd] }
+    ];
+    for (const terminal of terminals) {
+      if (!detectCommand(terminal.exe).available) continue;
+      try {
+        const child = spawn(terminal.exe, terminal.args, {
+          detached: true,
+          stdio: "ignore"
+        });
+        child.unref();
+        return true;
+      } catch (_error) {}
+    }
+    return false;
+  }
+
+  function runCompilerInstallCommand(command) {
+    const sourceCommand = String(command || "").trim();
+    if (!sourceCommand) {
+      return {
+        ok: false,
+        status: 1,
+        stdout: "",
+        stderr: "Missing command",
+        error: "",
+        command: ""
+      };
+    }
+
+    if (os.platform() !== "win32" && /^\s*sudo\s+/i.test(sourceCommand)) {
+      const withoutSudo = sourceCommand.replace(/^\s*sudo\s+/i, "").trim();
+      if (detectCommand("pkexec").available && withoutSudo) {
+        const wrapped = `pkexec sh -lc '${escapeShellSingleQuotes(withoutSudo)}'`;
+        const pkResult = runShellCommandDetailed(wrapped);
+        if (pkResult.ok) {
+          return { ...pkResult, command: wrapped, elevation: "pkexec" };
+        }
+      }
+    }
+
+    return {
+      ...runShellCommandDetailed(sourceCommand),
+      command: sourceCommand,
+      elevation: "none"
+    };
+  }
+
+  function shouldSuggestManualTerminal(stderr = "") {
+    const text = String(stderr || "").toLowerCase();
+    return text.includes("sudo")
+      || text.includes("password")
+      || text.includes("permission denied")
+      || text.includes("interactive");
+  }
+
   function detectEcmBuildEnvironment() {
     const compilerCandidates = ["gcc", "clang", "cc"];
     const compilers = compilerCandidates.map((name) => detectCommand(name));
@@ -223,6 +499,25 @@ function registerAppMetaIpc(deps = {}) {
       os.platform() === "win32" ? "powershell" : "pwsh",
       ["-NoProfile", "-Command", "$PSVersionTable.PSVersion.ToString()"]
     );
+    const packageManagers = {
+      winget: detectPackageManager("winget"),
+      choco: detectPackageManager("choco", ["-v"]),
+      scoop: detectPackageManager("scoop", ["--version"]),
+      brew: detectPackageManager("brew"),
+      "apt-get": detectPackageManager("apt-get"),
+      apt: detectPackageManager("apt"),
+      dnf: detectPackageManager("dnf"),
+      pacman: detectPackageManager("pacman"),
+      zypper: detectPackageManager("zypper"),
+      apk: detectPackageManager("apk")
+    };
+    const compilerInstallOptions = buildCompilerInstallerOptions({
+      platform: os.platform(),
+      packageManagers
+    });
+    const recommendedCompilerInstaller = (
+      compilerInstallOptions.find((entry) => entry.recommended) || compilerInstallOptions[0] || {}
+    ).id || "";
     return {
       platform: os.platform(),
       arch: os.arch(),
@@ -231,7 +526,10 @@ function registerAppMetaIpc(deps = {}) {
       make,
       unzip,
       tar,
-      powershell
+      powershell,
+      packageManagers,
+      compilerInstallOptions,
+      recommendedCompilerInstaller
     };
   }
 
@@ -351,6 +649,113 @@ function registerAppMetaIpc(deps = {}) {
         success: false,
         message: String(error?.message || error || "Failed to detect ECM/UNECM build environment."),
         environment: null
+      };
+    }
+  });
+
+  ipcMain.handle("tools:ecm:get-compiler-install-options", async () => {
+    try {
+      const environment = detectEcmBuildEnvironment();
+      const options = Array.isArray(environment?.compilerInstallOptions)
+        ? environment.compilerInstallOptions
+        : [];
+      const recommendedOptionId = String(environment?.recommendedCompilerInstaller || "").trim()
+        || String((options.find((entry) => entry?.recommended) || options[0] || {}).id || "").trim();
+      return {
+        success: true,
+        platform: String(environment?.platform || os.platform()),
+        options,
+        recommendedOptionId,
+        environment
+      };
+    } catch (error) {
+      log.error("tools:ecm:get-compiler-install-options failed:", error);
+      return {
+        success: false,
+        message: String(error?.message || error || "Failed to get compiler install options."),
+        platform: os.platform(),
+        options: [],
+        recommendedOptionId: "",
+        environment: null
+      };
+    }
+  });
+
+  ipcMain.handle("tools:ecm:install-compiler", async (_event, payload = {}) => {
+    try {
+      const optionId = String(payload?.optionId || "").trim();
+      if (!optionId) {
+        return { success: false, message: "Missing compiler install option id." };
+      }
+
+      const environmentBefore = detectEcmBuildEnvironment();
+      const options = Array.isArray(environmentBefore?.compilerInstallOptions)
+        ? environmentBefore.compilerInstallOptions
+        : [];
+      const selectedOption = options.find((entry) => String(entry?.id || "").trim() === optionId);
+      if (!selectedOption) {
+        return { success: false, message: "Unknown compiler install option." };
+      }
+      const actionType = String(selectedOption.action || "command").trim().toLowerCase();
+      if (actionType !== "command") {
+        return {
+          success: false,
+          message: "Selected option is not a direct command install.",
+          option: selectedOption
+        };
+      }
+      const installCommand = String(selectedOption.command || "").trim();
+      if (!installCommand) {
+        return { success: false, message: "Install command missing for selected option.", option: selectedOption };
+      }
+
+      const runResult = runCompilerInstallCommand(installCommand);
+      if (!runResult.ok) {
+        const needsManual = shouldSuggestManualTerminal(runResult.stderr || runResult.error);
+        const canOpenTerminal = needsManual && os.platform() !== "win32";
+        let terminalOpened = false;
+        if (canOpenTerminal && payload?.allowOpenTerminal === true) {
+          terminalOpened = openTerminalWithCommand(installCommand);
+        }
+        return {
+          success: false,
+          message: String(runResult.stderr || runResult.error || "Compiler install command failed."),
+          option: selectedOption,
+          command: installCommand,
+          stdout: String(runResult.stdout || ""),
+          stderr: String(runResult.stderr || runResult.error || ""),
+          status: Number(runResult.status),
+          needsManual,
+          terminalOpened
+        };
+      }
+
+      const environmentAfter = detectEcmBuildEnvironment();
+      const compilerName = String(selectedOption.compiler || "").trim().toLowerCase();
+      const compilerDetected = compilerName
+        ? !!(Array.isArray(environmentAfter?.compilers) && environmentAfter.compilers.some((entry) => {
+          return String(entry?.name || "").trim().toLowerCase() === compilerName && !!entry?.available;
+        }))
+        : !!String(environmentAfter?.recommendedCompiler || "").trim();
+
+      return {
+        success: true,
+        message: compilerDetected
+          ? "Compiler installation finished and compiler was detected."
+          : "Install command finished. Compiler detection may require reopening shell/session.",
+        option: selectedOption,
+        command: installCommand,
+        stdout: String(runResult.stdout || ""),
+        stderr: String(runResult.stderr || ""),
+        status: Number(runResult.status),
+        compilerDetected,
+        environment: environmentAfter
+      };
+    } catch (error) {
+      log.error("tools:ecm:install-compiler failed:", error);
+      return {
+        success: false,
+        message: String(error?.message || error || "Failed to install compiler.")
       };
     }
   });
