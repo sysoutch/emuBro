@@ -25,6 +25,7 @@ const { registerThemeUploadIpc } = require("./main/ipc/theme-upload");
 const { registerSettingsPathsIpc } = require("./main/ipc/settings-paths");
 const { registerImportStagingIpc } = require("./main/ipc/import-staging");
 const { registerAppMetaIpc } = require("./main/ipc/app-meta");
+const { createRemoteLibraryService } = require("./main/ipc/remote-library-service");
 const { registerCoverIpc } = require("./main/ipc/covers");
 const { createLibraryStorageTools } = require("./main/library-storage-tools");
 const { createResourceOverrides } = require("./main/resource-overrides");
@@ -390,6 +391,16 @@ registerAppMetaIpc({
   spawnSync,
   getMainWindow: () => mainWindow,
   getGamesState
+});
+
+createRemoteLibraryService({
+  ipcMain,
+  log,
+  store,
+  app,
+  fsSync,
+  getGamesState,
+  getLibraryPathSettings
 });
 
 ipcMain.handle("settings:set-splash-theme", async (_event, payload = {}) => {

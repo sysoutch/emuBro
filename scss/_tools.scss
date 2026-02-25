@@ -574,6 +574,104 @@
     }
 }
 
+.remote-library-tool {
+    display: grid;
+    gap: 16px;
+
+    .remote-library-grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    }
+
+    .remote-library-panel {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-card);
+        padding: 14px;
+        display: grid;
+        gap: 10px;
+    }
+
+    .remote-library-inline {
+        display: grid;
+        gap: 6px;
+        align-items: center;
+    }
+
+    .remote-library-inline label {
+        font-size: 0.82rem;
+        color: var(--text-secondary);
+        font-weight: 600;
+    }
+
+    .remote-library-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .remote-library-hosts,
+    .remote-library-games {
+        border: 1px solid color-mix(in srgb, var(--border-color), transparent 18%);
+        border-radius: var(--radius-card);
+        background: color-mix(in srgb, var(--bg-primary), transparent 14%);
+        max-height: min(45vh, 460px);
+        overflow: auto;
+    }
+
+    .remote-host-row,
+    .remote-game-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        padding: 10px 12px;
+        border-bottom: 1px solid color-mix(in srgb, var(--border-color), transparent 26%);
+        align-items: center;
+    }
+
+    .remote-game-row {
+        grid-template-columns: auto 1fr auto;
+    }
+
+    .remote-host-row.is-empty,
+    .remote-game-row.is-empty {
+        grid-template-columns: 1fr;
+        color: var(--text-secondary);
+    }
+
+    .remote-host-row:last-child,
+    .remote-game-row:last-child {
+        border-bottom: none;
+    }
+
+    .remote-host-name {
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .remote-host-meta {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+    }
+
+    .remote-host-actions {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .remote-game-title {
+        font-weight: 600;
+    }
+
+    .remote-game-meta {
+        font-size: 0.78rem;
+        color: var(--text-secondary);
+    }
+}
+
 /* Ensure parents allow filling space */
 #games-container:has(.memory-card-editor) {
     display: block;
