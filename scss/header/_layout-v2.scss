@@ -156,9 +156,20 @@ html[data-header-density="compact"] .header .language-controls-content {
     display: none !important;
 }
 
-html[data-header-density="compact"] .header .theme-toggle-wrapper.is-open .theme-controls-content,
-html[data-header-density="compact"] .header .language-controls-wrapper.is-open .language-controls-content {
-    display: grid !important;
+html[data-header-density="compact"] .header .theme-controls-content.header-compact-menu,
+html[data-header-density="compact"] .header .language-controls-content.header-compact-menu {
+    padding: 8px;
+    border: 1px solid color-mix(in srgb, var(--border-color), var(--accent-color) 24%);
+    border-radius: var(--radius-card);
+    background: color-mix(in srgb, var(--bg-secondary), transparent 4%);
+    backdrop-filter: blur(12px) saturate(1.08);
+    -webkit-backdrop-filter: blur(12px) saturate(1.08);
+    box-shadow:
+        0 16px 34px color-mix(in srgb, var(--glass-shadow), transparent 16%),
+        0 0 0 1px color-mix(in srgb, var(--accent-color), transparent 88%) inset;
+    gap: 8px;
+    max-height: min(56vh, 420px);
+    overflow: auto;
 }
 
 html[data-header-density="compact"] .header .header-inline-drag-gap,
@@ -217,9 +228,20 @@ html[data-header-density="tiny"] .header .language-controls-content {
     display: none !important;
 }
 
-html[data-header-density="tiny"] .header .theme-toggle-wrapper.is-open .theme-controls-content,
-html[data-header-density="tiny"] .header .language-controls-wrapper.is-open .language-controls-content {
-    display: grid !important;
+html[data-header-density="tiny"] .header .theme-controls-content.header-compact-menu,
+html[data-header-density="tiny"] .header .language-controls-content.header-compact-menu {
+    padding: 8px;
+    border: 1px solid color-mix(in srgb, var(--border-color), var(--accent-color) 24%);
+    border-radius: var(--radius-card);
+    background: color-mix(in srgb, var(--bg-secondary), transparent 4%);
+    backdrop-filter: blur(12px) saturate(1.08);
+    -webkit-backdrop-filter: blur(12px) saturate(1.08);
+    box-shadow:
+        0 16px 34px color-mix(in srgb, var(--glass-shadow), transparent 16%),
+        0 0 0 1px color-mix(in srgb, var(--accent-color), transparent 88%) inset;
+    gap: 8px;
+    max-height: min(56vh, 420px);
+    overflow: auto;
 }
 
 html[data-header-density="tiny"] .header .header-inline-drag-gap,
