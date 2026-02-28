@@ -984,6 +984,208 @@ fn classify_import_media(path: &str) -> Value {
     })
 }
 
+fn read_path_list_arg(arg: Option<&Value>) -> Vec<String> {
+    match arg {
+        Some(Value::Array(rows)) => rows
+            .iter()
+            .filter_map(|row| row.as_str())
+            .map(|row| row.trim().to_string())
+            .filter(|row| !row.is_empty())
+            .collect(),
+        Some(Value::String(text)) => {
+            let trimmed = text.trim();
+            if trimmed.is_empty() {
+                Vec::new()
+            } else {
+                vec![trimmed.to_string()]
+            }
+        }
+        _ => Vec::new(),
+    }
+}
+
+fn parse_cue_referenced_bin_names(cue_path: &Path) -> Vec<String> {
+    let text = match fs::read_to_string(cue_path) {
+        Ok(content) => content,
+        Err(_) => return Vec::new(),
+    };
+    let mut out = Vec::<String>::new();
+    for raw_line in text.lines() {
+        let line = raw_line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        if !line.to_uppercase().starts_with("FILE ") {
+            continue;
+        }
+        let mut rest = line[5..].trim().to_string();
+        if rest.is_empty() {
+            continue;
+        }
+        let file_name = if rest.starts_with('"') {
+            rest.remove(0);
+            match rest.find('"') {
+                Some(index) => rest[..index].trim().to_string(),
+                None => String::new(),
+            }
+        } else {
+            rest.split_whitespace().next().unwrap_or("").trim().to_string()
+        };
+        if file_name.is_empty() {
+            continue;
+        }
+        if Path::new(&file_name)
+            .extension()
+            .and_then(|v| v.to_str())
+            .map(|v| v.eq_ignore_ascii_case("bin"))
+            .unwrap_or(false)
+        {
+            out.push(
+                Path::new(&file_name)
+                    .file_name()
+                    .and_then(|v| v.to_str())
+                    .unwrap_or("")
+                    .to_string(),
+            );
+        }
+    }
+    out.sort();
+    out.dedup();
+    out
+}
+
+fn find_cue_for_bin(bin_path: &Path) -> Option<PathBuf> {
+    if !bin_path
+        .extension()
+        .and_then(|v| v.to_str())
+        .map(|v| v.eq_ignore_ascii_case("bin"))
+        .unwrap_or(false)
+    {
+        return None;
+    }
+    let parent = bin_path.parent()?;
+    let stem = bin_path.file_stem().and_then(|v| v.to_str()).unwrap_or("");
+    if !stem.is_empty() {
+        let sibling = parent.join(format!("{}.cue", stem));
+        if sibling.exists() && sibling.is_file() {
+            return Some(sibling);
+        }
+    }
+
+    let bin_name = bin_path
+        .file_name()
+        .and_then(|v| v.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+    let entries = fs::read_dir(parent).ok()?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+        let is_cue = path
+            .extension()
+            .and_then(|v| v.to_str())
+            .map(|v| v.eq_ignore_ascii_case("cue"))
+            .unwrap_or(false);
+        if !is_cue {
+            continue;
+        }
+        let refs = parse_cue_referenced_bin_names(&path)
+            .into_iter()
+            .map(|row| row.to_lowercase())
+            .collect::<Vec<String>>();
+        if refs.iter().any(|row| row == &bin_name) {
+            return Some(path);
+        }
+    }
+    None
+}
+
+fn build_cue_content_for_bin(bin_path: &Path) -> String {
+    let file_name = bin_path
+        .file_name()
+        .and_then(|v| v.to_str())
+        .unwrap_or("track01.bin");
+    format!(
+        "FILE \"{}\" BINARY\n  TRACK 01 MODE1/2352\n    INDEX 01 00:00:00\n",
+        file_name
+    )
+}
+
+fn archive_kind_for_extension(ext: &str) -> String {
+    match ext {
+        ".zip" => "zip",
+        ".rar" => "rar",
+        ".7z" => "7z",
+        ".iso" => "iso",
+        ".ciso" => "ciso",
+        ".tar" => "tar",
+        ".gz" => "gz",
+        _ => "",
+    }
+    .to_string()
+}
+
+fn platform_supports_archive_extension(platform: &Value, extension: &str) -> bool {
+    let ext = normalize_extension(extension);
+    if ext.is_empty() {
+        return false;
+    }
+    platform
+        .get("supportedArchiveTypes")
+        .and_then(|v| v.as_array())
+        .map(|rows| {
+            rows.iter().any(|row| {
+                normalize_extension(row.as_str().unwrap_or(""))
+                    .eq_ignore_ascii_case(&ext)
+            })
+        })
+        .unwrap_or(false)
+}
+
+fn direct_archive_emulators_for_extension(platform: &Value, extension: &str) -> Vec<String> {
+    let ext = normalize_extension(extension);
+    if ext.is_empty() {
+        return Vec::new();
+    }
+    let mut out = Vec::<String>::new();
+    let mut seen = std::collections::HashSet::<String>::new();
+    let emulators = platform
+        .get("emulators")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+    for emulator in emulators {
+        let name = emulator
+            .get("name")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .trim()
+            .to_string();
+        if name.is_empty() {
+            continue;
+        }
+        let supports = emulator
+            .get("supportedFileTypes")
+            .and_then(|v| v.as_array())
+            .map(|rows| {
+                rows.iter().any(|row| {
+                    normalize_extension(row.as_str().unwrap_or(""))
+                        .eq_ignore_ascii_case(&ext)
+                })
+            })
+            .unwrap_or(false);
+        if supports {
+            let key = name.to_lowercase();
+            if seen.insert(key) {
+                out.push(name);
+            }
+        }
+    }
+    out
+}
+
 fn not_implemented() -> Value {
     json!({
         "success": false,
@@ -1622,6 +1824,169 @@ fn emubro_invoke(channel: String, args: Vec<Value>, window: Window) -> Result<Va
                 "warnings": warnings
             }))
         }
+        "cue:inspect-bin-files" => {
+            let input_paths = read_path_list_arg(args.get(0));
+            let mut results = Vec::<Value>::new();
+            for source_path in input_paths {
+                let source = PathBuf::from(&source_path);
+                let is_bin = source
+                    .extension()
+                    .and_then(|v| v.to_str())
+                    .map(|v| v.eq_ignore_ascii_case("bin"))
+                    .unwrap_or(false);
+                if !is_bin {
+                    results.push(json!({
+                        "binPath": source_path,
+                        "hasCue": false,
+                        "cuePath": "",
+                        "message": "Not a BIN file"
+                    }));
+                    continue;
+                }
+                let cue_path = find_cue_for_bin(&source);
+                results.push(json!({
+                    "binPath": source_path,
+                    "hasCue": cue_path.is_some(),
+                    "cuePath": cue_path.map(|p| p.to_string_lossy().to_string()).unwrap_or_default()
+                }));
+            }
+            Ok(json!({
+                "success": true,
+                "results": results
+            }))
+        }
+        "cue:generate-for-bin" => {
+            let input_paths = read_path_list_arg(args.get(0));
+            let mut generated = Vec::<Value>::new();
+            let mut existing = Vec::<Value>::new();
+            let mut failed = Vec::<Value>::new();
+
+            for source_path in input_paths {
+                let source = PathBuf::from(&source_path);
+                if !source.exists() || !source.is_file() {
+                    failed.push(json!({
+                        "binPath": source_path,
+                        "message": "BIN file does not exist."
+                    }));
+                    continue;
+                }
+                let is_bin = source
+                    .extension()
+                    .and_then(|v| v.to_str())
+                    .map(|v| v.eq_ignore_ascii_case("bin"))
+                    .unwrap_or(false);
+                if !is_bin {
+                    failed.push(json!({
+                        "binPath": source_path,
+                        "message": "Path is not a BIN file."
+                    }));
+                    continue;
+                }
+                if let Some(cue_path) = find_cue_for_bin(&source) {
+                    existing.push(json!({
+                        "binPath": source_path,
+                        "cuePath": cue_path.to_string_lossy().to_string()
+                    }));
+                    continue;
+                }
+
+                let cue_path = source.with_extension("cue");
+                let cue_content = build_cue_content_for_bin(&source);
+                match fs::write(&cue_path, cue_content) {
+                    Ok(_) => generated.push(json!({
+                        "binPath": source_path,
+                        "cuePath": cue_path.to_string_lossy().to_string()
+                    })),
+                    Err(err) => failed.push(json!({
+                        "binPath": source_path,
+                        "message": err.to_string()
+                    })),
+                }
+            }
+
+            Ok(json!({
+                "success": true,
+                "generated": generated,
+                "existing": existing,
+                "failed": failed
+            }))
+        }
+        "import:analyze-archives" => {
+            let input_paths = read_path_list_arg(args.get(0));
+            let platform_rows = load_platform_configs();
+            let mut archives = Vec::<Value>::new();
+            let mut seen = std::collections::HashSet::<String>::new();
+            for source_path in input_paths {
+                let key = path_key(&source_path);
+                if !seen.insert(key) {
+                    continue;
+                }
+                let source = PathBuf::from(&source_path);
+                let ext = normalize_extension(source.extension().and_then(|v| v.to_str()).unwrap_or(""));
+                if ext.is_empty() {
+                    continue;
+                }
+                let kind = archive_kind_for_extension(&ext);
+                if kind.is_empty() {
+                    continue;
+                }
+                let matched_platform = platform_rows
+                    .iter()
+                    .find(|row| platform_matches_extension(row, &ext))
+                    .cloned();
+                let platform_short = matched_platform
+                    .as_ref()
+                    .and_then(|row| row.get("shortName"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .trim()
+                    .to_lowercase();
+                let platform_name = matched_platform
+                    .as_ref()
+                    .and_then(|row| row.get("name"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .trim()
+                    .to_string();
+                let direct_emulators = matched_platform
+                    .as_ref()
+                    .map(|row| direct_archive_emulators_for_extension(row, &ext))
+                    .unwrap_or_default();
+                let direct_supported = matched_platform
+                    .as_ref()
+                    .map(|row| {
+                        platform_supports_archive_extension(row, &ext)
+                            && !direct_emulators.is_empty()
+                    })
+                    .unwrap_or(false);
+                archives.push(json!({
+                    "path": source_path,
+                    "extension": ext,
+                    "archiveKind": kind,
+                    "platformShortName": platform_short,
+                    "platformName": platform_name,
+                    "directArchiveSupported": direct_supported,
+                    "directArchiveEmulators": direct_emulators,
+                    "recommendedMode": if direct_supported { "ask" } else { "extract" }
+                }));
+            }
+
+            Ok(json!({
+                "success": true,
+                "archives": archives
+            }))
+        }
+        "iso:detect-game-codes" => {
+            let input_paths = read_path_list_arg(args.get(0));
+            let mut codes_by_path = serde_json::Map::new();
+            for source_path in input_paths {
+                codes_by_path.insert(source_path, Value::String(String::new()));
+            }
+            Ok(json!({
+                "success": true,
+                "codesByPath": Value::Object(codes_by_path)
+            }))
+        }
         "update-game-metadata" => {
             let payload = args.get(0).cloned().unwrap_or_else(|| json!({}));
             let game_id = payload.get("gameId").and_then(|v| v.as_i64()).unwrap_or(0);
@@ -1903,10 +2268,6 @@ fn emubro_invoke(channel: String, args: Vec<Value>, window: Window) -> Result<Va
         | "update:install"
         | "resources:update:check"
         | "resources:update:install"
-        | "cue:inspect-bin-files"
-        | "cue:generate-for-bin"
-        | "import:analyze-archives"
-        | "iso:detect-game-codes"
         | "launcher:scan-games"
         | "launcher:import-games"
         | "locales:write"
