@@ -117,6 +117,487 @@ fn read_legacy_state_json() -> serde_json::Map<String, Value> {
     }
 }
 
+fn legacy_library_db_candidate_paths() -> Vec<PathBuf> {
+    let mut out = Vec::<PathBuf>::new();
+    let mut seen = std::collections::HashSet::<String>::new();
+    let push = |rows: &mut Vec<PathBuf>,
+                used: &mut std::collections::HashSet<String>,
+                path: PathBuf| {
+        let key = path.to_string_lossy().to_lowercase();
+        if used.insert(key) {
+            rows.push(path);
+        }
+    };
+
+    if let Ok(cwd) = std::env::current_dir() {
+        push(&mut out, &mut seen, cwd.join("library.db"));
+        push(&mut out, &mut seen, cwd.join("../library.db"));
+        push(&mut out, &mut seen, cwd.join("../../library.db"));
+    }
+
+    let roaming_roots = [
+        "emuBro",
+        "emubro",
+        "emuBro-Reloaded",
+        "emubro-reloaded",
+        "emuBro Reloaded",
+    ];
+    if let Ok(appdata) = std::env::var("APPDATA") {
+        let base = PathBuf::from(appdata);
+        for root in roaming_roots {
+            push(&mut out, &mut seen, base.join(root).join("library.db"));
+        }
+    }
+    if let Ok(local_appdata) = std::env::var("LOCALAPPDATA") {
+        let base = PathBuf::from(local_appdata);
+        for root in roaming_roots {
+            push(&mut out, &mut seen, base.join(root).join("library.db"));
+        }
+    }
+
+    out
+}
+
+fn sqlite_table_exists(conn: &Connection, table_name: &str) -> Result<bool, String> {
+    let count = conn
+        .query_row(
+            "SELECT COUNT(1) FROM sqlite_master WHERE type='table' AND name = ?1",
+            params![table_name],
+            |row| row.get::<_, i64>(0),
+        )
+        .map_err(|e| e.to_string())?;
+    Ok(count > 0)
+}
+
+fn sqlite_table_columns(
+    conn: &Connection,
+    table_name: &str,
+) -> Result<std::collections::HashSet<String>, String> {
+    let mut out = std::collections::HashSet::new();
+    let sql = format!("PRAGMA table_info({})", table_name);
+    let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map([], |row| row.get::<_, String>(1))
+        .map_err(|e| e.to_string())?;
+    for value in rows {
+        let column = value.map_err(|e| e.to_string())?;
+        out.insert(column.trim().to_lowercase());
+    }
+    Ok(out)
+}
+
+fn parse_legacy_tags(raw: &str) -> Vec<Value> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Vec::new();
+    }
+    if let Ok(Value::Array(rows)) = serde_json::from_str::<Value>(trimmed) {
+        let mut out = Vec::<Value>::new();
+        let mut seen = std::collections::HashSet::<String>::new();
+        for row in rows {
+            let tag = normalize_tag_id(row.as_str().unwrap_or(""));
+            if tag.is_empty() {
+                continue;
+            }
+            if seen.insert(tag.clone()) {
+                out.push(Value::String(tag));
+            }
+        }
+        return out;
+    }
+
+    let mut out = Vec::<Value>::new();
+    let mut seen = std::collections::HashSet::<String>::new();
+    for entry in trimmed.split([',', ';']) {
+        let tag = normalize_tag_id(entry);
+        if tag.is_empty() {
+            continue;
+        }
+        if seen.insert(tag.clone()) {
+            out.push(Value::String(tag));
+        }
+    }
+    out
+}
+
+fn read_legacy_games(conn: &Connection) -> Result<Vec<Value>, String> {
+    if !sqlite_table_exists(conn, "games")? {
+        return Ok(Vec::new());
+    }
+    let columns = sqlite_table_columns(conn, "games")?;
+    let select_or_default = |col: &str, fallback: &str| -> String {
+        if columns.contains(&col.to_lowercase()) {
+            col.to_string()
+        } else {
+            format!("{} AS {}", fallback, col)
+        }
+    };
+
+    let sql = format!(
+        "SELECT
+            {id},
+            {name},
+            {platform},
+            {platform_short},
+            {file_path},
+            {code},
+            {image},
+            {progress},
+            {last_played},
+            {run_as_mode},
+            {run_as_user},
+            {emu_override},
+            {tags}
+         FROM games
+         ORDER BY COALESCE(name, '') COLLATE NOCASE",
+        id = select_or_default("id", "NULL"),
+        name = select_or_default("name", "''"),
+        platform = select_or_default("platform", "''"),
+        platform_short = select_or_default("platformShortName", "''"),
+        file_path = select_or_default("filePath", "''"),
+        code = select_or_default("code", "''"),
+        image = select_or_default("image", "''"),
+        progress = select_or_default("progress", "0"),
+        last_played = select_or_default("lastPlayed", "NULL"),
+        run_as_mode = select_or_default("runAsMode", "''"),
+        run_as_user = select_or_default("runAsUser", "''"),
+        emu_override = select_or_default("emulatorOverridePath", "''"),
+        tags = select_or_default("tags", "''")
+    );
+
+    let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map([], |row| {
+            let id = row.get::<_, Option<i64>>(0)?.unwrap_or(0);
+            let name = row.get::<_, Option<String>>(1)?.unwrap_or_default();
+            let platform = row.get::<_, Option<String>>(2)?.unwrap_or_default();
+            let platform_short = row.get::<_, Option<String>>(3)?.unwrap_or_default();
+            let file_path = row.get::<_, Option<String>>(4)?.unwrap_or_default();
+            let code = row.get::<_, Option<String>>(5)?.unwrap_or_default();
+            let image = row.get::<_, Option<String>>(6)?.unwrap_or_default();
+            let progress = row.get::<_, Option<i64>>(7)?.unwrap_or(0);
+            let last_played = row.get::<_, Option<String>>(8)?;
+            let run_as_mode = row.get::<_, Option<String>>(9)?.unwrap_or_default();
+            let run_as_user = row.get::<_, Option<String>>(10)?.unwrap_or_default();
+            let emulator_override = row.get::<_, Option<String>>(11)?.unwrap_or_default();
+            let tags_text = row.get::<_, Option<String>>(12)?.unwrap_or_default();
+            let tags = parse_legacy_tags(&tags_text);
+
+            let mut out = serde_json::Map::new();
+            out.insert("id".to_string(), Value::Number(id.into()));
+            out.insert("name".to_string(), Value::String(name.trim().to_string()));
+            out.insert("platform".to_string(), Value::String(platform.trim().to_string()));
+            out.insert(
+                "platformShortName".to_string(),
+                Value::String(normalize_platform_short_name(&platform_short)),
+            );
+            out.insert(
+                "filePath".to_string(),
+                Value::String(file_path.trim().to_string()),
+            );
+            out.insert("code".to_string(), Value::String(code.trim().to_string()));
+            out.insert("image".to_string(), Value::String(image.trim().to_string()));
+            out.insert("progress".to_string(), Value::Number(progress.into()));
+            out.insert(
+                "lastPlayed".to_string(),
+                last_played
+                    .map(|v| Value::String(v.trim().to_string()))
+                    .unwrap_or(Value::Null),
+            );
+            out.insert("runAsMode".to_string(), Value::String(run_as_mode.trim().to_string()));
+            out.insert("runAsUser".to_string(), Value::String(run_as_user.trim().to_string()));
+            out.insert(
+                "emulatorOverridePath".to_string(),
+                Value::String(emulator_override.trim().to_string()),
+            );
+            out.insert("tags".to_string(), Value::Array(tags));
+            Ok(Value::Object(out))
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut out = Vec::<Value>::new();
+    let mut next_id = 1i64;
+    let mut seen_path = std::collections::HashSet::<String>::new();
+    for row in rows {
+        let mut value = row.map_err(|e| e.to_string())?;
+        if let Some(obj) = value.as_object_mut() {
+            let file_path = obj
+                .get("filePath")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            if file_path.is_empty() {
+                continue;
+            }
+            let path_key = file_path.to_lowercase();
+            if !seen_path.insert(path_key) {
+                continue;
+            }
+            if obj
+                .get("id")
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0)
+                <= 0
+            {
+                obj.insert("id".to_string(), Value::Number(next_id.into()));
+                next_id += 1;
+            } else {
+                let current = obj.get("id").and_then(|v| v.as_i64()).unwrap_or(0);
+                if current >= next_id {
+                    next_id = current + 1;
+                }
+            }
+            if obj
+                .get("platformShortName")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim()
+                .is_empty()
+            {
+                let fallback = normalize_platform_short_name(
+                    obj.get("platform")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("unknown"),
+                );
+                obj.insert("platformShortName".to_string(), Value::String(fallback));
+            }
+        }
+        out.push(value);
+    }
+
+    Ok(out)
+}
+
+fn read_legacy_emulators(conn: &Connection) -> Result<Vec<Value>, String> {
+    if !sqlite_table_exists(conn, "emulators")? {
+        return Ok(Vec::new());
+    }
+    let columns = sqlite_table_columns(conn, "emulators")?;
+    let select_or_default = |col: &str, fallback: &str| -> String {
+        if columns.contains(&col.to_lowercase()) {
+            col.to_string()
+        } else {
+            format!("{} AS {}", fallback, col)
+        }
+    };
+
+    let sql = format!(
+        "SELECT
+            {id},
+            {name},
+            {platform},
+            {platform_short},
+            {file_path}
+         FROM emulators
+         ORDER BY COALESCE(name, '') COLLATE NOCASE",
+        id = select_or_default("id", "NULL"),
+        name = select_or_default("name", "''"),
+        platform = select_or_default("platform", "''"),
+        platform_short = select_or_default("platformShortName", "''"),
+        file_path = select_or_default("filePath", "''"),
+    );
+
+    let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map([], |row| {
+            let id = row.get::<_, Option<i64>>(0)?.unwrap_or(0);
+            let name = row.get::<_, Option<String>>(1)?.unwrap_or_default();
+            let platform = row.get::<_, Option<String>>(2)?.unwrap_or_default();
+            let platform_short = row.get::<_, Option<String>>(3)?.unwrap_or_default();
+            let file_path = row.get::<_, Option<String>>(4)?.unwrap_or_default();
+            Ok(json!({
+                "id": id,
+                "name": name.trim(),
+                "platform": platform.trim(),
+                "platformShortName": normalize_platform_short_name(&platform_short),
+                "filePath": file_path.trim(),
+                "args": "",
+                "workingDirectory": Path::new(file_path.trim()).parent().map(|p| p.to_string_lossy().to_string()).unwrap_or_default()
+            }))
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut out = Vec::<Value>::new();
+    let mut next_id = 1i64;
+    let mut seen_path = std::collections::HashSet::<String>::new();
+    for row in rows {
+        let mut value = row.map_err(|e| e.to_string())?;
+        if let Some(obj) = value.as_object_mut() {
+            let file_path = obj
+                .get("filePath")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            if file_path.is_empty() {
+                continue;
+            }
+            let path_key = file_path.to_lowercase();
+            if !seen_path.insert(path_key) {
+                continue;
+            }
+            if obj
+                .get("id")
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0)
+                <= 0
+            {
+                obj.insert("id".to_string(), Value::Number(next_id.into()));
+                next_id += 1;
+            } else {
+                let current = obj.get("id").and_then(|v| v.as_i64()).unwrap_or(0);
+                if current >= next_id {
+                    next_id = current + 1;
+                }
+            }
+        }
+        out.push(value);
+    }
+    Ok(out)
+}
+
+fn read_legacy_tags(conn: &Connection) -> Result<Vec<Value>, String> {
+    if !sqlite_table_exists(conn, "tags")? {
+        return Ok(Vec::new());
+    }
+    let columns = sqlite_table_columns(conn, "tags")?;
+    let select_or_default = |col: &str, fallback: &str| -> String {
+        if columns.contains(&col.to_lowercase()) {
+            col.to_string()
+        } else {
+            format!("{} AS {}", fallback, col)
+        }
+    };
+
+    let sql = format!(
+        "SELECT
+            {id},
+            {label},
+            {source}
+         FROM tags
+         ORDER BY COALESCE(label, id) COLLATE NOCASE",
+        id = select_or_default("id", "''"),
+        label = select_or_default("label", "''"),
+        source = select_or_default("source", "'db'")
+    );
+
+    let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map([], |row| {
+            let id = row.get::<_, Option<String>>(0)?.unwrap_or_default();
+            let label = row.get::<_, Option<String>>(1)?.unwrap_or_default();
+            let source = row.get::<_, Option<String>>(2)?.unwrap_or_else(|| "db".to_string());
+            let normalized_id = normalize_tag_id(&id);
+            Ok(json!({
+                "id": normalized_id,
+                "label": if label.trim().is_empty() { id.trim().to_string() } else { label.trim().to_string() },
+                "source": if source.trim().is_empty() { "db".to_string() } else { source.trim().to_string() }
+            }))
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut out = Vec::<Value>::new();
+    let mut seen = std::collections::HashSet::<String>::new();
+    for row in rows {
+        let value = row.map_err(|e| e.to_string())?;
+        let id = value
+            .get("id")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .trim()
+            .to_string();
+        if id.is_empty() {
+            continue;
+        }
+        if seen.insert(id.to_lowercase()) {
+            out.push(value);
+        }
+    }
+    Ok(out)
+}
+
+fn derive_tags_from_games(games: &[Value]) -> Vec<Value> {
+    let mut out = Vec::<Value>::new();
+    let mut seen = std::collections::HashSet::<String>::new();
+    for game in games {
+        let tags = game
+            .get("tags")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+        for tag in tags {
+            let id = normalize_tag_id(tag.as_str().unwrap_or(""));
+            if id.is_empty() {
+                continue;
+            }
+            if seen.insert(id.clone()) {
+                out.push(json!({
+                    "id": id.clone(),
+                    "label": id.replace('-', " ").trim().to_string(),
+                    "source": "db"
+                }));
+            }
+        }
+    }
+    out
+}
+
+fn migrate_legacy_library_db_if_needed(conn: &Connection) -> Result<(), String> {
+    let current_games = match db_get_state_value(conn, "games") {
+        Ok(Some(Value::Array(rows))) => rows,
+        _ => Vec::new(),
+    };
+    let current_emulators = match db_get_state_value(conn, "emulators") {
+        Ok(Some(Value::Array(rows))) => rows,
+        _ => Vec::new(),
+    };
+    let current_tags = match db_get_state_value(conn, "tags") {
+        Ok(Some(Value::Array(rows))) => rows,
+        _ => Vec::new(),
+    };
+
+    if !current_games.is_empty() && !current_emulators.is_empty() {
+        return Ok(());
+    }
+
+    let mut imported_games = Vec::<Value>::new();
+    let mut imported_emulators = Vec::<Value>::new();
+    let mut imported_tags = Vec::<Value>::new();
+
+    for candidate in legacy_library_db_candidate_paths() {
+        if !candidate.exists() || !candidate.is_file() {
+            continue;
+        }
+        let legacy_conn = match Connection::open(&candidate) {
+            Ok(conn) => conn,
+            Err(_) => continue,
+        };
+        imported_games = read_legacy_games(&legacy_conn)?;
+        imported_emulators = read_legacy_emulators(&legacy_conn)?;
+        imported_tags = read_legacy_tags(&legacy_conn)?;
+
+        if imported_tags.is_empty() && !imported_games.is_empty() {
+            imported_tags = derive_tags_from_games(&imported_games);
+        }
+        if !imported_games.is_empty() || !imported_emulators.is_empty() || !imported_tags.is_empty() {
+            break;
+        }
+    }
+
+    if current_games.is_empty() && !imported_games.is_empty() {
+        db_set_state_value(conn, "games", &Value::Array(imported_games))?;
+    }
+    if current_emulators.is_empty() && !imported_emulators.is_empty() {
+        db_set_state_value(conn, "emulators", &Value::Array(imported_emulators))?;
+    }
+    if current_tags.is_empty() && !imported_tags.is_empty() {
+        db_set_state_value(conn, "tags", &Value::Array(imported_tags))?;
+    }
+
+    Ok(())
+}
+
 fn migrate_legacy_json_state_if_needed(conn: &mut Connection) -> Result<(), String> {
     let current_count = conn
         .query_row("SELECT COUNT(1) FROM app_state", [], |row| row.get::<_, i64>(0))
@@ -160,6 +641,7 @@ fn open_state_db() -> Result<Connection, String> {
     )
     .map_err(|e| e.to_string())?;
     migrate_legacy_json_state_if_needed(&mut conn)?;
+    migrate_legacy_library_db_if_needed(&conn)?;
     Ok(conn)
 }
 
@@ -1218,6 +1700,73 @@ fn extract_zip_archive_to_dir(archive_path: &Path, destination_dir: &Path) -> Re
     Ok(())
 }
 
+fn extract_archive_with_7z(archive_path: &Path, destination_dir: &Path) -> Result<(), String> {
+    let archive = archive_path.to_string_lossy().to_string();
+    let destination = destination_dir.to_string_lossy().to_string();
+    let candidates = if cfg!(target_os = "windows") {
+        vec![
+            "7z".to_string(),
+            "7za".to_string(),
+            "7zr".to_string(),
+            "C:\\Program Files\\7-Zip\\7z.exe".to_string(),
+            "C:\\Program Files (x86)\\7-Zip\\7z.exe".to_string(),
+        ]
+    } else {
+        vec!["7z".to_string(), "7za".to_string(), "7zr".to_string()]
+    };
+    let mut last_error = String::new();
+    for command in candidates {
+        let status = Command::new(&command)
+            .arg("x")
+            .arg(&archive)
+            .arg(format!("-o{}", destination))
+            .arg("-y")
+            .status();
+        match status {
+            Ok(exit) if exit.success() => return Ok(()),
+            Ok(exit) => {
+                last_error = format!("{} exited with status {}", command, exit);
+            }
+            Err(err) => {
+                last_error = err.to_string();
+            }
+        }
+    }
+    if last_error.is_empty() {
+        last_error = "No 7z executable found".to_string();
+    }
+    Err(last_error)
+}
+
+fn extract_archive_with_tar(archive_path: &Path, destination_dir: &Path) -> Result<(), String> {
+    let status = Command::new("tar")
+        .arg("-xf")
+        .arg(archive_path)
+        .arg("-C")
+        .arg(destination_dir)
+        .status()
+        .map_err(|e| e.to_string())?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!("tar exited with status {}", status))
+    }
+}
+
+fn extract_archive_to_dir(archive_path: &Path, destination_dir: &Path) -> Result<(), String> {
+    fs::create_dir_all(destination_dir).map_err(|e| e.to_string())?;
+    let ext = normalize_extension(archive_path.extension().and_then(|v| v.to_str()).unwrap_or(""));
+    if ext == ".zip" {
+        return extract_zip_archive_to_dir(archive_path, destination_dir);
+    }
+    if ext == ".tar" || ext == ".gz" || ext == ".tgz" {
+        if let Ok(_) = extract_archive_with_tar(archive_path, destination_dir) {
+            return Ok(());
+        }
+    }
+    extract_archive_with_7z(archive_path, destination_dir)
+}
+
 fn build_archive_extraction_directory(archive_path: &Path) -> PathBuf {
     let parent = archive_path.parent().unwrap_or_else(|| Path::new("."));
     let stem = archive_path
@@ -1322,6 +1871,61 @@ fn build_file_icon_data_url(file_path: &Path) -> String {
     );
 
     format!("data:image/svg+xml;utf8,{}", percent_encode_data_url(&svg))
+}
+
+fn parse_command_args(input: &str) -> Vec<String> {
+    let text = input.trim();
+    if text.is_empty() {
+        return Vec::new();
+    }
+    let mut args = Vec::<String>::new();
+    let mut current = String::new();
+    let mut in_quotes = false;
+    let mut quote_char = '\0';
+    for ch in text.chars() {
+        if in_quotes {
+            if ch == quote_char {
+                in_quotes = false;
+                quote_char = '\0';
+            } else {
+                current.push(ch);
+            }
+            continue;
+        }
+
+        if ch == '"' || ch == '\'' {
+            in_quotes = true;
+            quote_char = ch;
+            continue;
+        }
+
+        if ch.is_whitespace() {
+            if !current.is_empty() {
+                args.push(current.clone());
+                current.clear();
+            }
+            continue;
+        }
+        current.push(ch);
+    }
+    if !current.is_empty() {
+        args.push(current);
+    }
+    args
+}
+
+fn launch_game_with_emulator(emulator_path: &Path, emulator_args: &str, game_path: &Path) -> Result<(), String> {
+    let mut args = parse_command_args(emulator_args);
+    args.push(game_path.to_string_lossy().to_string());
+    let mut command = Command::new(emulator_path);
+    if !args.is_empty() {
+        command.args(args);
+    }
+    if let Some(parent) = emulator_path.parent() {
+        command.current_dir(parent);
+    }
+    command.spawn().map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 fn launch_game_file(game_path: &Path) -> Result<(), String> {
@@ -1965,21 +2569,28 @@ fn emubro_invoke(channel: String, args: Vec<Value>, window: Window) -> Result<Va
                         }
                         continue;
                     }
-                    if ext != ".zip" {
-                        skipped.push(json!({
-                            "path": source_path,
-                            "reason": "archive_extract_failed",
-                            "message": format!("Archive extraction for {} is not implemented yet.", ext)
-                        }));
-                        continue;
-                    }
-
                     let destination = build_archive_extraction_directory(&source);
-                    match extract_zip_archive_to_dir(&source, &destination) {
+                    let fallback_destination = std::env::current_dir()
+                        .unwrap_or_else(|_| PathBuf::from("."))
+                        .join(".emubro-imports")
+                        .join(format!(
+                            "{}_{}",
+                            source.file_stem().and_then(|v| v.to_str()).unwrap_or("archive"),
+                            system_unix_timestamp_string()
+                        ));
+                    let mut extracted_dir = destination.clone();
+                    let extraction_result = match extract_archive_to_dir(&source, &destination) {
+                        Ok(_) => Ok(()),
+                        Err(_) => {
+                            extracted_dir = fallback_destination.clone();
+                            extract_archive_to_dir(&source, &fallback_destination)
+                        }
+                    };
+                    match extraction_result {
                         Ok(_) => {
                             let scan_options = json!({ "scope": "both", "recursive": true, "maxDepth": 30 });
                             let scan_res = scan_and_import_games_and_emulators(
-                                destination.to_string_lossy().as_ref(),
+                                extracted_dir.to_string_lossy().as_ref(),
                                 Some(&scan_options),
                             )?;
                             let scan_games = scan_res
@@ -1998,7 +2609,7 @@ fn emubro_invoke(channel: String, args: Vec<Value>, window: Window) -> Result<Va
                                 warnings.push(json!({
                                     "path": source_path,
                                     "reason": "archive_extracted",
-                                    "message": format!("Archive extracted to {}", destination.to_string_lossy())
+                                    "message": format!("Archive extracted to {}", extracted_dir.to_string_lossy())
                                 }));
                             }
                             added_games.extend(scan_games);
@@ -2514,13 +3125,87 @@ fn emubro_invoke(channel: String, args: Vec<Value>, window: Window) -> Result<Va
                 }));
             }
 
+            let platform_short_name = normalize_platform_short_name(
+                game_row
+                    .get("platformShortName")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or(""),
+            );
+            let override_emulator_path = game_row
+                .get("emulatorOverridePath")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim()
+                .to_string();
+
+            let emulators = read_state_array("emulators");
+            let mut selected_emulator = None::<(PathBuf, String)>;
+            if !override_emulator_path.is_empty() {
+                let candidate = PathBuf::from(&override_emulator_path);
+                if candidate.exists() && candidate.is_file() {
+                    selected_emulator = Some((candidate, String::new()));
+                }
+            }
+
+            if selected_emulator.is_none() && !platform_short_name.is_empty() {
+                for emulator in emulators {
+                    let emulator_psn = normalize_platform_short_name(
+                        emulator
+                            .get("platformShortName")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or(""),
+                    );
+                    if emulator_psn != platform_short_name {
+                        continue;
+                    }
+                    let emulator_path = emulator
+                        .get("filePath")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .trim()
+                        .to_string();
+                    if emulator_path.is_empty() {
+                        continue;
+                    }
+                    let emulator_path_buf = PathBuf::from(&emulator_path);
+                    if !emulator_path_buf.exists() || !emulator_path_buf.is_file() {
+                        continue;
+                    }
+                    let emulator_args = emulator
+                        .get("args")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .trim()
+                        .to_string();
+                    selected_emulator = Some((emulator_path_buf, emulator_args));
+                    break;
+                }
+            }
+
+            if let Some((emulator_path, emulator_args)) = selected_emulator {
+                match launch_game_with_emulator(&emulator_path, &emulator_args, &game_path_buf) {
+                    Ok(_) => {
+                        let _ = update_game_last_played(game_id);
+                        return Ok(json!({
+                            "success": true,
+                            "message": "Game launched",
+                            "gameId": game_id,
+                            "launchMode": "emulator",
+                            "emulatorPath": emulator_path.to_string_lossy().to_string()
+                        }));
+                    }
+                    Err(_) => {}
+                }
+            }
+
             match launch_game_file(&game_path_buf) {
                 Ok(_) => {
                     let _ = update_game_last_played(game_id);
                     Ok(json!({
                         "success": true,
                         "message": "Game launched",
-                        "gameId": game_id
+                        "gameId": game_id,
+                        "launchMode": "direct"
                     }))
                 }
                 Err(err) => Ok(json!({
