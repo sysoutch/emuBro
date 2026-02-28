@@ -18,6 +18,7 @@ tauri = { version = "2.0", features = [] }
 open = "5.3"
 rfd = "0.15"
 walkdir = "2.5"
+rusqlite = { version = "0.32", features = ["bundled"] }
 
 [features]
 default = ["custom-protocol"]

@@ -1,9 +1,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use rusqlite::{params, Connection, OptionalExtension};
 use serde_json::{json, Value};
 use std::fs;
-use std::process::Command;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use tauri::Window;
 use walkdir::WalkDir;
 
@@ -89,14 +90,20 @@ fn read_all_translations_from_disk() -> Value {
     Value::Object(out)
 }
 
-fn migration_state_path() -> PathBuf {
+fn state_db_path() -> PathBuf {
+    std::env::current_dir()
+        .unwrap_or_else(|_| PathBuf::from("."))
+        .join(".emubro-tauri-state.db")
+}
+
+fn legacy_json_state_path() -> PathBuf {
     std::env::current_dir()
         .unwrap_or_else(|_| PathBuf::from("."))
         .join(".emubro-tauri-state.json")
 }
 
-fn load_migration_state() -> serde_json::Map<String, Value> {
-    let path = migration_state_path();
+fn read_legacy_state_json() -> serde_json::Map<String, Value> {
+    let path = legacy_json_state_path();
     let Ok(raw) = fs::read_to_string(path) else {
         return serde_json::Map::new();
     };
@@ -106,24 +113,95 @@ fn load_migration_state() -> serde_json::Map<String, Value> {
     }
 }
 
-fn save_migration_state(map: &serde_json::Map<String, Value>) -> Result<(), String> {
-    let path = migration_state_path();
-    let encoded = serde_json::to_string_pretty(map).map_err(|e| e.to_string())?;
-    fs::write(path, encoded).map_err(|e| e.to_string())
+fn migrate_legacy_json_state_if_needed(conn: &mut Connection) -> Result<(), String> {
+    let current_count = conn
+        .query_row("SELECT COUNT(1) FROM app_state", [], |row| row.get::<_, i64>(0))
+        .map_err(|e| e.to_string())?;
+    if current_count > 0 {
+        return Ok(());
+    }
+
+    let legacy_state = read_legacy_state_json();
+    if legacy_state.is_empty() {
+        return Ok(());
+    }
+
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+    let mut stmt = tx
+        .prepare(
+            "INSERT OR REPLACE INTO app_state (key, value, updatedAt) VALUES (?1, ?2, CURRENT_TIMESTAMP)",
+        )
+        .map_err(|e| e.to_string())?;
+    for (key, value) in legacy_state {
+        let encoded = serde_json::to_string(&value).map_err(|e| e.to_string())?;
+        stmt.execute(params![key, encoded]).map_err(|e| e.to_string())?;
+    }
+    drop(stmt);
+    tx.commit().map_err(|e| e.to_string())
+}
+
+fn open_state_db() -> Result<Connection, String> {
+    let db_path = state_db_path();
+    let mut conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+    conn.execute_batch(
+        "
+        PRAGMA journal_mode = WAL;
+        PRAGMA foreign_keys = ON;
+        CREATE TABLE IF NOT EXISTS app_state (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+        ",
+    )
+    .map_err(|e| e.to_string())?;
+    migrate_legacy_json_state_if_needed(&mut conn)?;
+    Ok(conn)
+}
+
+fn db_get_state_value(conn: &Connection, key: &str) -> Result<Option<Value>, String> {
+    let encoded = conn
+        .query_row(
+            "SELECT value FROM app_state WHERE key = ?1",
+            params![key],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(|e| e.to_string())?;
+    let Some(text) = encoded else {
+        return Ok(None);
+    };
+    let parsed = serde_json::from_str::<Value>(&text).map_err(|e| e.to_string())?;
+    Ok(Some(parsed))
+}
+
+fn db_set_state_value(conn: &Connection, key: &str, value: &Value) -> Result<(), String> {
+    let encoded = serde_json::to_string(value).map_err(|e| e.to_string())?;
+    conn.execute(
+        "INSERT INTO app_state (key, value, updatedAt)
+         VALUES (?1, ?2, CURRENT_TIMESTAMP)
+         ON CONFLICT(key) DO UPDATE SET
+           value = excluded.value,
+           updatedAt = CURRENT_TIMESTAMP",
+        params![key, encoded],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 fn read_state_array(key: &str) -> Vec<Value> {
-    let state = load_migration_state();
-    match state.get(key) {
-        Some(Value::Array(rows)) => rows.clone(),
+    let Ok(conn) = open_state_db() else {
+        return Vec::new();
+    };
+    match db_get_state_value(&conn, key) {
+        Ok(Some(Value::Array(rows))) => rows,
         _ => Vec::new(),
     }
 }
 
 fn write_state_array(key: &str, rows: Vec<Value>) -> Result<(), String> {
-    let mut state = load_migration_state();
-    state.insert(key.to_string(), Value::Array(rows));
-    save_migration_state(&state)
+    let conn = open_state_db()?;
+    db_set_state_value(&conn, key, &Value::Array(rows))
 }
 
 fn normalize_path_list(input: Option<&Value>) -> Vec<Value> {
@@ -162,18 +240,19 @@ fn normalize_library_path_settings(payload: Option<&Value>) -> Value {
 }
 
 fn read_library_path_settings() -> Value {
-    let state = load_migration_state();
-    match state.get("libraryPathSettings") {
-        Some(value) => normalize_library_path_settings(Some(value)),
-        None => default_library_path_settings(),
+    let Ok(conn) = open_state_db() else {
+        return default_library_path_settings();
+    };
+    match db_get_state_value(&conn, "libraryPathSettings") {
+        Ok(Some(value)) => normalize_library_path_settings(Some(&value)),
+        _ => default_library_path_settings(),
     }
 }
 
 fn write_library_path_settings(payload: Option<&Value>) -> Result<Value, String> {
     let normalized = normalize_library_path_settings(payload);
-    let mut state = load_migration_state();
-    state.insert("libraryPathSettings".to_string(), normalized.clone());
-    save_migration_state(&state)?;
+    let conn = open_state_db()?;
+    db_set_state_value(&conn, "libraryPathSettings", &normalized)?;
     Ok(normalized)
 }
 
