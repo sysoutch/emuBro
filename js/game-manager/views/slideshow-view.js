@@ -1,5 +1,4 @@
 export function renderGamesAsSlideshow(gamesToRender, options = {}) {
-    const SLIDESHOW_MODE_STORAGE_KEY = 'emuBro.slideshowMode';
     const gamesContainer = document.getElementById('games-container');
     if (!gamesContainer) return;
     const renderToken = options.renderToken;
@@ -27,7 +26,7 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
     };
 
     const slideshowContainer = document.createElement('div');
-    slideshowContainer.className = 'slideshow-container';
+    slideshowContainer.className = 'slideshow-container slideshow-deck-layout';
     slideshowContainer.tabIndex = 0;
     const slideshowGames = buildViewGamePool(gamesToRender, maxPoolSize);
 
@@ -45,87 +44,86 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
         el.setAttribute('aria-hidden', 'true');
     });
 
+    const SLIDESHOW_MODE_STORAGE_KEY = 'emuBro.slideshowMode';
+    let slideshowMode = (() => {
+        try {
+            const stored = String(localStorage.getItem(SLIDESHOW_MODE_STORAGE_KEY) || 'flat').trim().toLowerCase();
+            return stored === '3d' ? '3d' : 'flat';
+        } catch (_error) {
+            return 'flat';
+        }
+    })();
+
     const chrome = document.createElement('div');
     chrome.className = 'slideshow-chrome';
 
-    const titleRow = document.createElement('div');
-    titleRow.className = 'slideshow-title-row';
-    const heading = document.createElement('h2');
-    heading.className = 'slideshow-heading';
-    titleRow.appendChild(heading);
-
-    const showcase = document.createElement('div');
-    showcase.className = 'slideshow-showcase';
-
-    const heroButton = document.createElement('button');
-    heroButton.type = 'button';
-    heroButton.className = 'slideshow-hero-card';
-    heroButton.setAttribute('aria-label', 'Open selected game details');
-    const heroImage = document.createElement('img');
-    heroImage.className = 'slideshow-hero-image';
-    heroImage.alt = '';
-    heroImage.loading = 'lazy';
-    heroImage.decoding = 'async';
-    heroButton.appendChild(heroImage);
-    const heroFrame = document.createElement('div');
-    heroFrame.className = 'slideshow-hero-frame';
-    heroFrame.setAttribute('aria-hidden', 'true');
-    heroButton.appendChild(heroFrame);
-
-    const stripPanel = document.createElement('div');
-    stripPanel.className = 'slideshow-strip-panel glass';
-    const stripHeader = document.createElement('div');
-    stripHeader.className = 'slideshow-strip-header';
-    const stripTitle = document.createElement('div');
-    stripTitle.className = 'slideshow-strip-title';
-    stripTitle.textContent = 'Up Next';
-    const modeTabs = document.createElement('div');
-    modeTabs.className = 'slideshow-mode-tabs';
-    modeTabs.innerHTML = `
-        <button type="button" class="slideshow-mode-tab" data-slideshow-mode="flat">Flat</button>
-        <button type="button" class="slideshow-mode-tab" data-slideshow-mode="3d">3D</button>
+    const carouselControls = document.createElement('div');
+    carouselControls.className = 'slideshow-carousel-controls';
+    carouselControls.innerHTML = `
+        <div class="slideshow-mode-tabs">
+            <button type="button" class="slideshow-mode-tab" data-slideshow-mode="flat">Flat</button>
+            <button type="button" class="slideshow-mode-tab" data-slideshow-mode="3d">3D</button>
+        </div>
     `;
-    const stripTrack = document.createElement('div');
-    stripTrack.className = 'slideshow-strip-track';
-    stripHeader.appendChild(stripTitle);
-    stripHeader.appendChild(modeTabs);
-    stripPanel.appendChild(stripHeader);
-    stripPanel.appendChild(stripTrack);
 
-    showcase.appendChild(heroButton);
-    showcase.appendChild(stripPanel);
+    const carousel = document.createElement('div');
+    carousel.className = 'slideshow-carousel';
+    
+    const track = document.createElement('div');
+    track.className = 'slideshow-track';
 
-    const footer = document.createElement('div');
-    footer.className = 'slideshow-footer';
-    const blurb = document.createElement('div');
-    blurb.className = 'slideshow-blurb glass';
-    const blurbMeta = document.createElement('div');
-    blurbMeta.className = 'slideshow-blurb-meta';
-    const blurbText = document.createElement('p');
-    blurbText.className = 'slideshow-blurb-text';
-    blurb.appendChild(blurbMeta);
-    blurb.appendChild(blurbText);
+    slideshowGames.forEach((game, idx) => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'slideshow-item';
+        item.dataset.index = String(idx);
+        item.setAttribute('aria-label', game.name || '');
 
-    const controlsContainer = document.createElement('div');
-    controlsContainer.className = 'slideshow-controls';
-    const prevBtn = document.createElement('button');
-    prevBtn.className = 'slideshow-btn prev-btn';
-    prevBtn.textContent = 'Previous';
-    const nextBtn = document.createElement('button');
-    nextBtn.className = 'slideshow-btn next-btn';
-    nextBtn.textContent = 'Next';
-    controlsContainer.appendChild(prevBtn);
-    controlsContainer.appendChild(nextBtn);
+        // Click handler for direct selection
+        item.addEventListener('click', (e) => {
+            // Only handle click if we weren't just dragging
+            if (performance.now() < suppressStripClickUntil) return;
+            const targetIdx = parseInt(item.dataset.index);
+            if (targetIdx === currentIndex) {
+                showGameDetails(slideshowGames[targetIdx]);
+            } else {
+                scrollToItem(targetIdx);
+            }
+        });
 
-    footer.appendChild(titleRow);
-    footer.appendChild(blurb);
-    footer.appendChild(controlsContainer);
+        const safeImage = getGameImage(game);
+        const src = lazyPlaceholderSrc || safeImage;
 
-    chrome.appendChild(showcase);
-    chrome.appendChild(footer);
+        item.innerHTML = `
+            <div class="slideshow-item-inner">
+                <img class="slideshow-item-image lazy-game-image is-pending" src="${src}" data-lazy-src="${safeImage}" alt="" loading="lazy" decoding="async" />
+                <div class="slideshow-item-overlay">
+                    <div class="slideshow-item-title">${escapeHtml(game.name)}</div>
+                </div>
+            </div>
+        `;
+        track.appendChild(item);
+    });
+
+    carousel.appendChild(track);
+
+    const infoPanel = document.createElement('div');
+    infoPanel.className = 'slideshow-info-panel';
+    infoPanel.innerHTML = `
+        <h2 class="slideshow-active-title"></h2>
+        <div class="slideshow-active-meta"></div>
+        <div class="slideshow-active-blurb glass"></div>
+    `;
+
+    chrome.appendChild(carouselControls);
+    chrome.appendChild(carousel);
+    chrome.appendChild(infoPanel);
+
     backdrops.forEach((el) => slideshowContainer.appendChild(el));
     slideshowContainer.appendChild(chrome);
     gamesContainer.appendChild(slideshowContainer);
+
+    initializeLazyGameImages(track);
 
     function getGameImage(game) {
         let gameImageToUse = game && game.image;
@@ -138,6 +136,7 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
 
     function setBackdropForIndex(idx) {
         const game = slideshowGames[idx];
+        if (!game) return;
         const heroImg = getGameImage(game);
         const nextBackdrop = 1 - activeBackdrop;
         backdrops[nextBackdrop].style.backgroundImage = heroImg ? `url("${heroImg}")` : '';
@@ -148,28 +147,60 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
 
     const len = slideshowGames.length;
     let currentIndex = 0;
-    const STRIP_VISIBLE_COUNT = 14;
-    let slideshowMode = (() => {
-        try {
-            const stored = String(localStorage.getItem(SLIDESHOW_MODE_STORAGE_KEY) || 'flat').trim().toLowerCase();
-            return stored === '3d' ? '3d' : 'flat';
-        } catch (_error) {
-            return 'flat';
-        }
-    })();
-
-    const AUTO_ADVANCE_MS = 4600;
-    let autoAdvanceTimer = null;
-    let autoAdvancePaused = false;
+    let isMoving = false;
+    let scrollX = 0;
     let suppressStripClickUntil = 0;
-    let stripInertiaFrame = null;
+
+    function updateInfo(idx) {
+        const game = slideshowGames[idx];
+        if (!game) return;
+        const titleEl = infoPanel.querySelector('.slideshow-active-title');
+        const metaEl = infoPanel.querySelector('.slideshow-active-meta');
+        const blurbEl = infoPanel.querySelector('.slideshow-active-blurb');
+
+        const statusText = game.isInstalled ? 'Installed' : 'Not Installed';
+        const platformName = game.platform || game.platformShortName || t('gameDetails.unknown');
+        const ratingText = (game.rating !== undefined && game.rating !== null) ? `${game.rating}` : t('gameDetails.unknown');
+
+        if (titleEl) titleEl.textContent = game.name;
+        if (metaEl) {
+            metaEl.innerHTML = `
+                <span class="slideshow-meta-pill">${platformName}</span>
+                <span class="slideshow-meta-pill">Rating: ${ratingText}</span>
+                <span class="slideshow-meta-pill">${statusText}</span>
+                <span class="slideshow-meta-pill">${idx + 1} / ${len}</span>
+            `;
+        }
+        if (blurbEl) {
+            blurbEl.textContent = (game.description && String(game.description).trim().length > 0)
+                ? String(game.description).trim()
+                : 'No description available for this game yet.';
+        }
+
+        setBackdropForIndex(idx);
+    }
+
+    function getLayout() {
+        const carouselRect = carousel.getBoundingClientRect();
+        const firstItem = track.querySelector('.slideshow-item');
+        if (!firstItem) return { center: 0, itemWidth: 0, gap: 0 };
+        // Use offsetWidth to get unscaled dimensions
+        const itemWidth = firstItem.offsetWidth;
+        const style = window.getComputedStyle(track);
+        const gap = parseFloat(style.gap) || 0;
+        return {
+            center: carouselRect.width / 2,
+            itemWidth: itemWidth,
+            gap: gap
+        };
+    }
 
     function applySlideshowMode(nextMode, options = {}) {
         const persist = options.persist !== false;
         slideshowMode = nextMode === '3d' ? '3d' : 'flat';
         slideshowContainer.classList.toggle('is-mode-3d', slideshowMode === '3d');
         slideshowContainer.classList.toggle('is-mode-flat', slideshowMode === 'flat');
-        modeTabs.querySelectorAll('.slideshow-mode-tab').forEach((button) => {
+        carouselControls.querySelectorAll('.slideshow-mode-tab').forEach((button) => {
             const isActive = String(button.dataset.slideshowMode || '') === slideshowMode;
             button.classList.toggle('is-active', isActive);
             button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
@@ -179,284 +210,212 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
                 localStorage.setItem(SLIDESHOW_MODE_STORAGE_KEY, slideshowMode);
             } catch (_error) {}
         }
+        applyTransforms();
     }
 
-    function clearAutoAdvance() {
-        if (!autoAdvanceTimer) return;
-        window.clearTimeout(autoAdvanceTimer);
-        autoAdvanceTimer = null;
-    }
-
-    function stopStripInertia() {
-        if (!stripInertiaFrame) return;
-        window.cancelAnimationFrame(stripInertiaFrame);
-        stripInertiaFrame = null;
-    }
-
-    function scheduleAutoAdvance() {
-        clearAutoAdvance();
-        if (len <= 1 || autoAdvancePaused) return;
-        if (!slideshowContainer.isConnected) return;
-        autoAdvanceTimer = window.setTimeout(() => {
-            autoAdvanceTimer = null;
-            if (renderToken !== getRenderToken()) return;
-            if (!slideshowContainer.isConnected || autoAdvancePaused) {
-                scheduleAutoAdvance();
-                return;
-            }
-            setIndex(currentIndex + 1);
-        }, AUTO_ADVANCE_MS);
-    }
-
-    function getStripIndices(centerIdx) {
-        const count = Math.min(len, STRIP_VISIBLE_COUNT);
-        const indices = [];
-        for (let offset = 0; offset < count; offset += 1) {
-            indices.push((centerIdx + offset) % len);
-        }
-        return indices;
-    }
-
-    function renderStrip(centerIdx) {
-        const stripIndices = getStripIndices(centerIdx);
-        stripTrack.innerHTML = stripIndices.map((gameIdx) => {
-            const game = slideshowGames[gameIdx];
-            const safeName = escapeHtml(game?.name || '');
-            const safeImage = escapeHtml(getGameImage(game) || '');
-            const isActive = gameIdx === centerIdx;
-            const src = lazyPlaceholderSrc || safeImage;
-            return `
-                <button
-                    type="button"
-                    class="slideshow-strip-item${isActive ? ' is-active' : ''}"
-                    data-slideshow-index="${gameIdx}"
-                    aria-label="${safeName}"
-                >
-                    <img class="slideshow-strip-image lazy-game-image is-pending" src="${src}" data-lazy-src="${safeImage}" alt="${safeName}" loading="lazy" decoding="async" fetchpriority="low" />
-                    <span class="slideshow-strip-name">${safeName}</span>
-                </button>
-            `;
-        }).join('');
-
-        initializeLazyGameImages(stripTrack);
-        const activeItem = stripTrack.querySelector('.slideshow-strip-item.is-active');
-        if (activeItem && typeof activeItem.scrollIntoView === 'function') {
-            activeItem.scrollIntoView({
-                behavior: reduceMotion ? 'auto' : 'smooth',
-                block: 'nearest',
-                inline: 'nearest'
-            });
-        }
-    }
-
-    function updateHero(idx) {
-        const game = slideshowGames[idx];
-        const safeImage = getGameImage(game);
-        const statusText = game.isInstalled ? 'Installed' : 'Not Installed';
-        const platformName = game.platform || game.platformShortName || t('gameDetails.unknown');
-        const ratingText = (game.rating !== undefined && game.rating !== null) ? `${game.rating}` : t('gameDetails.unknown');
-
-        heading.textContent = game.name;
-        heroImage.src = safeImage || '';
-        heroImage.alt = game.name || '';
-        heroButton.dataset.index = String(idx);
-        blurbMeta.innerHTML = `
-            <span class="slideshow-meta-pill">${platformName}</span>
-            <span class="slideshow-meta-pill">Rating: ${ratingText}</span>
-            <span class="slideshow-meta-pill">${statusText}</span>
-            <span class="slideshow-meta-pill">${idx + 1} / ${slideshowGames.length}</span>
-        `;
-        blurbText.textContent = (game.description && String(game.description).trim().length > 0)
-            ? String(game.description).trim()
-            : 'No description available for this game yet.';
-
-        setBackdropForIndex(idx);
-        renderStrip(idx);
-    }
-
-    function setIndex(nextIndex) {
+    function applyTransforms() {
         if (renderToken !== getRenderToken()) return;
-        if (!slideshowContainer.isConnected) return;
-        currentIndex = (nextIndex + len) % len;
-        updateHero(currentIndex);
-        scheduleAutoAdvance();
-    }
+        const { center, itemWidth, gap } = getLayout();
+        if (itemWidth === 0) return;
 
-    function getNearestStripIndex() {
-        const buttons = Array.from(stripTrack.querySelectorAll('.slideshow-strip-item[data-slideshow-index]'));
-        if (!buttons.length) return null;
-        const trackRect = stripTrack.getBoundingClientRect();
-        const targetCenter = trackRect.left + (trackRect.width / 2);
-        let bestIdx = null;
-        let bestDist = Number.POSITIVE_INFINITY;
+        const items = track.querySelectorAll('.slideshow-item');
+        const fullStep = itemWidth + gap;
 
-        buttons.forEach((button) => {
-            const idx = Number.parseInt(button.dataset.slideshowIndex || '-1', 10);
-            if (!Number.isFinite(idx) || idx < 0 || idx >= len) return;
-            const rect = button.getBoundingClientRect();
-            const center = rect.left + (rect.width / 2);
-            const dist = Math.abs(center - targetCenter);
-            if (dist < bestDist) {
-                bestDist = dist;
-                bestIdx = idx;
+        // Current offset based on scrollX
+        track.style.transform = `translate3d(${center - (itemWidth / 2) - scrollX}px, 0, 0)`;
+
+        items.forEach((item, i) => {
+            const itemX = i * fullStep;
+            const diffX = itemX - scrollX;
+            const dist = Math.abs(diffX);
+            
+            // Normalized distance: 0 at center, 1 at edges of focus range
+            const normalizedDist = Math.min(1, dist / (fullStep * 2.5));
+            
+            // Steam-like scaling: center is 1.15, edges are 0.85
+            const scale = 1.15 - (normalizedDist * 0.3);
+            const opacity = 1.0 - (normalizedDist * 0.6);
+            const zIndex = Math.round((1 - normalizedDist) * 100);
+
+            let transform = `scale(${scale})`;
+            if (slideshowMode === '3d') {
+                // Precision: ensure that when dist is very small, we snap to 0 deg
+                const rotateY = dist < 1 ? 0 : Math.max(-45, Math.min(45, (diffX / fullStep) * -20));
+                const translateZ = normalizedDist * -120;
+                transform += ` rotateY(${rotateY}deg) translateZ(${translateZ}px)`;
+            }
+
+            item.style.transform = transform;
+            item.style.opacity = String(opacity);
+            item.style.zIndex = String(zIndex);
+            
+            // Update active state based on proximity to center
+            const isActive = dist < (fullStep / 2);
+            item.classList.toggle('is-active', isActive);
+            if (isActive && i !== currentIndex) {
+                currentIndex = i;
+                updateInfo(currentIndex);
             }
         });
-
-        return bestIdx;
     }
 
-    (function enableStripDragScroll() {
-        let armed = false;
-        let dragging = false;
-        let pointerId = null;
-        let startX = 0;
-        let startScrollLeft = 0;
-        let lastMoveX = 0;
-        let lastMoveT = 0;
-        let velocityPxMs = 0;
+    function scrollToItem(idx, smooth = true) {
+        const { itemWidth, gap } = getLayout();
+        const targetX = idx * (itemWidth + gap);
+        
+        if (!smooth || reduceMotion) {
+            scrollX = targetX;
+            currentIndex = idx;
+            applyTransforms();
+            updateInfo(currentIndex);
+            return;
+        }
 
-        const dragThreshold = 4;
+        const startX = scrollX;
+        const startTime = performance.now();
+        const duration = 450;
 
-        const setDraggingState = (isDragging) => {
-            stripTrack.classList.toggle('is-dragging', !!isDragging);
-        };
+        function animate(now) {
+            if (renderToken !== getRenderToken()) return;
+            const elapsed = now - startTime;
+            const t = Math.min(1, elapsed / duration);
+            const ease = 1 - Math.pow(1 - t, 4); // easeOutQuart
+            
+            scrollX = startX + (targetX - startX) * ease;
+            applyTransforms();
 
-        const onPointerDown = (event) => {
-            if (event.pointerType === 'mouse' && event.button !== 0) return;
-            armed = true;
-            dragging = false;
-            pointerId = event.pointerId;
-            startX = event.clientX;
-            startScrollLeft = stripTrack.scrollLeft;
-            lastMoveX = event.clientX;
-            lastMoveT = performance.now();
-            velocityPxMs = 0;
-            autoAdvancePaused = true;
-            clearAutoAdvance();
-            stopStripInertia();
-            try { stripTrack.setPointerCapture(pointerId); } catch (_error) {}
-        };
-
-        const onPointerMove = (event) => {
-            if (!armed || event.pointerId !== pointerId) return;
-
-            const dx = event.clientX - startX;
-            if (!dragging && Math.abs(dx) >= dragThreshold) {
-                dragging = true;
-                setDraggingState(true);
+            if (t < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                scrollX = targetX;
+                currentIndex = idx;
+                applyTransforms();
+                updateInfo(currentIndex);
+                isMoving = false;
             }
-            if (!dragging) return;
+        }
 
-            stripTrack.scrollLeft = startScrollLeft - dx;
+        isMoving = true;
+        requestAnimationFrame(animate);
+    }
 
-            const now = performance.now();
-            const dt = Math.max(1, now - lastMoveT);
-            const instVelocity = (event.clientX - lastMoveX) / dt;
-            velocityPxMs = (velocityPxMs * 0.7) + (instVelocity * 0.3);
-            lastMoveX = event.clientX;
-            lastMoveT = now;
-            event.preventDefault();
+    // Drag / Swipe Logic
+    (function initDragHandler() {
+        let isArmed = false;
+        let isDragging = false;
+        let startPointerX = 0;
+        let startScrollX = 0;
+        let lastPointerX = 0;
+        let velocity = 0;
+        let lastTimestamp = 0;
+
+        const onDown = (e) => {
+            if (e.pointerType === 'mouse' && e.button !== 0) return;
+            isArmed = true;
+            isDragging = false;
+            startPointerX = e.clientX;
+            lastPointerX = e.clientX;
+            startScrollX = scrollX;
+            lastTimestamp = performance.now();
+            velocity = 0;
+            carousel.setPointerCapture(e.pointerId);
         };
 
-        const onPointerEnd = (event) => {
-            if (!armed || event.pointerId !== pointerId) return;
-            armed = false;
-            try { stripTrack.releasePointerCapture(pointerId); } catch (_error) {}
-            pointerId = null;
+        const onMove = (e) => {
+            if (!isArmed) return;
+            const dx = e.clientX - startPointerX;
+            if (!isDragging && Math.abs(dx) > 5) {
+                isDragging = true;
+                carousel.classList.add('is-dragging');
+            }
 
-            if (!dragging) {
-                autoAdvancePaused = false;
-                scheduleAutoAdvance();
+            if (isDragging) {
+                scrollX = startScrollX - dx;
+                
+                const now = performance.now();
+                const dt = now - lastTimestamp;
+                if (dt > 0) {
+                    velocity = (e.clientX - lastPointerX) / dt;
+                }
+                lastPointerX = e.clientX;
+                lastTimestamp = now;
+
+                applyTransforms();
+            }
+        };
+
+        const onUp = (e) => {
+            if (!isArmed) return;
+            isArmed = false;
+            carousel.classList.remove('is-dragging');
+            carousel.releasePointerCapture(e.pointerId);
+
+            if (!isDragging) {
                 return;
             }
 
-            dragging = false;
-            setDraggingState(false);
-            suppressStripClickUntil = performance.now() + 220;
-
-            let velocity = -velocityPxMs * 18;
-            const decay = 0.92;
-            const tick = () => {
-                velocity *= decay;
-                if (Math.abs(velocity) < 0.2) {
-                    stripInertiaFrame = null;
-                    const nearestIdx = getNearestStripIndex();
-                    if (nearestIdx != null) setIndex(nearestIdx);
-                    autoAdvancePaused = false;
-                    scheduleAutoAdvance();
-                    return;
-                }
-                stripTrack.scrollLeft += velocity;
-                stripInertiaFrame = requestAnimationFrame(tick);
-            };
-            stripInertiaFrame = requestAnimationFrame(tick);
+            isDragging = false;
+            suppressStripClickUntil = performance.now() + 100;
+            
+            // Magnetic snap with velocity assistance
+            const { itemWidth, gap } = getLayout();
+            const step = itemWidth + gap;
+            
+            let targetIdx = Math.round(scrollX / step);
+            if (Math.abs(velocity) > 0.5) {
+                targetIdx -= Math.sign(velocity);
+            }
+            
+            targetIdx = Math.max(0, Math.min(len - 1, targetIdx));
+            scrollToItem(targetIdx);
         };
 
-        stripTrack.style.touchAction = 'pan-y';
-        stripTrack.addEventListener('pointerdown', onPointerDown);
-        stripTrack.addEventListener('pointermove', onPointerMove);
-        stripTrack.addEventListener('pointerup', onPointerEnd);
-        stripTrack.addEventListener('pointercancel', onPointerEnd);
-        stripTrack.addEventListener('lostpointercapture', onPointerEnd);
+        carousel.addEventListener('pointerdown', onDown);
+        carousel.addEventListener('pointermove', onMove);
+        carousel.addEventListener('pointerup', onUp);
+        carousel.addEventListener('pointercancel', onUp);
     })();
 
-    heroButton.addEventListener('click', () => {
-        const game = slideshowGames[currentIndex];
-        if (game) showGameDetails(game);
-    });
-
-    stripTrack.addEventListener('click', (event) => {
-        if (performance.now() < suppressStripClickUntil) return;
-        const button = event.target.closest('.slideshow-strip-item[data-slideshow-index]');
-        if (!button) return;
-        const idx = Number.parseInt(button.dataset.slideshowIndex || '-1', 10);
-        if (!Number.isFinite(idx) || idx < 0 || idx >= len) return;
-        setIndex(idx);
-    });
-
-    modeTabs.addEventListener('click', (event) => {
+    carouselControls.addEventListener('click', (event) => {
         const button = event.target.closest('.slideshow-mode-tab[data-slideshow-mode]');
         if (!button) return;
         applySlideshowMode(button.dataset.slideshowMode || 'flat');
     });
 
-    prevBtn.addEventListener('click', () => setIndex(currentIndex - 1));
-    nextBtn.addEventListener('click', () => setIndex(currentIndex + 1));
+    // Keyboard & Controls
+    slideshowContainer.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            scrollToItem(Math.max(0, currentIndex - 1));
+        } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            scrollToItem(Math.min(len - 1, currentIndex + 1));
+        } else if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            showGameDetails(slideshowGames[currentIndex]);
+        }
+    });
 
-    slideshowContainer.addEventListener('keydown', (event) => {
-        if (event.key === 'ArrowLeft') {
-            event.preventDefault();
-            setIndex(currentIndex - 1);
+    const onResize = () => {
+        if (renderToken !== getRenderToken()) return;
+        if (!slideshowContainer.isConnected) {
+            window.removeEventListener('resize', onResize);
             return;
         }
-        if (event.key === 'ArrowRight') {
-            event.preventDefault();
-            setIndex(currentIndex + 1);
-            return;
-        }
-        if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            const game = slideshowGames[currentIndex];
-            if (game) showGameDetails(game);
-        }
-    });
+        scrollToItem(currentIndex, false);
+    };
+    window.addEventListener('resize', onResize);
 
-    slideshowContainer.addEventListener('mouseenter', () => {
-        autoAdvancePaused = true;
-        clearAutoAdvance();
-    });
-    slideshowContainer.addEventListener('mouseleave', () => {
-        autoAdvancePaused = false;
-        scheduleAutoAdvance();
-    });
-
+    // Initial setup
     applySlideshowMode(slideshowMode, { persist: false });
-    setIndex(currentIndex);
-    slideshowContainer.focus();
+    requestAnimationFrame(() => {
+        if (renderToken !== getRenderToken()) return;
+        scrollToItem(0, false);
+        slideshowContainer.focus();
+    });
 
     setGamesScrollDetach(() => {
-        clearAutoAdvance();
-        stopStripInertia();
+        window.removeEventListener('resize', onResize);
         cleanupLazyGameImages(slideshowContainer);
     });
 }

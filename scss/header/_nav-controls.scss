@@ -1,0 +1,244 @@
+﻿.navigation ul {
+    display: flex;
+    list-style: none;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    gap: 14px;
+    margin: 0;
+    padding: 0;
+}
+
+.navigation {
+    flex: 0 1 auto;
+    min-width: 0;
+    margin-inline: clamp(10px, 2vw, 28px);
+    padding-inline: clamp(4px, 0.9vw, 10px);
+}
+
+.dropdown-with-button-wrapper {
+    display: flex;
+    flex-direction: row;
+    gap: 0px;
+}
+
+/* Theme Controls */
+.theme-toggle-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    flex: 0 0 auto;
+    margin-right: 8px;
+}
+
+.language-controls-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    flex: 0 0 auto;
+}
+
+.language-selector-wrapper {
+    flex: 0 0 auto;
+}
+
+.theme-controls-toggle,
+.language-controls-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 0 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-btn);
+    background: color-mix(in srgb, var(--bg-secondary), transparent 14%);
+    color: var(--text-secondary);
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    line-height: 1.2;
+    user-select: none;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.theme-controls-toggle:hover,
+.language-controls-toggle:hover {
+    border-color: color-mix(in srgb, var(--accent-color), white 20%);
+    color: var(--text-primary);
+}
+
+.theme-toggle-wrapper.is-open .theme-controls-toggle,
+.language-controls-wrapper.is-open .language-controls-toggle {
+    border-color: color-mix(in srgb, var(--accent-color), white 18%);
+    color: var(--text-primary);
+    background: color-mix(in srgb, var(--accent-color), transparent 80%);
+}
+
+.theme-controls-content,
+.language-controls-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Prevent compact panel chrome from leaking onto inline language controls. */
+.language-controls-content.header-compact-menu {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+.theme-toggle,
+.theme-manager-btn {
+    background-color: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: var(--radius-btn-top-left) var(--radius-btn-top-right) var(--radius-btn-bottom-right) var(--radius-btn-bottom-left);
+    cursor: pointer;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &:hover {
+        background-color: var(--bg-tertiary);
+        border-color: var(--accent-color);
+        transform: scale(1.1);
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    &:active {
+        transform: scale(0.95);
+    }
+}
+
+.theme-manager-btn {
+    border-radius: 0 var(--radius-input) var(--radius-input) 0;
+}
+
+#theme-select {
+    padding: 6px 12px;
+    height: 36px;
+    border-radius: var(--radius-input) 0 0 var(--radius-input);
+}
+
+.theme-controls-content .dropdown-with-button-wrapper .theme-toggle {
+    border-radius: 0;
+}
+
+.theme-controls-content .dropdown-with-button-wrapper #theme-select + .theme-toggle,
+.theme-controls-content .dropdown-with-button-wrapper .theme-toggle + .theme-toggle,
+.theme-controls-content .dropdown-with-button-wrapper .theme-toggle + .theme-manager-btn {
+    margin-left: -1px;
+}
+
+.navigation ul li a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.3s;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+}
+
+.navigation ul li a:hover,
+.navigation ul li a.active {
+    color: var(--accent-color);
+}
+
+.user-actions {
+    display: flex;
+    align-items: center;
+    gap: 0px;
+    flex-wrap: nowrap;
+    min-width: 0;
+}
+
+.search-bar input {
+    padding: 8px 12px;
+    border-radius: var(--radius-input);
+    border: none;
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    width: clamp(160px, 24vw, 300px);
+    transition: background-color 0.3s;
+    font-size: 0.95rem;
+    height: 36px;
+    line-height: 1.2;
+}
+
+.search-bar input:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--accent-color);
+}
+
+.global-search-bar {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+    margin-right: 0;
+}
+
+.global-search-bar .global-search-input {
+    padding-right: 34px;
+}
+
+.search-clear-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    border: 0;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--bg-secondary), transparent 25%);
+    color: var(--text-secondary);
+    cursor: pointer;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.16s ease, color 0.16s ease, background-color 0.16s ease;
+}
+
+.search-clear-btn.is-visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.search-clear-btn:hover {
+    background: color-mix(in srgb, var(--accent-color), transparent 78%);
+    color: var(--text-primary);
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-info img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%; /* Avatar always round */
+    border: 2px solid var(--accent-color);
+}
+
+// The custom language selector has its own styles in _language-selector.scss
+

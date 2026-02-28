@@ -1,6 +1,5 @@
 .env
 i18n.js  
-locales/  
 assets/  
 build_out/  
 dist/  

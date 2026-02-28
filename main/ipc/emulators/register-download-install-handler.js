@@ -261,7 +261,8 @@ function registerEmulatorDownloadInstallHandler(deps = {}) {
       }
 
       const requestedPackageType = normalizeDownloadPackageType(payload?.packageType || "");
-      const resolved = await resolveEmulatorDownloadTarget(emulator, osKey, requestedPackageType);
+      const specificUrl = String(payload?.specificUrl || "").trim();
+      const resolved = await resolveEmulatorDownloadTarget(emulator, osKey, requestedPackageType, specificUrl);
       if (!resolved?.url) {
         return { success: false, message: "No download source found for this emulator" };
       }

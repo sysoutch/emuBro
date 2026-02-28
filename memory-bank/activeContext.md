@@ -4,6 +4,9 @@
 Refactoring `js/game-manager.js` into smaller modules while keeping the public API stable.
 
 ## Recent Changes
+- Implemented emulator download scraping logic: when direct links are missing, the system now scrapes the configured `downloadUrl` for links matching OS-specific file patterns, allowing for robust automated downloads from complex provider pages.
+- Updated emulator download UI to handle multiple discovered packages, allowing users to choose the specific version/format they want to install.
+- Fixed an issue in Remote Library tool where pairing and browsing games silently failed because of the native unsupported `window.prompt` returning null; replaced it with `showTextInputDialog` from `js/ui/text-input-dialog.js`.
 - Continued game-manager refactor: moved slideshow/random views and grouped/incremental rendering into `js/game-manager/views/` and `js/game-manager/rendering/` modules with dependency injection.
 - Continued theme-manager refactor: moved LLM control helpers into `js/theme-manager/llm-utils.js`.
 - Continued theme-manager refactor: moved gradient/intensity helpers into `js/theme-manager/editor-utils.js` and background surface helpers into `js/theme-manager/background-editor-utils.js`.

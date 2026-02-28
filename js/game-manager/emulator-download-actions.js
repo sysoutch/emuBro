@@ -229,12 +229,13 @@ export function createEmulatorDownloadActions(deps = {}) {
             const list = document.createElement('div');
             list.className = 'emulator-download-choice-list';
 
-            options.forEach((entry) => {
+            options.forEach((entry, idx) => {
                 const button = document.createElement('button');
                 const isRecommended = entry.packageType === recommendedType;
                 button.type = 'button';
                 button.className = `action-btn emulator-download-choice-btn ${isRecommended ? 'launch-btn' : ''}`.trim();
                 button.dataset.packageType = entry.packageType;
+                button.dataset.optionIdx = String(idx);
                 button.innerHTML = `
                 <span class="emulator-download-choice-label">${escapeHtml(getDownloadPackageTypeLabel(entry.packageType))}${isRecommended ? ' (Recommended)' : ''}</span>
                 <span class="emulator-download-choice-file">${escapeHtml(entry.fileName || entry.source || '')}</span>
@@ -280,7 +281,11 @@ export function createEmulatorDownloadActions(deps = {}) {
             });
             cancelBtn.addEventListener('click', () => close(''));
             list.querySelectorAll('[data-package-type]').forEach((btn) => {
-                btn.addEventListener('click', () => close(String(btn.dataset.packageType || '').trim()));
+                btn.addEventListener('click', () => {
+                    const idx = Number.parseInt(btn.dataset.optionIdx || '-1', 10);
+                    const entry = options[idx];
+                    close(entry || String(btn.dataset.packageType || '').trim());
+                });
             });
         });
     }
@@ -311,6 +316,7 @@ export function createEmulatorDownloadActions(deps = {}) {
             };
 
             let selectedPackageType = '';
+            let selectedUrl = '';
             let useWaybackFallback = false;
             let waybackSourceUrl = '';
             let waybackUrl = '';
@@ -331,7 +337,12 @@ export function createEmulatorDownloadActions(deps = {}) {
                 const optionsResult = await emubro.invoke('get-emulator-download-options', payload);
                 if (optionsResult?.success) {
                     const selection = await promptEmulatorDownloadType(emulator, optionsResult);
-                    selectedPackageType = selection === 'wayback-fallback' ? '' : selection;
+                    if (selection && typeof selection === 'object') {
+                        selectedPackageType = selection.packageType;
+                        selectedUrl = selection.url;
+                    } else {
+                        selectedPackageType = selection === 'wayback-fallback' ? '' : selection;
+                    }
                     useWaybackFallback = selection === 'wayback-fallback';
                     waybackSourceUrl = String(optionsResult?.manualUrl || emulator?.website || '').trim();
                     waybackUrl = String(optionsResult?.waybackUrl || '').trim();
@@ -349,6 +360,7 @@ export function createEmulatorDownloadActions(deps = {}) {
             const result = await emubro.invoke('download-install-emulator', {
                 ...payload,
                 packageType: selectedPackageType,
+                specificUrl: selectedUrl,
                 useWaybackFallback,
                 waybackSourceUrl,
                 waybackUrl

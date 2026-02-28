@@ -178,12 +178,24 @@ function createRemoteLibraryService(deps = {}) {
       const norm = normalizePathForCompare(root);
       if (norm) roots.add(norm);
     });
+    const scanRoots = Array.isArray(settings.scanFolders) ? settings.scanFolders : [];
+    scanRoots.forEach((root) => {
+      const norm = normalizePathForCompare(root);
+      if (norm) roots.add(norm);
+    });
     return Array.from(roots).filter(Boolean);
   }
 
   function isAllowedPath(targetPath) {
     const normalized = normalizePathForCompare(targetPath);
     if (!normalized) return false;
+
+    // Allow if it matches any game currently in the library
+    const games = Array.isArray(getGamesState()) ? getGamesState() : [];
+    if (games.some((game) => normalizePathForCompare(game?.path || game?.filePath) === normalized)) {
+      return true;
+    }
+
     const roots = allowedRootsWithLibrary();
     if (roots.length === 0) return false;
     return roots.some((root) => {

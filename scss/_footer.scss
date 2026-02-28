@@ -312,6 +312,22 @@
     color: var(--text-secondary);
     background: color-mix(in srgb, var(--bg-primary), transparent 20%);
     padding: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+        background: color-mix(in srgb, var(--bg-primary), transparent 10%);
+        border-color: var(--accent-color);
+        color: var(--text-primary);
+    }
+
+    &.is-drag-over {
+        background: color-mix(in srgb, var(--accent-color), transparent 85%);
+        border-color: var(--accent-color);
+        border-style: solid;
+        color: var(--text-primary);
+        transform: scale(1.01);
+    }
 }
 
 .game-detail-row {

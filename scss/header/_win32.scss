@@ -1,0 +1,29 @@
+﻿[data-os="win32"] .header {
+    --win-controls-width: 210px;
+    --win-controls-gap: 12px;
+    min-height: 48px;
+    padding: 1.5px 0 1.5px 14px;
+}
+
+[data-os="win32"] .window-drag-gap {
+    display: block;
+}
+
+[data-os="win32"] .logo img {
+    height: 36px;
+}
+
+[data-os="win32"] .logo-circle {
+    width: 36px;
+    height: 36px;
+}
+
+[data-os="win32"] .logo h1 {
+    font-size: 2rem;
+}
+
+[data-os="win32"] .win-btn {
+    width: 42px;
+    font-size: 14px;
+}
+

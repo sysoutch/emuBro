@@ -11,6 +11,7 @@ const customToolIconCache = new Map();
 import { GamepadTool } from './tools/gamepad-tool.js';
 import { MonitorTool } from './tools/monitor-tool.js';
 import { MemoryCardTool } from './tools/memory-card-tool.js';
+import { showTextInputDialog } from './ui/text-input-dialog.js';
 
 // Create instances of tools
 const gamepadTool = new GamepadTool();
@@ -1555,6 +1556,7 @@ function renderRemoteLibraryTool() {
                 <h4>${escapeHtml(t('tools.remoteLibraryClient', 'Client (Remote Hosts)'))}</h4>
                 <div class="remote-library-inline">
                     <button type="button" class="action-btn" data-remote-scan>${escapeHtml(t('tools.remoteLibraryScan', 'Scan LAN'))}</button>
+                    <button type="button" class="action-btn" data-remote-clear>${escapeHtml(t('tools.remoteLibraryClear', 'Clear'))}</button>
                 </div>
                 <div class="remote-library-hosts" data-remote-hosts></div>
             </section>
@@ -1586,6 +1588,7 @@ function renderRemoteLibraryTool() {
     const hostSaveBtn = toolContent.querySelector('[data-remote-host-save]');
     const hostRotateBtn = toolContent.querySelector('[data-remote-host-rotate]');
     const scanBtn = toolContent.querySelector('[data-remote-scan]');
+    const clearBtn = toolContent.querySelector('[data-remote-clear]');
     const hostsEl = toolContent.querySelector('[data-remote-hosts]');
     const gamesEl = toolContent.querySelector('[data-remote-games]');
     const copyBtn = toolContent.querySelector('[data-remote-copy]');
@@ -1596,8 +1599,6 @@ function renderRemoteLibraryTool() {
     let clientHosts = [];
     let activeHost = null;
     let remoteGames = [];
-
-    const isWin = String(window.emubro?.platform || '').toLowerCase() === 'win32';
 
     const setStatus = (message, level = 'info') => {
         if (!statusEl) return;
@@ -1616,11 +1617,10 @@ function renderRemoteLibraryTool() {
     };
 
     const joinPath = (...parts) => {
-        const sep = isWin ? '\\\\' : '/';
         return parts
-            .map((part) => String(part || '').replace(/[\\\\/]+$/g, ''))
+            .map((part) => String(part || '').replace(/[\\/]+$/, ''))
             .filter(Boolean)
-            .join(sep);
+            .join('/');
     };
 
     const sanitizeSegment = (value) => String(value || '')
@@ -1659,7 +1659,11 @@ function renderRemoteLibraryTool() {
                 if (!Number.isFinite(idx) || !clientHosts[idx]) return;
                 const host = clientHosts[idx];
                 if (action === 'pair') {
-                    const code = window.prompt(t('tools.remoteLibraryEnterCode', 'Enter pairing code from host:'), '');
+                    const code = await showTextInputDialog({
+                        title: t('tools.remoteLibraryPair', 'Pair'),
+                        message: t('tools.remoteLibraryEnterCode', 'Enter pairing code from host:'),
+                        placeholder: '123456'
+                    });
                     if (!code) return;
                     try {
                         const result = await window.emubro.invoke('remote:client:pair', {
@@ -1840,7 +1844,8 @@ function renderRemoteLibraryTool() {
     };
 
     const resolveDownloadRoot = async () => {
-        const settings = await window.emubro.invoke('settings:get-library-paths');
+        const response = await window.emubro.invoke('settings:get-library-paths');
+        const settings = response?.settings || {};
         const gameFolders = Array.isArray(settings?.gameFolders) ? settings.gameFolders : [];
         if (gameFolders.length > 0) return gameFolders[0];
         const pick = await window.emubro.invoke('open-file-dialog', {
@@ -1889,6 +1894,17 @@ function renderRemoteLibraryTool() {
             }
         }
 
+        if (lastImportedId) {
+            try {
+                const updatedGames = await window.emubro.invoke('get-games');
+                const gameManager = await import('../js/game-manager.js');
+                gameManager.setGames(updatedGames);
+                gameManager.applyFilters();
+            } catch (error) {
+                log.warn('Failed to refresh library view after download:', error);
+            }
+        }
+
         if (launchAfter && lastImportedId) {
             await window.emubro.invoke('launch-game', { gameId: lastImportedId });
         }
@@ -1905,6 +1921,16 @@ function renderRemoteLibraryTool() {
         });
     }
     if (scanBtn) scanBtn.addEventListener('click', scanHosts);
+    if (clearBtn) clearBtn.addEventListener('click', async () => {
+        try {
+            clientHosts = [];
+            await window.emubro.invoke('remote:client:set-hosts', { hosts: clientHosts });
+            renderHosts();
+            setStatus(t('tools.remoteLibraryCleared', 'Host list cleared.'), 'success');
+        } catch (error) {
+            setStatus(String(error?.message || error || t('tools.remoteLibraryClearFailed', 'Failed to clear host list.')), 'error');
+        }
+    });
     if (copyBtn) copyBtn.addEventListener('click', () => downloadGames(getSelectedGameRows(), false));
     if (copyRunBtn) copyRunBtn.addEventListener('click', () => downloadGames(getSelectedGameRows(), true));
     if (manualDownloadBtn) {

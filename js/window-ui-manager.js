@@ -185,8 +185,8 @@ export function setupHeaderThemeControlsToggle(options = {}) {
         };
     };
 
-    const themeCompactQuery = createHeaderWidthQuery(1460);
-    const languageCompactQuery = createHeaderWidthQuery(1260);
+    const themeCompactQuery = createHeaderWidthQuery(1500);
+    const languageCompactQuery = createHeaderWidthQuery(1320);
 
     let densityRaf = null;
 
@@ -196,13 +196,29 @@ export function setupHeaderThemeControlsToggle(options = {}) {
         const headerWidth = getHeaderWidth();
         const userActionsEl = header.querySelector('.user-actions');
         const navList = header.querySelector('.navigation ul');
-        const navOverflow = !!(navList && navList.scrollWidth > (navList.clientWidth + 8));
-        const actionsOverflow = !!(userActionsEl && userActionsEl.scrollWidth > (userActionsEl.clientWidth + 8));
-
+        
+        // Simple, robust density detection
         let density = 'normal';
-        if (themeCompactQuery.matches || navOverflow || headerWidth <= 1380) density = 'compact';
-        if (languageCompactQuery.matches || actionsOverflow || headerWidth <= 1180) density = 'tiny';
-        if (density === 'compact' && actionsOverflow) density = 'tiny';
+        
+        if (headerWidth <= 1500) {
+            density = 'compact';
+        }
+        
+        if (headerWidth <= 1320) {
+            density = 'tiny';
+        }
+
+        // Secondary check for content overflow if width is borderline
+        if (density === 'normal') {
+            const navOverflow = !!(navList && navList.scrollWidth > (navList.clientWidth + 8));
+            if (navOverflow) density = 'compact';
+        }
+        
+        if (density === 'compact') {
+            const actionsOverflow = !!(userActionsEl && userActionsEl.scrollWidth > (userActionsEl.clientWidth + 8));
+            if (actionsOverflow) density = 'tiny';
+        }
+
         if (root.getAttribute('data-header-density') !== density) {
             root.setAttribute('data-header-density', density);
         }
@@ -218,327 +234,34 @@ export function setupHeaderThemeControlsToggle(options = {}) {
         });
     };
 
-    const initCompactWrapper = ({
-        wrapperSelector,
-        toggleId,
-        compactQuery,
-        menuAriaLabel,
-        buildBlocks,
-        closeOnChangeElement = null
-    }) => {
+    const initSimpleToggle = (wrapperSelector, toggleSelector, compactQuery) => {
         const wrapper = document.querySelector(wrapperSelector);
-        const toggleBtn = document.getElementById(toggleId);
-        if (!wrapper || !toggleBtn || typeof buildBlocks !== 'function') {
-            return { close: () => {}, isOpen: () => false, rerender: () => {} };
-        }
+        const toggleBtn = document.querySelector(toggleSelector);
+        if (!wrapper || !toggleBtn) return { close: () => {} };
 
-        let floatingMenuEl = null;
-
-        const createOptionButton = ({ label, active = false, onClick }) => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'filter-pair-compact-option';
-            if (active) btn.classList.add('is-active');
-            btn.textContent = String(label || '').trim();
-            btn.addEventListener('click', (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                if (typeof onClick === 'function') onClick();
-            });
-            return btn;
+        const setOpen = (open) => {
+            wrapper.classList.toggle('is-open', !!open);
+            toggleBtn.setAttribute('aria-expanded', !!open ? 'true' : 'false');
         };
 
-        const createCompactBlock = (title, options = []) => {
-            const normalizedOptions = Array.isArray(options) ? options : [];
-            if (normalizedOptions.length === 0) return null;
-
-            const block = document.createElement('div');
-            block.className = 'filter-pair-compact-block';
-
-            const label = document.createElement('div');
-            label.className = 'filter-pair-compact-label';
-            label.textContent = String(title || 'Options');
-            block.appendChild(label);
-
-            const optionsWrap = document.createElement('div');
-            optionsWrap.className = 'filter-pair-compact-options';
-            normalizedOptions.forEach((entry) => {
-                const btn = createOptionButton(entry);
-                if (!btn.textContent) return;
-                optionsWrap.appendChild(btn);
-            });
-
-            if (optionsWrap.childElementCount === 0) return null;
-            block.appendChild(optionsWrap);
-            return block;
-        };
-
-        const destroyFloatingMenu = () => {
-            if (!floatingMenuEl) return;
-            try {
-                floatingMenuEl.remove();
-            } catch (_error) {}
-            floatingMenuEl = null;
-        };
-
-        const positionFloatingMenu = () => {
-            if (!floatingMenuEl || !toggleBtn) return;
-            const rect = toggleBtn.getBoundingClientRect();
-            const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
-            const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
-            const margin = 8;
-
-            const maxWidth = Math.max(220, viewportWidth - (margin * 2));
-            const preferredWidth = Math.max(240, Math.min(560, Math.round(rect.width + 240)));
-            floatingMenuEl.style.width = `${Math.min(preferredWidth, maxWidth)}px`;
-            floatingMenuEl.style.maxWidth = `${maxWidth}px`;
-
-            floatingMenuEl.style.left = `${Math.max(margin, rect.left)}px`;
-            floatingMenuEl.style.top = `${Math.max(margin, rect.bottom + 6)}px`;
-
-            const menuRect = floatingMenuEl.getBoundingClientRect();
-            let left = rect.left;
-            if (left + menuRect.width > viewportWidth - margin) {
-                left = viewportWidth - margin - menuRect.width;
-            }
-            if (left < margin) left = margin;
-
-            let top = rect.bottom + 6;
-            if (top + menuRect.height > viewportHeight - margin) {
-                top = rect.top - menuRect.height - 6;
-            }
-            if (top < margin) top = margin;
-
-            floatingMenuEl.style.left = `${Math.round(left)}px`;
-            floatingMenuEl.style.top = `${Math.round(top)}px`;
-        };
-
-        const setOpenState = (open) => {
-            const shouldOpen = !!open && compactQuery.matches;
-            wrapper.classList.toggle('is-open', shouldOpen);
-            toggleBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
-            if (shouldOpen) {
-                const menu = document.createElement('div');
-                menu.className = 'filter-pair-floating-menu header-compact-floating-menu';
-                menu.setAttribute('role', 'dialog');
-                menu.setAttribute('aria-label', String(menuAriaLabel || 'Options'));
-
-                const blocks = buildBlocks({
-                    close: () => setOpenState(false),
-                    createCompactBlock
-                });
-                (Array.isArray(blocks) ? blocks : []).forEach((block) => {
-                    if (block) menu.appendChild(block);
-                });
-
-                if (menu.childElementCount === 0) {
-                    wrapper.classList.remove('is-open');
-                    toggleBtn.setAttribute('aria-expanded', 'false');
-                    destroyFloatingMenu();
-                    return;
-                }
-
-                destroyFloatingMenu();
-                document.body.appendChild(menu);
-                floatingMenuEl = menu;
-                positionFloatingMenu();
-            } else {
-                destroyFloatingMenu();
-            }
-        };
-
-        const closePanel = () => setOpenState(false);
-        const rerenderPanel = () => {
-            if (!wrapper.classList.contains('is-open')) return;
-            setOpenState(true);
-        };
-
-        toggleBtn.addEventListener('click', (event) => {
+        toggleBtn.addEventListener('click', (e) => {
             if (!compactQuery.matches) return;
-            event.preventDefault();
-            event.stopPropagation();
-            setOpenState(!wrapper.classList.contains('is-open'));
+            e.stopPropagation();
+            setOpen(!wrapper.classList.contains('is-open'));
         });
 
-        document.addEventListener('click', (event) => {
-            if (!compactQuery.matches || !wrapper.classList.contains('is-open')) return;
-            if (wrapper.contains(event.target)) return;
-            if (floatingMenuEl && floatingMenuEl.contains(event.target)) return;
-            closePanel();
-        });
-
-        if (closeOnChangeElement) {
-            closeOnChangeElement.addEventListener('change', closePanel);
-            closeOnChangeElement.addEventListener('change', rerenderPanel);
-        }
-
-        window.addEventListener('resize', () => {
+        document.addEventListener('click', (e) => {
             if (!wrapper.classList.contains('is-open')) return;
-            if (!compactQuery.matches) {
-                closePanel();
-                return;
+            if (!wrapper.contains(e.target)) {
+                setOpen(false);
             }
-            positionFloatingMenu();
         });
 
-        window.addEventListener('scroll', () => {
-            if (!wrapper.classList.contains('is-open')) return;
-            positionFloatingMenu();
-        }, true);
-
-        return {
-            close: closePanel,
-            isOpen: () => wrapper.classList.contains('is-open'),
-            rerender: rerenderPanel
-        };
+        return { close: () => setOpen(false) };
     };
 
-    const themePanelController = initCompactWrapper({
-        wrapperSelector: '.theme-toggle-wrapper',
-        toggleId: 'theme-controls-toggle',
-        compactQuery: themeCompactQuery,
-        menuAriaLabel: 'Theme options',
-        buildBlocks: ({ close, createCompactBlock }) => {
-            const blocks = [];
-            const themeOptions = Array.from(themeSelect?.options || [])
-                .map((optionEl) => ({
-                    value: String(optionEl.value || '').trim(),
-                    label: String(optionEl.textContent || '').trim()
-                }))
-                .filter((entry) => entry.value && entry.label);
-
-            if (themeOptions.length > 0) {
-                const currentValue = String(themeSelect?.value || '').trim();
-                const themeBlock = createCompactBlock(
-                    'Theme',
-                    themeOptions.map((entry) => ({
-                        label: entry.label,
-                        active: currentValue === entry.value,
-                        onClick: () => {
-                            if (!themeSelect) {
-                                close();
-                                return;
-                            }
-                            if (themeSelect.value === entry.value) {
-                                close();
-                                return;
-                            }
-                            themeSelect.value = entry.value;
-                            themeSelect.dispatchEvent(new Event('change', { bubbles: true }));
-                            close();
-                        }
-                    }))
-                );
-                if (themeBlock) blocks.push(themeBlock);
-            }
-
-            const actionOptions = [];
-            if (themeToggleBtn) {
-                actionOptions.push({
-                    label: 'Toggle Light/Dark',
-                    active: false,
-                    onClick: () => {
-                        themeToggleBtn.click();
-                        close();
-                    }
-                });
-            }
-            if (invertColorsBtn) {
-                actionOptions.push({
-                    label: String(invertColorsBtn.title || 'Invert Colors'),
-                    active: false,
-                    onClick: () => {
-                        invertColorsBtn.click();
-                        close();
-                    }
-                });
-            }
-            if (themeManagerBtn) {
-                actionOptions.push({
-                    label: 'Manage Themes',
-                    active: false,
-                    onClick: () => {
-                        themeManagerBtn.click();
-                        close();
-                    }
-                });
-            }
-            const actionsBlock = createCompactBlock('Actions', actionOptions);
-            if (actionsBlock) blocks.push(actionsBlock);
-
-            return blocks;
-        },
-        closeOnChangeElement: themeSelect
-    });
-    const languagePanelController = initCompactWrapper({
-        wrapperSelector: '.language-controls-wrapper',
-        toggleId: 'language-controls-toggle',
-        compactQuery: languageCompactQuery,
-        menuAriaLabel: 'Language options',
-        buildBlocks: ({ close, createCompactBlock }) => {
-            const blocks = [];
-            const i18nRef = (() => {
-                if (typeof window !== 'undefined' && window.i18n) return window.i18n;
-                try {
-                    // eslint-disable-next-line no-undef
-                    return typeof i18n !== 'undefined' ? i18n : null;
-                } catch (_e) {
-                    return null;
-                }
-            })();
-            const currentLanguage = String(
-                i18nRef?.getLanguage?.()
-                || localStorage.getItem('language')
-                || ''
-            ).trim().toLowerCase();
-
-            const languageEntries = Array.from(languageOptions?.querySelectorAll?.('li[data-value]') || [])
-                .map((li) => {
-                    const value = String(li.dataset.value || '').trim().toLowerCase();
-                    const nameNode = li.querySelector('span:last-child');
-                    const label = String(nameNode?.textContent || li.textContent || '').trim();
-                    return { value, label, node: li };
-                })
-                .filter((entry) => entry.value && entry.label);
-
-            if (languageEntries.length > 0) {
-                const languageBlock = createCompactBlock(
-                    'Language',
-                    languageEntries.map((entry) => ({
-                        label: entry.label,
-                        active: currentLanguage === entry.value,
-                        onClick: () => {
-                            if (currentLanguage === entry.value) {
-                                close();
-                                return;
-                            }
-                            if (i18nRef && typeof i18nRef.setLanguage === 'function') {
-                                i18nRef.setLanguage(entry.value);
-                            } else if (entry.node) {
-                                entry.node.click();
-                            }
-                            close();
-                        }
-                    }))
-                );
-                if (languageBlock) blocks.push(languageBlock);
-            }
-
-            if (languageManagerBtn) {
-                const actionsBlock = createCompactBlock('Actions', [{
-                    label: 'Manage Languages',
-                    active: false,
-                    onClick: () => {
-                        languageManagerBtn.click();
-                        close();
-                    }
-                }]);
-                if (actionsBlock) blocks.push(actionsBlock);
-            }
-
-            return blocks;
-        }
-    });
+    const themePanelController = initSimpleToggle('.theme-toggle-wrapper', '#theme-controls-toggle', themeCompactQuery);
+    const languagePanelController = initSimpleToggle('.language-controls-wrapper', '#language-controls-toggle', languageCompactQuery);
 
     if (languageOptions) {
         languageOptions.addEventListener('click', (event) => {
@@ -625,6 +348,7 @@ export function setupSidebarRail(options = {}) {
     const setExpanded = (expanded) => {
         sidebar.classList.toggle('sidebar--expanded', expanded);
         sidebar.classList.toggle('sidebar--collapsed', !expanded);
+        document.body.classList.toggle('sidebar-is-expanded', expanded);
         toggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
         toggleBtn.title = expanded ? 'Collapse sidebar' : 'Expand sidebar';
         localStorage.setItem('emuBro.sidebarExpanded', expanded ? 'true' : 'false');

@@ -114,6 +114,17 @@
     - Added centralized operation controls and bottom action bars
     - Extracted PS1 save icons from memory card files and rendered them in the UI (32x32px size)
     - Debugged and fixed issues with icon rendering (path: null error, incorrect palette/bitmap decoding)
+- Implemented emulator download scraping: pages linked via `downloadUrl` are now scraped for archives/installers when direct links are missing, enabling automated downloads from complex provider sites.
+- Enhanced emulator package selection UI: the download modal now lists all discovered packages, including those found via scraping, allowing users to choose specific versions or formats.
+- Fixed library panel "Search Covers" tab drag-and-drop: implemented local drop zone listeners with `stopPropagation()` to prevent global library import interception, and added a click handler to manually open a file selection dialog.
+- Refactored `scss/_tools.scss` into modular files under `scss/tools/` directory (`_core.scss`, `_custom-shortcuts.scss`, `_cover-downloader.scss`, `_cue-maker.scss`, `_ecm-unecm.scss`, `_remote-library.scss`, `_hardware.scss`, `_memory-card.scss`), with `_tools.scss` acting as a central import point.
+- Improved "Lucky Shuffle" (Random view) animations: enhanced lever pull feedback with overshoot spring effect, added motion blur to spinning reels, and implemented a delayed fade-in reveal for the selected game title.
+- Transformed Slideshow view into a centered "Deck Carousel" with integrated 2D/3D modes: implemented dynamic scaling, opacity, and high-precision 3D rotation effects based on distance from center, magnetic snap-to-center logic, and enhanced drag/inertia physics for a premium console-like experience.
+- Fixed header clickability issues: opted language and theme control wrappers out of the `-webkit-app-region: drag` area to ensure reliable interaction across all window widths.
+- Improved "Lucky Shuffle" (Random view) logic: redesigned the spin animation to use high-fidelity acceleration and deceleration phases in a consistent forward direction, eliminating jitter and reverse-motion artifacts.
+- Implemented collapsed library controls: created a new filters popup system that automatically activates when the sidebar is expanded, preserving horizontal space while keeping platform, region, language, and grouping options easily accessible.
+- Added click navigation to Slideshow: enabled direct game card selection in the carousel view, allowing users to jump between games without dragging.
+- Fixed a bug where UI layout changes and interactive elements weren't taking effect because the renderer wasn't rebuilt via Webpack in the user's dev environment.
 - Added dedicated "Tools" navigation logic to header
     - Created a "Tools Overview" grid view to browse available utilities
     - Implemented seamless switching between the library and tools views

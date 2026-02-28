@@ -1,0 +1,63 @@
+/* CUE Maker Tool */
+.cue-maker-tool {
+    .cover-downloader-results {
+        margin-top: 8px;
+        border: 1px solid color-mix(in srgb, var(--border-color), transparent 18%);
+        border-radius: var(--radius-card);
+        background: color-mix(in srgb, var(--bg-primary), transparent 14%);
+        max-height: min(52vh, 520px);
+        overflow: auto;
+    }
+
+    .cover-download-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 12px;
+        border-bottom: 1px solid color-mix(in srgb, var(--border-color), transparent 26%);
+        padding: 10px 12px;
+        font-size: 0.9rem;
+    }
+
+    .cover-download-row:last-child {
+        border-bottom: none;
+    }
+
+    .cover-download-row.is-empty {
+        color: var(--text-secondary);
+        justify-content: flex-start;
+    }
+
+    .cover-download-game {
+        color: var(--text-primary);
+        font-weight: 600;
+        overflow-wrap: anywhere;
+        display: grid;
+        gap: 4px;
+    }
+
+    .cover-download-game span {
+        color: var(--text-secondary);
+        font-weight: 500;
+        margin-left: 0;
+        font-size: 0.8rem;
+    }
+
+    .cover-download-status {
+        color: var(--text-secondary);
+        text-align: right;
+        flex-shrink: 0;
+    }
+
+    .cover-download-row[data-level="success"] .cover-download-status {
+        color: var(--success-color);
+    }
+
+    .cover-download-row[data-level="warning"] .cover-download-status {
+        color: var(--warning-color, #f3b35a);
+    }
+
+    .cover-download-row[data-level="error"] .cover-download-status {
+        color: var(--danger-color);
+    }
+}

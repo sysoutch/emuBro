@@ -75,6 +75,12 @@ function stopDockResize() {
     window.removeEventListener('pointermove', onDockResizePointerMove);
     window.removeEventListener('pointerup', stopDockResize);
     window.removeEventListener('pointercancel', stopDockResize);
+
+    try {
+        window.dispatchEvent(new CustomEvent('emubro:layout-width-changed', {
+            detail: { dockResized: true }
+        }));
+    } catch (_error) {}
 }
 
 function ensureDockHost() {
@@ -177,6 +183,12 @@ function applyDockRootState() {
     document.body.classList.toggle('panel-docked', hasVisiblePanels);
     document.body.classList.toggle('docking-accordion', visibleIds.length > 1);
     setDockHostActive(hasVisiblePanels);
+
+    try {
+        window.dispatchEvent(new CustomEvent('emubro:layout-width-changed', {
+            detail: { panelDocked: hasVisiblePanels }
+        }));
+    } catch (_error) {}
 
     if (!hasVisiblePanels) {
         activeDockedPanel = null;

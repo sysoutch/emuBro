@@ -344,7 +344,7 @@
         rgba(255,255,255,0.10) 35%,
         rgba(0,0,0,0.35) 100%);
     box-shadow: 0 0 0 1px rgba(0,0,0,0.35) inset;
-    transition: transform 220ms ease;
+    transition: transform 260ms cubic-bezier(0.18, 0.89, 0.32, 1.28);
 }
 
 .slot-lever::after {
@@ -362,7 +362,7 @@
     box-shadow:
         0 10px 18px rgba(0,0,0,0.35),
         0 0 22px color-mix(in srgb, var(--accent-color) 26%, transparent);
-    transition: transform 220ms ease, filter 220ms ease;
+    transition: transform 260ms cubic-bezier(0.18, 0.89, 0.32, 1.28), filter 220ms ease;
 }
 
 .slot-lever:hover {
@@ -381,13 +381,15 @@
     filter: none;
 }
 
-.slot-machine.is-spinning .slot-lever::before {
-    transform: translateX(-50%) rotate(16deg);
+.slot-lever.is-active::before {
+    transform: translateX(-50%) rotate(24deg);
+    transition: transform 120ms ease-out;
 }
 
-.slot-machine.is-spinning .slot-lever::after {
-    transform: translateX(-50%) translateY(36px);
-    filter: brightness(1.02);
+.slot-lever.is-active::after {
+    transform: translateX(-50%) translateY(58px);
+    filter: brightness(1.08);
+    transition: transform 120ms ease-out;
 }
 
 .slot-result {
@@ -395,6 +397,16 @@
     padding: clamp(12px, 1.8vw, 16px) clamp(12px, 1.8vw, 18px);
     border-radius: 18px;
     text-align: center;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.4s ease-out, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+}
+
+.slot-result.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
 }
 
 .slot-result.slot-result-clickable {
@@ -539,6 +551,10 @@
     animation: slotPulse 520ms ease-in-out infinite;
 }
 
+.slot-machine.is-spinning .slot-reel-inner {
+    filter: blur(2px);
+}
+
 .slot-machine.is-spinning .slot-cabinet {
     box-shadow:
         0 30px 70px rgba(0,0,0,0.55),
@@ -550,10 +566,15 @@
     animation: slotPulse 320ms ease-in-out infinite;
 }
 
+.slot-machine.is-stopping .slot-reel-inner {
+    filter: blur(1px);
+    transition: filter 0.8s ease-out;
+}
+
 @keyframes slotPulse {
     0% { opacity: 0.45; filter: blur(0px); }
-    50% { opacity: 1; filter: blur(0.3px); }
-    100% { opacity: 0.55; filter: blur(0px); }
+    50% { opacity: 1; filter: blur(0.6px); }
+    100% { opacity: 0.45; filter: blur(0px); }
 }
 
 @media (max-width: 640px) {

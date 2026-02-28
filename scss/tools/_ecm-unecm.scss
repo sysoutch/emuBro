@@ -1,0 +1,85 @@
+/* ECM/UNECM Tool */
+.ecm-unecm-tool {
+    .ecm-tool-inline-group {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin: 8px 0;
+    }
+
+    .ecm-tool-inline-group label {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        min-width: 150px;
+    }
+
+    .ecm-tool-inline-group select {
+        min-width: min(460px, 100%);
+        flex: 1 1 260px;
+    }
+
+    .cover-downloader-results {
+        margin-top: 8px;
+        border: 1px solid color-mix(in srgb, var(--border-color), transparent 18%);
+        border-radius: var(--radius-card);
+        background: color-mix(in srgb, var(--bg-primary), transparent 14%);
+        max-height: min(40vh, 360px);
+        overflow: auto;
+    }
+
+    .cover-download-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 12px;
+        border-bottom: 1px solid color-mix(in srgb, var(--border-color), transparent 26%);
+        padding: 10px 12px;
+        font-size: 0.9rem;
+    }
+
+    .cover-download-row:last-child {
+        border-bottom: none;
+    }
+
+    .cover-download-row.is-empty {
+        color: var(--text-secondary);
+        justify-content: flex-start;
+    }
+
+    .cover-download-game {
+        color: var(--text-primary);
+        font-weight: 600;
+        overflow-wrap: anywhere;
+        display: grid;
+        gap: 4px;
+    }
+
+    .cover-download-game span {
+        color: var(--text-secondary);
+        font-weight: 500;
+        margin-left: 0;
+        font-size: 0.8rem;
+    }
+
+    .cover-download-game a {
+        color: var(--accent-light);
+        font-size: 0.76rem;
+        text-decoration: underline;
+    }
+
+    .cover-download-status {
+        color: var(--text-secondary);
+        text-align: right;
+        flex-shrink: 0;
+    }
+
+    .cover-download-row[data-level="success"] .cover-download-status {
+        color: var(--success-color);
+    }
+
+    .cover-download-row[data-level="error"] .cover-download-status {
+        color: var(--danger-color);
+    }
+}

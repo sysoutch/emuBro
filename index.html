@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data: blob: https:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; connect-src 'self' https: http:;">
     <title data-i18n="app.title">emuBro</title>
     <style>
         html[data-booting="1"],
@@ -308,6 +309,14 @@
                     <div class="game-header">
                         <h2 id="games-header" data-i18n="gameGrid.featuredGames">Featured Games</h2>
                         <div class="filters">
+                            <button type="button" id="library-filters-popup-btn" class="action-btn small filters-popup-btn" title="Filter Options">
+                                <span class="icon-svg" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"></path>
+                                    </svg>
+                                </span>
+                                <span>Filters</span>
+                            </button>
                             <label id="emulators-installed-toggle-wrap" class="emulators-installed-toggle is-hidden">
                                 <input id="emulators-installed-toggle" type="checkbox" />
                                 <span data-i18n="sidebar.installed">Installed</span>

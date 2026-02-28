@@ -128,6 +128,25 @@
     margin-left: auto;
 }
 
+#library-filters-popup-btn {
+    display: none !important;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Collapse filters when sidebar is expanded to preserve space */
+.filters.is-super-compact {
+    #platform-filter,
+    .filter-pair-wrapper,
+    .group-same-names-toggle {
+        display: none !important;
+    }
+
+    #library-filters-popup-btn {
+        display: inline-flex !important;
+    }
+}
+
 .filter-pair-wrapper {
     display: contents;
 }

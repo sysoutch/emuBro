@@ -74,6 +74,100 @@ export function createBrowseFooterController(options = {}) {
         return 'both';
     }
 
+    function setupCoversTabListeners() {
+        const coversPlaceholder = document.querySelector('.footer-covers-placeholder');
+        if (!coversPlaceholder) return;
+
+        const prevent = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        };
+
+        const onEnter = (e) => {
+            prevent(e);
+            coversPlaceholder.classList.add('is-drag-over');
+        };
+
+        const onLeave = (e) => {
+            prevent(e);
+            coversPlaceholder.classList.remove('is-drag-over');
+        };
+
+        const onDrop = async (e) => {
+            prevent(e);
+            coversPlaceholder.classList.remove('is-drag-over');
+
+            const files = Array.from(e.dataTransfer?.files || []);
+            const paths = files.map(f => f.path).filter(Boolean);
+
+            if (paths.length > 0) {
+                await runCoversSearchForPaths(paths);
+            }
+        };
+
+        coversPlaceholder.addEventListener('dragenter', onEnter);
+        coversPlaceholder.addEventListener('dragover', onEnter);
+        coversPlaceholder.addEventListener('dragleave', onLeave);
+        coversPlaceholder.addEventListener('drop', onDrop);
+
+        coversPlaceholder.addEventListener('click', async () => {
+            try {
+                const result = await emubro.invoke('open-file-dialog', {
+                    title: t('browseFooter.selectCoversSource', 'Select files or folders to search for covers'),
+                    properties: ['openFile', 'openDirectory', 'multiSelections']
+                });
+
+                if (result && !result.canceled && Array.isArray(result.filePaths) && result.filePaths.length > 0) {
+                    await runCoversSearchForPaths(result.filePaths);
+                }
+            } catch (error) {
+                log.error('Failed to open covers file dialog:', error);
+            }
+        });
+    }
+
+    async function runCoversSearchForPaths(paths) {
+        const normalizedPaths = normalizePathList(paths);
+        if (normalizedPaths.length === 0) return;
+
+        addFooterNotification(t('browseFooter.coversSearchStarted', 'Searching for covers in {{count}} location(s)...', { count: normalizedPaths.length }), 'info');
+        
+        try {
+            const result = await emubro.invoke('covers:download-for-library', {
+                onlyMissing: true,
+                overwrite: false,
+                searchPaths: normalizedPaths
+            });
+
+            if (result?.success) {
+                const downloaded = Number(result.downloaded || 0);
+                const failed = Number(result.failed || 0);
+                const skipped = Number(result.skipped || 0);
+
+                addFooterNotification(
+                    t('browseFooter.coversSearchComplete', 'Cover search complete. {{downloaded}} downloaded, {{skipped}} skipped, {{failed}} failed.', {
+                        downloaded,
+                        skipped,
+                        failed
+                    }),
+                    failed > 0 ? 'warning' : 'success'
+                );
+
+                if (downloaded > 0) {
+                    // Refresh view if needed
+                    await renderActiveLibraryView();
+                }
+            } else {
+                addFooterNotification(result?.message || t('browseFooter.coversSearchFailed', 'Cover search failed.'), 'error');
+            }
+        } catch (error) {
+            log.error('Covers search failed:', error);
+            addFooterNotification(error.message || t('browseFooter.coversSearchFailed', 'Cover search failed.'), 'error');
+        }
+
+        openFooterPanel('notifications');
+    }
+
     function switchFooterTab(tabId = 'browse') {
         const target = String(tabId || 'browse').trim().toLowerCase();
         document.querySelectorAll('.game-details-tab[data-footer-tab]').forEach((tabBtn) => {
@@ -83,7 +177,11 @@ export function createBrowseFooterController(options = {}) {
         });
         document.querySelectorAll('.game-details-tab-panel[data-footer-panel]').forEach((panel) => {
             const active = String(panel.dataset.footerPanel || '').toLowerCase() === target;
-            panel.classList.toggle('is-active', active);
+            if (active) {
+                panel.classList.toggle('is-active', active);
+            } else {
+                panel.classList.remove('is-active');
+            }
         });
     }
 
@@ -460,6 +558,8 @@ export function createBrowseFooterController(options = {}) {
             openFooterPanel('notifications');
         }
     }
+
+    setupCoversTabListeners();
 
     return {
         switchFooterTab,

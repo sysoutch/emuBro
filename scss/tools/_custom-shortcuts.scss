@@ -1,0 +1,157 @@
+/* Custom Tools Shortcuts Section */
+.custom-tools-section {
+    width: 100%;
+    max-width: min(1200px, 100%);
+    background: color-mix(in srgb, var(--bg-secondary), transparent 58%);
+    backdrop-filter: blur(var(--glass-blur, 14px)) saturate(1.08);
+    -webkit-backdrop-filter: blur(var(--glass-blur, 14px)) saturate(1.08);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-card);
+    padding: clamp(12px, 1.8vw, 22px);
+    box-shadow: 0 8px 24px var(--glass-shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.custom-tools-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+
+    h3 {
+        margin: 0;
+        color: var(--text-primary);
+        font-size: clamp(1.02rem, 1.5vw, 1.3rem);
+    }
+}
+
+.custom-tools-subtitle {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+}
+
+.custom-tools-dropzone {
+    border: 1px dashed color-mix(in srgb, var(--accent-color), transparent 35%);
+    border-radius: var(--radius-btn);
+    padding: 12px;
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    text-align: center;
+    transition: all 0.2s ease;
+    background: color-mix(in srgb, var(--bg-primary), transparent 12%);
+
+    &.is-drag-over {
+        border-color: var(--accent-color);
+        color: var(--text-primary);
+        background: color-mix(in srgb, var(--accent-color), transparent 88%);
+    }
+}
+
+.custom-tools-status {
+    margin: 0;
+    min-height: 1.1rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.custom-tools-status[data-level="success"] {
+    color: var(--success-color);
+}
+
+.custom-tools-status[data-level="warning"] {
+    color: var(--warning-color);
+}
+
+.custom-tools-status[data-level="error"] {
+    color: var(--danger-color);
+}
+
+.custom-tools-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 10px;
+}
+
+.custom-tools-empty {
+    grid-column: 1 / -1;
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-btn);
+    padding: 12px;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.custom-tool-card {
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-card);
+    background: color-mix(in srgb, var(--bg-primary), transparent 34%);
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.custom-tool-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.custom-tool-icon-wrap {
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--accent-color), transparent 88%);
+    border: 1px solid color-mix(in srgb, var(--accent-color), transparent 66%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.custom-tool-icon {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: none;
+}
+
+.custom-tool-icon-fallback {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--accent-color);
+    line-height: 1;
+}
+
+.custom-tool-icon-wrap.has-icon .custom-tool-icon {
+    display: block;
+}
+
+.custom-tool-icon-wrap.has-icon .custom-tool-icon-fallback {
+    display: none;
+}
+
+.custom-tool-title {
+    color: var(--text-primary);
+    font-weight: 600;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.custom-tool-path {
+    color: var(--text-secondary);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.76rem;
+    overflow-wrap: anywhere;
+}
+
+.custom-tool-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}

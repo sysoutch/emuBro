@@ -154,11 +154,13 @@ export function renderGamesAsRandom(gamesToRender, options = {}) {
         }
     }
 
-    function setResult(idx) {
+    function setResult(idx, options = {}) {
         const game = spinGames[idx];
         const platformName = game.platform || game.platformShortName || i18n.t('gameDetails.unknown');
         const ratingText = (game.rating !== undefined && game.rating !== null) ? `${game.rating}` : i18n.t('gameDetails.unknown');
         const statusText = game.isInstalled ? 'Installed' : 'Not Installed';
+
+        const immediate = !!options.immediate;
 
         resultTitle.textContent = game.name;
         resultMeta.innerHTML = `
@@ -167,6 +169,18 @@ export function renderGamesAsRandom(gamesToRender, options = {}) {
             <span class="slot-meta-pill">${statusText}</span>
             <span class="slot-meta-pill">${idx + 1} / ${spinGames.length}</span>
         `;
+
+        if (immediate) {
+            result.classList.add('is-visible');
+        } else {
+            result.classList.remove('is-visible');
+            // Small timeout to allow CSS to reset if it was already visible from previous spin
+            setTimeout(() => {
+                if (spinning) return;
+                result.classList.add('is-visible');
+            }, 50);
+        }
+
         renderSelectionStrip(idx);
     }
 
@@ -268,31 +282,46 @@ export function renderGamesAsRandom(gamesToRender, options = {}) {
         if (!metricsReady) return;
 
         const currentMod = ((absPos % totalHeight) + totalHeight) % totalHeight;
-        const currentBlock = Math.floor(absPos / (itemStep * baseLen));
-
-        let bestDelta = Infinity;
-        for (let b = currentBlock + 1; b <= currentBlock + 8; b++) {
-            const reelIdx = gameIdx + b * baseLen;
-            const desired = (reelIdx * itemStep) - alignOffset;
-            const desiredMod = ((desired % totalHeight) + totalHeight) % totalHeight;
-            let delta = desiredMod - currentMod;
-            if (delta < 0) delta += totalHeight;
-            delta += totalHeight * 2;
-            if (delta < bestDelta) bestDelta = delta;
-        }
-
-        const target = absPos + bestDelta;
-        const duration = reduceMotion ? 0 : 900;
+        
+        // Calculate target position in current or next blocks to ensure we always move forward
+        const targetReelIdx = gameIdx + (Math.floor(absPos / itemStep) + baseLen * 3);
+        const targetAbsPos = (targetReelIdx * itemStep) - alignOffset;
+        
+        const duration = reduceMotion ? 0 : 2800; // Longer, more natural deceleration
 
         machine.classList.remove('is-spinning');
         machine.classList.add('is-stopping');
-        animateTo(target, duration, () => {
-            spinning = false;
-            machine.classList.remove('is-stopping');
-            leverBtn.disabled = false;
-            leverBtn.textContent = 'SPIN';
-            setResult(gameIdx);
-        });
+
+        // Custom easing for smooth deceleration (easeOutQuart-like)
+        const start = performance.now();
+        const startPos = absPos;
+        const delta = targetAbsPos - startPos;
+
+        function step(ts) {
+            if (renderToken !== getRenderToken()) return;
+            if (!randomContainer.isConnected) return;
+            const t = Math.min(1, (ts - start) / duration);
+            
+            // easeOutQuart
+            const e = 1 - Math.pow(1 - t, 4);
+            
+            absPos = startPos + delta * e;
+            renderPos();
+            
+            if (t < 1) {
+                rafId = requestAnimationFrame(step);
+            } else {
+                absPos = targetAbsPos;
+                renderPos();
+                spinning = false;
+                machine.classList.remove('is-stopping');
+                leverBtn.disabled = false;
+                leverBtn.textContent = 'SPIN';
+                setResult(gameIdx, { immediate: false });
+            }
+        }
+
+        rafId = requestAnimationFrame(step);
     }
 
     function startSpin() {
@@ -303,6 +332,13 @@ export function renderGamesAsRandom(gamesToRender, options = {}) {
         leverBtn.disabled = true;
         leverBtn.textContent = 'SPINNING...';
         machine.classList.add('is-spinning');
+        result.classList.remove('is-visible');
+
+        // Visual lever "pull" feedback
+        leverBtn.classList.add('is-active');
+        setTimeout(() => {
+            leverBtn.classList.remove('is-active');
+        }, 400);
 
         if (!metricsReady) measure();
         if (!metricsReady) {
@@ -325,20 +361,25 @@ export function renderGamesAsRandom(gamesToRender, options = {}) {
             return;
         }
 
-        const speed = 2400;
-        const spinMs = 1100 + Math.floor(Math.random() * 700);
+        // Phase 1: Acceleration
+        const maxSpeed = 3200;
+        const accelDuration = 800;
         const startTs = performance.now();
         let lastTs = startTs;
 
         function tick(ts) {
             if (renderToken !== getRenderToken()) return;
             if (!randomContainer.isConnected) return;
+            const elapsed = ts - startTs;
             const dt = Math.min(0.05, (ts - lastTs) / 1000);
             lastTs = ts;
-            absPos += speed * dt;
+
+            // Smooth acceleration
+            const currentSpeed = maxSpeed * Math.min(1, elapsed / accelDuration);
+            absPos += currentSpeed * dt;
             renderPos();
 
-            if (ts - startTs < spinMs) {
+            if (elapsed < accelDuration + 400) {
                 rafId = requestAnimationFrame(tick);
             } else {
                 selectedIndex = Math.floor(Math.random() * spinGames.length);
@@ -401,7 +442,7 @@ export function renderGamesAsRandom(gamesToRender, options = {}) {
         if (!randomContainer.isConnected) return;
         measure();
         snapToGameIndex(selectedIndex);
-        setResult(selectedIndex);
+        setResult(selectedIndex, { immediate: true });
     });
 
     setGamesScrollDetach(() => {

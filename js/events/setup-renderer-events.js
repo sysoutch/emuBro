@@ -502,6 +502,7 @@ export function setupRendererEventListeners(options = {}) {
         return { close, isOpen, setOpenState, compactQuery };
     };
 
+    const superCompactQuery = createElementWidthQuery(850, contentWidthHost);
     const filtersCompactQuery = createElementWidthQuery(1500, contentWidthHost);
     const regionLanguageCompactQuery = createElementWidthQuery(1500, contentWidthHost);
     const groupSortCompactQuery = createElementWidthQuery(1200, contentWidthHost);
@@ -509,6 +510,7 @@ export function setupRendererEventListeners(options = {}) {
     const filtersEl = document.querySelector('.game-header .filters');
 
     const applyFilterCompactClasses = () => {
+        const superCompact = !!superCompactQuery.matches;
         const anyCompact = !!filtersCompactQuery.matches;
         const regionCompact = !!regionLanguageCompactQuery.matches;
         const groupCompact = !!groupSortCompactQuery.matches;
@@ -517,6 +519,7 @@ export function setupRendererEventListeners(options = {}) {
             gameHeaderEl.classList.toggle('is-content-compact', anyCompact);
         }
         if (filtersEl) {
+            filtersEl.classList.toggle('is-super-compact', superCompact);
             filtersEl.classList.toggle('is-content-compact', anyCompact);
             filtersEl.classList.toggle('is-region-language-compact', regionCompact);
             filtersEl.classList.toggle('is-group-sort-compact', groupCompact);
@@ -564,6 +567,7 @@ export function setupRendererEventListeners(options = {}) {
     applyFilterCompactClasses();
 
     const queries = [
+        superCompactQuery,
         filtersCompactQuery,
         regionLanguagePair.compactQuery,
         groupSortPair.compactQuery
@@ -872,4 +876,160 @@ export function setupRendererEventListeners(options = {}) {
     setupWindowControls({ emubro, openLibraryPathSettingsModal, openAboutDialog });
     setupHeaderThemeControlsToggle({ themeSelect });
 
+    // Library Filters Popup (for expanded sidebar mode)
+    const filtersPopupBtn = document.getElementById('library-filters-popup-btn');
+    let filtersFloatingMenuEl = null;
+
+    const destroyFiltersFloatingMenu = () => {
+        if (!filtersFloatingMenuEl) return;
+        filtersFloatingMenuEl.remove();
+        filtersFloatingMenuEl = null;
+        filtersPopupBtn?.classList.remove('is-open');
+    };
+
+    const positionFiltersFloatingMenu = () => {
+        if (!filtersFloatingMenuEl || !filtersPopupBtn) return;
+        const rect = filtersPopupBtn.getBoundingClientRect();
+        const margin = 8;
+        
+        filtersFloatingMenuEl.style.left = `${Math.max(margin, rect.left)}px`;
+        filtersFloatingMenuEl.style.top = `${rect.bottom + 6}px`;
+        
+        const menuRect = filtersFloatingMenuEl.getBoundingClientRect();
+        if (menuRect.right > window.innerWidth - margin) {
+            filtersFloatingMenuEl.style.left = `${window.innerWidth - menuRect.width - margin}px`;
+        }
+    };
+
+    const renderFiltersPopup = () => {
+        destroyFiltersFloatingMenu();
+        const menu = document.createElement('div');
+        menu.className = 'filter-pair-floating-menu library-filters-floating-menu';
+        
+        const createBlock = (title, content) => {
+            const block = document.createElement('div');
+            block.className = 'filter-pair-compact-block';
+            const label = document.createElement('div');
+            label.className = 'filter-pair-compact-label';
+            label.textContent = title;
+            block.appendChild(label);
+            block.appendChild(content);
+            return block;
+        };
+
+        // Platform Filter
+        if (platformFilter) {
+            const clone = platformFilter.cloneNode(true);
+            clone.style.display = 'block';
+            clone.style.width = '100%';
+            clone.value = platformFilter.value;
+            clone.addEventListener('change', (e) => {
+                platformFilter.value = e.target.value;
+                platformFilter.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+            menu.appendChild(createBlock('Platform', clone));
+        }
+
+        // Region Filter
+        if (gameRegionFilterSelect) {
+            const clone = gameRegionFilterSelect.cloneNode(true);
+            clone.style.display = 'block';
+            clone.style.width = '100%';
+            clone.value = gameRegionFilterSelect.value;
+            clone.addEventListener('change', (e) => {
+                gameRegionFilterSelect.value = e.target.value;
+                gameRegionFilterSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+            menu.appendChild(createBlock('Region', clone));
+        }
+
+        // Language Filter
+        if (gameLanguageFilterSelect) {
+            const clone = gameLanguageFilterSelect.cloneNode(true);
+            clone.style.display = 'block';
+            clone.style.width = '100%';
+            clone.value = gameLanguageFilterSelect.value;
+            clone.addEventListener('change', (e) => {
+                gameLanguageFilterSelect.value = e.target.value;
+                gameLanguageFilterSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+            menu.appendChild(createBlock('Language', clone));
+        }
+
+        // Group Filter
+        if (groupFilterSelect) {
+            const clone = groupFilterSelect.cloneNode(true);
+            clone.style.display = 'block';
+            clone.style.width = '100%';
+            clone.value = groupFilterSelect.value;
+            clone.addEventListener('change', (e) => {
+                groupFilterSelect.value = e.target.value;
+                groupFilterSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+            menu.appendChild(createBlock('Group By', clone));
+        }
+
+        // Sort Filter
+        if (sortFilter) {
+            const clone = sortFilter.cloneNode(true);
+            clone.style.display = 'block';
+            clone.style.width = '100%';
+            clone.value = sortFilter.value;
+            clone.addEventListener('change', (e) => {
+                sortFilter.value = e.target.value;
+                sortFilter.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+            menu.appendChild(createBlock('Sort By', clone));
+        }
+
+        // Group Same Names Toggle
+        if (groupSameNamesToggle) {
+            const label = document.createElement('label');
+            label.className = 'group-same-names-toggle';
+            label.style.width = '100%';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = groupSameNamesToggle.checked;
+            checkbox.addEventListener('change', (e) => {
+                groupSameNamesToggle.checked = e.target.checked;
+                groupSameNamesToggle.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+            const span = document.createElement('span');
+            span.textContent = 'Group same names';
+            label.appendChild(checkbox);
+            label.appendChild(span);
+            menu.appendChild(createBlock('Options', label));
+        }
+
+        document.body.appendChild(menu);
+        filtersFloatingMenuEl = menu;
+        filtersPopupBtn?.classList.add('is-open');
+        positionFiltersFloatingMenu();
+    };
+
+    filtersPopupBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (filtersFloatingMenuEl) destroyFiltersFloatingMenu();
+        else renderFiltersPopup();
+    });
+
+    document.addEventListener('click', (e) => {
+        if (filtersFloatingMenuEl && !filtersFloatingMenuEl.contains(e.target) && e.target !== filtersPopupBtn) {
+            destroyFiltersFloatingMenu();
+        }
+    });
+
+    window.addEventListener('resize', () => {
+        if (filtersFloatingMenuEl) positionFiltersFloatingMenu();
+        // Hide popup if sidebar is no longer expanded? 
+        // Actually the button itself will disappear via CSS, so the popup might stay floating.
+        // Let's hide it if the button is hidden.
+        if (filtersPopupBtn && window.getComputedStyle(filtersPopupBtn).display === 'none') {
+            destroyFiltersFloatingMenu();
+        }
+    });
+
+    window.addEventListener('emubro:layout-width-changed', () => {
+        destroyFiltersFloatingMenu();
+    });
 }

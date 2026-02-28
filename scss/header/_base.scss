@@ -1,0 +1,152 @@
+﻿/* Header */
+.header {
+    background-color: color-mix(in srgb, var(--bg-header), transparent 8%);
+    backdrop-filter: blur(16px) saturate(1.12);
+    -webkit-backdrop-filter: blur(16px) saturate(1.12);
+    --win-controls-width: 210px;
+    --win-controls-gap: 12px;
+    --win-controls-space: calc(var(--win-controls-width) + var(--win-controls-gap));
+
+    padding: 2.5px 0px 2.5px 20px;
+    padding-right: calc(0px + var(--win-controls-space));
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: nowrap;
+    border-bottom: 1px solid var(--glass-border);
+    color: var(--text-primary);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    transition: background-color 0.3s ease;
+    min-height: 48px;
+
+    /* Custom titlebar drag region (frameless on Windows) */
+    -webkit-app-region: drag;
+}
+
+/* Interactive elements must be opt-out of drag region */
+.header a,
+.header button,
+.header input,
+.header select,
+.header .custom-select,
+.header .options-list,
+.header .dropdown-with-button-wrapper,
+.header .search-bar {
+    -webkit-app-region: no-drag;
+}
+
+.user-actions {
+    /* Reserve space so the absolute-positioned window buttons don't overlap */
+    padding-right: calc(var(--win-controls-space) + 6px);
+    -webkit-app-region: drag;
+    flex-wrap: wrap;
+    gap: 0px;
+    justify-content: flex-end;
+    align-items: center;
+    flex: 1 1 auto;
+}
+
+.search-bar {
+    flex: 0 0 auto;
+    min-width: 0;
+}
+
+.header-inline-drag-gap {
+    display: block;
+    width: auto;
+    min-width: 8px;
+    max-width: 24px;
+    height: 36px;
+    flex: 0 0 20px;
+    -webkit-app-region: drag;
+}
+
+.header-search-theme-drag-gap {
+    display: block;
+    width: auto;
+    min-width: 10px;
+    max-width: 24px;
+    height: 36px;
+    flex: 0 0 14px;
+    -webkit-app-region: drag;
+}
+
+.window-controls-main {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: var(--win-controls-width);
+    height: 100%;
+    display: flex;
+    gap: 0px;
+    align-items: stretch;
+    padding: 0px;
+    -webkit-app-region: no-drag;
+}
+
+.window-drag-gap {
+    display: none;
+    position: absolute;
+    top: 0;
+    right: var(--win-controls-width);
+    width: var(--win-controls-gap);
+    height: 100%;
+    -webkit-app-region: drag;
+}
+
+.win-btn {
+    width: 44px;
+    height: 100%;
+    padding: 0;
+    border-radius: 0px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 16px;
+    line-height: 1;
+    letter-spacing: 0;
+    text-transform: none;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.win-btn:hover {
+    background-color: color-mix(in srgb, var(--bg-tertiary), white 6%);
+    border-color: color-mix(in srgb, var(--border-color), var(--accent-color) 20%);
+    color: var(--text-primary);
+}
+
+.win-btn:active {
+    background-color: color-mix(in srgb, var(--bg-tertiary), black 8%);
+}
+
+.win-btn-close:hover {
+    background-color: color-mix(in srgb, var(--danger-color), black 10%);
+    border-color: var(--danger-dark);
+    color: white;
+}
+
+.win-btn-update {
+    color: color-mix(in srgb, var(--accent-color), var(--text-primary) 22%);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.win-btn-about {
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.win-btn-update.has-update {
+    background-color: color-mix(in srgb, var(--accent-color), transparent 82%);
+    border-color: color-mix(in srgb, var(--accent-color), white 18%);
+    color: var(--text-primary);
+}
+

@@ -325,32 +325,36 @@ function createDownloadPrimitives(deps = {}) {
   }
 
   function selectDownloadOptionsByType(candidates, emulator, osKey) {
-    const byType = new Map();
     const list = Array.isArray(candidates) ? candidates : [];
-    for (const candidate of list) {
-      const type = normalizeDownloadPackageType(candidate?.packageType);
-      const url = ensureHttpUrl(candidate?.url || "");
-      if (!type || !url) continue;
+    const normalizedList = list.map((candidate) => ({
+      packageType: normalizeDownloadPackageType(candidate?.packageType),
+      url: ensureHttpUrl(candidate?.url || ""),
+      fileName: String(candidate?.fileName || "").trim(),
+      source: String(candidate?.source || "").trim() || "unknown",
+      releaseUrl: ensureHttpUrl(candidate?.releaseUrl || ""),
+      score: Number.isFinite(candidate?.score) ? Number(candidate.score) : scoreAssetForOs(candidate?.fileName, osKey)
+    })).filter((item) => item.packageType && item.url);
 
-      const normalized = {
-        packageType: type,
-        url,
-        fileName: String(candidate?.fileName || "").trim(),
-        source: String(candidate?.source || "").trim() || "unknown",
-        releaseUrl: ensureHttpUrl(candidate?.releaseUrl || ""),
-        score: Number.isFinite(candidate?.score) ? Number(candidate.score) : scoreAssetForOs(candidate?.fileName, osKey)
-      };
-
-      const existing = byType.get(type);
-      if (!existing || rankDownloadOption(normalized, emulator, osKey) > rankDownloadOption(existing, emulator, osKey)) {
-        byType.set(type, normalized);
-      }
+    // If we have scraped results, we might have many.
+    // We want to return all unique ones, but still sorted/ranked.
+    const seenUrls = new Set();
+    const uniqueList = [];
+    for (const item of normalizedList) {
+      if (seenUrls.has(item.url)) continue;
+      seenUrls.add(item.url);
+      uniqueList.push(item);
     }
 
-    const order = ["installer", "archive", "executable"];
-    return order
-      .map((type) => byType.get(type))
-      .filter(Boolean);
+    // Rank them
+    uniqueList.sort((a, b) => rankDownloadOption(b, emulator, osKey) - rankDownloadOption(a, emulator, osKey));
+
+    // Limit to a reasonable number if it's from scraping to avoid UI clutter,
+    // but include all types found.
+    if (uniqueList.length > 15) {
+        return uniqueList.slice(0, 15);
+    }
+
+    return uniqueList;
   }
 
   function selectBestGitHubAsset(release, emulator, osKey) {
