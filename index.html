@@ -1271,6 +1271,59 @@
         </div>
     </div>
 
+    <script>
+        (function () {
+            if (window.emubro) return;
+            try {
+                if (window.parent && window.parent !== window && window.parent.emubro) {
+                    window.emubro = window.parent.emubro;
+                    return;
+                }
+            } catch (_e) {}
+            window.emubro = {
+                platform: 'web',
+                invoke: async function () {
+                    return { success: false, message: 'emuBro bridge unavailable' };
+                },
+                minimizeWindow: async function () {},
+                onLaunch: function () { return function () {}; },
+                onWindowMoved: function () { return function () {}; },
+                onWindowMaximizedChanged: function () { return function () {}; },
+                onUpdateStatus: function () { return function () {}; },
+                onResourcesUpdateStatus: function () { return function () {}; },
+                getAllTranslations: async function () { return {}; },
+                locales: {
+                    list: async function () { return []; },
+                    read: async function () { return {}; },
+                    exists: async function () { return false; }
+                },
+                updates: {
+                    getState: async function () { return {}; },
+                    getConfig: async function () { return {}; },
+                    setConfig: async function () { return { success: false }; },
+                    check: async function () { return { success: false }; },
+                    download: async function () { return { success: false }; },
+                    install: async function () { return { success: false }; }
+                },
+                resourcesUpdates: {
+                    getState: async function () { return {}; },
+                    check: async function () { return { success: false }; },
+                    install: async function () { return { success: false }; },
+                    getConfig: async function () { return {}; },
+                    setConfig: async function () { return { success: false }; }
+                },
+                helpDocs: {
+                    list: async function () { return { success: false, items: [] }; },
+                    get: async function () { return { success: false, item: null }; },
+                    search: async function () { return { success: false, items: [] }; }
+                },
+                promptScanSubfolders: async function () { return { canceled: false, recursive: true }; },
+                importPaths: async function () { return { success: false, message: 'emuBro bridge unavailable' }; },
+                createGameShortcut: async function () { return { success: false }; },
+                getPathForFile: function () { return ''; }
+            };
+        })();
+    </script>
     <script src="./i18n.js"></script>
     <script src="dist/renderer.bundle.js"></script>
 </body>

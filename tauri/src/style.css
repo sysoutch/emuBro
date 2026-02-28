@@ -38,6 +38,26 @@ body {
   color: var(--text);
 }
 
+.legacy-shell {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0b1220;
+}
+
+.legacy-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  opacity: 0;
+  transition: opacity 0.16s ease;
+}
+
+.legacy-frame.is-ready {
+  opacity: 1;
+}
+
 .shell {
   display: grid;
   grid-template-rows: auto 1fr;
@@ -108,4 +128,10 @@ body {
 
 .card h2 {
   margin-top: 0;
+}
+
+.legacy-fallback-note {
+  margin: 12px 0 0;
+  color: #ff9eb0;
+  font-size: 0.9rem;
 }

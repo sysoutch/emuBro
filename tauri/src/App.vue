@@ -1,19 +1,58 @@
 <script setup>
-import { onMounted } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { storeToRefs } from "pinia";
 import { useAppStore } from "./stores/app";
 
 const appStore = useAppStore();
 const { title, subtitle, ready, theme } = storeToRefs(appStore);
+const legacyFrameReady = ref(false);
+const legacyFrameError = ref(false);
+const legacyFrameUrl = ref("");
+
+const hasLegacyFrame = computed(
+  () => !!legacyFrameUrl.value && !legacyFrameError.value
+);
+
+function onLegacyFrameLoad() {
+  legacyFrameReady.value = true;
+  appStore.markReady();
+}
+
+function onLegacyFrameError() {
+  legacyFrameError.value = true;
+  legacyFrameReady.value = false;
+  appStore.markReady();
+}
 
 onMounted(() => {
   document.documentElement.setAttribute("data-theme", theme.value);
+
+  const legacyEntry =
+    typeof __EMUBRO_LEGACY_INDEX__ === "string"
+      ? __EMUBRO_LEGACY_INDEX__.trim()
+      : "";
+  if (legacyEntry) {
+    legacyFrameUrl.value = legacyEntry;
+    return;
+  }
+
   appStore.markReady();
 });
 </script>
 
 <template>
-  <main class="shell">
+  <main v-if="hasLegacyFrame" class="legacy-shell">
+    <iframe
+      class="legacy-frame"
+      :class="{ 'is-ready': legacyFrameReady }"
+      :src="legacyFrameUrl"
+      title="emuBro Legacy UI"
+      @load="onLegacyFrameLoad"
+      @error="onLegacyFrameError"
+    />
+  </main>
+
+  <main v-else class="shell">
     <header class="titlebar" data-tauri-drag-region>
       <div class="brand" data-tauri-drag-region>
         <h1>{{ title }}</h1>
@@ -32,6 +71,9 @@ onMounted(() => {
         <p>
           This is the new Tauri frontend foundation. Next steps are porting game/library,
           settings, language, and theme modules from Electron to Tauri commands + Pinia stores.
+        </p>
+        <p v-if="legacyFrameError" class="legacy-fallback-note">
+          Legacy UI bootstrap failed. Check dev console and Vite `/@fs` access.
         </p>
       </div>
     </section>
