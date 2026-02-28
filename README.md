@@ -4,8 +4,7 @@
 
 emuBro is an open source retro game launcher for Windows, Linux, and macOS. It allows you to manage all your games and emulators such as snes9x, epsxe, pcsx2, dolphin, or whatever you like.
 
-This is now migrating to a **Tauri + Vue + Pinia** desktop stack for a lighter, faster, native-backed experience.
-Legacy Electron code is still kept in this repo during the porting phase.
+This desktop app now runs on a **Tauri + Vue + Pinia** stack for a lighter, faster, native-backed experience.
 
 ![](https://preview.redd.it/zpx8ciq23a831.png?width=600&format=png&auto=webp&v=enabled&s=fc5c19c4f90500b829bd709fca996c38770af01c "Retro Game Launcher for cool kids")
 
@@ -111,7 +110,6 @@ If you want to run the latest development version:
 - `npm run dev` starts the new Tauri + Vue + Pinia app.
 - `npm run dev:web` starts only the Vue frontend (no Tauri shell).
 - `npm run build` builds the new Tauri desktop app.
-- `npm run legacy:electron:start` still runs the old Electron app while features are being ported.
 
 ## :white_check_mark: Usage
 1. Launch emuBro
