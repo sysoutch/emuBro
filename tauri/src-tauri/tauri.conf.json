@@ -26,10 +26,6 @@
     }
   },
   "bundle": {
-    "active": true,
-    "targets": "all",
-    "icon": [
-      "../../icon.png"
-    ]
+    "active": false
   }
 }
