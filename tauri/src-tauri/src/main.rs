@@ -1928,6 +1928,61 @@ fn launch_game_with_emulator(emulator_path: &Path, emulator_args: &str, game_pat
     Ok(())
 }
 
+fn launch_emulator_process(
+    emulator_path: &Path,
+    emulator_args: &str,
+    working_directory: &str,
+) -> Result<(), String> {
+    if !emulator_path.exists() || !emulator_path.is_file() {
+        return Err("Emulator executable not found".to_string());
+    }
+    let args = parse_command_args(emulator_args);
+    let mut command = Command::new(emulator_path);
+    if !args.is_empty() {
+        command.args(args);
+    }
+
+    let working_dir = working_directory.trim();
+    if !working_dir.is_empty() {
+        command.current_dir(PathBuf::from(working_dir));
+    } else if let Some(parent) = emulator_path.parent() {
+        command.current_dir(parent);
+    }
+
+    command.spawn().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+fn find_file_by_name_in_tree(root_dir: &Path, file_name: &str, max_depth: usize, max_files: usize) -> Option<PathBuf> {
+    if !root_dir.exists() || !root_dir.is_dir() {
+        return None;
+    }
+    let target = file_name.trim().to_lowercase();
+    if target.is_empty() {
+        return None;
+    }
+    let mut visited_files = 0usize;
+    for entry in WalkDir::new(root_dir)
+        .follow_links(false)
+        .max_depth(max_depth)
+        .into_iter()
+        .filter_map(|row| row.ok())
+    {
+        if !entry.file_type().is_file() {
+            continue;
+        }
+        visited_files += 1;
+        if visited_files > max_files {
+            break;
+        }
+        let name = entry.file_name().to_string_lossy().to_lowercase();
+        if name == target {
+            return Some(entry.path().to_path_buf());
+        }
+    }
+    None
+}
+
 fn launch_game_file(game_path: &Path) -> Result<(), String> {
     if cfg!(target_os = "windows") {
         let lower_ext = game_path
@@ -3214,6 +3269,191 @@ fn emubro_invoke(channel: String, args: Vec<Value>, window: Window) -> Result<Va
                 })),
             }
         }
+        "launch-emulator" => {
+            let payload = args.get(0).cloned().unwrap_or_else(|| json!({}));
+            let emulator_path = payload
+                .get("filePath")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            if emulator_path.is_empty() {
+                return Ok(json!({ "success": false, "message": "Missing emulator path" }));
+            }
+            let emulator_args = payload
+                .get("args")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            let working_directory = payload
+                .get("workingDirectory")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            match launch_emulator_process(
+                Path::new(&emulator_path),
+                &emulator_args,
+                &working_directory,
+            ) {
+                Ok(_) => Ok(json!({ "success": true })),
+                Err(err) => Ok(json!({ "success": false, "message": err })),
+            }
+        }
+        "search-missing-game-file" => {
+            let payload = args.get(0).cloned().unwrap_or_else(|| json!({}));
+            let target_id = payload
+                .get("gameId")
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0);
+            let root_dir = payload
+                .get("rootDir")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            let max_depth = payload
+                .get("maxDepth")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(8) as usize;
+
+            if target_id <= 0 {
+                return Ok(json!({ "success": false, "message": "Missing game ID" }));
+            }
+            if root_dir.is_empty() {
+                return Ok(json!({ "success": false, "message": "Missing search root folder" }));
+            }
+            let root_path = PathBuf::from(&root_dir);
+            if !root_path.exists() || !root_path.is_dir() {
+                return Ok(json!({ "success": false, "message": "Search root folder not found" }));
+            }
+
+            let mut games = read_state_array("games");
+            let game_index = games.iter().position(|row| {
+                row.get("id").and_then(|v| v.as_i64()).unwrap_or(0) == target_id
+            });
+            let Some(game_index) = game_index else {
+                return Ok(json!({ "success": false, "message": "Game not found" }));
+            };
+            let game_name = games[game_index]
+                .get("name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Unknown Game")
+                .to_string();
+            let old_path = games[game_index]
+                .get("filePath")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            let target_file_name = Path::new(&old_path)
+                .file_name()
+                .and_then(|v| v.to_str())
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            if target_file_name.is_empty() {
+                return Ok(json!({ "success": false, "message": "Game has no file name" }));
+            }
+
+            let found_path = find_file_by_name_in_tree(&root_path, &target_file_name, max_depth, 20000);
+            let Some(found) = found_path else {
+                return Ok(json!({
+                    "success": true,
+                    "found": false,
+                    "gameId": target_id,
+                    "gameName": game_name,
+                    "targetFileName": target_file_name
+                }));
+            };
+
+            if let Some(obj) = games[game_index].as_object_mut() {
+                obj.insert(
+                    "filePath".to_string(),
+                    Value::String(found.to_string_lossy().to_string()),
+                );
+            }
+            write_state_array("games", games)?;
+            Ok(json!({
+                "success": true,
+                "found": true,
+                "gameId": target_id,
+                "gameName": game_name,
+                "newPath": found.to_string_lossy().to_string()
+            }))
+        }
+        "relink-game-file" => {
+            let payload = args.get(0).cloned().unwrap_or_else(|| json!({}));
+            let target_id = payload
+                .get("gameId")
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0);
+            let selected_path = payload
+                .get("filePath")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim()
+                .to_string();
+
+            if target_id <= 0 {
+                return Ok(json!({ "success": false, "message": "Missing game ID" }));
+            }
+            if selected_path.is_empty() {
+                return Ok(json!({ "success": false, "message": "Missing file path" }));
+            }
+            let selected = PathBuf::from(&selected_path);
+            if !selected.exists() {
+                return Ok(json!({ "success": false, "message": "Selected file was not found" }));
+            }
+            if !selected.is_file() {
+                return Ok(json!({ "success": false, "message": "Selected path is not a file" }));
+            }
+
+            let mut games = read_state_array("games");
+            let game_index = games.iter().position(|row| {
+                row.get("id").and_then(|v| v.as_i64()).unwrap_or(0) == target_id
+            });
+            let Some(index) = game_index else {
+                return Ok(json!({ "success": false, "message": "Game not found" }));
+            };
+            let game_name = games[index]
+                .get("name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Unknown Game")
+                .to_string();
+            if let Some(obj) = games[index].as_object_mut() {
+                obj.insert("filePath".to_string(), Value::String(selected_path.clone()));
+            }
+            write_state_array("games", games)?;
+            Ok(json!({
+                "success": true,
+                "gameId": target_id,
+                "gameName": game_name,
+                "newPath": selected_path
+            }))
+        }
+        "migration:import-legacy-library-db" => {
+            let conn = open_state_db()?;
+            let games_before = read_state_array("games").len();
+            let emus_before = read_state_array("emulators").len();
+            let tags_before = read_state_array("tags").len();
+            migrate_legacy_library_db_if_needed(&conn)?;
+            let games_after = read_state_array("games").len();
+            let emus_after = read_state_array("emulators").len();
+            let tags_after = read_state_array("tags").len();
+            Ok(json!({
+                "success": true,
+                "before": {
+                    "games": games_before,
+                    "emulators": emus_before,
+                    "tags": tags_before
+                },
+                "after": {
+                    "games": games_after,
+                    "emulators": emus_after,
+                    "tags": tags_after
+                }
+            }))
+        }
         "prompt-scan-subfolders" => Ok(json!({ "canceled": false, "recursive": true })),
         "open-file-dialog" => {
             let options = args.get(0).cloned().unwrap_or_else(|| json!({}));
@@ -3317,9 +3557,6 @@ fn emubro_invoke(channel: String, args: Vec<Value>, window: Window) -> Result<Va
         | "locales:repo:set-config"
         | "locales:repo:fetch-catalog"
         | "locales:repo:install"
-        | "search-missing-game-file"
-        | "relink-game-file"
-        | "launch-emulator"
         | "youtube:search-videos"
         | "youtube:open-video"
         | "covers:download-for-game"
