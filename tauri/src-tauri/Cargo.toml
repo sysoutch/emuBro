@@ -19,6 +19,7 @@ open = "5.3"
 rfd = "0.15"
 walkdir = "2.5"
 rusqlite = { version = "0.32", features = ["bundled"] }
+zip = { version = "2.2", default-features = true }
 
 [features]
 default = ["custom-protocol"]

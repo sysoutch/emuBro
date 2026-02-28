@@ -2,11 +2,15 @@
 
 use rusqlite::{params, Connection, OptionalExtension};
 use serde_json::{json, Value};
+use std::collections::hash_map::DefaultHasher;
 use std::fs;
+use std::hash::{Hash, Hasher};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use tauri::Window;
 use walkdir::WalkDir;
+use zip::ZipArchive;
 
 #[tauri::command]
 fn app_version() -> String {
@@ -1186,6 +1190,159 @@ fn direct_archive_emulators_for_extension(platform: &Value, extension: &str) -> 
     out
 }
 
+fn extract_zip_archive_to_dir(archive_path: &Path, destination_dir: &Path) -> Result<(), String> {
+    let file = fs::File::open(archive_path).map_err(|e| e.to_string())?;
+    let mut archive = ZipArchive::new(file).map_err(|e| e.to_string())?;
+    fs::create_dir_all(destination_dir).map_err(|e| e.to_string())?;
+
+    for index in 0..archive.len() {
+        let mut entry = archive.by_index(index).map_err(|e| e.to_string())?;
+        let Some(relative_path) = entry.enclosed_name().map(|p| p.to_path_buf()) else {
+            continue;
+        };
+        let out_path = destination_dir.join(relative_path);
+
+        if entry.is_dir() {
+            fs::create_dir_all(&out_path).map_err(|e| e.to_string())?;
+            continue;
+        }
+
+        if let Some(parent) = out_path.parent() {
+            fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
+        let mut out_file = fs::File::create(&out_path).map_err(|e| e.to_string())?;
+        std::io::copy(&mut entry, &mut out_file).map_err(|e| e.to_string())?;
+        out_file.flush().map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
+fn build_archive_extraction_directory(archive_path: &Path) -> PathBuf {
+    let parent = archive_path.parent().unwrap_or_else(|| Path::new("."));
+    let stem = archive_path
+        .file_stem()
+        .and_then(|v| v.to_str())
+        .unwrap_or("archive");
+    let initial = parent.join(format!("{}_extracted", stem));
+    ensure_unique_destination_path(&initial)
+}
+
+fn parse_game_id_from_payload(payload: &Value) -> i64 {
+    if let Some(id) = payload.as_i64() {
+        return id;
+    }
+    if let Some(obj) = payload.as_object() {
+        if let Some(id) = obj.get("gameId").and_then(|v| v.as_i64()) {
+            return id;
+        }
+        if let Some(id) = obj.get("id").and_then(|v| v.as_i64()) {
+            return id;
+        }
+    }
+    0
+}
+
+fn system_unix_timestamp_string() -> String {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs().to_string())
+        .unwrap_or_else(|_| "0".to_string())
+}
+
+fn update_game_last_played(game_id: i64) -> Result<(), String> {
+    if game_id <= 0 {
+        return Ok(());
+    }
+    let mut games = read_state_array("games");
+    let mut changed = false;
+    for row in &mut games {
+        if row.get("id").and_then(|v| v.as_i64()).unwrap_or(0) == game_id {
+            if let Some(obj) = row.as_object_mut() {
+                obj.insert(
+                    "lastPlayed".to_string(),
+                    Value::String(system_unix_timestamp_string()),
+                );
+            }
+            changed = true;
+            break;
+        }
+    }
+    if changed {
+        write_state_array("games", games)?;
+    }
+    Ok(())
+}
+
+fn percent_encode_data_url(input: &str) -> String {
+    let mut out = String::with_capacity(input.len() * 2);
+    for byte in input.as_bytes() {
+        let c = *byte as char;
+        let safe = c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.' || c == '~';
+        if safe {
+            out.push(c);
+        } else {
+            out.push('%');
+            out.push_str(&format!("{:02X}", byte));
+        }
+    }
+    out
+}
+
+fn build_file_icon_data_url(file_path: &Path) -> String {
+    let ext = file_path
+        .extension()
+        .and_then(|v| v.to_str())
+        .unwrap_or("")
+        .trim()
+        .to_uppercase();
+    let label = if ext.is_empty() {
+        "FILE".to_string()
+    } else {
+        ext.chars().take(4).collect::<String>()
+    };
+
+    let mut hasher = DefaultHasher::new();
+    label.hash(&mut hasher);
+    let hash = hasher.finish();
+    let hue = (hash % 360) as i32;
+    let hue2 = ((hue + 28) % 360) as i32;
+
+    let svg = format!(
+        "<svg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'>\
+<defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>\
+<stop offset='0%' stop-color='hsl({} 68% 42%)'/>\
+<stop offset='100%' stop-color='hsl({} 74% 34%)'/>\
+</linearGradient></defs>\
+<rect x='2' y='2' width='92' height='92' rx='16' fill='url(#g)'/>\
+<rect x='10' y='12' width='76' height='72' rx='10' fill='rgba(6,10,18,0.35)'/>\
+<text x='48' y='56' text-anchor='middle' font-family='Segoe UI,Arial,sans-serif' font-size='22' font-weight='700' fill='#F4F8FF'>{}</text>\
+</svg>",
+        hue, hue2, label
+    );
+
+    format!("data:image/svg+xml;utf8,{}", percent_encode_data_url(&svg))
+}
+
+fn launch_game_file(game_path: &Path) -> Result<(), String> {
+    if cfg!(target_os = "windows") {
+        let lower_ext = game_path
+            .extension()
+            .and_then(|v| v.to_str())
+            .unwrap_or("")
+            .to_lowercase();
+        if lower_ext == "exe" || lower_ext == "bat" || lower_ext == "cmd" {
+            let mut command = Command::new(game_path);
+            if let Some(parent) = game_path.parent() {
+                command.current_dir(parent);
+            }
+            command.spawn().map_err(|e| e.to_string())?;
+            return Ok(());
+        }
+    }
+    open::that(game_path).map_err(|e| e.to_string())
+}
+
 fn not_implemented() -> Value {
     json!({
         "success": false,
@@ -1667,6 +1824,16 @@ fn emubro_invoke(channel: String, args: Vec<Value>, window: Window) -> Result<Va
                 .and_then(|v| v.as_object())
                 .cloned()
                 .unwrap_or_default();
+            let archive_modes_lookup = archive_modes
+                .iter()
+                .filter_map(|(k, v)| {
+                    let mode = v.as_str().unwrap_or("").trim().to_lowercase();
+                    if mode.is_empty() {
+                        return None;
+                    }
+                    Some((path_key(k), mode))
+                })
+                .collect::<std::collections::HashMap<String, String>>();
 
             let platforms = load_platform_configs();
             let ext_map = extension_platform_map(&platforms);
@@ -1693,6 +1860,8 @@ fn emubro_invoke(channel: String, args: Vec<Value>, window: Window) -> Result<Va
             let mut skipped = Vec::<Value>::new();
             let errors = Vec::<Value>::new();
             let mut warnings = Vec::<Value>::new();
+            let mut dirty_games = false;
+            let mut dirty_emulators = false;
 
             for raw in input_paths {
                 let source_path = raw.as_str().unwrap_or("").trim().to_string();
@@ -1722,6 +1891,20 @@ fn emubro_invoke(channel: String, args: Vec<Value>, window: Window) -> Result<Va
                     }
                     added_games.extend(scan_games);
                     added_emulators.extend(scan_emus);
+                    games = read_state_array("games");
+                    emulators = read_state_array("emulators");
+                    game_seen = games
+                        .iter()
+                        .filter_map(|row| row.get("filePath").and_then(|v| v.as_str()))
+                        .map(path_key)
+                        .collect::<std::collections::HashSet<String>>();
+                    emu_seen = emulators
+                        .iter()
+                        .filter_map(|row| row.get("filePath").and_then(|v| v.as_str()))
+                        .map(path_key)
+                        .collect::<std::collections::HashSet<String>>();
+                    next_game_id = next_numeric_id(&games);
+                    next_emu_id = next_numeric_id(&emulators);
                     continue;
                 }
                 if !source.is_file() {
@@ -1743,6 +1926,7 @@ fn emubro_invoke(channel: String, args: Vec<Value>, window: Window) -> Result<Va
                         next_emu_id += 1;
                         emulators.push(row.clone());
                         added_emulators.push(row);
+                        dirty_emulators = true;
                     } else {
                         skipped.push(json!({ "path": source_path, "reason": "emu_exists_or_unmatched" }));
                     }
@@ -1750,9 +1934,9 @@ fn emubro_invoke(channel: String, args: Vec<Value>, window: Window) -> Result<Va
                 }
 
                 if archive_exts.contains(&ext) {
-                    let mode = archive_modes
-                        .get(&source_path)
-                        .and_then(|v| v.as_str())
+                    let mode = archive_modes_lookup
+                        .get(&path_key(&source_path))
+                        .map(|v| v.as_str())
                         .unwrap_or("extract")
                         .trim()
                         .to_lowercase();
@@ -1772,6 +1956,7 @@ fn emubro_invoke(channel: String, args: Vec<Value>, window: Window) -> Result<Va
                                 next_game_id += 1;
                                 games.push(row.clone());
                                 added_games.push(row);
+                                dirty_games = true;
                             } else {
                                 skipped.push(json!({ "path": source_path, "reason": "game_exists" }));
                             }
@@ -1780,12 +1965,67 @@ fn emubro_invoke(channel: String, args: Vec<Value>, window: Window) -> Result<Va
                         }
                         continue;
                     }
-                    skipped.push(json!({ "path": source_path, "reason": "unmatched" }));
-                    warnings.push(json!({
-                        "path": source_path,
-                        "reason": "archive_extract_not_implemented",
-                        "message": "Archive extraction is not implemented in Tauri migration yet."
-                    }));
+                    if ext != ".zip" {
+                        skipped.push(json!({
+                            "path": source_path,
+                            "reason": "archive_extract_failed",
+                            "message": format!("Archive extraction for {} is not implemented yet.", ext)
+                        }));
+                        continue;
+                    }
+
+                    let destination = build_archive_extraction_directory(&source);
+                    match extract_zip_archive_to_dir(&source, &destination) {
+                        Ok(_) => {
+                            let scan_options = json!({ "scope": "both", "recursive": true, "maxDepth": 30 });
+                            let scan_res = scan_and_import_games_and_emulators(
+                                destination.to_string_lossy().as_ref(),
+                                Some(&scan_options),
+                            )?;
+                            let scan_games = scan_res
+                                .get("games")
+                                .and_then(|v| v.as_array())
+                                .cloned()
+                                .unwrap_or_default();
+                            let scan_emus = scan_res
+                                .get("emulators")
+                                .and_then(|v| v.as_array())
+                                .cloned()
+                                .unwrap_or_default();
+                            if scan_games.is_empty() && scan_emus.is_empty() {
+                                skipped.push(json!({ "path": source_path, "reason": "no_matches" }));
+                            } else {
+                                warnings.push(json!({
+                                    "path": source_path,
+                                    "reason": "archive_extracted",
+                                    "message": format!("Archive extracted to {}", destination.to_string_lossy())
+                                }));
+                            }
+                            added_games.extend(scan_games);
+                            added_emulators.extend(scan_emus);
+                            games = read_state_array("games");
+                            emulators = read_state_array("emulators");
+                            game_seen = games
+                                .iter()
+                                .filter_map(|row| row.get("filePath").and_then(|v| v.as_str()))
+                                .map(path_key)
+                                .collect::<std::collections::HashSet<String>>();
+                            emu_seen = emulators
+                                .iter()
+                                .filter_map(|row| row.get("filePath").and_then(|v| v.as_str()))
+                                .map(path_key)
+                                .collect::<std::collections::HashSet<String>>();
+                            next_game_id = next_numeric_id(&games);
+                            next_emu_id = next_numeric_id(&emulators);
+                        }
+                        Err(err) => {
+                            skipped.push(json!({
+                                "path": source_path,
+                                "reason": "archive_extract_failed",
+                                "message": err
+                            }));
+                        }
+                    }
                     continue;
                 }
 
@@ -1800,6 +2040,7 @@ fn emubro_invoke(channel: String, args: Vec<Value>, window: Window) -> Result<Va
                         next_game_id += 1;
                         games.push(row.clone());
                         added_games.push(row);
+                        dirty_games = true;
                     } else {
                         skipped.push(json!({ "path": source_path, "reason": "game_exists" }));
                     }
@@ -1808,10 +2049,10 @@ fn emubro_invoke(channel: String, args: Vec<Value>, window: Window) -> Result<Va
                 }
             }
 
-            if !added_games.is_empty() {
+            if dirty_games {
                 write_state_array("games", games)?;
             }
-            if !added_emulators.is_empty() {
+            if dirty_emulators {
                 write_state_array("emulators", emulators)?;
             }
 
@@ -2186,6 +2427,108 @@ fn emubro_invoke(channel: String, args: Vec<Value>, window: Window) -> Result<Va
             write_state_array("games", games)?;
             Ok(json!({ "success": true }))
         }
+        "launch-game" => {
+            let payload = args.get(0).cloned().unwrap_or(Value::Null);
+            let game_id = parse_game_id_from_payload(&payload);
+            if game_id <= 0 {
+                return Ok(json!({ "success": false, "message": "Game not found" }));
+            }
+
+            let games = read_state_array("games");
+            let game = games
+                .iter()
+                .find(|row| row.get("id").and_then(|v| v.as_i64()).unwrap_or(0) == game_id)
+                .cloned();
+            let Some(game_row) = game else {
+                return Ok(json!({ "success": false, "message": "Game not found" }));
+            };
+
+            let game_name = game_row
+                .get("name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Unknown Game")
+                .to_string();
+            let game_path = game_row
+                .get("filePath")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            if game_path.is_empty() {
+                return Ok(json!({
+                    "success": false,
+                    "code": "GAME_FILE_MISSING",
+                    "message": "Game file not found",
+                    "gameId": game_id,
+                    "gameName": game_name,
+                    "missingPath": "",
+                    "parentPath": "",
+                    "parentExists": false,
+                    "rootPath": "",
+                    "rootExists": false,
+                    "sourceMedia": "unknown"
+                }));
+            }
+
+            let is_launcher_uri = game_path.starts_with("steam://")
+                || game_path.starts_with("com.epicgames.launcher://")
+                || game_path.starts_with("goggalaxy://")
+                || game_path.starts_with("heroic://");
+            if is_launcher_uri {
+                return match open::that(&game_path) {
+                    Ok(_) => {
+                        let _ = update_game_last_played(game_id);
+                        Ok(json!({
+                            "success": true,
+                            "message": "Launcher opened",
+                            "launchMode": "launcher"
+                        }))
+                    }
+                    Err(err) => Ok(json!({
+                        "success": false,
+                        "message": err.to_string()
+                    })),
+                };
+            }
+
+            let game_path_buf = PathBuf::from(&game_path);
+            if !game_path_buf.exists() {
+                let parent_path = game_path_buf
+                    .parent()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .unwrap_or_default();
+                let parent_exists = game_path_buf.parent().map(|p| p.exists()).unwrap_or(false);
+                let media = classify_import_media(&game_path);
+                return Ok(json!({
+                    "success": false,
+                    "code": "GAME_FILE_MISSING",
+                    "message": "Game file not found",
+                    "gameId": game_id,
+                    "gameName": game_name,
+                    "missingPath": game_path,
+                    "parentPath": parent_path,
+                    "parentExists": parent_exists,
+                    "rootPath": media.get("rootPath").cloned().unwrap_or_else(|| Value::String(String::new())),
+                    "rootExists": media.get("rootExists").cloned().unwrap_or(Value::Bool(false)),
+                    "sourceMedia": media.get("mediaCategory").cloned().unwrap_or_else(|| Value::String("unknown".to_string()))
+                }));
+            }
+
+            match launch_game_file(&game_path_buf) {
+                Ok(_) => {
+                    let _ = update_game_last_played(game_id);
+                    Ok(json!({
+                        "success": true,
+                        "message": "Game launched",
+                        "gameId": game_id
+                    }))
+                }
+                Err(err) => Ok(json!({
+                    "success": false,
+                    "message": err
+                })),
+            }
+        }
         "prompt-scan-subfolders" => Ok(json!({ "canceled": false, "recursive": true })),
         "open-file-dialog" => {
             let options = args.get(0).cloned().unwrap_or_else(|| json!({}));
@@ -2252,11 +2595,20 @@ fn emubro_invoke(channel: String, args: Vec<Value>, window: Window) -> Result<Va
             let scan_target = args.get(0).and_then(|v| v.as_str()).unwrap_or("");
             scan_and_import_games_and_emulators(scan_target, args.get(1))
         }
-        "get-file-icon-data-url" => Ok(json!({
-            "success": false,
-            "message": "Not implemented in Tauri migration yet",
-            "dataUrl": ""
-        })),
+        "get-file-icon-data-url" => {
+            let raw_path = args.get(0).and_then(|v| v.as_str()).unwrap_or("").trim().to_string();
+            if raw_path.is_empty() {
+                return Ok(json!({ "success": false, "message": "Missing path", "dataUrl": "" }));
+            }
+            let path = PathBuf::from(&raw_path);
+            if !path.exists() {
+                return Ok(json!({ "success": false, "message": "Path not found", "dataUrl": "" }));
+            }
+            Ok(json!({
+                "success": true,
+                "dataUrl": build_file_icon_data_url(&path)
+            }))
+        }
         "update:get-state" | "resources:update:get-state" => Ok(json!({
             "available": false,
             "downloaded": false
@@ -2282,7 +2634,6 @@ fn emubro_invoke(channel: String, args: Vec<Value>, window: Window) -> Result<Va
         | "locales:repo:install"
         | "search-missing-game-file"
         | "relink-game-file"
-        | "launch-game"
         | "launch-emulator"
         | "youtube:search-videos"
         | "youtube:open-video"
