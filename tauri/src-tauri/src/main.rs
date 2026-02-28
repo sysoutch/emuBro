@@ -679,6 +679,232 @@ fn scan_and_import_games_and_emulators(scan_target: &str, options: Option<&Value
     }))
 }
 
+fn emulator_extensions() -> std::collections::HashSet<String> {
+    [".exe", ".bat", ".cmd", ".ps1", ".sh", ".appimage"]
+        .into_iter()
+        .map(|v| v.to_string())
+        .collect()
+}
+
+fn archive_extensions() -> std::collections::HashSet<String> {
+    [".zip", ".rar", ".7z", ".iso", ".ciso", ".tar", ".gz"]
+        .into_iter()
+        .map(|v| v.to_string())
+        .collect()
+}
+
+fn normalize_platform_short_name(value: &str) -> String {
+    value.trim().to_lowercase()
+}
+
+fn find_platform_name(platforms: &[Value], platform_short_name: &str) -> String {
+    let psn = normalize_platform_short_name(platform_short_name);
+    if psn == "pc" {
+        return "PC".to_string();
+    }
+    for row in platforms {
+        let row_short = normalize_platform_short_name(
+            row.get("shortName").and_then(|v| v.as_str()).unwrap_or(""),
+        );
+        if row_short == psn {
+            return row
+                .get("name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Unknown")
+                .trim()
+                .to_string();
+        }
+    }
+    "Unknown".to_string()
+}
+
+fn detect_emulator_platform(path: &str, platforms: &[Value]) -> (bool, String, String) {
+    let name = Path::new(path)
+        .file_name()
+        .and_then(|v| v.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+    if name.is_empty() {
+        return (false, String::new(), String::new());
+    }
+
+    for row in platforms {
+        let psn = normalize_platform_short_name(
+            row.get("shortName").and_then(|v| v.as_str()).unwrap_or(""),
+        );
+        if psn.is_empty() {
+            continue;
+        }
+        let pname = row
+            .get("name")
+            .and_then(|v| v.as_str())
+            .unwrap_or("Unknown")
+            .trim()
+            .to_string();
+        let pname_key = pname.to_lowercase().replace([' ', '-', '_'], "");
+        let psn_key = psn.replace([' ', '-', '_'], "");
+
+        if name.contains(&psn_key) || (!pname_key.is_empty() && name.contains(&pname_key)) {
+            return (true, psn, pname);
+        }
+
+        if let Some(emulators) = row.get("emulators").and_then(|v| v.as_array()) {
+            for emu in emulators {
+                let emu_name = emu
+                    .get("name")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .trim()
+                    .to_lowercase()
+                    .replace([' ', '-', '_'], "");
+                if !emu_name.is_empty() && name.replace([' ', '-', '_'], "").contains(&emu_name) {
+                    return (true, psn, pname);
+                }
+            }
+        }
+    }
+
+    (false, String::new(), String::new())
+}
+
+fn make_game_row(id: i64, file_path: &str, platform_short_name: &str, platform_name: &str) -> Value {
+    let title = Path::new(file_path)
+        .file_stem()
+        .and_then(|v| v.to_str())
+        .unwrap_or("Unknown")
+        .trim()
+        .to_string();
+    json!({
+        "id": id,
+        "name": title,
+        "platform": platform_name,
+        "platformShortName": normalize_platform_short_name(platform_short_name),
+        "filePath": file_path,
+        "code": "",
+        "image": "",
+        "progress": 0,
+        "tags": []
+    })
+}
+
+fn make_emulator_row(id: i64, file_path: &str, platform_short_name: &str) -> Value {
+    let title = Path::new(file_path)
+        .file_stem()
+        .and_then(|v| v.to_str())
+        .unwrap_or("Emulator")
+        .trim()
+        .to_string();
+    json!({
+        "id": id,
+        "name": title,
+        "filePath": file_path,
+        "platformShortName": normalize_platform_short_name(platform_short_name),
+        "args": "",
+        "workingDirectory": Path::new(file_path).parent().map(|p| p.to_string_lossy().to_string()).unwrap_or_default()
+    })
+}
+
+fn copy_path_recursive(src: &Path, dest: &Path) -> Result<(), String> {
+    if src.is_dir() {
+        fs::create_dir_all(dest).map_err(|e| e.to_string())?;
+        for entry in fs::read_dir(src).map_err(|e| e.to_string())? {
+            let entry = entry.map_err(|e| e.to_string())?;
+            let source_path = entry.path();
+            let target_path = dest.join(entry.file_name());
+            copy_path_recursive(&source_path, &target_path)?;
+        }
+        return Ok(());
+    }
+    if let Some(parent) = dest.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    fs::copy(src, dest).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+fn move_path_safe(src: &Path, dest: &Path) -> Result<(), String> {
+    if let Some(parent) = dest.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    match fs::rename(src, dest) {
+        Ok(_) => Ok(()),
+        Err(_) => {
+            copy_path_recursive(src, dest)?;
+            if src.is_dir() {
+                fs::remove_dir_all(src).map_err(|e| e.to_string())?;
+            } else if src.is_file() {
+                fs::remove_file(src).map_err(|e| e.to_string())?;
+            }
+            Ok(())
+        }
+    }
+}
+
+fn ensure_unique_destination_path(target: &Path) -> PathBuf {
+    if !target.exists() {
+        return target.to_path_buf();
+    }
+    let parent = target.parent().unwrap_or_else(|| Path::new("."));
+    let stem = target.file_stem().and_then(|v| v.to_str()).unwrap_or("item");
+    let ext = target.extension().and_then(|v| v.to_str()).unwrap_or("");
+    for index in 1..5000 {
+        let name = if ext.is_empty() {
+            format!("{} ({})", stem, index)
+        } else {
+            format!("{} ({}).{}", stem, index, ext)
+        };
+        let candidate = parent.join(name);
+        if !candidate.exists() {
+            return candidate;
+        }
+    }
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let fallback = if ext.is_empty() {
+        format!("{} ({})", stem, stamp)
+    } else {
+        format!("{} ({}).{}", stem, stamp, ext)
+    };
+    parent.join(fallback)
+}
+
+fn classify_import_media(path: &str) -> Value {
+    let trimmed = path.trim();
+    let root = Path::new(trimmed)
+        .components()
+        .next()
+        .map(|c| c.as_os_str().to_string_lossy().to_string())
+        .unwrap_or_default();
+
+    let mut category = "fixed".to_string();
+    let mut label = "Filesystem".to_string();
+    let lower = trimmed.to_lowercase();
+
+    if lower.starts_with("\\\\") {
+        category = "network".to_string();
+        label = "Network Share".to_string();
+    } else if cfg!(target_os = "windows") {
+        let chars: Vec<char> = lower.chars().collect();
+        if chars.len() >= 2 && chars[1] == ':' {
+            let drive = chars[0];
+            if drive != 'c' {
+                category = "removable".to_string();
+                label = "USB / Removable".to_string();
+            }
+        }
+    }
+
+    json!({
+        "path": trimmed,
+        "rootPath": root,
+        "rootExists": Path::new(&root).exists(),
+        "mediaCategory": category,
+        "mediaLabel": label
+    })
+}
+
 fn not_implemented() -> Value {
     json!({
         "success": false,
@@ -834,6 +1060,487 @@ fn emubro_invoke(channel: String, args: Vec<Value>, window: Window) -> Result<Va
                 "exists": meta.is_some(),
                 "isDirectory": is_dir,
                 "isFile": is_file
+            }))
+        }
+        "analyze-import-paths" => {
+            let input_paths = args
+                .get(0)
+                .and_then(|v| v.as_array())
+                .cloned()
+                .unwrap_or_default();
+            let rows = input_paths
+                .iter()
+                .filter_map(|v| v.as_str())
+                .map(classify_import_media)
+                .collect::<Vec<Value>>();
+            let requires_decision = rows.iter().any(|row| {
+                let category = row
+                    .get("mediaCategory")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_lowercase();
+                category == "removable" || category == "network" || category == "cdrom"
+            });
+            Ok(json!({
+                "success": true,
+                "paths": rows,
+                "requiresDecision": requires_decision
+            }))
+        }
+        "stage-import-paths" => {
+            let payload = args.get(0).cloned().unwrap_or_else(|| json!({}));
+            let mode = payload
+                .get("mode")
+                .and_then(|v| v.as_str())
+                .unwrap_or("keep")
+                .trim()
+                .to_lowercase();
+            if mode != "keep" && mode != "copy" && mode != "move" {
+                return Ok(json!({ "success": false, "message": "Invalid staging mode", "paths": [], "skipped": [] }));
+            }
+            let input_paths = payload
+                .get("paths")
+                .and_then(|v| v.as_array())
+                .cloned()
+                .unwrap_or_default()
+                .into_iter()
+                .filter_map(|v| v.as_str().map(|s| s.trim().to_string()))
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<String>>();
+
+            if mode == "keep" {
+                return Ok(json!({
+                    "success": true,
+                    "mode": "keep",
+                    "paths": input_paths,
+                    "skipped": []
+                }));
+            }
+
+            let target_dir = payload
+                .get("targetDir")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            if target_dir.is_empty() {
+                return Ok(json!({ "success": false, "message": "Missing destination folder", "paths": [], "skipped": [] }));
+            }
+            let target_dir_path = PathBuf::from(&target_dir);
+            fs::create_dir_all(&target_dir_path).map_err(|e| e.to_string())?;
+
+            let mut staged = Vec::<Value>::new();
+            let mut skipped = Vec::<Value>::new();
+            for source in input_paths {
+                let src = PathBuf::from(&source);
+                if !src.exists() {
+                    skipped.push(json!({ "path": source, "reason": "not_found" }));
+                    continue;
+                }
+                let base_name = src
+                    .file_name()
+                    .and_then(|v| v.to_str())
+                    .unwrap_or("item")
+                    .to_string();
+                let requested_dest = target_dir_path.join(base_name);
+                let final_dest = ensure_unique_destination_path(&requested_dest);
+                let move_res = if mode == "move" {
+                    move_path_safe(&src, &final_dest)
+                } else {
+                    copy_path_recursive(&src, &final_dest)
+                };
+                match move_res {
+                    Ok(_) => staged.push(Value::String(final_dest.to_string_lossy().to_string())),
+                    Err(err) => skipped.push(json!({
+                        "path": source,
+                        "reason": "stage_failed",
+                        "message": err
+                    })),
+                }
+            }
+
+            Ok(json!({
+                "success": true,
+                "mode": mode,
+                "paths": staged,
+                "skipped": skipped
+            }))
+        }
+        "detect-emulator-exe" => {
+            let input_path = args
+                .get(0)
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            if input_path.is_empty() {
+                return Ok(json!({ "success": false, "message": "Missing path" }));
+            }
+            let platforms = load_platform_configs();
+            let (matched, platform_short_name, platform_name) = detect_emulator_platform(&input_path, &platforms);
+            let already_added = read_state_array("emulators")
+                .iter()
+                .filter_map(|row| row.get("filePath").and_then(|v| v.as_str()))
+                .any(|row| row.eq_ignore_ascii_case(&input_path));
+            Ok(json!({
+                "success": true,
+                "matched": matched,
+                "emulatorAlreadyAdded": already_added,
+                "platformShortName": platform_short_name,
+                "platformName": platform_name
+            }))
+        }
+        "import-exe" => {
+            let payload = args.get(0).cloned().unwrap_or_else(|| json!({}));
+            let source_path = payload
+                .get("path")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            if source_path.is_empty() {
+                return Ok(json!({ "success": false, "message": "Missing .exe path" }));
+            }
+            let source = PathBuf::from(&source_path);
+            if !source.exists() || !source.is_file() {
+                return Ok(json!({ "success": false, "message": "Path is not a file" }));
+            }
+
+            let add_emulator = payload.get("addEmulator").and_then(|v| v.as_bool()).unwrap_or(false);
+            let add_game = payload.get("addGame").and_then(|v| v.as_bool()).unwrap_or(false);
+            let requested_emu_psn = normalize_platform_short_name(
+                payload
+                    .get("emulatorPlatformShortName")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or(""),
+            );
+            let requested_game_psn = normalize_platform_short_name(
+                payload
+                    .get("gamePlatformShortName")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("pc"),
+            );
+
+            let platforms = load_platform_configs();
+            let mut games = read_state_array("games");
+            let mut emulators = read_state_array("emulators");
+            let mut game_seen = games
+                .iter()
+                .filter_map(|row| row.get("filePath").and_then(|v| v.as_str()))
+                .map(path_key)
+                .collect::<std::collections::HashSet<String>>();
+            let mut emu_seen = emulators
+                .iter()
+                .filter_map(|row| row.get("filePath").and_then(|v| v.as_str()))
+                .map(path_key)
+                .collect::<std::collections::HashSet<String>>();
+            let next_game_id = next_numeric_id(&games);
+            let next_emu_id = next_numeric_id(&emulators);
+
+            let mut added_emulator = Value::Null;
+            let mut added_game = Value::Null;
+            let mut skipped = Vec::<Value>::new();
+            let mut errors = Vec::<Value>::new();
+            let mut touched_games = false;
+            let mut touched_emulators = false;
+
+            if add_emulator {
+                let mut psn = requested_emu_psn.clone();
+                let mut pname = find_platform_name(&platforms, &psn);
+                if psn.is_empty() {
+                    let (matched, det_psn, det_pname) = detect_emulator_platform(&source_path, &platforms);
+                    if matched {
+                        psn = det_psn;
+                        pname = det_pname;
+                    }
+                }
+                if psn.is_empty() {
+                    errors.push(json!({ "path": source_path, "message": "Emulator platform is required" }));
+                } else {
+                    let key = path_key(&source_path);
+                    if emu_seen.insert(key) {
+                        let row = make_emulator_row(next_emu_id, &source_path, &psn);
+                        if let Some(obj) = row.as_object() {
+                            let mut with_platform = obj.clone();
+                            with_platform.insert("platform".to_string(), Value::String(pname));
+                            let value = Value::Object(with_platform);
+                            emulators.push(value.clone());
+                            added_emulator = value;
+                        } else {
+                            emulators.push(row.clone());
+                            added_emulator = row;
+                        }
+                        touched_emulators = true;
+                    } else {
+                        skipped.push(json!({ "path": source_path, "reason": "emu_exists" }));
+                    }
+                }
+            }
+
+            if add_game {
+                let psn = if requested_game_psn.is_empty() {
+                    "pc".to_string()
+                } else {
+                    requested_game_psn.clone()
+                };
+                let pname = find_platform_name(&platforms, &psn);
+                let key = path_key(&source_path);
+                if game_seen.insert(key) {
+                    let row = make_game_row(next_game_id, &source_path, &psn, &pname);
+                    games.push(row.clone());
+                    added_game = row;
+                    touched_games = true;
+                } else {
+                    skipped.push(json!({ "path": source_path, "reason": "game_exists" }));
+                }
+            }
+
+            if touched_games {
+                write_state_array("games", games)?;
+            }
+            if touched_emulators {
+                write_state_array("emulators", emulators)?;
+            }
+
+            Ok(json!({
+                "success": true,
+                "addedEmulator": added_emulator,
+                "addedGame": added_game,
+                "skipped": skipped,
+                "errors": errors
+            }))
+        }
+        "import-files-as-platform" => {
+            let input_paths = args
+                .get(0)
+                .and_then(|v| v.as_array())
+                .cloned()
+                .unwrap_or_default();
+            let psn = normalize_platform_short_name(
+                args.get(1).and_then(|v| v.as_str()).unwrap_or(""),
+            );
+            if psn.is_empty() {
+                return Ok(json!({ "success": false, "message": "Missing platformShortName" }));
+            }
+            let platforms = load_platform_configs();
+            let platform_name = find_platform_name(&platforms, &psn);
+            let mut games = read_state_array("games");
+            let mut game_seen = games
+                .iter()
+                .filter_map(|row| row.get("filePath").and_then(|v| v.as_str()))
+                .map(path_key)
+                .collect::<std::collections::HashSet<String>>();
+            let mut next_game_id = next_numeric_id(&games);
+            let mut added_games = Vec::<Value>::new();
+            let mut skipped = Vec::<Value>::new();
+            let mut errors = Vec::<Value>::new();
+
+            for raw in input_paths {
+                let source_path = raw.as_str().unwrap_or("").trim().to_string();
+                if source_path.is_empty() {
+                    continue;
+                }
+                let source = PathBuf::from(&source_path);
+                if !source.exists() || !source.is_file() {
+                    skipped.push(json!({ "path": source_path, "reason": "not_a_file" }));
+                    continue;
+                }
+                let key = path_key(&source_path);
+                if !game_seen.insert(key) {
+                    skipped.push(json!({ "path": source_path, "reason": "game_exists" }));
+                    continue;
+                }
+                let row = make_game_row(next_game_id, &source_path, &psn, &platform_name);
+                next_game_id += 1;
+                games.push(row.clone());
+                added_games.push(row);
+            }
+
+            if !added_games.is_empty() {
+                if let Err(err) = write_state_array("games", games) {
+                    errors.push(json!({ "message": err }));
+                }
+            }
+
+            Ok(json!({
+                "success": errors.is_empty(),
+                "addedGames": added_games,
+                "skipped": skipped,
+                "errors": errors,
+                "warnings": []
+            }))
+        }
+        "import-paths" => {
+            let input_paths = args
+                .get(0)
+                .and_then(|v| v.as_array())
+                .cloned()
+                .unwrap_or_default();
+            let options = args.get(1).cloned().unwrap_or_else(|| json!({}));
+            let recursive = options
+                .get("recursive")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(true);
+            let archive_modes = options
+                .get("archiveImportModes")
+                .and_then(|v| v.as_object())
+                .cloned()
+                .unwrap_or_default();
+
+            let platforms = load_platform_configs();
+            let ext_map = extension_platform_map(&platforms);
+            let emu_exts = emulator_extensions();
+            let archive_exts = archive_extensions();
+
+            let mut games = read_state_array("games");
+            let mut emulators = read_state_array("emulators");
+            let mut game_seen = games
+                .iter()
+                .filter_map(|row| row.get("filePath").and_then(|v| v.as_str()))
+                .map(path_key)
+                .collect::<std::collections::HashSet<String>>();
+            let mut emu_seen = emulators
+                .iter()
+                .filter_map(|row| row.get("filePath").and_then(|v| v.as_str()))
+                .map(path_key)
+                .collect::<std::collections::HashSet<String>>();
+            let mut next_game_id = next_numeric_id(&games);
+            let mut next_emu_id = next_numeric_id(&emulators);
+
+            let mut added_games = Vec::<Value>::new();
+            let mut added_emulators = Vec::<Value>::new();
+            let mut skipped = Vec::<Value>::new();
+            let errors = Vec::<Value>::new();
+            let mut warnings = Vec::<Value>::new();
+
+            for raw in input_paths {
+                let source_path = raw.as_str().unwrap_or("").trim().to_string();
+                if source_path.is_empty() {
+                    continue;
+                }
+                let source = PathBuf::from(&source_path);
+                if !source.exists() {
+                    skipped.push(json!({ "path": source_path, "reason": "not_found" }));
+                    continue;
+                }
+                if source.is_dir() {
+                    let scan_options = json!({ "scope": "both", "recursive": recursive, "maxDepth": if recursive { 20 } else { 0 } });
+                    let scan_res = scan_and_import_games_and_emulators(&source_path, Some(&scan_options))?;
+                    let scan_games = scan_res
+                        .get("games")
+                        .and_then(|v| v.as_array())
+                        .cloned()
+                        .unwrap_or_default();
+                    let scan_emus = scan_res
+                        .get("emulators")
+                        .and_then(|v| v.as_array())
+                        .cloned()
+                        .unwrap_or_default();
+                    if scan_games.is_empty() && scan_emus.is_empty() {
+                        skipped.push(json!({ "path": source_path, "reason": "no_matches" }));
+                    }
+                    added_games.extend(scan_games);
+                    added_emulators.extend(scan_emus);
+                    continue;
+                }
+                if !source.is_file() {
+                    skipped.push(json!({ "path": source_path, "reason": "not_a_file" }));
+                    continue;
+                }
+
+                let ext = normalize_extension(source.extension().and_then(|v| v.to_str()).unwrap_or(""));
+                if ext.is_empty() {
+                    skipped.push(json!({ "path": source_path, "reason": "unmatched" }));
+                    continue;
+                }
+
+                if emu_exts.contains(&ext) {
+                    let (matched, psn, _pname) = detect_emulator_platform(&source_path, &platforms);
+                    let key = path_key(&source_path);
+                    if emu_seen.insert(key) {
+                        let row = make_emulator_row(next_emu_id, &source_path, if matched { &psn } else { "" });
+                        next_emu_id += 1;
+                        emulators.push(row.clone());
+                        added_emulators.push(row);
+                    } else {
+                        skipped.push(json!({ "path": source_path, "reason": "emu_exists_or_unmatched" }));
+                    }
+                    continue;
+                }
+
+                if archive_exts.contains(&ext) {
+                    let mode = archive_modes
+                        .get(&source_path)
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("extract")
+                        .trim()
+                        .to_lowercase();
+                    if mode == "skip" {
+                        skipped.push(json!({ "path": source_path, "reason": "archive_skipped_by_user" }));
+                        continue;
+                    }
+                    if mode == "direct" {
+                        if let Some(platform) = ext_map.get(&ext) {
+                            let psn = normalize_platform_short_name(
+                                platform.get("shortName").and_then(|v| v.as_str()).unwrap_or(""),
+                            );
+                            let pname = platform.get("name").and_then(|v| v.as_str()).unwrap_or("Unknown").to_string();
+                            let key = path_key(&source_path);
+                            if game_seen.insert(key) {
+                                let row = make_game_row(next_game_id, &source_path, &psn, &pname);
+                                next_game_id += 1;
+                                games.push(row.clone());
+                                added_games.push(row);
+                            } else {
+                                skipped.push(json!({ "path": source_path, "reason": "game_exists" }));
+                            }
+                        } else {
+                            skipped.push(json!({ "path": source_path, "reason": "unmatched" }));
+                        }
+                        continue;
+                    }
+                    skipped.push(json!({ "path": source_path, "reason": "unmatched" }));
+                    warnings.push(json!({
+                        "path": source_path,
+                        "reason": "archive_extract_not_implemented",
+                        "message": "Archive extraction is not implemented in Tauri migration yet."
+                    }));
+                    continue;
+                }
+
+                if let Some(platform) = ext_map.get(&ext) {
+                    let psn = normalize_platform_short_name(
+                        platform.get("shortName").and_then(|v| v.as_str()).unwrap_or(""),
+                    );
+                    let pname = platform.get("name").and_then(|v| v.as_str()).unwrap_or("Unknown").to_string();
+                    let key = path_key(&source_path);
+                    if game_seen.insert(key) {
+                        let row = make_game_row(next_game_id, &source_path, &psn, &pname);
+                        next_game_id += 1;
+                        games.push(row.clone());
+                        added_games.push(row);
+                    } else {
+                        skipped.push(json!({ "path": source_path, "reason": "game_exists" }));
+                    }
+                } else {
+                    skipped.push(json!({ "path": source_path, "reason": "unmatched" }));
+                }
+            }
+
+            if !added_games.is_empty() {
+                write_state_array("games", games)?;
+            }
+            if !added_emulators.is_empty() {
+                write_state_array("emulators", emulators)?;
+            }
+
+            Ok(json!({
+                "success": true,
+                "addedGames": added_games,
+                "addedEmulators": added_emulators,
+                "skipped": skipped,
+                "errors": errors,
+                "warnings": warnings
             }))
         }
         "update-game-metadata" => {
@@ -1117,15 +1824,9 @@ fn emubro_invoke(channel: String, args: Vec<Value>, window: Window) -> Result<Va
         | "update:install"
         | "resources:update:check"
         | "resources:update:install"
-        | "import-paths"
-        | "import-exe"
-        | "stage-import-paths"
-        | "analyze-import-paths"
-        | "detect-emulator-exe"
         | "cue:inspect-bin-files"
         | "cue:generate-for-bin"
         | "import:analyze-archives"
-        | "import-files-as-platform"
         | "iso:detect-game-codes"
         | "launcher:scan-games"
         | "launcher:import-games"
