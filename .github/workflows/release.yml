@@ -73,7 +73,7 @@ jobs:
       - name: Install Tauri JS dependencies (non-Windows)
         if: runner.os != 'Windows'
         timeout-minutes: 20
-        run: npm --prefix tauri install --no-audit --prefer-offline --omit=optional --no-fund
+        run: npm --prefix tauri install --no-audit --prefer-offline --include=optional --no-fund
 
       - name: Build legacy renderer bundle
         run: npm run legacy:build
@@ -121,7 +121,7 @@ jobs:
 
       - name: Install Tauri JS dependencies (Linux)
         timeout-minutes: 20
-        run: npm --prefix tauri install --no-audit --prefer-offline --omit=optional --no-fund
+        run: npm --prefix tauri install --no-audit --prefer-offline --include=optional --no-fund
 
       - name: Build legacy renderer bundle
         run: npm run legacy:build
