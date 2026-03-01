@@ -27,9 +27,6 @@ jobs:
           - name: linux
             os: ubuntu-latest
             bundles: "appimage,deb"
-          - name: mac
-            os: macos-latest
-            bundles: "app,dmg"
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -112,7 +109,7 @@ jobs:
 
   publish-release:
     name: Publish GitHub Release Assets
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/') && always()
     needs:
       - bundle
       - flatpak
