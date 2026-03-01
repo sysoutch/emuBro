@@ -117,4 +117,134 @@
     }
 }
 
+.tools-overview .tool-card.tool-card-create {
+    border-style: dashed;
+
+    .tool-icon {
+        color: color-mix(in srgb, var(--accent-color), #fff 24%);
+    }
+}
+
+.tools-overview .tool-card.tool-card-plugin {
+    .tool-icon {
+        color: color-mix(in srgb, var(--accent-color), #b7ffcb 26%);
+    }
+}
+
+.tool-plugin-builder,
+.tool-plugin-view {
+    gap: 12px;
+    max-width: min(920px, 100%);
+}
+
+.tool-plugin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+
+    h3 {
+        margin-bottom: 4px;
+    }
+
+    p {
+        margin-bottom: 0;
+    }
+}
+
+.tool-plugin-mode-toggle {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+
+    .action-btn.active {
+        border-color: color-mix(in srgb, var(--accent-color), #fff 28%);
+        background: color-mix(in srgb, var(--accent-color), transparent 76%);
+    }
+}
+
+.tool-plugin-llm-block {
+    display: none;
+    gap: 8px;
+    border: 1px solid color-mix(in srgb, var(--border-color), transparent 16%);
+    border-radius: 10px;
+    padding: 10px;
+    background: color-mix(in srgb, var(--bg-secondary), transparent 20%);
+
+    &.is-visible {
+        display: grid;
+    }
+
+    label {
+        color: var(--text-secondary);
+        font-size: 0.82rem;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+    }
+}
+
+.tool-plugin-form-grid {
+    display: grid;
+    gap: 8px;
+
+    label {
+        color: var(--text-secondary);
+        font-size: 0.82rem;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+    }
+}
+
+.tool-plugin-inline {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+}
+
+.tool-plugin-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.tool-plugin-status {
+    min-height: 1rem;
+    margin: 0;
+    font-size: 0.86rem;
+    color: var(--text-secondary);
+
+    &[data-level="success"] {
+        color: var(--success-color);
+    }
+
+    &[data-level="warning"] {
+        color: var(--warning-color, #f7b85f);
+    }
+
+    &[data-level="error"] {
+        color: var(--danger-color);
+    }
+}
+
+.tool-plugin-summary {
+    display: grid;
+    gap: 6px;
+    border: 1px solid color-mix(in srgb, var(--border-color), transparent 16%);
+    border-radius: 10px;
+    padding: 10px;
+    background: color-mix(in srgb, var(--bg-secondary), transparent 16%);
+    font-size: 0.9rem;
+}
+
+.tool-plugin-notes {
+    border: 1px solid color-mix(in srgb, var(--border-color), transparent 16%);
+    border-radius: 10px;
+    padding: 10px;
+    min-height: 64px;
+    white-space: pre-wrap;
+    color: var(--text-secondary);
+    background: color-mix(in srgb, var(--bg-primary), transparent 14%);
+}
+
 .hidden { display: none !important; }

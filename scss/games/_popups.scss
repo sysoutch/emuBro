@@ -84,6 +84,143 @@
     color: var(--danger-color);
 }
 
+#game-info-modal .game-detail-cover-browser {
+    grid-column: 1 / -1;
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, rgba(255,255,255,0.22), var(--border-color));
+    background: color-mix(in srgb, var(--bg-secondary), transparent 16%);
+    padding: 10px;
+}
+
+#game-info-modal .game-detail-cover-browser.is-open {
+    display: flex;
+}
+
+#game-info-modal [data-open-cover-browser].is-active {
+    border-color: color-mix(in srgb, var(--accent-color), #fff 28%);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-color), transparent 64%);
+}
+
+#game-info-modal .game-cover-browser-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+#game-info-modal .game-cover-browser-header h4 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 0.98rem;
+}
+
+#game-info-modal .game-cover-browser-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+#game-info-modal .game-cover-browser-search input {
+    flex: 1;
+    min-width: 180px;
+}
+
+#game-info-modal .game-cover-browser-status {
+    margin: 0;
+    min-height: 1rem;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+}
+
+#game-info-modal .game-cover-browser-status[data-level="success"] {
+    color: var(--success-color);
+}
+
+#game-info-modal .game-cover-browser-status[data-level="warning"] {
+    color: var(--warning-color, #f7b85f);
+}
+
+#game-info-modal .game-cover-browser-status[data-level="error"] {
+    color: var(--danger-color);
+}
+
+#game-info-modal .game-cover-browser-results {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+    gap: 8px;
+    max-height: 228px;
+    overflow: auto;
+    padding-right: 2px;
+}
+
+#game-info-modal .game-cover-browser-empty {
+    grid-column: 1 / -1;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    padding: 6px 2px;
+}
+
+#game-info-modal .game-cover-browser-card {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    border: 1px solid color-mix(in srgb, rgba(255,255,255,0.2), var(--border-color));
+    background: color-mix(in srgb, var(--bg-primary), transparent 20%);
+    border-radius: 10px;
+    padding: 6px;
+    cursor: pointer;
+    color: var(--text-primary);
+    text-align: left;
+    transition: border-color 0.14s ease, transform 0.14s ease;
+}
+
+#game-info-modal .game-cover-browser-card:hover {
+    border-color: color-mix(in srgb, var(--accent-color), #fff 22%);
+    transform: translateY(-1px);
+}
+
+#game-info-modal .game-cover-browser-card:disabled {
+    opacity: 0.66;
+    cursor: progress;
+}
+
+#game-info-modal .game-cover-browser-thumb-wrap {
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    border-radius: 7px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--bg-primary), black 16%);
+}
+
+#game-info-modal .game-cover-browser-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+#game-info-modal .game-cover-browser-title {
+    font-size: 0.74rem;
+    line-height: 1.2;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#game-info-modal .game-cover-browser-source {
+    font-size: 0.69rem;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 #game-info-modal .detail-game-image {
     max-width: 112px;
 }
@@ -136,6 +273,38 @@
 #game-info-modal .game-detail-runas-hint {
     color: var(--text-tertiary);
     font-size: 0.74rem;
+}
+
+#game-info-modal .game-detail-description-control {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#game-info-modal .game-detail-description-control label {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+#game-info-modal .game-detail-description-control textarea {
+    width: 100%;
+    min-height: 104px;
+    resize: vertical;
+}
+
+#game-info-modal .game-detail-description-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+#game-info-modal .game-detail-description-actions .action-btn {
+    width: auto;
+    min-width: 0;
+    padding-inline: 14px;
 }
 
 #game-info-modal .game-detail-platform-inline {

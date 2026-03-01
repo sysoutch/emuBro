@@ -658,6 +658,26 @@ export function createGameDetailsPopupActions(deps = {}) {
         return '';
     }
 
+    function stripBracketedTitleParts(value) {
+        let text = String(value || '');
+        if (!text) return '';
+
+        // Remove bracketed fragments like "(USA)", "[v1.1]" or "{Prototype}".
+        let previous = '';
+        while (previous !== text) {
+            previous = text;
+            text = text.replace(/\s*[\(\[\{][^()\[\]{}]*[\)\]\}]\s*/g, ' ');
+        }
+        return text.replace(/\s+/g, ' ').trim();
+    }
+
+    function buildCoverSearchQuery(game) {
+        const platform = normalizeCoverPlatform(game?.platformShortName || game?.platform);
+        const platformLabel = platform === 'psx' ? 'PS1' : (platform === 'ps2' ? 'PS2' : '');
+        const gameName = stripBracketedTitleParts(game?.name || '');
+        return [gameName, platformLabel, 'cover art'].filter(Boolean).join(' ').trim();
+    }
+
     async function bindCoverDownloadAction(button, statusEl, game) {
         if (!button || !game) return;
         const setStatus = (message, level = 'info') => {
@@ -717,6 +737,22 @@ export function createGameDetailsPopupActions(deps = {}) {
             } finally {
                 button.disabled = false;
                 button.textContent = previousLabel;
+            }
+        });
+    }
+
+    function bindCoverWebSearchAction(button, game) {
+        if (!button || !game) return;
+        button.addEventListener('click', async () => {
+            const query = buildCoverSearchQuery(game);
+            if (!query) return;
+            const url = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(query)}`;
+            try {
+                await emubro.invoke('open-external-url', url);
+            } catch (_error) {
+                if (window?.open) {
+                    window.open(url, '_blank', 'noopener,noreferrer');
+                }
             }
         });
     }
@@ -896,19 +932,6 @@ export function createGameDetailsPopupActions(deps = {}) {
                 button.disabled = false;
             }
         });
-    }
-
-    function stripBracketedTitleParts(value) {
-        let text = String(value || '');
-        if (!text) return '';
-
-        // Remove bracketed suffixes like "(USA)", "[v1.1]" or "{Prototype}".
-        let previous = '';
-        while (previous !== text) {
-            previous = text;
-            text = text.replace(/\s*[\(\[\{][^()\[\]{}]*[\)\]\}]\s*/g, ' ');
-        }
-        return text.replace(/\s+/g, ' ').trim();
     }
 
     function buildYouTubeSearchQuery(game) {
@@ -1121,6 +1144,7 @@ export function createGameDetailsPopupActions(deps = {}) {
             container.querySelector('[data-cover-download-status]'),
             game
         );
+        bindCoverWebSearchAction(container.querySelector('[data-search-cover-web]'), game);
         bindShowInExplorerAction(container.querySelector('[data-show-in-explorer]'), game);
         bindRemoveGameAction(container.querySelector('[data-remove-game]'), game);
         bindEmulatorOverrideAction(container.querySelector('[data-game-emulator-override]'), game);
@@ -1228,6 +1252,7 @@ export function createGameDetailsPopupActions(deps = {}) {
         <div class="game-detail-row game-detail-actions">
             <button class="action-btn" data-create-shortcut>Create Desktop Shortcut</button>
             <button class="action-btn" data-download-cover>Download Cover (Serial)</button>
+            <button class="action-btn" data-search-cover-web>Search Cover Web</button>
             <button class="action-btn" data-show-in-explorer>Show in Explorer</button>
             <button class="action-btn youtube-preview-btn" data-youtube-preview>
                 <span class="youtube-preview-btn-icon" aria-hidden="true"></span>

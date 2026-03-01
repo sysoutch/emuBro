@@ -4,10 +4,13 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "cleanup:dev-ports": "node ../scripts/cleanup-dev-ports.js",
     "dev": "vite",
+    "dev:clean": "npm run cleanup:dev-ports && npm run dev",
     "build": "vite build",
     "preview": "vite preview",
     "tauri:dev": "tauri dev",
+    "tauri:dev:clean": "npm run cleanup:dev-ports && npm run tauri:dev",
     "tauri:build": "tauri build"
   },
   "dependencies": {

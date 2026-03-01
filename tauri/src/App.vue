@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { storeToRefs } from "pinia";
 import { useAppStore } from "./stores/app";
 
@@ -8,6 +8,8 @@ const { title, subtitle, ready, theme } = storeToRefs(appStore);
 const legacyFrameReady = ref(false);
 const legacyFrameError = ref(false);
 const legacyFrameUrl = ref("");
+const legacyFrameRef = ref(null);
+let cleanupLegacyFrameDragProxy = () => {};
 
 const hasLegacyFrame = computed(
   () => !!legacyFrameUrl.value && !legacyFrameError.value
@@ -24,6 +26,11 @@ function onLegacyFrameError() {
   appStore.markReady();
 }
 
+function bindLegacyFrameDragProxy() {
+  cleanupLegacyFrameDragProxy();
+  cleanupLegacyFrameDragProxy = () => {};
+}
+
 onMounted(() => {
   document.documentElement.setAttribute("data-theme", theme.value);
 
@@ -38,11 +45,17 @@ onMounted(() => {
 
   appStore.markReady();
 });
+
+onBeforeUnmount(() => {
+  cleanupLegacyFrameDragProxy();
+  cleanupLegacyFrameDragProxy = () => {};
+});
 </script>
 
 <template>
   <main v-if="hasLegacyFrame" class="legacy-shell">
     <iframe
+      ref="legacyFrameRef"
       class="legacy-frame"
       :class="{ 'is-ready': legacyFrameReady }"
       :src="legacyFrameUrl"

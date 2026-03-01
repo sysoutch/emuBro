@@ -20,6 +20,11 @@ rfd = "0.15"
 walkdir = "2.5"
 rusqlite = { version = "0.32", features = ["bundled"] }
 zip = { version = "2.2", default-features = true }
+base64 = "0.22"
+ureq = { version = "2.12", features = ["json"] }
+urlencoding = "2.1"
+tiny_http = "0.12"
+url = "2.5"
 
 [features]
 default = ["custom-protocol"]

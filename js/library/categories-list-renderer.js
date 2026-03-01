@@ -94,8 +94,13 @@ function t(key, fallback, data = {}) {
         ? i18n
         : (window?.i18n && typeof window.i18n.t === 'function' ? window.i18n : null);
     if (i18nRef && typeof i18nRef.t === 'function') {
-        const translated = i18nRef.t(key, data);
-        if (translated && translated !== key) return applyTemplate(String(translated), data);
+        const translated = i18nRef.t(key);
+        if (typeof translated === 'string' && translated && translated !== key) {
+            return applyTemplate(translated, data);
+        }
+        if (typeof translated === 'number' && Number.isFinite(translated)) {
+            return applyTemplate(String(translated), data);
+        }
     }
     return applyTemplate(String(fallback || key), data);
 }
@@ -162,6 +167,10 @@ async function loadTagCatalogRows() {
     } catch (_error) {
         return [];
     }
+}
+
+function hasGameDescription(game) {
+    return String(game?.description || '').trim().length > 0;
 }
 
 function closeCategorySettingsMenu() {
@@ -518,7 +527,8 @@ async function renderCategoriesList() {
             <button class="action-btn small" type="button" data-category-action="toggle-selection-mode">${escapeHtml(getSelectionModeButtonText())}</button>
         </li>
         ${isLlmHelpersEnabled()
-            ? `<li class="categories-llm-row"><button class="action-btn small" type="button" data-category-action="llm-global-tags">${escapeHtml(t('sidebar.addGlobalTagsWithLlm', 'Add Global Tags with LLM'))}</button></li>`
+            ? `<li class="categories-llm-row"><button class="action-btn small" type="button" data-category-action="llm-global-tags">${escapeHtml(t('sidebar.addGlobalTagsWithLlm', 'Add Global Tags with LLM'))}</button></li>
+               <li class="categories-llm-row"><button class="action-btn small" type="button" data-category-action="llm-global-descriptions">${escapeHtml(t('sidebar.addGlobalDescriptionsWithLlm', 'Add Global Descriptions with LLM'))}</button></li>`
             : ''}
         ${categoryItems}
         ${showMoreMarkup}
@@ -907,6 +917,328 @@ async function renderCategoriesList() {
             } finally {
                 globalLlmBtn.disabled = false;
                 globalLlmBtn.textContent = previousLabel;
+            }
+        });
+    }
+
+    const globalDescriptionBtn = listRoot.querySelector('[data-category-action="llm-global-descriptions"]');
+    if (globalDescriptionBtn) {
+        globalDescriptionBtn.addEventListener('click', async () => {
+            if (!isLlmHelpersEnabled()) return;
+
+            const settings = loadSuggestionSettings();
+            const provider = normalizeSuggestionProvider(settings.provider);
+            const model = String(settings.models?.[provider] || '').trim();
+            const baseUrl = String(settings.baseUrls?.[provider] || '').trim();
+            const apiKey = String(settings.apiKeys?.[provider] || '').trim();
+            const routing = getSuggestionLlmRoutingSettings(settings);
+
+            if (routing.llmMode === 'client' && !routing.relayHostUrl) {
+                await showGlassMessageDialog({
+                    title: t('categories.globalLlmDescriptionTitle', 'Global LLM Descriptions'),
+                    message: t('support.status.missingRelayHost', 'Set a relay host URL first in Settings -> AI / LLM.'),
+                    level: 'warning'
+                });
+                return;
+            }
+            if (routing.llmMode !== 'client' && (!model || !baseUrl)) {
+                await showGlassMessageDialog({
+                    title: t('categories.globalLlmDescriptionTitle', 'Global LLM Descriptions'),
+                    message: t('categories.configureLlmProviderFirst', 'Configure your LLM provider/model first in Suggested view.'),
+                    level: 'warning'
+                });
+                return;
+            }
+            if (routing.llmMode !== 'client' && (provider === 'openai' || provider === 'gemini') && !apiKey) {
+                await showGlassMessageDialog({
+                    title: t('categories.globalLlmDescriptionTitle', 'Global LLM Descriptions'),
+                    message: t('categories.apiKeyMissingSelectedProvider', 'API key is missing for the selected provider.'),
+                    level: 'warning'
+                });
+                return;
+            }
+
+            const sectionGames = getSectionFilteredGames();
+            if (!sectionGames.length) {
+                await showGlassMessageDialog({
+                    title: t('categories.globalLlmDescriptionTitle', 'Global LLM Descriptions'),
+                    message: t('categories.noMatchingGamesToDescribe', 'No matching games in the current filter/category selection.'),
+                    level: 'warning'
+                });
+                return;
+            }
+
+            const gamesWithoutDescription = sectionGames.filter((game) => !hasGameDescription(game));
+            if (!gamesWithoutDescription.length) {
+                await showGlassMessageDialog({
+                    title: t('categories.globalLlmDescriptionTitle', 'Global LLM Descriptions'),
+                    message: t('categories.noMissingDescriptions', 'All matching games already have descriptions.'),
+                    level: 'info'
+                });
+                return;
+            }
+
+            const plan = await openGlobalLlmTaggingSetupModal({
+                totalAll: sectionGames.length,
+                totalUntagged: gamesWithoutDescription.length,
+                countCalculator: ({ includeAlreadyTagged, skipTaggedCount }) => {
+                    if (!includeAlreadyTagged) return gamesWithoutDescription.length;
+                    if (typeof skipTaggedCount === 'number' && skipTaggedCount >= 0) {
+                        return sectionGames.reduce((acc, game) => {
+                            const length = String(game?.description || '').trim().length;
+                            if (length <= skipTaggedCount) return acc + 1;
+                            return acc;
+                        }, 0);
+                    }
+                    return sectionGames.length;
+                },
+                ui: {
+                    title: t('categories.globalLlmDescriptionTitle', 'Global LLM Descriptions'),
+                    subtitle: t('categories.globalLlmDescriptionSubtitle', 'Generate descriptions for many games at once with your configured LLM provider.'),
+                    includeExistingLabel: t('categories.includeGamesWithDescriptions', 'Include games that already have descriptions'),
+                    skipExistingLabel: t('categories.maxDescriptionLength', 'Max existing description length (process if <= X chars)'),
+                    nextScopeLabel: t('categories.describeNextXGames', 'Describe next X games'),
+                    allScopeLabel: t('categories.describeAllMatchingGames', 'Describe all matching games'),
+                    startLabel: t('categories.startDescriptions', 'Start Describing'),
+                    summaryLargeBatchWarning: t(
+                        'categories.largeDescriptionBatchWarning',
+                        'Large batch for the current category selection. Consider smaller chunks to avoid long wait times.'
+                    ),
+                    noMatchingMessage: t('categories.noMatchingGamesToDescribe', 'No matching games in the current filter/category selection.'),
+                    noSelectionMessage: t('categories.noGamesAfterRunSettings', 'No games selected after applying your run settings.')
+                }
+            });
+            if (!plan) return;
+
+            let candidateGames = plan.includeAlreadyTagged ? [...sectionGames] : [...gamesWithoutDescription];
+            if (plan.includeAlreadyTagged && plan.skipTaggedCount >= 0) {
+                candidateGames = candidateGames.filter((game) => {
+                    const length = String(game?.description || '').trim().length;
+                    return length <= plan.skipTaggedCount;
+                });
+            }
+            if (!candidateGames.length) {
+                await showGlassMessageDialog({
+                    title: t('categories.globalLlmDescriptionTitle', 'Global LLM Descriptions'),
+                    message: plan.includeAlreadyTagged
+                        ? t('categories.noGamesAvailableForDescriptions', 'No games available for description generation.')
+                        : t('categories.noGamesMissingDescriptionsForSelection', 'No games without descriptions found for this selection.'),
+                    level: 'warning'
+                });
+                return;
+            }
+
+            if (plan.processMode !== 'all') {
+                candidateGames = candidateGames.slice(0, Math.max(1, Number(plan.nextCount) || 1));
+            }
+            if (!candidateGames.length) {
+                await showGlassMessageDialog({
+                    title: t('categories.globalLlmDescriptionTitle', 'Global LLM Descriptions'),
+                    message: t('categories.noGamesAfterRunSettings', 'No games selected after applying your run settings.'),
+                    level: 'warning'
+                });
+                return;
+            }
+
+            const chunkValue = Math.max(1, Number(plan.chunkValue) || 1);
+            const chunkSize = plan.chunkMode === 'count'
+                ? Math.max(1, Math.ceil(candidateGames.length / chunkValue))
+                : chunkValue;
+            const queueChunks = [];
+            for (let idx = 0; idx < candidateGames.length; idx += chunkSize) {
+                queueChunks.push(candidateGames.slice(idx, idx + chunkSize));
+            }
+            if (!queueChunks.length) {
+                await showGlassMessageDialog({
+                    title: t('categories.globalLlmDescriptionTitle', 'Global LLM Descriptions'),
+                    message: t('categories.unableBuildChunks', 'Unable to build processing chunks from your input.'),
+                    level: 'error'
+                });
+                return;
+            }
+
+            const previousLabel = globalDescriptionBtn.textContent;
+            globalDescriptionBtn.disabled = true;
+            globalDescriptionBtn.textContent = t('categories.describingProgress', 'Describing {{done}} / {{total}}...', {
+                done: 0,
+                total: candidateGames.length
+            });
+
+            const progressDialog = createGlobalLlmProgressDialog({
+                totalGames: candidateGames.length,
+                totalChunks: queueChunks.length,
+                confirmEachChunk: !!plan.confirmEachChunk,
+                chunkValue: plan.chunkValue,
+                chunkMode: plan.chunkMode,
+                title: t('categories.globalLlmDescriptionProgressTitle', 'Global LLM Description Progress')
+            });
+
+            let processed = 0;
+            let updated = 0;
+            let skipped = 0;
+            let failed = 0;
+            let stoppedEarly = false;
+
+            progressDialog.setStatus(t('categories.startingChunkStatus', 'Starting chunk 1 / {{totalChunks}}...', { totalChunks: queueChunks.length }));
+            progressDialog.log(t('categories.runPlanLog', 'Run plan: {{games}} game(s), {{chunks}} chunk(s), chunk size {{chunkSize}}.', {
+                games: candidateGames.length,
+                chunks: queueChunks.length,
+                chunkSize
+            }));
+
+            try {
+                let chunkIndex = 0;
+                while (chunkIndex < candidateGames.length) {
+                    if (progressDialog.isCanceled()) {
+                        stoppedEarly = true;
+                        progressDialog.log(t('categories.runCanceledByUser', 'Run canceled by user.'), 'warning');
+                        break;
+                    }
+                    const currentChunkSize = progressDialog.getLiveChunkSize(candidateGames.length - chunkIndex);
+                    const chunk = candidateGames.slice(chunkIndex, chunkIndex + currentChunkSize);
+                    progressDialog.setStatus(`Processing chunk... (${chunk.length} game(s), ${candidateGames.length - chunkIndex} remaining)`);
+                    progressDialog.log(t('categories.chunkStarted', 'Chunk: started ({{count}} game(s)).', { count: chunk.length }));
+
+                    let batchResult;
+                    try {
+                        batchResult = await emubro.invoke('suggestions:generate-descriptions-for-games-batch', {
+                            provider,
+                            model,
+                            baseUrl,
+                            apiKey,
+                            ...routing,
+                            maxChars: 420,
+                            games: chunk.map((game) => ({
+                                id: Number(game?.id || 0),
+                                name: String(game?.name || ''),
+                                filePath: String(game?.filePath || ''),
+                                platform: String(game?.platform || game?.platformShortName || ''),
+                                platformShortName: String(game?.platformShortName || ''),
+                                genre: String(game?.genre || ''),
+                                description: String(game?.description || ''),
+                                tags: getGameTagIds(game)
+                            }))
+                        });
+                    } catch (error) {
+                        batchResult = { success: false, results: [], message: String(error?.message || error || '') };
+                    }
+
+                    if (!batchResult?.success) {
+                        progressDialog.log(t('categories.chunkBatchRequestFailed', 'Chunk: batch request failed ({{message}}).', {
+                            message: String(batchResult?.message || 'unknown error')
+                        }), 'error');
+                        for (let i = 0; i < chunk.length; i += 1) {
+                            processed += 1;
+                            failed += 1;
+                            progressDialog.updateCounters({ processed, updated, skipped, failed });
+                            globalDescriptionBtn.textContent = t('categories.describingProgress', 'Describing {{done}} / {{total}}...', {
+                                done: Math.min(processed, candidateGames.length),
+                                total: candidateGames.length
+                            });
+                        }
+                        if (progressDialog.isCanceled()) {
+                            stoppedEarly = true;
+                            progressDialog.log(t('categories.runCanceledByUser', 'Run canceled by user.'), 'warning');
+                            break;
+                        }
+                    } else {
+                        const rows = Array.isArray(batchResult?.results) ? batchResult.results : [];
+                        const rowById = new Map();
+                        rows.forEach((row) => {
+                            const id = Number(row?.gameId || 0);
+                            if (id > 0 && !rowById.has(id)) rowById.set(id, row);
+                        });
+                        progressDialog.log(t('categories.chunkReceivedResults', 'Chunk: received {{count}} result row(s).', { count: rowById.size }));
+
+                        for (const game of chunk) {
+                            if (progressDialog.isCanceled()) {
+                                stoppedEarly = true;
+                                progressDialog.log(t('categories.runCanceledByUser', 'Run canceled by user.'), 'warning');
+                                break;
+                            }
+                            const gameId = Number(game?.id || 0);
+                            const gameName = String(game?.name || `Game ${processed + 1}`);
+                            globalDescriptionBtn.textContent = t('categories.describingProgress', 'Describing {{done}} / {{total}}...', {
+                                done: processed + 1,
+                                total: candidateGames.length
+                            });
+                            try {
+                                const generated = rowById.get(gameId);
+                                if (!generated?.success) {
+                                    skipped += 1;
+                                    progressDialog.log(`${gameName}: no usable description returned.`, 'warning');
+                                    continue;
+                                }
+                                const description = String(generated?.description || '').trim();
+                                if (!description) {
+                                    skipped += 1;
+                                    progressDialog.log(`${gameName}: empty description returned.`, 'warning');
+                                    continue;
+                                }
+                                const saveResult = await emubro.invoke('update-game-metadata', {
+                                    gameId,
+                                    description
+                                });
+                                if (saveResult?.success) {
+                                    updated += 1;
+                                } else {
+                                    failed += 1;
+                                    progressDialog.log(`${gameName}: failed to save description (${String(saveResult?.message || 'unknown error')}).`, 'error');
+                                }
+                            } catch (error) {
+                                failed += 1;
+                                progressDialog.log(`${gameName}: error (${String(error?.message || error || 'unknown')}).`, 'error');
+                            } finally {
+                                processed += 1;
+                                progressDialog.updateCounters({ processed, updated, skipped, failed });
+                            }
+                        }
+                    }
+                    if (stoppedEarly) break;
+
+                    chunkIndex += chunk.length;
+                    progressDialog.log(t('categories.chunkCompleted', 'Chunk completed.'));
+                    if (chunkIndex < candidateGames.length) {
+                        const nextChunkSize = progressDialog.getLiveChunkSize(candidateGames.length - chunkIndex);
+                        const decision = await progressDialog.waitForNextChunk(
+                            Math.floor(chunkIndex / chunkSize) + 2,
+                            nextChunkSize
+                        );
+                        if (decision !== 'continue') {
+                            stoppedEarly = true;
+                            progressDialog.log(t('categories.runStoppedBeforeNextChunk', 'Run stopped by user before next chunk.'), 'warning');
+                            break;
+                        }
+                    }
+                }
+
+                const refreshedGames = await emubro.invoke('get-games');
+                setGames(refreshedGames);
+                applyFilters(false);
+                await renderCategoriesList();
+                if (isLibraryTopSection() && !isEmulatorsSection()) {
+                    await renderActiveLibraryView();
+                }
+
+                const summary = t(
+                    'categories.globalLlmDescriptionSummary',
+                    'Global descriptions {{status}}. Updated: {{updated}}, skipped: {{skipped}}, failed: {{failed}}, processed: {{processed}}.',
+                    {
+                        status: stoppedEarly
+                            ? t('categories.statusStoppedEarly', 'stopped early')
+                            : t('categories.statusFinished', 'finished'),
+                        updated,
+                        skipped,
+                        failed,
+                        processed
+                    }
+                );
+                progressDialog.complete(summary, failed > 0 ? 'warning' : 'info');
+                addFooterNotification(summary, failed > 0 ? 'warning' : 'success');
+                openFooterPanel('notifications');
+            } finally {
+                globalDescriptionBtn.disabled = false;
+                globalDescriptionBtn.textContent = previousLabel;
             }
         });
     }

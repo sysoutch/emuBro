@@ -9,7 +9,7 @@ function escapeHtml(value) {
 
 const SOCIAL_LINKS = [
     { id: 'discord', label: 'Discord', url: 'https://discord.com/invite/EtKvZ2F' },
-    { id: 'reddit', label: 'Reddit', url: 'https://www.reddit.com/r/emubro/' },
+    { id: 'reddit', label: 'Reddit', url: 'https://www.reddit.com/r/emuBro/' },
     { id: 'youtube', label: 'YouTube', url: 'https://www.youtube.com/channel/UC9zQuEiPjnRv2LXVqR57K1Q' },
     { id: 'bluesky', label: 'Bluesky', url: 'https://bsky.app/profile/emubro.bsky.social' },
     { id: 'x', label: 'X', url: 'https://x.com/emubro' },

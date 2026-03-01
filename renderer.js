@@ -15,6 +15,7 @@ import {
     renderMarketplace, 
     toggleTheme, 
     invertColors, 
+    hueRotateColors,
     saveTheme, 
     hideThemeForm, 
     setupColorPickerListeners, 
@@ -79,6 +80,7 @@ import { createCategoriesListRenderer } from './js/library/categories-list-rende
 import { createSuggestionsPanelController } from './js/suggestions/suggestions-panel-controller';
 import { createBrowseFooterController } from './js/library/browse-footer-controller';
 import { createLibraryViewController } from './js/library/library-view-controller';
+import { setupGameSessionOverlay } from './js/game-session-overlay';
 
 // ===== Global State & Elements =====
 const gamesContainer = document.getElementById('games-container');
@@ -127,6 +129,7 @@ let categoriesListRenderer = null;
 let suggestionsPanelController = null;
 let browseFooterController = null;
 let libraryViewController = null;
+let gameSessionOverlayController = null;
 
 // Forward declarations for functions that might be used before their full definition due to circular dependencies
 // This is a common pattern in large JS files that get refactored into modules
@@ -1035,6 +1038,14 @@ async function initializeApp() {
 
         // Set up listeners before revealing the main window.
         setupEventListeners();
+        if (!gameSessionOverlayController) {
+            gameSessionOverlayController = setupGameSessionOverlay({
+                emubro,
+                i18n: window.i18n || null,
+                onNotify: (message, level) => addFooterNotification(message, level),
+                setAppMode
+            });
+        }
         void setActiveLibrarySection(activeLibrarySection).catch((error) => {
             log.error('Failed to apply initial library section:', error);
         });
@@ -1091,6 +1102,7 @@ function setupEventListeners() {
 
         toggleTheme,
         invertColors,
+        hueRotateColors,
         themeManagerBtn,
         openThemeManager,
         openLanguageManager,

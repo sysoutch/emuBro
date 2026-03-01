@@ -36,6 +36,7 @@ import { syncSplashThemePreference as syncSplashThemePreferenceView } from './th
 import {
     toggleThemeColors as toggleThemeColorsView,
     toggleInvertFilter as toggleInvertFilterView,
+    toggleHueRotateColors as toggleHueRotateColorsView,
     getBackgroundImageFromGrid
 } from './theme-manager/theme-toggle-utils';
 import {
@@ -830,4 +831,8 @@ export function toggleTheme() {
 
 export function invertColors() {
     toggleInvertFilterView();
+}
+
+export function hueRotateColors() {
+    toggleHueRotateColorsView();
 }

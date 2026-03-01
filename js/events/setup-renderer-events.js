@@ -34,6 +34,7 @@ export function setupRendererEventListeners(options = {}) {
 
     const toggleTheme = typeof options.toggleTheme === 'function' ? options.toggleTheme : () => {};
     const invertColors = typeof options.invertColors === 'function' ? options.invertColors : () => {};
+    const hueRotateColors = typeof options.hueRotateColors === 'function' ? options.hueRotateColors : () => {};
     const themeManagerBtn = options.themeManagerBtn || null;
     const openThemeManager = typeof options.openThemeManager === 'function' ? options.openThemeManager : () => {};
     const openLanguageManager = typeof options.openLanguageManager === 'function' ? options.openLanguageManager : () => {};
@@ -593,6 +594,9 @@ export function setupRendererEventListeners(options = {}) {
     const invertBtn = document.getElementById('invert-colors-btn');
     if (invertBtn) invertBtn.addEventListener('click', invertColors);
     
+    const hueRotateBtn = document.getElementById('hue-rotate-btn');
+    if (hueRotateBtn) hueRotateBtn.addEventListener('click', hueRotateColors);
+
     if (themeManagerBtn) themeManagerBtn.addEventListener('click', () => {
         openThemeManager();
     });

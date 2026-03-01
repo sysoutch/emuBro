@@ -12,6 +12,7 @@ import { GamepadTool } from './tools/gamepad-tool.js';
 import { MonitorTool } from './tools/monitor-tool.js';
 import { MemoryCardTool } from './tools/memory-card-tool.js';
 import { showTextInputDialog } from './ui/text-input-dialog.js';
+import { createToolPluginManager } from './tools/tool-plugin-manager.js';
 
 // Create instances of tools
 const gamepadTool = new GamepadTool();
@@ -51,6 +52,12 @@ function escapeHtml(value) {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
 }
+
+const toolPluginManager = createToolPluginManager({
+    t,
+    escapeHtml,
+    showToolView: (toolId) => showToolView(toolId)
+});
 
 function normalizePathForCompare(inputPath) {
     const normalized = String(inputPath || '').trim();
@@ -391,6 +398,9 @@ function renderCustomToolsSection() {
 export function showToolView(tool) {
     const gamesContainer = document.getElementById("games-container");
     const gamesHeader = document.getElementById("games-header");
+    const editingPluginId = toolPluginManager.parseCreateToolRouteId(tool);
+    const activePluginId = toolPluginManager.parsePluginRouteId(tool);
+    const activePlugin = activePluginId ? toolPluginManager.findToolPluginById(activePluginId) : null;
     
     // 1. Safety: Stop gamepad testing loop whenever switching AWAY from the gamepad tool
     if (gamepadTool && typeof gamepadTool.stopTesting === 'function') {
@@ -417,6 +427,10 @@ export function showToolView(tool) {
         else if (tool === 'gamepad') title = t('tools.gamepadTester', 'Gamepad Tester');
         else if (tool === 'monitor') title = t('tools.monitorManager', 'Monitor Manager');
         else if (tool === 'bios') title = t('tools.biosManager', 'BIOS Manager');
+        else if (editingPluginId !== null) title = editingPluginId
+            ? t('tools.editToolTitle', 'Edit Tool')
+            : t('tools.createNewTool', 'Create New Tool');
+        else if (activePlugin) title = activePlugin.name;
         else if (tool) title = tool.charAt(0).toUpperCase() + tool.slice(1).replace("-", " ");
         gamesHeader.textContent = title;
     }
@@ -465,6 +479,9 @@ export function showToolView(tool) {
                     log.error("Monitor tool failed to load or has no render() method");
                 }
                 break;
+            case "create-tool":
+                toolPluginManager.renderToolPluginBuilder(null);
+                break;
             case "bios":
                 renderBiosManagerTool();
                 break;
@@ -479,6 +496,16 @@ export function showToolView(tool) {
                 renderCheatCodesTool();
                 break;
             default:
+                if (editingPluginId !== null) {
+                    toolPluginManager.renderToolPluginBuilder(
+                        editingPluginId ? toolPluginManager.findToolPluginById(editingPluginId) : null
+                    );
+                    return;
+                }
+                if (activePlugin) {
+                    toolPluginManager.renderToolPluginView(activePlugin);
+                    return;
+                }
                 gamesContainer.innerHTML = `<p>${escapeHtml(t('tools.notImplementedTool', 'Tool "{{tool}}" is not yet implemented.', { tool }))}</p>`;
         }
     }
@@ -488,7 +515,7 @@ function renderToolsOverview() {
     const gamesContainer = document.getElementById("games-container");
     const overview = document.createElement("div");
     overview.className = "tools-overview";
-    
+
     const tools = [
         { id: "memory-card", icon: "fas fa-memory", name: t('tools.memoryCardEditor', 'Memory Card Editor'), desc: t('tools.memoryCardEditorDesc', 'Manage PS1/PS2 save files.') },
         { id: "cover-downloader", icon: "fas fa-image", name: t('tools.coverDownloader', 'Cover Downloader'), desc: t('tools.coverDownloaderOverviewDesc', 'Fetch PS1/PS2 covers by game serial.') },
@@ -502,15 +529,31 @@ function renderToolsOverview() {
         { id: "monitor", icon: "fas fa-desktop", name: t('tools.monitorManager', 'Monitor Manager'), desc: t('tools.monitorManagerDesc', 'Manage displays and orientation.') },
         { id: "bios", icon: "fas fa-microchip", name: t('tools.biosManager', 'BIOS Manager'), desc: t('tools.biosManagerDesc', 'Manage BIOS files per platform.') }
     ];
+    const createCard = {
+        id: 'create-tool',
+        icon: 'fas fa-plus-circle',
+        name: t('tools.createNewTool', 'Create New Tool'),
+        desc: t('tools.createNewToolDesc', 'Build a plugin tool manually or generate a draft with LLM.'),
+        actionLabel: t('tools.createTool', 'Create Tool'),
+        extraClass: 'tool-card-create'
+    };
+    const pluginCards = toolPluginManager.getOverviewPluginCards();
+
+    const withCreateCard = [
+        ...tools.slice(0, Math.max(0, tools.length - 1)),
+        createCard,
+        ...tools.slice(Math.max(0, tools.length - 1))
+    ];
+    const cards = [...withCreateCard, ...pluginCards];
 
     overview.innerHTML = `
         <div class="tools-grid">
-            ${tools.map((toolMeta) => `
-                <div class="tool-card" data-tool-id="${toolMeta.id}">
+            ${cards.map((toolMeta) => `
+                <div class="tool-card ${escapeHtml(toolMeta.extraClass || '')}" data-tool-id="${escapeHtml(toolMeta.id)}" data-tool-mode="${escapeHtml(toolMeta.mode || '')}">
                     <div class="tool-icon"><i class="${toolMeta.icon}"></i></div>
-                    <h3>${toolMeta.name}</h3>
-                    <p>${toolMeta.desc}</p>
-                    <button class="action-btn">${escapeHtml(t('tools.openTool', 'Open Tool'))}</button>
+                    <h3>${escapeHtml(toolMeta.name)}</h3>
+                    <p>${escapeHtml(toolMeta.desc)}</p>
+                    <button class="action-btn">${escapeHtml(toolMeta.actionLabel || t('tools.openTool', 'Open Tool'))}</button>
                 </div>
             `).join("")}
         </div>

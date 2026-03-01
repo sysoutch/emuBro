@@ -321,8 +321,9 @@ export function createEmulatorConfigActions(deps = {}) {
     const t = (key, fallback, data) => {
         try {
             if (i18nRef && typeof i18nRef.t === 'function') {
-                const translated = i18nRef.t(key, data);
-                if (translated && translated !== key) return translated;
+                const translated = i18nRef.t(key);
+                if (typeof translated === 'string' && translated && translated !== key) return translated;
+                if (typeof translated === 'number' && Number.isFinite(translated)) return String(translated);
             }
         } catch (_e) {}
         return String(fallback || key || '');

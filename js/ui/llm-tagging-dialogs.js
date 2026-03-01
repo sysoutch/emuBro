@@ -1,5 +1,36 @@
-export function openGlobalLlmTaggingSetupModal({ totalAll = 0, totalUntagged = 0, countCalculator = null } = {}) {
+export function openGlobalLlmTaggingSetupModal({
+    totalAll = 0,
+    totalUntagged = 0,
+    countCalculator = null,
+    ui = {}
+} = {}) {
     return new Promise((resolve) => {
+        const copy = {
+            title: String(ui.title || 'Global LLM Tagging'),
+            subtitle: String(ui.subtitle || 'Tag many games at once with your configured LLM provider.'),
+            includeExistingLabel: String(ui.includeExistingLabel || 'Include games that already have tags'),
+            skipExistingLabel: String(ui.skipExistingLabel || 'Max existing tags (process if <= X)'),
+            nextScopeLabel: String(ui.nextScopeLabel || 'Tag next X games'),
+            allScopeLabel: String(ui.allScopeLabel || 'Tag all matching games'),
+            chunkByLabel: String(ui.chunkByLabel || 'Chunk by'),
+            chunkModeSizeLabel: String(ui.chunkModeSizeLabel || 'Games per chunk'),
+            chunkModeCountLabel: String(ui.chunkModeCountLabel || 'Number of chunks'),
+            confirmEachChunkLabel: String(ui.confirmEachChunkLabel || 'Ask before sending each next chunk'),
+            cancelLabel: String(ui.cancelLabel || 'Cancel'),
+            startLabel: String(ui.startLabel || 'Start Tagging'),
+            summaryMatchingLabel: String(ui.summaryMatchingLabel || 'Matching games'),
+            summaryPlannedLabel: String(ui.summaryPlannedLabel || 'Planned run'),
+            summaryExecutionLabel: String(ui.summaryExecutionLabel || 'Execution'),
+            summaryExecutionConfirm: String(ui.summaryExecutionConfirm || 'Pause for confirmation after each chunk'),
+            summaryExecutionContinuous: String(ui.summaryExecutionContinuous || 'Run chunks continuously'),
+            summaryLargeBatchWarning: String(
+                ui.summaryLargeBatchWarning
+                || 'Large batch for the current category selection. Consider smaller chunks to avoid long wait times.'
+            ),
+            noMatchingMessage: String(ui.noMatchingMessage || 'No matching games for this selection.'),
+            noSelectionMessage: String(ui.noSelectionMessage || 'Please select at least one game.')
+        };
+
         const overlay = document.createElement('div');
         overlay.style.cssText = [
             'position:fixed',
@@ -29,52 +60,52 @@ export function openGlobalLlmTaggingSetupModal({ totalAll = 0, totalUntagged = 0
 
         modal.innerHTML = `
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-                <h3 style="margin:0;font-size:1.1rem;color:var(--accent-color);">Global LLM Tagging</h3>
+                <h3 style="margin:0;font-size:1.1rem;color:var(--accent-color);">${copy.title}</h3>
                 <button type="button" class="close-btn" data-close>&times;</button>
             </div>
             <p style="margin:0;color:var(--text-secondary);">
-                Tag many games at once with your configured LLM provider.
+                ${copy.subtitle}
             </p>
             <div style="display:grid;gap:10px;border:1px solid var(--border-color);border-radius:10px;padding:12px;">
                 <label style="display:flex;align-items:center;gap:10px;">
                     <input type="checkbox" data-input="include-tagged" />
-                    <span>Include games that already have tags</span>
+                    <span>${copy.includeExistingLabel}</span>
                 </label>
                 <div data-skip-tagged-wrap style="display:none;grid-template-columns:1fr 180px;gap:10px;align-items:center;padding-left:24px;">
-                    <label>Max existing tags (process if ≤ X)</label>
+                    <label>${copy.skipExistingLabel}</label>
                     <input type="number" min="0" step="1" data-input="skip-tagged-count" value="1" />
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 180px;gap:10px;align-items:center;">
                     <label style="display:flex;align-items:center;gap:10px;">
                         <input type="radio" name="llm-tag-scope" value="next" checked />
-                        <span>Tag next X games</span>
+                        <span>${copy.nextScopeLabel}</span>
                     </label>
                     <input type="number" min="1" step="1" data-input="next-count" value="${Math.max(1, Math.min(120, Number(totalUntagged || totalAll || 1)))}" />
                 </div>
                 <label style="display:flex;align-items:center;gap:10px;">
                     <input type="radio" name="llm-tag-scope" value="all" />
-                    <span>Tag all matching games</span>
+                    <span>${copy.allScopeLabel}</span>
                 </label>
                 <div style="display:grid;grid-template-columns:1fr 180px;gap:10px;align-items:center;">
-                    <label for="llm-chunk-mode">Chunk by</label>
+                    <label for="llm-chunk-mode">${copy.chunkByLabel}</label>
                     <select id="llm-chunk-mode" data-input="chunk-mode">
-                        <option value="size">Games per chunk</option>
-                        <option value="count">Number of chunks</option>
+                        <option value="size">${copy.chunkModeSizeLabel}</option>
+                        <option value="count">${copy.chunkModeCountLabel}</option>
                     </select>
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 180px;gap:10px;align-items:center;">
-                    <label data-label="chunk-value-label">Games per chunk</label>
+                    <label data-label="chunk-value-label">${copy.chunkModeSizeLabel}</label>
                     <input type="number" min="1" step="1" data-input="chunk-value" value="25" />
                 </div>
                 <label style="display:flex;align-items:center;gap:10px;">
                     <input type="checkbox" data-input="confirm-each-chunk" checked />
-                    <span>Ask before sending each next chunk</span>
+                    <span>${copy.confirmEachChunkLabel}</span>
                 </label>
             </div>
             <div data-summary style="display:grid;gap:6px;border:1px solid var(--border-color);border-radius:10px;padding:10px;"></div>
             <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;">
-                <button type="button" class="action-btn" data-cancel>Cancel</button>
-                <button type="button" class="action-btn launch-btn" data-start>Start Tagging</button>
+                <button type="button" class="action-btn" data-cancel>${copy.cancelLabel}</button>
+                <button type="button" class="action-btn launch-btn" data-start>${copy.startLabel}</button>
             </div>
         `;
 
@@ -96,7 +127,7 @@ export function openGlobalLlmTaggingSetupModal({ totalAll = 0, totalUntagged = 0
             if (skipTaggedWrap) {
                 skipTaggedWrap.style.display = includeTagged?.checked ? 'grid' : 'none';
             }
-            
+
             let baseCount = 0;
             if (typeof countCalculator === 'function') {
                 const rawSkip = Number.parseInt(skipTaggedCountInput?.value, 10);
@@ -120,13 +151,15 @@ export function openGlobalLlmTaggingSetupModal({ totalAll = 0, totalUntagged = 0
             const warnLarge = estimated > 250;
 
             if (chunkValueLabel) {
-                chunkValueLabel.textContent = chunkMode === 'count' ? 'Number of chunks' : 'Games per chunk';
+                chunkValueLabel.textContent = chunkMode === 'count'
+                    ? copy.chunkModeCountLabel
+                    : copy.chunkModeSizeLabel;
             }
             summaryBox.innerHTML = `
-                <div><strong>Matching games:</strong> ${baseCount}</div>
-                <div><strong>Planned run:</strong> ${estimated} game(s) in ${chunkCount} chunk(s)${chunkCount > 0 ? ` that's ${chunkSize} game(s) per chunk` : ''}</div>
-                <div><strong>Execution:</strong> ${confirmEachChunk?.checked ? 'Pause for confirmation after each chunk' : 'Run chunks continuously'}</div>
-                ${warnLarge ? '<div style="color:#e8b84a;"><strong>Warning:</strong> Large batch for the current category selection. Consider smaller chunks to avoid long wait times.</div>' : ''}
+                <div><strong>${copy.summaryMatchingLabel}:</strong> ${baseCount}</div>
+                <div><strong>${copy.summaryPlannedLabel}:</strong> ${estimated} game(s) in ${chunkCount} chunk(s)${chunkCount > 0 ? ` that's ${chunkSize} game(s) per chunk` : ''}</div>
+                <div><strong>${copy.summaryExecutionLabel}:</strong> ${confirmEachChunk?.checked ? copy.summaryExecutionConfirm : copy.summaryExecutionContinuous}</div>
+                ${warnLarge ? `<div style="color:#e8b84a;"><strong>Warning:</strong> ${copy.summaryLargeBatchWarning}</div>` : ''}
             `;
         };
 
@@ -164,14 +197,14 @@ export function openGlobalLlmTaggingSetupModal({ totalAll = 0, totalUntagged = 0
             }
 
             if (baseCount <= 0) {
-                summaryBox.innerHTML = '<div style="color:#e8b84a;">No matching games for this selection.</div>';
+                summaryBox.innerHTML = `<div style="color:#e8b84a;">${copy.noMatchingMessage}</div>`;
                 return;
             }
             const scope = getScope();
             const nextCount = getNextCount();
             const selectedCount = scope === 'all' ? baseCount : Math.min(baseCount, nextCount);
             if (selectedCount <= 0) {
-                summaryBox.innerHTML = '<div style="color:#e8b84a;">Please select at least one game.</div>';
+                summaryBox.innerHTML = `<div style="color:#e8b84a;">${copy.noSelectionMessage}</div>`;
                 return;
             }
             close({
@@ -195,7 +228,14 @@ export function openGlobalLlmTaggingSetupModal({ totalAll = 0, totalUntagged = 0
     });
 }
 
-export function createGlobalLlmProgressDialog({ totalGames = 0, totalChunks = 0, confirmEachChunk = true, chunkValue = 0, chunkMode = 'size' } = {}) {
+export function createGlobalLlmProgressDialog({
+    totalGames = 0,
+    totalChunks = 0,
+    confirmEachChunk = true,
+    chunkValue = 0,
+    chunkMode = 'size',
+    title = 'Global LLM Tagging Progress'
+} = {}) {
     const overlay = document.createElement('div');
     overlay.style.cssText = [
         'position:fixed',
@@ -225,7 +265,7 @@ export function createGlobalLlmProgressDialog({ totalGames = 0, totalChunks = 0,
 
     modal.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
-            <h3 style="margin:0;font-size:1.05rem;color:var(--accent-color);">Global LLM Tagging Progress</h3>
+            <h3 style="margin:0;font-size:1.05rem;color:var(--accent-color);">${title}</h3>
             <button type="button" class="close-btn" data-close>&times;</button>
         </div>
         <p data-progress-status style="margin:0;color:var(--text-secondary);">Preparing...</p>

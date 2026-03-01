@@ -37,6 +37,9 @@
 - Deployment procedures and packaging
 
 ## Recent Changes
+- Rebuilt corrupted Tauri covers bridge file `tauri/src-tauri/src/bridge_extensions/covers.rs` from scratch, restoring `covers:download-for-game`, `covers:download-for-library`, and `covers:get-source-config`.
+- Continued `js/tools-manager.js` refactor by extracting plugin-tool creation/view/storage/LLM-draft logic into `js/tools/tool-plugin-manager.js`.
+- Updated memory-bank refactor backlog snapshot in `memory-bank/activeContext.md` with the current largest JS files and size/LOC targets.
 - Continued game-manager refactor: moved slideshow/random views and grouped/incremental rendering into `js/game-manager/views/` and `js/game-manager/rendering/`.
 - Continued theme-manager refactor: moved LLM control helpers into `js/theme-manager/llm-utils.js`.
 - Continued theme-manager refactor: moved gradient/intensity helpers into `js/theme-manager/editor-utils.js` and background surface helpers into `js/theme-manager/background-editor-utils.js`.

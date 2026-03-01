@@ -21,8 +21,13 @@ function t(key, fallback, data = {}) {
         ? i18n
         : (window?.i18n && typeof window.i18n.t === 'function' ? window.i18n : null);
     if (i18nRef && typeof i18nRef.t === 'function') {
-        const translated = i18nRef.t(key, data);
-        if (translated && translated !== key) return String(translated);
+        const translated = i18nRef.t(key);
+        if (typeof translated === 'string' && translated && translated !== key) {
+            return applyTemplate(translated, data);
+        }
+        if (typeof translated === 'number' && Number.isFinite(translated)) {
+            return applyTemplate(String(translated), data);
+        }
     }
     return applyTemplate(String(fallback || key), data);
 }

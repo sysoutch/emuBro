@@ -17,6 +17,9 @@ export function setupWindowControls(options = {}) {
     const updateBtn = document.getElementById('win-update-btn');
     const aboutBtn = document.getElementById('win-about-btn');
     const header = document.querySelector('header.header');
+    const extraDragZones = Array.from(document.querySelectorAll(
+        '.win-top-drag-strip, .window-drag-gap, .header-inline-drag-gap, .header-search-theme-drag-gap'
+    ));
     let appUpdateAvailable = false;
     let resourcesUpdateAvailable = false;
     const isUpdateFlagTrue = (value) => {
@@ -124,12 +127,61 @@ export function setupWindowControls(options = {}) {
         .catch(() => {});
 
     if (header) {
+        const shouldCloseOpenCompactMenus = (target) => {
+            if (!target || typeof target.closest !== 'function') return false;
+            const hasOpenMenus = !!document.querySelector('.theme-toggle-wrapper.is-open, .language-controls-wrapper.is-open');
+            if (!hasOpenMenus) return false;
+            if (target.closest('.theme-toggle-wrapper')) return false;
+            if (target.closest('.language-controls-wrapper')) return false;
+            if (target.closest('.header-compact-floating-menu')) return false;
+            return true;
+        };
+
+        const shouldIgnoreDragStart = (target) => {
+            if (!target || typeof target.closest !== 'function') return false;
+            return !!target.closest(
+                'button, input, select, textarea, a, [role="button"], [data-no-window-drag], .custom-select, .options-list, .header-compact-menu, .header-compact-floating-menu'
+            );
+        };
+
+        const requestWindowDrag = async (event) => {
+            if (event.button !== 0) return;
+            if (event.detail > 1) return;
+            if (shouldCloseOpenCompactMenus(event.target)) return;
+            if (shouldIgnoreDragStart(event.target)) return;
+            event.preventDefault();
+            if (typeof emubro.startWindowDragging === 'function') {
+                await emubro.startWindowDragging();
+                return;
+            }
+            await emubro.invoke('window:start-dragging');
+        };
+
+        header.addEventListener('mousedown', (event) => {
+            void requestWindowDrag(event);
+        });
+
         header.addEventListener('dblclick', async (event) => {
-            if (event.target.closest('button, input, select, textarea, a, .custom-select, .options-list')) return;
+            const target = event?.target;
+            if (!target || typeof target.closest !== 'function') return;
+            if (target.closest('button, input, select, textarea, a, .custom-select, .options-list')) return;
+            event.preventDefault();
+            event.stopPropagation();
             await emubro.invoke('window:toggle-maximize');
             updateMaxIcon();
         });
     }
+
+    extraDragZones.forEach((dragZone) => {
+        dragZone.addEventListener('mousedown', (event) => {
+            if (event.button !== 0 || event.detail > 1) return;
+            if (typeof emubro.startWindowDragging === 'function') {
+                void emubro.startWindowDragging();
+                return;
+            }
+            void emubro.invoke('window:start-dragging');
+        });
+    });
 }
 
 export function setupHeaderThemeControlsToggle(options = {}) {
@@ -139,6 +191,7 @@ export function setupHeaderThemeControlsToggle(options = {}) {
     const themeManagerBtn = document.getElementById('theme-manager-btn');
     const themeToggleBtn = document.getElementById('theme-toggle-btn');
     const invertColorsBtn = document.getElementById('invert-colors-btn');
+    const hueRotateColorsBtn = document.getElementById('hue-rotate-colors-btn');
     const languageManagerBtn = document.getElementById('language-manager-btn');
     const languageOptions = document.getElementById('language-options');
 
@@ -441,6 +494,15 @@ export function setupHeaderThemeControlsToggle(options = {}) {
                     }
                 });
             }
+            if (hueRotateColorsBtn) {
+                actionOptions.push({
+                    label: 'Hue Rotate',
+                    onSelect: () => {
+                        hueRotateColorsBtn.click();
+                        themePanelController.close();
+                    }
+                });
+            }
             if (themeManagerBtn) {
                 actionOptions.push({
                     label: 'Manage',
@@ -549,6 +611,20 @@ export function setupHeaderThemeControlsToggle(options = {}) {
         themePanelController.close();
         languagePanelController.close();
     });
+
+    if (header) {
+        const handleHeaderInteraction = (event) => {
+            const target = event?.target;
+            if (!target || typeof target.closest !== 'function') return;
+            if (target.closest('.theme-toggle-wrapper')) return;
+            if (target.closest('.language-controls-wrapper')) return;
+            if (target.closest('.header-compact-floating-menu')) return;
+            themePanelController.close();
+            languagePanelController.close();
+        };
+        header.addEventListener('mousedown', handleHeaderInteraction);
+        header.addEventListener('click', handleHeaderInteraction);
+    }
 
     const syncLayout = () => {
         if (!themeCompactQuery.matches) {

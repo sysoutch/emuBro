@@ -24,7 +24,7 @@ const COMMUNITY_PLATFORMS = [
         labelFallback: "Reddit",
         blurbKey: "community.cards.reddit.blurb",
         blurbFallback: "Long-form discussions, showcases, and community threads.",
-        url: "https://www.reddit.com/r/emubro/",
+        url: "https://www.reddit.com/r/emuBro/",
         externalKey: "community.openRedditExternal",
         externalFallback: "Open Reddit in Browser",
         requiresOptIn: false
@@ -69,6 +69,23 @@ const COMMUNITY_PLATFORMS = [
 
 let activeCommunityCleanup = null;
 
+function isElectronRuntime() {
+    return !!(window?.process?.versions?.electron);
+}
+
+function isTauriRuntime() {
+    if (isElectronRuntime()) return false;
+    if (emubro && typeof emubro.invoke === "function") {
+        const platform = String(emubro.platform || "").trim().toLowerCase();
+        if (platform === "tauri" || platform === "win32" || platform === "darwin" || platform === "linux") {
+            return true;
+        }
+    }
+    if (window.__TAURI__ && window.__TAURI__.core && typeof window.__TAURI__.core.invoke === "function") return true;
+    if (window.__TAURI_INTERNALS__ && typeof window.__TAURI_INTERNALS__.invoke === "function") return true;
+    return false;
+}
+
 function applyTemplate(input, data = {}) {
     let text = String(input ?? "");
     Object.keys(data || {}).forEach((key) => {
@@ -85,12 +102,12 @@ function t(key, fallback, data = {}) {
         ? i18n
         : (window?.i18n && typeof window.i18n.t === "function" ? window.i18n : null);
     if (i18nRef && typeof i18nRef.t === "function") {
-        const translated = i18nRef.t(key, data);
+        const translated = i18nRef.t(key);
         if (typeof translated === "string" && translated && translated !== key) {
-            return translated;
+            return applyTemplate(translated, data);
         }
         if (typeof translated === "number" && Number.isFinite(translated)) {
-            return String(translated);
+            return applyTemplate(String(translated), data);
         }
     }
     return applyTemplate(String(fallback || key), data);
@@ -202,7 +219,47 @@ async function openExternal(url) {
     } catch (_e) {}
 }
 
+async function closeCommunityInAppWindows() {
+    if (!emubro || typeof emubro.invoke !== "function") return;
+    try {
+        await emubro.invoke("community:close-in-app-windows");
+    } catch (_error) {}
+}
+
+async function openCommunityInAppWindow(platform) {
+    const targetUrl = String(platform?.url || "").trim();
+    if (!targetUrl || !isHttpUrl(targetUrl)) return false;
+    if (!emubro || typeof emubro.invoke !== "function") return false;
+    try {
+        const result = await emubro.invoke("community:open-in-app-window", {
+            url: targetUrl,
+            label: `community-${String(platform?.id || "tab").trim().toLowerCase()}`,
+            title: `emuBro Community - ${String(platform?.labelFallback || platform?.id || "Browser")}`
+        });
+        try {
+            console.info("[community] open-in-app-window result", {
+                platform: String(platform?.id || ""),
+                url: targetUrl,
+                result
+            });
+        } catch (_error) {}
+        if (!result?.success) return false;
+        if (String(result?.fallback || "").trim().toLowerCase() === "external-browser") return false;
+        return true;
+    } catch (_error) {
+        try {
+            console.warn("[community] open-in-app-window failed", {
+                platform: String(platform?.id || ""),
+                url: targetUrl,
+                message: String(_error?.message || _error || "")
+            });
+        } catch (_innerError) {}
+        return false;
+    }
+}
+
 export function teardownCommunityView() {
+    void closeCommunityInAppWindows();
     if (typeof activeCommunityCleanup === "function") {
         try {
             activeCommunityCleanup();
@@ -222,6 +279,14 @@ export function showCommunityView() {
     const defaultPlatformId = COMMUNITY_PLATFORMS[0]?.id || "discord";
     let activePlatformId = getPlatformById(readStoredText(COMMUNITY_ACTIVE_TAB_KEY, defaultPlatformId)).id;
     let discordInAppEnabled = readStoredBoolean(COMMUNITY_DISCORD_OPT_IN_KEY, false);
+    const electronRuntime = isElectronRuntime();
+    const tauriRuntime = isTauriRuntime();
+    const tauriWindowBrowserMode = tauriRuntime && !electronRuntime;
+    const discordSessionNote = electronRuntime
+        ? t("community.discordSessionNote", "Discord login stays in Electron's secure persistent session storage for this app.")
+        : tauriWindowBrowserMode
+            ? t("community.discordSessionNoteTauri", "In Tauri mode, community links open in an in-app browser window.")
+            : t("community.discordSessionNoteTauri", "In Tauri mode, some platforms may block embedded login. Use Open in Browser if needed.");
 
     if (gamesHeader) gamesHeader.textContent = t("header.community", "Community");
 
@@ -241,7 +306,7 @@ export function showCommunityView() {
                             ${escapeHtml(t("community.openDiscordExternal", "Open Discord in Browser"))}
                         </button>
                     </div>
-                    <p class="community-overview-note">${escapeHtml(t("community.discordSessionNote", "Discord login stays in Electron's secure persistent session storage for this app."))}</p>
+                    <p class="community-overview-note">${escapeHtml(discordSessionNote)}</p>
                 </article>
 
                 <div class="community-overview-grid">
@@ -364,9 +429,12 @@ export function showCommunityView() {
     const getCurrentPlatform = () => getPlatformById(activePlatformId);
 
     const getActiveWebviewUrl = () => {
-        if (!activeWebview || typeof activeWebview.getURL !== "function") return "";
+        if (!activeWebview) return "";
         try {
-            const url = String(activeWebview.getURL() || "").trim();
+            const rawUrl = typeof activeWebview.getURL === "function"
+                ? activeWebview.getURL()
+                : activeWebview.getAttribute("src");
+            const url = String(rawUrl || "").trim();
             return isHttpUrl(url) ? url : "";
         } catch (_error) {
             return "";
@@ -395,32 +463,54 @@ export function showCommunityView() {
         if (!webviewHost) return null;
 
         cleanupWebview();
-        const view = document.createElement("webview");
-        view.className = "community-browser-webview";
-        view.setAttribute("partition", COMMUNITY_WEBVIEW_PARTITION);
-        view.setAttribute("allowpopups", "true");
-        view.setAttribute("webpreferences", "sandbox=yes,contextIsolation=yes");
+        const useElectronWebview = electronRuntime && !tauriRuntime;
+        const view = document.createElement(useElectronWebview ? "webview" : "iframe");
+        view.className = "community-browser-webview community-browser-iframe";
+        if (useElectronWebview) {
+            view.setAttribute("partition", COMMUNITY_WEBVIEW_PARTITION);
+            view.setAttribute("allowpopups", "true");
+            view.setAttribute("webpreferences", "sandbox=yes,contextIsolation=yes");
 
-        bindWebviewEvent(view, "did-start-loading", () => {
-            setLoading(true);
-            setErrorVisible(false);
-        });
-        bindWebviewEvent(view, "did-stop-loading", () => {
-            setLoading(false);
-        });
-        bindWebviewEvent(view, "did-fail-load", (event) => {
-            if (Number(event?.errorCode) === -3) return;
+            bindWebviewEvent(view, "did-start-loading", () => {
+                setLoading(true);
+                setErrorVisible(false);
+            });
+            bindWebviewEvent(view, "did-stop-loading", () => {
+                setLoading(false);
+            });
+            bindWebviewEvent(view, "did-fail-load", (event) => {
+                if (Number(event?.errorCode) === -3) return;
+                setLoading(false);
+                setErrorVisible(true);
+            });
+            bindWebviewEvent(view, "new-window", (event) => {
+                if (typeof event?.preventDefault === "function") event.preventDefault();
+                void openExternal(event?.url);
+            });
+            bindWebviewEvent(view, "will-navigate", (event) => {
+                const targetUrl = String(event?.url || "").trim();
+                if (isHttpUrl(targetUrl)) return;
+                if (typeof event?.preventDefault === "function") event.preventDefault();
+            });
+        } else {
+            view.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
+            view.setAttribute("allow", "autoplay; clipboard-read; clipboard-write; encrypted-media; fullscreen; picture-in-picture");
+            view.setAttribute("sandbox", "allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads");
+            view.setAttribute("loading", "eager");
+
+            bindWebviewEvent(view, "load", () => {
+                setLoading(false);
+                setErrorVisible(false);
+            });
+            bindWebviewEvent(view, "error", () => {
+                setLoading(false);
+                setErrorVisible(true);
+            });
+        }
+
+        bindWebviewEvent(view, "abort", () => {
             setLoading(false);
             setErrorVisible(true);
-        });
-        bindWebviewEvent(view, "new-window", (event) => {
-            if (typeof event?.preventDefault === "function") event.preventDefault();
-            void openExternal(event?.url);
-        });
-        bindWebviewEvent(view, "will-navigate", (event) => {
-            const targetUrl = String(event?.url || "").trim();
-            if (isHttpUrl(targetUrl)) return;
-            if (typeof event?.preventDefault === "function") event.preventDefault();
         });
 
         webviewHost.replaceChildren(view);
@@ -454,10 +544,16 @@ export function showCommunityView() {
         }
 
         const currentSrc = String(view.getAttribute("src") || "").trim();
-        if (forceReload && currentSrc === targetUrl && typeof view.reload === "function") {
+        if (forceReload && currentSrc === targetUrl) {
             setLoading(true);
             try {
-                view.reload();
+                if (typeof view.reload === "function") {
+                    view.reload();
+                } else {
+                    const reloadUrl = new URL(targetUrl);
+                    reloadUrl.searchParams.set("_communityReload", String(Date.now()));
+                    view.setAttribute("src", reloadUrl.toString());
+                }
             } catch (_error) {
                 setLoading(false);
                 setErrorVisible(true);
@@ -494,6 +590,16 @@ export function showCommunityView() {
         const openPlatformBtn = event.target.closest("[data-community-open-platform]");
         if (openPlatformBtn) {
             const platformId = getPlatformById(openPlatformBtn.dataset.communityOpenPlatform).id;
+            if (tauriWindowBrowserMode) {
+                activePlatformId = platformId;
+                writeStoredText(COMMUNITY_ACTIVE_TAB_KEY, platformId);
+                const platform = getPlatformById(platformId);
+                const opened = await openCommunityInAppWindow(platform);
+                if (!opened) {
+                    await openExternal(platform.url);
+                }
+                return;
+            }
             setBrowserMode(true, { nextPlatformId: platformId });
             return;
         }
@@ -501,6 +607,16 @@ export function showCommunityView() {
         const tab = event.target.closest(".community-tab-btn[data-community-platform]");
         if (tab) {
             const nextId = getPlatformById(tab.dataset.communityPlatform).id;
+            if (tauriWindowBrowserMode) {
+                activePlatformId = nextId;
+                writeStoredText(COMMUNITY_ACTIVE_TAB_KEY, nextId);
+                const platform = getPlatformById(nextId);
+                const opened = await openCommunityInAppWindow(platform);
+                if (!opened) {
+                    await openExternal(platform.url);
+                }
+                return;
+            }
             if (nextId !== activePlatformId) {
                 activePlatformId = nextId;
                 loadCurrentPlatform();
@@ -516,10 +632,18 @@ export function showCommunityView() {
         const currentUrl = getActiveWebviewUrl() || currentPlatform.url;
 
         if (action === "back-overview") {
+            if (tauriWindowBrowserMode) {
+                await closeCommunityInAppWindows();
+            }
             setBrowserMode(false);
             return;
         }
         if (action === "reload-current" || action === "retry-load") {
+            if (tauriWindowBrowserMode) {
+                const opened = await openCommunityInAppWindow(currentPlatform);
+                if (!opened) await openExternal(currentPlatform.url);
+                return;
+            }
             loadCurrentPlatform({ forceReload: true });
             return;
         }
@@ -531,6 +655,12 @@ export function showCommunityView() {
             discordInAppEnabled = true;
             writeStoredBoolean(COMMUNITY_DISCORD_OPT_IN_KEY, true);
             activePlatformId = "discord";
+            if (tauriWindowBrowserMode) {
+                const platform = getPlatformById("discord");
+                const opened = await openCommunityInAppWindow(platform);
+                if (!opened) await openExternal(platform.url);
+                return;
+            }
             loadCurrentPlatform();
             return;
         }

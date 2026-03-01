@@ -2,6 +2,15 @@ import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 
 const emitter = new EventTarget();
 
+function detectDesktopPlatform() {
+  const ua = String(navigator?.userAgent || "").toLowerCase();
+  const platform = String(navigator?.platform || "").toLowerCase();
+  if (platform.includes("win") || ua.includes("windows")) return "win32";
+  if (platform.includes("mac") || ua.includes("mac os")) return "darwin";
+  if (platform.includes("linux") || ua.includes("linux")) return "linux";
+  return "tauri";
+}
+
 async function invokeChannel(channel, ...args) {
   return tauriInvoke("emubro_invoke", { channel, args });
 }
@@ -18,9 +27,10 @@ function dispatchEvent(eventName, detail) {
 }
 
 const emubro = {
-  platform: "tauri",
+  platform: detectDesktopPlatform(),
   invoke: invokeChannel,
   minimizeWindow: () => invokeChannel("window:minimize"),
+  startWindowDragging: () => invokeChannel("window:start-dragging"),
   onLaunch: (callback) => onEvent("emubro:launch", callback),
   onWindowMoved: (callback) => onEvent("window-moved", callback),
   onWindowMaximizedChanged: (callback) => onEvent("window:maximized-changed", callback),
@@ -31,16 +41,16 @@ const emubro = {
     list: () => invokeChannel("locales:list"),
     read: (filename) => invokeChannel("locales:read", filename),
     exists: (filename) => invokeChannel("locales:exists", filename),
-    write: async () => ({ success: false, message: "Not implemented in Tauri migration yet" }),
-    delete: async () => ({ success: false, message: "Not implemented in Tauri migration yet" }),
-    rename: async () => ({ success: false, message: "Not implemented in Tauri migration yet" }),
-    getFlagDataUrl: async () => ({ success: false, dataUrl: "" }),
-    writeFlagDataUrl: async () => ({ success: false, message: "Not implemented in Tauri migration yet" }),
-    writeFlagFromFile: async () => ({ success: false, message: "Not implemented in Tauri migration yet" }),
-    getRepoConfig: async () => ({}),
-    setRepoConfig: async () => ({ success: false, message: "Not implemented in Tauri migration yet" }),
-    fetchRepoCatalog: async () => ({ success: false, items: [] }),
-    installFromRepo: async () => ({ success: false, message: "Not implemented in Tauri migration yet" })
+    write: (filename, data) => invokeChannel("locales:write", filename, data),
+    delete: (filename) => invokeChannel("locales:delete", filename),
+    rename: (payload) => invokeChannel("locales:rename", payload),
+    getFlagDataUrl: (flagCode) => invokeChannel("locales:flags:get-data-url", flagCode),
+    writeFlagDataUrl: (payload) => invokeChannel("locales:flags:write-data-url", payload),
+    writeFlagFromFile: (payload) => invokeChannel("locales:flags:write-from-file", payload),
+    getRepoConfig: () => invokeChannel("locales:repo:get-config"),
+    setRepoConfig: (payload) => invokeChannel("locales:repo:set-config", payload),
+    fetchRepoCatalog: (payload) => invokeChannel("locales:repo:fetch-catalog", payload),
+    installFromRepo: (payload) => invokeChannel("locales:repo:install", payload)
   },
   updates: {
     getState: () => invokeChannel("update:get-state"),

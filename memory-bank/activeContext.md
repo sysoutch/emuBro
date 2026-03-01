@@ -3,6 +3,18 @@
 ## Current Work Focus
 Refactoring `js/game-manager.js` into smaller modules while keeping the public API stable.
 
+## Refactor Backlog Snapshot (2026-03-01)
+- `js/tools-manager.js` — 2,747 LOC — 130.3 KB
+- `js/settings/library-settings-modal.js` — 1,702 LOC — 97.3 KB
+- `js/language-manager.js` — 1,609 LOC — 62.3 KB
+- `js/game-manager/game-details-popup-actions.js` — 1,333 LOC — 60.3 KB
+- `js/library/categories-list-renderer.js` — 1,256 LOC — 62.8 KB
+- `js/drag-drop-manager.js` — 1,179 LOC — 50.2 KB
+- `js/support-manager.js` — 1,147 LOC — 50.6 KB
+- `js/events/setup-renderer-events.js` — 1,040 LOC — 46.3 KB
+- `js/game-manager/emulator-config-actions.js` — 1,030 LOC — 47.9 KB
+- `js/theme-manager.js` — 839 LOC — 30.0 KB
+
 ## Recent Changes
 - Implemented emulator download scraping logic: when direct links are missing, the system now scrapes the configured `downloadUrl` for links matching OS-specific file patterns, allowing for robust automated downloads from complex provider pages.
 - Updated emulator download UI to handle multiple discovered packages, allowing users to choose the specific version/format they want to install.

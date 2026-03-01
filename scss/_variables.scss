@@ -99,6 +99,7 @@
     --view-scale: 1;
     --view-scale-user: 1;
     --invert-media-compensation: 0;
+    --hue-rotate-deg: 0deg;
 }
 
 /* Light Theme */
@@ -138,4 +139,8 @@
 
 html[data-invert-filter-active="1"] {
     --invert-media-compensation: 1;
+}
+
+html[data-hue-rotate-active="1"] {
+    --hue-rotate-deg: 180deg;
 }

@@ -102,6 +102,29 @@ export function toggleInvertFilter() {
     root.setAttribute('data-invert-filter-active', '1');
 }
 
+export function toggleHueRotateColors() {
+    const root = document.documentElement;
+    const currentFilter = String(root.style.filter || '').trim();
+    const hasHueRotate = /\bhue-rotate\(180deg\)/.test(currentFilter);
+    if (hasHueRotate) {
+        const nextFilter = currentFilter
+            .replace(/\bhue-rotate\(180deg\)/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (nextFilter) {
+            root.style.filter = nextFilter;
+        }
+        else {
+            root.style.removeProperty('filter');
+        }
+        root.removeAttribute('data-hue-rotate-active');
+        return;
+    }
+    
+    root.style.filter = currentFilter ? `${currentFilter} hue-rotate(180deg)` : 'hue-rotate(180deg)';
+    root.setAttribute('data-hue-rotate-active', '1');
+}
+
 export function getBackgroundImageFromGrid() {
     const gameGrid = document.querySelector('main.game-grid');
     if (!gameGrid) return null;

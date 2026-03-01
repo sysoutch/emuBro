@@ -12,8 +12,13 @@ function applyTemplate(input, data = {}) {
 function createTranslator(i18nRef) {
     return (key, fallback, data = {}) => {
         if (i18nRef && typeof i18nRef.t === 'function') {
-            const translated = i18nRef.t(key, data);
-            if (translated && translated !== key) return String(translated);
+            const translated = i18nRef.t(key);
+            if (typeof translated === 'string' && translated && translated !== key) {
+                return applyTemplate(translated, data);
+            }
+            if (typeof translated === 'number' && Number.isFinite(translated)) {
+                return applyTemplate(String(translated), data);
+            }
         }
         return applyTemplate(String(fallback || key), data);
     };

@@ -86,6 +86,14 @@
                                     </svg>
                                 </span>
                             </button>
+                            <button id="hue-rotate-colors-btn" class="theme-toggle icon-only-btn" title="Hue Rotate Colors" aria-label="Hue Rotate Colors" data-i18n-title="theme.hueRotateColors" data-i18n-aria-label="theme.hueRotateColors">
+                                <span class="icon-svg" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24">
+                                        <circle cx="12" cy="12" r="9"></circle>
+                                        <path d="M12 3a9 9 0 0 0 0 18V3Z"></path>
+                                    </svg>
+                                </span>
+                            </button>
                             <button id="theme-manager-btn" class="theme-manager-btn icon-only-btn" title="Manage Themes" aria-label="Manage Themes" data-i18n-title="header.manageThemes" data-i18n-aria-label="header.manageThemes">
                                 <span class="icon-svg" aria-hidden="true">
                                     <svg viewBox="0 0 24 24">
@@ -1280,12 +1288,85 @@
                     return;
                 }
             } catch (_e) {}
+            const tauriInvoke =
+                (window.__TAURI__ && window.__TAURI__.core && typeof window.__TAURI__.core.invoke === 'function')
+                    ? window.__TAURI__.core.invoke
+                    : (window.__TAURI_INTERNALS__ && typeof window.__TAURI_INTERNALS__.invoke === 'function'
+                        ? window.__TAURI_INTERNALS__.invoke
+                        : null);
+            const detectDesktopPlatform = () => {
+                const ua = String(navigator?.userAgent || '').toLowerCase();
+                const platform = String(navigator?.platform || '').toLowerCase();
+                if (platform.includes('win') || ua.includes('windows')) return 'win32';
+                if (platform.includes('mac') || ua.includes('mac os')) return 'darwin';
+                if (platform.includes('linux') || ua.includes('linux')) return 'linux';
+                return 'tauri';
+            };
+            if (typeof tauriInvoke === 'function') {
+                const invokeChannel = function (channel) {
+                    const args = Array.prototype.slice.call(arguments, 1);
+                    return tauriInvoke('emubro_invoke', { channel: String(channel || ''), args });
+                };
+                window.emubro = {
+                    platform: detectDesktopPlatform(),
+                    invoke: invokeChannel,
+                    minimizeWindow: function () { return invokeChannel('window:minimize'); },
+                    startWindowDragging: function () { return invokeChannel('window:start-dragging'); },
+                    onLaunch: function () { return function () {}; },
+                    onWindowMoved: function () { return function () {}; },
+                    onWindowMaximizedChanged: function () { return function () {}; },
+                    onUpdateStatus: function () { return function () {}; },
+                    onResourcesUpdateStatus: function () { return function () {}; },
+                    getAllTranslations: function () { return invokeChannel('get-all-translations'); },
+                    locales: {
+                        list: function () { return invokeChannel('locales:list'); },
+                        read: function (filename) { return invokeChannel('locales:read', filename); },
+                        exists: function (filename) { return invokeChannel('locales:exists', filename); },
+                        write: function (filename, data) { return invokeChannel('locales:write', filename, data); },
+                        delete: function (filename) { return invokeChannel('locales:delete', filename); },
+                        rename: function (payload) { return invokeChannel('locales:rename', payload); },
+                        getFlagDataUrl: function (flagCode) { return invokeChannel('locales:flags:get-data-url', flagCode); },
+                        writeFlagDataUrl: function (payload) { return invokeChannel('locales:flags:write-data-url', payload); },
+                        writeFlagFromFile: function (payload) { return invokeChannel('locales:flags:write-from-file', payload); },
+                        getRepoConfig: function () { return invokeChannel('locales:repo:get-config'); },
+                        setRepoConfig: function (payload) { return invokeChannel('locales:repo:set-config', payload); },
+                        fetchRepoCatalog: function (payload) { return invokeChannel('locales:repo:fetch-catalog', payload); },
+                        installFromRepo: function (payload) { return invokeChannel('locales:repo:install', payload); }
+                    },
+                    updates: {
+                        getState: function () { return invokeChannel('update:get-state'); },
+                        getConfig: function () { return invokeChannel('update:get-config'); },
+                        setConfig: function (payload) { return invokeChannel('update:set-config', payload); },
+                        check: function () { return invokeChannel('update:check'); },
+                        download: function () { return invokeChannel('update:download'); },
+                        install: function () { return invokeChannel('update:install'); }
+                    },
+                    resourcesUpdates: {
+                        getState: function () { return invokeChannel('resources:update:get-state'); },
+                        check: function () { return invokeChannel('resources:update:check'); },
+                        install: function () { return invokeChannel('resources:update:install'); },
+                        getConfig: function () { return invokeChannel('resources:update:get-config'); },
+                        setConfig: function (payload) { return invokeChannel('resources:update:set-config', payload); }
+                    },
+                    helpDocs: {
+                        list: function (payload) { return invokeChannel('help:docs:list', payload); },
+                        get: function (payload) { return invokeChannel('help:docs:get', payload); },
+                        search: function (payload) { return invokeChannel('help:docs:search', payload); }
+                    },
+                    promptScanSubfolders: function (folderPath) { return invokeChannel('prompt-scan-subfolders', folderPath); },
+                    importPaths: function (paths, options) { return invokeChannel('import-paths', paths, options); },
+                    createGameShortcut: function (gameId) { return invokeChannel('create-game-shortcut', gameId); },
+                    getPathForFile: function () { return ''; }
+                };
+                return;
+            }
             window.emubro = {
                 platform: 'web',
                 invoke: async function () {
                     return { success: false, message: 'emuBro bridge unavailable' };
                 },
                 minimizeWindow: async function () {},
+                startWindowDragging: async function () {},
                 onLaunch: function () { return function () {}; },
                 onWindowMoved: function () { return function () {}; },
                 onWindowMaximizedChanged: function () { return function () {}; },
