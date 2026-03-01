@@ -109,7 +109,7 @@ Continuing oversized JS refactors with stable public APIs (`tools-manager`, `the
   - Improved color propagation/update consistency and reduced repetitive blue-biased outcomes
 - Moved runtime backup rule editing from global Settings into Emulator Edit modal (`js/game-manager/emulator-config-actions.js`) via a new "Runtime Backup" tab
 - Added emulator-specific runtime backup rules (`runtimeDataRules`) to emulator local config and wired them into game launch payload creation
-- Updated launch pipeline (`js/game-manager/missing-game-recovery.js`, `js/game-manager.js`, `main/ipc/games.js`, `main/game-session-manager.js`) to accept per-launch runtime backup rules
+- Updated launch pipeline (`js/game-manager/missing-game-recovery.js`, `js/game-manager.js`, `electron/legacy/main/ipc/games.js`, `electron/legacy/main/game-session-manager.js`) to accept per-launch runtime backup rules
 - Added in-app game session overlay controls (`js/game-session-overlay.js`, `renderer.js`) with actions for Show emuBro, Alt+Enter, screenshot, and quit game process
 - Added BIOS Manager tool view (`js/tools-manager.js`, `index.html`, locale updates) to list BIOS folders/files per platform, add BIOS files, and open folders
 - Updated launch flow to persist `lastPlayed` directly in main process on successful launch for better Recently Played consistency
@@ -123,10 +123,10 @@ Continuing oversized JS refactors with stable public APIs (`tools-manager`, `the
 - Fixed GitHub Release workflow:
   - Added `permissions: contents: write` to the release job to allow artifact upload and release creation
   - Added `npm run sync:resources` step to CI build to ensure `emubro-resources` are present during packaging
-  - Explicitly linked `electron-builder.config.js` in packaging commands
+  - Explicitly linked `electron/legacy/electron-builder.config.js` in packaging commands
   - Fixed Linux build error by switching to PNG icon (`icon.png`) as ICO is not supported by `app-builder` on Linux
   - Resolved GitHub API race conditions (404 Not Found on asset delete/overwrite) by switching to `--publish onTag` and performing clean tag resets
-  - Ensured release visibility by explicitly setting `releaseType: "release"` in `electron-builder.config.js`
+  - Ensured release visibility by explicitly setting `releaseType: "release"` in `electron/legacy/electron-builder.config.js`
   - Added explicit artifact upload step for CI debugging and fallback access
   - Modernized `sass-loader` configuration in `webpack.config.js` to address missing CSS in production builds
 - Committed documentation and core feature enhancements to git
@@ -178,7 +178,7 @@ Continuing oversized JS refactors with stable public APIs (`tools-manager`, `the
    - `rendering/` (`lazy-images.js`, `incremental-render.js`, `filters-sort.js`)
    - `index.js` as the compatibility entry exporting current public API
 10. Keep exports stable during refactor so `renderer.js` and other consumers do not break
-11. Refactor `main.js` into modular files under `main/` (window lifecycle, IPC handlers, library/db, launcher, download/install, locale manager) to reduce coupling and improve startup reliability
+11. Refactor `electron/legacy/main.js` into modular files under `electron/legacy/main/` (window lifecycle, IPC handlers, library/db, launcher, download/install, locale manager) to reduce coupling and improve startup reliability
 12. Future TODO Bank (requested by user):
    - Auto memory card / save-state backups to AppData
    - Auto in-game screenshotter to build multi-image cover sets per game
@@ -196,7 +196,7 @@ Continuing oversized JS refactors with stable public APIs (`tools-manager`, `the
 - Multi-language support through i18n system
 - Modular architecture with separate managers for different functionalities
 - `js/game-manager.js` has grown too large; ongoing work should prioritize modularization into `js/game-manager/` with stable interfaces
-- `main.js` is also too large and should be split into domain modules with a small composition entrypoint
+- `electron/legacy/main.js` is also too large and should be split into domain modules with a small composition entrypoint
 
 ## Important Patterns and Preferences
 - Component-based architecture

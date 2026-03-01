@@ -12,8 +12,11 @@ function parsePorts(args) {
   return Array.from(new Set(parsed));
 }
 
-function killWindowsPortListeners(ports) {
-  const output = execSync("netstat -ano -p tcp", { encoding: "utf8" });
+function collectWindowsPidsByNetstat(ports) {
+  const output = execSync("netstat -ano -p tcp", {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"]
+  });
   const targetPorts = new Set(ports);
   const pids = new Set();
 
@@ -22,19 +25,26 @@ function killWindowsPortListeners(ports) {
     .map((line) => line.trim())
     .filter(Boolean)
     .forEach((line) => {
+      // Locale-safe parse: find local endpoint + PID, ignore translated state names.
       const parts = line.split(/\s+/);
       if (parts.length < 5) return;
       const proto = String(parts[0] || "").toUpperCase();
+      if (proto !== "TCP") return;
       const local = String(parts[1] || "");
-      const state = String(parts[3] || "").toUpperCase();
-      const pidRaw = String(parts[4] || "").trim();
-      if (proto !== "TCP" || state !== "LISTENING") return;
+      const pidRaw = String(parts[parts.length - 1] || "").trim();
       const localPortText = local.slice(local.lastIndexOf(":") + 1).replace("]", "");
       const localPort = Number.parseInt(localPortText, 10);
       if (!targetPorts.has(localPort)) return;
       const pid = Number.parseInt(pidRaw, 10);
       if (Number.isFinite(pid) && pid > 0) pids.add(pid);
     });
+
+  return Array.from(pids);
+}
+
+function killWindowsPortListeners(ports) {
+  const pids = new Set();
+  collectWindowsPidsByNetstat(ports).forEach((pid) => pids.add(pid));
 
   if (pids.size === 0) return [];
   const killed = [];
@@ -49,20 +59,46 @@ function killWindowsPortListeners(ports) {
   return killed;
 }
 
+function collectUnixPidsByLsof(port) {
+  const output = execSync(`lsof -nP -iTCP:${port} -sTCP:LISTEN -t`, {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"]
+  });
+  return output
+    .split(/\r?\n/)
+    .map((line) => Number.parseInt(String(line).trim(), 10))
+    .filter((pid) => Number.isFinite(pid) && pid > 0);
+}
+
+function collectUnixPidsBySs(port) {
+  const output = execSync(`ss -ltnp "sport = :${port}"`, {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"]
+  });
+  const pids = new Set();
+  output.split(/\r?\n/).forEach((line) => {
+    const matches = line.match(/pid=(\d+)/g);
+    if (!matches) return;
+    matches.forEach((match) => {
+      const pid = Number.parseInt(match.replace("pid=", ""), 10);
+      if (Number.isFinite(pid) && pid > 0) pids.add(pid);
+    });
+  });
+  return Array.from(pids);
+}
+
 function killUnixPortListeners(ports) {
   const pids = new Set();
   ports.forEach((port) => {
     try {
-      const output = execSync(`lsof -nP -iTCP:${port} -sTCP:LISTEN -t`, {
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "ignore"]
-      });
-      output
-        .split(/\r?\n/)
-        .map((line) => Number.parseInt(String(line).trim(), 10))
-        .filter((pid) => Number.isFinite(pid) && pid > 0)
-        .forEach((pid) => pids.add(pid));
-    } catch (_error) {
+      collectUnixPidsByLsof(port).forEach((pid) => pids.add(pid));
+      return;
+    } catch (_lsofError) {
+      // Continue with ss fallback.
+    }
+    try {
+      collectUnixPidsBySs(port).forEach((pid) => pids.add(pid));
+    } catch (_ssError) {
       // no listener on this port
     }
   });

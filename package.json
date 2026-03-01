@@ -1,6 +1,6 @@
 {
   "name": "emuBro",
-  "version": "1.0.0-alpha.13",
+  "version": "1.0.0-alpha.14",
   "description": " emuBro is an open source retro game launcher that associates your retro games with your emulators such as snes9x, epsxe, pcsx2, dolphin, cemu or whatever you like. ",
   "scripts": {
     "postinstall": "node -e \"console.log('Root postinstall: run npm install in tauri/ and use npm run dev from root.')\"",
@@ -17,6 +17,8 @@
     "build:mac": "npm --prefix tauri run tauri:build:mac",
     "build:web": "npm --prefix tauri run build",
     "prebuild:win": "taskkill /F /IM emuBro.exe /T || exit 0",
+    "version:set": "node scripts/bump-version.js",
+    "version:sync": "node scripts/bump-version.js sync",
     "sync:resources": "node scripts/sync-emubro-resources.js",
     "sync:gamelist": "node scripts/sync-gamelist.js",
     "sync:assets": "npm run sync:resources && npm run sync:gamelist",

@@ -1,7 +1,7 @@
 {
   "name": "emubro-tauri",
   "private": true,
-  "version": "1.0.0-alpha.13",
+  "version": "1.0.0-alpha.14",
   "type": "module",
   "scripts": {
     "cleanup:dev-ports": "node ../scripts/cleanup-dev-ports.js",
@@ -11,10 +11,10 @@
     "preview": "vite preview",
     "tauri:dev": "tauri dev",
     "tauri:dev:clean": "npm run cleanup:dev-ports && npm run tauri:dev",
-    "tauri:build": "tauri build",
-    "tauri:build:linux:appimage": "tauri build --bundles appimage",
+    "tauri:build": "node ../scripts/sync-bundle-resources.js && tauri build",
+    "tauri:build:linux:appimage": "node ../scripts/sync-bundle-resources.js && tauri build --bundles appimage",
     "tauri:build:linux:flatpak": "node ../scripts/build-flatpak.js",
-    "tauri:build:mac": "tauri build --bundles app,dmg"
+    "tauri:build:mac": "node ../scripts/sync-bundle-resources.js && tauri build --bundles app,dmg"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.8.0",

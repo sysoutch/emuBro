@@ -42,6 +42,11 @@ function syncResources() {
     copied.push(entry.name);
   }
 
+  const keepFile = path.join(TARGET_DIR, '.keep');
+  if (!exists(keepFile)) {
+    fs.writeFileSync(keepFile, 'bundle resources placeholder\n', 'utf8');
+  }
+
   console.log(`[sync-bundle-resources] target: ${TARGET_DIR}`);
   console.log(
     copied.length
