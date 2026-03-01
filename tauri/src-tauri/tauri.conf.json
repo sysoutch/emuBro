@@ -51,12 +51,7 @@
       "msi"
     ],
     "resources": [
-      "../../locales/**",
-      "../../emubro-resources/**",
-      "../../gamelist/**",
-      "../../community-themes/**",
-      "../../dist/legacy/**",
-      "../../assets/**"
+      "bundle-resources/**"
     ],
     "icon": [
       "icons/32x32.png",

@@ -20,6 +20,7 @@
     "sync:resources": "node scripts/sync-emubro-resources.js",
     "sync:gamelist": "node scripts/sync-gamelist.js",
     "sync:assets": "npm run sync:resources && npm run sync:gamelist",
+    "sync:bundle-resources": "node scripts/sync-bundle-resources.js",
     "resources:manifest:update": "node scripts/update-resources-manifest.js"
   },
   "keywords": [

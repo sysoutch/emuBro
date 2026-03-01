@@ -78,6 +78,9 @@ jobs:
       - name: Build legacy renderer bundle
         run: npm run legacy:build
 
+      - name: Sync bundled resources
+        run: npm run sync:bundle-resources
+
       - name: Build Tauri bundles
         run: npm --prefix tauri run tauri:build -- --bundles ${{ matrix.bundles }}
 
@@ -125,6 +128,9 @@ jobs:
 
       - name: Build legacy renderer bundle
         run: npm run legacy:build
+
+      - name: Sync bundled resources
+        run: npm run sync:bundle-resources
 
       - name: Build Flatpak bundle
         run: npm run build:linux:flatpak
