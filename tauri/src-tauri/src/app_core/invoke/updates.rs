@@ -10,14 +10,13 @@ const DEFAULT_RESOURCES_MANIFEST_URL: &str =
 
 pub(super) fn handle(ch: &str, args: &[Value], _window: &Window) -> Result<Value, String> {
     match ch {
-        "update:get-state" => Ok(json!({
-            "available": false,
-            "downloaded": false
-        })),
+        "update:get-state" => Ok(read_app_update_state()),
         "resources:update:get-state" => Ok(read_resources_update_state()),
-        "update:get-config" => Ok(json!({})),
+        "update:get-config" => Ok(read_app_update_config()),
         "resources:update:get-config" => Ok(read_resources_update_config()),
-        "update:set-config" => Ok(json!({ "success": true })),
+        "update:set-config" => Ok(json!({
+            "success": true
+        })),
         "resources:update:set-config" => {
             let config = write_resources_update_config(args.get(0))?;
             Ok(with_config(
@@ -27,11 +26,54 @@ pub(super) fn handle(ch: &str, args: &[Value], _window: &Window) -> Result<Value
                 &config,
             ))
         }
-        "update:check" | "update:download" | "update:install" => Ok(not_implemented()),
+        "update:check" => Ok(unavailable_update_response(
+            "App updates are not available in the Tauri build yet."
+        )),
+        "update:download" => Ok(unavailable_update_response(
+            "App updates are not available in the Tauri build yet."
+        )),
+        "update:install" => Ok(unavailable_update_response(
+            "App updates are not available in the Tauri build yet."
+        )),
         "resources:update:check" => check_resources_update(),
         "resources:update:install" => install_resources_update(),
         _ => Ok(json!({ "success": false, "message": format!("Unsupported updates channel: {}", ch) })),
     }
+}
+
+fn read_app_update_config() -> Value {
+    json!({
+        "autoCheckOnStartup": true,
+        "autoCheckIntervalMinutes": 60
+    })
+}
+
+fn read_app_update_state() -> Value {
+    json!({
+        "success": true,
+        "available": false,
+        "checking": false,
+        "installing": false,
+        "downloaded": false,
+        "progressPercent": 0,
+        "currentVersion": "",
+        "latestVersion": "",
+        "lastError": "",
+        "lastMessage": "App updates not enabled in Tauri build."
+    })
+}
+
+fn unavailable_update_response(message: &str) -> Value {
+    json!({
+        "success": true,
+        "available": false,
+        "checking": false,
+        "installing": false,
+        "downloaded": false,
+        "progressPercent": 0,
+        "lastError": "",
+        "lastMessage": message
+    })
 }
 
 fn default_resources_storage_path() -> String {
