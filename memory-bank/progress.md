@@ -37,6 +37,12 @@
 - Deployment procedures and packaging
 
 ## Recent Changes
+- Continued `js/tools-manager.js` refactor by extracting Remote Library tool logic into `js/tools/remote-library-tool.js`.
+- Continued `js/tools-manager.js` refactor by extracting BIOS Manager tool logic into `js/tools/bios-manager-tool.js`.
+- Continued `js/tools-manager.js` refactor by extracting CUE Maker view logic into `js/tools/cue-maker-tool.js`.
+- Continued `js/tools-manager.js` refactor by extracting ECM/UNECM view logic into `js/tools/ecm-unecm-tool.js`.
+- Continued `js/tools-manager.js` refactor by extracting Cover Downloader view logic into `js/tools/cover-downloader-tool.js`.
+- Continued `js/tools-manager.js` refactor by extracting the custom executable shortcuts UI/logic into `js/tools/custom-tool-shortcuts-section.js`.
 - Rebuilt corrupted Tauri covers bridge file `tauri/src-tauri/src/bridge_extensions/covers.rs` from scratch, restoring `covers:download-for-game`, `covers:download-for-library`, and `covers:get-source-config`.
 - Continued `js/tools-manager.js` refactor by extracting plugin-tool creation/view/storage/LLM-draft logic into `js/tools/tool-plugin-manager.js`.
 - Updated memory-bank refactor backlog snapshot in `memory-bank/activeContext.md` with the current largest JS files and size/LOC targets.

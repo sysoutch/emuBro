@@ -1,10 +1,10 @@
 # Active Context
 
 ## Current Work Focus
-Refactoring `js/game-manager.js` into smaller modules while keeping the public API stable.
+Continuing oversized JS refactors with stable public APIs (`tools-manager`, `theme-manager`, settings/library modules).
 
 ## Refactor Backlog Snapshot (2026-03-01)
-- `js/tools-manager.js` — 2,747 LOC — 130.3 KB
+- `js/tools-manager.js` - 314 LOC - 14.6 KB (refactored; keep trimming by extracting placeholders if needed)
 - `js/settings/library-settings-modal.js` — 1,702 LOC — 97.3 KB
 - `js/language-manager.js` — 1,609 LOC — 62.3 KB
 - `js/game-manager/game-details-popup-actions.js` — 1,333 LOC — 60.3 KB
@@ -16,6 +16,12 @@ Refactoring `js/game-manager.js` into smaller modules while keeping the public A
 - `js/theme-manager.js` — 839 LOC — 30.0 KB
 
 ## Recent Changes
+- Continued `js/tools-manager.js` refactor by extracting Remote Library tool logic into `js/tools/remote-library-tool.js`.
+- Continued `js/tools-manager.js` refactor by extracting BIOS Manager tool logic into `js/tools/bios-manager-tool.js`.
+- Continued `js/tools-manager.js` refactor by extracting CUE Maker view logic into `js/tools/cue-maker-tool.js`.
+- Continued `js/tools-manager.js` refactor by extracting ECM/UNECM view logic into `js/tools/ecm-unecm-tool.js`.
+- Continued `js/tools-manager.js` refactor by extracting Cover Downloader view logic into `js/tools/cover-downloader-tool.js`.
+- Continued `js/tools-manager.js` refactor by extracting custom shortcuts UI/logic into `js/tools/custom-tool-shortcuts-section.js`.
 - Implemented emulator download scraping logic: when direct links are missing, the system now scrapes the configured `downloadUrl` for links matching OS-specific file patterns, allowing for robust automated downloads from complex provider pages.
 - Updated emulator download UI to handle multiple discovered packages, allowing users to choose the specific version/format they want to install.
 - Fixed an issue in Remote Library tool where pairing and browsing games silently failed because of the native unsupported `window.prompt` returning null; replaced it with `showTextInputDialog` from `js/ui/text-input-dialog.js`.
