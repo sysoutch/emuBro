@@ -11,7 +11,10 @@
     "preview": "vite preview",
     "tauri:dev": "tauri dev",
     "tauri:dev:clean": "npm run cleanup:dev-ports && npm run tauri:dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "tauri:build:linux:appimage": "tauri build --bundles appimage",
+    "tauri:build:linux:flatpak": "node ../scripts/build-flatpak.js",
+    "tauri:build:mac": "tauri build --bundles app,dmg"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.8.0",

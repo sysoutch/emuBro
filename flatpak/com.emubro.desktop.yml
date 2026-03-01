@@ -1,0 +1,31 @@
+app-id: com.emubro.desktop
+runtime: org.freedesktop.Platform
+runtime-version: "24.08"
+sdk: org.freedesktop.Sdk
+command: emubro
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=x11
+  - --socket=wayland
+  - --socket=pulseaudio
+  - --device=dri
+  - --filesystem=home
+modules:
+  - name: emubro
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 emubro_tauri /app/bin/emubro
+      - install -Dm644 icon.png /app/share/icons/hicolor/128x128/apps/com.emubro.desktop.png
+      - install -Dm644 com.emubro.desktop.desktop /app/share/applications/com.emubro.desktop.desktop
+      - install -Dm644 com.emubro.desktop.metainfo.xml /app/share/metainfo/com.emubro.desktop.metainfo.xml
+    sources:
+      - type: file
+        path: ../tauri/src-tauri/target/release/emubro_tauri
+      - type: file
+        path: ../tauri/src-tauri/icons/128x128.png
+        dest-filename: icon.png
+      - type: file
+        path: com.emubro.desktop.desktop
+      - type: file
+        path: com.emubro.desktop.metainfo.xml

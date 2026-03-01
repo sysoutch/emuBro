@@ -1,4 +1,4 @@
-name: Build and Release emuBro
+name: Build emuBro Packages
 
 on:
   push:
@@ -8,92 +8,141 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: tauri-release-${{ github.ref }}
   cancel-in-progress: true
 
 env:
   NODE_VERSION: 22
-  GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
-  CSC_LINK: ${{ secrets.CSC_LINK }}
-  CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-  APPLE_ID: ${{ secrets.APPLE_ID }}
-  APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-  APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-  EMUBRO_SHIP_EN_ONLY: "1"
-  ELECTRON_BUILDER_SKIP_REBUILD: "true"
 
 jobs:
-  build:
-    permissions:
-      contents: write
+  bundle:
+    name: Bundle (${{ matrix.name }})
     strategy:
+      fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
+        include:
+          - name: windows
+            os: windows-latest
+            bundles: "nsis,msi"
+          - name: linux
+            os: ubuntu-latest
+            bundles: "appimage,deb"
+          - name: mac
+            os: macos-latest
+            bundles: "app,dmg"
     runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Use Node ${{ env.NODE_VERSION }}
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            tauri/package-lock.json
 
-      - name: Install dependencies
-        shell: bash
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
         run: |
-          if [ -f package-lock.json ]; then
-            npm ci
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
+          if apt-cache show libwebkit2gtk-4.1-dev >/dev/null 2>&1; then
+            sudo apt-get install -y libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev
           else
-            npm install --no-audit --prefer-offline
+            sudo apt-get install -y libwebkit2gtk-4.0-dev libjavascriptcoregtk-4.0-dev
           fi
 
-      - name: Build renderer
-        run: npm run build
-
-      - name: Sync emuBro resources
-        run: npm run sync:resources
-
-      - name: Cleanup prior Windows release assets
-        if: ${{ runner.os == 'Windows' && startsWith(github.ref, 'refs/tags/') }}
-        shell: bash
+      - name: Install JS dependencies
         run: |
-          TAG="${GITHUB_REF_NAME}"
-          ASSET_URLS="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets \
-            --jq '.assets[] | select(.name=="latest.yml" or (.name | contains("-win-")) or (.name | endswith(".nsis.7z"))) | .apiUrl' 2>/dev/null || true)"
+          npm ci
+          npm --prefix tauri ci
 
-          if [[ -z "$ASSET_URLS" ]]; then
-            echo "No prior Windows assets to clean for tag $TAG."
-            exit 0
-          fi
-
-          while IFS= read -r api_url; do
-            [[ -z "$api_url" ]] && continue
-            echo "Deleting stale asset: $api_url"
-            gh api -X DELETE "$api_url" >/dev/null || true
-          done <<< "$ASSET_URLS"
-
-      - name: Package app
-        run: |
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            npx electron-builder --win --publish onTag --config electron-builder.config.js
-          elif [[ "$RUNNER_OS" == "Linux" ]]; then
-            npx electron-builder --linux AppImage --publish onTag --config electron-builder.config.js
-          else
-            echo "Skipping macOS packaging for CI"
-          fi
-        shell: bash
+      - name: Build Tauri bundles
+        run: npm --prefix tauri run tauri:build -- --bundles ${{ matrix.bundles }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: emubro-${{ matrix.os }}-artifacts
-          path: build_out/*
+          name: emubro-${{ matrix.name }}-bundles
+          path: |
+            tauri/src-tauri/target/release/bundle/**
 
-      - name: Upload artifacts (fallback)
-        if: ${{ failure() }}
+  flatpak:
+    name: Flatpak (linux)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            tauri/package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Flatpak tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+          flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          flatpak install -y flathub org.freedesktop.Platform//24.08 org.freedesktop.Sdk//24.08
+
+      - name: Install JS dependencies
+        run: |
+          npm ci
+          npm --prefix tauri ci
+
+      - name: Build Flatpak bundle
+        run: npm run build:linux:flatpak
+
+      - name: Upload Flatpak artifact
         uses: actions/upload-artifact@v4
         with:
-          name: emubro-${{ matrix.os }}-artifacts
-          path: dist/**
+          name: emubro-flatpak
+          path: build/flatpak/emuBro.flatpak
+
+  publish-release:
+    name: Publish GitHub Release Assets
+    if: startsWith(github.ref, 'refs/tags/')
+    needs:
+      - bundle
+      - flatpak
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: emubro-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Show release files
+        run: |
+          ls -la release-assets
+          find release-assets -type f | sort
+
+      - name: Upload assets to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            release-assets/**

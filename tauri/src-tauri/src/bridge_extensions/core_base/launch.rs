@@ -137,7 +137,11 @@ pub(crate) fn parse_command_args(input: &str) -> Vec<String> {
     args
 }
 
-pub(crate) fn launch_game_with_emulator(emulator_path: &Path, emulator_args: &str, game_path: &Path) -> Result<(), String> {
+pub(crate) fn launch_game_with_emulator(
+    emulator_path: &Path,
+    emulator_args: &str,
+    game_path: &Path,
+) -> Result<u32, String> {
     let mut args = parse_command_args(emulator_args);
     args.push(game_path.to_string_lossy().to_string());
     let mut command = Command::new(emulator_path);
@@ -147,15 +151,15 @@ pub(crate) fn launch_game_with_emulator(emulator_path: &Path, emulator_args: &st
     if let Some(parent) = emulator_path.parent() {
         command.current_dir(parent);
     }
-    command.spawn().map_err(|e| e.to_string())?;
-    Ok(())
+    let child = command.spawn().map_err(|e| e.to_string())?;
+    Ok(child.id())
 }
 
 pub(crate) fn launch_emulator_process(
     emulator_path: &Path,
     emulator_args: &str,
     working_directory: &str,
-) -> Result<(), String> {
+) -> Result<u32, String> {
     if !emulator_path.exists() || !emulator_path.is_file() {
         return Err("Emulator executable not found".to_string());
     }
@@ -172,8 +176,8 @@ pub(crate) fn launch_emulator_process(
         command.current_dir(parent);
     }
 
-    command.spawn().map_err(|e| e.to_string())?;
-    Ok(())
+    let child = command.spawn().map_err(|e| e.to_string())?;
+    Ok(child.id())
 }
 
 pub(crate) fn find_file_by_name_in_tree(root_dir: &Path, file_name: &str, max_depth: usize, max_files: usize) -> Option<PathBuf> {
@@ -206,7 +210,7 @@ pub(crate) fn find_file_by_name_in_tree(root_dir: &Path, file_name: &str, max_de
     None
 }
 
-pub(crate) fn launch_game_file(game_path: &Path) -> Result<(), String> {
+pub(crate) fn launch_game_file(game_path: &Path) -> Result<Option<u32>, String> {
     if cfg!(target_os = "windows") {
         let lower_ext = game_path
             .extension()
@@ -218,9 +222,10 @@ pub(crate) fn launch_game_file(game_path: &Path) -> Result<(), String> {
             if let Some(parent) = game_path.parent() {
                 command.current_dir(parent);
             }
-            command.spawn().map_err(|e| e.to_string())?;
-            return Ok(());
+            let child = command.spawn().map_err(|e| e.to_string())?;
+            return Ok(Some(child.id()));
         }
     }
-    open::that(game_path).map_err(|e| e.to_string())
+    open::that(game_path).map_err(|e| e.to_string())?;
+    Ok(None)
 }

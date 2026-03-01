@@ -315,96 +315,104 @@
                 <!-- Game Grid -->
                 <main class="game-grid">
                     <div class="game-header">
-                        <h2 id="games-header" data-i18n="gameGrid.featuredGames">Featured Games</h2>
-                        <div class="filters">
-                            <button type="button" id="library-filters-popup-btn" class="action-btn small filters-popup-btn" title="Filter Options">
-                                <span class="icon-svg" aria-hidden="true">
-                                    <svg viewBox="0 0 24 24">
-                                        <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"></path>
-                                    </svg>
-                                </span>
-                                <span>Filters</span>
-                            </button>
-                            <label id="emulators-installed-toggle-wrap" class="emulators-installed-toggle is-hidden">
-                                <input id="emulators-installed-toggle" type="checkbox" />
-                                <span data-i18n="sidebar.installed">Installed</span>
-                            </label>
-                            <select id="platform-filter">
-                                <option value="all" data-i18n="gameGrid.allPlatforms">All Platforms</option>
-                                <option value="gameboy">Gameboy</option>
-                                <option value="android">Android</option>
-                                <option value="xbox">Xbox</option>
-                                <option value="nes">NES</option>
-                                <option value="snes">SNES</option>
-                            </select>
-                            <div class="filter-pair-wrapper filter-pair-wrapper-region-language">
-                                <button
-                                    id="filters-region-language-toggle"
-                                    class="filter-pair-toggle"
-                                    type="button"
-                                    aria-expanded="false"
-                                    aria-controls="filters-region-language-content"
-                                >Region + Language</button>
-                                <div id="filters-region-language-content" class="filter-pair-content">
-                                    <select id="game-region-filter">
-                                        <option value="all">All Regions</option>
-                                        <option value="eu">EU</option>
-                                        <option value="us">US</option>
-                                        <option value="jp">JP</option>
-                                    </select>
-                                    <select id="game-language-filter">
-                                        <option value="all">All Languages</option>
-                                        <option value="en">English</option>
-                                        <option value="de">German</option>
-                                        <option value="fr">French</option>
-                                        <option value="es">Spanish</option>
-                                        <option value="it">Italian</option>
-                                        <option value="jp">Japanese</option>
-                                        <option value="pt">Portuguese</option>
-                                        <option value="nl">Dutch</option>
-                                        <option value="sv">Swedish</option>
-                                        <option value="no">Norwegian</option>
-                                        <option value="da">Danish</option>
-                                        <option value="fi">Finnish</option>
-                                        <option value="pl">Polish</option>
-                                        <option value="ru">Russian</option>
-                                        <option value="tr">Turkish</option>
-                                        <option value="cs">Czech</option>
-                                        <option value="hu">Hungarian</option>
-                                        <option value="ko">Korean</option>
-                                        <option value="zh">Chinese</option>
-                                    </select>
+                        <div class="game-header-top">
+                            <h2 id="games-header" data-i18n="gameGrid.featuredGames">Featured Games</h2>
+                            <div class="filters">
+                                <button type="button" id="library-filters-popup-btn" class="action-btn small filters-popup-btn" title="Filter Options">
+                                    <span class="icon-svg" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24">
+                                            <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"></path>
+                                        </svg>
+                                    </span>
+                                    <span>Filters</span>
+                                </button>
+                                <label id="emulators-installed-toggle-wrap" class="emulators-installed-toggle is-hidden">
+                                    <input id="emulators-installed-toggle" type="checkbox" />
+                                    <span data-i18n="sidebar.installed">Installed</span>
+                                </label>
+                                <select id="platform-filter">
+                                    <option value="all" data-i18n="gameGrid.allPlatforms">All Platforms</option>
+                                    <option value="gameboy">Gameboy</option>
+                                    <option value="android">Android</option>
+                                    <option value="xbox">Xbox</option>
+                                    <option value="nes">NES</option>
+                                    <option value="snes">SNES</option>
+                                </select>
+                                <div class="filter-pair-wrapper filter-pair-wrapper-region-language">
+                                    <button
+                                        id="filters-region-language-toggle"
+                                        class="filter-pair-toggle"
+                                        type="button"
+                                        aria-expanded="false"
+                                        aria-controls="filters-region-language-content"
+                                    >Region + Language</button>
+                                    <div id="filters-region-language-content" class="filter-pair-content">
+                                        <select id="game-region-filter">
+                                            <option value="all">All Regions</option>
+                                            <option value="eu">EU</option>
+                                            <option value="us">US</option>
+                                            <option value="jp">JP</option>
+                                        </select>
+                                        <select id="game-language-filter">
+                                            <option value="all">All Languages</option>
+                                            <option value="en">English</option>
+                                            <option value="de">German</option>
+                                            <option value="fr">French</option>
+                                            <option value="es">Spanish</option>
+                                            <option value="it">Italian</option>
+                                            <option value="jp">Japanese</option>
+                                            <option value="pt">Portuguese</option>
+                                            <option value="nl">Dutch</option>
+                                            <option value="sv">Swedish</option>
+                                            <option value="no">Norwegian</option>
+                                            <option value="da">Danish</option>
+                                            <option value="fi">Finnish</option>
+                                            <option value="pl">Polish</option>
+                                            <option value="ru">Russian</option>
+                                            <option value="tr">Turkish</option>
+                                            <option value="cs">Czech</option>
+                                            <option value="hu">Hungarian</option>
+                                            <option value="ko">Korean</option>
+                                            <option value="zh">Chinese</option>
+                                        </select>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="filter-pair-wrapper filter-pair-wrapper-group-sort">
-                                <button
-                                    id="filters-group-sort-toggle"
-                                    class="filter-pair-toggle"
-                                    type="button"
-                                    aria-expanded="false"
-                                    aria-controls="filters-group-sort-content"
-                                >Group + Sort</button>
-                                <div id="filters-group-sort-content" class="filter-pair-content">
-                                    <select id="group-filter">
-                                        <option value="none" data-i18n="filters.groupNone">None</option>
-                                        <option value="platform" data-i18n="filters.groupPlatform">Platform</option>
-                                        <option value="company" data-i18n="filters.groupCompany">Company</option>
-                                    </select>
-                                    <select id="sort-filter">
-                                        <option value="name" data-i18n="gameGrid.sortByName">Sort by Name</option>
-                                        <option value="rating" data-i18n="gameGrid.sortByRating">Sort by Rating</option>
-                                        <option value="platform" data-i18n="gameGrid.sortByPlatform">Sort by Platform</option>
-                                        <option value="recently-played">Recently Played</option>
-                                    </select>
+                                <div class="filter-pair-wrapper filter-pair-wrapper-group-sort">
+                                    <button
+                                        id="filters-group-sort-toggle"
+                                        class="filter-pair-toggle"
+                                        type="button"
+                                        aria-expanded="false"
+                                        aria-controls="filters-group-sort-content"
+                                    >Group + Sort</button>
+                                    <div id="filters-group-sort-content" class="filter-pair-content">
+                                        <select id="group-filter">
+                                            <option value="none" data-i18n="filters.groupNone">None</option>
+                                            <option value="platform" data-i18n="filters.groupPlatform">Platform</option>
+                                            <option value="company" data-i18n="filters.groupCompany">Company</option>
+                                        </select>
+                                        <select id="sort-filter">
+                                            <option value="name" data-i18n="gameGrid.sortByName">Sort by Name</option>
+                                            <option value="rating" data-i18n="gameGrid.sortByRating">Sort by Rating</option>
+                                            <option value="platform" data-i18n="gameGrid.sortByPlatform">Sort by Platform</option>
+                                            <option value="recently-played">Recently Played</option>
+                                        </select>
+                                    </div>
                                 </div>
+                                <label id="group-same-names-toggle-wrap" class="group-same-names-toggle">
+                                    <input id="group-same-names-toggle" type="checkbox" />
+                                    <span data-i18n="filters.groupSameNames">Group same names</span>
+                                </label>
                             </div>
-                            <label id="group-same-names-toggle-wrap" class="group-same-names-toggle">
-                                <input id="group-same-names-toggle" type="checkbox" />
-                                <span data-i18n="filters.groupSameNames">Group same names</span>
-                            </label>
                         </div>
                     </div>
                     <div class="game-scroll-body">
+                        <div class="cover-card-mode-strip is-hidden">
+                            <div id="cover-card-mode-tabs" class="cover-card-mode-tabs is-hidden" role="tablist" aria-label="Cover card mode">
+                                <button class="cover-card-mode-tab is-active" type="button" role="tab" data-cover-mode="cover-title" aria-selected="true">Cover+Title</button>
+                                <button class="cover-card-mode-tab" type="button" role="tab" data-cover-mode="cover-only" aria-selected="false">Cover Only</button>
+                            </div>
+                        </div>
                         <section id="suggested-panel" class="suggested-panel is-hidden" aria-live="polite"></section>
                         <div id="games-container" class="games-container">
                             <!-- Games will be loaded here dynamically -->

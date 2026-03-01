@@ -37,6 +37,32 @@
 - Deployment procedures and packaging
 
 ## Recent Changes
+- Continued `js/settings/library-settings-modal.js` refactor by extracting core/general/import/gamepad wiring into `js/settings/library-settings-modal/core-handlers.js`.
+- Continued `js/settings/library-settings-modal.js` refactor by extracting LLM tab event wiring into `js/settings/library-settings-modal/llm-handlers.js`.
+- Continued `js/settings/library-settings-modal.js` refactor by extracting app/resource update actions into `js/settings/library-settings-modal/update-actions.js`.
+- Continued `js/settings/library-settings-modal.js` refactor by extracting managed path list/relocation handlers into `js/settings/library-settings-modal/path-section-handlers.js`.
+- Continued `js/settings/library-settings-modal.js` refactor by extracting save/apply settings flow into `js/settings/library-settings-modal/save-settings.js`.
+- Added missing Tauri suggestions bridge channel `suggestions:generate-tool-draft` via `tauri/src-tauri/src/bridge_extensions/suggestions/tool_draft.rs` and wired it into `suggestions/channels.rs`.
+- Improved Tauri community in-app browser flow in `tauri/src-tauri/src/app_core/invoke/community.rs`: reuse existing `community-browser` window with URL navigation, allow navigation explicitly, and only recreate window when reuse navigation fails.
+- Verified Tauri invoke channel coverage: all current renderer `window.emubro.invoke(...)` channels now have Rust-side handlers.
+- Continued `js/language-manager.js` refactor by extracting modal DOM lookup and event wiring into `js/language-manager/modal-events.js`.
+- Continued `js/settings/library-settings-modal.js` refactor by extracting options/default function resolution into `js/settings/library-settings-modal/options-resolver.js`.
+- Continued `js/settings/library-settings-modal.js` refactor by extracting LLM modal normalization helpers into `js/settings/library-settings-modal/llm-utils.js`.
+- Continued `js/language-manager.js` refactor by extracting shared object/path helpers into `js/language-manager/data-utils.js`.
+- Continued `js/language-manager.js` refactor by extracting language code/flag validation into `js/language-manager/locale-validation.js`.
+- Continued `js/language-manager.js` refactor by extracting runtime translation refresh/base-language cache logic into `js/language-manager/runtime-state.js`.
+- Continued `js/language-manager.js` refactor by extracting translation UI state helpers into `js/language-manager/translation-controls.js`.
+- Continued `js/language-manager.js` refactor by extracting live edit lifecycle into `js/language-manager/live-edit.js`.
+- Continued `js/language-manager.js` refactor by extracting save/create persistence flows into `js/language-manager/persistence.js`.
+- Continued `js/language-manager.js` refactor by extracting rename/flag/delete flows into `js/language-manager/language-actions.js`.
+- Continued `js/language-manager.js` refactor by extracting editor grouping/rendering into `js/language-manager/editor-view.js`.
+- Continued `js/language-manager.js` refactor by extracting LLM translation workflow into `js/language-manager/llm-translation.js`.
+- Continued `js/language-manager.js` refactor by extracting language list/card rendering into `js/language-manager/language-list-view.js`.
+- Continued `js/language-manager.js` refactor by extracting flag resolution/rendering helpers into `js/language-manager/flags.js`.
+- Continued `js/language-manager.js` refactor by extracting add/rename dialogs into `js/language-manager/locale-dialogs.js`.
+- Continued `js/language-manager.js` refactor by extracting repo install + JSON export helpers into `js/language-manager/repo-export.js`.
+- Continued `js/settings/library-settings-modal.js` refactor by extracting launcher import dialog into `js/settings/library-settings-modal/launcher-import-modal.js`.
+- Continued `js/settings/library-settings-modal.js` refactor by extracting tab renderers into `js/settings/library-settings-modal/tab-renderers.js`.
 - Continued `js/tools-manager.js` refactor by extracting Remote Library tool logic into `js/tools/remote-library-tool.js`.
 - Continued `js/tools-manager.js` refactor by extracting BIOS Manager tool logic into `js/tools/bios-manager-tool.js`.
 - Continued `js/tools-manager.js` refactor by extracting CUE Maker view logic into `js/tools/cue-maker-tool.js`.

@@ -1,3 +1,5 @@
+import { buildGamesContainerClass, getStoredCoverCardMode } from '../game-manager/render-utils';
+
 export function createLibraryViewController(options = {}) {
     const getActiveTopSection = typeof options.getActiveTopSection === 'function'
         ? options.getActiveTopSection
@@ -178,7 +180,10 @@ export function createLibraryViewController(options = {}) {
 
         document.querySelectorAll('.view-btn').forEach((btn) => btn.classList.remove('active'));
         targetBtn.classList.add('active');
-        if (gamesContainer) gamesContainer.className = `games-container ${normalized}-view`;
+        if (gamesContainer) {
+            const coverCardMode = getStoredCoverCardMode(localStorage);
+            gamesContainer.className = buildGamesContainerClass(normalized, coverCardMode);
+        }
         updateViewSizeControlState();
         return true;
     }
@@ -327,7 +332,8 @@ export function createLibraryViewController(options = {}) {
             if (suggestedRows.length === 0) {
                 const activeView = document.querySelector('.view-btn.active')?.dataset?.view || 'cover';
                 if (gamesContainer) {
-                    gamesContainer.className = `games-container ${activeView}-view`;
+                    const coverCardMode = getStoredCoverCardMode(localStorage);
+                    gamesContainer.className = buildGamesContainerClass(activeView, coverCardMode);
                     gamesContainer.innerHTML = '<p class="suggested-empty-state">Generate suggestions to show recommended games here.</p>';
                 }
                 return;

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=emuBro
+Comment=Retro game launcher for emulators
+Exec=emubro
+Icon=com.emubro.desktop
+Categories=Game;
+StartupNotify=true
+Terminal=false

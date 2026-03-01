@@ -239,7 +239,8 @@ export function setupHeaderThemeControlsToggle(options = {}) {
     };
 
     const themeCompactQuery = createHeaderWidthQuery(1500);
-    const languageCompactQuery = createHeaderWidthQuery(1320);
+    // Keep language toggle behavior aligned with CSS: compact buttons are shown from compact density and below.
+    const languageCompactQuery = createHeaderWidthQuery(1500);
 
     let densityRaf = null;
 

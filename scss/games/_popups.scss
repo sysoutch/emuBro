@@ -33,6 +33,7 @@
     padding: 14px;
     overflow: auto;
     gap: 0;
+    container-type: inline-size;
 }
 
 #game-info-modal .game-details-info {
@@ -57,10 +58,8 @@
 
 #game-info-modal .game-detail-actions {
     grid-column: 1 / -1;
-    align-items: flex-start;
-    justify-content: flex-start;
-    flex-direction: row;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
     gap: 10px;
 }
 
@@ -307,6 +306,26 @@
     padding-inline: 14px;
 }
 
+#game-info-modal .game-detail-description-actions .game-detail-icon-btn {
+    width: auto;
+    min-width: 132px;
+}
+
+#game-info-modal .game-detail-description-status {
+    margin-top: 2px;
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    min-height: 1rem;
+}
+
+#game-info-modal .game-detail-description-status[data-level="success"] {
+    color: var(--success-color);
+}
+
+#game-info-modal .game-detail-description-status[data-level="error"] {
+    color: var(--danger-color);
+}
+
 #game-info-modal .game-detail-platform-inline {
     display: flex;
     gap: 8px;
@@ -364,15 +383,56 @@
 }
 
 #game-info-modal .game-detail-tags-actions {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
     gap: 8px;
 }
 
 #game-info-modal .game-detail-tags-actions .action-btn {
-    width: auto;
+    width: 100%;
     min-width: 0;
-    padding-inline: 14px;
+    padding-inline: 10px;
+}
+
+#game-info-modal .game-detail-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    min-width: 0;
+    width: 100%;
+}
+
+#game-info-modal .game-detail-btn-icon {
+    width: 16px;
+    height: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 16px;
+}
+
+#game-info-modal .game-detail-btn-icon svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.75;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+#game-info-modal .game-detail-btn-icon svg .fill {
+    fill: currentColor;
+    stroke: none;
+}
+
+#game-info-modal .game-detail-btn-label {
+    line-height: 1.1;
+    letter-spacing: 0.02em;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: left;
 }
 
 #game-info-modal .game-detail-tags-hint {
@@ -392,6 +452,10 @@
 #game-info-modal .youtube-preview-btn:hover {
     filter: brightness(1.06);
     box-shadow: 0 10px 24px -14px rgba(255, 44, 36, 0.9);
+}
+
+#game-info-modal .youtube-preview-btn .game-detail-btn-icon {
+    color: #fff;
 }
 
 #game-info-modal .youtube-preview-btn-icon {
@@ -633,6 +697,20 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 2px;
+}
+
+@container (max-width: 430px) {
+    #game-info-modal .game-detail-icon-btn {
+        min-width: 38px;
+        width: 100%;
+        justify-content: center;
+        padding-inline: 6px;
+        gap: 0;
+    }
+
+    #game-info-modal .game-detail-btn-label {
+        display: none;
+    }
 }
 
 #emulator-info-modal .emulator-detail-path-line {

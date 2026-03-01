@@ -28,7 +28,13 @@ import {
     dedupeLaunchCandidateMembers
 } from './game-manager/launch-candidate-utils';
 import { showGroupedLaunchPicker } from './game-manager/launch-picker';
-import { getGlobalSearchTerm, buildGamesRenderSignature, buildViewGamePool } from './game-manager/render-utils';
+import {
+    getGlobalSearchTerm,
+    buildGamesRenderSignature,
+    buildViewGamePool,
+    buildGamesContainerClass,
+    getStoredCoverCardMode
+} from './game-manager/render-utils';
 import { createGameSearchActions } from './game-manager/game-search';
 import { createGameFilters } from './game-manager/game-filters';
 import { renderGamesAsSlideshow } from './game-manager/views/slideshow-view';
@@ -421,13 +427,15 @@ export function renderGames(gamesToRender) {
 
     const activeViewBtn = document.querySelector('.view-btn.active');
     const activeView = activeViewBtn ? activeViewBtn.dataset.view : 'cover';
+    const coverCardMode = getStoredCoverCardMode(localStorage);
     const now = Date.now();
     const signature = buildGamesRenderSignature({
         rows: gamesToRender,
         view: activeView,
         currentGroupBy,
         currentSort,
-        currentSortDir
+        currentSortDir,
+        coverCardMode
     });
     if (signature === lastRenderSignature && (now - lastRenderAt) < 220) {
         return;
@@ -445,7 +453,7 @@ export function renderGames(gamesToRender) {
         cleanupLazyGameImages(gamesContainer, { releaseSources: true });
     }
 
-    gamesContainer.className = `games-container ${activeView}-view`;
+    gamesContainer.className = buildGamesContainerClass(activeView, coverCardMode);
 
     cleanupLazyGameImages(gamesContainer);
     gamesContainer.innerHTML = '';

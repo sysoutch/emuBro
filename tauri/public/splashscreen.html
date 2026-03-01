@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>emuBro Loading</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg-primary: #0b1220;
+        --bg-secondary: #121c2f;
+        --bg-tertiary: #1a263d;
+        --text-primary: #e7edf8;
+        --text-secondary: #b9c7dc;
+        --accent-color: #32b8de;
+        --accent-light: #8fe6ff;
+        --accent-rgb: 50, 184, 222;
+        --app-gradient-a: #0b1220;
+        --app-gradient-b: #121c2f;
+        --app-gradient-c: #1a263d;
+        --font-body: "Segoe UI", "Inter", sans-serif;
+      }
+
+      :root[data-tone="light"] {
+        color-scheme: light;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        user-select: none;
+        font-family: var(--font-body);
+      }
+
+      body {
+        background:
+          radial-gradient(90% 150% at 5% 0%, rgba(var(--accent-rgb), 0.34), transparent 65%),
+          radial-gradient(75% 120% at 100% 100%, rgba(var(--accent-rgb), 0.22), transparent 72%),
+          linear-gradient(140deg, var(--app-gradient-a) 0%, var(--app-gradient-b) 52%, var(--app-gradient-c) 100%);
+        color: var(--text-primary);
+        padding: 18px;
+      }
+
+      .shell {
+        width: 100%;
+        height: 100%;
+        border-radius: 14px;
+        border: 1px solid rgba(var(--accent-rgb), 0.38);
+        display: grid;
+        place-items: center;
+        background: linear-gradient(160deg, var(--bg-secondary), var(--bg-primary));
+      }
+
+      .card {
+        width: min(430px, 94%);
+        border-radius: 18px;
+        border: 1px solid rgba(var(--accent-rgb), 0.5);
+        background: linear-gradient(160deg, var(--bg-tertiary), var(--bg-primary));
+        box-shadow:
+          0 18px 36px rgba(0, 0, 0, 0.3),
+          0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+        padding: 24px 20px 20px;
+      }
+
+      .brand {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brand img {
+        width: 52px;
+        height: 52px;
+        filter: drop-shadow(0 0 10px rgba(var(--accent-rgb), 0.45));
+      }
+
+      .brand h1 {
+        margin: 0;
+        line-height: 1;
+        letter-spacing: 0.01em;
+        font-size: 54px;
+        font-weight: 800;
+      }
+
+      .brand .prefix {
+        color: var(--text-primary);
+      }
+
+      .brand .suffix {
+        color: var(--accent-color);
+      }
+
+      .subtitle {
+        margin: 14px 0 16px;
+        text-align: center;
+        color: var(--text-secondary);
+        font-size: 28px;
+      }
+
+      .progress {
+        height: 8px;
+        border-radius: 999px;
+        background: rgba(var(--accent-rgb), 0.24);
+        overflow: hidden;
+      }
+
+      .progress-bar {
+        height: 100%;
+        width: 35%;
+        background: linear-gradient(90deg, var(--accent-color), var(--accent-light), var(--accent-color));
+        border-radius: inherit;
+        box-shadow: 0 0 14px rgba(var(--accent-rgb), 0.58);
+        animation: pulse 1.15s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: translateX(-26%);
+        }
+        50% {
+          transform: translateX(94%);
+        }
+        100% {
+          transform: translateX(-26%);
+        }
+      }
+    </style>
+    <script>
+      (() => {
+        const FALLBACK_DARK = {
+          id: "dark",
+          tone: "dark",
+          bgPrimary: "#0b1220",
+          bgSecondary: "#121c2f",
+          bgTertiary: "#1a263d",
+          textPrimary: "#e7edf8",
+          textSecondary: "#b9c7dc",
+          accentColor: "#32b8de",
+          accentLight: "#8fe6ff",
+          fontBody: "Segoe UI, Inter, sans-serif",
+          appGradientA: "#0b1220",
+          appGradientB: "#121c2f",
+          appGradientC: "#1a263d"
+        };
+        const FALLBACK_LIGHT = {
+          id: "light",
+          tone: "light",
+          bgPrimary: "#dfeaf6",
+          bgSecondary: "#edf4fb",
+          bgTertiary: "#d2e3f5",
+          textPrimary: "#17263a",
+          textSecondary: "#5d7694",
+          accentColor: "#3db2d6",
+          accentLight: "#87d8ef",
+          fontBody: "Segoe UI, Inter, sans-serif",
+          appGradientA: "#dfeaf6",
+          appGradientB: "#edf4fb",
+          appGradientC: "#d2e3f5"
+        };
+
+        function isHexColor(value) {
+          const text = String(value || "").trim();
+          if (!text.startsWith("#")) return false;
+          const hex = text.slice(1);
+          return /^(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(hex);
+        }
+
+        function toRgbHex(value) {
+          const hex = String(value || "").trim().replace("#", "");
+          if (hex.length === 3 || hex.length === 4) {
+            const r = parseInt(hex[0] + hex[0], 16);
+            const g = parseInt(hex[1] + hex[1], 16);
+            const b = parseInt(hex[2] + hex[2], 16);
+            return `${r}, ${g}, ${b}`;
+          }
+          if (hex.length === 6 || hex.length === 8) {
+            const r = parseInt(hex.slice(0, 2), 16);
+            const g = parseInt(hex.slice(2, 4), 16);
+            const b = parseInt(hex.slice(4, 6), 16);
+            return `${r}, ${g}, ${b}`;
+          }
+          return "50, 184, 222";
+        }
+
+        function estimateToneFromBg(hex) {
+          if (!isHexColor(hex)) return "dark";
+          const text = String(hex).replace("#", "");
+          const full = text.length === 3 || text.length === 4
+            ? `${text[0]}${text[0]}${text[1]}${text[1]}${text[2]}${text[2]}`
+            : text.slice(0, 6);
+          const r = parseInt(full.slice(0, 2), 16);
+          const g = parseInt(full.slice(2, 4), 16);
+          const b = parseInt(full.slice(4, 6), 16);
+          const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+          return luminance > 0.62 ? "light" : "dark";
+        }
+
+        function normalizeTheme(raw) {
+          const tone = String(raw?.tone || "").toLowerCase() === "light" ? "light" : "dark";
+          const fallback = tone === "light" ? FALLBACK_LIGHT : FALLBACK_DARK;
+          const readColor = (key, fallbackKey = key) => {
+            const value = raw && raw[key];
+            return isHexColor(value) ? String(value).trim() : fallback[fallbackKey];
+          };
+
+          const bgPrimary = readColor("bgPrimary");
+          const bgSecondary = readColor("bgSecondary");
+          const bgTertiary = readColor("bgTertiary");
+
+          return {
+            id: String(raw?.id || fallback.id || "dark").trim() || "dark",
+            tone,
+            bgPrimary,
+            bgSecondary,
+            bgTertiary,
+            textPrimary: readColor("textPrimary"),
+            textSecondary: readColor("textSecondary"),
+            accentColor: readColor("accentColor"),
+            accentLight: readColor("accentLight"),
+            fontBody: String(raw?.fontBody || fallback.fontBody).trim() || fallback.fontBody,
+            appGradientA: readColor("appGradientA", "bgPrimary") || bgPrimary,
+            appGradientB: readColor("appGradientB", "bgSecondary") || bgSecondary,
+            appGradientC: readColor("appGradientC", "bgTertiary") || bgTertiary
+          };
+        }
+
+        function applyTheme(rawTheme) {
+          const theme = normalizeTheme(rawTheme);
+          const root = document.documentElement;
+          root.setAttribute("data-tone", theme.tone);
+          root.style.setProperty("--bg-primary", theme.bgPrimary);
+          root.style.setProperty("--bg-secondary", theme.bgSecondary);
+          root.style.setProperty("--bg-tertiary", theme.bgTertiary);
+          root.style.setProperty("--text-primary", theme.textPrimary);
+          root.style.setProperty("--text-secondary", theme.textSecondary);
+          root.style.setProperty("--accent-color", theme.accentColor);
+          root.style.setProperty("--accent-light", theme.accentLight);
+          root.style.setProperty("--accent-rgb", toRgbHex(theme.accentColor));
+          root.style.setProperty("--font-body", theme.fontBody);
+          root.style.setProperty("--app-gradient-a", theme.appGradientA);
+          root.style.setProperty("--app-gradient-b", theme.appGradientB);
+          root.style.setProperty("--app-gradient-c", theme.appGradientC);
+        }
+
+        function applyThemeFromLocalStorage() {
+          const selectedThemeId = String(localStorage.getItem("theme") || "").trim();
+          if (!selectedThemeId) return;
+
+          const lowered = selectedThemeId.toLowerCase();
+          if (lowered === "light") {
+            applyTheme(FALLBACK_LIGHT);
+            return;
+          }
+          if (lowered === "dark") {
+            applyTheme(FALLBACK_DARK);
+            return;
+          }
+
+          try {
+            const customThemes = JSON.parse(localStorage.getItem("customThemes") || "[]");
+            if (!Array.isArray(customThemes)) return;
+            const selected = customThemes.find((row) => String(row?.id || "").trim() === selectedThemeId);
+            if (!selected) return;
+            const colors = selected?.colors || {};
+            const bgPrimary = isHexColor(colors.bgPrimary) ? colors.bgPrimary : FALLBACK_DARK.bgPrimary;
+            applyTheme({
+              id: selectedThemeId,
+              tone: estimateToneFromBg(bgPrimary),
+              bgPrimary,
+              bgSecondary: colors.bgSecondary,
+              bgTertiary: colors.bgTertiary,
+              textPrimary: colors.textPrimary,
+              textSecondary: colors.textSecondary,
+              accentColor: colors.accentColor,
+              accentLight: colors.accentLight,
+              fontBody: selected?.fonts?.body,
+              appGradientA: colors.appGradientA,
+              appGradientB: colors.appGradientB,
+              appGradientC: colors.appGradientC
+            });
+          } catch (_) {}
+        }
+
+        async function applyThemeFromBackend() {
+          const invoke = window?.__TAURI_INTERNALS__?.invoke;
+          if (typeof invoke !== "function") return;
+          try {
+            const response = await invoke("emubro_invoke", {
+              channel: "settings:get-splash-theme",
+              args: []
+            });
+            if (response?.success && response?.theme && typeof response.theme === "object") {
+              applyTheme(response.theme);
+            }
+          } catch (_) {}
+        }
+
+        applyThemeFromLocalStorage();
+        void applyThemeFromBackend();
+      })();
+    </script>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="card" aria-live="polite">
+        <div class="brand">
+          <img src="/logo.png" alt="emuBro" />
+          <h1><span class="prefix">EMU</span><span class="suffix">BRO</span></h1>
+        </div>
+        <p class="subtitle">Loading library, themes, and tools...</p>
+        <div class="progress" role="presentation">
+          <div class="progress-bar"></div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

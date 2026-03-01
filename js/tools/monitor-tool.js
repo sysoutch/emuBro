@@ -96,9 +96,23 @@ export class MonitorTool {
         });
     }
 
+    normalizeMonitorPayload(payload) {
+        if (Array.isArray(payload)) return payload;
+        if (payload && typeof payload === 'object') {
+            if (Array.isArray(payload.monitors)) return payload.monitors;
+            if (Array.isArray(payload.data)) return payload.data;
+            if (payload.success === false) {
+                const message = String(payload.message || 'Failed to retrieve monitor information');
+                throw new Error(message);
+            }
+        }
+        return [];
+    }
+
     async updateMonitorStatus() {
         try {
-            const monitors = await emubro.invoke('get-monitor-info');
+            const payload = await emubro.invoke('get-monitor-info');
+            const monitors = this.normalizeMonitorPayload(payload);
             this.displayMonitorStatus(monitors);
         } catch (error) {
             console.error('Failed to get monitor info:', error);
@@ -218,7 +232,8 @@ export class MonitorTool {
 
     async detectMonitors() {
         try {
-            const monitors = await emubro.invoke('detect-monitors');
+            const payload = await emubro.invoke('detect-monitors');
+            const monitors = this.normalizeMonitorPayload(payload);
             this.displayMonitorStatus(monitors);
             alert(t('tools.monitor.detectCompleted', 'Monitor detection completed successfully.'));
         } catch (error) {

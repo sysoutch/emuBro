@@ -85,6 +85,54 @@
     font-weight: 600;
 }
 
+.cover-card-mode-tabs {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 4px;
+    border: 1px solid color-mix(in srgb, var(--border-color), var(--accent-color) 28%);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bg-secondary), black 16%);
+    box-shadow:
+        0 8px 20px -16px rgba(0, 0, 0, 0.8),
+        0 0 0 1px color-mix(in srgb, var(--accent-color), transparent 88%) inset;
+}
+
+.cover-card-mode-tabs.is-hidden {
+    display: none;
+}
+
+.cover-card-mode-tab {
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-secondary);
+    border-radius: 999px;
+    min-height: 30px;
+    padding: 6px 14px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: border-color 0.16s ease, background-color 0.16s ease, color 0.16s ease;
+}
+
+.cover-card-mode-tab:hover {
+    border-color: color-mix(in srgb, var(--accent-color), transparent 54%);
+    color: var(--text-primary);
+}
+
+.cover-card-mode-tab.is-active {
+    border-color: color-mix(in srgb, var(--accent-color), white 24%);
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--accent-color), #ffaf5a 34%),
+        color-mix(in srgb, var(--accent-color), #ff8a1f 16%)
+    );
+    color: color-mix(in srgb, #2a1603, black 14%);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.24);
+}
+
 .view-size-control {
     display: inline-flex;
     align-items: center;
@@ -256,8 +304,8 @@
     }
     
     .game-header {
-        flex-direction: row;
-        align-items: center;
+        flex-direction: column;
+        align-items: stretch;
         gap: 8px;
     }
     

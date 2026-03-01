@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.emubro.desktop</id>
+  <name>emuBro</name>
+  <summary>Retro game launcher for emulators</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <developer_name>emuBro</developer_name>
+  <launchable type="desktop-id">com.emubro.desktop.desktop</launchable>
+  <description>
+    <p>emuBro is a desktop launcher for managing retro games and emulators.</p>
+  </description>
+  <categories>
+    <category>Game</category>
+  </categories>
+</component>

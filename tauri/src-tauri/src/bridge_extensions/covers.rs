@@ -327,6 +327,515 @@ fn fetch_cover_bytes(source_url: &str) -> Result<Vec<u8>, CoverFetchError> {
     }
 }
 
+fn read_response_text(response: ureq::Response) -> Result<String, String> {
+    let mut reader = response.into_reader();
+    let mut data = String::new();
+    reader
+        .read_to_string(&mut data)
+        .map_err(|error| error.to_string())?;
+    Ok(data)
+}
+
+fn extract_between(haystack: &str, start: &str, end: char) -> Option<String> {
+    let start_idx = haystack.find(start)?;
+    let rest = &haystack[(start_idx + start.len())..];
+    let end_idx = rest.find(end)?;
+    Some(rest[..end_idx].to_string())
+}
+
+fn extract_duckduckgo_vqd(html: &str) -> Option<String> {
+    extract_between(html, "vqd='", '\'')
+        .or_else(|| extract_between(html, "vqd=\"", '"'))
+        .map(|token| token.trim().to_string())
+        .filter(|token| !token.is_empty())
+}
+
+fn is_http_url(value: &str) -> bool {
+    let lower = value.trim().to_lowercase();
+    lower.starts_with("http://") || lower.starts_with("https://")
+}
+
+fn build_cover_search_payload(provider: &str, query: &str, results: Vec<Value>) -> Value {
+    json!({
+        "success": true,
+        "provider": provider,
+        "query": query,
+        "results": Value::Array(results)
+    })
+}
+
+fn extract_url_domain(url: &str) -> String {
+    let parsed = url::Url::parse(url).ok();
+    parsed
+        .and_then(|value| value.host_str().map(|host| host.to_string()))
+        .unwrap_or_default()
+}
+
+fn html_unescape_basic(value: &str) -> String {
+    value
+        .replace("&quot;", "\"")
+        .replace("&#34;", "\"")
+        .replace("&amp;", "&")
+        .replace("&#38;", "&")
+        .replace("&lt;", "<")
+        .replace("&#60;", "<")
+        .replace("&gt;", ">")
+        .replace("&#62;", ">")
+        .replace("&#39;", "'")
+        .replace("&apos;", "'")
+}
+
+fn normalize_spacing(value: &str) -> String {
+    value
+        .split_whitespace()
+        .filter(|segment| !segment.trim().is_empty())
+        .collect::<Vec<&str>>()
+        .join(" ")
+}
+
+fn strip_bracketed_fragments(value: &str) -> String {
+    let mut out = String::new();
+    let mut depth_round = 0usize;
+    let mut depth_square = 0usize;
+    let mut depth_curly = 0usize;
+
+    for ch in value.chars() {
+        match ch {
+            '(' => {
+                depth_round += 1;
+            }
+            ')' => {
+                depth_round = depth_round.saturating_sub(1);
+            }
+            '[' => {
+                depth_square += 1;
+            }
+            ']' => {
+                depth_square = depth_square.saturating_sub(1);
+            }
+            '{' => {
+                depth_curly += 1;
+            }
+            '}' => {
+                depth_curly = depth_curly.saturating_sub(1);
+            }
+            _ => {
+                if depth_round == 0 && depth_square == 0 && depth_curly == 0 {
+                    out.push(ch);
+                }
+            }
+        }
+    }
+
+    normalize_spacing(&out)
+}
+
+fn normalize_trailing_article(value: &str) -> String {
+    let text = normalize_spacing(value);
+    if text.is_empty() {
+        return String::new();
+    }
+
+    let Some((left, right)) = text.split_once(',') else {
+        return text;
+    };
+    let right_trimmed = right.trim_start();
+    let right_lower = right_trimmed.to_lowercase();
+    if !right_lower.starts_with("the") {
+        return text;
+    }
+
+    let suffix = right_trimmed.get(3..).unwrap_or("").trim_start();
+    normalize_spacing(&format!(
+        "The {}{}",
+        left.trim(),
+        if suffix.is_empty() {
+            String::new()
+        } else {
+            format!(" {}", suffix)
+        }
+    ))
+}
+
+fn build_cover_search_query_candidates(query: &str) -> Vec<String> {
+    let mut out = Vec::<String>::new();
+    let mut seen = HashSet::<String>::new();
+    let push = |rows: &mut Vec<String>, set: &mut HashSet<String>, candidate: String| {
+        let normalized = normalize_spacing(&candidate);
+        if normalized.is_empty() {
+            return;
+        }
+        let key = normalized.to_lowercase();
+        if set.insert(key) {
+            rows.push(normalized);
+        }
+    };
+
+    let original = normalize_spacing(query);
+    let no_brackets = strip_bracketed_fragments(&original);
+    let reordered = normalize_trailing_article(&no_brackets);
+
+    push(&mut out, &mut seen, original.clone());
+    push(&mut out, &mut seen, reordered.clone());
+
+    let lowered_tokens = reordered
+        .split_whitespace()
+        .map(|segment| segment.trim().to_string())
+        .filter(|segment| !segment.is_empty())
+        .filter(|segment| {
+            let token = segment.to_lowercase();
+            token != "cover" && token != "box" && token != "art"
+        })
+        .collect::<Vec<String>>();
+    let base = normalize_spacing(&lowered_tokens.join(" "));
+
+    push(&mut out, &mut seen, base.clone());
+    push(&mut out, &mut seen, format!("{} cover", base));
+    push(&mut out, &mut seen, format!("{} box art", base));
+
+    out.into_iter().take(4).collect::<Vec<String>>()
+}
+
+fn try_search_duckduckgo_results(query: &str, limit: usize) -> Result<Value, String> {
+    let normalized_query = query.trim();
+    let agent = ureq::builder()
+        .timeout(Duration::from_secs(20))
+        .build();
+    let user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36";
+
+    let search_url = format!("https://duckduckgo.com/?q={}", urlencoding::encode(normalized_query));
+    let html = match agent
+        .get(&search_url)
+        .set("User-Agent", user_agent)
+        .set("Accept", "text/html,application/xhtml+xml")
+        .call()
+    {
+        Ok(response) => read_response_text(response)?,
+        Err(ureq::Error::Status(code, _)) => return Err(format!("DuckDuckGo search failed ({}).", code)),
+        Err(ureq::Error::Transport(error)) => return Err(error.to_string()),
+    };
+
+    let vqd = extract_duckduckgo_vqd(&html)
+        .ok_or_else(|| "Could not initialize DuckDuckGo image search token.".to_string())?;
+
+    let api_url = format!(
+        "https://duckduckgo.com/i.js?l=wt-wt&o=json&q={}&vqd={}&f=,,,&p=1",
+        urlencoding::encode(normalized_query),
+        urlencoding::encode(&vqd)
+    );
+    let response_text = match agent
+        .get(&api_url)
+        .set("User-Agent", user_agent)
+        .set("Accept", "application/json,text/javascript,*/*;q=0.9")
+        .set("Referer", &search_url)
+        .set("X-Requested-With", "XMLHttpRequest")
+        .call()
+    {
+        Ok(response) => read_response_text(response)?,
+        Err(ureq::Error::Status(code, _)) => return Err(format!("DuckDuckGo image search failed ({}).", code)),
+        Err(ureq::Error::Transport(error)) => return Err(error.to_string()),
+    };
+
+    let parsed: Value = serde_json::from_str(&response_text)
+        .map_err(|error| format!("Could not parse DuckDuckGo image response: {}", error))?;
+
+    let rows = parsed
+        .get("results")
+        .and_then(|value| value.as_array())
+        .cloned()
+        .unwrap_or_default();
+
+    let max_rows = limit.max(1).min(48);
+    let mut results = Vec::<Value>::new();
+    let mut seen_images = HashSet::<String>::new();
+    for row in rows {
+        let image_url = row
+            .get("image")
+            .and_then(|value| value.as_str())
+            .unwrap_or("")
+            .trim()
+            .to_string();
+        let thumb_url = row
+            .get("thumbnail")
+            .and_then(|value| value.as_str())
+            .unwrap_or("")
+            .trim()
+            .to_string();
+        let final_image_url = if is_http_url(&image_url) {
+            image_url
+        } else if is_http_url(&thumb_url) {
+            thumb_url.clone()
+        } else {
+            continue;
+        };
+        let dedupe_key = final_image_url.to_lowercase();
+        if !seen_images.insert(dedupe_key) {
+            continue;
+        }
+
+        let final_thumb_url = if is_http_url(&thumb_url) {
+            thumb_url
+        } else {
+            final_image_url.clone()
+        };
+        let page_url = row
+            .get("url")
+            .and_then(|value| value.as_str())
+            .unwrap_or("")
+            .trim()
+            .to_string();
+        let source = row
+            .get("source")
+            .and_then(|value| value.as_str())
+            .unwrap_or("")
+            .trim()
+            .to_string();
+        let title = row
+            .get("title")
+            .and_then(|value| value.as_str())
+            .unwrap_or("")
+            .trim()
+            .to_string();
+
+        results.push(json!({
+            "title": title,
+            "source": source,
+            "imageUrl": final_image_url,
+            "thumbnailUrl": final_thumb_url,
+            "pageUrl": if is_http_url(&page_url) { page_url } else { "".to_string() }
+        }));
+        if results.len() >= max_rows {
+            break;
+        }
+    }
+
+    Ok(build_cover_search_payload("duckduckgo", normalized_query, results))
+}
+
+fn parse_bing_image_results_from_html(html: &str, max_rows: usize) -> Vec<Value> {
+    let mut results = Vec::<Value>::new();
+    let mut seen_images = HashSet::<String>::new();
+    let mut cursor = 0usize;
+
+    while results.len() < max_rows {
+        let Some(class_rel) = html[cursor..].find("class=\"iusc\"") else {
+            break;
+        };
+        let class_idx = cursor + class_rel;
+        let tail = &html[class_idx..];
+        let Some(attr_rel) = tail.find(" m=\"") else {
+            cursor = class_idx + 11;
+            continue;
+        };
+        let attr_start = class_idx + attr_rel + 4;
+        let Some(attr_end_rel) = html[attr_start..].find('"') else {
+            break;
+        };
+        let attr_end = attr_start + attr_end_rel;
+        cursor = attr_end + 1;
+
+        let encoded_json = &html[attr_start..attr_end];
+        let decoded_json = html_unescape_basic(encoded_json);
+        let Ok(meta) = serde_json::from_str::<Value>(&decoded_json) else {
+            continue;
+        };
+
+        let image_url = meta
+            .get("murl")
+            .and_then(|value| value.as_str())
+            .unwrap_or("")
+            .trim()
+            .to_string();
+        if !is_http_url(&image_url) {
+            continue;
+        }
+        let dedupe_key = image_url.to_lowercase();
+        if !seen_images.insert(dedupe_key) {
+            continue;
+        }
+
+        let thumb_url = meta
+            .get("turl")
+            .and_then(|value| value.as_str())
+            .unwrap_or("")
+            .trim()
+            .to_string();
+        let page_url = meta
+            .get("purl")
+            .and_then(|value| value.as_str())
+            .unwrap_or("")
+            .trim()
+            .to_string();
+        let title = meta
+            .get("t")
+            .and_then(|value| value.as_str())
+            .unwrap_or("")
+            .trim()
+            .to_string();
+
+        results.push(json!({
+            "title": title,
+            "source": extract_url_domain(&page_url),
+            "imageUrl": image_url,
+            "thumbnailUrl": if is_http_url(&thumb_url) { thumb_url } else { "".to_string() },
+            "pageUrl": if is_http_url(&page_url) { page_url } else { "".to_string() }
+        }));
+    }
+
+    if results.is_empty() {
+        let mut fallback_cursor = 0usize;
+        let marker = "\"murl\":\"";
+        while results.len() < max_rows {
+            let Some(rel_idx) = html[fallback_cursor..].find(marker) else {
+                break;
+            };
+            let start = fallback_cursor + rel_idx + marker.len();
+            let mut end = start;
+            let bytes = html.as_bytes();
+            let mut escaped = false;
+            while end < html.len() {
+                let ch = bytes[end] as char;
+                if escaped {
+                    escaped = false;
+                    end += 1;
+                    continue;
+                }
+                if ch == '\\' {
+                    escaped = true;
+                    end += 1;
+                    continue;
+                }
+                if ch == '"' {
+                    break;
+                }
+                end += 1;
+            }
+            if end <= start || end > html.len() {
+                break;
+            }
+            fallback_cursor = end + 1;
+
+            let decoded = html[start..end]
+                .replace("\\/", "/")
+                .replace("\\u002f", "/")
+                .replace("\\u003a", ":")
+                .replace("\\u0026", "&");
+            let image_url = decoded.trim().to_string();
+            if !is_http_url(&image_url) {
+                continue;
+            }
+            let dedupe_key = image_url.to_lowercase();
+            if !seen_images.insert(dedupe_key) {
+                continue;
+            }
+            results.push(json!({
+                "title": String::new(),
+                "source": "bing",
+                "imageUrl": image_url,
+                "thumbnailUrl": String::new(),
+                "pageUrl": String::new()
+            }));
+        }
+    }
+
+    results
+}
+
+fn try_search_bing_results(query: &str, limit: usize) -> Result<Value, String> {
+    let normalized_query = query.trim();
+    let max_rows = limit.max(1).min(48);
+    let agent = ureq::builder()
+        .timeout(Duration::from_secs(20))
+        .build();
+    let user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36";
+    let url = format!("https://www.bing.com/images/search?q={}", urlencoding::encode(normalized_query));
+
+    let html = match agent
+        .get(&url)
+        .set("User-Agent", user_agent)
+        .set("Accept", "text/html,application/xhtml+xml")
+        .call()
+    {
+        Ok(response) => read_response_text(response)?,
+        Err(ureq::Error::Status(code, _)) => return Err(format!("Bing image search failed ({}).", code)),
+        Err(ureq::Error::Transport(error)) => return Err(error.to_string()),
+    };
+
+    let mut results = parse_bing_image_results_from_html(&html, max_rows);
+    if results.is_empty() {
+        let async_url = format!(
+            "https://www.bing.com/images/async?q={}&first=0&count={}&adlt=off",
+            urlencoding::encode(normalized_query),
+            max_rows
+        );
+        let async_html = match agent
+            .get(&async_url)
+            .set("User-Agent", user_agent)
+            .set("Accept", "text/html,application/xhtml+xml")
+            .set("X-Requested-With", "XMLHttpRequest")
+            .call()
+        {
+            Ok(response) => read_response_text(response).unwrap_or_default(),
+            Err(_) => String::new(),
+        };
+        if !async_html.is_empty() {
+            results = parse_bing_image_results_from_html(&async_html, max_rows);
+        }
+    }
+
+    Ok(build_cover_search_payload("bing", normalized_query, results))
+}
+
+fn search_web_cover_results(query: &str, limit: usize) -> Result<Value, String> {
+    let normalized_query = query.trim();
+    if normalized_query.is_empty() {
+        return Err("Missing query.".to_string());
+    }
+
+    let candidates = build_cover_search_query_candidates(normalized_query);
+    let mut last_error = String::new();
+
+    for candidate in candidates {
+        match try_search_duckduckgo_results(&candidate, limit) {
+            Ok(result) => {
+                let count = result
+                    .get("results")
+                    .and_then(|value| value.as_array())
+                    .map(|rows| rows.len())
+                    .unwrap_or(0);
+                if count > 0 {
+                    return Ok(result);
+                }
+            }
+            Err(error) => {
+                last_error = error;
+            }
+        }
+
+        match try_search_bing_results(&candidate, limit) {
+            Ok(result) => {
+                let count = result
+                    .get("results")
+                    .and_then(|value| value.as_array())
+                    .map(|rows| rows.len())
+                    .unwrap_or(0);
+                if count > 0 {
+                    return Ok(result);
+                }
+            }
+            Err(error) => {
+                last_error = error;
+            }
+        }
+    }
+
+    if last_error.is_empty() {
+        Err("No image results were found for this query.".to_string())
+    } else {
+        Err(last_error)
+    }
+}
+
 fn download_cover_for_game_row(
     game: &Value,
     overwrite: bool,
@@ -671,6 +1180,27 @@ pub(crate) fn handle(channel: &str, args: &[Value]) -> Option<Result<Value, Stri
                     "ps2": Value::Array(ps2_sources)
                 }
             }))
+        }
+        "covers:search-web" => {
+            let payload = args.get(0).cloned().unwrap_or_else(|| json!({}));
+            let query = payload.get("query").and_then(|v| v.as_str()).unwrap_or("").trim().to_string();
+            if query.is_empty() {
+                return Some(Ok(json!({ "success": false, "message": "Missing query.", "results": [] })));
+            }
+            let limit = payload
+                .get("limit")
+                .and_then(|v| v.as_u64())
+                .map(|v| v as usize)
+                .unwrap_or(24);
+            match search_web_cover_results(&query, limit) {
+                Ok(result) => Ok(result),
+                Err(error) => Ok(json!({
+                    "success": false,
+                    "message": error,
+                    "query": query,
+                    "results": []
+                })),
+            }
         }
         _ => return None,
     };

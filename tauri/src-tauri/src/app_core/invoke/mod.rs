@@ -2,6 +2,7 @@ use super::*;
 use serde_json::json;
 
 mod community;
+mod game_session;
 mod library_actions;
 mod state_config;
 mod updates;
@@ -78,6 +79,15 @@ pub(super) fn emubro_invoke_impl(channel: String, args: Vec<Value>, window: Wind
         | "community:open-in-app-window"
         | "community:close-in-app-windows"
         | "show-item-in-folder" => community::handle(ch.as_str(), &args, &window),
+
+        "game-session:get-status"
+        | "game-session:show-launcher"
+        | "game-session:show-overlay-menu"
+        | "game-session:ensure-overlay-window"
+        | "game-session:hide-overlay-window"
+        | "game-session:quit"
+        | "game-session:send-hotkey"
+        | "game-session:capture-screenshot" => game_session::handle(ch.as_str(), &args, &window),
 
         "update:get-state"
         | "resources:update:get-state"

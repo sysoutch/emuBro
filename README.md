@@ -110,6 +110,9 @@ If you want to run the latest development version:
 - `npm run dev` starts the new Tauri + Vue + Pinia app.
 - `npm run dev:web` starts only the Vue frontend (no Tauri shell).
 - `npm run build` builds the new Tauri desktop app.
+- `npm run build:linux:appimage` builds Linux AppImage.
+- `npm run build:linux:flatpak` builds Linux Flatpak (`flatpak-builder` required).
+- `npm run build:mac` builds macOS `.app` + `.dmg` (run on macOS host/runner).
 
 ## :white_check_mark: Usage
 1. Launch emuBro

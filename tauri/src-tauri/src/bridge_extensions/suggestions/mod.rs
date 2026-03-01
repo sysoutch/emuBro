@@ -7,6 +7,7 @@ mod recommendations;
 mod relay;
 mod tags;
 mod theme;
+mod tool_draft;
 
 pub(super) const RELAY_KEY: &str = relay::RELAY_KEY;
 pub(super) const RELAY_CONNECTIONS_KEY: &str = relay::RELAY_CONNECTIONS_KEY;

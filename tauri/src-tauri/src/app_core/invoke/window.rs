@@ -1,5 +1,6 @@
 use super::*;
 use serde_json::json;
+use tauri::Manager;
 
 pub(super) fn handle(ch: &str, _args: &[Value], window: &Window) -> Result<Value, String> {
     match ch {
@@ -33,7 +34,17 @@ pub(super) fn handle(ch: &str, _args: &[Value], window: &Window) -> Result<Value
             let is_max = window.is_maximized().map_err(|e| e.to_string())?;
             Ok(json!(is_max))
         }
-        "app:renderer-ready" => Ok(json!({ "success": true })),
+        "app:renderer-ready" => {
+            let app = window.app_handle();
+            if let Some(splashscreen) = app.get_webview_window("splashscreen") {
+                let _ = splashscreen.close();
+            }
+            if let Some(main_window) = app.get_webview_window("main") {
+                let _ = main_window.show();
+                let _ = main_window.set_focus();
+            }
+            Ok(json!({ "success": true }))
+        }
         _ => Ok(json!({ "success": false, "message": format!("Unsupported window channel: {}", ch) })),
     }
 }

@@ -4,6 +4,7 @@ import {
     getSuggestionLlmRoutingSettings
 } from '../suggestions-settings';
 import { showTextInputDialog } from '../ui/text-input-dialog';
+import { normalizeNameKey } from './game-utils';
 
 export function createGameDetailsPopupActions(deps = {}) {
     const emubro = deps.emubro || window.emubro;
@@ -32,8 +33,22 @@ export function createGameDetailsPopupActions(deps = {}) {
     const confirmUser = typeof deps.confirmUser === 'function'
         ? deps.confirmUser
         : ((message) => window.confirm(String(message || '')));
+    const t = (key, fallback) => {
+        const safeKey = String(key || '').trim();
+        try {
+            const translated = i18n.t(safeKey);
+            if (typeof translated === 'string') {
+                const normalized = translated.trim();
+                if (normalized && normalized !== safeKey) return normalized;
+            } else if (typeof translated === 'number' && Number.isFinite(translated)) {
+                return String(translated);
+            }
+        } catch (_error) {}
+        return String(fallback || safeKey || '');
+    };
 
     const GAME_INFO_PIN_STORAGE_KEY = 'emuBro.gameInfoPopupPinned';
+    const GROUP_SAME_NAMES_STORAGE_KEY = 'emuBro.groupSameNamesEnabled';
     let gameInfoPopup = null;
     let gameInfoPlatformsCache = null;
     let gameTagCatalogCache = null;
@@ -191,6 +206,81 @@ export function createGameDetailsPopupActions(deps = {}) {
             .replace(/^-+|-+$/g, '');
     }
 
+    function isGroupSameNamesEnabled() {
+        try {
+            return localStorageRef.getItem(GROUP_SAME_NAMES_STORAGE_KEY) === 'true';
+        } catch (_error) {
+            return false;
+        }
+    }
+
+    function resolveGroupedCoverTargetIds(game, sourceRows = null) {
+        if (!isGroupSameNamesEnabled()) return [];
+        const currentId = Number(game?.id || 0);
+        if (!currentId) return [];
+
+        const targetIds = new Set();
+        const addTargetId = (value) => {
+            const id = Number(value || 0);
+            if (!id || id === currentId) return;
+            targetIds.add(id);
+        };
+
+        (Array.isArray(game?.__groupMembers) ? game.__groupMembers : []).forEach((member) => {
+            addTargetId(member?.id);
+        });
+
+        const normalizedName = normalizeNameKey(game?.name || game?.__groupDisplayName || '');
+        const platformShortName = String(game?.platformShortName || game?.platform || '').trim().toLowerCase();
+        if (!normalizedName || !platformShortName) {
+            return Array.from(targetIds);
+        }
+
+        const rows = Array.isArray(sourceRows)
+            ? sourceRows
+            : (Array.isArray(getGames()) ? getGames() : []);
+
+        rows.forEach((row) => {
+            const rowId = Number(row?.id || 0);
+            if (!rowId || rowId === currentId) return;
+            const rowPlatformShortName = String(row?.platformShortName || row?.platform || '').trim().toLowerCase();
+            if (rowPlatformShortName !== platformShortName) return;
+            const rowNameKey = normalizeNameKey(row?.name || row?.__groupDisplayName || '');
+            if (rowNameKey !== normalizedName) return;
+            addTargetId(rowId);
+        });
+
+        return Array.from(targetIds);
+    }
+
+    async function applyCoverToGroupedGames(game, imageValue, sourceRows = null) {
+        const image = String(imageValue || '').trim();
+        if (!image) return { updated: 0, failed: 0, total: 0 };
+
+        const targetIds = resolveGroupedCoverTargetIds(game, sourceRows);
+        if (!targetIds.length) return { updated: 0, failed: 0, total: 0 };
+
+        let updated = 0;
+        let failed = 0;
+        for (const targetId of targetIds) {
+            try {
+                const result = await emubro.invoke('update-game-metadata', {
+                    gameId: targetId,
+                    image
+                });
+                if (result?.success) {
+                    updated += 1;
+                    markGameCoverUpdated(targetId);
+                } else {
+                    failed += 1;
+                }
+            } catch (_error) {
+                failed += 1;
+            }
+        }
+        return { updated, failed, total: targetIds.length };
+    }
+
     function renderSelectedTagPills(container, selectedTagIds, tagCatalog) {
         if (!container) return;
         const selected = Array.isArray(selectedTagIds) ? selectedTagIds : [];
@@ -323,6 +413,113 @@ export function createGameDetailsPopupActions(deps = {}) {
             } finally {
                 button.disabled = false;
                 button.textContent = previousLabel;
+            }
+        });
+    }
+
+    async function bindDescriptionActions(textarea, saveBtn, llmBtn, statusEl, game) {
+        if (!textarea || !saveBtn || !game) return;
+
+        const setStatus = (message, level = 'info') => {
+            if (!statusEl) return;
+            statusEl.textContent = String(message || '');
+            statusEl.dataset.level = String(level || 'info');
+        };
+
+        const saveDescription = async (description) => {
+            const result = await emubro.invoke('update-game-metadata', {
+                gameId: game.id,
+                description: String(description || '').trim()
+            });
+            if (!result?.success) {
+                throw new Error(String(result?.message || 'Failed to save description.'));
+            }
+            game.description = String(description || '').trim();
+            try {
+                await reloadGamesFromMainAndRender();
+            } catch (_error) {}
+        };
+
+        saveBtn.addEventListener('click', async () => {
+            const description = String(textarea.value || '').trim();
+            saveBtn.disabled = true;
+            setStatus('Saving description...', 'info');
+            try {
+                await saveDescription(description);
+                setStatus('Description saved.', 'success');
+            } catch (error) {
+                setStatus(String(error?.message || 'Failed to save description.'), 'error');
+            } finally {
+                saveBtn.disabled = false;
+            }
+        });
+
+        if (!llmBtn) return;
+        llmBtn.addEventListener('click', async () => {
+            const settings = loadSuggestionSettings(localStorageRef);
+            const provider = normalizeSuggestionProvider(settings.provider);
+            const model = String(settings.models?.[provider] || '').trim();
+            const baseUrl = String(settings.baseUrls?.[provider] || '').trim();
+            const apiKey = String(settings.apiKeys?.[provider] || '').trim();
+            const routing = getSuggestionLlmRoutingSettings(settings);
+
+            if (routing.llmMode === 'client' && !routing.relayHostUrl) {
+                setStatus('Set a relay host URL first in Settings -> AI / LLM.', 'error');
+                return;
+            }
+            if (routing.llmMode !== 'client' && (!model || !baseUrl)) {
+                setStatus('Configure your LLM provider/model first in Suggested view.', 'error');
+                return;
+            }
+            if (routing.llmMode !== 'client' && (provider === 'openai' || provider === 'gemini') && !apiKey) {
+                setStatus('API key is missing for the selected provider.', 'error');
+                return;
+            }
+
+            const oldLabel = llmBtn.textContent;
+            llmBtn.disabled = true;
+            saveBtn.disabled = true;
+            llmBtn.textContent = 'Generating...';
+            setStatus('Generating description with LLM...', 'info');
+            try {
+                const response = await emubro.invoke('suggestions:generate-description-for-game', {
+                    provider,
+                    model,
+                    baseUrl,
+                    apiKey,
+                    ...routing,
+                    maxChars: 420,
+                    game: {
+                        id: Number(game.id || 0),
+                        name: String(game.name || ''),
+                        platform: String(game.platform || game.platformShortName || ''),
+                        platformShortName: String(game.platformShortName || ''),
+                        genre: String(game.genre || ''),
+                        description: String(textarea.value || game.description || ''),
+                        filePath: String(game.filePath || ''),
+                        path: String(game.filePath || ''),
+                        tags: Array.isArray(game.tags) ? game.tags : []
+                    }
+                });
+
+                if (!response?.success) {
+                    throw new Error(String(response?.message || 'Failed to generate description.'));
+                }
+
+                const generated = String(response?.description || '').trim();
+                if (!generated) {
+                    throw new Error('LLM returned an empty description.');
+                }
+
+                textarea.value = generated;
+                await saveDescription(generated);
+                setStatus('Description generated and saved.', 'success');
+            } catch (error) {
+                setStatus(String(error?.message || 'Failed to generate description.'), 'error');
+            } finally {
+                llmBtn.disabled = false;
+                saveBtn.disabled = false;
+                llmBtn.textContent = oldLabel;
             }
         });
     }
@@ -565,11 +762,11 @@ export function createGameDetailsPopupActions(deps = {}) {
 
             const title = document.createElement('div');
             title.style.cssText = 'font-size:18px;font-weight:700;';
-            title.textContent = i18n.t('gameDetails.removeGameTitle') || 'Remove Game';
+            title.textContent = t('gameDetails.removeGameTitle', 'Remove Game');
 
             const text = document.createElement('div');
             text.style.cssText = 'opacity:0.92;line-height:1.45;';
-            text.textContent = (i18n.t('gameDetails.removeGameConfirm') || 'Remove "{{name}}" from library?').replace('{{name}}', safeName);
+            text.textContent = t('gameDetails.removeGameConfirm', 'Remove "{{name}}" from library?').replace('{{name}}', safeName);
 
             const checkboxWrap = document.createElement('label');
             checkboxWrap.style.cssText = 'display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;';
@@ -578,7 +775,7 @@ export function createGameDetailsPopupActions(deps = {}) {
             checkbox.checked = false;
             checkboxWrap.appendChild(checkbox);
             const checkboxLabel = document.createElement('span');
-            checkboxLabel.textContent = i18n.t('gameDetails.removeGameAlsoDisk') || 'Also remove on Disk';
+            checkboxLabel.textContent = t('gameDetails.removeGameAlsoDisk', 'Also remove on Disk');
             checkboxWrap.appendChild(checkboxLabel);
 
             const buttons = document.createElement('div');
@@ -586,11 +783,11 @@ export function createGameDetailsPopupActions(deps = {}) {
             const cancelBtn = document.createElement('button');
             cancelBtn.className = 'action-btn';
             cancelBtn.type = 'button';
-            cancelBtn.textContent = i18n.t('buttons.cancel') || 'Cancel';
+            cancelBtn.textContent = t('buttons.cancel', 'Cancel');
             const removeBtn = document.createElement('button');
             removeBtn.className = 'action-btn remove-btn';
             removeBtn.type = 'button';
-            removeBtn.textContent = i18n.t('gameDetails.removeGameAction') || 'Remove Game';
+            removeBtn.textContent = t('gameDetails.removeGameAction', 'Remove Game');
             buttons.appendChild(cancelBtn);
             buttons.appendChild(removeBtn);
 
@@ -671,11 +868,42 @@ export function createGameDetailsPopupActions(deps = {}) {
         return text.replace(/\s+/g, ' ').trim();
     }
 
+    function normalizeTrailingArticleTitle(value) {
+        const text = String(value || '').trim();
+        if (!text) return '';
+        const match = text.match(/^(.+?),\s*the(\b.*)?$/i);
+        if (!match) return text;
+        const baseTitle = String(match[1] || '').trim();
+        const suffix = String(match[2] || '').trimStart();
+        return `The ${baseTitle}${suffix ? ` ${suffix}` : ''}`.replace(/\s+/g, ' ').trim();
+    }
+
+    function buildCoverSearchPlatformTokens(game) {
+        const tokens = [];
+        const seen = new Set();
+        const pushToken = (value) => {
+            const text = String(value || '').trim();
+            if (!text) return;
+            const key = text.toLowerCase();
+            if (seen.has(key)) return;
+            seen.add(key);
+            tokens.push(text);
+        };
+
+        const normalizedPlatform = normalizeCoverPlatform(game?.platformShortName || game?.platform);
+        if (normalizedPlatform === 'psx') pushToken('PS1');
+        if (normalizedPlatform === 'ps2') pushToken('PS2');
+        pushToken(game?.platformShortName);
+        pushToken(game?.platform);
+        return tokens;
+    }
+
     function buildCoverSearchQuery(game) {
-        const platform = normalizeCoverPlatform(game?.platformShortName || game?.platform);
-        const platformLabel = platform === 'psx' ? 'PS1' : (platform === 'ps2' ? 'PS2' : '');
-        const gameName = stripBracketedTitleParts(game?.name || '');
-        return [gameName, platformLabel, 'cover art'].filter(Boolean).join(' ').trim();
+        const gameName = normalizeTrailingArticleTitle(
+            stripBracketedTitleParts(game?.name || '')
+        );
+        const platformTokens = buildCoverSearchPlatformTokens(game);
+        return [gameName, ...platformTokens, 'cover'].filter(Boolean).join(' ').trim();
     }
 
     async function bindCoverDownloadAction(button, statusEl, game) {
@@ -722,13 +950,25 @@ export function createGameDetailsPopupActions(deps = {}) {
 
                 markGameCoverUpdated(game.id);
                 await reloadGamesFromMainAndRender();
-                const refreshedGame = getGames().find((row) => Number(row.id) === Number(game.id));
+                let refreshedGame = getGames().find((row) => Number(row.id) === Number(game.id));
+                let groupedCoverResult = { updated: 0, failed: 0, total: 0 };
+                const refreshedImage = String(refreshedGame?.image || '').trim();
+                if (refreshedImage) {
+                    groupedCoverResult = await applyCoverToGroupedGames(refreshedGame || game, refreshedImage, getGames());
+                    if (groupedCoverResult.updated > 0) {
+                        await reloadGamesFromMainAndRender();
+                        refreshedGame = getGames().find((row) => Number(row.id) === Number(game.id)) || refreshedGame;
+                    }
+                }
                 if (refreshedGame) showGameDetails(refreshedGame);
+                const groupedNote = groupedCoverResult.updated > 0
+                    ? ` Applied to ${groupedCoverResult.updated} grouped game(s).`
+                    : '';
 
                 if (result?.status === 'reused_existing_file') {
-                    setStatus('Cover applied from local cache.', 'success');
+                    setStatus(`Cover applied from local cache.${groupedNote}`, 'success');
                 } else {
-                    setStatus('Cover downloaded and applied.', 'success');
+                    setStatus(`Cover downloaded and applied.${groupedNote}`, 'success');
                 }
             } catch (error) {
                 const message = String(error?.message || 'Failed to download cover.');
@@ -741,20 +981,183 @@ export function createGameDetailsPopupActions(deps = {}) {
         });
     }
 
-    function bindCoverWebSearchAction(button, game) {
-        if (!button || !game) return;
-        button.addEventListener('click', async () => {
-            const query = buildCoverSearchQuery(game);
+    async function openCoverSearchInExternalBrowser(query) {
+        const searchQuery = String(query || '').trim();
+        if (!searchQuery) return;
+        const url = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(searchQuery)}`;
+        try {
+            await emubro.invoke('open-external-url', url);
+        } catch (_error) {
+            if (window?.open) window.open(url, '_blank', 'noopener,noreferrer');
+        }
+    }
+
+    function bindCoverWebSearchAction(button, browserPanel, game) {
+        if (!button || !browserPanel || !game) return;
+
+        const queryInput = browserPanel.querySelector('[data-cover-browser-query]');
+        const runBtn = browserPanel.querySelector('[data-cover-browser-run]');
+        const closeBtn = browserPanel.querySelector('[data-cover-browser-close]');
+        const externalBtn = browserPanel.querySelector('[data-cover-browser-open-external]');
+        const statusEl = browserPanel.querySelector('[data-cover-browser-status]');
+        const resultsEl = browserPanel.querySelector('[data-cover-browser-results]');
+        const defaultQuery = buildCoverSearchQuery(game);
+        const state = {
+            loading: false,
+            results: []
+        };
+
+        const setStatus = (message, level = 'info') => {
+            if (!statusEl) return;
+            statusEl.textContent = String(message || '').trim();
+            statusEl.dataset.level = level;
+        };
+
+        const renderResults = () => {
+            if (!resultsEl) return;
+            if (!state.results.length) {
+                resultsEl.innerHTML = '<div class="game-cover-browser-empty">No web results yet. Run a search.</div>';
+                return;
+            }
+            resultsEl.innerHTML = state.results.map((row, index) => {
+                const thumb = escapeHtml(String(row?.thumbnailUrl || row?.imageUrl || '').trim());
+                const title = escapeHtml(String(row?.title || row?.source || 'Cover result').trim() || 'Cover result');
+                const source = escapeHtml(String(row?.source || '').trim() || 'web');
+                return `
+                    <button type="button" class="game-cover-browser-card" data-cover-browser-apply-index="${index}" title="Use this cover">
+                        <span class="game-cover-browser-thumb-wrap">
+                            <img class="game-cover-browser-thumb" src="${thumb}" alt="${title}" loading="lazy" />
+                        </span>
+                        <span class="game-cover-browser-title">${title}</span>
+                        <span class="game-cover-browser-source">${source}</span>
+                    </button>
+                `;
+            }).join('');
+        };
+
+        const runSearch = async () => {
+            if (state.loading) return;
+            const query = String(queryInput?.value || defaultQuery).trim();
             if (!query) return;
-            const url = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(query)}`;
+
+            state.loading = true;
+            if (runBtn) runBtn.disabled = true;
+            setStatus('Searching web cover results...', 'info');
             try {
-                await emubro.invoke('open-external-url', url);
-            } catch (_error) {
-                if (window?.open) {
-                    window.open(url, '_blank', 'noopener,noreferrer');
+                const result = await emubro.invoke('covers:search-web', { query, limit: 24 });
+                if (!result?.success) {
+                    state.results = [];
+                    renderResults();
+                    setStatus(String(result?.message || 'Cover web search failed.'), 'error');
+                    return;
                 }
+                state.results = Array.isArray(result.results) ? result.results : [];
+                renderResults();
+                if (!state.results.length) {
+                    setStatus('No results found for this query.', 'warning');
+                } else {
+                    setStatus(`Found ${state.results.length} result(s). Click one to apply.`, 'success');
+                }
+            } catch (error) {
+                state.results = [];
+                renderResults();
+                setStatus(String(error?.message || 'Cover web search failed.'), 'error');
+            } finally {
+                state.loading = false;
+                if (runBtn) runBtn.disabled = false;
+            }
+        };
+
+        const closePanel = () => {
+            browserPanel.classList.remove('is-open');
+            button.classList.remove('is-active');
+        };
+
+        const openPanel = () => {
+            browserPanel.classList.add('is-open');
+            button.classList.add('is-active');
+            if (!queryInput?.value && defaultQuery && queryInput) {
+                queryInput.value = defaultQuery;
+            }
+        };
+
+        button.addEventListener('click', async () => {
+            const willOpen = !browserPanel.classList.contains('is-open');
+            if (!willOpen) {
+                closePanel();
+                return;
+            }
+            openPanel();
+            if (!state.results.length) {
+                await runSearch();
             }
         });
+
+        if (runBtn) {
+            runBtn.addEventListener('click', async () => {
+                await runSearch();
+            });
+        }
+
+        if (queryInput) {
+            queryInput.addEventListener('keydown', async (event) => {
+                if (event.key !== 'Enter') return;
+                event.preventDefault();
+                await runSearch();
+            });
+        }
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                closePanel();
+            });
+        }
+
+        if (externalBtn) {
+            externalBtn.addEventListener('click', async () => {
+                const query = String(queryInput?.value || defaultQuery).trim();
+                await openCoverSearchInExternalBrowser(query);
+            });
+        }
+
+        if (resultsEl) {
+            resultsEl.addEventListener('click', async (event) => {
+                const card = event.target.closest('[data-cover-browser-apply-index]');
+                if (!card) return;
+                const index = Number(card.dataset.coverBrowserApplyIndex);
+                if (!Number.isFinite(index) || index < 0) return;
+                const row = state.results[index];
+                const imageUrl = String(row?.imageUrl || row?.thumbnailUrl || '').trim();
+                if (!imageUrl) return;
+
+                card.disabled = true;
+                setStatus('Applying selected cover...', 'info');
+                try {
+                    const result = await emubro.invoke('update-game-metadata', {
+                        gameId: game.id,
+                        image: imageUrl
+                    });
+                    if (!result?.success) {
+                        throw new Error(String(result?.message || 'Failed to apply cover.'));
+                    }
+                    markGameCoverUpdated(game.id);
+                    const groupedCoverResult = await applyCoverToGroupedGames(game, imageUrl, getGames());
+                    await reloadGamesFromMainAndRender();
+                    const refreshedGame = getGames().find((rowItem) => Number(rowItem.id) === Number(game.id));
+                    if (refreshedGame) {
+                        showGameDetails(refreshedGame);
+                    }
+                    const groupedNote = groupedCoverResult.updated > 0
+                        ? ` Applied to ${groupedCoverResult.updated} grouped game(s).`
+                        : '';
+                    setStatus(`Cover applied from web result.${groupedNote}`, 'success');
+                } catch (error) {
+                    setStatus(String(error?.message || 'Failed to apply cover.'), 'error');
+                } finally {
+                    card.disabled = false;
+                }
+            });
+        }
     }
 
     function isWebEmulatorPath(value) {
@@ -1138,13 +1541,24 @@ export function createGameDetailsPopupActions(deps = {}) {
         const tagsSelect = container.querySelector('[data-game-tags-select]');
         const tagsSaveBtn = container.querySelector('[data-game-tags-save]');
         const tagsSelectedPreview = container.querySelector('[data-game-tags-selected]');
+        bindDescriptionActions(
+            container.querySelector('[data-game-description-input]'),
+            container.querySelector('[data-game-description-save]'),
+            container.querySelector('[data-game-description-llm]'),
+            container.querySelector('[data-game-description-status]'),
+            game
+        );
         bindCreateShortcutAction(container.querySelector('[data-create-shortcut]'), game);
         bindCoverDownloadAction(
             container.querySelector('[data-download-cover]'),
             container.querySelector('[data-cover-download-status]'),
             game
         );
-        bindCoverWebSearchAction(container.querySelector('[data-search-cover-web]'), game);
+        bindCoverWebSearchAction(
+            container.querySelector('[data-search-cover-web]'),
+            container.querySelector('[data-cover-browser]'),
+            game
+        );
         bindShowInExplorerAction(container.querySelector('[data-show-in-explorer]'), game);
         bindRemoveGameAction(container.querySelector('[data-remove-game]'), game);
         bindEmulatorOverrideAction(container.querySelector('[data-game-emulator-override]'), game);
@@ -1176,22 +1590,78 @@ export function createGameDetailsPopupActions(deps = {}) {
         bindYouTubePreviewAction(container.querySelector('[data-youtube-preview]'), container, game);
     }
 
+    function buildGameDetailButtonIcon(iconKey) {
+        switch (String(iconKey || '').trim()) {
+            case 'save':
+                return '<svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v6h8V4"/><path d="M9 16h6"/></svg>';
+            case 'clear':
+                return '<svg viewBox="0 0 24 24"><path d="M5 7h14"/><path d="M9 7V5h6v2"/><path d="M8 7l1 12h6l1-12"/></svg>';
+            case 'rename':
+                return '<svg viewBox="0 0 24 24"><path d="M4 20h4l10-10-4-4L4 16z"/><path d="M13 7l4 4"/></svg>';
+            case 'delete':
+                return '<svg viewBox="0 0 24 24"><path d="M5 7h14"/><path d="M9 7V5h6v2"/><path d="M8 7l1 12h6l1-12"/><path d="M10 11v5"/><path d="M14 11v5"/></svg>';
+            case 'llm':
+                return '<svg viewBox="0 0 24 24"><path d="M12 3l1.8 3.9L18 9l-4.2 2.1L12 15l-1.8-3.9L6 9l4.2-2.1z"/><path d="M5 16l.9 2L8 19l-2.1 1-.9 2-.9-2L2 19l2.1-1z"/></svg>';
+            case 'shortcut':
+                return '<svg viewBox="0 0 24 24"><path d="M9 15H5a3 3 0 1 1 0-6h4"/><path d="M15 9h4a3 3 0 1 1 0 6h-4"/><path d="M8 12h8"/></svg>';
+            case 'download':
+                return '<svg viewBox="0 0 24 24"><path d="M12 4v10"/><path d="M8 10l4 4 4-4"/><path d="M5 19h14"/></svg>';
+            case 'search':
+                return '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg>';
+            case 'folder':
+                return '<svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
+            case 'youtube':
+                return '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="3"/><path d="m10 9 6 3-6 3z" class="fill"/></svg>';
+            case 'remove':
+                return '<svg viewBox="0 0 24 24"><path d="M5 7h14"/><path d="M9 7V5h6v2"/><path d="M8 7l1 12h6l1-12"/></svg>';
+            default:
+                return '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/></svg>';
+        }
+    }
+
+    function buildGameDetailActionButton({ label, icon, attrs = '', extraClasses = '' }) {
+        const safeLabel = escapeHtml(String(label || '').trim());
+        const className = `action-btn game-detail-icon-btn ${extraClasses}`.trim();
+        return `
+            <button class="${className}" ${attrs} title="${safeLabel}" aria-label="${safeLabel}">
+                <span class="game-detail-btn-icon" aria-hidden="true">${buildGameDetailButtonIcon(icon)}</span>
+                <span class="game-detail-btn-label">${safeLabel}</span>
+            </button>
+        `;
+    }
+
     function renderGameDetailsMarkup(container, game) {
         if (!container || !game) return;
         const safeName = escapeHtml(game.name || 'Unknown Game');
-        const platformText = escapeHtml(game.platform || game.platformShortName || i18n.t('gameDetails.unknown'));
-        const ratingText = escapeHtml(game.rating !== undefined && game.rating !== null ? String(game.rating) : i18n.t('gameDetails.unknown'));
-        const genreText = escapeHtml(game.genre || i18n.t('gameDetails.unknown'));
-        const priceText = escapeHtml(game.price > 0 ? `$${Number(game.price).toFixed(2)}` : (i18n.t('gameDetails.free') || 'Free'));
-        const platformLabel = escapeHtml(i18n.t('gameDetails.platform') || 'Platform');
-        const ratingLabel = escapeHtml(i18n.t('gameDetails.rating') || 'Rating');
-        const genreLabel = escapeHtml(i18n.t('gameDetails.genre') || 'Genre');
-        const priceLabel = escapeHtml(i18n.t('gameDetails.price') || 'Price');
-        const removeGameActionLabel = escapeHtml(i18n.t('gameDetails.removeGameAction') || 'Remove Game');
+        const platformText = escapeHtml(game.platform || game.platformShortName || t('gameDetails.unknown', 'Unknown'));
+        const ratingText = escapeHtml(game.rating !== undefined && game.rating !== null ? String(game.rating) : t('gameDetails.unknown', 'Unknown'));
+        const safeDescription = escapeHtml(String(game.description || '').trim());
+        const platformLabel = escapeHtml(t('gameDetails.platform', 'Platform'));
+        const ratingLabel = escapeHtml(t('gameDetails.rating', 'Rating'));
+        const descriptionLabel = escapeHtml(t('gameDetails.description', 'Description'));
+        const removeGameActionLabel = t('gameDetails.removeGameAction', 'Remove Game');
         const runAsMode = normalizeRunAsMode(game.runAsMode || 'default');
         const runAsUser = escapeHtml(game.runAsUser || '');
+        const saveDescriptionLabel = t('buttons.saveChanges', 'Save Changes');
+        const llmDescriptionLabel = t('gameDetails.generateDescriptionWithLlm', 'Generate with LLM');
+        const saveTagsLabel = t('gameDetails.saveTags', 'Save Tags');
+        const clearTagsLabel = t('common.clear', 'Clear');
+        const renameTagLabel = t('gameDetails.renameTag', 'Rename Tag');
+        const deleteTagLabel = t('gameDetails.deleteTag', 'Delete Tag');
+        const llmTagLabel = t('gameDetails.letLlmAddTags', 'Let LLM add tags');
+        const shortcutLabel = t('gameDetails.createDesktopShortcut', 'Create Desktop Shortcut');
+        const downloadCoverLabel = t('gameDetails.downloadCoverSerial', 'Download Cover (Serial)');
+        const searchCoverLabel = t('gameDetails.searchCoverWeb', 'Search Cover Web');
+        const showInExplorerLabel = t('gameDetails.showInExplorer', 'Show in Explorer');
+        const youtubePreviewLabel = t('gameDetails.youtubePreview', 'YouTube Preview');
+
         const llmButtonMarkup = isLlmHelpersEnabled()
-            ? '<button class="action-btn launch-btn" data-game-tags-llm type="button">Let LLM add tags</button>'
+            ? buildGameDetailActionButton({
+                label: llmTagLabel,
+                icon: 'llm',
+                attrs: 'data-game-tags-llm type="button"',
+                extraClasses: 'launch-btn'
+            })
             : '';
 
         container.innerHTML = `
@@ -1204,8 +1674,15 @@ export function createGameDetailsPopupActions(deps = {}) {
         <div class="game-detail-row game-detail-meta">
             <p><strong>${platformLabel}:</strong> ${platformText}</p>
             <p><strong>${ratingLabel}:</strong> ${ratingText}</p>
-            <p><strong>${genreLabel}:</strong> ${genreText}</p>
-            <p><strong>${priceLabel}:</strong> ${priceText}</p>
+        </div>
+        <div class="game-detail-row game-detail-description-control">
+            <label for="game-description-input-${Number(game.id)}">${descriptionLabel}</label>
+            <textarea id="game-description-input-${Number(game.id)}" data-game-description-input rows="4" placeholder="Add a game description...">${safeDescription}</textarea>
+            <div class="game-detail-description-actions">
+                ${buildGameDetailActionButton({ label: saveDescriptionLabel, icon: 'save', attrs: 'data-game-description-save type="button"' })}
+                ${buildGameDetailActionButton({ label: llmDescriptionLabel, icon: 'llm', attrs: 'data-game-description-llm type="button"', extraClasses: 'launch-btn' })}
+            </div>
+            <small class="game-detail-description-status" data-game-description-status aria-live="polite"></small>
         </div>
         <div class="game-detail-row game-detail-emulator-control">
             <label for="game-emulator-override-${Number(game.id)}">Emulator</label>
@@ -1241,26 +1718,38 @@ export function createGameDetailsPopupActions(deps = {}) {
             </select>
             <div class="game-detail-tags-selected" data-game-tags-selected></div>
             <div class="game-detail-tags-actions">
-                <button class="action-btn" data-game-tags-save>Save Tags</button>
-                <button class="action-btn" data-game-tags-clear type="button">Clear</button>
-                <button class="action-btn" data-game-tags-rename type="button">Rename Tag</button>
-                <button class="action-btn remove-btn" data-game-tags-delete type="button">Delete Tag</button>
+                ${buildGameDetailActionButton({ label: saveTagsLabel, icon: 'save', attrs: 'data-game-tags-save type="button"' })}
+                ${buildGameDetailActionButton({ label: clearTagsLabel, icon: 'clear', attrs: 'data-game-tags-clear type="button"' })}
+                ${buildGameDetailActionButton({ label: renameTagLabel, icon: 'rename', attrs: 'data-game-tags-rename type="button"' })}
+                ${buildGameDetailActionButton({ label: deleteTagLabel, icon: 'delete', attrs: 'data-game-tags-delete type="button"', extraClasses: 'remove-btn' })}
                 ${llmButtonMarkup}
             </div>
             <small class="game-detail-tags-hint">Use Ctrl/Cmd + click to select multiple tags.</small>
         </div>
         <div class="game-detail-row game-detail-actions">
-            <button class="action-btn" data-create-shortcut>Create Desktop Shortcut</button>
-            <button class="action-btn" data-download-cover>Download Cover (Serial)</button>
-            <button class="action-btn" data-search-cover-web>Search Cover Web</button>
-            <button class="action-btn" data-show-in-explorer>Show in Explorer</button>
-            <button class="action-btn youtube-preview-btn" data-youtube-preview>
-                <span class="youtube-preview-btn-icon" aria-hidden="true"></span>
-                <span>YouTube Preview</span>
-            </button>
-            <button class="action-btn remove-btn" data-remove-game>${removeGameActionLabel}</button>
+            ${buildGameDetailActionButton({ label: shortcutLabel, icon: 'shortcut', attrs: 'data-create-shortcut type="button"' })}
+            ${buildGameDetailActionButton({ label: downloadCoverLabel, icon: 'download', attrs: 'data-download-cover type="button"' })}
+            ${buildGameDetailActionButton({ label: searchCoverLabel, icon: 'search', attrs: 'data-search-cover-web data-open-cover-browser type="button"' })}
+            ${buildGameDetailActionButton({ label: showInExplorerLabel, icon: 'folder', attrs: 'data-show-in-explorer type="button"' })}
+            ${buildGameDetailActionButton({ label: youtubePreviewLabel, icon: 'youtube', attrs: 'data-youtube-preview type="button"', extraClasses: 'youtube-preview-btn' })}
+            ${buildGameDetailActionButton({ label: removeGameActionLabel, icon: 'remove', attrs: 'data-remove-game type="button"', extraClasses: 'remove-btn' })}
         </div>
         <div class="game-detail-row game-detail-cover-status" data-cover-download-status aria-live="polite"></div>
+        <div class="game-detail-row game-detail-cover-browser" data-cover-browser>
+            <div class="game-cover-browser-header">
+                <h4>Web Cover Search</h4>
+                <button class="action-btn small" type="button" data-cover-browser-close>Close</button>
+            </div>
+            <div class="game-cover-browser-search">
+                <input type="text" data-cover-browser-query value="${escapeHtml(buildCoverSearchQuery(game))}" placeholder="Game name + platform + cover" />
+                <button class="action-btn small" type="button" data-cover-browser-run>Search</button>
+                <button class="action-btn small" type="button" data-cover-browser-open-external>Google</button>
+            </div>
+            <p class="game-cover-browser-status" data-cover-browser-status aria-live="polite"></p>
+            <div class="game-cover-browser-results" data-cover-browser-results>
+                <div class="game-cover-browser-empty">No web results yet. Run a search.</div>
+            </div>
+        </div>
         <div class="game-detail-row game-detail-youtube-preview" data-game-youtube-preview>
             <div class="game-youtube-preview-header">
                 <h4>Video Preview</h4>

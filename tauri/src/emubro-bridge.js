@@ -1,6 +1,8 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 
 const emitter = new EventTarget();
+const bridgeErrorMessage =
+  "emuBro bridge unavailable. Run inside Tauri (npm run tauri:dev).";
 
 function detectDesktopPlatform() {
   const ua = String(navigator?.userAgent || "").toLowerCase();
@@ -11,7 +13,58 @@ function detectDesktopPlatform() {
   return "tauri";
 }
 
+function hasTauriRuntime() {
+  return Boolean(
+    (window.__TAURI__ &&
+      window.__TAURI__.core &&
+      typeof window.__TAURI__.core.invoke === "function") ||
+      (window.__TAURI_INTERNALS__ &&
+        typeof window.__TAURI_INTERNALS__.invoke === "function")
+  );
+}
+
+const runningInTauri = hasTauriRuntime();
+
+function getBridgeFallback(channel) {
+  switch (String(channel || "").trim()) {
+    case "get-all-translations":
+      return {};
+    case "get-games":
+    case "get-emulators":
+    case "get-platforms":
+    case "get-platforms-for-extension":
+    case "locales:list":
+      return [];
+    case "locales:read":
+    case "update:get-state":
+    case "update:get-config":
+    case "resources:update:get-state":
+    case "resources:update:get-config":
+      return {};
+    case "locales:exists":
+      return false;
+    case "locales:flags:get-data-url":
+      return { dataUrl: "" };
+    case "help:docs:list":
+    case "help:docs:search":
+      return { success: false, items: [] };
+    case "help:docs:get":
+      return { success: false, item: null };
+    case "window:is-maximized":
+      return false;
+    case "prompt-scan-subfolders":
+      return { canceled: false, recursive: true };
+    case "settings:get-library-paths":
+      return { success: true, settings: { gameFolders: [], emulatorFolders: [] } };
+    default:
+      return { success: false, message: bridgeErrorMessage };
+  }
+}
+
 async function invokeChannel(channel, ...args) {
+  if (!runningInTauri) {
+    return getBridgeFallback(channel);
+  }
   return tauriInvoke("emubro_invoke", { channel, args });
 }
 
@@ -27,7 +80,7 @@ function dispatchEvent(eventName, detail) {
 }
 
 const emubro = {
-  platform: detectDesktopPlatform(),
+  platform: runningInTauri ? detectDesktopPlatform() : "web",
   invoke: invokeChannel,
   minimizeWindow: () => invokeChannel("window:minimize"),
   startWindowDragging: () => invokeChannel("window:start-dragging"),

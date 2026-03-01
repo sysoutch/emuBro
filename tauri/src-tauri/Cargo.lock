@@ -983,6 +983,7 @@ dependencies = [
  "url",
  "urlencoding",
  "walkdir",
+ "windows",
  "zip",
 ]
 

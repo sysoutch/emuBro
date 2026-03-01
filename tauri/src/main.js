@@ -4,6 +4,8 @@ import App from "./App.vue";
 import "./emubro-bridge";
 import "./style.css";
 
-const app = createApp(App);
-app.use(createPinia());
-app.mount("#app");
+if (!window.__EMUBRO_OVERLAY_WINDOW__) {
+  const app = createApp(App);
+  app.use(createPinia());
+  app.mount("#app");
+}

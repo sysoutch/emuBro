@@ -7,6 +7,9 @@ pub(super) fn handle(channel: &str, args: &[Value]) -> Option<Result<Value, Stri
     if let Some(result) = tags::handle(channel, args) {
         return Some(result);
     }
+    if let Some(result) = tool_draft::handle(channel, args) {
+        return Some(result);
+    }
 
     let result = match channel {
         "suggestions:list-ollama-models" => {

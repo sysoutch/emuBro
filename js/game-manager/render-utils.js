@@ -6,7 +6,42 @@ export function getGlobalSearchTerm(documentRef = document) {
     ).trim().toLowerCase();
 }
 
-export function buildGamesRenderSignature({ rows = [], view = 'cover', currentGroupBy = 'none', currentSort = 'name', currentSortDir = 'asc' } = {}) {
+export function normalizeCoverCardMode(value) {
+    return String(value || '').trim().toLowerCase() === 'cover-only' ? 'cover-only' : 'cover-title';
+}
+
+export function getStoredCoverCardMode(storageRef = null) {
+    const storage = storageRef
+        || (typeof window !== 'undefined' && window?.localStorage ? window.localStorage : null);
+    if (!storage || typeof storage.getItem !== 'function') return 'cover-title';
+    try {
+        return normalizeCoverCardMode(storage.getItem('emuBro.coverCardMode') || 'cover-title');
+    } catch (_error) {
+        return 'cover-title';
+    }
+}
+
+export function buildGamesContainerClass(view = 'cover', coverCardMode = 'cover-title') {
+    const normalizedView = String(view || 'cover').trim().toLowerCase() || 'cover';
+    const classNames = ['games-container', `${normalizedView}-view`];
+    if (normalizedView === 'cover') {
+        classNames.push(
+            normalizeCoverCardMode(coverCardMode) === 'cover-only'
+                ? 'cover-mode-cover-only'
+                : 'cover-mode-cover-title'
+        );
+    }
+    return classNames.join(' ');
+}
+
+export function buildGamesRenderSignature({
+    rows = [],
+    view = 'cover',
+    currentGroupBy = 'none',
+    currentSort = 'name',
+    currentSortDir = 'asc',
+    coverCardMode = 'cover-title'
+} = {}) {
     const list = Array.isArray(rows) ? rows : [];
     const total = list.length;
     const first = total > 0 ? list[0] : null;
@@ -18,6 +53,7 @@ export function buildGamesRenderSignature({ rows = [], view = 'cover', currentGr
         String(currentGroupBy || 'none'),
         String(currentSort || 'name'),
         String(currentSortDir || 'asc'),
+        String(normalizeCoverCardMode(coverCardMode || 'cover-title')),
         total,
         firstId,
         lastId

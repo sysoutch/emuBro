@@ -119,6 +119,45 @@ export function setupGameSessionOverlay(options = {}) {
         return { destroy: () => {} };
     }
 
+    const runtimePlatform = String(emubro.platform || '').trim().toLowerCase();
+    const isDesktopRuntime = runtimePlatform && runtimePlatform !== 'web';
+    if (isDesktopRuntime) {
+        let pollTimer = null;
+        let lastActive = null;
+        let lastSessionId = '';
+        const syncDesktopOverlayWindow = async () => {
+            try {
+                const response = await emubro.invoke('game-session:get-status');
+                const active = !!response?.active && !!response?.session;
+                const sessionId = String(response?.session?.id || '').trim();
+                const changed = active !== lastActive || (active && sessionId !== lastSessionId);
+                lastActive = active;
+                lastSessionId = active ? sessionId : '';
+                if (!changed) return;
+                if (active) {
+                    await emubro.invoke('game-session:ensure-overlay-window');
+                } else {
+                    await emubro.invoke('game-session:hide-overlay-window');
+                }
+            } catch (_error) {}
+        };
+
+        pollTimer = window.setInterval(() => {
+            void syncDesktopOverlayWindow();
+        }, 2500);
+        void syncDesktopOverlayWindow();
+
+        return {
+            refreshStatus: syncDesktopOverlayWindow,
+            destroy: () => {
+                if (pollTimer) {
+                    window.clearInterval(pollTimer);
+                    pollTimer = null;
+                }
+            }
+        };
+    }
+
     const t = createTranslator(options.i18n || window.i18n);
     const onNotify = typeof options.onNotify === 'function' ? options.onNotify : () => {};
     const setAppMode = typeof options.setAppMode === 'function' ? options.setAppMode : () => {};

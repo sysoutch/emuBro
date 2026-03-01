@@ -15,6 +15,32 @@ export function createLazyGameImageActions(deps = {}) {
         if (!img) return;
         img.dataset.lazyStatus = 'loaded';
         img.classList.remove('is-pending');
+        updateCoverOrientationClass(img);
+    }
+
+    function updateCoverOrientationClass(img) {
+        if (!img) return;
+        const width = Number(img.naturalWidth || 0);
+        const height = Number(img.naturalHeight || 0);
+        if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return;
+
+        const cardStack = img.closest('.game-card-stack');
+        if (!cardStack) return;
+
+        cardStack.classList.remove(
+            'cover-orientation-portrait',
+            'cover-orientation-landscape',
+            'cover-orientation-square'
+        );
+
+        const ratio = width / height;
+        if (ratio > 1.04) {
+            cardStack.classList.add('cover-orientation-landscape');
+        } else if (ratio < 0.96) {
+            cardStack.classList.add('cover-orientation-portrait');
+        } else {
+            cardStack.classList.add('cover-orientation-square');
+        }
     }
 
     function attachLazyImageLoadHandlers(img) {

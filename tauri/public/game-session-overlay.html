@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>emuBro Session Overlay</title>
+  <style>
+    :root {
+      --ring: rgba(194, 25, 61, 0.65);
+      --bg: rgba(15, 20, 30, 0.88);
+      --fg: #f2f7ff;
+      --muted: #9ea8be;
+    }
+
+    * { box-sizing: border-box; user-select: none; }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+      font-family: "Segoe UI", system-ui, sans-serif;
+    }
+
+    .overlay-shell {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      padding: 10px;
+      cursor: default;
+    }
+
+    .drag-handle {
+      position: absolute;
+      inset: 0;
+      cursor: move;
+      z-index: 0;
+    }
+
+    .overlay-button {
+      position: relative;
+      z-index: 2;
+      width: 56px;
+      height: 56px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      background: radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.28), var(--bg) 65%);
+      color: var(--fg);
+      display: grid;
+      place-items: center;
+      box-shadow: 0 0 0 1px var(--ring), 0 10px 24px rgba(0, 0, 0, 0.45);
+      cursor: pointer;
+      letter-spacing: 0.2px;
+      transition: transform 120ms ease, border-color 120ms ease;
+      padding: 0;
+    }
+
+    .overlay-button:hover {
+      transform: scale(1.04);
+      border-color: rgba(255, 255, 255, 0.65);
+    }
+
+    .overlay-button:active {
+      transform: scale(0.97);
+    }
+
+    .overlay-icon {
+      width: 30px;
+      height: 30px;
+      object-fit: contain;
+      pointer-events: none;
+      filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.35));
+    }
+
+    .overlay-fallback {
+      display: none;
+      width: 30px;
+      height: 30px;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.92rem;
+      font-weight: 900;
+      color: #f2f7ff;
+      pointer-events: none;
+    }
+
+    .overlay-label {
+      position: absolute;
+      bottom: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.62rem;
+      font-weight: 700;
+      color: var(--muted);
+      white-space: nowrap;
+      text-transform: lowercase;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+  </style>
+</head>
+<body>
+  <main class="overlay-shell">
+    <div class="drag-handle" data-role="drag-handle" aria-hidden="true"></div>
+    <button class="overlay-button" data-role="overlay-logo-btn" title="Open emuBro" aria-label="Open emuBro">
+      <img class="overlay-icon" src="./logo.png" alt="" data-role="overlay-icon" />
+      <span class="overlay-fallback" data-role="overlay-fallback">E</span>
+      <span class="overlay-label">emuBro</span>
+    </button>
+    <span id="status" class="sr-only" aria-live="polite"></span>
+  </main>
+  <script>
+    (function () {
+      window.__EMUBRO_OVERLAY_UI_READY__ = true;
+      console.info("[overlay] ui-ready");
+
+      const tauriInvoke =
+        (window.__TAURI__ && window.__TAURI__.core && typeof window.__TAURI__.core.invoke === "function")
+          ? window.__TAURI__.core.invoke
+          : (window.__TAURI_INTERNALS__ && typeof window.__TAURI_INTERNALS__.invoke === "function"
+              ? window.__TAURI_INTERNALS__.invoke
+              : null);
+      if (typeof tauriInvoke !== "function") return;
+
+      const invokeChannel = (channel, ...args) =>
+        tauriInvoke("emubro_invoke", { channel: String(channel || ""), args });
+
+      const dragHandle = document.querySelector("[data-role='drag-handle']");
+      const button = document.querySelector("[data-role='overlay-logo-btn']");
+      const icon = document.querySelector("[data-role='overlay-icon']");
+      const fallback = document.querySelector("[data-role='overlay-fallback']");
+      const statusEl = document.getElementById("status");
+
+      icon?.addEventListener("error", () => {
+        icon.style.display = "none";
+        if (fallback) fallback.style.display = "inline-flex";
+      });
+
+      const setStatus = (text) => {
+        if (!statusEl) return;
+        statusEl.textContent = String(text || "");
+      };
+
+      dragHandle?.addEventListener("mousedown", async (event) => {
+        if (event.button !== 0) return;
+        try {
+          await invokeChannel("window:start-dragging");
+        } catch (_error) {}
+      });
+
+      button?.addEventListener("click", async () => {
+        if (!button) return;
+        button.disabled = true;
+        setStatus("Opening emuBro");
+        try {
+          const result = await invokeChannel("game-session:show-overlay-menu");
+          if (!result || !result.success) {
+            await invokeChannel("game-session:show-launcher");
+          }
+        } catch (_error) {
+          try {
+            await invokeChannel("game-session:show-launcher");
+          } catch (_innerError) {}
+        } finally {
+          button.disabled = false;
+          setStatus("");
+        }
+      });
+
+      button?.addEventListener("dblclick", async () => {
+        try {
+          await invokeChannel("game-session:show-launcher");
+        } catch (_error) {}
+      });
+    })();
+  </script>
+</body>
+</html>

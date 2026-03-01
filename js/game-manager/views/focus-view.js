@@ -117,6 +117,14 @@ export function renderGamesAsFocus(gamesToRender, options = {}) {
     let filteredIndices = [];
     let itemButtons = [];
 
+    function isGameDetailsPopupVisible() {
+        const popup = document.getElementById('game-info-modal');
+        if (!popup) return false;
+        if (popup.classList.contains('active')) return true;
+        const style = window.getComputedStyle(popup);
+        return style.display !== 'none' && style.visibility !== 'hidden';
+    }
+
     function setActiveListItem(filteredIndex, shouldScroll = false) {
         itemButtons.forEach((button, itemIdx) => {
             const isActive = itemIdx === filteredIndex;
@@ -227,6 +235,9 @@ export function renderGamesAsFocus(gamesToRender, options = {}) {
         const filteredIndex = filteredIndices.indexOf(sourceIndex);
         if (!Number.isFinite(filteredIndex) || filteredIndex < 0) return;
         setIndex(filteredIndex);
+        if (!isGameDetailsPopupVisible()) return;
+        const game = focusGames[sourceIndex];
+        if (game) showGameDetails(game);
     });
 
     listEl.addEventListener('dblclick', (event) => {

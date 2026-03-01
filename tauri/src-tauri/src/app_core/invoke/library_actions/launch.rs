@@ -1,7 +1,7 @@
 use super::*;
 use serde_json::json;
 
-pub(super) fn handle(ch: &str, args: &[Value], _window: &Window) -> Result<Value, String> {
+pub(super) fn handle(ch: &str, args: &[Value], window: &Window) -> Result<Value, String> {
     match ch {
         "launch-game" => {
             let payload = args.get(0).cloned().unwrap_or(Value::Null);
@@ -54,7 +54,8 @@ pub(super) fn handle(ch: &str, args: &[Value], _window: &Window) -> Result<Value
                 return match open::that(&game_path) {
                     Ok(_) => {
                         let _ = update_game_last_played(game_id);
-                        set_game_session_from_launch(game_id, &game_name, &game_path);
+                        set_game_session_from_launch(game_id, &game_name, &game_path, None);
+                        let _ = super::super::game_session::ensure_overlay_window(window);
                         Ok(json!({
                             "success": true,
                             "message": "Launcher opened",
@@ -150,14 +151,21 @@ pub(super) fn handle(ch: &str, args: &[Value], _window: &Window) -> Result<Value
 
             if let Some((emulator_path, emulator_args)) = selected_emulator {
                 match launch_game_with_emulator(&emulator_path, &emulator_args, &game_path_buf) {
-                    Ok(_) => {
+                    Ok(process_id) => {
                         let _ = update_game_last_played(game_id);
-                        set_game_session_from_launch(game_id, &game_name, &game_path);
+                        set_game_session_from_launch(
+                            game_id,
+                            &game_name,
+                            &game_path,
+                            Some(process_id),
+                        );
+                        let _ = super::super::game_session::ensure_overlay_window(window);
                         return Ok(json!({
                             "success": true,
                             "message": "Game launched",
                             "gameId": game_id,
                             "launchMode": "emulator",
+                            "processId": process_id,
                             "emulatorPath": emulator_path.to_string_lossy().to_string()
                         }));
                     }
@@ -166,14 +174,16 @@ pub(super) fn handle(ch: &str, args: &[Value], _window: &Window) -> Result<Value
             }
 
             match launch_game_file(&game_path_buf) {
-                Ok(_) => {
+                Ok(process_id) => {
                     let _ = update_game_last_played(game_id);
-                    set_game_session_from_launch(game_id, &game_name, &game_path);
+                    set_game_session_from_launch(game_id, &game_name, &game_path, process_id);
+                    let _ = super::super::game_session::ensure_overlay_window(window);
                     Ok(json!({
                         "success": true,
                         "message": "Game launched",
                         "gameId": game_id,
-                        "launchMode": "direct"
+                        "launchMode": "direct",
+                        "processId": process_id
                     }))
                 }
                 Err(err) => Ok(json!({
@@ -208,15 +218,21 @@ pub(super) fn handle(ch: &str, args: &[Value], _window: &Window) -> Result<Value
                 &emulator_args,
                 &working_directory,
             ) {
-                Ok(_) => {
+                Ok(process_id) => {
                     let emulator_name = payload
                         .get("name")
                         .and_then(|v| v.as_str())
                         .unwrap_or("Emulator Session")
                         .trim()
                         .to_string();
-                    set_game_session_from_launch(0, &emulator_name, &emulator_path);
-                    Ok(json!({ "success": true }))
+                    set_game_session_from_launch(
+                        0,
+                        &emulator_name,
+                        &emulator_path,
+                        Some(process_id),
+                    );
+                    let _ = super::super::game_session::ensure_overlay_window(window);
+                    Ok(json!({ "success": true, "processId": process_id }))
                 }
                 Err(err) => Ok(json!({ "success": false, "message": err })),
             }

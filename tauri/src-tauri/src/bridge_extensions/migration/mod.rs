@@ -7,7 +7,15 @@ mod session;
 mod theme_upload;
 mod web_source;
 
-pub(crate) use session::set_game_session_from_launch;
+pub(crate) use session::{
+    clear_game_session_process,
+    clear_game_session,
+    game_session_process_ids,
+    game_session_process_id,
+    game_session_status_payload,
+    has_active_game_session,
+    set_game_session_from_launch,
+};
 
 pub(crate) fn handle(channel: &str, args: &[Value]) -> Option<Result<Value, String>> {
     let result = match channel {
@@ -51,24 +59,6 @@ pub(crate) fn handle(channel: &str, args: &[Value]) -> Option<Result<Value, Stri
             let payload = args.get(0).cloned().unwrap_or_else(|| json!({}));
             Ok(Value::Bool(theme_upload::upload_theme_webhook(&payload)))
         }
-        "game-session:get-status" => Ok(session::game_session_status_payload()),
-        "game-session:show-launcher" => Ok(json!({ "success": true })),
-        "game-session:quit" => {
-            session::clear_game_session();
-            Ok(json!({
-                "success": true,
-                "message": "No tracked game session process to terminate in Tauri migration yet."
-            }))
-        }
-        "game-session:send-hotkey" => Ok(json!({
-            "success": false,
-            "message": "Game-session hotkeys are not wired in Tauri yet."
-        })),
-        "game-session:capture-screenshot" => Ok(json!({
-            "success": false,
-            "message": "Session screenshot capture is not wired in Tauri yet."
-        })),
-        "game-session:show-overlay-menu" => Ok(json!({ "success": true })),
         _ => return None,
     };
     Some(result)

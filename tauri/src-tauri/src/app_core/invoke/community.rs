@@ -72,6 +72,13 @@ pub(super) fn handle(ch: &str, args: &[Value], window: &Window) -> Result<Value,
             };
 
             if let Some(existing_window) = app_handle.get_webview_window(&label) {
+                let _ = existing_window.set_title(&title);
+                let navigate_result = existing_window.navigate(parsed_url.clone());
+                if navigate_result.is_ok() {
+                    let _ = existing_window.show();
+                    let _ = existing_window.set_focus();
+                    return Ok(json!({ "success": true, "label": label, "url": normalized, "reused": true }));
+                }
                 let _ = existing_window.close();
             }
             for (existing_label, existing_window) in app_handle.webview_windows() {
@@ -104,6 +111,7 @@ pub(super) fn handle(ch: &str, args: &[Value], window: &Window) -> Result<Value,
             .always_on_top(false)
             .incognito(false)
             .data_directory(community_data_dir)
+            .on_navigation(|_url| true)
             .initialization_script(
                 r#"
                     window.addEventListener('keydown', (event) => {

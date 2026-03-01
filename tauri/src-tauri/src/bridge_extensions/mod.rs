@@ -18,16 +18,28 @@ mod covers;
 mod locales;
 mod migration;
 mod memory_cards;
+mod monitor;
 mod suggestions;
+mod system_tools;
 mod youtube;
 
 pub(crate) use core::*;
-pub(crate) use migration::set_game_session_from_launch;
+pub(crate) use migration::{
+    clear_game_session_process,
+    clear_game_session,
+    game_session_process_ids,
+    game_session_process_id,
+    game_session_status_payload,
+    has_active_game_session,
+    set_game_session_from_launch,
+};
 
 pub(crate) fn handle_bridge_channel(channel: &str, args: &[Value]) -> Option<Result<Value, String>> {
     locales::handle(channel, args)
         .or_else(|| covers::handle(channel, args))
         .or_else(|| youtube::handle(channel, args))
+        .or_else(|| monitor::handle(channel, args))
+        .or_else(|| system_tools::handle(channel, args))
         .or_else(|| suggestions::handle(channel, args))
         .or_else(|| memory_cards::handle(channel, args))
         .or_else(|| migration::handle(channel, args))

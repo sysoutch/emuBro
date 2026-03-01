@@ -80,6 +80,7 @@ import { createCategoriesListRenderer } from './js/library/categories-list-rende
 import { createSuggestionsPanelController } from './js/suggestions/suggestions-panel-controller';
 import { createBrowseFooterController } from './js/library/browse-footer-controller';
 import { createLibraryViewController } from './js/library/library-view-controller';
+import { buildGamesContainerClass, getStoredCoverCardMode } from './js/game-manager/render-utils';
 import { setupGameSessionOverlay } from './js/game-session-overlay';
 
 // ===== Global State & Elements =====
@@ -723,7 +724,10 @@ function setActiveViewButton(viewId) {
 
     document.querySelectorAll('.view-btn').forEach((btn) => btn.classList.remove('active'));
     targetBtn.classList.add('active');
-    if (gamesContainer) gamesContainer.className = `games-container ${normalized}-view`;
+    if (gamesContainer) {
+        const coverCardMode = getStoredCoverCardMode(localStorage);
+        gamesContainer.className = buildGamesContainerClass(normalized, coverCardMode);
+    }
     updateViewSizeControlState();
     return true;
 }

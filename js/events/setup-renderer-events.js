@@ -1,3 +1,5 @@
+import { buildGamesContainerClass, getStoredCoverCardMode, normalizeCoverCardMode } from '../game-manager/render-utils';
+
 export function setupRendererEventListeners(options = {}) {
     const setupSidebarRail = typeof options.setupSidebarRail === 'function' ? options.setupSidebarRail : () => {};
     const setAppMode = typeof options.setAppMode === 'function' ? options.setAppMode : () => {};
@@ -60,6 +62,37 @@ export function setupRendererEventListeners(options = {}) {
 
     const updateViewSizeControlState = typeof options.updateViewSizeControlState === 'function' ? options.updateViewSizeControlState : () => {};
     const gamesContainer = options.gamesContainer || null;
+    const COVER_CARD_MODE_STORAGE_KEY = 'emuBro.coverCardMode';
+    const coverCardModeTabs = document.getElementById('cover-card-mode-tabs');
+    const coverCardModeTabsRow = coverCardModeTabs?.closest('.cover-card-mode-strip')
+        || coverCardModeTabs?.closest('.game-header-bottom')
+        || null;
+    const coverCardModeButtons = Array.from(document.querySelectorAll('.cover-card-mode-tab[data-cover-mode]'));
+    let activeCoverCardMode = getStoredCoverCardMode(localStorage);
+
+    const getActiveViewId = () => String(document.querySelector('.view-btn.active')?.dataset?.view || 'cover').trim().toLowerCase();
+    const applyGamesContainerClass = (viewId = getActiveViewId()) => {
+        if (!gamesContainer) return;
+        gamesContainer.className = buildGamesContainerClass(viewId, activeCoverCardMode);
+    };
+    const syncCoverCardModeControls = () => {
+        const activeView = getActiveViewId();
+        const shouldShow = activeView === 'cover'
+            && getActiveTopSection() === 'library'
+            && getActiveLibrarySection() !== 'emulators';
+        if (coverCardModeTabs) {
+            coverCardModeTabs.classList.toggle('is-hidden', !shouldShow);
+        }
+        if (coverCardModeTabsRow) {
+            coverCardModeTabsRow.classList.toggle('is-hidden', !shouldShow);
+        }
+        coverCardModeButtons.forEach((button) => {
+            const mode = normalizeCoverCardMode(button.dataset.coverMode || '');
+            const isActive = mode === activeCoverCardMode;
+            button.classList.toggle('is-active', isActive);
+            button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+    };
 
     const renderCategoriesList = typeof options.renderCategoriesList === 'function' ? options.renderCategoriesList : async () => {};
     const getActiveCategorySelectionSet = typeof options.getActiveCategorySelectionSet === 'function' ? options.getActiveCategorySelectionSet : () => new Set();
@@ -721,14 +754,30 @@ export function setupRendererEventListeners(options = {}) {
     // View Toggles
     document.querySelectorAll('.view-btn').forEach(button => {
         button.addEventListener('click', async (e) => {
+            const nextView = String(e.currentTarget?.dataset?.view || 'cover').trim().toLowerCase();
             document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
             e.currentTarget.classList.add('active');
             updateViewSizeControlState();
-            gamesContainer.className = 'games-container ' + e.currentTarget.dataset.view + '-view';
+            applyGamesContainerClass(nextView);
+            syncCoverCardModeControls();
             if (getActiveTopSection() !== 'library') return;
             await renderActiveLibraryView();
         });
     });
+
+    coverCardModeButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            const nextMode = normalizeCoverCardMode(button.dataset.coverMode || '');
+            if (nextMode === activeCoverCardMode) return;
+            activeCoverCardMode = nextMode;
+            localStorage.setItem(COVER_CARD_MODE_STORAGE_KEY, activeCoverCardMode);
+            applyGamesContainerClass();
+            syncCoverCardModeControls();
+        });
+    });
+
+    applyGamesContainerClass();
+    syncCoverCardModeControls();
 
     // Header Navigation
     const navLinks = document.querySelectorAll('.navigation a');
@@ -749,6 +798,7 @@ export function setupRendererEventListeners(options = {}) {
                 setAppMode('library');
                 await renderActiveLibraryView();
             }
+            syncCoverCardModeControls();
         });
     });
 
@@ -758,6 +808,7 @@ export function setupRendererEventListeners(options = {}) {
             e.preventDefault();
             setAppMode('library');
             await setActiveLibrarySection(e.currentTarget.dataset.view || 'all');
+            syncCoverCardModeControls();
         });
     });
 

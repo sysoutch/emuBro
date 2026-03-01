@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { storeToRefs } from "pinia";
 import { useAppStore } from "./stores/app";
 
@@ -8,27 +8,33 @@ const { title, subtitle, ready, theme } = storeToRefs(appStore);
 const legacyFrameReady = ref(false);
 const legacyFrameError = ref(false);
 const legacyFrameUrl = ref("");
-const legacyFrameRef = ref(null);
-let cleanupLegacyFrameDragProxy = () => {};
 
 const hasLegacyFrame = computed(
   () => !!legacyFrameUrl.value && !legacyFrameError.value
 );
 
+async function notifyRendererReady() {
+  if (!window?.emubro || typeof window.emubro.invoke !== "function") {
+    return;
+  }
+  try {
+    await window.emubro.invoke("app:renderer-ready");
+  } catch (error) {
+    console.warn("[app] renderer-ready notification failed:", error);
+  }
+}
+
 function onLegacyFrameLoad() {
   legacyFrameReady.value = true;
   appStore.markReady();
+  void notifyRendererReady();
 }
 
 function onLegacyFrameError() {
   legacyFrameError.value = true;
   legacyFrameReady.value = false;
   appStore.markReady();
-}
-
-function bindLegacyFrameDragProxy() {
-  cleanupLegacyFrameDragProxy();
-  cleanupLegacyFrameDragProxy = () => {};
+  void notifyRendererReady();
 }
 
 onMounted(() => {
@@ -44,18 +50,13 @@ onMounted(() => {
   }
 
   appStore.markReady();
-});
-
-onBeforeUnmount(() => {
-  cleanupLegacyFrameDragProxy();
-  cleanupLegacyFrameDragProxy = () => {};
+  void notifyRendererReady();
 });
 </script>
 
 <template>
   <main v-if="hasLegacyFrame" class="legacy-shell">
     <iframe
-      ref="legacyFrameRef"
       class="legacy-frame"
       :class="{ 'is-ready': legacyFrameReady }"
       :src="legacyFrameUrl"
