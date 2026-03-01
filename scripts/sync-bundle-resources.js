@@ -23,7 +23,15 @@ function exists(p) {
 
 function copyDir(src, dest) {
   fs.mkdirSync(path.dirname(dest), { recursive: true });
-  fs.cpSync(src, dest, { recursive: true });
+  fs.cpSync(src, dest, {
+    recursive: true,
+    filter: (srcPath) => {
+      const base = path.basename(srcPath);
+      if (base === '.git') return false;
+      if (base === '.github') return false;
+      return true;
+    }
+  });
 }
 
 function syncResources() {

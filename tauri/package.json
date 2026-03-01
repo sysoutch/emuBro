@@ -1,15 +1,15 @@
 {
   "name": "emubro-tauri",
   "private": true,
-  "version": "1.0.0-alpha.14",
+  "version": "1.0.0-alpha.15",
   "type": "module",
   "scripts": {
     "cleanup:dev-ports": "node ../scripts/cleanup-dev-ports.js",
-    "dev": "vite",
+    "dev": "node ../scripts/sync-bundle-resources.js && vite",
     "dev:clean": "npm run cleanup:dev-ports && npm run dev",
     "build": "vite build",
     "preview": "vite preview",
-    "tauri:dev": "tauri dev",
+    "tauri:dev": "node ../scripts/sync-bundle-resources.js && tauri dev",
     "tauri:dev:clean": "npm run cleanup:dev-ports && npm run tauri:dev",
     "tauri:build": "node ../scripts/sync-bundle-resources.js && tauri build",
     "tauri:build:linux:appimage": "node ../scripts/sync-bundle-resources.js && tauri build --bundles appimage",

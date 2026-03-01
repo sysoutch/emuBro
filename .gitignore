@@ -63,3 +63,5 @@ spec/fixtures/logo.png
 /emubro-locales-repo/
 /tauri/src-tauri/.emubro-tauri-data/
 /tauri/src-tauri/screenshots/
+/tauri/src-tauri/bundle-resources/*
+!/tauri/src-tauri/bundle-resources/.keep
