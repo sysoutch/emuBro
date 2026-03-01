@@ -190,7 +190,7 @@ Continuing oversized JS refactors with stable public APIs (`tools-manager`, `the
 ## Active Decisions and Considerations
 - Using CSS Grid for the main `games-container` but `flex-column` or `block` overrides (via `grid-column: 1 / -1`) for non-grid views like List, Table, and Slideshow
 - Extending Glass Effect (backdrop-filter) to all view containers for consistency when enabled
-- Using Electron for cross-platform compatibility
+- Using Tauri for cross-platform compatibility (Electron runtime is retained in `electron/legacy/` only)
 - Implementing Steam-like interface design
 - Supporting multiple themes through localStorage
 - Multi-language support through i18n system
@@ -213,3 +213,15 @@ Continuing oversized JS refactors with stable public APIs (`tools-manager`, `the
 - Theme customization needs to be well-structured for both custom and community themes
 - Internationalization should be implemented early to support multi-language features
 - Game library management will be a core feature requiring robust data handling
+- Tauri bundle resources in CI must exist before Rust build scripts run:
+  - keep a tracked placeholder (`tauri/src-tauri/bundle-resources/.keep`)
+  - sync generated resources before `tauri dev` and `tauri build`
+  - use `bundle-resources/**/*` in `tauri.conf.json` so file-only globs always match
+- Do not copy VCS metadata into synced bundle resources:
+  - exclude `.git` and `.github` while copying to avoid watch-triggered rebuild loops in dev
+- Windows MSI cannot be generated for prerelease semver like `1.0.0-alpha.15`:
+  - build `nsis` only on `-alpha.*` tags
+  - keep `msi` for stable tags
+- Linux artifact zips can look huge when uploading the entire `bundle/**` tree:
+  - upload only final installer outputs (`*.AppImage`, `*.deb`, `*.exe`, `*.msi`) instead of intermediate bundle directories
+- GitHub release upload is more reliable with `gh release upload --clobber` after ensuring the release exists than relying on asset update behavior in action wrappers
