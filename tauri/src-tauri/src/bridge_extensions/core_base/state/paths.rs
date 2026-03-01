@@ -1,15 +1,15 @@
 use super::*;
 
 pub(crate) fn state_db_path() -> PathBuf {
-    std::env::current_dir()
-        .unwrap_or_else(|_| PathBuf::from("."))
-        .join(".emubro-tauri-state.db")
+    let root = managed_data_root();
+    let _ = ensure_directory(&root);
+    root.join(".emubro-tauri-state.db")
 }
 
 pub(crate) fn legacy_json_state_path() -> PathBuf {
-    std::env::current_dir()
-        .unwrap_or_else(|_| PathBuf::from("."))
-        .join(".emubro-tauri-state.json")
+    let root = managed_data_root();
+    let _ = ensure_directory(&root);
+    root.join(".emubro-tauri-state.json")
 }
 
 pub(crate) fn read_legacy_state_json() -> serde_json::Map<String, Value> {

@@ -52,6 +52,12 @@ fn main() {
 
     tauri::Builder::default()
         .setup(move |app| {
+            if let Ok(resources_dir) = app.path().resource_dir() {
+                if let Some(text) = resources_dir.to_str() {
+                    std::env::set_var("EMUBRO_BUNDLE_RESOURCES_DIR", text);
+                }
+            }
+
             let app_handle = app.handle().clone();
             std::thread::spawn(move || {
                 std::thread::sleep(Duration::from_secs(20));

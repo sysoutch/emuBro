@@ -12,6 +12,34 @@ pub(crate) fn unix_timestamp_ms() -> u128 {
 }
 
 pub(crate) fn managed_data_root() -> PathBuf {
+    if let Ok(explicit_dir) = std::env::var("EMUBRO_MANAGED_DATA_DIR") {
+        let trimmed = explicit_dir.trim();
+        if !trimmed.is_empty() {
+            return PathBuf::from(trimmed);
+        }
+    }
+
+    if let Ok(local_appdata) = std::env::var("LOCALAPPDATA") {
+        let trimmed = local_appdata.trim();
+        if !trimmed.is_empty() {
+            return PathBuf::from(trimmed).join("emuBro");
+        }
+    }
+
+    if let Ok(xdg_data_home) = std::env::var("XDG_DATA_HOME") {
+        let trimmed = xdg_data_home.trim();
+        if !trimmed.is_empty() {
+            return PathBuf::from(trimmed).join("emuBro");
+        }
+    }
+
+    if let Some(home_dir) = user_home_dir() {
+        if cfg!(target_os = "macos") {
+            return home_dir.join("Library").join("Application Support").join("emuBro");
+        }
+        return home_dir.join(".local").join("share").join("emuBro");
+    }
+
     std::env::current_dir()
         .unwrap_or_else(|_| PathBuf::from("."))
         .join(".emubro-tauri-data")
@@ -34,29 +62,83 @@ pub(crate) fn user_home_dir() -> Option<PathBuf> {
 }
 
 pub(crate) fn find_locales_dir() -> Option<PathBuf> {
-    let cwd = std::env::current_dir().ok()?;
-    let candidates = [
-        cwd.join("locales"),
-        cwd.join("../locales"),
-        cwd.join("../../locales"),
-        cwd.join("../../../../locales"),
-    ];
-    candidates
-        .into_iter()
-        .find(|path| path.exists() && path.is_dir())
+    for root in resource_search_roots() {
+        let candidates = [
+            root.join("locales"),
+            root.join("legacy").join("locales"),
+        ];
+        for path in candidates {
+            if path.exists() && path.is_dir() {
+                return Some(path);
+            }
+        }
+    }
+    None
 }
 
 pub(crate) fn find_platforms_dir() -> Option<PathBuf> {
-    let cwd = std::env::current_dir().ok()?;
-    let candidates = [
-        cwd.join("emubro-resources").join("platforms"),
-        cwd.join("../emubro-resources").join("platforms"),
-        cwd.join("../../emubro-resources").join("platforms"),
-        cwd.join("../../../../emubro-resources").join("platforms"),
-    ];
-    candidates
-        .into_iter()
-        .find(|path| path.exists() && path.is_dir())
+    for root in resource_search_roots() {
+        let candidates = [
+            root.join("emubro-resources").join("platforms"),
+            root.join("legacy").join("emubro-resources").join("platforms"),
+        ];
+        for path in candidates {
+            if path.exists() && path.is_dir() {
+                return Some(path);
+            }
+        }
+    }
+    None
+}
+
+fn resource_search_roots() -> Vec<PathBuf> {
+    let mut roots = Vec::<PathBuf>::new();
+    let mut seen = std::collections::HashSet::<String>::new();
+
+    let mut push = |path: PathBuf| {
+        let key = path.to_string_lossy().to_lowercase();
+        if seen.insert(key) {
+            roots.push(path);
+        }
+    };
+
+    if let Ok(cwd) = std::env::current_dir() {
+        push(cwd.clone());
+        if let Some(parent) = cwd.parent() {
+            push(parent.to_path_buf());
+            if let Some(grand_parent) = parent.parent() {
+                push(grand_parent.to_path_buf());
+            }
+        }
+    }
+
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            push(exe_dir.to_path_buf());
+            if let Some(parent) = exe_dir.parent() {
+                push(parent.to_path_buf());
+                push(parent.join("resources"));
+            }
+        }
+    }
+
+    if let Ok(resources_dir) = std::env::var("EMUBRO_BUNDLE_RESOURCES_DIR") {
+        let trimmed = resources_dir.trim();
+        if !trimmed.is_empty() {
+            push(PathBuf::from(trimmed));
+        }
+    }
+
+    if let Ok(resources_dir) = std::env::var("EMUBRO_RESOURCES_DIR") {
+        let trimmed = resources_dir.trim();
+        if !trimmed.is_empty() {
+            push(PathBuf::from(trimmed));
+        }
+    }
+
+    push(managed_data_root());
+
+    roots
 }
 
 pub(crate) fn locale_file_path(base: &Path, file_name: &str) -> Option<PathBuf> {

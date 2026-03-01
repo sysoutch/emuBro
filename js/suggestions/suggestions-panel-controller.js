@@ -472,8 +472,8 @@ export function createSuggestionsPanelController(options = {}) {
             }
         };
 
-        if (provider === 'ollama') {
-            refreshOllamaModels(false);
+        if (provider === 'ollama' && status) {
+            status.textContent = t('suggested.status.clickRefreshModels', 'Click refresh to load Ollama models.');
         }
 
         const persistInputs = () => {

@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  NODE_VERSION: 22
+  NODE_VERSION: 20
 
 jobs:
   bundle:
@@ -58,13 +58,16 @@ jobs:
             sudo apt-get install -y libwebkit2gtk-4.0-dev libjavascriptcoregtk-4.0-dev
           fi
 
+      - name: Sync emuBro resources
+        run: npm run sync:resources
+
       - name: Install root JS dependencies
         timeout-minutes: 20
-        run: npm install --no-audit --prefer-offline --loglevel verbose
+        run: npm install --no-audit --prefer-offline --omit=optional --no-fund
 
       - name: Install Tauri JS dependencies
         timeout-minutes: 20
-        run: npm --prefix tauri install --no-audit --prefer-offline --loglevel verbose
+        run: npm --prefix tauri install --no-audit --prefer-offline --omit=optional --no-fund
 
       - name: Build legacy renderer bundle
         run: npm run legacy:build
@@ -103,13 +106,16 @@ jobs:
           sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
           sudo flatpak install -y flathub org.freedesktop.Platform//24.08 org.freedesktop.Sdk//24.08
 
+      - name: Sync emuBro resources
+        run: npm run sync:resources
+
       - name: Install root JS dependencies
         timeout-minutes: 20
-        run: npm install --no-audit --prefer-offline --loglevel verbose
+        run: npm install --no-audit --prefer-offline --omit=optional --no-fund
 
       - name: Install Tauri JS dependencies
         timeout-minutes: 20
-        run: npm --prefix tauri install --no-audit --prefer-offline --loglevel verbose
+        run: npm --prefix tauri install --no-audit --prefer-offline --omit=optional --no-fund
 
       - name: Build legacy renderer bundle
         run: npm run legacy:build
