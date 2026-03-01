@@ -225,3 +225,10 @@ Continuing oversized JS refactors with stable public APIs (`tools-manager`, `the
 - Linux artifact zips can look huge when uploading the entire `bundle/**` tree:
   - upload only final installer outputs (`*.AppImage`, `*.deb`, `*.exe`, `*.msi`) instead of intermediate bundle directories
 - GitHub release upload is more reliable with `gh release upload --clobber` after ensuring the release exists than relying on asset update behavior in action wrappers
+- App updates in Tauri are now implemented as a browser-assisted flow:
+  - `update:check` queries GitHub latest release API and compares semver
+  - `update:download` and `update:install` open the best matching platform asset or release page
+  - update state/config are persisted via state KV (`app:update:state:v1`, `app:update:config:v1`)
+  - this replaces the old "not available in Tauri build" stub
+- Follow-up improvement target:
+  - migrate from browser-assisted update to signed in-place updater (Tauri updater plugin + signing keys + endpoint)

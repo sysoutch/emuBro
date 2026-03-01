@@ -8,13 +8,6 @@ mod state_config;
 mod updates;
 mod window;
 
-pub(super) fn not_implemented() -> Value {
-    json!({
-        "success": false,
-        "message": "Not implemented in Tauri migration yet"
-    })
-}
-
 pub(super) fn emubro_invoke_impl(channel: String, args: Vec<Value>, window: Window) -> Result<Value, String> {
     let ch = channel.trim().to_lowercase();
 

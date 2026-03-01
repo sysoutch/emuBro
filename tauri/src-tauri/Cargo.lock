@@ -974,6 +974,7 @@ dependencies = [
  "open",
  "rfd",
  "rusqlite",
+ "semver",
  "serde",
  "serde_json",
  "tauri",
