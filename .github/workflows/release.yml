@@ -93,6 +93,26 @@ jobs:
         if: runner.os == 'Windows' && !contains(github.ref_name, '-alpha.')
         run: npm --prefix tauri run tauri:build -- --bundles ${{ matrix.bundles }}
 
+      - name: Build portable Windows package folder
+        if: runner.os == 'Windows'
+        run: node scripts/build-windows-portable.js
+
+      - name: Archive portable Windows package
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $portableRoot = "tauri/src-tauri/target/release/bundle/portable"
+          $portableDir = Get-ChildItem -Path $portableRoot -Directory | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if (-not $portableDir) {
+            throw "Portable package directory not found in $portableRoot"
+          }
+          $zipPath = Join-Path $portableDir.Parent.FullName ($portableDir.Name + ".zip")
+          if (Test-Path $zipPath) {
+            Remove-Item $zipPath -Force
+          }
+          Compress-Archive -Path (Join-Path $portableDir.FullName "*") -DestinationPath $zipPath
+          Write-Host "Portable archive: $zipPath"
+
       - name: Upload artifacts (Windows)
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
@@ -103,6 +123,7 @@ jobs:
             tauri/src-tauri/target/release/bundle/nsis/*.zip
             tauri/src-tauri/target/release/bundle/msi/*.msi
             tauri/src-tauri/target/release/bundle/msi/*.zip
+            tauri/src-tauri/target/release/bundle/portable/*.zip
           if-no-files-found: warn
 
       - name: Upload artifacts (Linux)

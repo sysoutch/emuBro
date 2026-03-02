@@ -1,20 +1,30 @@
 :root {
   color-scheme: dark light;
-  --bg: #121015;
-  --bg-elev: #1b1720;
-  --text: #f4eefb;
-  --muted: #c6b8d8;
-  --accent: #ff2d55;
-  --border: rgba(255, 220, 230, 0.22);
+  --bg: #0b1220;
+  --bg-elev: #121c2f;
+  --text: #e7edf8;
+  --muted: #b9c7dc;
+  --accent: #32b8de;
+  --accent-rgb: 50, 184, 222;
+  --border: rgba(50, 184, 222, 0.22);
+  --app-gradient-angle: 160deg;
+  --app-gradient-a: #0b1528;
+  --app-gradient-b: #0f2236;
+  --app-gradient-c: #1d2f4a;
 }
 
 :root[data-theme="light"] {
-  --bg: #f7f3fa;
-  --bg-elev: #ffffff;
-  --text: #2a1d34;
-  --muted: #6f5f7e;
-  --accent: #d21744;
-  --border: rgba(77, 37, 66, 0.18);
+  --bg: #dfeaf6;
+  --bg-elev: #edf4fb;
+  --text: #17263a;
+  --muted: #5d7694;
+  --accent: #3db2d6;
+  --accent-rgb: 61, 178, 214;
+  --border: rgba(61, 178, 214, 0.18);
+  --app-gradient-angle: 160deg;
+  --app-gradient-a: #dbe9f7;
+  --app-gradient-b: #e7f3ff;
+  --app-gradient-c: #d2e3f5;
 }
 
 * {
@@ -32,9 +42,9 @@ body,
 body {
   font-family: "Segoe UI", "Inter", sans-serif;
   background:
-    radial-gradient(1200px 500px at 0% -10%, rgba(255, 45, 85, 0.2), transparent 60%),
-    radial-gradient(900px 500px at 100% 0%, rgba(255, 106, 133, 0.18), transparent 58%),
-    var(--bg);
+    radial-gradient(1200px 500px at 0% -10%, rgba(var(--accent-rgb), 0.2), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(var(--accent-rgb), 0.18), transparent 58%),
+    linear-gradient(var(--app-gradient-angle, 160deg), var(--app-gradient-a) 0%, var(--app-gradient-b) 52%, var(--app-gradient-c) 100%);
   color: var(--text);
 }
 
@@ -44,9 +54,9 @@ body {
   height: 100%;
   overflow: hidden;
   background:
-    radial-gradient(100% 120% at 0% 0%, rgba(154, 23, 43, 0.42), transparent 66%),
-    radial-gradient(85% 90% at 100% 100%, rgba(125, 10, 40, 0.34), transparent 72%),
-    linear-gradient(145deg, #520915 0%, #2f0813 52%, #430a1b 100%);
+    radial-gradient(100% 120% at 0% 0%, rgba(var(--accent-rgb), 0.24), transparent 66%),
+    radial-gradient(85% 90% at 100% 100%, rgba(var(--accent-rgb), 0.18), transparent 72%),
+    linear-gradient(var(--app-gradient-angle, 160deg), var(--app-gradient-a) 0%, var(--app-gradient-b) 52%, var(--app-gradient-c) 100%);
 }
 
 .legacy-frame {

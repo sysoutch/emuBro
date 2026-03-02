@@ -7,6 +7,12 @@ use std::time::Duration;
 use tauri::{Manager, PhysicalPosition, Position, WebviewUrl};
 use url::Url;
 
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
 const SESSION_OVERLAY_LABEL: &str = "game-session-overlay";
 const SESSION_OVERLAY_WIDTH: f64 = 84.0;
 const SESSION_OVERLAY_HEIGHT: f64 = 84.0;
@@ -23,6 +29,13 @@ const OVERLAY_IPC_CAPTURE_SCREENSHOT: &str = "capture-screenshot";
 
 struct OverlayIpcRuntime {
     addr: String,
+}
+
+fn apply_windows_hidden_process_flags(command: &mut Command) {
+    #[cfg(windows)]
+    {
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
 }
 
 fn overlay_sidecar_handle() -> &'static Mutex<Option<Child>> {
@@ -50,13 +63,15 @@ fn is_process_running(process_id: u32) -> bool {
 
     #[cfg(windows)]
     {
-        let output = Command::new("tasklist")
+        let mut command = Command::new("tasklist");
+        command
             .arg("/FI")
             .arg(format!("PID eq {}", process_id))
             .arg("/FO")
             .arg("CSV")
-            .arg("/NH")
-            .output();
+            .arg("/NH");
+        apply_windows_hidden_process_flags(&mut command);
+        let output = command.output();
         let Ok(output) = output else {
             return true;
         };
@@ -117,6 +132,7 @@ fn spawn_overlay_sidecar_process(ipc_addr: Option<&str>) -> Result<Child, String
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());
+    apply_windows_hidden_process_flags(&mut command);
     if let Some(addr) = ipc_addr {
         command.arg(format!("--overlay-ipc={}", addr.trim()));
     }
@@ -418,11 +434,14 @@ fn terminate_process_tree(process_id: u32) -> Result<(), String> {
 
     #[cfg(windows)]
     {
-        let output = Command::new("taskkill")
+        let mut command = Command::new("taskkill");
+        command
             .arg("/PID")
             .arg(process_id.to_string())
             .arg("/T")
-            .arg("/F")
+            .arg("/F");
+        apply_windows_hidden_process_flags(&mut command);
+        let output = command
             .output()
             .map_err(|error| format!("Failed to run taskkill: {}", error))?;
         let stdout = String::from_utf8_lossy(&output.stdout).to_lowercase();
@@ -509,11 +528,14 @@ Start-Sleep -Milliseconds 25
 [EmuBro.EmuHotkeys]::keybd_event(0x0D, 0, 2, [UIntPtr]::Zero)
 [EmuBro.EmuHotkeys]::keybd_event(0x12, 0, 2, [UIntPtr]::Zero)
 "#;
-        let status = Command::new("powershell")
+        let mut command = Command::new("powershell");
+        command
             .arg("-NoProfile")
             .arg("-NonInteractive")
             .arg("-Command")
-            .arg(script)
+            .arg(script);
+        apply_windows_hidden_process_flags(&mut command);
+        let status = command
             .status()
             .map_err(|error| format!("Failed to send Alt+Enter: {}", error))?;
         if status.success() {
@@ -580,11 +602,14 @@ $bitmap.Dispose()
             path = escaped_path
         );
 
-        let output = Command::new("powershell")
+        let mut command = Command::new("powershell");
+        command
             .arg("-NoProfile")
             .arg("-NonInteractive")
             .arg("-Command")
-            .arg(script)
+            .arg(script);
+        apply_windows_hidden_process_flags(&mut command);
+        let output = command
             .output()
             .map_err(|error| format!("Failed to capture screenshot: {}", error))?;
 

@@ -16,7 +16,22 @@ module.exports = {
         use: {
           loader: 'babel-loader',
           options: {
-            presets: ['@babel/preset-env']
+            presets: [
+              [
+                '@babel/preset-env',
+                {
+                  // Keep the legacy renderer compatible with older WebKitGTK builds
+                  // used by Linux AppImage environments.
+                  targets: {
+                    chrome: '90',
+                    edge: '90',
+                    firefox: '88',
+                    safari: '12'
+                  },
+                  bugfixes: true
+                }
+              ]
+            ]
           }
         }
       },

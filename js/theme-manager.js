@@ -5,6 +5,7 @@
 import { 
     parseColorToHex, 
     flipLightness,
+    rotateHue,
     darkenHex
 } from './ui-utils';
 import { requestDockLayoutRefresh } from './docking-manager';
@@ -35,8 +36,8 @@ import {
 import { syncSplashThemePreference as syncSplashThemePreferenceView } from './theme-manager/theme-splash-utils';
 import {
     toggleThemeColors as toggleThemeColorsView,
+    toggleThemeHue as toggleThemeHueView,
     toggleInvertFilter as toggleInvertFilterView,
-    toggleHueRotateColors as toggleHueRotateColorsView,
     getBackgroundImageFromGrid
 } from './theme-manager/theme-toggle-utils';
 import {
@@ -176,6 +177,8 @@ let queuedThemeApply = null;
 let lastAppliedThemeId = '';
 let lastAppliedThemeAt = 0;
 const THEME_EDITOR_MODE_STORAGE_KEY = 'themeEditorCustomizationMode';
+const HUE_ROTATE_STEP_DEG = 45;
+let currentHueRotateDeg = 0;
 const getBackgroundSurfaceDraft = () => backgroundSurfaceDraft;
 const setBackgroundSurfaceDraft = (next) => { backgroundSurfaceDraft = next; };
 const setBackgroundLayerDraftsState = (next) => { backgroundLayerDrafts = next; };
@@ -251,6 +254,8 @@ const {
 const {
     makeDraggable
 } = themeModalUtils;
+
+applyHueRotationState(currentHueRotateDeg);
 
 export { makeDraggable };
 
@@ -817,6 +822,26 @@ function getCurrentLogoTextEffectFromRoot() {
     };
 }
 
+function runWithoutThemeTransitions(callback) {
+    const root = document.documentElement;
+    if (!root) {
+        callback();
+        return;
+    }
+    root.classList.add('theme-transition-suspended');
+    try {
+        callback();
+        // Flush style changes before re-enabling transitions.
+        void root.offsetHeight;
+    } finally {
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                root.classList.remove('theme-transition-suspended');
+            });
+        });
+    }
+}
+
 export function toggleTheme() {
     const invertedTheme = toggleThemeColorsView({
         getCurrentThemeColors,
@@ -830,9 +855,48 @@ export function toggleTheme() {
 }
 
 export function invertColors() {
-    toggleInvertFilterView();
+    runWithoutThemeTransitions(() => {
+        // Keep legacy behavior (CSS filter) but also invert the theme palette itself.
+        toggleTheme();
+        toggleInvertFilterView();
+    });
 }
 
 export function hueRotateColors() {
-    toggleHueRotateColorsView();
+    runWithoutThemeTransitions(() => {
+        const hueRotatedTheme = toggleThemeHueView({
+            getCurrentThemeColors,
+            rotateHue,
+            applyCustomTheme,
+            getCurrentThemeFonts: getCurrentThemeFontsFromRoot,
+            getCurrentLogoTextEffect: getCurrentLogoTextEffectFromRoot,
+            getComputedBackgroundImage: () => window.currentBackgroundImage || getBackgroundImageFromGrid(),
+            degrees: HUE_ROTATE_STEP_DEG
+        });
+        applyHueRotationState(currentHueRotateDeg + HUE_ROTATE_STEP_DEG);
+        currentTheme = hueRotatedTheme?.id || 'temp_hue_rotated';
+    });
+}
+
+function normalizeHueDegrees(value) {
+    const asText = String(value ?? '').trim().toLowerCase().replace('deg', '');
+    const parsed = Number.parseFloat(asText);
+    if (!Number.isFinite(parsed)) return 0;
+    const normalized = ((parsed % 360) + 360) % 360;
+    return normalized;
+}
+
+function applyHueRotationState(degrees) {
+    const normalized = normalizeHueDegrees(degrees);
+    currentHueRotateDeg = normalized;
+    const root = document.documentElement;
+    if (root) {
+        root.style.setProperty('--hue-rotate-deg', `${normalized}deg`);
+        if (normalized === 0) {
+            root.removeAttribute('data-hue-rotate-active');
+        } else {
+            root.setAttribute('data-hue-rotate-active', '1');
+        }
+    }
+    return normalized;
 }

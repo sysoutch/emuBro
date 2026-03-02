@@ -1,11 +1,19 @@
 import { defineStore } from "pinia";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
+function getInitialThemeTone() {
+  if (typeof document !== "undefined") {
+    const attr = String(document.documentElement.getAttribute("data-theme") || "").trim().toLowerCase();
+    if (attr === "light" || attr === "dark") return attr;
+  }
+  return "dark";
+}
+
 export const useAppStore = defineStore("app", {
   state: () => ({
     title: "emuBro",
     subtitle: "Tauri + Vue + Pinia migration in progress",
-    theme: "dark",
+    theme: getInitialThemeTone(),
     ready: false
   }),
   actions: {

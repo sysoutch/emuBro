@@ -56,6 +56,12 @@ html {
     height: 100%;
 }
 
+html.theme-transition-suspended *,
+html.theme-transition-suspended *::before,
+html.theme-transition-suspended *::after {
+    transition: none !important;
+}
+
 /* When maximized, Windows corners become square. Mirror that in our CSS chrome. */
 [data-window-state="maximized"] {
     --radius-window: 0px;

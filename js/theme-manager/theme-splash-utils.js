@@ -4,6 +4,8 @@
 
 import { parseColorToHex } from '../ui-utils';
 
+const SPLASH_THEME_STORAGE_KEY = 'emuBro.splashTheme';
+
 function readThemeColorForSplash(styles, cssVar, fallback) {
     const parsed = parseColorToHex(styles.getPropertyValue(cssVar) || '');
     return parsed || fallback;
@@ -49,8 +51,13 @@ export function syncSplashThemePreference(themeId, options = {}) {
         fontBody: String(styles.getPropertyValue('--font-body') || '').trim() || DEFAULT_THEME_FONTS.body,
         appGradientA: readThemeColorForSplash(styles, '--app-gradient-a', fallback.bgPrimary),
         appGradientB: readThemeColorForSplash(styles, '--app-gradient-b', fallback.bgSecondary),
-        appGradientC: readThemeColorForSplash(styles, '--app-gradient-c', fallback.bgTertiary)
+        appGradientC: readThemeColorForSplash(styles, '--app-gradient-c', fallback.bgTertiary),
+        appGradientAngle: String(styles.getPropertyValue('--app-gradient-angle') || '').trim() || '160deg'
     };
+
+    try {
+        localStorage.setItem(SPLASH_THEME_STORAGE_KEY, JSON.stringify(payload));
+    } catch (_e) {}
 
     try {
         const result = emubro.invoke('settings:set-splash-theme', payload);

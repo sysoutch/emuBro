@@ -5,10 +5,142 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data: blob: https:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; connect-src 'self' https: http:;">
     <title data-i18n="app.title">emuBro</title>
+    <script>
+        (() => {
+            const SPLASH_THEME_STORAGE_KEY = 'emuBro.splashTheme';
+            const FALLBACK_DARK = {
+                tone: 'dark',
+                bgPrimary: '#0b1220',
+                bgSecondary: '#121c2f',
+                bgTertiary: '#1a263d',
+                textPrimary: '#e7edf8',
+                textSecondary: '#b9c7dc',
+                accentColor: '#32b8de',
+                appGradientAngle: '160deg',
+                appGradientA: '#0b1528',
+                appGradientB: '#0f2236',
+                appGradientC: '#1d2f4a'
+            };
+            const FALLBACK_LIGHT = {
+                tone: 'light',
+                bgPrimary: '#dfeaf6',
+                bgSecondary: '#edf4fb',
+                bgTertiary: '#d2e3f5',
+                textPrimary: '#17263a',
+                textSecondary: '#5d7694',
+                accentColor: '#3db2d6',
+                appGradientAngle: '160deg',
+                appGradientA: '#dbe9f7',
+                appGradientB: '#e7f3ff',
+                appGradientC: '#d2e3f5'
+            };
+
+            function isHexColor(value) {
+                const text = String(value || '').trim();
+                return /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(text);
+            }
+
+            function toRgbString(value) {
+                const hex = String(value || '').trim().replace('#', '');
+                if (hex.length === 3 || hex.length === 4) {
+                    const r = parseInt(hex[0] + hex[0], 16);
+                    const g = parseInt(hex[1] + hex[1], 16);
+                    const b = parseInt(hex[2] + hex[2], 16);
+                    return `${r}, ${g}, ${b}`;
+                }
+                if (hex.length >= 6) {
+                    const r = parseInt(hex.slice(0, 2), 16);
+                    const g = parseInt(hex.slice(2, 4), 16);
+                    const b = parseInt(hex.slice(4, 6), 16);
+                    return `${r}, ${g}, ${b}`;
+                }
+                return '50, 184, 222';
+            }
+
+            function estimateTone(hex) {
+                if (!isHexColor(hex)) return 'dark';
+                const text = hex.slice(1);
+                const full = text.length <= 4
+                    ? `${text[0]}${text[0]}${text[1]}${text[1]}${text[2]}${text[2]}`
+                    : text.slice(0, 6);
+                const r = parseInt(full.slice(0, 2), 16);
+                const g = parseInt(full.slice(2, 4), 16);
+                const b = parseInt(full.slice(4, 6), 16);
+                const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+                return luminance > 0.62 ? 'light' : 'dark';
+            }
+
+            function normalizeTheme(rawTheme) {
+                const tone = String((rawTheme && rawTheme.tone) || '').toLowerCase() === 'light'
+                    ? 'light'
+                    : estimateTone(rawTheme && rawTheme.bgPrimary);
+                const fallback = tone === 'light' ? FALLBACK_LIGHT : FALLBACK_DARK;
+                const readColor = (key, fallbackKey = key) => {
+                    const value = rawTheme && rawTheme[key];
+                    return isHexColor(value) ? String(value).trim() : fallback[fallbackKey];
+                };
+                return {
+                    tone,
+                    bgPrimary: readColor('bgPrimary'),
+                    bgSecondary: readColor('bgSecondary'),
+                    bgTertiary: readColor('bgTertiary'),
+                    textPrimary: readColor('textPrimary'),
+                    textSecondary: readColor('textSecondary'),
+                    accentColor: readColor('accentColor'),
+                    appGradientAngle: String((rawTheme && rawTheme.appGradientAngle) || fallback.appGradientAngle || '160deg').trim() || '160deg',
+                    appGradientA: readColor('appGradientA', 'bgPrimary'),
+                    appGradientB: readColor('appGradientB', 'bgSecondary'),
+                    appGradientC: readColor('appGradientC', 'bgTertiary')
+                };
+            }
+
+            function readStoredTheme() {
+                try {
+                    const splashTheme = JSON.parse(localStorage.getItem(SPLASH_THEME_STORAGE_KEY) || 'null');
+                    if (splashTheme && typeof splashTheme === 'object') {
+                        return splashTheme;
+                    }
+                } catch (_e) {}
+
+                const selectedThemeId = String(localStorage.getItem('theme') || '').trim();
+                if (!selectedThemeId) return null;
+                if (selectedThemeId.toLowerCase() === 'dark') return FALLBACK_DARK;
+                if (selectedThemeId.toLowerCase() === 'light') return FALLBACK_LIGHT;
+
+                try {
+                    const customThemes = JSON.parse(localStorage.getItem('customThemes') || '[]');
+                    if (!Array.isArray(customThemes)) return null;
+                    const selected = customThemes.find((row) => String((row && row.id) || '').trim() === selectedThemeId);
+                    return selected && selected.colors ? selected.colors : null;
+                } catch (_e) {
+                    return null;
+                }
+            }
+
+            const theme = normalizeTheme(readStoredTheme() || FALLBACK_DARK);
+            const root = document.documentElement;
+            root.setAttribute('data-theme', theme.tone);
+            root.style.setProperty('--bg-primary', theme.bgPrimary);
+            root.style.setProperty('--bg-secondary', theme.bgSecondary);
+            root.style.setProperty('--bg-tertiary', theme.bgTertiary);
+            root.style.setProperty('--text-primary', theme.textPrimary);
+            root.style.setProperty('--text-secondary', theme.textSecondary);
+            root.style.setProperty('--accent-color', theme.accentColor);
+            root.style.setProperty('--accent-color-rgb', toRgbString(theme.accentColor));
+            root.style.setProperty('--app-gradient-angle', theme.appGradientAngle);
+            root.style.setProperty('--app-gradient-a', theme.appGradientA);
+            root.style.setProperty('--app-gradient-b', theme.appGradientB);
+            root.style.setProperty('--app-gradient-c', theme.appGradientC);
+        })();
+    </script>
     <style>
         html[data-booting="1"],
         html[data-booting="1"] body {
-            background: #0b1220;
+            background:
+                radial-gradient(1200px 760px at 8% 8%, rgba(var(--accent-color-rgb, 50, 184, 222), 0.18), transparent 70%),
+                radial-gradient(1000px 700px at 92% 92%, rgba(var(--accent-color-rgb, 50, 184, 222), 0.12), transparent 72%),
+                linear-gradient(var(--app-gradient-angle, 160deg), var(--app-gradient-a, #0b1528) 0%, var(--app-gradient-b, #0f2236) 48%, var(--app-gradient-c, #1d2f4a) 100%);
+            background-color: var(--bg-primary, #0b1220);
             overflow: hidden;
         }
 
@@ -1303,8 +1435,8 @@
                         ? window.__TAURI_INTERNALS__.invoke
                         : null);
             const detectDesktopPlatform = () => {
-                const ua = String(navigator?.userAgent || '').toLowerCase();
-                const platform = String(navigator?.platform || '').toLowerCase();
+                const ua = String((navigator && navigator.userAgent) || '').toLowerCase();
+                const platform = String((navigator && navigator.platform) || '').toLowerCase();
                 if (platform.includes('win') || ua.includes('windows')) return 'win32';
                 if (platform.includes('mac') || ua.includes('mac os')) return 'darwin';
                 if (platform.includes('linux') || ua.includes('linux')) return 'linux';

@@ -627,7 +627,8 @@ export function setupRendererEventListeners(options = {}) {
     const invertBtn = document.getElementById('invert-colors-btn');
     if (invertBtn) invertBtn.addEventListener('click', invertColors);
     
-    const hueRotateBtn = document.getElementById('hue-rotate-btn');
+    const hueRotateBtn = document.getElementById('hue-rotate-colors-btn')
+        || document.getElementById('hue-rotate-btn');
     if (hueRotateBtn) hueRotateBtn.addEventListener('click', hueRotateColors);
 
     if (themeManagerBtn) themeManagerBtn.addEventListener('click', () => {

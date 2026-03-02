@@ -43,7 +43,7 @@
         background:
           radial-gradient(90% 150% at 5% 0%, rgba(var(--accent-rgb), 0.34), transparent 65%),
           radial-gradient(75% 120% at 100% 100%, rgba(var(--accent-rgb), 0.22), transparent 72%),
-          linear-gradient(140deg, var(--app-gradient-a) 0%, var(--app-gradient-b) 52%, var(--app-gradient-c) 100%);
+          linear-gradient(var(--app-gradient-angle, 160deg), var(--app-gradient-a) 0%, var(--app-gradient-b) 52%, var(--app-gradient-c) 100%);
         color: var(--text-primary);
         padding: 18px;
       }
@@ -146,6 +146,7 @@
           accentColor: "#32b8de",
           accentLight: "#8fe6ff",
           fontBody: "Segoe UI, Inter, sans-serif",
+          appGradientAngle: "160deg",
           appGradientA: "#0b1220",
           appGradientB: "#121c2f",
           appGradientC: "#1a263d"
@@ -161,6 +162,7 @@
           accentColor: "#3db2d6",
           accentLight: "#87d8ef",
           fontBody: "Segoe UI, Inter, sans-serif",
+          appGradientAngle: "160deg",
           appGradientA: "#dfeaf6",
           appGradientB: "#edf4fb",
           appGradientC: "#d2e3f5"
@@ -226,6 +228,7 @@
             accentColor: readColor("accentColor"),
             accentLight: readColor("accentLight"),
             fontBody: String(raw?.fontBody || fallback.fontBody).trim() || fallback.fontBody,
+            appGradientAngle: String(raw?.appGradientAngle || fallback.appGradientAngle || "160deg").trim() || "160deg",
             appGradientA: readColor("appGradientA", "bgPrimary") || bgPrimary,
             appGradientB: readColor("appGradientB", "bgSecondary") || bgSecondary,
             appGradientC: readColor("appGradientC", "bgTertiary") || bgTertiary
@@ -245,9 +248,21 @@
           root.style.setProperty("--accent-light", theme.accentLight);
           root.style.setProperty("--accent-rgb", toRgbHex(theme.accentColor));
           root.style.setProperty("--font-body", theme.fontBody);
+          root.style.setProperty("--app-gradient-angle", theme.appGradientAngle);
           root.style.setProperty("--app-gradient-a", theme.appGradientA);
           root.style.setProperty("--app-gradient-b", theme.appGradientB);
           root.style.setProperty("--app-gradient-c", theme.appGradientC);
+        }
+
+        function applyThemeFromStoredSplashTheme() {
+          try {
+            const storedTheme = JSON.parse(localStorage.getItem("emuBro.splashTheme") || "null");
+            if (!storedTheme || typeof storedTheme !== "object") return false;
+            applyTheme(storedTheme);
+            return true;
+          } catch (_) {
+            return false;
+          }
         }
 
         function applyThemeFromLocalStorage() {
@@ -303,7 +318,9 @@
           } catch (_) {}
         }
 
-        applyThemeFromLocalStorage();
+        if (!applyThemeFromStoredSplashTheme()) {
+          applyThemeFromLocalStorage();
+        }
         void applyThemeFromBackend();
       })();
     </script>

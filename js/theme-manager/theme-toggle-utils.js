@@ -80,6 +80,85 @@ export function toggleThemeColors(options = {}) {
     return invertedTheme;
 }
 
+export function toggleThemeHue(options = {}) {
+    const {
+        getCurrentThemeColors,
+        rotateHue,
+        applyCustomTheme,
+        getComputedBackgroundImage,
+        getCurrentThemeFonts,
+        getCurrentLogoTextEffect,
+        degrees = 45
+    } = options;
+
+    const currentColors = getCurrentThemeColors();
+    const shiftedColors = {};
+    const shift = (hex) => rotateHue(hex, degrees);
+
+    shiftedColors.bgPrimary = shift(currentColors.bgPrimary);
+    shiftedColors.bgSecondary = shift(currentColors.bgSecondary);
+    shiftedColors.bgTertiary = shift(currentColors.bgTertiary);
+    shiftedColors.bgQuaternary = shift(currentColors.bgQuaternary);
+
+    shiftedColors.textPrimary = shift(currentColors.textPrimary);
+    shiftedColors.textSecondary = shift(currentColors.textSecondary);
+    shiftedColors.textTertiary = shift(currentColors.textTertiary);
+
+    shiftedColors.borderColor = shift(currentColors.borderColor);
+    shiftedColors.accentColor = shift(currentColors.accentColor);
+    shiftedColors.accentHover = shift(currentColors.accentHover);
+    shiftedColors.brandColor = shift(currentColors.brandColor);
+
+    shiftedColors.bgHeader = shift(currentColors.bgHeader);
+    shiftedColors.bgSidebar = shift(currentColors.bgSidebar);
+    shiftedColors.bgActionbar = shift(currentColors.bgActionbar);
+    shiftedColors.glassSurface = shift(currentColors.glassSurface);
+    shiftedColors.glassSurfaceStrong = shift(currentColors.glassSurfaceStrong);
+    shiftedColors.glassBorder = shift(currentColors.glassBorder);
+    shiftedColors.appGradientA = shift(currentColors.appGradientA);
+    shiftedColors.appGradientB = shift(currentColors.appGradientB);
+    shiftedColors.appGradientC = shift(currentColors.appGradientC);
+    shiftedColors.appGradientAngle = currentColors.appGradientAngle || '160deg';
+
+    shiftedColors.successColor = shift(currentColors.successColor);
+    shiftedColors.dangerColor = shift(currentColors.dangerColor);
+    shiftedColors.warningColor = shift(currentColors.warningColor);
+
+    let currentBgImage = null;
+    if (typeof getComputedBackgroundImage === 'function') {
+        currentBgImage = getComputedBackgroundImage();
+    }
+    const currentFonts = typeof getCurrentThemeFonts === 'function'
+        ? (getCurrentThemeFonts() || null)
+        : null;
+    const currentLogoTextEffect = typeof getCurrentLogoTextEffect === 'function'
+        ? (getCurrentLogoTextEffect() || null)
+        : null;
+
+    const shiftedTheme = {
+        id: 'temp_hue_rotated',
+        name: 'Hue Rotated (Temporary)',
+        colors: shiftedColors,
+        fonts: currentFonts || undefined,
+        textEffects: currentLogoTextEffect
+            ? { logo: currentLogoTextEffect }
+            : undefined,
+        background: {
+            image: currentBgImage || null,
+            position: 'centered',
+            scale: 'crop',
+            repeat: 'no-repeat'
+        },
+        cardEffects: {
+            glassEffect: document.documentElement.getAttribute('data-glass-effect') === 'enabled'
+        }
+    };
+
+    applyCustomTheme(shiftedTheme);
+
+    return shiftedTheme;
+}
+
 export function toggleInvertFilter() {
     const root = document.documentElement;
     const currentFilter = String(root.style.filter || '').trim();

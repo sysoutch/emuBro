@@ -1,5 +1,18 @@
 use super::*;
 
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+fn apply_windows_hidden_process_flags(command: &mut Command) {
+    #[cfg(windows)]
+    {
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+}
+
 pub(crate) fn parse_game_id_from_payload(payload: &Value) -> i64 {
     if let Some(id) = payload.as_i64() {
         return id;
@@ -151,6 +164,7 @@ pub(crate) fn launch_game_with_emulator(
     if let Some(parent) = emulator_path.parent() {
         command.current_dir(parent);
     }
+    apply_windows_hidden_process_flags(&mut command);
     let child = command.spawn().map_err(|e| e.to_string())?;
     Ok(child.id())
 }
@@ -176,6 +190,7 @@ pub(crate) fn launch_emulator_process(
         command.current_dir(parent);
     }
 
+    apply_windows_hidden_process_flags(&mut command);
     let child = command.spawn().map_err(|e| e.to_string())?;
     Ok(child.id())
 }
@@ -222,6 +237,7 @@ pub(crate) fn launch_game_file(game_path: &Path) -> Result<Option<u32>, String> 
             if let Some(parent) = game_path.parent() {
                 command.current_dir(parent);
             }
+            apply_windows_hidden_process_flags(&mut command);
             let child = command.spawn().map_err(|e| e.to_string())?;
             return Ok(Some(child.id()));
         }

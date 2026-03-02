@@ -74,6 +74,16 @@ export function flipLightness(hex) {
     return rgbToHex(newRgb.r, newRgb.g, newRgb.b);
 }
 
+export function rotateHue(hex, degrees = 180) {
+    const rgb = hexToRgb(hex);
+    const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+    const turns = (Number(degrees) || 0) / 360;
+    let nextHue = hsl.h + turns;
+    nextHue = ((nextHue % 1) + 1) % 1;
+    const nextRgb = hslToRgb(nextHue, hsl.s, hsl.l);
+    return rgbToHex(nextRgb.r, nextRgb.g, nextRgb.b);
+}
+
 export function parseColorToHex(color) {
     if (color === null || color === undefined) return '';
     const raw = String(color).trim();
