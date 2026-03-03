@@ -83,7 +83,22 @@ jobs:
 
       - name: Build Tauri bundles
         if: runner.os == 'Linux'
-        run: npm --prefix tauri run tauri:build -- --bundles ${{ matrix.bundles }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            echo "Linux bundle attempt ${attempt}/3"
+            if npm --prefix tauri run tauri:build -- --bundles ${{ matrix.bundles }}; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "Linux bundle failed after ${attempt} attempts"
+              exit 1
+            fi
+            echo "Linux bundle failed, cleaning partial AppImage output before retry"
+            rm -rf tauri/src-tauri/target/release/bundle/appimage
+            sleep 15
+          done
 
       - name: Build Tauri bundles (Windows prerelease)
         if: runner.os == 'Windows' && contains(github.ref_name, '-alpha.')
