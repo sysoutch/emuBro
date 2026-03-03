@@ -44,7 +44,36 @@ fn parse_startup_launch_game_arg() -> Option<i64> {
     None
 }
 
+#[cfg(target_os = "linux")]
+fn configure_linux_webkit_env() {
+    const DEFAULTS: [(&str, &str, &str); 2] = [
+        (
+            "WEBKIT_DISABLE_COMPOSITING_MODE",
+            "1",
+            "disable accelerated compositing to avoid EGL initialization failures",
+        ),
+        (
+            "WEBKIT_DISABLE_DMABUF_RENDERER",
+            "1",
+            "disable DMA-BUF renderer on Linux drivers that fail during WebKit startup",
+        ),
+    ];
+
+    for (key, value, reason) in DEFAULTS {
+        if std::env::var_os(key).is_some() {
+            continue;
+        }
+        std::env::set_var(key, value);
+        eprintln!("[linux-graphics] {}={} ({})", key, value, reason);
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+fn configure_linux_webkit_env() {}
+
 fn main() {
+    configure_linux_webkit_env();
+
     if overlay_sidecar::maybe_run_from_args() {
         return;
     }
