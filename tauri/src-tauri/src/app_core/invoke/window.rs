@@ -39,11 +39,16 @@ pub(super) fn handle(ch: &str, _args: &[Value], window: &Window) -> Result<Value
             if let Some(splashscreen) = app.get_webview_window("splashscreen") {
                 let _ = splashscreen.close();
             }
-            if let Some(main_window) = app.get_webview_window("main") {
-                let _ = main_window.show();
-                let _ = main_window.set_focus();
+            if !should_keep_main_window_hidden() {
+                if let Some(main_window) = app.get_webview_window("main") {
+                    let _ = main_window.show();
+                    let _ = main_window.set_focus();
+                }
             }
-            Ok(json!({ "success": true }))
+            Ok(json!({
+                "success": true,
+                "hiddenLaunch": should_keep_main_window_hidden()
+            }))
         }
         _ => Ok(json!({ "success": false, "message": format!("Unsupported window channel: {}", ch) })),
     }

@@ -2,6 +2,7 @@
 
 mod app_core;
 mod overlay_sidecar;
+mod single_instance;
 
 use serde_json::{json, Value};
 use std::time::Duration;
@@ -49,6 +50,10 @@ fn main() {
     }
 
     let startup_launch_game_id = parse_startup_launch_game_arg();
+    if single_instance::forward_to_existing_instance(startup_launch_game_id) {
+        return;
+    }
+    app_core::set_start_hidden_for_game_launch(startup_launch_game_id.is_some());
 
     tauri::Builder::default()
         .setup(move |app| {
@@ -58,16 +63,28 @@ fn main() {
                 }
             }
 
+            if let Err(error) = single_instance::spawn_listener(app.handle().clone()) {
+                eprintln!("[single-instance] {}", error);
+            }
+
+            if startup_launch_game_id.is_some() {
+                if let Some(splashscreen) = app.get_webview_window("splashscreen") {
+                    let _ = splashscreen.close();
+                }
+            }
+
             let app_handle = app.handle().clone();
             std::thread::spawn(move || {
                 std::thread::sleep(Duration::from_secs(20));
-                if let Some(main_window) = app_handle.get_webview_window("main") {
-                    match main_window.is_visible() {
-                        Ok(false) => {
-                            let _ = main_window.show();
-                            let _ = main_window.set_focus();
+                if !app_core::should_keep_main_window_hidden() {
+                    if let Some(main_window) = app_handle.get_webview_window("main") {
+                        match main_window.is_visible() {
+                            Ok(false) => {
+                                let _ = main_window.show();
+                                let _ = main_window.set_focus();
+                            }
+                            Ok(true) | Err(_) => {}
                         }
-                        Ok(true) | Err(_) => {}
                     }
                 }
                 if let Some(splashscreen) = app_handle.get_webview_window("splashscreen") {

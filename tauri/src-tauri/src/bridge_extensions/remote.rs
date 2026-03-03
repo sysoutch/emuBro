@@ -189,3 +189,222 @@ pub(crate) fn handle(channel: &str, args: &[Value]) -> Option<Result<Value, Stri
     };
     Some(result)
 }
+
+const REMOTE_HOST_CONFIG_KEY: &str = "remoteHostConfig";
+const REMOTE_HOST_PAIRING_KEY: &str = "remoteHostPairing";
+const REMOTE_CLIENT_HOSTS_KEY: &str = "remoteClientHosts";
+const DEFAULT_REMOTE_HOST_PORT: u16 = 38477;
+const DEFAULT_REMOTE_DISCOVERY_PORT: u16 = 38478;
+
+fn is_launch_uri(value: &str) -> bool {
+    let trimmed = value.trim().to_lowercase();
+    trimmed.starts_with("emubro://")
+        || trimmed.starts_with("steam://")
+        || trimmed.starts_with("shell:")
+}
+
+fn random_hex_token(len: usize) -> String {
+    let mut seed = format!(
+        "{}:{}:{}",
+        unix_timestamp_ms(),
+        std::process::id(),
+        std::thread::current().name().unwrap_or("emubro")
+    );
+    let mut out = String::new();
+    while out.len() < len {
+        let mut hasher = DefaultHasher::new();
+        seed.hash(&mut hasher);
+        let next = format!("{:016x}", hasher.finish());
+        out.push_str(&next);
+        seed = next;
+    }
+    out.truncate(len);
+    out
+}
+
+fn default_remote_allowed_roots() -> Vec<Value> {
+    let settings = read_library_path_settings();
+    let mut rows = Vec::<Value>::new();
+    let mut seen = HashSet::<String>::new();
+    for key in ["gameFolders", "scanFolders", "emulatorFolders"] {
+        if let Some(values) = settings.get(key).and_then(|v| v.as_array()) {
+            for value in values {
+                if let Some(path) = value.as_str() {
+                    add_unique_text(&mut rows, &mut seen, path);
+                }
+            }
+        }
+    }
+    if rows.is_empty() {
+        add_unique_text(
+            &mut rows,
+            &mut seen,
+            managed_data_root().to_string_lossy().as_ref()
+        );
+    }
+    rows
+}
+
+fn default_remote_host_config() -> Value {
+    json!({
+        "enabled": false,
+        "port": DEFAULT_REMOTE_HOST_PORT,
+        "discoveryPort": DEFAULT_REMOTE_DISCOVERY_PORT,
+        "allowedRoots": default_remote_allowed_roots()
+    })
+}
+
+fn normalize_port(value: Option<&Value>, fallback: u16) -> u16 {
+    let parsed = value
+        .and_then(|v| v.as_u64())
+        .or_else(|| value.and_then(|v| v.as_str()).and_then(|s| s.trim().parse::<u64>().ok()))
+        .unwrap_or(fallback as u64);
+    parsed.clamp(1, 65535) as u16
+}
+
+fn normalize_remote_host_config(payload: Option<&Value>) -> Value {
+    let defaults = default_remote_host_config();
+    json!({
+        "enabled": payload
+            .and_then(|v| v.get("enabled"))
+            .and_then(|v| v.as_bool())
+            .unwrap_or_else(|| defaults.get("enabled").and_then(|v| v.as_bool()).unwrap_or(false)),
+        "port": normalize_port(payload.and_then(|v| v.get("port")), DEFAULT_REMOTE_HOST_PORT),
+        "discoveryPort": normalize_port(payload.and_then(|v| v.get("discoveryPort")), DEFAULT_REMOTE_DISCOVERY_PORT),
+        "allowedRoots": normalize_path_list(payload.and_then(|v| v.get("allowedRoots")))
+    })
+}
+
+fn read_remote_host_config() -> Value {
+    normalize_remote_host_config(Some(&read_state_value_or_default(
+        REMOTE_HOST_CONFIG_KEY,
+        default_remote_host_config()
+    )))
+}
+
+fn write_remote_host_config(payload: Option<&Value>) -> Result<Value, String> {
+    let normalized = normalize_remote_host_config(payload);
+    write_state_value(REMOTE_HOST_CONFIG_KEY, &normalized)?;
+    Ok(normalized)
+}
+
+fn host_name() -> String {
+    for key in ["COMPUTERNAME", "HOSTNAME"] {
+        if let Ok(value) = std::env::var(key) {
+            let trimmed = value.trim();
+            if !trimmed.is_empty() {
+                return trimmed.to_string();
+            }
+        }
+    }
+    "emuBro Host".to_string()
+}
+
+fn local_ip_guess() -> String {
+    "127.0.0.1".to_string()
+}
+
+fn local_host_id() -> String {
+    let mut hasher = DefaultHasher::new();
+    host_name().hash(&mut hasher);
+    managed_data_root().to_string_lossy().hash(&mut hasher);
+    format!("host-{:016x}", hasher.finish())
+}
+
+fn local_remote_host_info(config: &Value) -> Value {
+    let port = normalize_port(config.get("port"), DEFAULT_REMOTE_HOST_PORT);
+    let address = local_ip_guess();
+    json!({
+        "hostId": local_host_id(),
+        "name": host_name(),
+        "address": address,
+        "port": port,
+        "url": format!("http://{}:{}", local_ip_guess(), port)
+    })
+}
+
+fn remote_host_status_payload(config: &Value) -> Value {
+    let enabled = config.get("enabled").and_then(|v| v.as_bool()).unwrap_or(false);
+    let port = normalize_port(config.get("port"), DEFAULT_REMOTE_HOST_PORT);
+    json!({
+        "running": enabled,
+        "port": port
+    })
+}
+
+fn generate_pairing_code_value() -> Value {
+    let mut code = String::new();
+    for ch in random_hex_token(6).chars() {
+        let digit = ch.to_digit(16).unwrap_or(0) % 10;
+        code.push(char::from(b'0' + digit as u8));
+    }
+    json!({
+        "code": code,
+        "generatedAt": unix_timestamp_ms().to_string()
+    })
+}
+
+fn read_or_refresh_pairing_code() -> Value {
+    let current = read_state_value_or_default(REMOTE_HOST_PAIRING_KEY, Value::Null);
+    let has_code = current
+        .get("code")
+        .and_then(|v| v.as_str())
+        .map(|v| !v.trim().is_empty())
+        .unwrap_or(false);
+    if has_code {
+        return current;
+    }
+    let generated = generate_pairing_code_value();
+    let _ = write_state_value(REMOTE_HOST_PAIRING_KEY, &generated);
+    generated
+}
+
+fn normalize_remote_client_host_row(row: &Value) -> Option<Value> {
+    let url = row.get("url").and_then(|v| v.as_str()).unwrap_or("").trim().to_string();
+    let address = row.get("address").and_then(|v| v.as_str()).unwrap_or("").trim().to_string();
+    let port = normalize_port(row.get("port"), DEFAULT_REMOTE_HOST_PORT);
+    let host_id = row.get("hostId").and_then(|v| v.as_str()).unwrap_or("").trim().to_string();
+    if url.is_empty() && address.is_empty() && host_id.is_empty() {
+        return None;
+    }
+    Some(json!({
+        "hostId": host_id,
+        "name": row.get("name").and_then(|v| v.as_str()).unwrap_or("").trim(),
+        "address": if address.is_empty() { "127.0.0.1" } else { &address },
+        "port": port,
+        "url": if url.is_empty() { format!("http://{}:{}", if address.is_empty() { "127.0.0.1" } else { &address }, port) } else { url },
+        "token": row.get("token").and_then(|v| v.as_str()).unwrap_or("").trim()
+    }))
+}
+
+fn read_remote_client_hosts() -> Vec<Value> {
+    read_state_value_or_default(REMOTE_CLIENT_HOSTS_KEY, json!([]))
+        .as_array()
+        .cloned()
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|row| normalize_remote_client_host_row(&row))
+        .collect()
+}
+
+fn write_remote_client_hosts(hosts: &[Value]) -> Result<Vec<Value>, String> {
+    let mut normalized = Vec::<Value>::new();
+    let mut seen = HashSet::<String>::new();
+    for row in hosts {
+        let Some(entry) = normalize_remote_client_host_row(row) else {
+            continue;
+        };
+        let key = entry
+            .get("url")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .trim()
+            .to_lowercase();
+        if key.is_empty() || !seen.insert(key) {
+            continue;
+        }
+        normalized.push(entry);
+    }
+    write_state_value(REMOTE_CLIENT_HOSTS_KEY, &Value::Array(normalized.clone()))?;
+    Ok(normalized)
+}

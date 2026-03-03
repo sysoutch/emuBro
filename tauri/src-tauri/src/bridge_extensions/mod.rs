@@ -19,6 +19,7 @@ mod locales;
 mod migration;
 mod memory_cards;
 mod monitor;
+mod remote;
 mod suggestions;
 mod system_tools;
 mod youtube;
@@ -40,6 +41,7 @@ pub(crate) fn handle_bridge_channel(channel: &str, args: &[Value]) -> Option<Res
         .or_else(|| youtube::handle(channel, args))
         .or_else(|| monitor::handle(channel, args))
         .or_else(|| system_tools::handle(channel, args))
+        .or_else(|| remote::handle(channel, args))
         .or_else(|| suggestions::handle(channel, args))
         .or_else(|| memory_cards::handle(channel, args))
         .or_else(|| migration::handle(channel, args))

@@ -410,6 +410,8 @@ pub(crate) fn hide_overlay_window(window: &Window) -> Result<Value, String> {
 }
 
 fn show_launcher_app_handle(app_handle: &tauri::AppHandle) -> Result<Value, String> {
+    set_start_hidden_for_game_launch(false);
+
     let Some(main_window) = app_handle.get_webview_window("main") else {
         return Ok(json!({ "success": false, "message": "Main window not found" }));
     };

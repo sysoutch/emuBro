@@ -24,7 +24,7 @@ function getRootVersion() {
 
 function setVersion(version) {
   if (!version) {
-    throw new Error('Missing version argument. Example: node scripts/bump-version.js 1.0.0-alpha.14');
+    throw new Error('Missing version argument. Example: node scripts/bump-version.js 1.0.0-alpha.20');
   }
 
   for (const filePath of FILES) {
