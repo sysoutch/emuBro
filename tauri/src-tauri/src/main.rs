@@ -46,6 +46,15 @@ fn parse_startup_launch_game_arg() -> Option<i64> {
 
 #[cfg(target_os = "linux")]
 fn configure_linux_webkit_env() {
+    let has_x11_display = std::env::var_os("DISPLAY").is_some();
+
+    if has_x11_display && std::env::var_os("GDK_BACKEND").is_none() {
+        std::env::set_var("GDK_BACKEND", "x11");
+        eprintln!(
+            "[linux-graphics] GDK_BACKEND=x11 (prefer X11/XWayland on Linux when EGL display creation fails)"
+        );
+    }
+
     const DEFAULTS: [(&str, &str, &str); 2] = [
         (
             "WEBKIT_DISABLE_COMPOSITING_MODE",
