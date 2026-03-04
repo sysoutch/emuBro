@@ -1,13 +1,21 @@
 use super::*;
 use serde_json::json;
-use std::path::PathBuf;
+use std::fs::File;
+use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::{Duration, Instant};
 use tauri::Manager;
 
 const APP_UPDATE_CONFIG_KEY: &str = "app:update:config:v1";
 const APP_UPDATE_STATE_KEY: &str = "app:update:state:v1";
 const DEFAULT_APP_RELEASE_API_URL: &str = "https://api.github.com/repos/sysoutch/emuBro/releases/latest";
 const DEFAULT_APP_RELEASES_PAGE_URL: &str = "https://github.com/sysoutch/emuBro/releases";
+const APP_UPDATE_DOWNLOADS_DIR_NAME: &str = "updates";
+const APP_UPDATE_DOWNLOAD_IN_PROGRESS_MSG: &str = "Update download already in progress.";
+
+static APP_UPDATE_DOWNLOAD_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
 
 const RESOURCES_UPDATE_CONFIG_KEY: &str = "resources:update:config:v1";
 const DEFAULT_RESOURCES_REPO_URL: &str = "https://github.com/sysoutch/emubro-resources.git";
@@ -142,21 +150,44 @@ fn read_app_update_state(window: &Window) -> Value {
     let config = read_app_update_config();
     let current_version = current_app_version(window);
     let stored = read_state_value_or_default(APP_UPDATE_STATE_KEY, json!({}));
+    let downloaded_file_path = stored
+        .get("downloadedFilePath")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    let has_local_download = !downloaded_file_path.is_empty() && Path::new(&downloaded_file_path).exists();
+    let stored_downloaded = stored
+        .get("downloaded")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let downloaded = if downloaded_file_path.is_empty() {
+        stored_downloaded
+    } else {
+        stored_downloaded && has_local_download
+    };
+    let progress_percent = if downloaded {
+        100
+    } else {
+        stored.get("progressPercent").and_then(|v| v.as_u64()).unwrap_or(0)
+    };
 
     with_config(
         json!({
             "success": true,
             "available": stored.get("available").and_then(|v| v.as_bool()).unwrap_or(false),
-            "checking": false,
-            "downloading": false,
-            "installing": false,
-            "downloaded": stored.get("downloaded").and_then(|v| v.as_bool()).unwrap_or(false),
-            "progressPercent": stored.get("progressPercent").and_then(|v| v.as_u64()).unwrap_or(0),
+            "checking": stored.get("checking").and_then(|v| v.as_bool()).unwrap_or(false),
+            "downloading": stored.get("downloading").and_then(|v| v.as_bool()).unwrap_or(false),
+            "installing": stored.get("installing").and_then(|v| v.as_bool()).unwrap_or(false),
+            "downloaded": downloaded,
+            "progressPercent": progress_percent,
             "currentVersion": current_version,
             "latestVersion": stored.get("latestVersion").and_then(|v| v.as_str()).unwrap_or(""),
             "releaseNotes": stored.get("releaseNotes").and_then(|v| v.as_str()).unwrap_or(""),
             "releaseUrl": stored.get("releaseUrl").and_then(|v| v.as_str()).unwrap_or(""),
             "downloadUrl": stored.get("downloadUrl").and_then(|v| v.as_str()).unwrap_or(""),
+            "downloadFileName": stored.get("downloadFileName").and_then(|v| v.as_str()).unwrap_or(""),
+            "downloadedFilePath": downloaded_file_path,
             "lastError": stored.get("lastError").and_then(|v| v.as_str()).unwrap_or(""),
             "lastMessage": stored.get("lastMessage").and_then(|v| v.as_str()).unwrap_or("Not checked yet.")
         }),
@@ -204,7 +235,7 @@ fn app_platform_asset_suffixes() -> Vec<&'static str> {
     }
 }
 
-fn pick_release_download_url(release_json: &Value) -> String {
+fn pick_release_asset_info(release_json: &Value) -> (String, String) {
     let assets = release_json
         .get("assets")
         .and_then(|v| v.as_array())
@@ -230,21 +261,36 @@ fn pick_release_download_url(release_json: &Value) -> String {
                 .trim()
                 .to_string();
             if !url.is_empty() {
-                return url;
+                let file_name = asset
+                    .get("name")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .trim()
+                    .to_string();
+                return (url, file_name);
             }
         }
     }
 
-    assets
-        .iter()
-        .find_map(|asset| {
-            asset
-                .get("browser_download_url")
+    for asset in assets {
+        let url = asset
+            .get("browser_download_url")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .trim()
+            .to_string();
+        if !url.is_empty() {
+            let file_name = asset
+                .get("name")
                 .and_then(|v| v.as_str())
-                .map(|v| v.trim().to_string())
-                .filter(|v| !v.is_empty())
-        })
-        .unwrap_or_default()
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            return (url, file_name);
+        }
+    }
+
+    (String::new(), String::new())
 }
 
 fn fetch_latest_release(release_api_url: &str) -> Result<Value, String> {
@@ -283,13 +329,14 @@ fn fetch_latest_release(release_api_url: &str) -> Result<Value, String> {
         .and_then(|v| v.as_str())
         .unwrap_or("")
         .to_string();
-    let download_url = pick_release_download_url(&release_json);
+    let (download_url, download_file_name) = pick_release_asset_info(&release_json);
 
     Ok(json!({
         "version": version,
         "releaseUrl": release_url,
         "releaseNotes": release_notes,
-        "downloadUrl": download_url
+        "downloadUrl": download_url,
+        "downloadFileName": download_file_name
     }))
 }
 
@@ -331,6 +378,12 @@ fn check_app_update(window: &Window) -> Result<Value, String> {
                 .unwrap_or("")
                 .trim()
                 .to_string();
+            let download_file_name = latest
+                .get("downloadFileName")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim()
+                .to_string();
             let available = semver_newer(&latest_version, &current_version);
 
             let existing = read_app_update_state(window);
@@ -339,11 +392,26 @@ fn check_app_update(window: &Window) -> Result<Value, String> {
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
+            let existing_download_path = existing
+                .get("downloadedFilePath")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            let existing_download_file_name = existing
+                .get("downloadFileName")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            let local_download_exists =
+                !existing_download_path.is_empty() && Path::new(&existing_download_path).exists();
             let already_downloaded = existing
                 .get("downloaded")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false)
-                && existing_latest == latest_version;
+                && existing_latest == latest_version
+                && (existing_download_path.is_empty() || local_download_exists);
 
             let state = with_config(
                 json!({
@@ -359,6 +427,8 @@ fn check_app_update(window: &Window) -> Result<Value, String> {
                     "releaseNotes": release_notes,
                     "releaseUrl": if release_url.is_empty() { fallback_release_page } else { release_url },
                     "downloadUrl": download_url,
+                    "downloadFileName": if !download_file_name.is_empty() { download_file_name } else { existing_download_file_name },
+                    "downloadedFilePath": if already_downloaded && local_download_exists { existing_download_path } else { "".to_string() },
                     "lastError": "",
                     "lastMessage": if available { "App update available." } else { "App is up to date." }
                 }),
@@ -382,6 +452,8 @@ fn check_app_update(window: &Window) -> Result<Value, String> {
                     "releaseNotes": "",
                     "releaseUrl": fallback_release_page,
                     "downloadUrl": "",
+                    "downloadFileName": "",
+                    "downloadedFilePath": "",
                     "lastError": error,
                     "lastMessage": ""
                 }),
@@ -391,6 +463,229 @@ fn check_app_update(window: &Window) -> Result<Value, String> {
             Ok(state)
         }
     }
+}
+
+fn read_downloaded_file_path(state: &Value) -> String {
+    state
+        .get("downloadedFilePath")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .trim()
+        .to_string()
+}
+
+fn app_update_downloads_dir() -> PathBuf {
+    managed_data_root().join(APP_UPDATE_DOWNLOADS_DIR_NAME)
+}
+
+fn sanitize_file_name(input: &str) -> String {
+    let mut out = String::new();
+    for ch in input.chars() {
+        if ch.is_ascii_alphanumeric() || ch == '.' || ch == '-' || ch == '_' {
+            out.push(ch);
+        }
+    }
+    let cleaned = out.trim_matches('.').trim().to_string();
+    if cleaned.is_empty() {
+        "emubro-update".to_string()
+    } else {
+        cleaned
+    }
+}
+
+fn fallback_platform_extension() -> &'static str {
+    if cfg!(target_os = "windows") {
+        ".exe"
+    } else if cfg!(target_os = "linux") {
+        ".AppImage"
+    } else if cfg!(target_os = "macos") {
+        ".dmg"
+    } else {
+        ".bin"
+    }
+}
+
+fn infer_download_file_name_from_url(download_url: &str) -> Option<String> {
+    let parsed = url::Url::parse(download_url).ok()?;
+    let segment = parsed
+        .path_segments()
+        .and_then(|segments| segments.last())
+        .unwrap_or("")
+        .trim();
+    if segment.is_empty() {
+        return None;
+    }
+    Some(segment.to_string())
+}
+
+fn resolve_download_file_name(state: &Value) -> String {
+    let from_state = state
+        .get("downloadFileName")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    let from_url = infer_download_file_name_from_url(
+        state
+            .get("downloadUrl")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .trim(),
+    )
+    .unwrap_or_default();
+    let latest_version = normalize_release_tag(
+        state
+            .get("latestVersion")
+            .and_then(|v| v.as_str())
+            .unwrap_or(""),
+    );
+    let candidate = if !from_state.is_empty() {
+        from_state
+    } else if !from_url.is_empty() {
+        from_url
+    } else if latest_version.is_empty() {
+        format!("emuBro-update{}", fallback_platform_extension())
+    } else {
+        format!("emuBro-{}{}", latest_version, fallback_platform_extension())
+    };
+    sanitize_file_name(&candidate)
+}
+
+fn resolve_download_target_path(state: &Value) -> Result<PathBuf, String> {
+    let dir = app_update_downloads_dir();
+    ensure_directory(&dir)?;
+
+    let latest_version = normalize_release_tag(
+        state
+            .get("latestVersion")
+            .and_then(|v| v.as_str())
+            .unwrap_or(""),
+    );
+    let file_name = resolve_download_file_name(state);
+    let version_prefix = sanitize_file_name(&latest_version);
+
+    let final_name = if version_prefix.is_empty() {
+        file_name
+    } else {
+        format!("{}-{}", version_prefix, file_name)
+    };
+    Ok(dir.join(final_name))
+}
+
+fn is_supported_download_url(download_url: &str) -> bool {
+    let trimmed = download_url.trim();
+    if trimmed.is_empty() {
+        return false;
+    }
+    trimmed.starts_with("http://") || trimmed.starts_with("https://")
+}
+
+fn format_download_size(bytes: u64) -> String {
+    const KB: f64 = 1024.0;
+    const MB: f64 = KB * 1024.0;
+    const GB: f64 = MB * 1024.0;
+    let b = bytes as f64;
+    if b >= GB {
+        format!("{:.1} GB", b / GB)
+    } else if b >= MB {
+        format!("{:.1} MB", b / MB)
+    } else if b >= KB {
+        format!("{:.1} KB", b / KB)
+    } else {
+        format!("{} B", bytes)
+    }
+}
+
+#[cfg(unix)]
+fn maybe_make_download_executable(path: &Path) -> Result<(), String> {
+    use std::os::unix::fs::PermissionsExt;
+
+    let extension = path
+        .extension()
+        .and_then(|v| v.to_str())
+        .unwrap_or("")
+        .trim()
+        .to_ascii_lowercase();
+    if extension != "appimage" {
+        return Ok(());
+    }
+
+    let metadata = fs::metadata(path).map_err(|e| e.to_string())?;
+    let mut permissions = metadata.permissions();
+    let mode = permissions.mode();
+    if (mode & 0o111) != 0 {
+        return Ok(());
+    }
+    permissions.set_mode(mode | 0o755);
+    fs::set_permissions(path, permissions).map_err(|e| e.to_string())
+}
+
+#[cfg(not(unix))]
+fn maybe_make_download_executable(_path: &Path) -> Result<(), String> {
+    Ok(())
+}
+
+fn download_update_asset_with_progress(
+    download_url: &str,
+    target_path: &Path,
+    mut on_progress: impl FnMut(u64, Option<u64>),
+) -> Result<(), String> {
+    if let Some(parent) = target_path.parent() {
+        ensure_directory(parent)?;
+    }
+
+    let response = ureq::get(download_url)
+        .set("User-Agent", "emuBro-Tauri")
+        .set("Accept", "application/octet-stream")
+        .call()
+        .map_err(|e| e.to_string())?;
+
+    let content_length = response
+        .header("Content-Length")
+        .and_then(|value| value.parse::<u64>().ok());
+
+    let part_file_name = format!(
+        "{}.part",
+        target_path
+            .file_name()
+            .and_then(|v| v.to_str())
+            .unwrap_or("emubro-update")
+    );
+    let part_path = target_path.with_file_name(part_file_name);
+    let mut reader = response.into_reader();
+    let mut file = File::create(&part_path).map_err(|e| e.to_string())?;
+    let mut buffer = [0u8; 64 * 1024];
+    let mut downloaded_bytes: u64 = 0;
+
+    on_progress(downloaded_bytes, content_length);
+
+    loop {
+        let read = reader.read(&mut buffer).map_err(|e| {
+            let _ = fs::remove_file(&part_path);
+            e.to_string()
+        })?;
+        if read == 0 {
+            break;
+        }
+        file.write_all(&buffer[..read]).map_err(|e| {
+            let _ = fs::remove_file(&part_path);
+            e.to_string()
+        })?;
+        downloaded_bytes = downloaded_bytes.saturating_add(read as u64);
+        on_progress(downloaded_bytes, content_length);
+    }
+    file.flush().map_err(|e| e.to_string())?;
+
+    if target_path.exists() {
+        let _ = fs::remove_file(target_path);
+    }
+    fs::rename(&part_path, target_path).map_err(|e| {
+        let _ = fs::remove_file(&part_path);
+        e.to_string()
+    })?;
+
+    maybe_make_download_executable(target_path)?;
+    Ok(())
 }
 
 fn resolve_update_open_url(state: &Value, fallback_release_page: &str) -> String {
@@ -416,12 +711,23 @@ fn resolve_update_open_url(state: &Value, fallback_release_page: &str) -> String
 }
 
 fn download_app_update(window: &Window) -> Result<Value, String> {
+    if APP_UPDATE_DOWNLOAD_IN_PROGRESS.load(Ordering::SeqCst) {
+        let current = read_app_update_state(window);
+        let state = with_config(
+            json!({
+                "success": true,
+                "downloading": true,
+                "installing": false,
+                "lastError": "",
+                "lastMessage": APP_UPDATE_DOWNLOAD_IN_PROGRESS_MSG
+            }),
+            &current,
+        );
+        persist_app_update_state(&state);
+        return Ok(state);
+    }
+
     let checked = check_app_update(window)?;
-    let config = read_app_update_config();
-    let fallback_release_page = config
-        .get("releasesPageUrl")
-        .and_then(|v| v.as_str())
-        .unwrap_or(DEFAULT_APP_RELEASES_PAGE_URL);
     let available = checked
         .get("available")
         .and_then(|v| v.as_bool())
@@ -434,6 +740,7 @@ fn download_app_update(window: &Window) -> Result<Value, String> {
                 "downloaded": false,
                 "progressPercent": 0,
                 "lastError": "",
+                "downloadedFilePath": "",
                 "lastMessage": "No app update is currently available."
             }),
             &checked,
@@ -442,15 +749,21 @@ fn download_app_update(window: &Window) -> Result<Value, String> {
         return Ok(state);
     }
 
-    let open_url = resolve_update_open_url(&checked, fallback_release_page);
-    if open_url.is_empty() {
+    let download_url = checked
+        .get("downloadUrl")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    if !is_supported_download_url(&download_url) {
         let state = with_config(
             json!({
                 "success": false,
                 "downloading": false,
                 "downloaded": false,
                 "progressPercent": 0,
-                "lastError": "Could not resolve update download URL.",
+                "downloadedFilePath": "",
+                "lastError": "Could not resolve a valid update download URL.",
                 "lastMessage": ""
             }),
             &checked,
@@ -459,22 +772,8 @@ fn download_app_update(window: &Window) -> Result<Value, String> {
         return Ok(state);
     }
 
-    match open::that(&open_url) {
-        Ok(_) => {
-            let state = with_config(
-                json!({
-                    "success": true,
-                    "downloading": false,
-                    "downloaded": true,
-                    "progressPercent": 100,
-                    "lastError": "",
-                    "lastMessage": "Opened update download in your browser. Run installer, then restart emuBro."
-                }),
-                &checked,
-            );
-            persist_app_update_state(&state);
-            Ok(state)
-        }
+    let target_path = match resolve_download_target_path(&checked) {
+        Ok(path) => path,
         Err(error) => {
             let state = with_config(
                 json!({
@@ -482,19 +781,207 @@ fn download_app_update(window: &Window) -> Result<Value, String> {
                     "downloading": false,
                     "downloaded": false,
                     "progressPercent": 0,
-                    "lastError": format!("Failed to open update URL: {}", error),
+                    "downloadedFilePath": "",
+                    "lastError": error,
                     "lastMessage": ""
                 }),
                 &checked,
             );
             persist_app_update_state(&state);
-            Ok(state)
+            return Ok(state);
         }
+    };
+    let downloaded_file_path = target_path.to_string_lossy().to_string();
+    let download_file_name = resolve_download_file_name(&checked);
+
+    if APP_UPDATE_DOWNLOAD_IN_PROGRESS
+        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+        .is_err()
+    {
+        let current = read_app_update_state(window);
+        let state = with_config(
+            json!({
+                "success": true,
+                "downloading": true,
+                "installing": false,
+                "lastError": "",
+                "lastMessage": APP_UPDATE_DOWNLOAD_IN_PROGRESS_MSG
+            }),
+            &current,
+        );
+        persist_app_update_state(&state);
+        return Ok(state);
     }
+
+    let started_state = with_config(
+        json!({
+            "success": true,
+            "downloading": true,
+            "installing": false,
+            "downloaded": false,
+            "progressPercent": 0,
+            "downloadedFilePath": downloaded_file_path,
+            "downloadFileName": download_file_name,
+            "lastError": "",
+            "lastMessage": "Downloading update..."
+        }),
+        &checked,
+    );
+    persist_app_update_state(&started_state);
+
+    let checked_for_thread = checked.clone();
+    let download_url_for_thread = download_url.clone();
+    let target_path_for_thread = target_path.clone();
+
+    std::thread::spawn(move || {
+        let mut last_percent = 0u64;
+        let mut last_emit = Instant::now()
+            .checked_sub(Duration::from_secs(5))
+            .unwrap_or_else(Instant::now);
+
+        let result = download_update_asset_with_progress(
+            &download_url_for_thread,
+            &target_path_for_thread,
+            |downloaded_bytes, total_bytes| {
+                let percent = total_bytes
+                    .map(|total| {
+                        if total == 0 {
+                            0
+                        } else {
+                            ((downloaded_bytes.saturating_mul(100)) / total).min(99)
+                        }
+                    })
+                    .unwrap_or(0);
+
+                let should_emit =
+                    percent > last_percent || last_emit.elapsed() >= Duration::from_millis(700);
+                if !should_emit {
+                    return;
+                }
+
+                last_percent = percent;
+                last_emit = Instant::now();
+
+                let progress_message = match total_bytes {
+                    Some(total) => format!(
+                        "Downloading update... {} / {} ({}%)",
+                        format_download_size(downloaded_bytes),
+                        format_download_size(total),
+                        percent
+                    ),
+                    None => format!("Downloading update... {}", format_download_size(downloaded_bytes)),
+                };
+                let progress_state = with_config(
+                    json!({
+                        "success": true,
+                        "downloading": true,
+                        "installing": false,
+                        "downloaded": false,
+                        "progressPercent": percent,
+                        "downloadedFilePath": target_path_for_thread.to_string_lossy().to_string(),
+                        "lastError": "",
+                        "lastMessage": progress_message
+                    }),
+                    &checked_for_thread,
+                );
+                persist_app_update_state(&progress_state);
+            },
+        );
+
+        match result {
+            Ok(_) => {
+                let completed = with_config(
+                    json!({
+                        "success": true,
+                        "downloading": false,
+                        "installing": false,
+                        "downloaded": true,
+                        "progressPercent": 100,
+                        "downloadedFilePath": target_path_for_thread.to_string_lossy().to_string(),
+                        "lastError": "",
+                        "lastMessage": "Update downloaded. Click \"Install & Restart\" to continue."
+                    }),
+                    &checked_for_thread,
+                );
+                persist_app_update_state(&completed);
+            }
+            Err(error) => {
+                let failed = with_config(
+                    json!({
+                        "success": false,
+                        "downloading": false,
+                        "installing": false,
+                        "downloaded": false,
+                        "progressPercent": 0,
+                        "lastError": format!("Failed to download update: {}", error),
+                        "lastMessage": ""
+                    }),
+                    &checked_for_thread,
+                );
+                persist_app_update_state(&failed);
+            }
+        }
+
+        APP_UPDATE_DOWNLOAD_IN_PROGRESS.store(false, Ordering::SeqCst);
+    });
+
+    Ok(started_state)
 }
 
 fn install_app_update(window: &Window) -> Result<Value, String> {
     let current_state = read_app_update_state(window);
+    let downloading = current_state
+        .get("downloading")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    if downloading {
+        let state = with_config(
+            json!({
+                "success": false,
+                "installing": false,
+                "lastError": "Update is still downloading. Please wait for it to finish.",
+                "lastMessage": ""
+            }),
+            &current_state,
+        );
+        persist_app_update_state(&state);
+        return Ok(state);
+    }
+
+    let local_download_path = read_downloaded_file_path(&current_state);
+    if !local_download_path.is_empty() && Path::new(&local_download_path).exists() {
+        let local_path = PathBuf::from(&local_download_path);
+        match maybe_make_download_executable(&local_path).and_then(|_| open::that(&local_path).map_err(|e| e.to_string())) {
+            Ok(_) => {
+                let state = with_config(
+                    json!({
+                        "success": true,
+                        "installing": false,
+                        "downloaded": true,
+                        "lastError": "",
+                        "lastMessage": "Opened downloaded installer. Complete installation, then relaunch emuBro."
+                    }),
+                    &current_state,
+                );
+                persist_app_update_state(&state);
+                return Ok(state);
+            }
+            Err(error) => {
+                let state = with_config(
+                    json!({
+                        "success": false,
+                        "installing": false,
+                        "lastError": format!("Failed to open downloaded installer: {}", error),
+                        "lastMessage": ""
+                    }),
+                    &current_state,
+                );
+                persist_app_update_state(&state);
+                return Ok(state);
+            }
+        }
+    }
+
     let config = read_app_update_config();
     let fallback_release_page = config
         .get("releasesPageUrl")

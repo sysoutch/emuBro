@@ -1545,6 +1545,28 @@
             };
         })();
     </script>
+    <script>
+        (function () {
+            let notified = false;
+            const notifyRendererReady = function () {
+                if (notified) return;
+                notified = true;
+                try {
+                    if (window.emubro && typeof window.emubro.invoke === 'function') {
+                        Promise.resolve(window.emubro.invoke('app:renderer-ready')).catch(function () {});
+                    }
+                } catch (_e) {}
+            };
+
+            if (document.readyState === 'complete') {
+                notifyRendererReady();
+                return;
+            }
+
+            window.addEventListener('load', notifyRendererReady, { once: true });
+            setTimeout(notifyRendererReady, 12000);
+        })();
+    </script>
     <script src="./i18n.js"></script>
     <script src="dist/renderer.bundle.js"></script>
 </body>

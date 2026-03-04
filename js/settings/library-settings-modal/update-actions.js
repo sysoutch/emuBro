@@ -6,6 +6,30 @@ export function bindUpdateActionHandlers({
     render,
     getResourcesUpdateState
 }) {
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    const pollAppUpdateStateUntilIdle = async ({
+        timeoutMs = 30 * 60 * 1000,
+        intervalMs = 700
+    } = {}) => {
+        const deadline = Date.now() + Math.max(2000, Number(timeoutMs) || 0);
+        let lastState = null;
+        while (Date.now() < deadline) {
+            const state = await emubro?.updates?.getState?.();
+            if (state && typeof state === 'object') {
+                applyUpdateState(state);
+                render();
+                lastState = state;
+            }
+            const isBusy = !!(lastState?.checking || lastState?.downloading || lastState?.installing);
+            if (!isBusy) {
+                return lastState;
+            }
+            await sleep(intervalMs);
+        }
+        return lastState;
+    };
+
     modal.querySelectorAll('[data-update-action]').forEach((button) => {
         button.addEventListener('click', async () => {
             const action = String(button.dataset.updateAction || '').trim().toLowerCase();
@@ -41,6 +65,13 @@ export function bindUpdateActionHandlers({
                     }
                 }
                 render();
+
+                if (
+                    (action === 'download' || action === 'install')
+                    && (result?.downloading || result?.installing)
+                ) {
+                    await pollAppUpdateStateUntilIdle();
+                }
             } catch (error) {
                 applyUpdateState({ lastError: String(error?.message || error || 'Update action failed') });
                 render();
