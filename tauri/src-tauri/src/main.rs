@@ -45,8 +45,38 @@ fn parse_startup_launch_game_arg() -> Option<i64> {
 }
 
 #[cfg(target_os = "linux")]
+fn log_linux_graphics_env() {
+    const KEYS: [&str; 10] = [
+        "DISPLAY",
+        "WAYLAND_DISPLAY",
+        "XDG_SESSION_TYPE",
+        "XDG_CURRENT_DESKTOP",
+        "DESKTOP_SESSION",
+        "GDK_BACKEND",
+        "WEBKIT_DISABLE_COMPOSITING_MODE",
+        "WEBKIT_DISABLE_DMABUF_RENDERER",
+        "LIBGL_ALWAYS_SOFTWARE",
+        "MESA_LOADER_DRIVER_OVERRIDE",
+    ];
+
+    for key in KEYS {
+        match std::env::var(key) {
+            Ok(value) if !value.trim().is_empty() => {
+                eprintln!("[linux-graphics] env {}={}", key, value);
+            }
+            _ => {
+                eprintln!("[linux-graphics] env {}=<unset>", key);
+            }
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
 fn configure_linux_webkit_env() {
     let has_x11_display = std::env::var_os("DISPLAY").is_some();
+    let has_wayland_display = std::env::var_os("WAYLAND_DISPLAY").is_some();
+
+    log_linux_graphics_env();
 
     if has_x11_display && std::env::var_os("GDK_BACKEND").is_none() {
         std::env::set_var("GDK_BACKEND", "x11");
@@ -74,6 +104,15 @@ fn configure_linux_webkit_env() {
         }
         std::env::set_var(key, value);
         eprintln!("[linux-graphics] {}={} ({})", key, value, reason);
+    }
+
+    // On some handheld Linux environments (Wayland/Gamescope + AMD/Mesa),
+    // WebKitGTK still fails EGL initialization even after compositing is disabled.
+    if has_wayland_display && std::env::var_os("LIBGL_ALWAYS_SOFTWARE").is_none() {
+        std::env::set_var("LIBGL_ALWAYS_SOFTWARE", "1");
+        eprintln!(
+            "[linux-graphics] LIBGL_ALWAYS_SOFTWARE=1 (force software GL fallback for EGL startup failures on Wayland/XWayland)"
+        );
     }
 }
 
