@@ -24,9 +24,25 @@ jobs:
           - name: windows
             os: windows-latest
             bundles: "nsis,msi"
-          - name: linux
+            artifact_paths: |
+              tauri/src-tauri/target/release/bundle/nsis/*.exe
+              tauri/src-tauri/target/release/bundle/nsis/*.zip
+              tauri/src-tauri/target/release/bundle/msi/*.msi
+              tauri/src-tauri/target/release/bundle/msi/*.zip
+              tauri/src-tauri/target/release/bundle/portable/*.zip
+          - name: linux-appimage
             os: ubuntu-latest
-            bundles: "appimage,deb"
+            bundles: "appimage"
+            artifact_paths: |
+              tauri/src-tauri/target/release/bundle/appimage/*.AppImage
+              tauri/src-tauri/target/release/bundle/appimage/*.tar.gz
+            experimental_appimage: true
+          - name: linux-deb
+            os: ubuntu-latest
+            bundles: "deb"
+            artifact_paths: |
+              tauri/src-tauri/target/release/bundle/deb/*.deb
+              tauri/src-tauri/target/release/bundle/deb/*.tar.gz
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -82,7 +98,7 @@ jobs:
         run: npm run sync:bundle-resources
 
       - name: Build Tauri bundles
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && matrix.experimental_appimage != true
         shell: bash
         run: |
           set -euo pipefail
@@ -96,6 +112,26 @@ jobs:
               exit 1
             fi
             echo "Linux bundle failed, cleaning partial AppImage output before retry"
+            rm -rf tauri/src-tauri/target/release/bundle/appimage
+            sleep 15
+          done
+
+      - name: Build portable AppImage bundle
+        if: runner.os == 'Linux' && matrix.experimental_appimage == true
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            echo "Portable AppImage bundle attempt ${attempt}/3"
+            if npm run build:linux:appimage; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "Portable AppImage bundle failed after ${attempt} attempts"
+              exit 1
+            fi
+            echo "Portable AppImage bundle failed, cleaning partial output before retry"
+            rm -rf .cache/tauri-portable-appimage-cli
             rm -rf tauri/src-tauri/target/release/bundle/appimage
             sleep 15
           done
@@ -128,29 +164,11 @@ jobs:
           Compress-Archive -Path (Join-Path $portableDir.FullName "*") -DestinationPath $zipPath
           Write-Host "Portable archive: $zipPath"
 
-      - name: Upload artifacts (Windows)
-        if: runner.os == 'Windows'
+      - name: Upload bundle artifacts
         uses: actions/upload-artifact@v4
         with:
           name: emubro-${{ matrix.name }}-bundles
-          path: |
-            tauri/src-tauri/target/release/bundle/nsis/*.exe
-            tauri/src-tauri/target/release/bundle/nsis/*.zip
-            tauri/src-tauri/target/release/bundle/msi/*.msi
-            tauri/src-tauri/target/release/bundle/msi/*.zip
-            tauri/src-tauri/target/release/bundle/portable/*.zip
-          if-no-files-found: warn
-
-      - name: Upload artifacts (Linux)
-        if: runner.os == 'Linux'
-        uses: actions/upload-artifact@v4
-        with:
-          name: emubro-${{ matrix.name }}-bundles
-          path: |
-            tauri/src-tauri/target/release/bundle/appimage/*.AppImage
-            tauri/src-tauri/target/release/bundle/appimage/*.tar.gz
-            tauri/src-tauri/target/release/bundle/deb/*.deb
-            tauri/src-tauri/target/release/bundle/deb/*.tar.gz
+          path: ${{ matrix.artifact_paths }}
           if-no-files-found: warn
 
   flatpak:
