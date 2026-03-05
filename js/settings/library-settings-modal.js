@@ -135,11 +135,14 @@ export async function openLibraryPathSettingsModal(options = {}) {
     let updateState = {
         checking: false,
         downloading: false,
+        installing: false,
         downloaded: false,
         available: false,
         currentVersion: '',
         latestVersion: '',
         releaseNotes: '',
+        downloadFileName: '',
+        downloadedFilePath: '',
         lastMessage: '',
         lastError: '',
         progressPercent: 0,
@@ -164,6 +167,7 @@ export async function openLibraryPathSettingsModal(options = {}) {
     };
     let detachUpdateListener = null;
     let detachResourcesUpdateListener = null;
+    let stopLiveUpdateStatePolling = null;
 
     const overlay = document.createElement('div');
     overlay.style.cssText = [
@@ -215,19 +219,36 @@ export async function openLibraryPathSettingsModal(options = {}) {
         try {
             if (typeof detachResourcesUpdateListener === 'function') detachResourcesUpdateListener();
         } catch (_error) {}
+        try {
+            if (typeof stopLiveUpdateStatePolling === 'function') stopLiveUpdateStatePolling();
+        } catch (_error) {}
         overlay.remove();
     };
 
     const applyUpdateState = (payload = {}) => {
+        const hasChecking = Object.prototype.hasOwnProperty.call(payload || {}, 'checking');
+        const hasDownloading = Object.prototype.hasOwnProperty.call(payload || {}, 'downloading');
+        const hasInstalling = Object.prototype.hasOwnProperty.call(payload || {}, 'installing');
+        const hasDownloaded = Object.prototype.hasOwnProperty.call(payload || {}, 'downloaded');
+        const hasAvailable = Object.prototype.hasOwnProperty.call(payload || {}, 'available');
+        const hasDownloadFileName = Object.prototype.hasOwnProperty.call(payload || {}, 'downloadFileName');
+        const hasDownloadedFilePath = Object.prototype.hasOwnProperty.call(payload || {}, 'downloadedFilePath');
         updateState = {
             ...updateState,
-            checking: !!payload?.checking,
-            downloading: !!payload?.downloading,
-            downloaded: !!payload?.downloaded,
-            available: !!payload?.available,
+            checking: hasChecking ? !!payload?.checking : !!updateState.checking,
+            downloading: hasDownloading ? !!payload?.downloading : !!updateState.downloading,
+            installing: hasInstalling ? !!payload?.installing : !!updateState.installing,
+            downloaded: hasDownloaded ? !!payload?.downloaded : !!updateState.downloaded,
+            available: hasAvailable ? !!payload?.available : !!updateState.available,
             currentVersion: String(payload?.currentVersion || updateState.currentVersion || ''),
             latestVersion: String(payload?.latestVersion || updateState.latestVersion || ''),
             releaseNotes: String(payload?.releaseNotes || updateState.releaseNotes || ''),
+            downloadFileName: hasDownloadFileName
+                ? String(payload?.downloadFileName || '')
+                : String(updateState.downloadFileName || ''),
+            downloadedFilePath: hasDownloadedFilePath
+                ? String(payload?.downloadedFilePath || '')
+                : String(updateState.downloadedFilePath || ''),
             lastMessage: String(payload?.lastMessage || ''),
             lastError: String(payload?.lastError || ''),
             progressPercent: Number.isFinite(Number(payload?.progressPercent))
@@ -244,12 +265,87 @@ export async function openLibraryPathSettingsModal(options = {}) {
 
     const renderUpdateStatusText = () => {
         if (updateState.lastError) return `Error: ${updateState.lastError}`;
+        if (updateState.installing) return 'Opening installer...';
         if (updateState.downloading) return `Downloading update... ${Math.round(updateState.progressPercent || 0)}%`;
-        if (updateState.downloaded) return 'Update downloaded. Restart app to install.';
+        if (updateState.downloaded || String(updateState.downloadedFilePath || '').trim()) return 'Update downloaded. Click "Install & Restart".';
         if (updateState.available) return `Update available${updateState.latestVersion ? `: ${updateState.latestVersion}` : ''}`;
         if (updateState.checking) return 'Checking for updates...';
         if (updateState.lastMessage) return updateState.lastMessage;
         return 'Not checked yet.';
+    };
+
+    const startLiveUpdateStatePolling = () => {
+        let stopped = false;
+        let timer = null;
+        let appSignature = '';
+        let resourcesSignature = '';
+
+        const schedule = () => {
+            if (stopped || !overlay.isConnected) return;
+            timer = window.setTimeout(tick, 1000);
+        };
+
+        const tick = async () => {
+            if (stopped || !overlay.isConnected) return;
+            try {
+                const [appState, resourcesState] = await Promise.all([
+                    emubro?.updates?.getState?.(),
+                    emubro?.resourcesUpdates?.getState?.()
+                ]);
+
+                let changed = false;
+                if (appState && typeof appState === 'object') {
+                    applyUpdateState(appState);
+                    const next = JSON.stringify({
+                        checking: !!appState.checking,
+                        downloading: !!appState.downloading,
+                        installing: !!appState.installing,
+                        downloaded: !!appState.downloaded,
+                        available: !!appState.available,
+                        progressPercent: Number(appState.progressPercent || 0),
+                        latestVersion: String(appState.latestVersion || ''),
+                        downloadedFilePath: String(appState.downloadedFilePath || ''),
+                        lastError: String(appState.lastError || ''),
+                        lastMessage: String(appState.lastMessage || '')
+                    });
+                    if (next !== appSignature) {
+                        appSignature = next;
+                        changed = true;
+                    }
+                }
+
+                if (resourcesState && typeof resourcesState === 'object') {
+                    applyResourcesUpdateState(resourcesState);
+                    const next = JSON.stringify({
+                        checking: !!resourcesState.checking,
+                        installing: !!resourcesState.installing,
+                        available: !!resourcesState.available,
+                        progressPercent: Number(resourcesState.progressPercent || 0),
+                        latestVersion: String(resourcesState.latestVersion || ''),
+                        lastError: String(resourcesState.lastError || ''),
+                        lastMessage: String(resourcesState.lastMessage || '')
+                    });
+                    if (next !== resourcesSignature) {
+                        resourcesSignature = next;
+                        changed = true;
+                    }
+                }
+
+                if (changed && overlay.isConnected) {
+                    render();
+                }
+            } catch (_error) {}
+            schedule();
+        };
+
+        schedule();
+        return () => {
+            stopped = true;
+            if (timer) {
+                window.clearTimeout(timer);
+                timer = null;
+            }
+        };
     };
 
     const applyResourcesUpdateState = (payload = {}) => {
@@ -582,5 +678,6 @@ export async function openLibraryPathSettingsModal(options = {}) {
     render();
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
+    stopLiveUpdateStatePolling = startLiveUpdateStatePolling();
     refreshRelayHostData({ skipRender: false }).catch(() => {});
 }

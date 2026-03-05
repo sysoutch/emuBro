@@ -160,8 +160,9 @@ export function renderUpdatesTab({
     const currentVersion = escapeAttr(updateState.currentVersion || '');
     const latestVersion = escapeAttr(updateState.latestVersion || '');
     const notes = String(updateState.releaseNotes || '').trim();
-    const canDownload = !!updateState.available && !updateState.downloaded && !updateState.downloading;
-    const canInstall = !!updateState.downloaded;
+    const hasDownloadedFile = !!String(updateState.downloadedFilePath || '').trim();
+    const canDownload = !!updateState.available && !updateState.downloaded && !updateState.downloading && !updateState.installing;
+    const canInstall = (!!updateState.downloaded || hasDownloadedFile) && !updateState.downloading && !updateState.installing;
     const resourcesStatus = escapeAttr(renderResourcesUpdateStatusText());
     const resourcesCurrentVersion = escapeAttr(resourcesUpdateState.currentVersion || '');
     const resourcesLatestVersion = escapeAttr(resourcesUpdateState.latestVersion || '');
@@ -208,7 +209,7 @@ export function renderUpdatesTab({
                 <div style="font-size:0.9rem;color:var(--text-secondary);" data-update-status>${status}</div>
                 <div style="font-size:0.82rem;color:var(--text-secondary);">${!updateState.currentVersion && !updateState.latestVersion ? 'If this app is not packaged or no GitHub release artifacts are published yet, check will report that directly.' : ''}</div>
                 <div style="display:flex;flex-wrap:wrap;gap:8px;">
-                    <button type="button" class="action-btn" data-update-action="check"${updateState.checking ? ' disabled' : ''}>Check for Updates</button>
+                    <button type="button" class="action-btn" data-update-action="check"${(updateState.checking || updateState.downloading || updateState.installing) ? ' disabled' : ''}>Check for Updates</button>
                     <button type="button" class="action-btn" data-update-action="download"${canDownload ? '' : ' disabled'}>Download Update</button>
                     <button type="button" class="action-btn launch-btn" data-update-action="install"${canInstall ? '' : ' disabled'}>Install & Restart</button>
                 </div>

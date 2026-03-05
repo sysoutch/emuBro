@@ -3,6 +3,54 @@
 ## Current Work Focus
 Continuing oversized JS refactors with stable public APIs (`tools-manager`, `theme-manager`, `settings/library`, `language-manager`).
 
+## Delivery Plan (2026-03-05)
+Priority order for moving from alpha churn to beta-readiness:
+
+1. Startup performance pass
+   - Instrument startup milestones end-to-end:
+     - Rust setup start
+     - main window created/shown
+     - renderer-ready event
+     - library loaded + first interactive frame
+   - Capture timings on Linux handheld targets (Steam Deck / Legion Go class devices).
+   - Remove top 2 startup blockers based on measured timings.
+   - Success criteria: main UI interactive in < 3s median on target Linux devices.
+
+2. Updater UX restore (in-app progress)
+   - Keep current download/install flow logic, but restore user-visible progress states:
+     - checking
+     - downloading
+     - percent progress
+     - ready-to-install
+     - installing
+     - failed with actionable message
+   - Ensure behavior is consistent on Windows/Linux/macOS.
+   - Success criteria: no forced browser handoff during normal app update flow.
+
+3. Remote library hardening
+   - Add resilient retry/timeout behavior for scan/pair/list/download.
+   - Add explicit manual "add host by IP/URL" fallback path in the tool UX.
+   - Improve firewall/network error messaging for non-technical users.
+   - Validate Linux<->Windows host discovery and transfer reliability.
+   - Success criteria: first-try success rate is high for mixed-OS LAN usage.
+
+4. Release quality gates in CI
+   - Add post-build smoke checks on packaged artifacts:
+     - app launches
+     - locale `en` loads in packaged build
+     - main window renders (no white-screen regressions)
+     - updater endpoint/state is reachable/responding
+   - Success criteria: common packaging/runtime regressions are caught before release publish.
+
+5. Beta-readiness checklist
+   - Define objective go/no-go gates:
+     - startup SLA
+     - updater success rate
+     - remote discovery success rate
+     - crash-free session baseline
+   - Move from alpha to beta only after gates pass consistently across release cycles.
+   - Success criteria: release promotion is metrics-driven, not manual gut-checking.
+
 ## Refactor Backlog Snapshot (2026-03-01)
 - `js/tools-manager.js` - 314 LOC - 14.6 KB (refactored; keep trimming by extracting placeholders if needed)
 - `js/settings/library-settings-modal.js` - 554 LOC - 25.4 KB (refactored; event/update/path/save handlers extracted)

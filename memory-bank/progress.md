@@ -37,6 +37,12 @@
 - Deployment procedures and packaging
 
 ## Recent Changes
+- Added a prioritized delivery roadmap to `memory-bank/activeContext.md` (2026-03-05) to guide next execution phase:
+  - startup performance instrumentation + <3s Linux target
+  - updater in-app progress/state restoration
+  - remote library reliability hardening for Linux<->Windows
+  - CI packaged-build smoke gates (locale/render/updater reachability)
+  - objective beta-readiness metrics and promotion criteria
 - Continued `js/settings/library-settings-modal.js` refactor by extracting core/general/import/gamepad wiring into `js/settings/library-settings-modal/core-handlers.js`.
 - Continued `js/settings/library-settings-modal.js` refactor by extracting LLM tab event wiring into `js/settings/library-settings-modal/llm-handlers.js`.
 - Continued `js/settings/library-settings-modal.js` refactor by extracting app/resource update actions into `js/settings/library-settings-modal/update-actions.js`.

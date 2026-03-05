@@ -15,12 +15,14 @@ export function bindUpdateActionHandlers({
         const deadline = Date.now() + Math.max(2000, Number(timeoutMs) || 0);
         let lastState = null;
         while (Date.now() < deadline) {
-            const state = await emubro?.updates?.getState?.();
-            if (state && typeof state === 'object') {
-                applyUpdateState(state);
-                render();
-                lastState = state;
-            }
+            try {
+                const state = await emubro?.updates?.getState?.();
+                if (state && typeof state === 'object') {
+                    applyUpdateState(state);
+                    render();
+                    lastState = state;
+                }
+            } catch (_error) {}
             const isBusy = !!(lastState?.checking || lastState?.downloading || lastState?.installing);
             if (!isBusy) {
                 return lastState;
@@ -55,6 +57,38 @@ export function bindUpdateActionHandlers({
                     if (resourcesConfigResult && typeof resourcesConfigResult === 'object') applyResourcesUpdateState(resourcesConfigResult);
                     result = { success: true };
                 }
+                if (action === 'check') {
+                    applyUpdateState({
+                        checking: true,
+                        downloading: false,
+                        installing: false,
+                        lastError: '',
+                        lastMessage: 'Checking for updates...'
+                    });
+                    render();
+                }
+                if (action === 'download') {
+                    applyUpdateState({
+                        checking: false,
+                        downloading: true,
+                        installing: false,
+                        downloaded: false,
+                        progressPercent: 0,
+                        lastError: '',
+                        lastMessage: 'Starting update download...'
+                    });
+                    render();
+                }
+                if (action === 'install') {
+                    applyUpdateState({
+                        checking: false,
+                        downloading: false,
+                        installing: true,
+                        lastError: '',
+                        lastMessage: 'Opening installer...'
+                    });
+                    render();
+                }
                 if (action === 'check') result = await emubro.updates?.check?.();
                 if (action === 'download') result = await emubro.updates?.download?.();
                 if (action === 'install') result = await emubro.updates?.install?.();
@@ -66,10 +100,10 @@ export function bindUpdateActionHandlers({
                 }
                 render();
 
-                if (
-                    (action === 'download' || action === 'install')
-                    && (result?.downloading || result?.installing)
-                ) {
+                if (action === 'check') {
+                    await pollAppUpdateStateUntilIdle({ timeoutMs: 15 * 1000, intervalMs: 450 });
+                }
+                if (action === 'download' || action === 'install') {
                     await pollAppUpdateStateUntilIdle();
                 }
             } catch (error) {
