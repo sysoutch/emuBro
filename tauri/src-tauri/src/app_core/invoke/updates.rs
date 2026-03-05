@@ -164,7 +164,7 @@ fn read_app_update_state(window: &Window) -> Value {
     let downloaded = if downloaded_file_path.is_empty() {
         stored_downloaded
     } else {
-        stored_downloaded && has_local_download
+        has_local_download
     };
     let progress_percent = if downloaded {
         100
@@ -406,12 +406,13 @@ fn check_app_update(window: &Window) -> Result<Value, String> {
                 .to_string();
             let local_download_exists =
                 !existing_download_path.is_empty() && Path::new(&existing_download_path).exists();
-            let already_downloaded = existing
-                .get("downloaded")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false)
-                && existing_latest == latest_version
-                && (existing_download_path.is_empty() || local_download_exists);
+            let already_downloaded = existing_latest == latest_version
+                && ((!existing_download_path.is_empty() && local_download_exists)
+                    || (existing_download_path.is_empty()
+                        && existing
+                            .get("downloaded")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false)));
 
             let state = with_config(
                 json!({
@@ -710,6 +711,30 @@ fn resolve_update_open_url(state: &Value, fallback_release_page: &str) -> String
     fallback_release_page.trim().to_string()
 }
 
+#[cfg(target_os = "linux")]
+fn open_downloaded_installer(path: &Path) -> Result<(), String> {
+    let extension = path
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or("")
+        .trim()
+        .to_ascii_lowercase();
+
+    if extension == "appimage" {
+        maybe_make_download_executable(path)?;
+        if Command::new(path).spawn().is_ok() {
+            return Ok(());
+        }
+    }
+
+    open::that(path).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_os = "linux"))]
+fn open_downloaded_installer(path: &Path) -> Result<(), String> {
+    open::that(path).map_err(|e| e.to_string())
+}
+
 fn download_app_update(window: &Window) -> Result<Value, String> {
     if APP_UPDATE_DOWNLOAD_IN_PROGRESS.load(Ordering::SeqCst) {
         let current = read_app_update_state(window);
@@ -951,7 +976,7 @@ fn install_app_update(window: &Window) -> Result<Value, String> {
     let local_download_path = read_downloaded_file_path(&current_state);
     if !local_download_path.is_empty() && Path::new(&local_download_path).exists() {
         let local_path = PathBuf::from(&local_download_path);
-        match maybe_make_download_executable(&local_path).and_then(|_| open::that(&local_path).map_err(|e| e.to_string())) {
+        match open_downloaded_installer(&local_path) {
             Ok(_) => {
                 let state = with_config(
                     json!({
@@ -1152,6 +1177,17 @@ fn read_manifest_version(path: &PathBuf) -> Option<String> {
     }
 }
 
+fn resources_storage_flags(effective_storage_path: &str) -> (PathBuf, bool, bool) {
+    let trimmed = effective_storage_path.trim().to_string();
+    if trimmed.is_empty() {
+        return (PathBuf::new(), false, false);
+    }
+    let dir = PathBuf::from(&trimmed);
+    let dir_exists = dir.exists() && dir.is_dir();
+    let manifest_exists = dir_exists && dir.join("manifest.json").exists();
+    (dir, dir_exists, manifest_exists)
+}
+
 fn fetch_remote_manifest_version(manifest_url: &str) -> Result<String, String> {
     let trimmed = manifest_url.trim();
     if trimmed.is_empty() {
@@ -1181,10 +1217,13 @@ fn read_resources_update_state() -> Value {
         .unwrap_or("")
         .trim()
         .to_string();
-    let current_version = if effective_storage_path.is_empty() {
+    let (storage_dir, storage_dir_exists, storage_manifest_exists) =
+        resources_storage_flags(&effective_storage_path);
+    let missing_local_resources = !storage_dir_exists || !storage_manifest_exists;
+    let current_version = if missing_local_resources {
         String::new()
     } else {
-        read_manifest_version(&PathBuf::from(&effective_storage_path)).unwrap_or_default()
+        read_manifest_version(&storage_dir).unwrap_or_default()
     };
 
     with_config(
@@ -1197,8 +1236,13 @@ fn read_resources_update_state() -> Value {
             "progressPercent": 0,
             "currentVersion": current_version,
             "latestVersion": "",
+            "missingLocalResources": missing_local_resources,
             "lastError": "",
-            "lastMessage": ""
+            "lastMessage": if missing_local_resources {
+                "Resources folder is missing. Click \"Install Resource Update\" to download again."
+            } else {
+                ""
+            }
         }),
         &config,
     )
@@ -1218,11 +1262,19 @@ fn check_resources_update() -> Result<Value, String> {
         .unwrap_or("")
         .trim()
         .to_string();
-    let current_version = read_manifest_version(&PathBuf::from(&effective_storage_path)).unwrap_or_default();
+    let (storage_dir, storage_dir_exists, storage_manifest_exists) =
+        resources_storage_flags(&effective_storage_path);
+    let missing_local_resources = !storage_dir_exists || !storage_manifest_exists;
+    let current_version = if missing_local_resources {
+        String::new()
+    } else {
+        read_manifest_version(&storage_dir).unwrap_or_default()
+    };
 
     match fetch_remote_manifest_version(&manifest_url) {
         Ok(latest_version) => {
-            let available = !latest_version.is_empty() && latest_version != current_version;
+            let available = missing_local_resources
+                || (!latest_version.is_empty() && latest_version != current_version);
             Ok(with_config(
                 json!({
                     "success": true,
@@ -1232,8 +1284,15 @@ fn check_resources_update() -> Result<Value, String> {
                     "progressPercent": 0,
                     "currentVersion": current_version,
                     "latestVersion": latest_version,
+                    "missingLocalResources": missing_local_resources,
                     "lastError": "",
-                    "lastMessage": if available { "Resource update available." } else { "Resources are up to date." }
+                    "lastMessage": if missing_local_resources {
+                        "Resources are missing locally. Click \"Install Resource Update\" to download."
+                    } else if available {
+                        "Resource update available."
+                    } else {
+                        "Resources are up to date."
+                    }
                 }),
                 &config,
             ))
@@ -1247,6 +1306,7 @@ fn check_resources_update() -> Result<Value, String> {
                 "progressPercent": 0,
                 "currentVersion": current_version,
                 "latestVersion": "",
+                "missingLocalResources": missing_local_resources,
                 "lastError": error,
                 "lastMessage": ""
             }),
@@ -1334,6 +1394,7 @@ fn install_resources_update() -> Result<Value, String> {
                     "installing": false,
                     "downloaded": true,
                     "progressPercent": 100,
+                    "missingLocalResources": false,
                     "lastError": "",
                     "lastMessage": "Resources updated successfully."
                 }),

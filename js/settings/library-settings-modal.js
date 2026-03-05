@@ -153,6 +153,7 @@ export async function openLibraryPathSettingsModal(options = {}) {
         checking: false,
         installing: false,
         available: false,
+        missingLocalResources: false,
         currentVersion: '',
         latestVersion: '',
         manifestUrl: '',
@@ -267,7 +268,7 @@ export async function openLibraryPathSettingsModal(options = {}) {
         if (updateState.lastError) return `Error: ${updateState.lastError}`;
         if (updateState.installing) return 'Opening installer...';
         if (updateState.downloading) return `Downloading update... ${Math.round(updateState.progressPercent || 0)}%`;
-        if (updateState.downloaded || String(updateState.downloadedFilePath || '').trim()) return 'Update downloaded. Click "Install & Restart".';
+        if (updateState.downloaded) return 'Update downloaded. Click "Install & Restart".';
         if (updateState.available) return `Update available${updateState.latestVersion ? `: ${updateState.latestVersion}` : ''}`;
         if (updateState.checking) return 'Checking for updates...';
         if (updateState.lastMessage) return updateState.lastMessage;
@@ -320,6 +321,7 @@ export async function openLibraryPathSettingsModal(options = {}) {
                         checking: !!resourcesState.checking,
                         installing: !!resourcesState.installing,
                         available: !!resourcesState.available,
+                        missingLocalResources: !!resourcesState.missingLocalResources,
                         progressPercent: Number(resourcesState.progressPercent || 0),
                         latestVersion: String(resourcesState.latestVersion || ''),
                         lastError: String(resourcesState.lastError || ''),
@@ -353,11 +355,15 @@ export async function openLibraryPathSettingsModal(options = {}) {
         const hasStoragePath = Object.prototype.hasOwnProperty.call(payload || {}, 'storagePath');
         const hasEffectiveStoragePath = Object.prototype.hasOwnProperty.call(payload || {}, 'effectiveStoragePath');
         const hasDefaultStoragePath = Object.prototype.hasOwnProperty.call(payload || {}, 'defaultStoragePath');
+        const hasMissingLocalResources = Object.prototype.hasOwnProperty.call(payload || {}, 'missingLocalResources');
         resourcesUpdateState = {
             ...resourcesUpdateState,
             checking: !!payload?.checking,
             installing: !!payload?.installing,
             available: !!payload?.available,
+            missingLocalResources: hasMissingLocalResources
+                ? !!payload?.missingLocalResources
+                : !!resourcesUpdateState.missingLocalResources,
             currentVersion: String(payload?.currentVersion || resourcesUpdateState.currentVersion || ''),
             latestVersion: String(payload?.latestVersion || resourcesUpdateState.latestVersion || ''),
             manifestUrl: hasManifestUrl
@@ -389,6 +395,7 @@ export async function openLibraryPathSettingsModal(options = {}) {
     const renderResourcesUpdateStatusText = () => {
         if (resourcesUpdateState.lastError) return `Error: ${resourcesUpdateState.lastError}`;
         if (resourcesUpdateState.installing) return `Installing resources... ${Math.round(resourcesUpdateState.progressPercent || 0)}%`;
+        if (resourcesUpdateState.missingLocalResources) return 'Resources folder is missing. Click "Install Resource Update" to download again.';
         if (resourcesUpdateState.available) return `Resource update available${resourcesUpdateState.latestVersion ? `: ${resourcesUpdateState.latestVersion}` : ''}`;
         if (resourcesUpdateState.checking) return 'Checking resource updates...';
         if (resourcesUpdateState.lastMessage) return resourcesUpdateState.lastMessage;

@@ -134,6 +134,25 @@ export function bindUpdateActionHandlers({
                         autoCheckIntervalMinutes: resourcesUpdateState.autoCheckIntervalMinutes
                     });
                 }
+                if (action === 'check') {
+                    applyResourcesUpdateState({
+                        checking: true,
+                        installing: false,
+                        lastError: '',
+                        lastMessage: 'Checking resource updates...'
+                    });
+                    render();
+                }
+                if (action === 'install') {
+                    applyResourcesUpdateState({
+                        checking: false,
+                        installing: true,
+                        progressPercent: 0,
+                        lastError: '',
+                        lastMessage: 'Installing resources...'
+                    });
+                    render();
+                }
                 if (action === 'check') result = await emubro.resourcesUpdates?.check?.();
                 if (action === 'install') result = await emubro.resourcesUpdates?.install?.();
                 if (result && typeof result === 'object') {

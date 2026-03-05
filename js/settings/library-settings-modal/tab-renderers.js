@@ -160,9 +160,8 @@ export function renderUpdatesTab({
     const currentVersion = escapeAttr(updateState.currentVersion || '');
     const latestVersion = escapeAttr(updateState.latestVersion || '');
     const notes = String(updateState.releaseNotes || '').trim();
-    const hasDownloadedFile = !!String(updateState.downloadedFilePath || '').trim();
     const canDownload = !!updateState.available && !updateState.downloaded && !updateState.downloading && !updateState.installing;
-    const canInstall = (!!updateState.downloaded || hasDownloadedFile) && !updateState.downloading && !updateState.installing;
+    const canInstall = !!updateState.downloaded && !updateState.downloading && !updateState.installing;
     const resourcesStatus = escapeAttr(renderResourcesUpdateStatusText());
     const resourcesCurrentVersion = escapeAttr(resourcesUpdateState.currentVersion || '');
     const resourcesLatestVersion = escapeAttr(resourcesUpdateState.latestVersion || '');
@@ -170,7 +169,9 @@ export function renderUpdatesTab({
     const resourcesStoragePath = escapeAttr(resourcesUpdateState.storagePath || '');
     const resourcesEffectiveStoragePath = escapeAttr(resourcesUpdateState.effectiveStoragePath || resourcesUpdateState.defaultStoragePath || '');
     const resourcesDefaultStoragePath = escapeAttr(resourcesUpdateState.defaultStoragePath || '');
-    const canInstallResources = !!resourcesUpdateState.available && !resourcesUpdateState.installing;
+    const missingResources = !!resourcesUpdateState.missingLocalResources;
+    const canInstallResources = (!!resourcesUpdateState.available || missingResources) && !resourcesUpdateState.installing;
+    const installResourcesLabel = missingResources ? 'Re-download Resources' : 'Install Resource Update';
     const autoCheckOnStartup = !!(updateState.autoCheckOnStartup && resourcesUpdateState.autoCheckOnStartup);
     const autoCheckIntervalMinutes = Math.max(
         5,
@@ -246,9 +247,10 @@ export function renderUpdatesTab({
                 <div style="font-size:0.82rem;color:var(--text-secondary);">
                     Active folder: ${resourcesEffectiveStoragePath || '-'}${resourcesDefaultStoragePath ? ` | Default: ${resourcesDefaultStoragePath}` : ''}
                 </div>
+                ${missingResources ? '<div style="font-size:0.82rem;color:#ff8f8f;">Resources folder or manifest is missing at the active path. Re-download is required.</div>' : ''}
                 <div style="display:flex;flex-wrap:wrap;gap:8px;">
                     <button type="button" class="action-btn" data-resource-update-action="check"${resourcesUpdateState.checking ? ' disabled' : ''}>Check Resource Updates</button>
-                    <button type="button" class="action-btn launch-btn" data-resource-update-action="install"${canInstallResources ? '' : ' disabled'}>Install Resource Update</button>
+                    <button type="button" class="action-btn launch-btn" data-resource-update-action="install"${canInstallResources ? '' : ' disabled'}>${installResourcesLabel}</button>
                 </div>
             </section>
         </section>

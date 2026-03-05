@@ -110,6 +110,59 @@ fn list_locale_paths() -> Vec<(String, PathBuf, String)> {
     rows
 }
 
+fn app_locale_path(filename: &str) -> Option<PathBuf> {
+    let normalized = normalize_locale_filename(filename).ok()?;
+    let dir = app_locales_dir()?;
+    let path = dir.join(normalized);
+    if path.exists() && path.is_file() {
+        Some(path)
+    } else {
+        None
+    }
+}
+
+fn embedded_english_locale() -> Option<Value> {
+    parse_locale_json(include_str!("../../../../locales/en.json")).ok()
+}
+
+fn locale_code_from_data(data: &Value, filename: &str) -> String {
+    data
+        .as_object()
+        .and_then(|obj| obj.keys().next().cloned())
+        .unwrap_or_else(|| filename.trim_end_matches(".json").to_string())
+}
+
+fn read_locale_json_with_fallback(filename: &str, full_path: &Path, source: &str) -> Option<(Value, String)> {
+    if let Ok(parsed) = read_locale_json(full_path) {
+        return Some((parsed, source.to_string()));
+    }
+
+    if source == "user" {
+        if let Some(app_path) = app_locale_path(filename) {
+            if let Ok(parsed) = read_locale_json(&app_path) {
+                return Some((parsed, "app".to_string()));
+            }
+        }
+    }
+
+    None
+}
+
+fn ensure_english_translation(out: &mut serde_json::Map<String, Value>) {
+    if out.contains_key("en") {
+        return;
+    }
+    let Some(parsed) = embedded_english_locale() else {
+        return;
+    };
+    let Some(obj) = parsed.as_object() else {
+        return;
+    };
+    if let Some(value) = obj.get("en") {
+        out.insert("en".to_string(), value.clone());
+    }
+}
+
 fn get_manifest_url() -> String {
     let raw = read_state_value_or_default(MANIFEST_KEY, Value::String(DEFAULT_MANIFEST_URL.to_string()));
     let value = raw.as_str().unwrap_or(DEFAULT_MANIFEST_URL).trim();
@@ -205,8 +258,8 @@ fn fetch_catalog(manifest_url: &str) -> Result<Value, String> {
 
 fn read_all_translations() -> Value {
     let mut out = serde_json::Map::new();
-    for (_filename, full_path, _source) in list_locale_paths() {
-        let Ok(parsed) = read_locale_json(&full_path) else {
+    for (filename, full_path, source) in list_locale_paths() {
+        let Some((parsed, _effective_source)) = read_locale_json_with_fallback(&filename, &full_path, &source) else {
             continue;
         };
         let Some(obj) = parsed.as_object() else {
@@ -216,6 +269,7 @@ fn read_all_translations() -> Value {
             out.insert(key.clone(), value.clone());
         }
     }
+    ensure_english_translation(&mut out);
     Value::Object(out)
 }
 
@@ -225,21 +279,38 @@ pub(crate) fn handle(channel: &str, args: &[Value]) -> Option<Result<Value, Stri
         "locales:list" => {
             let mut rows = Vec::<Value>::new();
             for (filename, full_path, source) in list_locale_paths() {
-                let Ok(data) = read_locale_json(&full_path) else {
+                let Some((data, effective_source)) =
+                    read_locale_json_with_fallback(&filename, &full_path, &source)
+                else {
                     continue;
                 };
-                let code = data
-                    .as_object()
-                    .and_then(|obj| obj.keys().next().cloned())
-                    .unwrap_or_else(|| filename.trim_end_matches(".json").to_string());
+                let code = locale_code_from_data(&data, &filename);
                 rows.push(json!({
                     "filename": filename,
                     "code": code,
                     "data": data,
-                    "source": source,
-                    "canDelete": source == "user",
-                    "canRename": source == "user"
+                    "source": effective_source,
+                    "canDelete": effective_source == "user",
+                    "canRename": effective_source == "user"
                 }));
+            }
+            let has_english = rows.iter().any(|row| {
+                row.get("code")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.trim().eq_ignore_ascii_case("en"))
+                    .unwrap_or(false)
+            });
+            if !has_english {
+                if let Some(data) = embedded_english_locale() {
+                    rows.push(json!({
+                        "filename": "en.json",
+                        "code": locale_code_from_data(&data, "en.json"),
+                        "data": data,
+                        "source": "app",
+                        "canDelete": false,
+                        "canRename": false
+                    }));
+                }
             }
             Ok(Value::Array(rows))
         }

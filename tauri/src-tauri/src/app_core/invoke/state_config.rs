@@ -163,10 +163,56 @@ pub(super) fn handle(ch: &str, args: &[Value], _window: &Window) -> Result<Value
 
 fn list_emulators_for_library() -> Vec<Value> {
     let installed = normalize_emulator_rows(read_state_array("emulators"));
+    let configured = configured_emulator_rows();
+
     if installed.is_empty() {
-        return configured_emulator_rows();
+        return configured;
     }
-    installed
+    if configured.is_empty() {
+        return installed;
+    }
+
+    let mut configured_by_key = std::collections::HashMap::<String, Value>::new();
+    for row in configured {
+        if let Some(key) = emulator_identity_key(&row) {
+            configured_by_key.insert(key, row);
+        }
+    }
+
+    let mut merged = Vec::<Value>::new();
+    for row in installed {
+        let Some(key) = emulator_identity_key(&row) else {
+            merged.push(row);
+            continue;
+        };
+        if let Some(config_row) = configured_by_key.remove(&key) {
+            merged.push(merge_emulator_rows(config_row, row));
+        } else {
+            merged.push(row);
+        }
+    }
+
+    merged.extend(configured_by_key.into_values());
+    merged.sort_by(|a, b| {
+        let ap = a
+            .get("platform")
+            .or_else(|| a.get("platformShortName"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let bp = b
+            .get("platform")
+            .or_else(|| b.get("platformShortName"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let pc = ap.cmp(bp);
+        if pc != std::cmp::Ordering::Equal {
+            return pc;
+        }
+        let an = a.get("name").and_then(|v| v.as_str()).unwrap_or("");
+        let bn = b.get("name").and_then(|v| v.as_str()).unwrap_or("");
+        an.cmp(bn)
+    });
+    merged
 }
 
 fn configured_emulator_rows() -> Vec<Value> {
@@ -349,6 +395,41 @@ fn normalize_emulator_type(raw: &str) -> String {
         return value;
     }
     "standalone".to_string()
+}
+
+fn emulator_identity_key(row: &Value) -> Option<String> {
+    let platform_short = normalize_platform_short_name(
+        row.get("platformShortName")
+            .or_else(|| row.get("platform"))
+            .and_then(|v| v.as_str())
+            .unwrap_or(""),
+    );
+    let name = row
+        .get("name")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    let name_key = normalize_emulator_name_key(&name);
+    if platform_short.is_empty() || name_key.is_empty() {
+        return None;
+    }
+    Some(format!("{}::{}", platform_short, name_key))
+}
+
+fn merge_emulator_rows(config_row: Value, installed_row: Value) -> Value {
+    let mut merged = config_row.as_object().cloned().unwrap_or_default();
+    if let Some(installed) = installed_row.as_object() {
+        for (key, value) in installed {
+            merged.insert(key.clone(), value.clone());
+        }
+    }
+    let mut out = Value::Object(merged);
+    let links = emulator_download_links(&out);
+    if let Some(obj) = out.as_object_mut() {
+        obj.insert("downloadLinks".to_string(), links);
+    }
+    out
 }
 
 fn normalize_emulator_name_key(raw: &str) -> String {

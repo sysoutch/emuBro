@@ -1,5 +1,7 @@
 use super::*;
 
+const RESOURCES_UPDATE_CONFIG_KEY: &str = "resources:update:config:v1";
+
 pub(crate) fn app_version_impl() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
@@ -86,6 +88,7 @@ pub(crate) fn find_locales_dir() -> Option<PathBuf> {
 pub(crate) fn find_platforms_dir() -> Option<PathBuf> {
     for root in resource_search_roots() {
         let candidates = [
+            root.join("platforms"),
             root.join("emubro-resources").join("platforms"),
             root.join("legacy").join("emubro-resources").join("platforms"),
             root.join("bundle-resources")
@@ -99,6 +102,10 @@ pub(crate) fn find_platforms_dir() -> Option<PathBuf> {
                 .join("bundle-resources")
                 .join("emubro-resources")
                 .join("platforms"),
+            root.join("resources")
+                .join("emubro-resources")
+                .join("platforms"),
+            root.join("resources").join("platforms"),
             root.join("resources")
                 .join("bundle-resources")
                 .join("legacy")
@@ -156,6 +163,24 @@ fn resource_search_roots() -> Vec<PathBuf> {
         let trimmed = resources_dir.trim();
         if !trimmed.is_empty() {
             push(PathBuf::from(trimmed));
+        }
+    }
+
+    let resources_config = read_state_value_or_default(RESOURCES_UPDATE_CONFIG_KEY, json!({}));
+    for key in ["effectiveStoragePath", "storagePath", "defaultStoragePath"] {
+        let configured = resources_config
+            .get(key)
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .trim()
+            .to_string();
+        if configured.is_empty() {
+            continue;
+        }
+        let configured_path = PathBuf::from(&configured);
+        push(configured_path.clone());
+        if let Some(parent) = configured_path.parent() {
+            push(parent.to_path_buf());
         }
     }
 
@@ -228,6 +253,19 @@ pub(crate) fn read_all_translations_from_disk() -> Value {
             continue;
         };
         out.insert(stem.clone(), normalize_locale_payload(&stem, parsed));
+    }
+
+    if !out.contains_key("en") {
+        let fallback = serde_json::from_str::<Value>(include_str!("../../../../../locales/en.json"))
+            .ok()
+            .and_then(|parsed| {
+                parsed
+                    .as_object()
+                    .and_then(|obj| obj.get("en").cloned())
+            });
+        if let Some(en) = fallback {
+            out.insert("en".to_string(), en);
+        }
     }
 
     Value::Object(out)

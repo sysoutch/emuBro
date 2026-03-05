@@ -256,6 +256,17 @@ html[data-theme="light"] select {
     color-scheme: light;
 }
 
+/* WebKitGTK still renders native popup menus, but this keeps the closed control and option rows aligned to the app theme as far as supported. */
+[data-os="linux"] select {
+    color-scheme: normal;
+}
+
+[data-os="linux"] select option,
+[data-os="linux"] select optgroup {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
 select:not([multiple]) {
     appearance: none;
     -webkit-appearance: none;
