@@ -62,13 +62,15 @@
     #theme-select {
         width: clamp(98px, 13vw, 142px);
         min-width: 98px;
-        padding: 6px 10px;
+        padding: 6px 32px 6px 10px;
         border-radius: var(--radius-input) 0 0 var(--radius-input);
         text-indent: 0;
-        background-image: none;
         color: var(--text-secondary);
         font-size: 0.86rem;
         background-color: var(--bg-tertiary);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     #theme-select option {
@@ -218,13 +220,15 @@
     #theme-select {
         width: clamp(98px, 13vw, 142px);
         min-width: 98px;
-        padding: 6px 10px;
+        padding: 6px 32px 6px 10px;
         border-radius: var(--radius-input) 0 0 var(--radius-input);
         text-indent: 0;
-        background-image: none;
         color: var(--text-secondary);
         font-size: 0.86rem;
         background-color: var(--bg-tertiary);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     #theme-select option {

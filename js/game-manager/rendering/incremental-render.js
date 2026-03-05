@@ -53,8 +53,9 @@ export function renderGamesIncremental(gamesToRender, activeView = 'cover', opti
             return Math.max(minRows, Math.min(maxRows, limitedByConfig));
         }
 
-        const minCardWidth = 250 * viewScale;
-        const gap = 20 * viewScale;
+        const coverOnlyMode = gamesContainer.classList.contains('cover-mode-cover-only');
+        const minCardWidth = (coverOnlyMode ? 252 : 250) * viewScale;
+        const gap = (coverOnlyMode ? 14 : 20) * viewScale;
         const containerWidth = Math.max(
             280,
             Number(gamesContainer.clientWidth || gamesContainer.getBoundingClientRect?.().width || 0)
@@ -66,7 +67,7 @@ export function renderGamesIncremental(gamesToRender, activeView = 'cover', opti
     const totalGames = Array.isArray(gamesToRender) ? gamesToRender.length : 0;
     const totalChunks = Math.ceil(totalGames / batchSize);
     const minChunksInDom = view === 'cover' ? 2 : 3;
-    const hardMaxChunksInDom = view === 'cover' ? 9 : (view === 'table' ? 18 : 16);
+    const hardMaxChunksInDom = view === 'cover' ? 7 : (view === 'table' ? 18 : 16);
 
     let mountTarget = null;
     let topSpacer = null;

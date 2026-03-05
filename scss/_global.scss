@@ -54,6 +54,7 @@ html[data-font-pixel="true"] {
 
 html {
     height: 100%;
+    font-size: 15px;
 }
 
 html.theme-transition-suspended *,
@@ -244,7 +245,51 @@ select {
     border-radius: var(--radius-input-top-left) var(--radius-input-top-right) var(--radius-input-bottom-right) var(--radius-input-bottom-left);
     cursor: pointer;
     font-size: 0.9rem;
-    transition: all 0.3s ease;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+html[data-theme="dark"] select {
+    color-scheme: dark;
+}
+
+html[data-theme="light"] select {
+    color-scheme: light;
+}
+
+select:not([multiple]) {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 30px;
+    background-image:
+        linear-gradient(45deg, transparent 50%, color-mix(in srgb, var(--text-secondary), white 14%) 50%),
+        linear-gradient(135deg, color-mix(in srgb, var(--text-secondary), white 14%) 50%, transparent 50%);
+    background-position:
+        calc(100% - 15px) calc(50% - 2px),
+        calc(100% - 10px) calc(50% - 2px);
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+}
+
+select option,
+select optgroup {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+select:hover,
+.custom-select:hover {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-color), transparent 48%);
+    background-color: color-mix(in srgb, var(--bg-tertiary), var(--accent-color) 4%);
+}
+
+select:focus,
+select:focus-visible {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--accent-color), transparent 38%),
+        0 0 0 3px color-mix(in srgb, var(--accent-color), transparent 78%);
 }
 
 input[type="text"], 

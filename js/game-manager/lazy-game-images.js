@@ -1,8 +1,12 @@
 export function createLazyGameImageActions(deps = {}) {
     const lazyPlaceholderSrc = String(deps.lazyPlaceholderSrc || '').trim();
     const resolveObserverRoot = typeof deps.resolveObserverRoot === 'function' ? deps.resolveObserverRoot : () => null;
+    const maxConcurrentLoads = Math.max(2, Math.min(16, Number(deps.maxConcurrentLoads) || 8));
     let gameImageObserver = null;
     let gameImageObserverRoot = null;
+    let queueDrainScheduled = false;
+    let inFlightImageCount = 0;
+    const pendingImageQueue = [];
 
     function unobserveLazyImage(img) {
         if (!img || !gameImageObserver) return;
@@ -45,14 +49,88 @@ export function createLazyGameImageActions(deps = {}) {
 
     function attachLazyImageLoadHandlers(img) {
         if (!img) return;
+        let settled = false;
         const onDone = () => {
-            if (img.dataset.lazyStatus !== 'loading') return;
-            markLazyImageLoaded(img);
+            if (settled) return;
+            settled = true;
+            if (img.dataset.lazyStatus === 'loading') {
+                markLazyImageLoaded(img);
+            }
             img.removeEventListener('load', onDone);
             img.removeEventListener('error', onDone);
+            completeLazyImageLoad(img);
         };
         img.addEventListener('load', onDone);
         img.addEventListener('error', onDone);
+    }
+
+    function getInFlightImageCount() {
+        return Math.max(0, Number(inFlightImageCount) || 0);
+    }
+
+    function completeLazyImageLoad(img) {
+        if (!img || img.dataset.lazyLoading !== '1') return;
+        delete img.dataset.lazyLoading;
+        inFlightImageCount = Math.max(0, inFlightImageCount - 1);
+        scheduleQueueDrain();
+    }
+
+    function sortImagesByViewportProximity(images) {
+        if (!Array.isArray(images) || images.length <= 1) return images;
+        const root = resolveObserverRoot() || null;
+        const rootRect = (root && typeof root.getBoundingClientRect === 'function')
+            ? root.getBoundingClientRect()
+            : null;
+        const viewportCenterY = rootRect
+            ? (rootRect.top + (rootRect.height / 2))
+            : ((window.innerHeight || document.documentElement.clientHeight || 0) / 2);
+        return images.sort((a, b) => {
+            const aRect = a.getBoundingClientRect();
+            const bRect = b.getBoundingClientRect();
+            const aCenter = aRect.top + (aRect.height / 2);
+            const bCenter = bRect.top + (bRect.height / 2);
+            return Math.abs(aCenter - viewportCenterY) - Math.abs(bCenter - viewportCenterY);
+        });
+    }
+
+    function scheduleQueueDrain() {
+        if (queueDrainScheduled) return;
+        queueDrainScheduled = true;
+        const run = () => {
+            queueDrainScheduled = false;
+            drainPendingImageQueue();
+        };
+        if (typeof window.requestIdleCallback === 'function') {
+            window.requestIdleCallback(run, { timeout: 90 });
+            return;
+        }
+        requestAnimationFrame(run);
+    }
+
+    function queueLazyImageLoad(img, urgent = false) {
+        if (!img) return;
+        if (img.dataset.lazyQueued === '1') return;
+        if (img.dataset.lazyStatus === 'loaded' || img.dataset.lazyStatus === 'loading') return;
+        img.dataset.lazyQueued = '1';
+        if (urgent) {
+            pendingImageQueue.unshift(img);
+        } else {
+            pendingImageQueue.push(img);
+        }
+        scheduleQueueDrain();
+    }
+
+    function drainPendingImageQueue() {
+        let inFlight = getInFlightImageCount();
+        while (inFlight < maxConcurrentLoads && pendingImageQueue.length > 0) {
+            const img = pendingImageQueue.shift();
+            if (!img) continue;
+            delete img.dataset.lazyQueued;
+            if (!img.isConnected) continue;
+            if (img.dataset.lazyStatus === 'loaded' || img.dataset.lazyStatus === 'loading') continue;
+            loadLazyImageNow(img);
+            inFlight = getInFlightImageCount();
+        }
     }
 
     function ensureGameImageObserver() {
@@ -69,15 +147,19 @@ export function createLazyGameImageActions(deps = {}) {
         gameImageObserverRoot = nextRoot;
 
         gameImageObserver = new IntersectionObserver((entries) => {
+            const visibleImages = [];
             entries.forEach((entry) => {
-                if (!entry.isIntersecting) return;
-                const img = entry.target;
-                loadLazyImageNow(img);
+                if (!entry.isIntersecting || !entry.target) return;
+                visibleImages.push(entry.target);
+            });
+
+            sortImagesByViewportProximity(visibleImages).forEach((img) => {
+                queueLazyImageLoad(img, true);
                 unobserveLazyImage(img);
             });
         }, {
             root: gameImageObserverRoot,
-            rootMargin: '360px 0px',
+            rootMargin: '260px 0px',
             threshold: 0
         });
 
@@ -97,10 +179,13 @@ export function createLazyGameImageActions(deps = {}) {
         }
 
         img.dataset.lazyStatus = 'loading';
+        img.dataset.lazyLoading = '1';
+        inFlightImageCount += 1;
         attachLazyImageLoadHandlers(img);
         img.src = source;
         if (img.complete && img.naturalWidth > 0) {
             markLazyImageLoaded(img);
+            completeLazyImageLoad(img);
         }
     }
 
@@ -139,13 +224,13 @@ export function createLazyGameImageActions(deps = {}) {
         }
 
         if (isLikelyVisibleNow(img)) {
-            loadLazyImageNow(img);
+            queueLazyImageLoad(img, true);
             return;
         }
 
         const observer = ensureGameImageObserver();
         if (!observer) {
-            loadLazyImageNow(img);
+            queueLazyImageLoad(img, true);
             return;
         }
 
@@ -166,6 +251,10 @@ export function createLazyGameImageActions(deps = {}) {
 
         if (scope.matches && scope.matches('img[data-lazy-src]')) {
             unobserveLazyImage(scope);
+            if (scope.dataset.lazyQueued === '1') {
+                delete scope.dataset.lazyQueued;
+            }
+            completeLazyImageLoad(scope);
             if (releaseSources) {
                 scope.removeAttribute('srcset');
                 scope.removeAttribute('sizes');
@@ -182,6 +271,10 @@ export function createLazyGameImageActions(deps = {}) {
         const images = scope.querySelectorAll ? scope.querySelectorAll('img[data-lazy-src]') : [];
         images.forEach((img) => {
             unobserveLazyImage(img);
+            if (img.dataset.lazyQueued === '1') {
+                delete img.dataset.lazyQueued;
+            }
+            completeLazyImageLoad(img);
             if (!releaseSources) return;
             img.removeAttribute('srcset');
             img.removeAttribute('sizes');
@@ -196,12 +289,16 @@ export function createLazyGameImageActions(deps = {}) {
     }
 
     function resetObserver() {
-        if (!gameImageObserver) return;
-        try {
-            gameImageObserver.disconnect();
-        } catch (_error) {}
-        gameImageObserver = null;
+        if (gameImageObserver) {
+            try {
+                gameImageObserver.disconnect();
+            } catch (_error) {}
+            gameImageObserver = null;
+        }
         gameImageObserverRoot = null;
+        pendingImageQueue.length = 0;
+        queueDrainScheduled = false;
+        inFlightImageCount = 0;
     }
 
     return {

@@ -428,6 +428,12 @@ export function renderGames(gamesToRender) {
     const activeViewBtn = document.querySelector('.view-btn.active');
     const activeView = activeViewBtn ? activeViewBtn.dataset.view : 'cover';
     const coverCardMode = getStoredCoverCardMode(localStorage);
+    const rootStyles = getComputedStyle(document.documentElement);
+    const viewScaleSignature = String(
+        rootStyles.getPropertyValue('--view-scale-user')
+        || rootStyles.getPropertyValue('--view-scale')
+        || '1'
+    ).trim() || '1';
     const now = Date.now();
     const signature = buildGamesRenderSignature({
         rows: gamesToRender,
@@ -435,7 +441,8 @@ export function renderGames(gamesToRender) {
         currentGroupBy,
         currentSort,
         currentSortDir,
-        coverCardMode
+        coverCardMode,
+        viewScale: viewScaleSignature
     });
     if (signature === lastRenderSignature && (now - lastRenderAt) < 220) {
         return;

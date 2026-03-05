@@ -127,9 +127,12 @@
 }
 
 #theme-select {
-    padding: 6px 12px;
+    padding: 6px 34px 6px 12px;
     height: 36px;
     border-radius: var(--radius-input) 0 0 var(--radius-input);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .theme-controls-content .dropdown-with-button-wrapper .theme-toggle {

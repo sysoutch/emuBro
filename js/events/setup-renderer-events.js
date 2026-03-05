@@ -774,6 +774,8 @@ export function setupRendererEventListeners(options = {}) {
             localStorage.setItem(COVER_CARD_MODE_STORAGE_KEY, activeCoverCardMode);
             applyGamesContainerClass();
             syncCoverCardModeControls();
+            if (getActiveTopSection() !== 'library' || getActiveLibrarySection() === 'emulators') return;
+            void renderActiveLibraryView();
         });
     });
 

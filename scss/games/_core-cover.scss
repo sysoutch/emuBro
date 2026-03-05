@@ -928,6 +928,14 @@
     border-color: color-mix(in srgb, var(--success-color), white 10%);
 }
 
+body.panel-docked .games-load-indicator {
+    right: calc(var(--dock-panel-width) + 34px);
+}
+
+[data-os="win32"] body.panel-docked .games-load-indicator {
+    right: calc(var(--dock-panel-width) + 34px + var(--win-border-w));
+}
+
 /* Cover View Card */
 .game-card {
     /* Frosted glass card */

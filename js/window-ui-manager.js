@@ -39,7 +39,7 @@ export function setupWindowControls(options = {}) {
     if (closeBtn) closeBtn.addEventListener('click', () => emubro.invoke('window:close'));
     if (maxBtn) maxBtn.addEventListener('click', async () => {
         await emubro.invoke('window:toggle-maximize');
-        updateMaxIcon();
+        scheduleMaxIconSync(70);
     });
 
     const setWindowStateAttr = (isMax) => {
@@ -59,6 +59,24 @@ export function setupWindowControls(options = {}) {
             maxBtn.setAttribute('aria-label', isMax ? 'Restore' : 'Maximize');
             setWindowStateAttr(isMax);
         } catch (_e) {}
+    };
+
+    let maxIconSyncRaf = null;
+    let maxIconSyncTimer = null;
+    const scheduleMaxIconSync = (delayMs = 110) => {
+        if (maxIconSyncRaf !== null) {
+            window.cancelAnimationFrame(maxIconSyncRaf);
+        }
+        maxIconSyncRaf = window.requestAnimationFrame(() => {
+            maxIconSyncRaf = null;
+            void updateMaxIcon();
+        });
+        if (maxIconSyncTimer) {
+            window.clearTimeout(maxIconSyncTimer);
+        }
+        maxIconSyncTimer = window.setTimeout(() => {
+            void updateMaxIcon();
+        }, Math.max(0, Number(delayMs) || 0));
     };
 
     const syncUpdateBadge = () => {
@@ -86,6 +104,18 @@ export function setupWindowControls(options = {}) {
     if (typeof emubro.onWindowMaximizedChanged === 'function') {
         emubro.onWindowMaximizedChanged((isMax) => updateMaxIcon(!!isMax));
     }
+
+    window.addEventListener('resize', () => {
+        scheduleMaxIconSync(140);
+    }, { passive: true });
+    window.addEventListener('focus', () => {
+        scheduleMaxIconSync(40);
+    });
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            scheduleMaxIconSync(30);
+        }
+    });
 
     if (updateBtn) {
         updateBtn.addEventListener('click', async () => {
@@ -168,7 +198,7 @@ export function setupWindowControls(options = {}) {
             event.preventDefault();
             event.stopPropagation();
             await emubro.invoke('window:toggle-maximize');
-            updateMaxIcon();
+            scheduleMaxIconSync(70);
         });
     }
 
@@ -238,9 +268,10 @@ export function setupHeaderThemeControlsToggle(options = {}) {
         };
     };
 
-    const themeCompactQuery = createHeaderWidthQuery(1500);
-    // Keep language toggle behavior aligned with CSS: compact buttons are shown from compact density and below.
-    const languageCompactQuery = createHeaderWidthQuery(1500);
+    // Keep toggle click behavior aligned with density rules in applyHeaderDensityMode:
+    // compact starts at <= 1720, tiny at <= 1480.
+    const themeCompactQuery = createHeaderWidthQuery(1720);
+    const languageCompactQuery = createHeaderWidthQuery(1720);
 
     let densityRaf = null;
 
@@ -254,11 +285,11 @@ export function setupHeaderThemeControlsToggle(options = {}) {
         // Simple, robust density detection
         let density = 'normal';
         
-        if (headerWidth <= 1500) {
+        if (headerWidth <= 1720) {
             density = 'compact';
         }
         
-        if (headerWidth <= 1320) {
+        if (headerWidth <= 1480) {
             density = 'tiny';
         }
 

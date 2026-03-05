@@ -40,7 +40,8 @@ export function buildGamesRenderSignature({
     currentGroupBy = 'none',
     currentSort = 'name',
     currentSortDir = 'asc',
-    coverCardMode = 'cover-title'
+    coverCardMode = 'cover-title',
+    viewScale = '1'
 } = {}) {
     const list = Array.isArray(rows) ? rows : [];
     const total = list.length;
@@ -54,6 +55,7 @@ export function buildGamesRenderSignature({
         String(currentSort || 'name'),
         String(currentSortDir || 'asc'),
         String(normalizeCoverCardMode(coverCardMode || 'cover-title')),
+        String(viewScale || '1'),
         total,
         firstId,
         lastId

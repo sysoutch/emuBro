@@ -723,16 +723,76 @@ fn allowed_roots_from_config(config: &Value) -> Vec<PathBuf> {
         .collect()
 }
 
-fn path_allowed_for_remote_access(path: &Path, config: &Value) -> bool {
-    let roots = allowed_roots_from_config(config);
+fn path_dedupe_key(path: &Path) -> String {
+    canonicalize_or_same(path)
+        .unwrap_or_else(|| path.to_path_buf())
+        .to_string_lossy()
+        .to_lowercase()
+}
+
+fn should_augment_allowed_roots_with_game_paths(roots: &[PathBuf]) -> bool {
+    if roots.is_empty() {
+        return true;
+    }
+    let managed_root = managed_data_root();
+    roots
+        .iter()
+        .all(|root| path_is_within_root(root, &managed_root))
+}
+
+fn effective_allowed_roots_from_config(config: &Value) -> Vec<PathBuf> {
+    let mut roots = allowed_roots_from_config(config);
+    if !should_augment_allowed_roots_with_game_paths(&roots) {
+        return roots;
+    }
+
+    let mut seen = std::collections::HashSet::<String>::new();
+    for root in &roots {
+        seen.insert(path_dedupe_key(root));
+    }
+
+    for game in read_state_array("games") {
+        let path_text = game
+            .get("filePath")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .trim()
+            .to_string();
+        if path_text.is_empty() || is_launch_uri(&path_text) {
+            continue;
+        }
+        let path = PathBuf::from(&path_text);
+        let candidate = if path.is_dir() {
+            path
+        } else {
+            path.parent().map(|p| p.to_path_buf()).unwrap_or(path)
+        };
+        if candidate.as_os_str().is_empty() {
+            continue;
+        }
+        let key = path_dedupe_key(&candidate);
+        if seen.insert(key) {
+            roots.push(candidate);
+        }
+    }
+
+    roots
+}
+
+fn path_allowed_for_remote_access_with_roots(path: &Path, roots: &[PathBuf]) -> bool {
     if roots.is_empty() {
         return false;
     }
-    roots.into_iter().any(|root| path_is_within_root(path, &root))
+    roots.iter().any(|root| path_is_within_root(path, root))
+}
+
+fn path_allowed_for_remote_access(path: &Path, config: &Value) -> bool {
+    let roots = effective_allowed_roots_from_config(config);
+    path_allowed_for_remote_access_with_roots(path, &roots)
 }
 
 fn remote_list_games_for_client(config: &Value) -> Vec<Value> {
-    let roots = allowed_roots_from_config(config);
+    let roots = effective_allowed_roots_from_config(config);
     let roots_exist = !roots.is_empty();
     read_state_array("games")
         .into_iter()
@@ -749,7 +809,7 @@ fn remote_list_games_for_client(config: &Value) -> Vec<Value> {
 
             if !is_launch_uri(&path_text) && roots_exist {
                 let file_path = PathBuf::from(&path_text);
-                if !path_allowed_for_remote_access(&file_path, config) {
+                if !path_allowed_for_remote_access_with_roots(&file_path, &roots) {
                     return None;
                 }
             }
