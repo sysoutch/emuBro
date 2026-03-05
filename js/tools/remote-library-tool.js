@@ -80,6 +80,8 @@ export function renderRemoteLibraryTool({ t, escapeHtml, showTextInputDialog, lo
     let clientHosts = [];
     let activeHost = null;
     let remoteGames = [];
+    let isScanning = false;
+    let isBrowsing = false;
 
     const setStatus = (message, level = 'info') => {
         if (!statusEl) return;
@@ -257,9 +259,14 @@ export function renderRemoteLibraryTool({ t, escapeHtml, showTextInputDialog, lo
     };
 
     const scanHosts = async () => {
+        if (isScanning) return;
+        isScanning = true;
+        if (scanBtn) scanBtn.disabled = true;
         setStatus(t('tools.remoteLibraryScanning', 'Scanning LAN for hosts...'), 'info');
         try {
-            const response = await window.emubro.invoke('remote:client:scan');
+            const response = await window.emubro.invoke('remote:client:scan', {
+                includeLocalSelf: false
+            });
             if (!response?.success) {
                 setStatus(response?.message || t('tools.remoteLibraryScanFailed', 'Scan failed.'), 'error');
                 return;
@@ -285,18 +292,30 @@ export function renderRemoteLibraryTool({ t, escapeHtml, showTextInputDialog, lo
             });
             await window.emubro.invoke('remote:client:set-hosts', { hosts: clientHosts });
             renderHosts();
-            setStatus(t('tools.remoteLibraryScanDone', 'Scan completed.'), 'success');
+            if (discovered.length === 0) {
+                setStatus(t('tools.remoteLibraryNoHosts', 'No hosts yet. Scan your LAN to discover hosts.'), 'warning');
+            } else {
+                setStatus(t('tools.remoteLibraryScanDone', 'Scan completed.'), 'success');
+            }
         } catch (error) {
             setStatus(String(error?.message || error || t('tools.remoteLibraryScanFailed', 'Scan failed.')), 'error');
+        } finally {
+            isScanning = false;
+            if (scanBtn) scanBtn.disabled = false;
         }
     };
 
     const loadRemoteGames = async () => {
+        if (isBrowsing) return;
         if (!activeHost || !activeHost.token) {
             setStatus(t('tools.remoteLibrarySelectPaired', 'Select a paired host first.'), 'warning');
             renderGames();
             return;
         }
+        isBrowsing = true;
+        hostsEl?.querySelectorAll?.('[data-remote-host-action="browse"]').forEach((btn) => {
+            btn.disabled = true;
+        });
         setStatus(t('tools.remoteLibraryLoadingGames', 'Loading remote games...'), 'info');
         try {
             const response = await window.emubro.invoke('remote:client:list-games', {
@@ -309,9 +328,28 @@ export function renderRemoteLibraryTool({ t, escapeHtml, showTextInputDialog, lo
             }
             remoteGames = Array.isArray(response.games) ? response.games : [];
             renderGames();
-            setStatus(t('tools.remoteLibraryLoaded', 'Loaded {{count}} games.', { count: remoteGames.length }), 'success');
+            if (!remoteGames.length) {
+                const diagnostics = response?.diagnostics || {};
+                const totalGames = Number(diagnostics.totalGames || 0);
+                const blockedByRoots = Number(diagnostics.blockedByRoots || 0);
+                const hostMessage = String(response?.message || '').trim();
+                if (hostMessage) {
+                    setStatus(hostMessage, 'warning');
+                } else if (totalGames > 0 && blockedByRoots >= totalGames) {
+                    setStatus(t('tools.remoteLibraryNoSharedByRoots', 'Host has games, but none are inside allowed transfer roots.'), 'warning');
+                } else {
+                    setStatus(t('tools.remoteLibraryNoGames', 'No games returned from host.'), 'warning');
+                }
+            } else {
+                setStatus(t('tools.remoteLibraryLoaded', 'Loaded {{count}} games.', { count: remoteGames.length }), 'success');
+            }
         } catch (error) {
             setStatus(String(error?.message || error || t('tools.remoteLibraryLoadFailed', 'Failed to load games.')), 'error');
+        } finally {
+            isBrowsing = false;
+            hostsEl?.querySelectorAll?.('[data-remote-host-action="browse"]').forEach((btn) => {
+                btn.disabled = false;
+            });
         }
     };
 

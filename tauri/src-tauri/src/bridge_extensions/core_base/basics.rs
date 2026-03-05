@@ -189,6 +189,156 @@ fn resource_search_roots() -> Vec<PathBuf> {
     roots
 }
 
+fn default_resources_storage_dir() -> PathBuf {
+    managed_data_root().join("emubro-resources")
+}
+
+fn configured_resources_storage_dir() -> PathBuf {
+    let config = read_state_value_or_default(RESOURCES_UPDATE_CONFIG_KEY, json!({}));
+    for key in ["effectiveStoragePath", "storagePath", "defaultStoragePath"] {
+        let value = config
+            .get(key)
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .trim()
+            .to_string();
+        if value.is_empty() {
+            continue;
+        }
+        return PathBuf::from(value);
+    }
+    default_resources_storage_dir()
+}
+
+fn has_resources_manifest(path: &Path) -> bool {
+    path.join("manifest.json").exists() && path.join("manifest.json").is_file()
+}
+
+fn directory_is_empty(path: &Path) -> bool {
+    if !path.exists() || !path.is_dir() {
+        return true;
+    }
+    match fs::read_dir(path) {
+        Ok(mut entries) => entries.next().is_none(),
+        Err(_) => false,
+    }
+}
+
+fn path_identity_key(path: &Path) -> String {
+    let normalized = fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+    normalized.to_string_lossy().to_lowercase()
+}
+
+fn should_skip_seed_path(relative_path: &Path) -> bool {
+    relative_path.components().any(|component| {
+        let text = component.as_os_str().to_string_lossy();
+        text.eq_ignore_ascii_case(".git") || text.eq_ignore_ascii_case(".github")
+    })
+}
+
+fn copy_resources_tree(source_dir: &Path, target_dir: &Path) -> Result<(), String> {
+    ensure_directory(target_dir)?;
+
+    for entry in WalkDir::new(source_dir) {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let path = entry.path();
+        let relative_path = path.strip_prefix(source_dir).map_err(|e| e.to_string())?;
+        if relative_path.as_os_str().is_empty() {
+            continue;
+        }
+        if should_skip_seed_path(relative_path) {
+            continue;
+        }
+
+        let target_path = target_dir.join(relative_path);
+        if entry.file_type().is_dir() {
+            ensure_directory(&target_path)?;
+            continue;
+        }
+        if !entry.file_type().is_file() {
+            continue;
+        }
+        if let Some(parent) = target_path.parent() {
+            ensure_directory(parent)?;
+        }
+        fs::copy(path, &target_path).map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
+fn find_bundled_resources_seed_source(target_dir: &Path) -> Option<PathBuf> {
+    let target_key = path_identity_key(target_dir);
+    let mut seen = std::collections::HashSet::<String>::new();
+
+    for root in resource_search_roots() {
+        let mut candidates = vec![
+            root.clone(),
+            root.join("emubro-resources"),
+            root.join("legacy").join("emubro-resources"),
+            root.join("bundle-resources").join("emubro-resources"),
+            root.join("bundle-resources")
+                .join("legacy")
+                .join("emubro-resources"),
+            root.join("resources").join("emubro-resources"),
+            root.join("resources")
+                .join("bundle-resources")
+                .join("emubro-resources"),
+            root.join("resources")
+                .join("bundle-resources")
+                .join("legacy")
+                .join("emubro-resources"),
+        ];
+
+        if root
+            .file_name()
+            .and_then(|name| name.to_str())
+            .map(|name| name.eq_ignore_ascii_case("emubro-resources"))
+            .unwrap_or(false)
+        {
+            candidates.push(root.clone());
+        }
+
+        for candidate in candidates {
+            let key = path_identity_key(&candidate);
+            if !seen.insert(key.clone()) {
+                continue;
+            }
+            if key == target_key {
+                continue;
+            }
+            if !candidate.exists() || !candidate.is_dir() {
+                continue;
+            }
+            if !has_resources_manifest(&candidate) {
+                continue;
+            }
+            return Some(candidate);
+        }
+    }
+
+    None
+}
+
+pub(crate) fn ensure_resources_storage_seeded_from_bundle() -> Result<bool, String> {
+    let target_dir = configured_resources_storage_dir();
+    if target_dir.exists() && target_dir.is_dir() && has_resources_manifest(&target_dir) {
+        return Ok(false);
+    }
+
+    let can_seed = !target_dir.exists() || (target_dir.is_dir() && directory_is_empty(&target_dir));
+    if !can_seed {
+        return Ok(false);
+    }
+
+    let Some(source_dir) = find_bundled_resources_seed_source(&target_dir) else {
+        return Ok(false);
+    };
+
+    copy_resources_tree(&source_dir, &target_dir)?;
+    Ok(true)
+}
+
 pub(crate) fn locale_file_path(base: &Path, file_name: &str) -> Option<PathBuf> {
     let name = String::from(file_name).trim().to_string();
     if name.is_empty() {

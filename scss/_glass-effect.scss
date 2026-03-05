@@ -45,6 +45,13 @@
         -webkit-backdrop-filter: none;
     }
 
+    .games-container.emulators-view .emulator-card,
+    .games-container.emulators-view .emulator-list-item,
+    .games-container.emulators-view .emulators-table {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+
     .game-card:hover,
     .tools-overview .tool-card:hover,
     .emulator-card:hover,

@@ -36,6 +36,11 @@ pub(crate) use migration::{
 };
 
 pub(crate) fn bootstrap_background_services() {
+    match ensure_resources_storage_seeded_from_bundle() {
+        Ok(true) => eprintln!("[resources-bootstrap] Seeded emubro-resources from bundled assets."),
+        Ok(false) => {}
+        Err(error) => eprintln!("[resources-bootstrap] Failed to seed bundled resources: {}", error),
+    }
     remote::bootstrap_runtime_from_saved_config();
 }
 

@@ -25,6 +25,7 @@ const DEFAULT_REMOTE_HOST_PORT: u16 = 38477;
 const DEFAULT_REMOTE_DISCOVERY_PORT: u16 = 38478;
 const DEFAULT_SCAN_TIMEOUT_MS: u64 = 1100;
 const DEFAULT_HTTP_TIMEOUT_MS: u64 = 3500;
+const LIST_GAMES_HTTP_TIMEOUT_MS: u64 = 12_000;
 const DOWNLOAD_TIMEOUT_MS: u64 = 90_000;
 const REMOTE_API_BASE: &str = "/api/remote";
 
@@ -791,10 +792,13 @@ fn path_allowed_for_remote_access(path: &Path, config: &Value) -> bool {
     path_allowed_for_remote_access_with_roots(path, &roots)
 }
 
-fn remote_list_games_for_client(config: &Value) -> Vec<Value> {
+fn remote_list_games_for_client(config: &Value) -> Value {
     let roots = effective_allowed_roots_from_config(config);
     let roots_exist = !roots.is_empty();
-    read_state_array("games")
+    let source_games = read_state_array("games");
+    let total_games = source_games.len();
+    let mut blocked_by_roots = 0usize;
+    let games = source_games
         .into_iter()
         .filter_map(|game| {
             let path_text = game
@@ -810,6 +814,7 @@ fn remote_list_games_for_client(config: &Value) -> Vec<Value> {
             if !is_launch_uri(&path_text) && roots_exist {
                 let file_path = PathBuf::from(&path_text);
                 if !path_allowed_for_remote_access_with_roots(&file_path, &roots) {
+                    blocked_by_roots += 1;
                     return None;
                 }
             }
@@ -822,7 +827,27 @@ fn remote_list_games_for_client(config: &Value) -> Vec<Value> {
                 "platformShortName": game.get("platformShortName").and_then(|v| v.as_str()).unwrap_or("").to_string()
             }))
         })
-        .collect::<Vec<Value>>()
+        .collect::<Vec<Value>>();
+    let shared_games = games.len();
+
+    let mut message = String::new();
+    if total_games == 0 {
+        message = "Host library is empty.".to_string();
+    } else if shared_games == 0 && roots_exist {
+        message = "No games are currently shared by this host. Check host allowed transfer roots.".to_string();
+    }
+
+    json!({
+        "games": games,
+        "diagnostics": {
+            "totalGames": total_games,
+            "sharedGames": shared_games,
+            "blockedByRoots": blocked_by_roots,
+            "allowedRootsCount": roots.len(),
+            "usingRootFilter": roots_exist
+        },
+        "message": message
+    })
 }
 
 fn parse_ureq_error(err: ureq::Error) -> String {
@@ -948,9 +973,20 @@ fn remote_client_list_games(payload: &Value) -> Value {
         return json!({ "success": false, "message": "Missing remote host URL or token." });
     }
     let url = format!("{}/list-games", remote_api_base_url(&host_url));
-    match remote_http_post_json(&url, &json!({ "token": token }), DEFAULT_HTTP_TIMEOUT_MS) {
+    match remote_http_post_json(&url, &json!({ "token": token }), LIST_GAMES_HTTP_TIMEOUT_MS) {
         Ok(response) => response,
-        Err(message) => json!({ "success": false, "message": message }),
+        Err(message) => {
+            let lower = message.to_lowercase();
+            if lower.contains("timed out") || lower.contains("timeout") {
+                json!({
+                    "success": false,
+                    "message": "Timed out while loading remote games. Try again, or reduce shared library size/allowed roots on host.",
+                    "code": "timeout"
+                })
+            } else {
+                json!({ "success": false, "message": message })
+            }
+        }
     }
 }
 
@@ -1071,19 +1107,45 @@ fn subnet_broadcast_candidate() -> Option<Ipv4Addr> {
     Some(Ipv4Addr::from(octets))
 }
 
+fn discovery_ports_for_scan(payload: &Value, config: &Value) -> Vec<u16> {
+    let mut ports = Vec::<u16>::new();
+    let mut seen = HashSet::<u16>::new();
+    let mut add = |port: u16| {
+        if seen.insert(port) {
+            ports.push(port);
+        }
+    };
+    if payload.get("discoveryPort").is_some() {
+        add(normalize_port(
+            payload.get("discoveryPort"),
+            DEFAULT_REMOTE_DISCOVERY_PORT,
+        ));
+    }
+    add(normalize_port(
+        config.get("discoveryPort"),
+        DEFAULT_REMOTE_DISCOVERY_PORT,
+    ));
+    add(DEFAULT_REMOTE_DISCOVERY_PORT);
+    ports
+}
+
 fn remote_scan_hosts(payload: &Value) -> Value {
     let config = read_remote_host_config();
-    let discovery_port = normalize_port(
-        payload.get("discoveryPort").or_else(|| config.get("discoveryPort")),
-        DEFAULT_REMOTE_DISCOVERY_PORT,
-    );
+    let discovery_ports = discovery_ports_for_scan(payload, &config);
     let timeout_ms = payload
         .get("timeoutMs")
         .and_then(|v| v.as_u64())
         .map(|v| v.clamp(250, 3500))
         .unwrap_or(DEFAULT_SCAN_TIMEOUT_MS);
 
-    let mut discovered = discover_remote_hosts_udp(discovery_port, timeout_ms);
+    let include_local_self = payload
+        .get("includeLocalSelf")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let mut discovered = Vec::<Value>::new();
+    for port in &discovery_ports {
+        discovered.extend(discover_remote_hosts_udp(*port, timeout_ms));
+    }
     let existing = read_remote_client_hosts();
 
     for host in &existing {
@@ -1101,7 +1163,7 @@ fn remote_scan_hosts(payload: &Value) -> Value {
         }
     }
 
-    if config.get("enabled").and_then(|v| v.as_bool()).unwrap_or(false) {
+    if include_local_self && config.get("enabled").and_then(|v| v.as_bool()).unwrap_or(false) {
         discovered.push(local_remote_host_info(&config));
     }
 
@@ -1177,7 +1239,8 @@ fn remote_scan_hosts(payload: &Value) -> Value {
     json!({
         "success": true,
         "hosts": saved,
-        "discoveryPort": discovery_port
+        "discoveryPort": discovery_ports.first().copied().unwrap_or(DEFAULT_REMOTE_DISCOVERY_PORT),
+        "discoveryPorts": discovery_ports
     })
 }
 
@@ -1439,10 +1502,15 @@ fn remote_handle_http_request(mut request: TinyRequest) {
     }
 
     if path == format!("{}/list-games", REMOTE_API_BASE) {
-        let games = remote_list_games_for_client(&config);
+        let listing = remote_list_games_for_client(&config);
         let _ = request.respond(tiny_json_response(
             200,
-            &json!({ "success": true, "games": games }),
+            &json!({
+                "success": true,
+                "games": listing.get("games").cloned().unwrap_or_else(|| json!([])),
+                "diagnostics": listing.get("diagnostics").cloned().unwrap_or_else(|| json!({})),
+                "message": listing.get("message").and_then(|v| v.as_str()).unwrap_or("")
+            }),
         ));
         return;
     }

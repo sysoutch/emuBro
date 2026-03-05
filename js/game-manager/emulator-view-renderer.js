@@ -8,9 +8,90 @@ export function createEmulatorViewRenderer(deps = {}) {
     const emulatorTypeTabs = Array.isArray(deps.emulatorTypeTabs) && deps.emulatorTypeTabs.length > 0
         ? deps.emulatorTypeTabs
         : DEFAULT_TYPE_TABS;
+    const EMULATOR_ICON_PALETTE_CACHE_KEY = 'emuBro.emulatorIconPaletteCache.v1';
+    const EMULATOR_ICON_PALETTE_CACHE_MAX = Math.max(40, Number(deps.emulatorIconPaletteCacheMax) || 160);
     const emulatorIconPaletteCache = new Map();
     let currentSort = 'name';
     let currentSortDir = 'asc';
+    const EMULATOR_GRID_PERF_THRESHOLD = Math.max(40, Number(deps.emulatorGridPerfThreshold) || 90);
+    let paletteCachePersistTimer = null;
+
+    function normalizePalette(palette) {
+        if (!Array.isArray(palette) || palette.length < 3) return null;
+        const normalized = palette
+            .slice(0, 3)
+            .map((entry) => String(entry || '').trim())
+            .filter(Boolean);
+        if (normalized.length < 3) return null;
+        return normalized;
+    }
+
+    function trimPaletteCacheToLimit() {
+        while (emulatorIconPaletteCache.size > EMULATOR_ICON_PALETTE_CACHE_MAX) {
+            const firstKey = emulatorIconPaletteCache.keys().next().value;
+            if (!firstKey) break;
+            emulatorIconPaletteCache.delete(firstKey);
+        }
+    }
+
+    function schedulePaletteCachePersist() {
+        if (paletteCachePersistTimer) return;
+        paletteCachePersistTimer = window.setTimeout(() => {
+            paletteCachePersistTimer = null;
+            try {
+                const rows = [];
+                emulatorIconPaletteCache.forEach((palette, source) => {
+                    const normalized = normalizePalette(palette);
+                    if (!normalized) return;
+                    rows.push([String(source), normalized]);
+                });
+                localStorage.setItem(EMULATOR_ICON_PALETTE_CACHE_KEY, JSON.stringify(rows));
+            } catch (_error) {}
+        }, 450);
+    }
+
+    function setCachedPalette(source, palette) {
+        const key = String(source || '').trim();
+        const normalized = normalizePalette(palette);
+        if (!key || !normalized) return;
+        if (emulatorIconPaletteCache.has(key)) {
+            emulatorIconPaletteCache.delete(key);
+        }
+        emulatorIconPaletteCache.set(key, normalized);
+        trimPaletteCacheToLimit();
+        schedulePaletteCachePersist();
+    }
+
+    function getCachedPalette(source) {
+        const key = String(source || '').trim();
+        if (!key || !emulatorIconPaletteCache.has(key)) return null;
+        const palette = normalizePalette(emulatorIconPaletteCache.get(key));
+        if (!palette) {
+            emulatorIconPaletteCache.delete(key);
+            return null;
+        }
+        emulatorIconPaletteCache.delete(key);
+        emulatorIconPaletteCache.set(key, palette);
+        return palette;
+    }
+
+    function restorePaletteCacheFromStorage() {
+        try {
+            const raw = localStorage.getItem(EMULATOR_ICON_PALETTE_CACHE_KEY);
+            if (!raw) return;
+            const parsed = JSON.parse(raw);
+            if (!Array.isArray(parsed)) return;
+            parsed.forEach((entry) => {
+                if (!Array.isArray(entry) || entry.length < 2) return;
+                const source = String(entry[0] || '').trim();
+                const palette = normalizePalette(entry[1]);
+                if (!source || !palette) return;
+                emulatorIconPaletteCache.set(source, palette);
+            });
+            trimPaletteCacheToLimit();
+        } catch (_error) {}
+    }
+    restorePaletteCacheFromStorage();
 
     function normalizeEmulatorType(type) {
         const value = String(type || '').trim().toLowerCase();
@@ -62,6 +143,59 @@ export function createEmulatorViewRenderer(deps = {}) {
 
     function toRgbaColor(rgb, alpha) {
         return `rgba(${clampColorChannel(rgb.r)}, ${clampColorChannel(rgb.g)}, ${clampColorChannel(rgb.b)}, ${alpha})`;
+    }
+
+    function hashStringToSeed(value) {
+        const text = String(value || '');
+        let hash = 0;
+        for (let i = 0; i < text.length; i += 1) {
+            hash = ((hash << 5) - hash) + text.charCodeAt(i);
+            hash |= 0;
+        }
+        return Math.abs(hash);
+    }
+
+    function hslToRgb(h, s, l) {
+        const hue = ((Number(h) % 360) + 360) % 360;
+        const sat = Math.max(0, Math.min(100, Number(s) || 0)) / 100;
+        const light = Math.max(0, Math.min(100, Number(l) || 0)) / 100;
+        const c = (1 - Math.abs((2 * light) - 1)) * sat;
+        const x = c * (1 - Math.abs(((hue / 60) % 2) - 1));
+        const m = light - (c / 2);
+        let r = 0;
+        let g = 0;
+        let b = 0;
+        if (hue < 60) {
+            r = c; g = x; b = 0;
+        } else if (hue < 120) {
+            r = x; g = c; b = 0;
+        } else if (hue < 180) {
+            r = 0; g = c; b = x;
+        } else if (hue < 240) {
+            r = 0; g = x; b = c;
+        } else if (hue < 300) {
+            r = x; g = 0; b = c;
+        } else {
+            r = c; g = 0; b = x;
+        }
+        return {
+            r: Math.round((r + m) * 255),
+            g: Math.round((g + m) * 255),
+            b: Math.round((b + m) * 255)
+        };
+    }
+
+    function fallbackPaletteFromSource(source) {
+        const seed = hashStringToSeed(source || 'emubro-platform');
+        const baseHue = seed % 360;
+        const colorA = hslToRgb(baseHue, 68, 56);
+        const colorB = hslToRgb((baseHue + 38) % 360, 64, 54);
+        const colorC = hslToRgb((baseHue + 320) % 360, 58, 46);
+        return [
+            toRgbaColor(colorA, 0.48),
+            toRgbaColor(colorB, 0.42),
+            toRgbaColor(colorC, 0.36)
+        ];
     }
 
     function extractPaletteFromPlatformIcon(image) {
@@ -145,33 +279,56 @@ export function createEmulatorViewRenderer(deps = {}) {
         card.style.setProperty('--emulator-glow-3', palette[2]);
     }
 
-    function applyPlatformColorBlurToEmulatorCards(root) {
+    function applyPlatformColorBlurToEmulatorCards(root, options = {}) {
+        if (options && options.enabled === false) return;
         if (!root) return;
         const cards = root.querySelectorAll('.emulator-card');
+        const allowExtraction = options?.allowExtraction !== false;
+        const maxSourcesToExtract = Number.isFinite(Number(options?.maxSourcesToExtract))
+            ? Math.max(0, Math.round(Number(options.maxSourcesToExtract)))
+            : Number.POSITIVE_INFINITY;
+        let extractedSources = 0;
+
+        const cardsBySource = new Map();
         cards.forEach((card) => {
             const icon = card.querySelector('.emulator-platform-icon');
             if (!icon) return;
+            const source = String(icon.currentSrc || icon.src || icon.getAttribute('src') || '').trim();
+            if (!source) return;
+            if (!cardsBySource.has(source)) {
+                cardsBySource.set(source, []);
+            }
+            cardsBySource.get(source).push({ card, icon });
+        });
 
-            const applyFromIcon = () => {
-                const source = String(icon.currentSrc || icon.src || '').trim();
-                if (!source) return;
+        cardsBySource.forEach((items, source) => {
+            const cached = getCachedPalette(source);
+            if (cached) {
+                items.forEach(({ card }) => applyPaletteToEmulatorCard(card, cached));
+                return;
+            }
+            const fallback = fallbackPaletteFromSource(source);
+            items.forEach(({ card }) => applyPaletteToEmulatorCard(card, fallback));
+            if (!allowExtraction || extractedSources >= maxSourcesToExtract) return;
+            extractedSources += 1;
 
-                const cached = emulatorIconPaletteCache.get(source);
-                if (cached) {
-                    applyPaletteToEmulatorCard(card, cached);
-                    return;
-                }
-
-                const extracted = extractPaletteFromPlatformIcon(icon);
+            const applyExtractedPalette = () => {
+                const sample = items.find(({ icon }) => Number(icon?.naturalWidth || 0) > 0)?.icon || items[0]?.icon;
+                if (!sample) return;
+                const extracted = extractPaletteFromPlatformIcon(sample);
                 if (!extracted) return;
-                emulatorIconPaletteCache.set(source, extracted);
-                applyPaletteToEmulatorCard(card, extracted);
+                setCachedPalette(source, extracted);
+                items.forEach(({ card }) => applyPaletteToEmulatorCard(card, extracted));
             };
 
-            if (icon.complete && Number(icon.naturalWidth || 0) > 0) {
-                applyFromIcon();
-            } else {
-                icon.addEventListener('load', applyFromIcon, { once: true });
+            const readyIcon = items.find(({ icon }) => icon.complete && Number(icon.naturalWidth || 0) > 0)?.icon || null;
+            if (readyIcon) {
+                applyExtractedPalette();
+                return;
+            }
+            const firstIcon = items[0]?.icon;
+            if (firstIcon) {
+                firstIcon.addEventListener('load', applyExtractedPalette, { once: true });
             }
         });
     }
@@ -241,6 +398,11 @@ export function createEmulatorViewRenderer(deps = {}) {
 
         const grid = document.createElement('div');
         grid.className = 'emulators-grid';
+        const performanceMode = emulatorsToRender.length >= EMULATOR_GRID_PERF_THRESHOLD;
+        if (performanceMode) {
+            grid.classList.add('is-performance-mode');
+            container.classList.add('is-performance-mode');
+        }
         grid.innerHTML = emulatorsToRender.map((emulator) => {
             const shortName = String(emulator.platformShortName || 'unknown').toLowerCase();
             const platformName = emulator.platform || emulator.platformShortName || i18n.t('gameDetails.unknown');
@@ -274,7 +436,11 @@ export function createEmulatorViewRenderer(deps = {}) {
 
         container.appendChild(grid);
         gamesContainer.appendChild(container);
-        applyPlatformColorBlurToEmulatorCards(container);
+        applyPlatformColorBlurToEmulatorCards(container, {
+            enabled: true,
+            allowExtraction: true,
+            maxSourcesToExtract: performanceMode ? 12 : Number.POSITIVE_INFINITY
+        });
         wireEmulatorCardInteractions(container, emulatorsToRender, options);
     }
 
@@ -430,13 +596,18 @@ export function createEmulatorViewRenderer(deps = {}) {
             showEmulatorDetails(emulator, options);
         };
 
-        root.querySelectorAll('[data-emu-key]').forEach((item) => {
-            item.addEventListener('click', () => activate(item));
-            item.addEventListener('keydown', (event) => {
-                if (event.key !== 'Enter' && event.key !== ' ') return;
-                event.preventDefault();
-                activate(item);
-            });
+        root.addEventListener('click', (event) => {
+            const item = event?.target?.closest?.('[data-emu-key]');
+            if (!item || !root.contains(item)) return;
+            activate(item);
+        });
+
+        root.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            const item = event?.target?.closest?.('[data-emu-key]');
+            if (!item || !root.contains(item)) return;
+            event.preventDefault();
+            activate(item);
         });
     }
 

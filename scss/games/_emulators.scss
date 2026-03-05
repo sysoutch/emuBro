@@ -65,6 +65,9 @@
     position: relative;
     overflow: hidden;
     cursor: pointer;
+    contain: layout style paint;
+    content-visibility: auto;
+    contain-intrinsic-size: 320px 210px;
     box-shadow: 0 16px 30px -24px rgba(0, 0, 0, 0.82);
     transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
@@ -172,6 +175,26 @@
     opacity: 1;
     transform: translate(-50%, -50%) scale(1);
     box-shadow: 0 16px 30px rgba(0,0,0,0.35);
+}
+
+.emulators-grid.is-performance-mode .emulator-card {
+    box-shadow: 0 10px 18px -16px rgba(0, 0, 0, 0.72);
+    transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.emulators-grid.is-performance-mode .emulator-card:hover {
+    transform: none;
+    box-shadow: 0 12px 20px -16px rgba(0, 0, 0, 0.74);
+}
+
+.emulators-grid.is-performance-mode .emulator-card-hero::before {
+    inset: -20%;
+    filter: blur(calc(8px * var(--view-scale))) saturate(1.04);
+    opacity: 0.76;
+}
+
+.emulators-grid.is-performance-mode .emulator-card-hover-action {
+    display: none;
 }
 
 .emulator-title {

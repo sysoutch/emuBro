@@ -280,3 +280,9 @@ Priority order for moving from alpha churn to beta-readiness:
   - this replaces the old "not available in Tauri build" stub
 - Follow-up improvement target:
   - migrate from browser-assisted update to signed in-place updater (Tauri updater plugin + signing keys + endpoint)
+- Release hardening plan (keep in backlog):
+  - Add dedicated GitHub CI workflow for PRs/branches with build/test matrices (separate from tag release workflow).
+  - Protect release tag flow (`v*`) with rulesets + gated release environment approvals.
+  - Publish cryptographic integrity data with releases (at least SHA256 checksums; ideally signed artifacts/attestations).
+- Operator directive (from user):
+  - Do not create commits unless the user explicitly asks for a commit.
