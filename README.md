@@ -114,6 +114,9 @@ If you want to run the latest development version:
 - `npm run build:linux:flatpak` builds Linux Flatpak (`flatpak-builder` required).
 - `npm run build:mac` builds macOS `.app` + `.dmg` (run on macOS host/runner).
 
+### Release Gate
+- Use the release checklist before shipping: `docs/release/SHIP_CHECKLIST.md`
+
 ## :white_check_mark: Usage
 1. Launch emuBro
 2. Browse and select a game to play
