@@ -26,6 +26,10 @@ pub(crate) fn should_keep_main_window_hidden() -> bool {
     START_HIDDEN_FOR_GAME_LAUNCH.load(Ordering::SeqCst)
 }
 
+pub(crate) fn bootstrap_background_services() {
+    bridge_extensions::bootstrap_background_services();
+}
+
 pub(crate) fn emubro_invoke_impl(channel: String, args: Vec<Value>, window: Window) -> Result<Value, String> {
     invoke::emubro_invoke_impl(channel, args, window)
 }

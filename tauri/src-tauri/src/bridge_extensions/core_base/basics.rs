@@ -66,6 +66,13 @@ pub(crate) fn find_locales_dir() -> Option<PathBuf> {
         let candidates = [
             root.join("locales"),
             root.join("legacy").join("locales"),
+            root.join("bundle-resources").join("locales"),
+            root.join("bundle-resources").join("legacy").join("locales"),
+            root.join("resources").join("bundle-resources").join("locales"),
+            root.join("resources")
+                .join("bundle-resources")
+                .join("legacy")
+                .join("locales"),
         ];
         for path in candidates {
             if path.exists() && path.is_dir() {
@@ -81,6 +88,22 @@ pub(crate) fn find_platforms_dir() -> Option<PathBuf> {
         let candidates = [
             root.join("emubro-resources").join("platforms"),
             root.join("legacy").join("emubro-resources").join("platforms"),
+            root.join("bundle-resources")
+                .join("emubro-resources")
+                .join("platforms"),
+            root.join("bundle-resources")
+                .join("legacy")
+                .join("emubro-resources")
+                .join("platforms"),
+            root.join("resources")
+                .join("bundle-resources")
+                .join("emubro-resources")
+                .join("platforms"),
+            root.join("resources")
+                .join("bundle-resources")
+                .join("legacy")
+                .join("emubro-resources")
+                .join("platforms"),
         ];
         for path in candidates {
             if path.exists() && path.is_dir() {

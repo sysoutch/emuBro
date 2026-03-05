@@ -140,6 +140,8 @@ fn main() {
                 }
             }
 
+            app_core::bootstrap_background_services();
+
             if let Err(error) = single_instance::spawn_listener(app.handle().clone()) {
                 eprintln!("[single-instance] {}", error);
             }
