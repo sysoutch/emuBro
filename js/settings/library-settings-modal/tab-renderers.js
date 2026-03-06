@@ -160,8 +160,10 @@ export function renderUpdatesTab({
     const currentVersion = escapeAttr(updateState.currentVersion || '');
     const latestVersion = escapeAttr(updateState.latestVersion || '');
     const notes = String(updateState.releaseNotes || '').trim();
-    const canDownload = !!updateState.available && !updateState.downloaded && !updateState.downloading && !updateState.installing;
-    const canInstall = !!updateState.downloaded && !updateState.downloading && !updateState.installing;
+    const hasDownloadUrl = /^https?:\/\//i.test(String(updateState.downloadUrl || '').trim());
+    const canDownload = !!updateState.available && hasDownloadUrl && !updateState.downloaded && !updateState.downloading && !updateState.installing;
+    const canInstall = (!!updateState.downloaded || (!!updateState.available && !hasDownloadUrl)) && !updateState.downloading && !updateState.installing;
+    const installLabel = updateState.downloaded ? 'Install & Restart' : 'Open Release Page';
     const resourcesStatus = escapeAttr(renderResourcesUpdateStatusText());
     const resourcesCurrentVersion = escapeAttr(resourcesUpdateState.currentVersion || '');
     const resourcesLatestVersion = escapeAttr(resourcesUpdateState.latestVersion || '');
@@ -212,7 +214,7 @@ export function renderUpdatesTab({
                 <div style="display:flex;flex-wrap:wrap;gap:8px;">
                     <button type="button" class="action-btn" data-update-action="check"${(updateState.checking || updateState.downloading || updateState.installing) ? ' disabled' : ''}>Check for Updates</button>
                     <button type="button" class="action-btn" data-update-action="download"${canDownload ? '' : ' disabled'}>Download Update</button>
-                    <button type="button" class="action-btn launch-btn" data-update-action="install"${canInstall ? '' : ' disabled'}>Install & Restart</button>
+                    <button type="button" class="action-btn launch-btn" data-update-action="install"${canInstall ? '' : ' disabled'}>${installLabel}</button>
                 </div>
                 ${notes ? `<pre style="margin:0;padding:10px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-primary);white-space:pre-wrap;font-family:var(--font-body);font-size:0.85rem;">${escapeAttr(notes)}</pre>` : ''}
             </section>

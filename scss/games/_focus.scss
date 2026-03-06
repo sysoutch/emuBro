@@ -25,6 +25,18 @@
     background:
         radial-gradient(86% 90% at 42% 32%, color-mix(in srgb, var(--accent-color), transparent 88%), transparent 72%),
         linear-gradient(180deg, color-mix(in srgb, var(--bg-secondary), transparent 6%), color-mix(in srgb, var(--bg-primary), transparent 8%));
+    --focus-chip-bg: color-mix(in srgb, var(--bg-secondary), transparent 16%);
+    --focus-chip-border: color-mix(in srgb, var(--border-color), rgba(255, 255, 255, 0.22));
+    --focus-chip-bg-active: color-mix(in srgb, var(--accent-color), var(--bg-secondary) 52%);
+    --focus-chip-text: var(--text-secondary);
+    --focus-chip-text-active: var(--text-primary);
+    --focus-item-bg: color-mix(in srgb, var(--bg-quaternary), transparent 20%);
+    --focus-item-border: color-mix(in srgb, var(--border-color), rgba(255, 255, 255, 0.18));
+    --focus-item-bg-active: color-mix(in srgb, var(--accent-color), var(--bg-secondary) 50%);
+    --focus-item-shadow-active: color-mix(in srgb, var(--accent-color), transparent 62%);
+    --focus-overlay-soft: color-mix(in srgb, var(--bg-primary), transparent 96%);
+    --focus-overlay-mid: color-mix(in srgb, var(--bg-primary), transparent 88%);
+    --focus-overlay-strong: color-mix(in srgb, var(--bg-primary), transparent 78%);
 }
 
 .focus-backdrop {
@@ -45,8 +57,8 @@
     inset: 0;
     pointer-events: none;
     background:
-        radial-gradient(84% 72% at 50% 44%, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.12) 62%, rgba(0, 0, 0, 0.22)),
-        linear-gradient(180deg, rgba(0, 0, 0, 0.03), rgba(0, 0, 0, 0.09));
+        radial-gradient(84% 72% at 50% 44%, var(--focus-overlay-soft), var(--focus-overlay-mid) 62%, var(--focus-overlay-strong)),
+        linear-gradient(180deg, color-mix(in srgb, var(--bg-primary), transparent 97%), color-mix(in srgb, var(--bg-primary), transparent 90%));
 }
 
 .focus-layout {
@@ -91,10 +103,10 @@
 
 .focus-platform-btn {
     flex: 0 0 auto;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--focus-chip-border);
     border-radius: 999px;
-    background: rgba(0, 0, 0, 0.24);
-    color: var(--text-secondary);
+    background: var(--focus-chip-bg);
+    color: var(--focus-chip-text);
     padding: 7px 12px;
     font-size: 0.78rem;
     letter-spacing: 0.05em;
@@ -112,9 +124,9 @@
 }
 
 .focus-platform-btn.is-active {
-    background: color-mix(in srgb, var(--accent-color), black 60%);
+    background: var(--focus-chip-bg-active);
     border-color: color-mix(in srgb, var(--accent-color), white 16%);
-    color: color-mix(in srgb, var(--text-primary), white 10%);
+    color: var(--focus-chip-text-active);
 }
 
 .focus-platform-btn:focus-visible {
@@ -173,10 +185,10 @@
 }
 
 .focus-list-item {
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(4, 10, 20, 0.78);
+    border: 1px solid var(--focus-item-border);
+    background: var(--focus-item-bg);
     border-radius: 9px;
-    color: color-mix(in srgb, var(--text-primary), white 10%);
+    color: var(--text-primary);
     text-align: left;
     padding: 9px 13px;
     min-height: 36px;
@@ -195,14 +207,14 @@
 
 .focus-list-item:hover {
     border-color: color-mix(in srgb, var(--accent-color), white 14%);
-    color: color-mix(in srgb, var(--text-primary), white 16%);
+    color: var(--text-primary);
 }
 
 .focus-list-item.is-active {
-    background: color-mix(in srgb, var(--accent-color), black 54%);
+    background: var(--focus-item-bg-active);
     border-color: color-mix(in srgb, var(--accent-color), white 14%);
-    color: color-mix(in srgb, var(--text-primary), white 20%);
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-color), transparent 62%) inset;
+    color: var(--text-primary);
+    box-shadow: 0 0 0 1px var(--focus-item-shadow-active) inset;
 }
 
 .focus-list-item:focus-visible {
@@ -247,7 +259,7 @@
 .focus-preview-image-wrap {
     border-radius: 14px;
     overflow: hidden;
-    background: rgba(0, 0, 0, 0.26);
+    background: color-mix(in srgb, var(--bg-quaternary), transparent 14%);
     min-height: 0;
     flex: 1 1 auto;
     max-height: 72%;
@@ -288,10 +300,27 @@
     align-items: center;
     padding: 6px 10px;
     border-radius: 999px;
-    background: rgba(0, 0, 0, 0.28);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: color-mix(in srgb, var(--bg-secondary), transparent 16%);
+    border: 1px solid color-mix(in srgb, var(--border-color), rgba(255, 255, 255, 0.22));
     color: var(--text-secondary);
     font-size: 0.82rem;
+}
+
+[data-theme="light"] .focus-container {
+    --focus-chip-bg: color-mix(in srgb, #ffffff, var(--bg-secondary) 30%);
+    --focus-chip-border: color-mix(in srgb, var(--border-color), white 40%);
+    --focus-chip-bg-active: color-mix(in srgb, var(--accent-color), white 58%);
+    --focus-item-bg: color-mix(in srgb, #ffffff, var(--bg-secondary) 36%);
+    --focus-item-border: color-mix(in srgb, var(--border-color), white 36%);
+    --focus-item-bg-active: color-mix(in srgb, var(--accent-color), white 56%);
+    --focus-overlay-soft: color-mix(in srgb, #ffffff, transparent 88%);
+    --focus-overlay-mid: color-mix(in srgb, var(--bg-secondary), transparent 76%);
+    --focus-overlay-strong: color-mix(in srgb, var(--bg-tertiary), transparent 72%);
+}
+
+[data-theme="light"] .focus-backdrop {
+    filter: invert(var(--invert-media-compensation, 0)) blur(30px) saturate(1.02) brightness(1.05);
+    opacity: 0.2;
 }
 
 .focus-preview-desc {

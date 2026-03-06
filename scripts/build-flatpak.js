@@ -39,9 +39,9 @@ run("flatpak", ["--version"]);
 run("cargo", ["--version"]);
 
 console.log("[flatpak] Building frontend and Rust binary...");
-run("npm", ["--prefix", "tauri", "run", "build"]);
+run("npm", ["--prefix", "desktop", "run", "build"]);
 run("node", ["scripts/sync-bundle-resources.js"]);
-run("cargo", ["build", "--manifest-path", "tauri/src-tauri/Cargo.toml", "--release"]);
+run("cargo", ["build", "--manifest-path", "desktop/src-tauri/Cargo.toml", "--release"]);
 
 console.log("[flatpak] Building Flatpak repo...");
 fs.rmSync(appDir, { recursive: true, force: true });

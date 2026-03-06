@@ -1,6 +1,0 @@
-/dist
-/node_modules
-/src-tauri/target
-/src-tauri/gen
-/src-tauri/.emubro-tauri-state.db
-/src-tauri/.emubro-tauri-state.json

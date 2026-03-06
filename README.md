@@ -4,7 +4,7 @@
 
 emuBro is an open source retro game launcher for Windows, Linux, and macOS. It allows you to manage all your games and emulators such as snes9x, epsxe, pcsx2, dolphin, or whatever you like.
 
-This desktop app now runs on a **Tauri + Vue + Pinia** stack for a lighter, faster, native-backed experience.
+This desktop app now runs on a **Rust desktop shell + Vue + Pinia** stack for a lighter, faster, native-backed experience.
 
 ![](https://preview.redd.it/zpx8ciq23a831.png?width=600&format=png&auto=webp&v=enabled&s=fc5c19c4f90500b829bd709fca996c38770af01c "Retro Game Launcher for cool kids")
 
@@ -80,7 +80,7 @@ The support prompt explicitly blocks piracy/cracked BIOS guidance and focuses on
 ### For Developers
 - [Node.js](https://nodejs.org/) (Latest LTS recommended)
 - [Git](https://git-scm.com/)
-- [Rust](https://www.rust-lang.org/tools/install) (required by Tauri)
+- [Rust](https://www.rust-lang.org/tools/install) (required by the desktop shell)
 
 ## :wrench: Installation
 
@@ -107,9 +107,9 @@ If you want to run the latest development version:
    ```
 
 ### Migration Commands
-- `npm run dev` starts the new Tauri + Vue + Pinia app.
-- `npm run dev:web` starts only the Vue frontend (no Tauri shell).
-- `npm run build` builds the new Tauri desktop app.
+- `npm run dev` starts the new desktop shell + Vue + Pinia app.
+- `npm run dev:web` starts only the Vue frontend (no desktop shell).
+- `npm run build` builds the new desktop app.
 - `npm run build:linux:appimage` builds Linux AppImage.
 - `npm run build:linux:flatpak` builds Linux Flatpak (`flatpak-builder` required).
 - `npm run build:mac` builds macOS `.app` + `.dmg` (run on macOS host/runner).

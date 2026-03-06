@@ -55,13 +55,13 @@ Priority order for moving from alpha churn to beta-readiness:
 - `js/tools-manager.js` - 314 LOC - 14.6 KB (refactored; keep trimming by extracting placeholders if needed)
 - `js/settings/library-settings-modal.js` - 554 LOC - 25.4 KB (refactored; event/update/path/save handlers extracted)
 - `js/language-manager.js` - 458 LOC - 17.1 KB (refactored; modal event wiring extracted)
-- `js/game-manager/game-details-popup-actions.js` — 1,333 LOC — 60.3 KB
-- `js/library/categories-list-renderer.js` — 1,256 LOC — 62.8 KB
-- `js/drag-drop-manager.js` — 1,179 LOC — 50.2 KB
-- `js/support-manager.js` — 1,147 LOC — 50.6 KB
-- `js/events/setup-renderer-events.js` — 1,040 LOC — 46.3 KB
-- `js/game-manager/emulator-config-actions.js` — 1,030 LOC — 47.9 KB
-- `js/theme-manager.js` — 839 LOC — 30.0 KB
+- `js/game-manager/game-details-popup-actions.js` â€” 1,333 LOC â€” 60.3 KB
+- `js/library/categories-list-renderer.js` â€” 1,256 LOC â€” 62.8 KB
+- `js/drag-drop-manager.js` â€” 1,179 LOC â€” 50.2 KB
+- `js/support-manager.js` â€” 1,147 LOC â€” 50.6 KB
+- `js/events/setup-renderer-events.js` â€” 1,040 LOC â€” 46.3 KB
+- `js/game-manager/emulator-config-actions.js` â€” 1,030 LOC â€” 47.9 KB
+- `js/theme-manager.js` â€” 839 LOC â€” 30.0 KB
 
 ## Recent Changes
 - Continued `js/settings/library-settings-modal.js` refactor by extracting core/general/import/gamepad wiring into `js/settings/library-settings-modal/core-handlers.js`.
@@ -69,8 +69,8 @@ Priority order for moving from alpha churn to beta-readiness:
 - Continued `js/settings/library-settings-modal.js` refactor by extracting app/resource update actions into `js/settings/library-settings-modal/update-actions.js`.
 - Continued `js/settings/library-settings-modal.js` refactor by extracting managed path list/relocation handlers into `js/settings/library-settings-modal/path-section-handlers.js`.
 - Continued `js/settings/library-settings-modal.js` refactor by extracting save/apply settings flow into `js/settings/library-settings-modal/save-settings.js`.
-- Added missing Tauri suggestions bridge channel `suggestions:generate-tool-draft` via `tauri/src-tauri/src/bridge_extensions/suggestions/tool_draft.rs` and wired it into `suggestions/channels.rs`.
-- Improved Tauri community in-app browser flow in `tauri/src-tauri/src/app_core/invoke/community.rs`: reuse existing `community-browser` window with URL navigation, allow navigation explicitly, and only recreate window when reuse navigation fails.
+- Added missing Tauri suggestions bridge channel `suggestions:generate-tool-draft` via `desktop/src-tauri/src/bridge_extensions/suggestions/tool_draft.rs` and wired it into `suggestions/channels.rs`.
+- Improved Tauri community in-app browser flow in `desktop/src-tauri/src/app_core/invoke/community.rs`: reuse existing `community-browser` window with URL navigation, allow navigation explicitly, and only recreate window when reuse navigation fails.
 - Verified Tauri invoke channel coverage: all current renderer `window.emubro.invoke(...)` channels now have Rust-side handlers.
 - Continued `js/language-manager.js` refactor by extracting modal DOM lookup and event wiring into `js/language-manager/modal-events.js`.
 - Continued `js/settings/library-settings-modal.js` refactor by extracting options/default function resolution into `js/settings/library-settings-modal/options-resolver.js`.
@@ -157,7 +157,7 @@ Priority order for moving from alpha churn to beta-readiness:
   - Improved color propagation/update consistency and reduced repetitive blue-biased outcomes
 - Moved runtime backup rule editing from global Settings into Emulator Edit modal (`js/game-manager/emulator-config-actions.js`) via a new "Runtime Backup" tab
 - Added emulator-specific runtime backup rules (`runtimeDataRules`) to emulator local config and wired them into game launch payload creation
-- Updated launch pipeline (`js/game-manager/missing-game-recovery.js`, `js/game-manager.js`, `electron/legacy/main/ipc/games.js`, `electron/legacy/main/game-session-manager.js`) to accept per-launch runtime backup rules
+- Updated launch pipeline (`js/game-manager/missing-game-recovery.js`, `js/game-manager.js`) to accept per-launch runtime backup rules
 - Added in-app game session overlay controls (`js/game-session-overlay.js`, `renderer.js`) with actions for Show emuBro, Alt+Enter, screenshot, and quit game process
 - Added BIOS Manager tool view (`js/tools-manager.js`, `index.html`, locale updates) to list BIOS folders/files per platform, add BIOS files, and open folders
 - Updated launch flow to persist `lastPlayed` directly in main process on successful launch for better Recently Played consistency
@@ -171,10 +171,10 @@ Priority order for moving from alpha churn to beta-readiness:
 - Fixed GitHub Release workflow:
   - Added `permissions: contents: write` to the release job to allow artifact upload and release creation
   - Added `npm run sync:resources` step to CI build to ensure `emubro-resources` are present during packaging
-  - Explicitly linked `electron/legacy/electron-builder.config.js` in packaging commands
+  - Removed legacy packaging hooks from packaging commands
   - Fixed Linux build error by switching to PNG icon (`icon.png`) as ICO is not supported by `app-builder` on Linux
   - Resolved GitHub API race conditions (404 Not Found on asset delete/overwrite) by switching to `--publish onTag` and performing clean tag resets
-  - Ensured release visibility by explicitly setting `releaseType: "release"` in `electron/legacy/electron-builder.config.js`
+  - Ensured release visibility with explicit GitHub Release publish flow and retries
   - Added explicit artifact upload step for CI debugging and fallback access
   - Modernized `sass-loader` configuration in `webpack.config.js` to address missing CSS in production builds
 - Committed documentation and core feature enhancements to git
@@ -182,7 +182,7 @@ Priority order for moving from alpha churn to beta-readiness:
 - Implemented Language Manager with progress tracking, editing, and creation capabilities
 - Added flag icons to language selector using `flag-icons` library
 - Replaced standard select dropdown with custom styled dropdown for languages
-- Rewrote `README.md` to reflect the transition from Java to Electron/Node.js, removing outdated requirements and adding build instructions
+- Rewrote `README.md` to reflect the transition from Java to the desktop shell stack, removing outdated requirements and adding build instructions
 - Applied glass effect styling to List, Table, Slideshow, and Random views in `scss/_glass-effect.scss`
 - Fixed Table view styling and added image sizing constraints
 - Implemented missing CSS for Slideshow view (carousel layout, transitions, controls)
@@ -226,7 +226,7 @@ Priority order for moving from alpha churn to beta-readiness:
    - `rendering/` (`lazy-images.js`, `incremental-render.js`, `filters-sort.js`)
    - `index.js` as the compatibility entry exporting current public API
 10. Keep exports stable during refactor so `renderer.js` and other consumers do not break
-11. Refactor `electron/legacy/main.js` into modular files under `electron/legacy/main/` (window lifecycle, IPC handlers, library/db, launcher, download/install, locale manager) to reduce coupling and improve startup reliability
+11. Refactor remaining oversized runtime modules to reduce coupling and improve startup reliability
 12. Future TODO Bank (requested by user):
    - Auto memory card / save-state backups to AppData
    - Auto in-game screenshotter to build multi-image cover sets per game
@@ -238,13 +238,13 @@ Priority order for moving from alpha churn to beta-readiness:
 ## Active Decisions and Considerations
 - Using CSS Grid for the main `games-container` but `flex-column` or `block` overrides (via `grid-column: 1 / -1`) for non-grid views like List, Table, and Slideshow
 - Extending Glass Effect (backdrop-filter) to all view containers for consistency when enabled
-- Using Tauri for cross-platform compatibility (Electron runtime is retained in `electron/legacy/` only)
+- Using Tauri for cross-platform compatibility
 - Implementing Steam-like interface design
 - Supporting multiple themes through localStorage
 - Multi-language support through i18n system
 - Modular architecture with separate managers for different functionalities
 - `js/game-manager.js` has grown too large; ongoing work should prioritize modularization into `js/game-manager/` with stable interfaces
-- `electron/legacy/main.js` is also too large and should be split into domain modules with a small composition entrypoint
+- Keep splitting oversized runtime modules into domain modules with a small composition entrypoint
 
 ## Important Patterns and Preferences
 - Component-based architecture
@@ -257,13 +257,13 @@ Priority order for moving from alpha churn to beta-readiness:
 ## Learnings and Project Insights
 - When dynamically generating HTML classes in JS (e.g. `list-item-image`), ensure strict synchronization with SCSS selectors
 - `scss/_games.scss` serves as the central stylesheet for all game visualization modes, not just the default grid
-- The project requires careful consideration of Electron's main vs renderer process architecture
+- The project requires careful consideration of backend vs renderer process architecture
 - Theme customization needs to be well-structured for both custom and community themes
 - Internationalization should be implemented early to support multi-language features
 - Game library management will be a core feature requiring robust data handling
 - Tauri bundle resources in CI must exist before Rust build scripts run:
-  - keep a tracked placeholder (`tauri/src-tauri/bundle-resources/.keep`)
-  - sync generated resources before `tauri dev` and `tauri build`
+  - keep a tracked placeholder (`desktop/src-tauri/bundle-resources/.keep`)
+  - sync generated resources before `desktop:dev` and `desktop:build`
   - use `bundle-resources/**/*` in `tauri.conf.json` so file-only globs always match
 - Do not copy VCS metadata into synced bundle resources:
   - exclude `.git` and `.github` while copying to avoid watch-triggered rebuild loops in dev
@@ -277,7 +277,7 @@ Priority order for moving from alpha churn to beta-readiness:
   - `update:check` queries GitHub latest release API and compares semver
   - `update:download` and `update:install` open the best matching platform asset or release page
   - update state/config are persisted via state KV (`app:update:state:v1`, `app:update:config:v1`)
-  - this replaces the old "not available in Tauri build" stub
+  - this replaces the old "not available in desktop:build" stub
 - Follow-up improvement target:
   - migrate from browser-assisted update to signed in-place updater (Tauri updater plugin + signing keys + endpoint)
 - Release hardening plan (keep in backlog):
@@ -286,3 +286,4 @@ Priority order for moving from alpha churn to beta-readiness:
   - Publish cryptographic integrity data with releases (at least SHA256 checksums; ideally signed artifacts/attestations).
 - Operator directive (from user):
   - Do not create commits unless the user explicitly asks for a commit.
+

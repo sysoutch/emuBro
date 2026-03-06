@@ -245,7 +245,7 @@ export function createMissingGameRecoveryActions(deps = {}) {
                 gameId: Number(gameId),
                 lastPlayed: new Date().toISOString()
             });
-            await reloadGamesFromMainAndRender();
+            await reloadGamesFromMainAndRender({ preserveScroll: true, anchorGameId: Number(gameId) });
             return true;
         }
 
@@ -305,7 +305,7 @@ export function createMissingGameRecoveryActions(deps = {}) {
                         gameId: Number(gameId),
                         lastPlayed: new Date().toISOString()
                     });
-                    await reloadGamesFromMainAndRender();
+                    await reloadGamesFromMainAndRender({ preserveScroll: true, anchorGameId: Number(gameId) });
                     return true;
                 }
                 if (retryResult?.code === 'GAME_FILE_MISSING') {
@@ -342,7 +342,7 @@ export function createMissingGameRecoveryActions(deps = {}) {
                         gameId: Number(gameId),
                         lastPlayed: new Date().toISOString()
                     });
-                    await reloadGamesFromMainAndRender();
+                    await reloadGamesFromMainAndRender({ preserveScroll: true, anchorGameId: Number(gameId) });
                     return true;
                 }
                 if (retryResult?.code === 'GAME_FILE_MISSING') {
@@ -364,7 +364,7 @@ export function createMissingGameRecoveryActions(deps = {}) {
                 gameId: Number(gameId),
                 lastPlayed: new Date().toISOString()
             });
-            await reloadGamesFromMainAndRender();
+            await reloadGamesFromMainAndRender({ preserveScroll: true, anchorGameId: Number(gameId) });
             return;
         }
 

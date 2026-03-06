@@ -93,6 +93,107 @@ let lastRenderedView = 'cover';
 let launchCandidateResolver = null;
 let globalSizeWheelShortcutBound = false;
 const gameCoverCacheBusters = new Map();
+let cardShineInteractionsBound = false;
+
+function resolveGamesScrollRoot() {
+    return document.querySelector('.game-scroll-body')
+        || document.querySelector('main.game-grid')
+        || document.getElementById('games-container')?.parentElement
+        || null;
+}
+
+function findClosestVisibleGameAnchor(root) {
+    if (!root || typeof root.querySelectorAll !== 'function') return null;
+    const rootRect = root.getBoundingClientRect?.();
+    if (!rootRect) return null;
+    const viewportTop = Number(rootRect.top || 0);
+    const viewportBottom = Number(rootRect.bottom || (viewportTop + Number(root.clientHeight || 0)));
+
+    let best = null;
+    root.querySelectorAll('[data-game-id]').forEach((node) => {
+        if (!(node instanceof Element) || !node.isConnected) return;
+        const gameId = Number(node.getAttribute('data-game-id') || 0);
+        if (!gameId) return;
+        const rect = node.getBoundingClientRect?.();
+        if (!rect) return;
+        if (rect.bottom < viewportTop || rect.top > viewportBottom) return;
+        const offset = rect.top - viewportTop;
+        const score = Math.abs(offset);
+        if (!best || score < best.score) {
+            best = { gameId, offset, score };
+        }
+    });
+
+    return best ? { gameId: best.gameId, offset: best.offset } : null;
+}
+
+function captureGamesScrollPosition(options = {}) {
+    const root = resolveGamesScrollRoot();
+    if (!root) return null;
+    const requestedAnchorId = Number(options?.anchorGameId || 0);
+    let anchorGameId = requestedAnchorId > 0 ? requestedAnchorId : 0;
+    let anchorOffset = null;
+
+    if (anchorGameId > 0) {
+        const anchorEl = root.querySelector(`[data-game-id="${anchorGameId}"]`);
+        if (anchorEl && typeof anchorEl.getBoundingClientRect === 'function') {
+            const rootRect = root.getBoundingClientRect?.();
+            const anchorRect = anchorEl.getBoundingClientRect();
+            if (rootRect) {
+                anchorOffset = Number(anchorRect.top || 0) - Number(rootRect.top || 0);
+            }
+        }
+    } else {
+        const fallbackAnchor = findClosestVisibleGameAnchor(root);
+        if (fallbackAnchor?.gameId) {
+            anchorGameId = fallbackAnchor.gameId;
+            anchorOffset = Number(fallbackAnchor.offset || 0);
+        }
+    }
+
+    return {
+        root,
+        top: Number(root.scrollTop || 0),
+        left: Number(root.scrollLeft || 0),
+        anchorGameId: anchorGameId > 0 ? anchorGameId : 0,
+        anchorOffset: Number.isFinite(anchorOffset) ? Number(anchorOffset) : null
+    };
+}
+
+function restoreGamesScrollPosition(snapshot, attempts = 3) {
+    if (!snapshot || !snapshot.root || !snapshot.root.isConnected) return;
+    const root = snapshot.root;
+    const targetLeft = Math.max(0, Number(snapshot.left || 0));
+    const anchorGameId = Number(snapshot.anchorGameId || 0);
+    const hasAnchorOffset = Number.isFinite(snapshot.anchorOffset);
+    const maxTop = Math.max(0, Number(root.scrollHeight || 0) - Number(root.clientHeight || 0));
+    const maxLeft = Math.max(0, Number(root.scrollWidth || 0) - Number(root.clientWidth || 0));
+    root.scrollLeft = Math.min(targetLeft, maxLeft);
+
+    let appliedAnchor = false;
+    if (anchorGameId > 0 && hasAnchorOffset) {
+        const anchorEl = root.querySelector(`[data-game-id="${anchorGameId}"]`);
+        if (anchorEl && typeof anchorEl.getBoundingClientRect === 'function') {
+            const rootRect = root.getBoundingClientRect?.();
+            const anchorRect = anchorEl.getBoundingClientRect();
+            if (rootRect) {
+                const currentOffset = Number(anchorRect.top || 0) - Number(rootRect.top || 0);
+                const delta = currentOffset - Number(snapshot.anchorOffset || 0);
+                const nextTop = Math.max(0, Math.min(maxTop, Number(root.scrollTop || 0) + delta));
+                root.scrollTop = nextTop;
+                appliedAnchor = true;
+            }
+        }
+    }
+
+    if (!appliedAnchor) {
+        const targetTop = Math.max(0, Number(snapshot.top || 0));
+        root.scrollTop = Math.min(targetTop, maxTop);
+    }
+
+    if (attempts <= 1) return;
+    window.requestAnimationFrame(() => restoreGamesScrollPosition(snapshot, attempts - 1));
+}
 
 function getEmulatorDownloadActions() {
     if (!emulatorDownloadActions) {
@@ -212,6 +313,8 @@ function getEmulatorViewRenderer() {
             escapeHtml,
             getEmulatorKey,
             showEmulatorDetails: (emulator, options) => showEmulatorDetails(emulator, options),
+            launchEmulatorAction: (emulator) => launchEmulatorAction(emulator),
+            downloadAndInstallEmulatorAction: (emulator) => downloadAndInstallEmulatorAction(emulator),
             emulatorTypeTabs: EMULATOR_TYPE_TABS
         });
     }
@@ -356,6 +459,119 @@ function setupGlobalSizeWheelShortcut() {
     }, { passive: false, capture: true });
 }
 
+function clamp01(value) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return 0;
+    return Math.max(0, Math.min(1, num));
+}
+
+function resolveInteractiveCardElement(target, root) {
+    if (!(target instanceof Element)) return null;
+
+    const emulatorCard = target.closest('.emulator-card');
+    if (emulatorCard && root.contains(emulatorCard)) return emulatorCard;
+
+    const gameStack = target.closest('.game-card-stack');
+    if (gameStack && root.contains(gameStack)) return gameStack;
+
+    const gameCard = target.closest('.game-card');
+    if (gameCard && root.contains(gameCard)) return gameCard;
+
+    return null;
+}
+
+function getCardVarTargets(card) {
+    if (!(card instanceof Element)) return [];
+    if (card.classList.contains('game-card-stack')) {
+        const inner = card.querySelector('.game-card');
+        return inner && inner !== card ? [card, inner] : [card];
+    }
+    if (card.classList.contains('game-card')) {
+        const stack = card.closest('.game-card-stack');
+        if (stack && stack !== card) return [stack, card];
+    }
+    return [card];
+}
+
+function resetCardShine(card) {
+    const targets = getCardVarTargets(card);
+    targets.forEach((target) => {
+        if (!target || !target.style) return;
+        target.style.removeProperty('--card-pointer-x');
+        target.style.removeProperty('--card-pointer-y');
+        target.style.removeProperty('--card-shine-dx');
+        target.style.removeProperty('--card-shine-dy');
+        target.style.removeProperty('--card-tilt-x');
+        target.style.removeProperty('--card-tilt-y');
+    });
+}
+
+function updateCardShine(card, clientX, clientY) {
+    if (!card || typeof card.getBoundingClientRect !== 'function') return;
+    const rect = card.getBoundingClientRect();
+    if (!rect || rect.width <= 0 || rect.height <= 0) return;
+
+    const x = clamp01((Number(clientX || 0) - rect.left) / rect.width);
+    const y = clamp01((Number(clientY || 0) - rect.top) / rect.height);
+    const dx = (x - 0.5) * 14;
+    const dy = (y - 0.5) * 10;
+    const tiltY = (x - 0.5) * 10;
+    const tiltX = (0.5 - y) * 8;
+
+    const targets = getCardVarTargets(card);
+    targets.forEach((target) => {
+        if (!target || !target.style) return;
+        target.style.setProperty('--card-pointer-x', `${(x * 100).toFixed(2)}%`);
+        target.style.setProperty('--card-pointer-y', `${(y * 100).toFixed(2)}%`);
+        target.style.setProperty('--card-shine-dx', `${dx.toFixed(2)}px`);
+        target.style.setProperty('--card-shine-dy', `${dy.toFixed(2)}px`);
+        target.style.setProperty('--card-tilt-x', `${tiltX.toFixed(2)}deg`);
+        target.style.setProperty('--card-tilt-y', `${tiltY.toFixed(2)}deg`);
+    });
+}
+
+function bindInteractiveCardShine(root) {
+    if (!root || cardShineInteractionsBound) return;
+    cardShineInteractionsBound = true;
+
+    let rafId = 0;
+    let pendingCard = null;
+    let pendingX = 0;
+    let pendingY = 0;
+
+    const flushMove = () => {
+        rafId = 0;
+        if (!pendingCard) return;
+        updateCardShine(pendingCard, pendingX, pendingY);
+        pendingCard = null;
+    };
+
+    root.addEventListener('pointermove', (event) => {
+        const card = resolveInteractiveCardElement(event?.target, root);
+        if (!card || !root.contains(card)) return;
+        pendingCard = card;
+        pendingX = Number(event.clientX || 0);
+        pendingY = Number(event.clientY || 0);
+        if (!rafId) {
+            rafId = window.requestAnimationFrame(flushMove);
+        }
+    }, { passive: true });
+
+    root.addEventListener('pointerout', (event) => {
+        const leavingCard = resolveInteractiveCardElement(event?.target, root);
+        if (!leavingCard || !root.contains(leavingCard)) return;
+        const enteringCard = resolveInteractiveCardElement(event?.relatedTarget, root);
+        if (enteringCard && enteringCard === leavingCard) return;
+        resetCardShine(leavingCard);
+    }, { passive: true });
+
+    root.addEventListener('scroll', () => {
+        root.querySelectorAll?.('.game-card-stack, .emulator-card').forEach((card) => {
+            resetCardShine(card);
+        });
+    }, { passive: true });
+}
+
 function getGameImagePath(game) {
     let gameImageToUse = game?.image;
     const platformShortName = String(game?.platformShortName || 'unknown').toLowerCase();
@@ -452,13 +668,6 @@ export function renderGames(gamesToRender) {
 
     clearGamesLoadObserver();
     gamesRenderToken += 1;
-
-    const previousView = String(lastRenderedView || '').trim().toLowerCase();
-    const nextView = String(activeView || '').trim().toLowerCase();
-    const isLeavingCover = previousView === 'cover' && nextView !== 'cover';
-    if (isLeavingCover) {
-        cleanupLazyGameImages(gamesContainer, { releaseSources: true });
-    }
 
     gamesContainer.className = buildGamesContainerClass(activeView, coverCardMode);
 
@@ -563,11 +772,14 @@ export function renderGames(gamesToRender) {
     }
 
     initializeLazyGameImages(gamesContainer);
+    bindInteractiveCardShine(gamesContainer);
     lastRenderedView = activeView;
 }
 
 export function renderEmulators(emulatorsToRender = emulators, options = {}) {
     getEmulatorViewRenderer().renderEmulators(emulatorsToRender, options);
+    const gamesContainer = document.getElementById('games-container');
+    bindInteractiveCardShine(gamesContainer);
 }
 
 function normalizeEmulatorDownloadLinks(raw) {
@@ -733,11 +945,19 @@ async function removeGame(gameId) {
     }
 }
 
-async function reloadGamesFromMainAndRender() {
+async function reloadGamesFromMainAndRender(options = {}) {
+    const preserveScroll = Boolean(options?.preserveScroll);
+    const anchorGameId = Number(options?.anchorGameId || 0);
+    const scrollSnapshot = preserveScroll
+        ? captureGamesScrollPosition({ anchorGameId: anchorGameId > 0 ? anchorGameId : 0 })
+        : null;
     const updatedGames = await emubro.invoke('get-games');
     setGames(updatedGames);
 
     applyFilters();
+    if (scrollSnapshot) {
+        window.requestAnimationFrame(() => restoreGamesScrollPosition(scrollSnapshot, 4));
+    }
 }
 
 async function launchGame(gameOrId) {

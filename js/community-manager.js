@@ -2,7 +2,6 @@ const emubro = window.emubro;
 
 const COMMUNITY_DISCORD_OPT_IN_KEY = "emuBro.community.discordInAppOptIn.v1";
 const COMMUNITY_ACTIVE_TAB_KEY = "emuBro.community.activeTab.v1";
-const COMMUNITY_WEBVIEW_PARTITION = "persist:emubro-community";
 
 const COMMUNITY_PLATFORMS = [
     {
@@ -69,15 +68,10 @@ const COMMUNITY_PLATFORMS = [
 
 let activeCommunityCleanup = null;
 
-function isElectronRuntime() {
-    return !!(window?.process?.versions?.electron);
-}
-
 function isTauriRuntime() {
-    if (isElectronRuntime()) return false;
     if (emubro && typeof emubro.invoke === "function") {
         const platform = String(emubro.platform || "").trim().toLowerCase();
-        if (platform === "tauri" || platform === "win32" || platform === "darwin" || platform === "linux") {
+        if (platform === "desktop" || platform === "win32" || platform === "darwin" || platform === "linux") {
             return true;
         }
     }
@@ -279,14 +273,11 @@ export function showCommunityView() {
     const defaultPlatformId = COMMUNITY_PLATFORMS[0]?.id || "discord";
     let activePlatformId = getPlatformById(readStoredText(COMMUNITY_ACTIVE_TAB_KEY, defaultPlatformId)).id;
     let discordInAppEnabled = readStoredBoolean(COMMUNITY_DISCORD_OPT_IN_KEY, false);
-    const electronRuntime = isElectronRuntime();
     const tauriRuntime = isTauriRuntime();
-    const tauriWindowBrowserMode = tauriRuntime && !electronRuntime;
-    const discordSessionNote = electronRuntime
-        ? t("community.discordSessionNote", "Discord login stays in Electron's secure persistent session storage for this app.")
-        : tauriWindowBrowserMode
-            ? t("community.discordSessionNoteTauri", "In Tauri mode, community links open in an in-app browser window.")
-            : t("community.discordSessionNoteTauri", "In Tauri mode, some platforms may block embedded login. Use Open in Browser if needed.");
+    const tauriWindowBrowserMode = tauriRuntime;
+    const discordSessionNote = tauriWindowBrowserMode
+        ? t("community.discordSessionNoteTauri", "In Tauri mode, community links open in an in-app browser window.")
+        : t("community.discordSessionNoteTauri", "In Tauri mode, some platforms may block embedded login. Use Open in Browser if needed.");
 
     if (gamesHeader) gamesHeader.textContent = t("header.community", "Community");
 
@@ -463,50 +454,21 @@ export function showCommunityView() {
         if (!webviewHost) return null;
 
         cleanupWebview();
-        const useElectronWebview = electronRuntime && !tauriRuntime;
-        const view = document.createElement(useElectronWebview ? "webview" : "iframe");
+        const view = document.createElement("iframe");
         view.className = "community-browser-webview community-browser-iframe";
-        if (useElectronWebview) {
-            view.setAttribute("partition", COMMUNITY_WEBVIEW_PARTITION);
-            view.setAttribute("allowpopups", "true");
-            view.setAttribute("webpreferences", "sandbox=yes,contextIsolation=yes");
+        view.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
+        view.setAttribute("allow", "autoplay; clipboard-read; clipboard-write; encrypted-media; fullscreen; picture-in-picture");
+        view.setAttribute("sandbox", "allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads");
+        view.setAttribute("loading", "eager");
 
-            bindWebviewEvent(view, "did-start-loading", () => {
-                setLoading(true);
-                setErrorVisible(false);
-            });
-            bindWebviewEvent(view, "did-stop-loading", () => {
-                setLoading(false);
-            });
-            bindWebviewEvent(view, "did-fail-load", (event) => {
-                if (Number(event?.errorCode) === -3) return;
-                setLoading(false);
-                setErrorVisible(true);
-            });
-            bindWebviewEvent(view, "new-window", (event) => {
-                if (typeof event?.preventDefault === "function") event.preventDefault();
-                void openExternal(event?.url);
-            });
-            bindWebviewEvent(view, "will-navigate", (event) => {
-                const targetUrl = String(event?.url || "").trim();
-                if (isHttpUrl(targetUrl)) return;
-                if (typeof event?.preventDefault === "function") event.preventDefault();
-            });
-        } else {
-            view.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
-            view.setAttribute("allow", "autoplay; clipboard-read; clipboard-write; encrypted-media; fullscreen; picture-in-picture");
-            view.setAttribute("sandbox", "allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads");
-            view.setAttribute("loading", "eager");
-
-            bindWebviewEvent(view, "load", () => {
-                setLoading(false);
-                setErrorVisible(false);
-            });
-            bindWebviewEvent(view, "error", () => {
-                setLoading(false);
-                setErrorVisible(true);
-            });
-        }
+        bindWebviewEvent(view, "load", () => {
+            setLoading(false);
+            setErrorVisible(false);
+        });
+        bindWebviewEvent(view, "error", () => {
+            setLoading(false);
+            setErrorVisible(true);
+        });
 
         bindWebviewEvent(view, "abort", () => {
             setLoading(false);

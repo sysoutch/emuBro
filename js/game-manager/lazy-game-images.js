@@ -2,11 +2,32 @@ export function createLazyGameImageActions(deps = {}) {
     const lazyPlaceholderSrc = String(deps.lazyPlaceholderSrc || '').trim();
     const resolveObserverRoot = typeof deps.resolveObserverRoot === 'function' ? deps.resolveObserverRoot : () => null;
     const maxConcurrentLoads = Math.max(2, Math.min(16, Number(deps.maxConcurrentLoads) || 8));
+    const maxRememberedLoadedSources = Math.max(300, Math.min(12000, Number(deps.maxRememberedLoadedSources) || 5000));
     let gameImageObserver = null;
     let gameImageObserverRoot = null;
     let queueDrainScheduled = false;
     let inFlightImageCount = 0;
     const pendingImageQueue = [];
+    const knownLoadedSources = new Set();
+    const knownLoadedSourceOrder = [];
+
+    function rememberLoadedSource(source) {
+        const normalized = String(source || '').trim();
+        if (!normalized) return;
+        if (knownLoadedSources.has(normalized)) return;
+        knownLoadedSources.add(normalized);
+        knownLoadedSourceOrder.push(normalized);
+        if (knownLoadedSourceOrder.length <= maxRememberedLoadedSources) return;
+        const oldest = knownLoadedSourceOrder.shift();
+        if (!oldest) return;
+        knownLoadedSources.delete(oldest);
+    }
+
+    function isKnownLoadedSource(source) {
+        const normalized = String(source || '').trim();
+        if (!normalized) return false;
+        return knownLoadedSources.has(normalized);
+    }
 
     function unobserveLazyImage(img) {
         if (!img || !gameImageObserver) return;
@@ -19,6 +40,7 @@ export function createLazyGameImageActions(deps = {}) {
         if (!img) return;
         img.dataset.lazyStatus = 'loaded';
         img.classList.remove('is-pending');
+        rememberLoadedSource(String(img.dataset.lazySrc || img.src || '').trim());
         updateCoverOrientationClass(img);
     }
 
@@ -211,11 +233,28 @@ export function createLazyGameImageActions(deps = {}) {
         if (!img || img.dataset.lazyPrepared === '1') return;
         const source = String(img.dataset.lazySrc || '').trim();
         img.dataset.lazyPrepared = '1';
-        img.classList.add('lazy-game-image', 'is-pending');
-        img.dataset.lazyStatus = 'pending';
+        img.classList.add('lazy-game-image');
         img.loading = 'lazy';
         img.decoding = 'async';
         if (!img.getAttribute('fetchpriority')) img.setAttribute('fetchpriority', 'low');
+
+        if (source && isKnownLoadedSource(source)) {
+            img.dataset.lazyStatus = 'loaded';
+            img.classList.remove('is-pending');
+            img.src = source;
+            if (img.complete && img.naturalWidth > 0) {
+                updateCoverOrientationClass(img);
+            } else {
+                img.addEventListener('load', () => {
+                    rememberLoadedSource(source);
+                    updateCoverOrientationClass(img);
+                }, { once: true });
+            }
+            return;
+        }
+
+        img.dataset.lazyStatus = 'pending';
+        img.classList.add('is-pending');
         img.src = lazyPlaceholderSrc;
 
         if (!source) {

@@ -4,7 +4,7 @@ Use this before every public release.
 `PASS` means release can continue. `FAIL` means block release.
 
 ## 1. Release Identity
-- [ ] Version bumped in all required files (`package.json`, `tauri/package.json`, `tauri/src-tauri/tauri.conf.json`)
+- [ ] Version bumped in all required files (`package.json`, `desktop/package.json`, `desktop/src-tauri/tauri.conf.json`)
 - [ ] Release commit created on target branch
 - [ ] Annotated tag created (`vX.Y.Z...`) and pushed
 - [ ] Release notes drafted
@@ -29,7 +29,7 @@ Use this before every public release.
 
 ## 4. Security Gate
 - [ ] `npm audit --omit=dev --audit-level=high` passes (root)
-- [ ] `npm --prefix tauri audit --omit=dev --audit-level=high` passes
+- [ ] `npm --prefix desktop audit --omit=dev --audit-level=high` passes
 - [ ] No known critical/high vulnerabilities in shipped runtime dependencies
 - [ ] Sensitive defaults reviewed (API keys, debug flags, unsafe endpoints)
 
@@ -46,8 +46,9 @@ Use this before every public release.
 ```bash
 npm run build:web
 npm audit --omit=dev --audit-level=high
-npm --prefix tauri audit --omit=dev --audit-level=high
+npm --prefix desktop audit --omit=dev --audit-level=high
 git status --short
 git rev-parse --short HEAD
 git tag --points-at HEAD
 ```
+

@@ -141,6 +141,8 @@ export async function openLibraryPathSettingsModal(options = {}) {
         currentVersion: '',
         latestVersion: '',
         releaseNotes: '',
+        releaseUrl: '',
+        downloadUrl: '',
         downloadFileName: '',
         downloadedFilePath: '',
         lastMessage: '',
@@ -244,6 +246,8 @@ export async function openLibraryPathSettingsModal(options = {}) {
             currentVersion: String(payload?.currentVersion || updateState.currentVersion || ''),
             latestVersion: String(payload?.latestVersion || updateState.latestVersion || ''),
             releaseNotes: String(payload?.releaseNotes || updateState.releaseNotes || ''),
+            releaseUrl: String(payload?.releaseUrl || updateState.releaseUrl || ''),
+            downloadUrl: String(payload?.downloadUrl || updateState.downloadUrl || ''),
             downloadFileName: hasDownloadFileName
                 ? String(payload?.downloadFileName || '')
                 : String(updateState.downloadFileName || ''),
@@ -269,6 +273,9 @@ export async function openLibraryPathSettingsModal(options = {}) {
         if (updateState.installing) return 'Opening installer...';
         if (updateState.downloading) return `Downloading update... ${Math.round(updateState.progressPercent || 0)}%`;
         if (updateState.downloaded) return 'Update downloaded. Click "Install & Restart".';
+        if (updateState.available && !String(updateState.downloadUrl || '').trim()) {
+            return `Update available${updateState.latestVersion ? `: ${updateState.latestVersion}` : ''}. No direct installer asset found; open the release page.`;
+        }
         if (updateState.available) return `Update available${updateState.latestVersion ? `: ${updateState.latestVersion}` : ''}`;
         if (updateState.checking) return 'Checking for updates...';
         if (updateState.lastMessage) return updateState.lastMessage;
@@ -305,6 +312,8 @@ export async function openLibraryPathSettingsModal(options = {}) {
                         available: !!appState.available,
                         progressPercent: Number(appState.progressPercent || 0),
                         latestVersion: String(appState.latestVersion || ''),
+                        releaseUrl: String(appState.releaseUrl || ''),
+                        downloadUrl: String(appState.downloadUrl || ''),
                         downloadedFilePath: String(appState.downloadedFilePath || ''),
                         lastError: String(appState.lastError || ''),
                         lastMessage: String(appState.lastMessage || '')

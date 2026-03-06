@@ -7,6 +7,8 @@ import {
 const TOOL_PLUGIN_STORAGE_KEY = 'emuBro.toolPlugins.v1';
 const TOOL_PLUGIN_MODE_MANUAL = 'manual';
 const TOOL_PLUGIN_MODE_LLM = 'llm';
+const TOOL_PLUGIN_KIND_LAUNCHER = 'launcher';
+const TOOL_PLUGIN_KIND_WEB = 'web';
 
 export function createToolPluginManager(deps = {}) {
     const t = typeof deps.t === 'function'
@@ -29,6 +31,12 @@ export function createToolPluginManager(deps = {}) {
             : TOOL_PLUGIN_MODE_MANUAL;
     }
 
+    function normalizeToolPluginKind(value) {
+        return String(value || '').trim().toLowerCase() === TOOL_PLUGIN_KIND_WEB
+            ? TOOL_PLUGIN_KIND_WEB
+            : TOOL_PLUGIN_KIND_LAUNCHER;
+    }
+
     function normalizeToolPluginRecord(raw) {
         const source = raw && typeof raw === 'object' ? raw : {};
         const name = String(source.name || '').trim();
@@ -40,6 +48,10 @@ export function createToolPluginManager(deps = {}) {
             commandPath: String(source.commandPath || '').trim(),
             args: String(source.args || '').trim(),
             workingDirectory: String(source.workingDirectory || '').trim(),
+            pluginKind: normalizeToolPluginKind(source.pluginKind),
+            htmlFilePath: String(source.htmlFilePath || '').trim(),
+            cssFilePath: String(source.cssFilePath || '').trim(),
+            jsFilePath: String(source.jsFilePath || '').trim(),
             prompt: String(source.prompt || '').trim(),
             notes: String(source.notes || '').trim(),
             mode: normalizeToolPluginMode(source.mode),
@@ -226,6 +238,14 @@ export function createToolPluginManager(deps = {}) {
         } catch (_error) {}
     }
 
+    async function createPluginScaffoldFiles(payload = {}) {
+        return window.emubro.invoke('tools:plugin:create-files', payload);
+    }
+
+    async function readPluginScaffoldFiles(payload = {}) {
+        return window.emubro.invoke('tools:plugin:read-files', payload);
+    }
+
     function renderToolPluginBuilder(editPlugin = null) {
         const gamesContainer = document.getElementById('games-container');
         if (!gamesContainer) return;
@@ -233,6 +253,7 @@ export function createToolPluginManager(deps = {}) {
         const normalizedEdit = normalizeToolPluginRecord(editPlugin);
         const isEditing = !!normalizedEdit;
         const initialMode = normalizeToolPluginMode(normalizedEdit?.mode);
+        const builderPluginId = String(normalizedEdit?.id || createToolPluginId()).trim();
 
         const toolContent = document.createElement('div');
         toolContent.className = 'tool-content tool-plugin-builder';
@@ -260,6 +281,12 @@ export function createToolPluginManager(deps = {}) {
             <label for="tool-plugin-description">${escapeHtml(t('tools.createDescriptionLabel', 'Description'))}</label>
             <textarea id="tool-plugin-description" data-plugin-field="description" rows="2" placeholder="${escapeHtml(t('tools.createDescriptionPlaceholder', 'What this tool does and when to use it.'))}">${escapeHtml(normalizedEdit?.description || '')}</textarea>
 
+            <label for="tool-plugin-kind">${escapeHtml(t('tools.createKindLabel', 'Plugin Type'))}</label>
+            <select id="tool-plugin-kind" data-plugin-field="pluginKind">
+                <option value="${TOOL_PLUGIN_KIND_LAUNCHER}">${escapeHtml(t('tools.createKindLauncher', 'Executable Launcher'))}</option>
+                <option value="${TOOL_PLUGIN_KIND_WEB}">${escapeHtml(t('tools.createKindWeb', 'Web Plugin (HTML/CSS/JS)'))}</option>
+            </select>
+
             <label for="tool-plugin-command">${escapeHtml(t('tools.createCommandPathLabel', 'Command Path'))}</label>
             <div class="tool-plugin-inline">
                 <input id="tool-plugin-command" data-plugin-field="commandPath" type="text" value="${escapeHtml(normalizedEdit?.commandPath || '')}" placeholder="C:\\Tools\\retroarch.exe" />
@@ -274,6 +301,15 @@ export function createToolPluginManager(deps = {}) {
 
             <label for="tool-plugin-notes">${escapeHtml(t('tools.createNotesLabel', 'Notes'))}</label>
             <textarea id="tool-plugin-notes" data-plugin-field="notes" rows="3" placeholder="${escapeHtml(t('tools.createNotesPlaceholder', 'Optional notes shown in the plugin details view.'))}">${escapeHtml(normalizedEdit?.notes || '')}</textarea>
+
+            <label>${escapeHtml(t('tools.createWebFilesLabel', 'Web Plugin Files'))}</label>
+            <div class="tool-plugin-inline">
+                <button type="button" class="action-btn small" data-plugin-action="create-files">${escapeHtml(t('tools.createWebFilesBtn', 'Create HTML/CSS/JS Files'))}</button>
+                <span style="align-self:center;font-size:0.8rem;color:var(--text-secondary);">${escapeHtml(t('tools.createWebFilesHint', 'Files are stored in managed data under tool-plugins/.'))}</span>
+            </div>
+            <input id="tool-plugin-html-path" data-plugin-field="htmlFilePath" type="text" value="${escapeHtml(normalizedEdit?.htmlFilePath || '')}" placeholder=".../index.html" readonly />
+            <input id="tool-plugin-css-path" data-plugin-field="cssFilePath" type="text" value="${escapeHtml(normalizedEdit?.cssFilePath || '')}" placeholder=".../style.css" readonly />
+            <input id="tool-plugin-js-path" data-plugin-field="jsFilePath" type="text" value="${escapeHtml(normalizedEdit?.jsFilePath || '')}" placeholder=".../script.js" readonly />
         </div>
         <div class="tool-plugin-actions">
             <button type="button" class="action-btn" data-plugin-action="save">${escapeHtml(isEditing ? t('tools.saveToolChanges', 'Save Changes') : t('tools.saveTool', 'Save Tool'))}</button>
@@ -288,9 +324,13 @@ export function createToolPluginManager(deps = {}) {
         const statusEl = toolContent.querySelector('[data-plugin-status]');
         const fieldName = toolContent.querySelector('[data-plugin-field="name"]');
         const fieldDescription = toolContent.querySelector('[data-plugin-field="description"]');
+        const fieldPluginKind = toolContent.querySelector('[data-plugin-field="pluginKind"]');
         const fieldCommandPath = toolContent.querySelector('[data-plugin-field="commandPath"]');
         const fieldArgs = toolContent.querySelector('[data-plugin-field="args"]');
         const fieldWorkingDirectory = toolContent.querySelector('[data-plugin-field="workingDirectory"]');
+        const fieldHtmlFilePath = toolContent.querySelector('[data-plugin-field="htmlFilePath"]');
+        const fieldCssFilePath = toolContent.querySelector('[data-plugin-field="cssFilePath"]');
+        const fieldJsFilePath = toolContent.querySelector('[data-plugin-field="jsFilePath"]');
         const fieldPrompt = toolContent.querySelector('[data-plugin-field="prompt"]');
         const fieldNotes = toolContent.querySelector('[data-plugin-field="notes"]');
 
@@ -313,9 +353,13 @@ export function createToolPluginManager(deps = {}) {
         const collectDraftFields = () => ({
             name: String(fieldName?.value || '').trim(),
             description: String(fieldDescription?.value || '').trim(),
+            pluginKind: normalizeToolPluginKind(fieldPluginKind?.value || TOOL_PLUGIN_KIND_LAUNCHER),
             commandPath: String(fieldCommandPath?.value || '').trim(),
             args: String(fieldArgs?.value || '').trim(),
             workingDirectory: String(fieldWorkingDirectory?.value || '').trim(),
+            htmlFilePath: String(fieldHtmlFilePath?.value || '').trim(),
+            cssFilePath: String(fieldCssFilePath?.value || '').trim(),
+            jsFilePath: String(fieldJsFilePath?.value || '').trim(),
             prompt: String(fieldPrompt?.value || '').trim(),
             notes: String(fieldNotes?.value || '').trim(),
             mode
@@ -325,10 +369,22 @@ export function createToolPluginManager(deps = {}) {
             if (!draft || typeof draft !== 'object') return;
             if (fieldName && draft.name) fieldName.value = String(draft.name || '');
             if (fieldDescription && draft.description) fieldDescription.value = String(draft.description || '');
+            if (fieldPluginKind) fieldPluginKind.value = normalizeToolPluginKind(draft.pluginKind || TOOL_PLUGIN_KIND_LAUNCHER);
             if (fieldCommandPath && draft.commandPath) fieldCommandPath.value = String(draft.commandPath || '');
             if (fieldArgs && (draft.args || draft.args === '')) fieldArgs.value = String(draft.args || '');
             if (fieldWorkingDirectory && draft.workingDirectory) fieldWorkingDirectory.value = String(draft.workingDirectory || '');
+            if (fieldHtmlFilePath && draft.htmlFilePath) fieldHtmlFilePath.value = String(draft.htmlFilePath || '');
+            if (fieldCssFilePath && draft.cssFilePath) fieldCssFilePath.value = String(draft.cssFilePath || '');
+            if (fieldJsFilePath && draft.jsFilePath) fieldJsFilePath.value = String(draft.jsFilePath || '');
             if (fieldNotes && draft.notes) fieldNotes.value = String(draft.notes || '');
+        };
+
+        const syncPluginKindUi = () => {
+            const kind = normalizeToolPluginKind(fieldPluginKind?.value || TOOL_PLUGIN_KIND_LAUNCHER);
+            const isWeb = kind === TOOL_PLUGIN_KIND_WEB;
+            if (fieldCommandPath) fieldCommandPath.disabled = isWeb;
+            if (fieldArgs) fieldArgs.disabled = isWeb;
+            if (fieldWorkingDirectory) fieldWorkingDirectory.disabled = isWeb;
         };
 
         modeButtons.forEach((button) => {
@@ -337,6 +393,11 @@ export function createToolPluginManager(deps = {}) {
             });
         });
         setMode(mode);
+        if (fieldPluginKind) {
+            fieldPluginKind.value = normalizeToolPluginKind(normalizedEdit?.pluginKind || TOOL_PLUGIN_KIND_LAUNCHER);
+            fieldPluginKind.addEventListener('change', syncPluginKindUi);
+        }
+        syncPluginKindUi();
 
         toolContent.addEventListener('click', async (event) => {
             const actionButton = event.target.closest('[data-plugin-action]');
@@ -350,6 +411,36 @@ export function createToolPluginManager(deps = {}) {
             }
             if (action === 'pick-command') {
                 await pickPluginExecutable(fieldCommandPath);
+                return;
+            }
+            if (action === 'create-files') {
+                const name = String(fieldName?.value || '').trim();
+                if (!name) {
+                    setStatus(t('tools.createNameRequired', 'Tool name is required.'), 'error');
+                    return;
+                }
+                actionButton.disabled = true;
+                setStatus(t('tools.createWebFilesCreating', 'Creating plugin files...'), 'info');
+                try {
+                    const result = await createPluginScaffoldFiles({
+                        name,
+                        pluginId: builderPluginId
+                    });
+                    if (!result?.success) {
+                        setStatus(String(result?.message || t('tools.createWebFilesFailed', 'Failed to create plugin files.')), 'error');
+                        return;
+                    }
+                    if (fieldPluginKind) fieldPluginKind.value = TOOL_PLUGIN_KIND_WEB;
+                    if (fieldHtmlFilePath) fieldHtmlFilePath.value = String(result?.htmlFilePath || '');
+                    if (fieldCssFilePath) fieldCssFilePath.value = String(result?.cssFilePath || '');
+                    if (fieldJsFilePath) fieldJsFilePath.value = String(result?.jsFilePath || '');
+                    syncPluginKindUi();
+                    setStatus(t('tools.createWebFilesSuccess', 'Plugin files created. Save this tool to use them.'), 'success');
+                } catch (error) {
+                    setStatus(String(error?.message || error || t('tools.createWebFilesFailed', 'Failed to create plugin files.')), 'error');
+                } finally {
+                    actionButton.disabled = false;
+                }
                 return;
             }
             if (action === 'generate') {
@@ -389,14 +480,15 @@ export function createToolPluginManager(deps = {}) {
             const normalized = normalizeToolPluginRecord({
                 ...normalizedEdit,
                 ...payload,
-                id: normalizedEdit?.id || createToolPluginId(),
+                id: builderPluginId,
                 createdAt: normalizedEdit?.createdAt || Date.now()
             });
             if (!normalized) {
                 setStatus(t('tools.createNameRequired', 'Tool name is required.'), 'error');
                 return;
             }
-            if (!normalized.commandPath && !normalized.notes) {
+            const hasWebFiles = !!(normalized.htmlFilePath && normalized.cssFilePath && normalized.jsFilePath);
+            if (!normalized.commandPath && !hasWebFiles && !normalized.notes) {
                 setStatus(t('tools.createCommandOrNotesRequired', 'Provide a command path or add notes so this tool has meaningful behavior.'), 'warning');
                 return;
             }
@@ -418,7 +510,10 @@ export function createToolPluginManager(deps = {}) {
             return;
         }
 
+        const isWebPlugin = normalizeToolPluginKind(plugin.pluginKind) === TOOL_PLUGIN_KIND_WEB;
+        const hasWebFiles = !!(plugin.htmlFilePath && plugin.cssFilePath && plugin.jsFilePath);
         const hasLaunchCommand = !!String(plugin.commandPath || '').trim();
+        const canRun = isWebPlugin ? hasWebFiles : hasLaunchCommand;
         const toolContent = document.createElement('div');
         toolContent.className = 'tool-content tool-plugin-view';
         toolContent.innerHTML = `
@@ -430,22 +525,27 @@ export function createToolPluginManager(deps = {}) {
             <button type="button" class="action-btn small" data-plugin-action="back">${escapeHtml(t('tools.backToTools', 'Back to Tools'))}</button>
         </div>
         <div class="tool-plugin-summary">
+            <div><strong>${escapeHtml(t('tools.createKindLabel', 'Plugin Type'))}:</strong> ${escapeHtml(isWebPlugin ? t('tools.createKindWeb', 'Web Plugin (HTML/CSS/JS)') : t('tools.createKindLauncher', 'Executable Launcher'))}</div>
             <div><strong>${escapeHtml(t('tools.createModeLabel', 'Mode'))}:</strong> ${escapeHtml(plugin.mode === TOOL_PLUGIN_MODE_LLM ? t('tools.createWithLlm', 'Generate with LLM') : t('tools.createManual', 'Create Manually'))}</div>
             <div><strong>${escapeHtml(t('tools.createCommandPathLabel', 'Command Path'))}:</strong> ${escapeHtml(plugin.commandPath || t('tools.noneSet', 'Not set'))}</div>
             <div><strong>${escapeHtml(t('tools.createArgsLabel', 'Arguments'))}:</strong> ${escapeHtml(plugin.args || t('tools.noneSet', 'Not set'))}</div>
             <div><strong>${escapeHtml(t('tools.createWorkingDirLabel', 'Working Directory'))}:</strong> ${escapeHtml(plugin.workingDirectory || t('tools.noneSet', 'Not set'))}</div>
+            <div><strong>${escapeHtml(t('tools.createWebFilesLabel', 'Web Plugin Files'))}:</strong> ${escapeHtml(hasWebFiles ? t('tools.configured', 'Configured') : t('tools.noneSet', 'Not set'))}</div>
         </div>
         <div class="tool-plugin-notes">${escapeHtml(plugin.notes || t('tools.createNoNotes', 'No additional notes.'))}</div>
         <div class="tool-plugin-actions">
-            <button type="button" class="action-btn" data-plugin-action="run"${hasLaunchCommand ? '' : ' disabled'}>${escapeHtml(t('tools.launchTool', 'Launch Tool'))}</button>
+            <button type="button" class="action-btn" data-plugin-action="run"${canRun ? '' : ' disabled'}>${escapeHtml(isWebPlugin ? t('tools.runPlugin', 'Run Plugin') : t('tools.launchTool', 'Launch Tool'))}</button>
+            <button type="button" class="action-btn" data-plugin-action="open-plugin-folder"${hasWebFiles ? '' : ' disabled'}>${escapeHtml(t('tools.openPluginFolder', 'Open Plugin Folder'))}</button>
             <button type="button" class="action-btn" data-plugin-action="edit">${escapeHtml(t('tools.editToolTitle', 'Edit Tool'))}</button>
             <button type="button" class="action-btn remove-btn" data-plugin-action="delete">${escapeHtml(t('tools.deleteTool', 'Delete Tool'))}</button>
         </div>
+        <div class="tool-plugin-runtime" data-plugin-runtime hidden></div>
         <p class="tool-plugin-status" data-plugin-status aria-live="polite"></p>
     `;
         gamesContainer.appendChild(toolContent);
 
         const statusEl = toolContent.querySelector('[data-plugin-status]');
+        const runtimeEl = toolContent.querySelector('[data-plugin-runtime]');
         const setStatus = (message, level = 'info') => {
             if (!statusEl) return;
             statusEl.textContent = String(message || '').trim();
@@ -474,34 +574,67 @@ export function createToolPluginManager(deps = {}) {
                 navigateToTool('');
                 return;
             }
-            if (action !== 'run') return;
-
-            const commandPath = String(plugin.commandPath || '').trim();
-            if (!commandPath) {
-                setStatus(t('tools.commandPathMissing', 'Command path is missing.'), 'warning');
-                return;
-            }
-            button.disabled = true;
-            setStatus(t('tools.runningTool', 'Launching tool...'), 'info');
-            try {
-                let result;
-                if (/^https?:\/\//i.test(commandPath)) {
-                    result = await window.emubro.invoke('open-external-url', commandPath);
-                } else {
-                    result = await window.emubro.invoke('launch-emulator', {
-                        filePath: commandPath,
-                        args: String(plugin.args || ''),
-                        workingDirectory: String(plugin.workingDirectory || ''),
-                        name: plugin.name
-                    });
-                }
-                if (result?.success === false) {
-                    setStatus(result?.message || t('tools.status.launchFailed', 'Failed to launch tool.'), 'error');
+            if (action === 'open-plugin-folder') {
+                const htmlPath = String(plugin.htmlFilePath || '').trim();
+                if (!htmlPath) {
+                    setStatus(t('tools.pluginFolderMissing', 'Plugin folder is not configured yet.'), 'warning');
                     return;
                 }
-                setStatus(t('tools.status.launchedTool', 'Launched {{name}}.', { name: plugin.name }), 'success');
+                const result = await window.emubro.invoke('show-item-in-folder', htmlPath);
+                if (result?.success === false) {
+                    setStatus(result?.message || t('tools.status.openFolderFailed', 'Failed to open folder.'), 'error');
+                }
+                return;
+            }
+            if (action !== 'run') return;
+
+            button.disabled = true;
+            setStatus(isWebPlugin ? t('tools.runningPlugin', 'Running plugin...') : t('tools.runningTool', 'Launching tool...'), 'info');
+            try {
+                if (isWebPlugin) {
+                    const files = await readPluginScaffoldFiles({
+                        htmlFilePath: plugin.htmlFilePath,
+                        cssFilePath: plugin.cssFilePath,
+                        jsFilePath: plugin.jsFilePath
+                    });
+                    if (!files?.success) {
+                        setStatus(files?.message || t('tools.runPluginFailed', 'Failed to run plugin files.'), 'error');
+                        return;
+                    }
+                    const htmlSource = String(files?.html || '').trim();
+                    const cssSource = String(files?.css || '');
+                    const jsSource = String(files?.js || '').replace(/<\/script>/gi, '<\\/script>');
+                    const srcDoc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${cssSource}</style></head><body>${htmlSource}<script>${jsSource}</script></body></html>`;
+                    if (runtimeEl) {
+                        runtimeEl.hidden = false;
+                        runtimeEl.innerHTML = `<iframe class="tool-plugin-frame" sandbox="allow-scripts allow-forms allow-modals allow-downloads" srcdoc="${escapeHtml(srcDoc)}"></iframe>`;
+                    }
+                    setStatus(t('tools.runPluginSuccess', 'Plugin is running below.'), 'success');
+                } else {
+                    const commandPath = String(plugin.commandPath || '').trim();
+                    if (!commandPath) {
+                        setStatus(t('tools.commandPathMissing', 'Command path is missing.'), 'warning');
+                        return;
+                    }
+                    let result;
+                    if (/^https?:\/\//i.test(commandPath)) {
+                        result = await window.emubro.invoke('open-external-url', commandPath);
+                    } else {
+                        result = await window.emubro.invoke('launch-emulator', {
+                            filePath: commandPath,
+                            args: String(plugin.args || ''),
+                            workingDirectory: String(plugin.workingDirectory || ''),
+                            name: plugin.name
+                        });
+                    }
+                    if (result?.success === false) {
+                        setStatus(result?.message || t('tools.status.launchFailed', 'Failed to launch tool.'), 'error');
+                        return;
+                    }
+                    setStatus(t('tools.status.launchedTool', 'Launched {{name}}.', { name: plugin.name }), 'success');
+                }
             } catch (error) {
-                setStatus(String(error?.message || error || t('tools.status.launchFailed', 'Failed to launch tool.')), 'error');
+                setStatus(String(error?.message || error || (isWebPlugin ? t('tools.runPluginFailed', 'Failed to run plugin files.') : t('tools.status.launchFailed', 'Failed to launch tool.'))), 'error');
             } finally {
                 button.disabled = false;
             }

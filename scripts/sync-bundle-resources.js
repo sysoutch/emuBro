@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
-const TARGET_DIR = path.join(ROOT_DIR, 'tauri', 'src-tauri', 'bundle-resources');
+const TARGET_DIR = path.join(ROOT_DIR, 'desktop', 'src-tauri', 'bundle-resources');
 
 const SOURCES = [
   { name: 'locales', path: path.join(ROOT_DIR, 'locales') },

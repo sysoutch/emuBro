@@ -13,8 +13,8 @@ Commit: `26ed76f`
 ### 1. Release Identity
 - PASS: version synced in:
   - `package.json`
-  - `tauri/package.json`
-  - `tauri/src-tauri/tauri.conf.json`
+  - `desktop/package.json`
+  - `desktop/src-tauri/tauri.conf.json`
 - PASS: release commit created and pushed
 - PASS: annotated tag `v1.0.0-alpha.28` pushed
 - FAIL: no formal release notes file generated in repo for this tag
@@ -27,12 +27,12 @@ Commit: `26ed76f`
   - macOS bundle
 
 ### 3. Test Gate
-- FAIL: no automated test scripts defined in root or `tauri/package.json`
+- FAIL: no automated test scripts defined in root or `desktop/package.json`
 - NOT VERIFIED: cross-platform smoke test matrix for this tag
 
 ### 4. Security Gate
 - PASS: `npm audit --omit=dev --audit-level=high` => 0 vulnerabilities
-- PASS: `npm --prefix tauri audit --omit=dev --audit-level=high` => 0 vulnerabilities
+- PASS: `npm --prefix desktop audit --omit=dev --audit-level=high` => 0 vulnerabilities
 - NOT VERIFIED: full security review/pen-test
 
 ### 5. Operations Gate
@@ -46,3 +46,4 @@ Commit: `26ed76f`
 2. Validate native bundles on each target OS for this exact tag.
 3. Publish release notes + checksums/signatures.
 4. Define rollback and incident response steps.
+

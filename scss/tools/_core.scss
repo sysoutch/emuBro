@@ -247,4 +247,20 @@
     background: color-mix(in srgb, var(--bg-primary), transparent 14%);
 }
 
+.tool-plugin-runtime {
+    margin-top: 6px;
+    border: 1px solid color-mix(in srgb, var(--border-color), transparent 16%);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--bg-primary), transparent 14%);
+    overflow: hidden;
+    min-height: 360px;
+}
+
+.tool-plugin-frame {
+    width: 100%;
+    min-height: 360px;
+    border: 0;
+    background: transparent;
+}
+
 .hidden { display: none !important; }

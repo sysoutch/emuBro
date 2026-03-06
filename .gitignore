@@ -30,10 +30,6 @@ compile_commands.json
 
 .npmrc
 
-# Generated API definitions
-electron-api.json
-electron.d.ts
-
 # Spec hash calculation
 spec/.hash
 
@@ -61,7 +57,8 @@ spec/fixtures/logo.png
 /emubro-resources/
 /gamelist/
 /emubro-locales-repo/
-/tauri/src-tauri/.emubro-tauri-data/
-/tauri/src-tauri/screenshots/
-/tauri/src-tauri/bundle-resources/*
-!/tauri/src-tauri/bundle-resources/.keep
+/desktop/src-tauri/.emubro-desktop-data/
+/desktop/src-tauri/screenshots/
+/desktop/src-tauri/target/*
+/desktop/src-tauri/bundle-resources/*
+!/desktop/src-tauri/bundle-resources/.keep

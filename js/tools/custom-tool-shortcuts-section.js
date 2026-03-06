@@ -34,6 +34,14 @@ function getPathExtension(filePath) {
     return match ? match[1].toLowerCase() : '';
 }
 
+function deriveWorkingDirectory(filePath) {
+    const normalized = String(filePath || '').trim();
+    if (!normalized) return '';
+    const slash = Math.max(normalized.lastIndexOf('/'), normalized.lastIndexOf('\\'));
+    if (slash <= 0) return '';
+    return normalized.slice(0, slash);
+}
+
 function isSupportedShortcutPath(filePath) {
     const pathValue = String(filePath || '').trim();
     if (!pathValue) return false;
@@ -67,6 +75,10 @@ function normalizeShortcutRecord(raw, t) {
         id: String(raw?.id || `tool-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
         name: String(raw?.name || deriveShortcutName(filePath, t)).trim() || deriveShortcutName(filePath, t),
         filePath,
+        args: String(raw?.args || '').trim(),
+        workingDirectory: String(raw?.workingDirectory || deriveWorkingDirectory(filePath)).trim(),
+        runAsAdmin: !!raw?.runAsAdmin,
+        runAsUser: String(raw?.runAsUser || '').trim(),
         createdAt: Number(raw?.createdAt || Date.now())
     };
 }
@@ -116,6 +128,10 @@ function addCustomToolShortcutsFromPaths(paths, t) {
             id: `tool-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
             name: deriveShortcutName(filePath, t),
             filePath,
+            args: '',
+            workingDirectory: deriveWorkingDirectory(filePath),
+            runAsAdmin: false,
+            runAsUser: '',
             createdAt: Date.now()
         });
         added += 1;
@@ -168,13 +184,65 @@ async function pickAndAddCustomTools(renderList, setStatus, t) {
 async function launchCustomTool(shortcut, setStatus, t) {
     if (!shortcut?.filePath) return;
     const result = await window.emubro.invoke('launch-emulator', {
-        filePath: shortcut.filePath
+        filePath: shortcut.filePath,
+        args: String(shortcut.args || ''),
+        workingDirectory: String(shortcut.workingDirectory || ''),
+        runAsAdmin: !!shortcut.runAsAdmin,
+        runAsUser: String(shortcut.runAsUser || ''),
+        name: shortcut.name
     });
     if (!result?.success) {
         setStatus(result?.message || t('tools.status.launchFailed', 'Failed to launch tool.'), 'error');
         return;
     }
     setStatus(t('tools.status.launchedTool', 'Launched {{name}}.', { name: shortcut.name }), 'success');
+}
+
+function editCustomToolShortcut(shortcuts, shortcut, renderList, setStatus, t) {
+    const nextName = window.prompt(
+        t('tools.editNamePrompt', 'Tool name:'),
+        String(shortcut?.name || '')
+    );
+    if (nextName === null) return;
+
+    const nextArgs = window.prompt(
+        t('tools.editArgsPrompt', 'Arguments (optional):'),
+        String(shortcut?.args || '')
+    );
+    if (nextArgs === null) return;
+
+    const suggestedWorkingDir = String(shortcut?.workingDirectory || deriveWorkingDirectory(shortcut?.filePath || '') || '').trim();
+    const nextWorkingDirectory = window.prompt(
+        t('tools.editWorkingDirPrompt', 'Working directory (optional):'),
+        suggestedWorkingDir
+    );
+    if (nextWorkingDirectory === null) return;
+
+    const nextRunAsUser = window.prompt(
+        t('tools.editRunAsUserPrompt', 'Run as user (optional):'),
+        String(shortcut?.runAsUser || '')
+    );
+    if (nextRunAsUser === null) return;
+
+    const runAsAdmin = window.confirm(
+        t('tools.editRunAsAdminConfirm', 'Run this tool with admin/root privileges?\n\nOK = yes, Cancel = no')
+    );
+
+    const nameNormalized = String(nextName || '').trim() || deriveShortcutName(shortcut.filePath, t);
+    const updated = shortcuts.map((entry) => {
+        if (entry.id !== shortcut.id) return entry;
+        return {
+            ...entry,
+            name: nameNormalized,
+            args: String(nextArgs || '').trim(),
+            workingDirectory: String(nextWorkingDirectory || '').trim(),
+            runAsUser: String(nextRunAsUser || '').trim(),
+            runAsAdmin: !!runAsAdmin
+        };
+    });
+    saveCustomToolShortcuts(updated, t);
+    renderList();
+    setStatus(t('tools.status.updatedTool', 'Updated {{name}}.', { name: nameNormalized }), 'success');
 }
 
 export function createCustomToolShortcutsSection({ t, escapeHtml }) {
@@ -241,8 +309,18 @@ export function createCustomToolShortcutsSection({ t, escapeHtml }) {
                     <div class="custom-tool-title">${escapeHtml(shortcut.name)}</div>
                 </div>
                 <div class="custom-tool-path" title="${escapeHtml(shortcut.filePath)}">${escapeHtml(shortcut.filePath)}</div>
+                <div class="custom-tool-path" title="${escapeHtml(String(shortcut.args || '').trim() || t('tools.noneSet', 'Not set'))}">
+                    ${escapeHtml(t('tools.createArgsLabel', 'Arguments'))}: ${escapeHtml(String(shortcut.args || '').trim() || t('tools.noneSet', 'Not set'))}
+                </div>
+                <div class="custom-tool-path" title="${escapeHtml(String(shortcut.workingDirectory || '').trim() || t('tools.noneSet', 'Not set'))}">
+                    ${escapeHtml(t('tools.createWorkingDirLabel', 'Working Directory'))}: ${escapeHtml(String(shortcut.workingDirectory || '').trim() || t('tools.noneSet', 'Not set'))}
+                </div>
+                <div class="custom-tool-path" title="${escapeHtml(String(shortcut.runAsUser || '').trim() || t('tools.noneSet', 'Not set'))}">
+                    ${escapeHtml(t('tools.runAsLabel', 'Run as'))}: ${escapeHtml(shortcut.runAsAdmin ? t('tools.runAsAdminShort', 'Admin/Root') : (String(shortcut.runAsUser || '').trim() || t('tools.runAsDefaultShort', 'Current user')))}
+                </div>
                 <div class="custom-tool-actions">
                     <button type="button" class="action-btn small" data-custom-tool-action="launch" data-custom-tool-id="${escapeHtml(shortcut.id)}">${escapeHtml(t('tools.customLaunch', 'Launch'))}</button>
+                    <button type="button" class="action-btn small" data-custom-tool-action="edit" data-custom-tool-id="${escapeHtml(shortcut.id)}">${escapeHtml(t('tools.editToolTitle', 'Edit Tool'))}</button>
                     <button type="button" class="action-btn small" data-custom-tool-action="reveal" data-custom-tool-id="${escapeHtml(shortcut.id)}">${escapeHtml(t('tools.customShowInFolder', 'Show in Folder'))}</button>
                     <button type="button" class="action-btn small remove-btn" data-custom-tool-action="remove" data-custom-tool-id="${escapeHtml(shortcut.id)}">${escapeHtml(t('tools.customRemove', 'Remove'))}</button>
                 </div>
@@ -271,6 +349,11 @@ export function createCustomToolShortcutsSection({ t, escapeHtml }) {
 
             if (action === 'launch') {
                 await launchCustomTool(shortcut, setStatus, t);
+                return;
+            }
+
+            if (action === 'edit') {
+                editCustomToolShortcut(shortcuts, shortcut, renderList, setStatus, t);
                 return;
             }
 

@@ -1,9 +1,10 @@
-﻿.logo-circle {
+.logo-circle {
     position: absolute;
     width: 44px;
     height: 44px;
     border-radius: 50%;
     background-color: color-mix(in srgb, var(--logo-brand-color, var(--brand-color)) 82%, black);
+    filter: hue-rotate(var(--hue-rotate-deg, 0deg));
     z-index: -1;
 }
 
@@ -35,6 +36,7 @@
     letter-spacing: 1px;
     white-space: nowrap;
     line-height: 1;
+    filter: hue-rotate(var(--hue-rotate-deg, 0deg));
 }
 
 .logo-text-prefix {
@@ -326,4 +328,6 @@
     50% { opacity: 1; }
     100% { opacity: 0.94; }
 }
+
+
 

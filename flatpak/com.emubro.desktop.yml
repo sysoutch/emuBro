@@ -15,15 +15,15 @@ modules:
   - name: emubro
     buildsystem: simple
     build-commands:
-      - install -Dm755 emubro_tauri /app/bin/emubro
+      - install -Dm755 emubro_desktop /app/bin/emubro
       - install -Dm644 icon.png /app/share/icons/hicolor/128x128/apps/com.emubro.desktop.png
       - install -Dm644 com.emubro.desktop.desktop /app/share/applications/com.emubro.desktop.desktop
       - install -Dm644 com.emubro.desktop.metainfo.xml /app/share/metainfo/com.emubro.desktop.metainfo.xml
     sources:
       - type: file
-        path: ../tauri/src-tauri/target/release/emubro_tauri
+        path: ../desktop/src-tauri/target/release/emubro_desktop
       - type: file
-        path: ../tauri/src-tauri/icons/128x128.png
+        path: ../desktop/src-tauri/icons/128x128.png
         dest-filename: icon.png
       - type: file
         path: com.emubro.desktop.desktop

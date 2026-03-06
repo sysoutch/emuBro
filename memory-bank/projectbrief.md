@@ -1,7 +1,7 @@
 # Project Brief
 
 ## Overview
-emuBro-Reloaded is an Electron-based emulator application designed to provide a Steam-like interface for managing and playing retro games. The application features game library management, emulator integration, theme customization, and multi-language support.
+emuBro-Reloaded is a desktop-shell emulator application designed to provide a Steam-like interface for managing and playing retro games. The application features game library management, emulator integration, theme customization, and multi-language support.
 
 ## Core Requirements
 - Game library management with detection and organization

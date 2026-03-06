@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: tauri-release-${{ github.ref }}
+  group: desktop-release-${{ github.ref }}
   cancel-in-progress: false
 
 env:
@@ -17,6 +17,8 @@ env:
 jobs:
   bundle:
     name: Bundle (${{ matrix.name }})
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
@@ -25,24 +27,24 @@ jobs:
             os: windows-latest
             bundles: "nsis,msi"
             artifact_paths: |
-              tauri/src-tauri/target/release/bundle/nsis/*.exe
-              tauri/src-tauri/target/release/bundle/nsis/*.zip
-              tauri/src-tauri/target/release/bundle/msi/*.msi
-              tauri/src-tauri/target/release/bundle/msi/*.zip
-              tauri/src-tauri/target/release/bundle/portable/*.zip
+              desktop/src-tauri/target/release/bundle/nsis/*.exe
+              desktop/src-tauri/target/release/bundle/nsis/*.zip
+              desktop/src-tauri/target/release/bundle/msi/*.msi
+              desktop/src-tauri/target/release/bundle/msi/*.zip
+              desktop/src-tauri/target/release/bundle/portable/*.zip
           - name: linux-appimage
             os: ubuntu-latest
             bundles: "appimage"
             artifact_paths: |
-              tauri/src-tauri/target/release/bundle/appimage/*.AppImage
-              tauri/src-tauri/target/release/bundle/appimage/*.tar.gz
+              desktop/src-tauri/target/release/bundle/appimage/*.AppImage
+              desktop/src-tauri/target/release/bundle/appimage/*.tar.gz
             experimental_appimage: true
           - name: linux-deb
             os: ubuntu-latest
             bundles: "deb"
             artifact_paths: |
-              tauri/src-tauri/target/release/bundle/deb/*.deb
-              tauri/src-tauri/target/release/bundle/deb/*.tar.gz
+              desktop/src-tauri/target/release/bundle/deb/*.deb
+              desktop/src-tauri/target/release/bundle/deb/*.tar.gz
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -81,15 +83,15 @@ jobs:
         timeout-minutes: 20
         run: npm install --no-audit --prefer-offline --no-fund
 
-      - name: Install Tauri JS dependencies (Windows)
+      - name: Install desktop shell JS dependencies (Windows)
         if: runner.os == 'Windows'
         timeout-minutes: 20
-        run: npm --prefix tauri install --no-audit --prefer-offline --include=optional --no-fund
+        run: npm --prefix desktop install --no-audit --prefer-offline --include=optional --no-fund
 
-      - name: Install Tauri JS dependencies (non-Windows)
+      - name: Install desktop shell JS dependencies (non-Windows)
         if: runner.os != 'Windows'
         timeout-minutes: 20
-        run: npm --prefix tauri install --no-audit --prefer-offline --include=optional --no-fund
+        run: npm --prefix desktop install --no-audit --prefer-offline --include=optional --no-fund
 
       - name: Build legacy renderer bundle
         run: npm run legacy:build
@@ -97,14 +99,14 @@ jobs:
       - name: Sync bundled resources
         run: npm run sync:bundle-resources
 
-      - name: Build Tauri bundles
+      - name: Build desktop shell bundles
         if: runner.os == 'Linux' && matrix.experimental_appimage != true
         shell: bash
         run: |
           set -euo pipefail
           for attempt in 1 2 3; do
             echo "Linux bundle attempt ${attempt}/3"
-            if npm --prefix tauri run tauri:build -- --bundles ${{ matrix.bundles }}; then
+            if npm --prefix desktop run desktop:build -- --bundles ${{ matrix.bundles }}; then
               exit 0
             fi
             if [ "$attempt" -eq 3 ]; then
@@ -112,7 +114,7 @@ jobs:
               exit 1
             fi
             echo "Linux bundle failed, cleaning partial AppImage output before retry"
-            rm -rf tauri/src-tauri/target/release/bundle/appimage
+            rm -rf desktop/src-tauri/target/release/bundle/appimage
             sleep 15
           done
 
@@ -131,18 +133,18 @@ jobs:
               exit 1
             fi
             echo "Portable AppImage bundle failed, cleaning partial output before retry"
-            rm -rf .cache/tauri-portable-appimage-cli
-            rm -rf tauri/src-tauri/target/release/bundle/appimage
+            rm -rf .cache/desktop-portable-appimage-cli
+            rm -rf desktop/src-tauri/target/release/bundle/appimage
             sleep 15
           done
 
-      - name: Build Tauri bundles (Windows prerelease)
+      - name: Build desktop shell bundles (Windows prerelease)
         if: runner.os == 'Windows' && contains(github.ref_name, '-alpha.')
-        run: npm --prefix tauri run tauri:build -- --bundles nsis
+        run: npm --prefix desktop run desktop:build -- --bundles nsis
 
-      - name: Build Tauri bundles (Windows stable)
+      - name: Build desktop shell bundles (Windows stable)
         if: runner.os == 'Windows' && !contains(github.ref_name, '-alpha.')
-        run: npm --prefix tauri run tauri:build -- --bundles ${{ matrix.bundles }}
+        run: npm --prefix desktop run desktop:build -- --bundles ${{ matrix.bundles }}
 
       - name: Build portable Windows package folder
         if: runner.os == 'Windows'
@@ -152,7 +154,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $portableRoot = "tauri/src-tauri/target/release/bundle/portable"
+          $portableRoot = "desktop/src-tauri/target/release/bundle/portable"
           $portableDir = Get-ChildItem -Path $portableRoot -Directory | Sort-Object LastWriteTime -Descending | Select-Object -First 1
           if (-not $portableDir) {
             throw "Portable package directory not found in $portableRoot"
@@ -171,9 +173,61 @@ jobs:
           path: ${{ matrix.artifact_paths }}
           if-no-files-found: warn
 
+      - name: Publish bundle assets to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if ! gh release view "$RELEASE_TAG" --repo "$GH_REPO" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --repo "$GH_REPO" --title "$RELEASE_TAG" --generate-notes || true
+          fi
+
+          mapfile -t PATTERNS <<'EOF'
+          ${{ matrix.artifact_paths }}
+          EOF
+
+          FILES=()
+          for pattern in "${PATTERNS[@]}"; do
+            pattern="${pattern#"${pattern%%[![:space:]]*}"}"
+            pattern="${pattern%"${pattern##*[![:space:]]}"}"
+            if [ -z "$pattern" ]; then
+              continue
+            fi
+            shopt -s nullglob
+            for file in $pattern; do
+              if [ -f "$file" ]; then
+                FILES+=("$file")
+              fi
+            done
+            shopt -u nullglob
+          done
+
+          if [ "${#FILES[@]}" -eq 0 ]; then
+            echo "No bundle files found for release upload in matrix '${{ matrix.name }}'."
+            exit 1
+          fi
+
+          for attempt in 1 2 3; do
+            echo "Upload attempt ${attempt}/3 for matrix '${{ matrix.name }}'"
+            if gh release upload "$RELEASE_TAG" "${FILES[@]}" --repo "$GH_REPO" --clobber; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "Failed to upload release assets after ${attempt} attempts."
+              exit 1
+            fi
+            sleep 10
+          done
+
   flatpak:
     name: Flatpak (linux)
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -218,9 +272,9 @@ jobs:
         timeout-minutes: 20
         run: npm install --no-audit --prefer-offline --no-fund
 
-      - name: Install Tauri JS dependencies (Linux)
+      - name: Install desktop shell JS dependencies (Linux)
         timeout-minutes: 20
-        run: npm --prefix tauri install --no-audit --prefer-offline --include=optional --no-fund
+        run: npm --prefix desktop install --no-audit --prefer-offline --include=optional --no-fund
 
       - name: Build legacy renderer bundle
         run: npm run legacy:build
@@ -237,43 +291,34 @@ jobs:
           name: emubro-flatpak
           path: build/flatpak/emuBro.flatpak
 
-  publish-release:
-    name: Publish GitHub Release Assets
-    if: startsWith(github.ref, 'refs/tags/') && needs.bundle.result == 'success' && needs.flatpak.result == 'success'
-    needs:
-      - bundle
-      - flatpak
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Download all build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: emubro-*
-          path: release-assets
-          merge-multiple: true
-
-      - name: Show release files
-        run: |
-          ls -la release-assets
-          find release-assets -type f | sort
-
-      - name: Ensure GitHub release exists
+      - name: Publish Flatpak asset to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          gh release view "${{ github.ref_name }}" --repo "$GH_REPO" >/dev/null 2>&1 || gh release create "${{ github.ref_name }}" --repo "$GH_REPO" --title "${{ github.ref_name }}" --generate-notes
-
-      - name: Upload assets to GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          mapfile -t FILES < <(find release-assets -type f | sort)
-          if [ "${#FILES[@]}" -eq 0 ]; then
-            echo "No release assets found to upload."
+          set -euo pipefail
+          FILE="build/flatpak/emuBro.flatpak"
+          if [ ! -f "$FILE" ]; then
+            echo "Flatpak artifact missing: $FILE"
             exit 1
           fi
-          gh release upload "${{ github.ref_name }}" "${FILES[@]}" --repo "$GH_REPO" --clobber
+
+          if ! gh release view "$RELEASE_TAG" --repo "$GH_REPO" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --repo "$GH_REPO" --title "$RELEASE_TAG" --generate-notes || true
+          fi
+
+          for attempt in 1 2 3; do
+            echo "Flatpak upload attempt ${attempt}/3"
+            if gh release upload "$RELEASE_TAG" "$FILE" --repo "$GH_REPO" --clobber; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "Failed to upload Flatpak asset after ${attempt} attempts."
+              exit 1
+            fi
+            sleep 10
+          done
+

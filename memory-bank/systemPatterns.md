@@ -1,7 +1,7 @@
 # System Patterns
 
 ## System Architecture
-emuBro-Reloaded follows an Electron-based architecture with clear separation between main and renderer processes:
+emuBro-Reloaded follows a desktop-shell architecture with clear separation between backend and renderer processes:
 
 ### Main Process
 - Handles system-level operations
@@ -57,7 +57,7 @@ emuBro-Reloaded follows an Electron-based architecture with clear separation bet
 - **State Cleanup**: When undocking, ensure the panel is removed from any active docking tracking Sets and that all layout-related body classes are cleaned up to prevent "stuck" padding.
 
 ### Library Cover Memory/Virtualization Pattern
-- **Profile both JS and native memory**: In Electron renderer issues, `usedJSHeapSize` can stay flat while native renderer memory grows due to compositing/image paths.
+- **Profile both JS and native memory**: In desktop webview renderer issues, `usedJSHeapSize` can stay flat while native renderer memory grows due to compositing/image paths.
 - **Keep virtualization residency small**: For cover grids, limit chunk batch size and cap resident chunks aggressively to avoid large off-screen DOM/image retention.
 - **Use container-rooted intersection observers**: Observe cover images relative to the actual scroll container (e.g., `.game-scroll-body`) and recreate observers if root changes.
 - **Avoid blanket heavy compositing on dense grids**: Repeated blur/backdrop/shimmer/forced GPU promotion across many cards can drive native memory growth; reserve these effects for sparse UI, not large cover lists.

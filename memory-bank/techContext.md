@@ -1,7 +1,7 @@
 # Technical Context
 
 ## Technologies Used
-- Electron.js: Cross-platform desktop application framework
+- Tauri (Rust desktop shell): Cross-platform desktop application framework
 - JavaScript/ES6+: Primary programming language
 - HTML5/CSS3: UI structure and styling
 - i18n.js: Internationalization library
@@ -11,7 +11,7 @@
 ## Development Setup
 - Node.js environment
 - npm package manager
-- Electron development tools
+- Tauri development tools
 - Webpack build system
 - Git version control
 
@@ -23,7 +23,7 @@
 - Efficient theme loading and switching
 
 ## Dependencies
-- electron: Main Electron framework
+- tauri + @tauri-apps/api: Desktop shell runtime and bridge
 - i18n: Internationalization support
 - gamepad.js: Gamepad event handling and state management
 - webpack: Module bundler
@@ -32,7 +32,7 @@
 
 ## Tool Usage Patterns
 - Webpack for bundling and building the application
-- Electron's IPC for communication between processes
+- Desktop bridge IPC for communication between backend and renderer
 - localStorage for persisting user preferences
 - CSS modules for scoped styling
 - Git for version control and collaboration
@@ -59,5 +59,5 @@
 
 ### 3. Implementation Details
 *   **Transparency:** Color Index 0 in the palette is usually reserved for transparency.
-*   **IPC Serialization:** Electron's `ipcMain` can transform `Buffer` objects into JSON-like objects `{type: 'Buffer', data: []}`. Ensure the renderer handles both formats.
+*   **IPC Serialization:** Bridge payloads can transform `Buffer` objects into JSON-like objects `{type: 'Buffer', data: []}`. Ensure the renderer handles both formats.
 *   **Canvas API:** Raw pixels must be expanded from 4-bit pointers to 32-bit RGBA `Uint8ClampedArray` for `putImageData` to work.

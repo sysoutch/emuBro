@@ -59,6 +59,7 @@ export function createGameCardElements(deps = {}) {
 
     function createGameTableRow(game) {
         const row = document.createElement('tr');
+        row.dataset.gameId = String(game?.id ?? '');
         const gameImageToUse = getGameImagePath(game);
         const platformShortName = String(game.platformShortName || 'unknown').toLowerCase();
         const platformIcon = `emubro-resources/platforms/${platformShortName}/logos/default.png`;
@@ -92,6 +93,7 @@ export function createGameCardElements(deps = {}) {
     function createGameListItem(game) {
         const listItem = document.createElement('div');
         listItem.className = 'list-item';
+        listItem.dataset.gameId = String(game?.id ?? '');
 
         const gameImageToUse = getGameImagePath(game);
         const platformShortName = String(game.platformShortName || 'unknown').toLowerCase();

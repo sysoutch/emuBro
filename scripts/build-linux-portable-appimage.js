@@ -3,8 +3,8 @@ const path = require("path");
 const { spawnSync } = require("child_process");
 
 const ROOT_DIR = path.resolve(__dirname, "..");
-const TAURI_DIR = path.join(ROOT_DIR, "tauri");
-const INSTALL_ROOT = path.join(ROOT_DIR, ".cache", "tauri-portable-appimage-cli");
+const DESKTOP_DIR = path.join(ROOT_DIR, "desktop");
+const INSTALL_ROOT = path.join(ROOT_DIR, ".cache", "desktop-portable-appimage-cli");
 const INSTALL_BIN_DIR = path.join(
   INSTALL_ROOT,
   process.platform === "win32" ? "" : "bin"
@@ -71,7 +71,7 @@ function buildPortableAppImage(binaryPath, env, extraArgs) {
     "[portable-appimage] Building AppImage with TAURI_BUNDLER_NEW_APPIMAGE_FORMAT=true"
   );
   run(binaryPath, args, {
-    cwd: TAURI_DIR,
+    cwd: DESKTOP_DIR,
     env
   });
 }

@@ -12,12 +12,12 @@
 - Hardcoded Webhook URL base in validation to avoid translation issues
 - Implemented translation fallback to English for missing keys in other locales
 - Project structure with memory-bank documentation system
-- README.md updated for Electron version
+- README.md updated for desktop-shell version
 - Core documentation files initialized (projectbrief, productContext, activeContext, systemPatterns, techContext)
 - Draggable floating windows (Theme Manager, Language Manager)
 - Dockable panels with unified sidebar support and tabbed interface
 - Auto-centering for floating windows on resize (smoother and smarter behavior)
-- Electron-based architecture established
+- Desktop-shell architecture established
 - Internationalization system in place (i18n-manager.js)
 - Theme management system with localStorage
 - Game management system (game-manager.js) with multiple functional views (Cover, List, Table, Slideshow, Random)
@@ -48,8 +48,8 @@
 - Continued `js/settings/library-settings-modal.js` refactor by extracting app/resource update actions into `js/settings/library-settings-modal/update-actions.js`.
 - Continued `js/settings/library-settings-modal.js` refactor by extracting managed path list/relocation handlers into `js/settings/library-settings-modal/path-section-handlers.js`.
 - Continued `js/settings/library-settings-modal.js` refactor by extracting save/apply settings flow into `js/settings/library-settings-modal/save-settings.js`.
-- Added missing Tauri suggestions bridge channel `suggestions:generate-tool-draft` via `tauri/src-tauri/src/bridge_extensions/suggestions/tool_draft.rs` and wired it into `suggestions/channels.rs`.
-- Improved Tauri community in-app browser flow in `tauri/src-tauri/src/app_core/invoke/community.rs`: reuse existing `community-browser` window with URL navigation, allow navigation explicitly, and only recreate window when reuse navigation fails.
+- Added missing Tauri suggestions bridge channel `suggestions:generate-tool-draft` via `desktop/src-tauri/src/bridge_extensions/suggestions/tool_draft.rs` and wired it into `suggestions/channels.rs`.
+- Improved Tauri community in-app browser flow in `desktop/src-tauri/src/app_core/invoke/community.rs`: reuse existing `community-browser` window with URL navigation, allow navigation explicitly, and only recreate window when reuse navigation fails.
 - Verified Tauri invoke channel coverage: all current renderer `window.emubro.invoke(...)` channels now have Rust-side handlers.
 - Continued `js/language-manager.js` refactor by extracting modal DOM lookup and event wiring into `js/language-manager/modal-events.js`.
 - Continued `js/settings/library-settings-modal.js` refactor by extracting options/default function resolution into `js/settings/library-settings-modal/options-resolver.js`.
@@ -75,7 +75,7 @@
 - Continued `js/tools-manager.js` refactor by extracting ECM/UNECM view logic into `js/tools/ecm-unecm-tool.js`.
 - Continued `js/tools-manager.js` refactor by extracting Cover Downloader view logic into `js/tools/cover-downloader-tool.js`.
 - Continued `js/tools-manager.js` refactor by extracting the custom executable shortcuts UI/logic into `js/tools/custom-tool-shortcuts-section.js`.
-- Rebuilt corrupted Tauri covers bridge file `tauri/src-tauri/src/bridge_extensions/covers.rs` from scratch, restoring `covers:download-for-game`, `covers:download-for-library`, and `covers:get-source-config`.
+- Rebuilt corrupted Tauri covers bridge file `desktop/src-tauri/src/bridge_extensions/covers.rs` from scratch, restoring `covers:download-for-game`, `covers:download-for-library`, and `covers:get-source-config`.
 - Continued `js/tools-manager.js` refactor by extracting plugin-tool creation/view/storage/LLM-draft logic into `js/tools/tool-plugin-manager.js`.
 - Updated memory-bank refactor backlog snapshot in `memory-bank/activeContext.md` with the current largest JS files and size/LOC targets.
 - Continued game-manager refactor: moved slideshow/random views and grouped/incremental rendering into `js/game-manager/views/` and `js/game-manager/rendering/`.
@@ -200,7 +200,7 @@
 
 ## Evolution of Project Decisions
 - Started with documentation-first approach
-- Established Electron architecture early
+- Established desktop-shell architecture early
 - Prioritized modular design with separate managers
 - Decided on localStorage for theme persistence
 - Chose i18n.js for internationalization
@@ -208,3 +208,4 @@
 - Added "Refresh Themes" button in marketplace to fetch community themes from GitHub dynamically
 - Implemented a unified docking system for floating panels with tabbed sidebar support
 - Fixed and perfected window docking persistence, layout shift, and transition logic
+

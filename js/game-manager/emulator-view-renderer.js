@@ -5,6 +5,12 @@ export function createEmulatorViewRenderer(deps = {}) {
     const escapeHtml = deps.escapeHtml || ((value) => String(value ?? ''));
     const getEmulatorKey = deps.getEmulatorKey || ((emulator) => String(emulator?.id || emulator?.name || ''));
     const showEmulatorDetails = deps.showEmulatorDetails || (() => {});
+    const launchEmulator = typeof deps.launchEmulatorAction === 'function'
+        ? deps.launchEmulatorAction
+        : null;
+    const downloadAndInstallEmulator = typeof deps.downloadAndInstallEmulatorAction === 'function'
+        ? deps.downloadAndInstallEmulatorAction
+        : null;
     const emulatorTypeTabs = Array.isArray(deps.emulatorTypeTabs) && deps.emulatorTypeTabs.length > 0
         ? deps.emulatorTypeTabs
         : DEFAULT_TYPE_TABS;
@@ -415,6 +421,9 @@ export function createEmulatorViewRenderer(deps = {}) {
             const statusClass = installed ? 'is-installed' : 'is-missing';
             const statusText = installed ? 'Installed' : 'Not Installed';
             const key = encodeURIComponent(getEmulatorKey(emulator));
+            const quickActionLabel = installed
+                ? i18n.t('buttons.launch', 'Launch')
+                : i18n.t('buttons.download', 'Download');
 
             return `
             <article class="emulator-card" data-emu-key="${key}" tabindex="0" role="button" aria-label="Open emulator details for ${safeName}">
@@ -429,7 +438,7 @@ export function createEmulatorViewRenderer(deps = {}) {
                     <p class="emulator-install-status ${statusClass}">${statusText}</p>
                     <p class="emulator-path" title="${safePathTitle}">${safePath}</p>
                 </div>
-                <span class="emulator-card-hover-action ${installed ? 'is-play' : 'is-download'}">${getEmulatorCardHoverIconMarkup(installed)}</span>
+                <button type="button" class="emulator-card-hover-action ${installed ? 'is-play' : 'is-download'}" data-emu-quick-action="${installed ? 'launch' : 'download'}" aria-label="${escapeHtml(quickActionLabel)}" title="${escapeHtml(quickActionLabel)}">${getEmulatorCardHoverIconMarkup(installed)}</button>
             </article>
         `;
         }).join('');
@@ -596,7 +605,47 @@ export function createEmulatorViewRenderer(deps = {}) {
             showEmulatorDetails(emulator, options);
         };
 
+        const quickActionInFlight = new Set();
+        const runQuickAction = async (button, emulator) => {
+            if (!button || !emulator) return;
+            const emuKey = encodeURIComponent(getEmulatorKey(emulator));
+            if (quickActionInFlight.has(emuKey)) return;
+            quickActionInFlight.add(emuKey);
+            button.disabled = true;
+            button.classList.add('is-busy');
+            try {
+                const installed = !!emulator.isInstalled;
+                if (installed && launchEmulator) {
+                    await launchEmulator(emulator);
+                    return;
+                }
+                if (!installed && downloadAndInstallEmulator) {
+                    await downloadAndInstallEmulator(emulator);
+                    return;
+                }
+                showEmulatorDetails(emulator, options);
+            } catch (_error) {
+                showEmulatorDetails(emulator, options);
+            } finally {
+                quickActionInFlight.delete(emuKey);
+                button.disabled = false;
+                button.classList.remove('is-busy');
+            }
+        };
+
         root.addEventListener('click', (event) => {
+            const quickActionButton = event?.target?.closest?.('[data-emu-quick-action]');
+            if (quickActionButton && root.contains(quickActionButton)) {
+                const item = quickActionButton.closest('[data-emu-key]');
+                const emuKey = String(item?.dataset?.emuKey || '').trim();
+                const emulator = emulatorByKey.get(emuKey);
+                event.preventDefault();
+                event.stopPropagation();
+                if (emulator) {
+                    void runQuickAction(quickActionButton, emulator);
+                }
+                return;
+            }
             const item = event?.target?.closest?.('[data-emu-key]');
             if (!item || !root.contains(item)) return;
             activate(item);
@@ -604,6 +653,7 @@ export function createEmulatorViewRenderer(deps = {}) {
 
         root.addEventListener('keydown', (event) => {
             if (event.key !== 'Enter' && event.key !== ' ') return;
+            if (event?.target?.closest?.('[data-emu-quick-action]')) return;
             const item = event?.target?.closest?.('[data-emu-key]');
             if (!item || !root.contains(item)) return;
             event.preventDefault();

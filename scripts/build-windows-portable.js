@@ -2,12 +2,12 @@ const fs = require("fs");
 const path = require("path");
 
 const ROOT_DIR = path.resolve(__dirname, "..");
-const TAURI_SRC_DIR = path.join(ROOT_DIR, "tauri", "src-tauri");
-const RELEASE_DIR = path.join(TAURI_SRC_DIR, "target", "release");
-const EXE_PATH = path.join(RELEASE_DIR, "emubro_tauri.exe");
-const BUNDLE_RESOURCES_DIR = path.join(TAURI_SRC_DIR, "bundle-resources");
+const DESKTOP_SRC_DIR = path.join(ROOT_DIR, "desktop", "src-tauri");
+const RELEASE_DIR = path.join(DESKTOP_SRC_DIR, "target", "release");
+const EXE_PATH = path.join(RELEASE_DIR, "emuBro.exe");
+const BUNDLE_RESOURCES_DIR = path.join(DESKTOP_SRC_DIR, "bundle-resources");
 const PORTABLE_ROOT_DIR = path.join(RELEASE_DIR, "bundle", "portable");
-const TAURI_CONF_PATH = path.join(TAURI_SRC_DIR, "tauri.conf.json");
+const DESKTOP_CONF_PATH = path.join(DESKTOP_SRC_DIR, "tauri.conf.json");
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
@@ -67,8 +67,8 @@ function buildPortable() {
     );
   }
 
-  const tauriConfig = readJson(TAURI_CONF_PATH);
-  const version = String(tauriConfig.version || "0.0.0").trim();
+  const desktopConfig = readJson(DESKTOP_CONF_PATH);
+  const version = String(desktopConfig.version || "0.0.0").trim();
   const portableName = `emuBro_${version}_x64_portable`;
   const portableDir = path.join(PORTABLE_ROOT_DIR, portableName);
   const portableExePath = path.join(portableDir, "emuBro_portable.exe");

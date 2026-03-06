@@ -526,12 +526,12 @@ async function renderCategoriesList() {
         <li class="categories-llm-row">
             <button class="action-btn small" type="button" data-category-action="toggle-selection-mode">${escapeHtml(getSelectionModeButtonText())}</button>
         </li>
+        ${categoryItems}
+        ${showMoreMarkup}
         ${isLlmHelpersEnabled()
             ? `<li class="categories-llm-row"><button class="action-btn small" type="button" data-category-action="llm-global-tags">${escapeHtml(t('sidebar.addGlobalTagsWithLlm', 'Add Global Tags with LLM'))}</button></li>
                <li class="categories-llm-row"><button class="action-btn small" type="button" data-category-action="llm-global-descriptions">${escapeHtml(t('sidebar.addGlobalDescriptionsWithLlm', 'Add Global Descriptions with LLM'))}</button></li>`
             : ''}
-        ${categoryItems}
-        ${showMoreMarkup}
     `;
 
     setActiveCategoryLinkState(listRoot);

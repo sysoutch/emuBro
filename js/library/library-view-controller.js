@@ -204,8 +204,6 @@ export function createLibraryViewController(options = {}) {
         const slider = document.getElementById('view-size-slider');
         const valueEl = document.getElementById('view-size-value');
         if (!slider || !valueEl) return;
-        let rerenderTimer = null;
-        let rerenderPending = false;
 
         const applyScale = (raw, persist = true) => {
             const clamped = Math.max(70, Math.min(140, Number(raw) || 100));
@@ -216,34 +214,14 @@ export function createLibraryViewController(options = {}) {
             valueEl.textContent = `${clamped}%`;
             if (persist) localStorage.setItem('emuBro.viewScalePercent', String(clamped));
         };
-        const scheduleScaleRelayout = (delayMs = 120) => {
-            if (rerenderTimer) {
-                window.clearTimeout(rerenderTimer);
-                rerenderTimer = null;
-            }
-            rerenderTimer = window.setTimeout(async () => {
-                rerenderTimer = null;
-                if (rerenderPending) return;
-                if (getActiveTopSection() !== 'library' || getActiveLibrarySection() === 'emulators') return;
-                rerenderPending = true;
-                try {
-                    await renderActiveLibraryView();
-                } finally {
-                    rerenderPending = false;
-                }
-            }, Math.max(0, Number(delayMs) || 0));
-        };
-
         const stored = localStorage.getItem('emuBro.viewScalePercent');
         applyScale(stored || slider.value || 100, false);
 
         slider.addEventListener('input', (e) => {
             applyScale(e.target.value, true);
-            scheduleScaleRelayout(120);
         });
         slider.addEventListener('change', (e) => {
             applyScale(e.target.value, true);
-            scheduleScaleRelayout(0);
         });
 
         updateViewSizeControlState();

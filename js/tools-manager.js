@@ -205,12 +205,7 @@ function renderToolsOverview() {
     };
     const pluginCards = toolPluginManager.getOverviewPluginCards();
 
-    const withCreateCard = [
-        ...tools.slice(0, Math.max(0, tools.length - 1)),
-        createCard,
-        ...tools.slice(Math.max(0, tools.length - 1))
-    ];
-    const cards = [...withCreateCard, ...pluginCards];
+    const cards = [...tools, ...pluginCards, createCard];
 
     overview.innerHTML = `
         <div class="tools-grid">

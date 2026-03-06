@@ -5,6 +5,7 @@
 import { 
     parseColorToHex, 
     flipLightness,
+    invertHex,
     rotateHue,
     darkenHex
 } from './ui-utils';
@@ -176,12 +177,18 @@ let isApplyingTheme = false;
 let queuedThemeApply = null;
 let lastAppliedThemeId = '';
 let lastAppliedThemeAt = 0;
+let lastTaskbarIconColor = '';
+let taskbarIconSyncHandle = 0;
+let taskbarIconSyncTimeout = 0;
+let taskbarIconSyncForce = false;
+let taskbarIconVisibilityListenerBound = false;
 const THEME_EDITOR_MODE_STORAGE_KEY = 'themeEditorCustomizationMode';
 const HUE_ROTATE_STEP_DEG = 45;
 let currentHueRotateDeg = 0;
 const getBackgroundSurfaceDraft = () => backgroundSurfaceDraft;
 const setBackgroundSurfaceDraft = (next) => { backgroundSurfaceDraft = next; };
 const setBackgroundLayerDraftsState = (next) => { backgroundLayerDrafts = next; };
+const TASKBAR_ICON_FALLBACK_COLOR = '#2f9ec0';
 const buildBackgroundConfig = (overrides = {}) => getThemeBackgroundConfigFromForm(overrides, {
     currentBackgroundImage: window.currentBackgroundImage || null,
     currentTopBackgroundImage: window.currentTopBackgroundImage || null,
@@ -354,6 +361,7 @@ export function applyCustomTheme(theme) {
     // Apply global corner style instead of theme-specific one
     const globalStyle = localStorage.getItem('globalCornerStyle') || 'rounded';
     applyCornerStyle(globalStyle);
+    scheduleTaskbarIconSync();
 }
 
 export function getCustomThemes() {
@@ -411,6 +419,7 @@ export function setTheme(theme, options = {}) {
 
     try {
         clearThemeInlineVariables(root);
+        applyHueRotationState(0);
         disableFixedBackgroundTracking();
         applyThemeFonts(DEFAULT_THEME_FONTS);
         applyThemeTextEffects(null);
@@ -445,6 +454,7 @@ export function setTheme(theme, options = {}) {
         }
 
         syncSplashThemePreferenceView(nextTheme, { emubro, DEFAULT_THEME_FONTS });
+        scheduleTaskbarIconSync(true);
 
         // Keep theme switching side effects minimal to avoid memory churn.
         lastAppliedThemeId = nextTheme;
@@ -859,6 +869,7 @@ export function invertColors() {
         // Keep legacy behavior (CSS filter) but also invert the theme palette itself.
         toggleTheme();
         toggleInvertFilterView();
+        scheduleTaskbarIconSync(true);
     });
 }
 
@@ -874,6 +885,7 @@ export function hueRotateColors() {
             degrees: HUE_ROTATE_STEP_DEG
         });
         applyHueRotationState(currentHueRotateDeg + HUE_ROTATE_STEP_DEG);
+        scheduleTaskbarIconSync(true);
         currentTheme = hueRotatedTheme?.id || 'temp_hue_rotated';
     });
 }
@@ -899,4 +911,90 @@ function applyHueRotationState(degrees) {
         }
     }
     return normalized;
+}
+
+function getCurrentTaskbarIconColor() {
+    const root = document.documentElement;
+    if (!root || typeof getComputedStyle !== 'function') return TASKBAR_ICON_FALLBACK_COLOR;
+    const rootStyles = getComputedStyle(root);
+    const logoCircle = document.querySelector('.logo-circle');
+    let color = '';
+
+    if (logoCircle && typeof getComputedStyle === 'function') {
+        const circleStyles = getComputedStyle(logoCircle);
+        color = parseColorToHex(circleStyles.backgroundColor || '');
+    }
+    if (!color) {
+        color = parseColorToHex(rootStyles.getPropertyValue('--logo-brand-color'))
+            || parseColorToHex(rootStyles.getPropertyValue('--accent-color'))
+            || parseColorToHex(rootStyles.getPropertyValue('--brand-color'))
+            || TASKBAR_ICON_FALLBACK_COLOR;
+    }
+    if (!color) return TASKBAR_ICON_FALLBACK_COLOR;
+    const hueDegrees = normalizeHueDegrees(rootStyles.getPropertyValue('--hue-rotate-deg'));
+    if (hueDegrees > 0) {
+        color = parseColorToHex(rotateHue(color, hueDegrees)) || color;
+    }
+    if (root.getAttribute('data-invert-filter-active') === '1') {
+        color = parseColorToHex(invertHex(color)) || color;
+    }
+    return color;
+}
+
+function syncTaskbarIconWithThemeColor(options = {}) {
+    const force = Boolean(options?.force);
+    if (!emubro || typeof emubro.invoke !== 'function') return;
+    const color = getCurrentTaskbarIconColor() || TASKBAR_ICON_FALLBACK_COLOR;
+    const signature = String(color || '').trim().toLowerCase();
+    if (!signature) return;
+    if (!force && signature === lastTaskbarIconColor) return;
+    lastTaskbarIconColor = signature;
+    try {
+        const result = emubro.invoke('window:set-taskbar-icon', { color });
+        if (result && typeof result.catch === 'function') {
+            result.catch(() => {
+                lastTaskbarIconColor = '';
+            });
+        }
+    } catch (_error) {
+        lastTaskbarIconColor = '';
+    }
+}
+
+function scheduleTaskbarIconSync(force = false) {
+    if (force) taskbarIconSyncForce = true;
+    if (!taskbarIconVisibilityListenerBound && typeof document !== 'undefined') {
+        taskbarIconVisibilityListenerBound = true;
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                scheduleTaskbarIconSync(true);
+            }
+        });
+    }
+
+    if (taskbarIconSyncHandle || taskbarIconSyncTimeout) return;
+
+    const flush = () => {
+        if (taskbarIconSyncHandle) {
+            window.cancelAnimationFrame(taskbarIconSyncHandle);
+            taskbarIconSyncHandle = 0;
+        }
+        if (taskbarIconSyncTimeout) {
+            window.clearTimeout(taskbarIconSyncTimeout);
+            taskbarIconSyncTimeout = 0;
+        }
+        const shouldForce = taskbarIconSyncForce;
+        taskbarIconSyncForce = false;
+        syncTaskbarIconWithThemeColor({ force: shouldForce });
+    };
+
+    // rAF keeps updates aligned with paint in normal cases.
+    taskbarIconSyncHandle = window.requestAnimationFrame(() => {
+        taskbarIconSyncHandle = window.requestAnimationFrame(() => {
+            flush();
+        });
+    });
+
+    // Packaged Windows builds can delay/suspend rAF before the window is fully visible.
+    taskbarIconSyncTimeout = window.setTimeout(flush, 220);
 }

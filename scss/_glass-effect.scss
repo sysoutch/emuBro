@@ -39,7 +39,7 @@
         @include glass-bg-only(--bg-secondary, 50%);
     }
 
-    /* Avoid Electron/Chromium hover repaint memory growth on cover cards. */
+    /* Avoid webview/Chromium hover repaint memory growth on cover cards. */
     .game-card {
         backdrop-filter: none;
         -webkit-backdrop-filter: none;

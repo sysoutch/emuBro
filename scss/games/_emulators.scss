@@ -55,6 +55,12 @@
 }
 
 .emulator-card {
+    --card-pointer-x: 50%;
+    --card-pointer-y: 50%;
+    --card-shine-dx: 0px;
+    --card-shine-dy: 0px;
+    --card-tilt-x: 0deg;
+    --card-tilt-y: 0deg;
     --emulator-glow-1: color-mix(in srgb, var(--accent-color), transparent 38%);
     --emulator-glow-2: color-mix(in srgb, var(--accent-color), white 22%);
     --emulator-glow-3: color-mix(in srgb, var(--accent-color), black 18%);
@@ -69,13 +75,40 @@
     content-visibility: auto;
     contain-intrinsic-size: 320px 210px;
     box-shadow: 0 16px 30px -24px rgba(0, 0, 0, 0.82);
+    transform-style: preserve-3d;
     transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .emulator-card:hover {
-    transform: translateY(-3px);
+    transform: translateY(-3px) perspective(900px) rotateX(var(--card-tilt-x)) rotateY(var(--card-tilt-y));
     border-color: color-mix(in srgb, var(--accent-color) 54%, rgba(255,255,255,0.2));
     box-shadow: 0 24px 36px -26px rgba(0, 0, 0, 0.92);
+}
+
+.emulator-card::after {
+    content: "";
+    position: absolute;
+    inset: -34% -54%;
+    opacity: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(280px 180px at var(--card-pointer-x) var(--card-pointer-y), color-mix(in srgb, white 22%, transparent), transparent 62%),
+        linear-gradient(
+            112deg,
+            transparent 42%,
+            color-mix(in srgb, white 24%, transparent) 50%,
+            color-mix(in srgb, white 10%, transparent) 56%,
+            transparent 64%
+        );
+    transform: translateX(calc(-18% + var(--card-shine-dx))) translateY(var(--card-shine-dy)) rotate(10deg);
+    transition: transform 320ms ease, opacity 160ms ease;
+    z-index: 1;
+}
+
+.emulator-card:hover::after,
+.emulator-card:focus-visible::after {
+    opacity: 0.7;
+    transform: translateX(calc(16% + var(--card-shine-dx))) translateY(var(--card-shine-dy)) rotate(10deg);
 }
 
 .emulator-card-header {
@@ -94,6 +127,9 @@
     overflow: hidden;
     border: 1px solid color-mix(in srgb, rgba(255,255,255,0.18), var(--border-color));
     background: color-mix(in srgb, var(--bg-primary), white 9%);
+    transform: translateY(0) scale(1);
+    transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
+    box-shadow: 0 10px 18px rgba(0, 0, 0, 0.24);
 }
 
 .emulator-card-hero::before {
@@ -105,8 +141,11 @@
         radial-gradient(62% 58% at 10% 14%, var(--emulator-glow-1) 0%, transparent 72%),
         radial-gradient(54% 54% at 90% 10%, var(--emulator-glow-2) 0%, transparent 70%),
         linear-gradient(140deg, var(--emulator-glow-1) 0%, var(--emulator-glow-2) 45%, var(--emulator-glow-3) 100%);
+    background-size: 130% 130%, 135% 135%, 175% 175%;
+    background-position: 0% 0%, 100% 0%, 20% 24%;
     filter: blur(calc(16px * var(--view-scale))) saturate(1.12);
     opacity: 0.88;
+    transition: opacity 200ms ease, transform 300ms ease;
 }
 
 .emulator-card-hero::after {
@@ -126,13 +165,29 @@
     z-index: 1;
 }
 
+.emulator-card:hover .emulator-card-hero,
+.emulator-card:focus-visible .emulator-card-hero {
+    transform: translateY(-1px) scale(1.012);
+    border-color: color-mix(in srgb, var(--accent-color) 42%, rgba(255,255,255,0.2));
+    box-shadow: 0 14px 26px rgba(0, 0, 0, 0.3);
+}
+
+.emulator-card:hover .emulator-card-hero::before,
+.emulator-card:focus-visible .emulator-card-hero::before {
+    opacity: 0.96;
+    transform: translate(calc(var(--card-shine-dx) * 0.45), calc(var(--card-shine-dy) * 0.38)) scale(1.02);
+    animation: emulator-hero-gradient-drift 5s ease-in-out infinite;
+}
+
 .emulator-card-hover-action {
+    appearance: none;
+    cursor: pointer;
     position: absolute;
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%) scale(0.92);
-    width: calc(62px * var(--view-scale));
-    height: calc(62px * var(--view-scale));
+    width: 62px;
+    height: 62px;
     border-radius: 999px;
     background: color-mix(in srgb, var(--bg-primary), transparent 28%);
     border: 1px solid color-mix(in srgb, rgba(255,255,255,0.32), var(--border-color));
@@ -175,6 +230,12 @@
     opacity: 1;
     transform: translate(-50%, -50%) scale(1);
     box-shadow: 0 16px 30px rgba(0,0,0,0.35);
+    pointer-events: auto;
+}
+
+.emulator-card-hover-action.is-busy {
+    cursor: progress;
+    opacity: 0.86;
 }
 
 .emulators-grid.is-performance-mode .emulator-card {
@@ -183,7 +244,7 @@
 }
 
 .emulators-grid.is-performance-mode .emulator-card:hover {
-    transform: none;
+    transform: perspective(900px) rotateX(var(--card-tilt-x)) rotateY(var(--card-tilt-y));
     box-shadow: 0 12px 20px -16px rgba(0, 0, 0, 0.74);
 }
 
@@ -191,10 +252,27 @@
     inset: -20%;
     filter: blur(calc(8px * var(--view-scale))) saturate(1.04);
     opacity: 0.76;
+    animation: none;
 }
 
 .emulators-grid.is-performance-mode .emulator-card-hover-action {
     display: none;
+}
+
+.emulators-grid.is-performance-mode .emulator-card::after {
+    display: none;
+}
+
+@keyframes emulator-hero-gradient-drift {
+    0% {
+        background-position: 0% 0%, 100% 0%, 20% 24%;
+    }
+    50% {
+        background-position: 16% 10%, 84% 18%, 74% 68%;
+    }
+    100% {
+        background-position: 0% 0%, 100% 0%, 20% 24%;
+    }
 }
 
 .emulator-title {
@@ -210,8 +288,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: calc(32px * var(--view-scale));
-    height: calc(32px * var(--view-scale));
+    width: 32px;
+    height: 32px;
     border-radius: 999px;
     background: color-mix(in srgb, var(--bg-secondary), transparent 20%);
     border: 1px solid color-mix(in srgb, rgba(255,255,255,0.22), var(--border-color));
@@ -219,8 +297,8 @@
 }
 
 .emulator-platform-icon {
-    width: calc(18px * var(--view-scale));
-    height: calc(18px * var(--view-scale));
+    width: 18px;
+    height: 18px;
     object-fit: contain;
 }
 
