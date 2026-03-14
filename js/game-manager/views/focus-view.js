@@ -1,6 +1,16 @@
+import { isCustomGameCoverSource } from '../render-utils';
+import { attachGameCardContextMenu } from '../game-card-context-menu';
+
 export function renderGamesAsFocus(gamesToRender, options = {}) {
     const gamesContainer = document.getElementById('games-container');
     if (!gamesContainer) return;
+    const previousActiveElement = document.activeElement;
+    const shouldRestoreViewFocus = (() => {
+        if (!previousActiveElement || previousActiveElement === document.body) return true;
+        if (!(previousActiveElement instanceof HTMLElement)) return false;
+        if (gamesContainer.contains(previousActiveElement)) return true;
+        return false;
+    })();
     const renderToken = options.renderToken;
     const getRenderToken = typeof options.getRenderToken === 'function' ? options.getRenderToken : () => renderToken;
     const setGamesScrollDetach = typeof options.setGamesScrollDetach === 'function'
@@ -8,9 +18,13 @@ export function renderGamesAsFocus(gamesToRender, options = {}) {
         : () => {};
     const buildViewGamePool = typeof options.buildViewGamePool === 'function' ? options.buildViewGamePool : (rows) => rows;
     const maxPoolSize = Number(options.maxPoolSize) || 0;
+    const launchGame = typeof options.launchGame === 'function' ? options.launchGame : (async () => {});
     const showGameDetails = typeof options.showGameDetails === 'function' ? options.showGameDetails : () => {};
+    const removeGame = typeof options.removeGame === 'function' ? options.removeGame : (async () => {});
     const cleanupLazyGameImages = typeof options.cleanupLazyGameImages === 'function' ? options.cleanupLazyGameImages : () => {};
     const i18n = options.i18n;
+    const emubro = options.emubro || window.emubro;
+    const alertUser = typeof options.alertUser === 'function' ? options.alertUser : (message) => window.alert(String(message || ''));
     const t = (key, fallback = 'Unknown') => {
         try {
             if (i18n && typeof i18n.t === 'function') return i18n.t(key);
@@ -71,6 +85,13 @@ export function renderGamesAsFocus(gamesToRender, options = {}) {
     previewImage.loading = 'lazy';
     previewImage.decoding = 'async';
     previewImageWrap.appendChild(previewImage);
+    const previewPlayBtn = document.createElement('button');
+    previewPlayBtn.type = 'button';
+    previewPlayBtn.className = 'game-cover-play-btn focus-preview-play-btn';
+    previewPlayBtn.setAttribute('aria-label', 'Play selected game');
+    previewPlayBtn.setAttribute('title', 'Play selected game');
+    previewPlayBtn.innerHTML = '<span class="game-cover-play-icon" aria-hidden="true"></span>';
+    previewImageWrap.appendChild(previewPlayBtn);
     const previewInfo = document.createElement('div');
     previewInfo.className = 'focus-preview-info';
     const previewTitle = document.createElement('h2');
@@ -117,6 +138,18 @@ export function renderGamesAsFocus(gamesToRender, options = {}) {
     let filteredIndices = [];
     let itemButtons = [];
 
+    function bindContextMenu(target, game) {
+        if (!(target instanceof Element) || !game) return;
+        attachGameCardContextMenu(target, game, {
+            i18n,
+            emubro,
+            alertUser,
+            launchGame,
+            showGameDetails,
+            removeGame
+        });
+    }
+
     function isGameDetailsPopupVisible() {
         const popup = document.getElementById('game-info-modal');
         if (!popup) return false;
@@ -154,6 +187,9 @@ export function renderGamesAsFocus(gamesToRender, options = {}) {
         previewTitle.textContent = game.name || '';
         previewImage.src = imagePath || '';
         previewImage.alt = game.name || '';
+        previewPlayBtn.setAttribute('aria-label', `Play ${game.name || 'selected game'}`);
+        previewPlayBtn.setAttribute('title', `Play ${game.name || 'selected game'}`);
+        previewPanel.classList.toggle('is-custom-cover-source', isCustomGameCoverSource(imagePath));
         previewMeta.innerHTML = `
             <span class="focus-meta-pill">${platformName}</span>
             <span class="focus-meta-pill">Rating: ${ratingText}</span>
@@ -166,6 +202,7 @@ export function renderGamesAsFocus(gamesToRender, options = {}) {
 
         backdrop.style.backgroundImage = imagePath ? `url("${imagePath}")` : '';
         setActiveListItem(filteredIndex, shouldScroll);
+        bindContextMenu(previewPanel, game);
     }
 
     function setIndex(nextFilteredIndex, shouldScroll = false) {
@@ -210,6 +247,7 @@ export function renderGamesAsFocus(gamesToRender, options = {}) {
             itemBtn.appendChild(itemName);
             itemButtons.push(itemBtn);
             listEl.appendChild(itemBtn);
+            bindContextMenu(itemBtn, game);
         });
 
         if (!filteredIndices.length) {
@@ -255,6 +293,16 @@ export function renderGamesAsFocus(gamesToRender, options = {}) {
         if (game) showGameDetails(game);
     });
 
+    previewPlayBtn.addEventListener('click', async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const sourceIndex = filteredIndices[currentFilteredIndex];
+        const game = Number.isFinite(sourceIndex) ? focusGames[sourceIndex] : null;
+        if (game) {
+            await launchGame(game);
+        }
+    });
+
     platformBar.addEventListener('click', (event) => {
         const button = event.target.closest('.focus-platform-btn[data-focus-platform]');
         if (!button) return;
@@ -287,7 +335,9 @@ export function renderGamesAsFocus(gamesToRender, options = {}) {
 
     renderPlatformButtons();
     rebuildList(true);
-    focusContainer.focus();
+    if (shouldRestoreViewFocus && document.activeElement !== focusContainer) {
+        focusContainer.focus();
+    }
 
     setGamesScrollDetach(() => {
         cleanupLazyGameImages(focusContainer);

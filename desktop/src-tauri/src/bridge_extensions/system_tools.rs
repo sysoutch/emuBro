@@ -6,11 +6,393 @@ use std::env;
 use std::io::Cursor;
 use std::path::PathBuf;
 
+fn format_hardware_bytes(bytes: u64) -> String {
+    const UNITS: [&str; 5] = ["B", "KB", "MB", "GB", "TB"];
+    let mut value = bytes as f64;
+    let mut unit_index = 0usize;
+    while value >= 1024.0 && unit_index < UNITS.len() - 1 {
+        value /= 1024.0;
+        unit_index += 1;
+    }
+    if unit_index == 0 {
+        format!("{} {}", bytes, UNITS[unit_index])
+    } else {
+        format!("{:.1} {}", value, UNITS[unit_index])
+    }
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+fn dedupe_hardware_names(names: impl IntoIterator<Item = String>) -> Vec<String> {
+    let mut unique = Vec::<String>::new();
+    for name in names {
+        let trimmed = name.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if unique.iter().any(|existing| existing.eq_ignore_ascii_case(trimmed)) {
+            continue;
+        }
+        unique.push(trimmed.to_string());
+    }
+    unique
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+fn run_text_command(command: &str, args: &[&str]) -> Option<String> {
+    let output = Command::new(command).args(args).output().ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let text = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if text.is_empty() {
+        None
+    } else {
+        Some(text)
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn parse_first_labeled_value(text: &str, labels: &[&str]) -> Option<String> {
+    for line in text.lines() {
+        let trimmed = line.trim();
+        for label in labels {
+            if let Some(value) = trimmed.strip_prefix(label) {
+                let parsed = value.trim().trim_start_matches(':').trim();
+                if !parsed.is_empty() {
+                    return Some(parsed.to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
+#[cfg(target_os = "linux")]
+fn parse_linux_meminfo_kib(text: &str, key: &str) -> Option<u64> {
+    let prefix = format!("{}:", key);
+    let line = text.lines().find(|entry| entry.starts_with(&prefix))?;
+    let amount = line[prefix.len()..]
+        .split_whitespace()
+        .next()?
+        .parse::<u64>()
+        .ok()?;
+    Some(amount * 1024)
+}
+
+#[cfg(target_os = "windows")]
+fn decode_windows_wide_text(buffer: &[u16]) -> String {
+    let end = buffer.iter().position(|value| *value == 0).unwrap_or(buffer.len());
+    String::from_utf16_lossy(&buffer[..end]).trim().to_string()
+}
+
+#[cfg(target_os = "windows")]
+fn encode_windows_wide_text(value: &str) -> Vec<u16> {
+    use std::os::windows::ffi::OsStrExt;
+
+    std::ffi::OsStr::new(value)
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect()
+}
+
+#[cfg(target_os = "windows")]
+fn read_windows_cpu_name() -> Option<String> {
+    use windows::core::PCWSTR;
+    use windows::Win32::System::Registry::{
+        RegCloseKey, RegOpenKeyExW, RegQueryValueExW, HKEY, HKEY_LOCAL_MACHINE, KEY_READ,
+        REG_VALUE_TYPE,
+    };
+
+    let key_path = encode_windows_wide_text("HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0");
+    let value_name = encode_windows_wide_text("ProcessorNameString");
+    let mut key = HKEY::default();
+    if unsafe {
+        RegOpenKeyExW(
+            HKEY_LOCAL_MACHINE,
+            PCWSTR(key_path.as_ptr()),
+            Some(0),
+            KEY_READ,
+            &mut key,
+        )
+    }
+    .0 != 0
+    {
+        return None;
+    }
+
+    let mut value_kind = REG_VALUE_TYPE(0);
+    let mut value_len = 0u32;
+    let query_len_status = unsafe {
+        RegQueryValueExW(
+            key,
+            PCWSTR(value_name.as_ptr()),
+            None,
+            Some(&mut value_kind),
+            None,
+            Some(&mut value_len),
+        )
+    };
+    if query_len_status.0 != 0 || value_len < 2 {
+        unsafe {
+            let _ = RegCloseKey(key);
+        }
+        return None;
+    }
+
+    let mut buffer = vec![0u8; value_len as usize];
+    let query_value_status = unsafe {
+        RegQueryValueExW(
+            key,
+            PCWSTR(value_name.as_ptr()),
+            None,
+            Some(&mut value_kind),
+            Some(buffer.as_mut_ptr()),
+            Some(&mut value_len),
+        )
+    };
+    unsafe {
+        let _ = RegCloseKey(key);
+    }
+    if query_value_status.0 != 0 || buffer.len() < 2 {
+        return None;
+    }
+
+    let wide_len = buffer.len() / 2;
+    let wide_buffer = unsafe { std::slice::from_raw_parts(buffer.as_ptr() as *const u16, wide_len) };
+    let cpu_name = decode_windows_wide_text(wide_buffer);
+    if cpu_name.is_empty() {
+        None
+    } else {
+        Some(cpu_name)
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn read_windows_memory_bytes() -> Option<(u64, u64)> {
+    use windows::Win32::System::SystemInformation::{GlobalMemoryStatusEx, MEMORYSTATUSEX};
+
+    let mut status = MEMORYSTATUSEX::default();
+    status.dwLength = std::mem::size_of::<MEMORYSTATUSEX>() as u32;
+    if unsafe { GlobalMemoryStatusEx(&mut status) }.is_ok() {
+        Some((status.ullTotalPhys, status.ullAvailPhys))
+    } else {
+        None
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn read_windows_gpu_names() -> Vec<String> {
+    use windows::core::PCWSTR;
+    use windows::Win32::Graphics::Gdi::{DISPLAY_DEVICEW, EnumDisplayDevicesW};
+
+    let mut names = Vec::<String>::new();
+    for index in 0..16u32 {
+        let mut device = DISPLAY_DEVICEW::default();
+        device.cb = std::mem::size_of::<DISPLAY_DEVICEW>() as u32;
+        if !unsafe { EnumDisplayDevicesW(PCWSTR::null(), index, &mut device, 0) }.as_bool() {
+            break;
+        }
+        let name = decode_windows_wide_text(&device.DeviceString);
+        if name.is_empty() {
+            continue;
+        }
+        if names.iter().any(|existing| existing.eq_ignore_ascii_case(&name)) {
+            continue;
+        }
+        names.push(name);
+    }
+    names
+}
+
+#[cfg(target_os = "linux")]
+fn read_linux_cpu_name() -> Option<String> {
+    if let Some(output) = run_text_command("lscpu", &[]) {
+        if let Some(name) = parse_first_labeled_value(&output, &["Model name", "Model name:"]) {
+            return Some(name);
+        }
+    }
+    let cpuinfo = fs::read_to_string("/proc/cpuinfo").ok()?;
+    parse_first_labeled_value(&cpuinfo, &["model name", "model name:"])
+}
+
+#[cfg(target_os = "linux")]
+fn read_linux_memory_bytes() -> Option<(u64, u64)> {
+    let meminfo = fs::read_to_string("/proc/meminfo").ok()?;
+    let total = parse_linux_meminfo_kib(&meminfo, "MemTotal")?;
+    let available = parse_linux_meminfo_kib(&meminfo, "MemAvailable").unwrap_or(0);
+    Some((total, available))
+}
+
+#[cfg(target_os = "linux")]
+fn read_linux_gpu_names() -> Vec<String> {
+    let Some(output) = run_text_command("lspci", &[]) else {
+        return Vec::new();
+    };
+    dedupe_hardware_names(output.lines().filter_map(|line| {
+        let trimmed = line.trim();
+        let is_gpu = trimmed.contains("VGA compatible controller")
+            || trimmed.contains("3D controller")
+            || trimmed.contains("Display controller");
+        if !is_gpu {
+            return None;
+        }
+        let normalized = trimmed
+            .splitn(3, ':')
+            .nth(2)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .unwrap_or(trimmed);
+        Some(normalized.to_string())
+    }))
+}
+
+#[cfg(target_os = "macos")]
+fn read_macos_cpu_name() -> Option<String> {
+    run_text_command("sysctl", &["-n", "machdep.cpu.brand_string"])
+}
+
+#[cfg(target_os = "macos")]
+fn read_macos_memory_bytes() -> Option<(u64, u64)> {
+    let total = run_text_command("sysctl", &["-n", "hw.memsize"])?.parse::<u64>().ok()?;
+    Some((total, 0))
+}
+
+#[cfg(target_os = "macos")]
+fn read_macos_gpu_names() -> Vec<String> {
+    let Some(output) = run_text_command("system_profiler", &["SPDisplaysDataType", "-json"]) else {
+        return Vec::new();
+    };
+    let parsed = serde_json::from_str::<Value>(&output).ok();
+    let names = parsed
+        .and_then(|value| value.get("SPDisplaysDataType").cloned())
+        .and_then(|value| value.as_array().cloned())
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|entry| {
+            entry
+                .get("sppci_model")
+                .and_then(|value| value.as_str())
+                .map(|value| value.to_string())
+                .or_else(|| {
+                    entry
+                        .get("_name")
+                        .and_then(|value| value.as_str())
+                        .map(|value| value.to_string())
+                })
+        });
+    dedupe_hardware_names(names)
+}
+
+#[cfg(not(target_os = "windows"))]
+fn read_windows_cpu_name() -> Option<String> {
+    None
+}
+
+#[cfg(not(target_os = "windows"))]
+fn read_windows_memory_bytes() -> Option<(u64, u64)> {
+    None
+}
+
+#[cfg(not(target_os = "windows"))]
+fn read_windows_gpu_names() -> Vec<String> {
+    Vec::new()
+}
+
+fn read_cpu_name() -> Option<String> {
+    #[cfg(target_os = "windows")]
+    {
+        return read_windows_cpu_name();
+    }
+    #[cfg(target_os = "linux")]
+    {
+        return read_linux_cpu_name();
+    }
+    #[cfg(target_os = "macos")]
+    {
+        return read_macos_cpu_name();
+    }
+    #[allow(unreachable_code)]
+    None
+}
+
+fn read_memory_bytes() -> Option<(u64, u64)> {
+    #[cfg(target_os = "windows")]
+    {
+        return read_windows_memory_bytes();
+    }
+    #[cfg(target_os = "linux")]
+    {
+        return read_linux_memory_bytes();
+    }
+    #[cfg(target_os = "macos")]
+    {
+        return read_macos_memory_bytes();
+    }
+    #[allow(unreachable_code)]
+    None
+}
+
+fn read_gpu_names() -> Vec<String> {
+    #[cfg(target_os = "windows")]
+    {
+        return read_windows_gpu_names();
+    }
+    #[cfg(target_os = "linux")]
+    {
+        return read_linux_gpu_names();
+    }
+    #[cfg(target_os = "macos")]
+    {
+        return read_macos_gpu_names();
+    }
+    #[allow(unreachable_code)]
+    Vec::new()
+}
+
 fn build_system_specs() -> Value {
+    let platform = std::env::consts::OS;
+    let arch = std::env::consts::ARCH;
+    let cpu_cores = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(1);
+    let cpu_name = read_cpu_name().unwrap_or_default();
+    let (ram_total_bytes, ram_available_bytes) = read_memory_bytes().unwrap_or((0, 0));
+    let gpu_names = read_gpu_names();
+
+    let mut lines = vec![
+        format!("Platform: {}", platform),
+        format!("Architecture: {}", arch),
+    ];
+    if !cpu_name.is_empty() {
+        lines.push(format!("CPU: {}", cpu_name));
+    }
+    lines.push(format!("CPU Cores: {}", cpu_cores));
+    if ram_total_bytes > 0 {
+        let total = format_hardware_bytes(ram_total_bytes);
+        if ram_available_bytes > 0 {
+            lines.push(format!(
+                "RAM: {} total ({} available)",
+                total,
+                format_hardware_bytes(ram_available_bytes)
+            ));
+        } else {
+            lines.push(format!("RAM: {}", total));
+        }
+    }
+    if !gpu_names.is_empty() {
+        lines.push(format!("GPU: {}", gpu_names.join(", ")));
+    }
+
+    let text = lines.join("\n");
     json!({
-        "platform": std::env::consts::OS,
-        "arch": std::env::consts::ARCH,
-        "cpuCores": std::thread::available_parallelism().map(|n| n.get()).unwrap_or(1),
+        "platform": platform,
+        "arch": arch,
+        "cpuCores": cpu_cores,
+        "cpuName": cpu_name,
+        "ramTotalBytes": ram_total_bytes,
+        "ramAvailableBytes": ram_available_bytes,
+        "ramTotal": if ram_total_bytes > 0 { Value::String(format_hardware_bytes(ram_total_bytes)) } else { Value::Null },
+        "ramAvailable": if ram_available_bytes > 0 { Value::String(format_hardware_bytes(ram_available_bytes)) } else { Value::Null },
+        "gpuNames": gpu_names,
+        "text": text
     })
 }
 

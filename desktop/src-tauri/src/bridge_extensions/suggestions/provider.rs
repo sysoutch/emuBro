@@ -395,3 +395,139 @@ pub(super) fn request_provider_text(payload: &Value, prompt: &str) -> Result<Str
     }
     Ok(text)
 }
+
+pub(super) fn request_provider_chat_text(
+    payload: &Value,
+    system_prompt: &str,
+    user_prompt: &str,
+    expect_json: bool,
+) -> Result<String, String> {
+    if relay_enabled_for_payload(payload) {
+        let merged_prompt = format!(
+            "{}\n\nUser request:\n{}",
+            system_prompt.trim(),
+            user_prompt.trim()
+        );
+        let body = json!({
+            "payload": sanitize_relay_payload(payload),
+            "options": {
+                "prompt": merged_prompt,
+                "temperature": normalize_temperature(payload.get("temperature").and_then(|v| v.as_f64()), 0.8),
+                "responseFormat": if expect_json { "json_object" } else { "text" }
+            }
+        });
+        let response = relay_post_json(payload, "/api/llm/request-text", &body)?;
+        if !response.get("success").and_then(|v| v.as_bool()).unwrap_or(false) {
+            return Err(
+                response
+                    .get("message")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("Relay request failed.")
+                    .to_string(),
+            );
+        }
+        let text = response
+            .get("text")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .trim()
+            .to_string();
+        if text.is_empty() {
+            return Err("Relay returned an empty response.".to_string());
+        }
+        return Ok(text);
+    }
+
+    let provider = normalize_provider(payload.get("provider").and_then(|v| v.as_str()).unwrap_or(""));
+    let model = payload
+        .get("model")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    let base_url = payload
+        .get("baseUrl")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    let api_key = payload
+        .get("apiKey")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    let temperature = normalize_temperature(payload.get("temperature").and_then(|v| v.as_f64()), 0.8);
+
+    if model.is_empty() {
+        return Err("Model is required.".to_string());
+    }
+    if base_url.is_empty() {
+        return Err("Provider base URL is required.".to_string());
+    }
+
+    let response = match provider.as_str() {
+        "openai" => {
+            if api_key.is_empty() {
+                return Err("API key is required for OpenAI.".to_string());
+            }
+            let url = format!("{}/chat/completions", base_url.trim_end_matches('/'));
+            let auth = format!("Bearer {}", api_key);
+            let body = json!({
+                "model": model,
+                "temperature": temperature,
+                "response_format": if expect_json { json!({ "type": "json_object" }) } else { Value::Null },
+                "messages": [
+                    { "role": "system", "content": system_prompt },
+                    { "role": "user", "content": user_prompt }
+                ]
+            });
+            ureq_json_request("POST", &url, &[("Authorization", &auth)], Some(&body))?
+        }
+        "gemini" => {
+            if api_key.is_empty() {
+                return Err("API key is required for Gemini.".to_string());
+            }
+            let root = base_url.trim_end_matches('/');
+            let model_path = model.trim_start_matches("models/");
+            let url = format!("{}/models/{}:generateContent?key={}", root, model_path, api_key);
+            let body = json!({
+                "systemInstruction": {
+                    "parts": [{ "text": system_prompt }]
+                },
+                "contents": [{
+                    "role": "user",
+                    "parts": [{ "text": user_prompt }]
+                }],
+                "generationConfig": {
+                    "temperature": temperature,
+                    "responseMimeType": if expect_json { "application/json" } else { "text/plain" }
+                }
+            });
+            ureq_json_request("POST", &url, &[], Some(&body))?
+        }
+        _ => {
+            let url = format!("{}/api/generate", base_url.trim_end_matches('/'));
+            let body = json!({
+                "model": model,
+                "system": system_prompt,
+                "prompt": user_prompt,
+                "format": if expect_json { json!("json") } else { Value::Null },
+                "stream": false,
+                "options": { "temperature": temperature }
+            });
+            ureq_json_request("POST", &url, &[], Some(&body))?
+        }
+    };
+
+    let text = extract_model_text(&response);
+    if text.is_empty() {
+        let response_preview = response.to_string();
+        let clipped = response_preview.chars().take(320).collect::<String>();
+        return Err(format!(
+            "Provider returned an empty response. Raw preview: {}",
+            clipped
+        ));
+    }
+    Ok(text)
+}

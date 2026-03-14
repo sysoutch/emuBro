@@ -22,6 +22,8 @@ pub(super) fn emubro_invoke_impl(channel: String, args: Vec<Value>, window: Wind
         | "window:toggle-maximize"
         | "window:close"
         | "window:is-maximized"
+        | "window:set-corner-radius"
+        | "window:debug-log"
         | "window:set-taskbar-icon"
         | "app:renderer-ready" => window::handle(ch.as_str(), &args, &window),
 
@@ -36,6 +38,9 @@ pub(super) fn emubro_invoke_impl(channel: String, args: Vec<Value>, window: Wind
         | "settings:set-runtime-data-rules"
         | "settings:get-splash-theme"
         | "settings:set-splash-theme"
+        | "shell-state:get"
+        | "shell-state:set"
+        | "shell-state:delete"
         | "get-all-translations"
         | "locales:list"
         | "locales:read"

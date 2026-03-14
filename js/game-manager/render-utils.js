@@ -21,10 +21,29 @@ export function getStoredCoverCardMode(storageRef = null) {
     }
 }
 
+export function isCustomGameCoverSource(value = '') {
+    const source = String(value || '').trim();
+    if (!source) return false;
+    if (source.startsWith('data:')) return true;
+    if (/^https?:\/\//i.test(source)) return true;
+    if (/^[a-z]:[\\/]/i.test(source)) return true;
+    if (source.startsWith('\\\\')) return true;
+    if (source.startsWith('/') && !source.startsWith('/emubro-resources/')) return true;
+
+    const normalized = source.replace(/\\/g, '/').toLowerCase();
+    if (normalized.includes('/emubro-resources/platforms/') && normalized.includes('/covers/default.')) {
+        return false;
+    }
+    if (normalized.startsWith('emubro-resources/platforms/') && normalized.includes('/covers/default.')) {
+        return false;
+    }
+    return !normalized.startsWith('emubro-resources/platforms/');
+}
+
 export function buildGamesContainerClass(view = 'cover', coverCardMode = 'cover-title') {
     const normalizedView = String(view || 'cover').trim().toLowerCase() || 'cover';
     const classNames = ['games-container', `${normalizedView}-view`];
-    if (normalizedView === 'cover') {
+    if (normalizedView === 'cover' || normalizedView === 'slideshow') {
         classNames.push(
             normalizeCoverCardMode(coverCardMode) === 'cover-only'
                 ? 'cover-mode-cover-only'

@@ -31,6 +31,18 @@ export function createGameFilters(deps = {}) {
         documentRef = document
     } = deps;
 
+    function getSidebarSelectedPlatforms() {
+        const listRoot = documentRef.getElementById('platforms-list');
+        const raw = String(listRoot?.dataset?.selectedPlatforms || '').trim();
+        if (!raw) return new Set();
+        return new Set(
+            raw
+                .split(',')
+                .map((value) => String(value || '').trim().toLowerCase())
+                .filter(Boolean)
+        );
+    }
+
     function applyFilters(shouldRender = true, sourceRows = null) {
         let filteredGames = Array.isArray(sourceRows) ? [...sourceRows] : [...getGames()];
 
@@ -48,7 +60,11 @@ export function createGameFilters(deps = {}) {
         setCurrentRegionFilter(normalizeRegionFilterValue(regionFilter ? regionFilter.value : 'all'));
         setGroupSameNamesEnabled(!!groupSameNamesToggle?.checked);
 
-        if (getCurrentFilter() !== 'all') {
+        const selectedSidebarPlatforms = getSidebarSelectedPlatforms();
+
+        if (selectedSidebarPlatforms.size > 0) {
+            filteredGames = filteredGames.filter((game) => selectedSidebarPlatforms.has(String(game?.platformShortName || '').trim().toLowerCase()));
+        } else if (getCurrentFilter() !== 'all') {
             filteredGames = filteredGames.filter(game => game.platformShortName.toLowerCase() === getCurrentFilter());
         }
 

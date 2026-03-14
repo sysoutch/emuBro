@@ -1,0 +1,495 @@
+/* Tool workspace surfaces */
+.desktop-tools-layout {
+  max-width: 1480px;
+}
+
+.desktop-tools-workspace {
+  display: grid;
+  gap: 18px;
+}
+
+.desktop-tools-toolbar {
+  display: grid;
+  gap: 16px;
+  padding: 20px 22px;
+}
+
+.desktop-tools-toolbar-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.desktop-tools-toolbar h2 {
+  margin: 0;
+}
+
+.desktop-tools-toolbar p {
+  margin: 8px 0 0;
+  max-width: 760px;
+  color: var(--text-secondary);
+}
+
+.desktop-tools-summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.desktop-tools-summary-pill {
+  min-height: 34px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border-color), transparent 10%);
+  background: color-mix(in srgb, var(--bg-secondary), transparent 10%);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.desktop-tools-summary-pill strong {
+  color: var(--text-primary);
+}
+
+.desktop-tools-tab-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.desktop-tools-tab {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid color-mix(in srgb, var(--border-color), transparent 12%);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-secondary), transparent 12%);
+  color: var(--text-secondary);
+  font-family: var(--font-heading, var(--app-font-heading));
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.desktop-tools-tab:hover {
+  transform: translateY(-1px);
+  color: var(--text-primary);
+  border-color: color-mix(in srgb, var(--accent-color), white 8%);
+}
+
+.desktop-tools-tab.is-active {
+  color: #06141d;
+  border-color: color-mix(in srgb, var(--accent-color), white 6%);
+  background: color-mix(in srgb, var(--accent-color), white 10%);
+  box-shadow: 0 10px 24px rgba(var(--accent-rgb), 0.18);
+}
+
+.desktop-tools-home {
+  padding: 20px 22px 24px;
+}
+
+.desktop-tool-overview-grid,
+.desktop-tool-card-grid,
+.desktop-cover-source-grid,
+.desktop-bios-platform-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.desktop-tool-overview-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  min-height: 100%;
+  padding: 24px 22px 20px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--border-color), transparent 6%);
+  background:
+    radial-gradient(120% 150% at 50% 0%, rgba(var(--accent-rgb), 0.08), transparent 64%),
+    color-mix(in srgb, var(--bg-secondary), transparent 8%);
+  box-shadow:
+    0 16px 28px rgba(0, 0, 0, 0.16),
+    0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+  text-align: center;
+  transition:
+    transform 0.22s ease,
+    border-color 0.22s ease,
+    box-shadow 0.22s ease,
+    background 0.22s ease;
+}
+
+.desktop-tool-overview-card:hover {
+  transform: translateY(-4px);
+  border-color: color-mix(in srgb, var(--accent-color), white 10%);
+  background:
+    radial-gradient(120% 150% at 50% 0%, rgba(var(--accent-rgb), 0.14), transparent 62%),
+    color-mix(in srgb, var(--bg-secondary), transparent 4%);
+  box-shadow:
+    0 24px 38px rgba(0, 0, 0, 0.2),
+    0 0 0 1px rgba(var(--accent-rgb), 0.12) inset;
+}
+
+.desktop-tool-overview-card.is-legacy {
+  opacity: 0.82;
+}
+
+.desktop-tool-overview-icon {
+  width: 68px;
+  height: 68px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--bg-primary), transparent 4%);
+  border: 1px solid color-mix(in srgb, var(--border-color), transparent 18%);
+  color: var(--accent-color);
+  box-shadow: 0 12px 22px rgba(0, 0, 0, 0.18);
+}
+
+.desktop-tool-overview-icon svg {
+  width: 34px;
+  height: 34px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.desktop-tool-overview-copy {
+  display: grid;
+  gap: 10px;
+}
+
+.desktop-tool-overview-copy h3 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.desktop-tool-overview-copy p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.desktop-tool-overview-action {
+  width: 100%;
+  margin-top: auto;
+  min-height: 42px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--border-color), transparent 8%);
+  background: color-mix(in srgb, var(--bg-primary), transparent 12%);
+  color: var(--text-primary);
+  font-family: var(--font-heading, var(--app-font-heading));
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    color 0.18s ease;
+}
+
+.desktop-tool-overview-action:hover {
+  border-color: color-mix(in srgb, var(--accent-color), white 10%);
+  background: color-mix(in srgb, var(--bg-secondary), transparent 4%);
+}
+
+.desktop-tool-overview-action.is-legacy,
+.desktop-tool-overview-action:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.desktop-tools-active {
+  min-width: 0;
+}
+
+.desktop-gamepad-grid {
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+}
+
+.desktop-gamepad-profile-layout {
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+}
+
+.desktop-gamepad-state-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.desktop-tool-card,
+.desktop-tool-surface-card,
+.desktop-tool-host-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--border-color), transparent 8%);
+  background:
+    radial-gradient(120% 150% at 0% 0%, rgba(var(--accent-rgb), 0.1), transparent 62%),
+    color-mix(in srgb, var(--bg-secondary), transparent 10%);
+}
+
+.desktop-tool-card.is-muted {
+  opacity: 0.82;
+}
+
+.desktop-tool-list {
+  display: grid;
+  gap: 10px;
+}
+
+.desktop-tool-list-row,
+.desktop-tool-game-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--border-color), transparent 12%);
+  background: color-mix(in srgb, var(--bg-elev), transparent 12%);
+}
+
+.desktop-tool-game-row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.desktop-tool-list-row strong,
+.desktop-tool-game-row strong,
+.desktop-tool-host-card strong,
+.desktop-tool-card h4 {
+  font-family: var(--font-heading, var(--app-font-heading));
+}
+
+.desktop-tool-list-row small,
+.desktop-tool-list-row-meta,
+.desktop-tool-host-card .meta-line,
+.desktop-tool-game-row small {
+  color: var(--text-secondary);
+}
+
+.desktop-tool-list-row-meta {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+}
+
+.desktop-tool-empty-state {
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px dashed color-mix(in srgb, var(--border-color), transparent 20%);
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--bg-elev), transparent 18%);
+}
+
+.desktop-tool-link-list {
+  display: grid;
+  gap: 8px;
+}
+
+.desktop-tool-link-list a,
+.desktop-tool-list-row-meta a {
+  color: var(--accent-color);
+  overflow-wrap: anywhere;
+}
+
+.desktop-code-block {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--border-color), transparent 12%);
+  background: color-mix(in srgb, var(--bg-elev), transparent 10%);
+  color: var(--text-secondary);
+  font-family: "Consolas", "Courier New", monospace;
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.desktop-textarea-input,
+.field textarea.desktop-textarea-input {
+  width: 100%;
+  min-height: 110px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-elev), transparent 12%);
+  color: var(--text);
+  resize: vertical;
+}
+
+.desktop-status-line {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--border-color), transparent 16%);
+  background: color-mix(in srgb, var(--bg-elev), transparent 14%);
+  color: var(--text-secondary);
+}
+
+.desktop-status-line[data-tone="success"] {
+  border-color: rgba(86, 196, 129, 0.36);
+  color: #8de0a9;
+}
+
+.desktop-status-line[data-tone="warning"] {
+  border-color: rgba(255, 187, 64, 0.36);
+  color: #ffd68a;
+}
+
+.desktop-status-line[data-tone="error"] {
+  border-color: rgba(255, 96, 96, 0.36);
+  color: #ffb1b1;
+}
+
+.desktop-tool-host-card.is-active {
+  border-color: color-mix(in srgb, var(--accent-color), white 8%);
+  box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.18) inset;
+}
+
+.desktop-remote-host-list,
+.desktop-remote-games-list,
+.desktop-cover-results-list {
+  max-height: 420px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.desktop-remote-top-grid {
+  align-items: start;
+}
+
+.desktop-memory-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.desktop-memory-slot-card {
+  align-content: start;
+}
+
+.desktop-memory-action-bar {
+  justify-content: flex-start;
+}
+
+.desktop-memory-save-list {
+  display: grid;
+  gap: 10px;
+}
+
+.desktop-memory-save-row {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--border-color), transparent 12%);
+  background: color-mix(in srgb, var(--bg-elev), transparent 12%);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.desktop-memory-save-row.is-selected {
+  border-color: color-mix(in srgb, var(--accent-color), white 8%);
+  box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.18) inset;
+}
+
+.desktop-memory-save-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--border-color), transparent 16%);
+  background: color-mix(in srgb, var(--bg-secondary), transparent 12%);
+  overflow: hidden;
+}
+
+.desktop-memory-save-icon img {
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+
+.desktop-memory-save-main,
+.desktop-memory-save-meta {
+  display: grid;
+  gap: 4px;
+}
+
+.desktop-memory-save-main small,
+.desktop-memory-save-meta small {
+  color: var(--text-secondary);
+}
+
+.desktop-gamepad-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.desktop-gamepad-meter-list {
+  display: grid;
+  gap: 10px;
+}
+
+.desktop-gamepad-meter-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--border-color), transparent 12%);
+  background: color-mix(in srgb, var(--bg-elev), transparent 12%);
+}
+
+.desktop-gamepad-meter-row.is-active {
+  border-color: color-mix(in srgb, var(--accent-color), white 8%);
+  box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.16) inset;
+}
+
+.desktop-gamepad-meter-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.desktop-gamepad-meter-label small {
+  color: var(--text-secondary);
+}
+
+.desktop-gamepad-meter-track {
+  position: relative;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border-color), transparent 18%);
+  background: color-mix(in srgb, var(--bg-secondary), transparent 12%);
+}
+
+.desktop-gamepad-meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent-color), white 8%), color-mix(in srgb, var(--accent-light-color), white 6%));
+  box-shadow: 0 0 16px rgba(var(--accent-rgb), 0.2);
+}

@@ -1,0 +1,180 @@
+/* Responsive desktop shell overrides */
+@media (max-width: 900px) {
+  .shell-header-top,
+  .shell-body {
+    grid-template-columns: 1fr;
+  }
+
+  .shell-header-top {
+    gap: 10px;
+  }
+
+  .shell-primary-nav,
+  .shell-header-actions {
+    justify-content: flex-start;
+  }
+
+  .shell-quick-controls {
+    width: 100%;
+  }
+
+  .shell-quick-compact {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .shell-compact-menu {
+    left: 0;
+    right: auto;
+    width: min(100%, 340px);
+  }
+
+  .shell-sidebar-shell {
+    width: 100%;
+    border-right: 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--glass-border), transparent 20%);
+  }
+
+  .shell-sidebar-shell.is-collapsed {
+    width: 100%;
+  }
+
+  .shell-sidebar-pane,
+  .shell-sidebar-shell.is-collapsed .shell-sidebar-pane {
+    width: auto;
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+
+  .shell-sidebar-pane-inner {
+    min-width: 0;
+  }
+
+  .shell-stage-header-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .shell-stage-header-meta {
+    justify-content: flex-start;
+  }
+
+  .grid-two,
+  .metrics,
+  .form-grid,
+  .metrics-compact,
+  .desktop-llm-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .desktop-library-list-row {
+    grid-template-columns: 1fr;
+  }
+
+  .desktop-locale-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .desktop-theme-editor-grid,
+  .desktop-theme-preview-card,
+  .desktop-profile-top,
+  .desktop-settings-layout,
+  .desktop-tools-toolbar-main,
+  .desktop-workspace-layout,
+  .desktop-section-grid,
+  .desktop-gamepad-state-grid,
+  .desktop-memory-grid,
+  .desktop-docs-layout,
+  .desktop-support-help-layout,
+  .desktop-library-workspace-layout,
+  .desktop-immersive-focus,
+  .desktop-immersive-hero,
+  .desktop-immersive-random-card,
+  .desktop-about-layout,
+  .desktop-modal-layout,
+  .desktop-modal-layout-compact,
+  .desktop-library-selection-card,
+  .desktop-library-selection-meta,
+  .desktop-runtime-rule-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .desktop-path-entry-row,
+  .desktop-path-list li,
+  .desktop-llm-row,
+  .desktop-llm-result-card,
+  .desktop-tool-list-row,
+  .desktop-tool-game-row,
+  .desktop-memory-save-row,
+  .desktop-gamepad-meter-row {
+    grid-template-columns: 1fr;
+  }
+
+  .desktop-emulator-binding-row,
+  .desktop-emulator-gamepad-header,
+  .desktop-emulator-gamepad-row {
+    grid-template-columns: 1fr;
+  }
+
+  .desktop-theme-color-row {
+    grid-template-columns: 1fr;
+  }
+
+  .desktop-gamepad-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .desktop-sidebar-stat-list {
+    grid-template-columns: 1fr;
+  }
+
+  .desktop-tools-summary {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 680px) {
+  .shell-header-top {
+    padding: 10px 12px;
+  }
+
+  .shell-brand-wordmark {
+    font-size: 1.7rem;
+  }
+
+  .shell-stage {
+    padding: 14px 12px 16px;
+  }
+
+  .shell-stage-header {
+    padding: 10px 6px 0;
+  }
+
+  .shell-sidebar-shell {
+    --shell-rail-width: 68px;
+    --shell-sidebar-pane-width: 1fr;
+  }
+
+  .shell-rail {
+    padding: 12px 8px;
+  }
+
+  .shell-sidebar-pane-inner {
+    padding: 16px 14px;
+  }
+
+  .desktop-tools-toolbar,
+  .desktop-tools-home {
+    padding: 16px 14px;
+  }
+
+  .desktop-tool-overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .shell-compact-trigger {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

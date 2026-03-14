@@ -9,7 +9,7 @@
 .docked-panel-host {
     flex: 0 0 var(--dock-panel-width);
     width: var(--dock-panel-width);
-    min-width: var(--dock-panel-width);
+    min-width: 0;
     display: none;
     position: relative;
     overflow: hidden;

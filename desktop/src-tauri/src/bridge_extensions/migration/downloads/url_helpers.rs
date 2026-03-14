@@ -1,6 +1,8 @@
 use super::*;
+use regex::{Regex, RegexBuilder};
 use std::collections::HashSet;
 use std::io::{Read, Write};
+use url::Url;
 
 pub(super) fn normalize_download_os_key(raw: &str) -> String {
     let value = raw.trim().to_lowercase();
@@ -72,36 +74,183 @@ pub(super) fn url_file_name(url: &str) -> String {
     tail.to_string()
 }
 
+fn compile_download_asset_matchers(payload: &Value, os_key: &str) -> Vec<Regex> {
+    let suffix = match os_key {
+        "windows" => "Win",
+        "mac" => "Mac",
+        _ => "Linux",
+    };
+
+    ["archiveFileMatch", "setupFileMatch", "executableFileMatch"]
+        .iter()
+        .filter_map(|prefix| {
+            let key = format!("{}{}", prefix, suffix);
+            payload
+                .get(&key)
+                .and_then(|v| v.as_str())
+                .map(str::trim)
+                .filter(|pattern| !pattern.is_empty())
+        })
+        .filter_map(|pattern| RegexBuilder::new(pattern).case_insensitive(true).build().ok())
+        .collect()
+}
+
+fn github_release_api_url(raw_url: &str) -> Option<String> {
+    let normalized = ensure_http_url(raw_url);
+    if normalized.is_empty() {
+        return None;
+    }
+
+    let parsed = Url::parse(&normalized).ok()?;
+    let host = parsed.host_str()?.trim().to_ascii_lowercase();
+    if host != "github.com" && host != "www.github.com" {
+        return None;
+    }
+
+    let segments = parsed.path_segments()?.collect::<Vec<_>>();
+    if segments.len() < 4 || segments[2] != "releases" {
+        return None;
+    }
+
+    let owner = segments[0].trim();
+    let repo = segments[1].trim();
+    if owner.is_empty() || repo.is_empty() {
+        return None;
+    }
+
+    match segments[3] {
+        "latest" => Some(format!(
+            "https://api.github.com/repos/{}/{}/releases/latest",
+            owner, repo
+        )),
+        "tag" => {
+            let tag = segments.get(4).copied().unwrap_or("").trim();
+            if tag.is_empty() || tag.eq_ignore_ascii_case("latest") {
+                Some(format!(
+                    "https://api.github.com/repos/{}/{}/releases/latest",
+                    owner, repo
+                ))
+            } else {
+                Some(format!(
+                    "https://api.github.com/repos/{}/{}/releases/tags/{}",
+                    owner,
+                    repo,
+                    urlencoding::encode(tag)
+                ))
+            }
+        }
+        _ => None,
+    }
+}
+
+fn resolve_dynamic_release_asset_urls(source_url: &str, payload: &Value, os_key: &str) -> Vec<String> {
+    let Some(api_url) = github_release_api_url(source_url) else {
+        return Vec::new();
+    };
+
+    let matchers = compile_download_asset_matchers(payload, os_key);
+    let response = match ureq::get(&api_url)
+        .set("User-Agent", "emuBro-Tauri/0.1")
+        .set("Accept", "application/vnd.github+json")
+        .call()
+    {
+        Ok(value) => value,
+        Err(error) => {
+            eprintln!(
+                "[emulator-download] Failed to resolve GitHub release assets from {}: {}",
+                api_url, error
+            );
+            return Vec::new();
+        }
+    };
+
+    let release: Value = match response.into_json() {
+        Ok(value) => value,
+        Err(error) => {
+            eprintln!(
+                "[emulator-download] Failed to parse GitHub release JSON from {}: {}",
+                api_url, error
+            );
+            return Vec::new();
+        }
+    };
+
+    let assets = release
+        .get("assets")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+
+    assets
+        .into_iter()
+        .filter_map(|asset| {
+            let file_name = asset.get("name").and_then(|v| v.as_str()).unwrap_or("").trim();
+            let url = asset
+                .get("browser_download_url")
+                .and_then(|v| v.as_str())
+                .map(ensure_http_url)
+                .unwrap_or_default();
+            if file_name.is_empty() || url.is_empty() {
+                return None;
+            }
+            if !matchers.is_empty() && !matchers.iter().any(|re| re.is_match(file_name)) {
+                return None;
+            }
+            if matchers.is_empty() && infer_download_package_type_from_url(&url).is_empty() {
+                return None;
+            }
+            Some(url)
+        })
+        .collect()
+}
+
+fn push_download_source_urls(
+    out: &mut Vec<String>,
+    seen: &mut HashSet<String>,
+    value: &str,
+    payload: &Value,
+    os_key: &str,
+) {
+    let normalized = ensure_http_url(value);
+    if normalized.is_empty() {
+        return;
+    }
+
+    let dynamic_urls = resolve_dynamic_release_asset_urls(&normalized, payload, os_key);
+    let candidates = if dynamic_urls.is_empty() {
+        vec![normalized]
+    } else {
+        dynamic_urls
+    };
+
+    for candidate in candidates {
+        let key = candidate.to_lowercase();
+        if seen.insert(key) {
+            out.push(candidate);
+        }
+    }
+}
+
 pub(super) fn collect_download_urls(payload: &Value, os_key: &str) -> Vec<String> {
     let mut out = Vec::<String>::new();
     let mut seen = HashSet::<String>::new();
-    let mut push_url = |value: &str| {
-        let normalized = ensure_http_url(value);
-        if normalized.is_empty() {
-            return;
-        }
-        let key = normalized.to_lowercase();
-        if seen.insert(key) {
-            out.push(normalized);
-        }
-    };
 
     if let Some(links) = payload.get("downloadLinks").and_then(|v| v.as_object()) {
         for key in [os_key, "windows", "win", "linux", "mac", "macos", "darwin"] {
             if let Some(value) = links.get(key).and_then(|v| v.as_str()) {
                 if normalize_download_os_key(key) == os_key {
-                    push_url(value);
+                    push_download_source_urls(&mut out, &mut seen, value, payload, os_key);
                 }
             }
         }
     }
 
     match payload.get("downloadUrl") {
-        Some(Value::String(url)) => push_url(url),
+        Some(Value::String(url)) => push_download_source_urls(&mut out, &mut seen, url, payload, os_key),
         Some(Value::Array(values)) => {
             for value in values {
                 if let Some(url) = value.as_str() {
-                    push_url(url);
+                    push_download_source_urls(&mut out, &mut seen, url, payload, os_key);
                 }
             }
         }
@@ -116,11 +265,11 @@ pub(super) fn collect_download_urls(payload: &Value, os_key: &str) -> Vec<String
             for key in keys {
                 if let Some(value) = map.get(key) {
                     match value {
-                        Value::String(url) => push_url(url),
+                        Value::String(url) => push_download_source_urls(&mut out, &mut seen, url, payload, os_key),
                         Value::Array(rows) => {
                             for row in rows {
                                 if let Some(url) = row.as_str() {
-                                    push_url(url);
+                                    push_download_source_urls(&mut out, &mut seen, url, payload, os_key);
                                 }
                             }
                         }
@@ -130,6 +279,12 @@ pub(super) fn collect_download_urls(payload: &Value, os_key: &str) -> Vec<String
             }
         }
         _ => {}
+    }
+
+    if out.is_empty() {
+        if let Some(website) = payload.get("website").and_then(|v| v.as_str()) {
+            push_download_source_urls(&mut out, &mut seen, website, payload, os_key);
+        }
     }
 
     out

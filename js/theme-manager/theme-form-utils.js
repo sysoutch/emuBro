@@ -20,6 +20,7 @@ import {
     updateTextEffectIntensityValueLabel,
     updateTextEffectAngleValueLabel
 } from './theme-controls-utils';
+import { updateBasicBrandStrengthValueLabel } from './brand-controls-utils';
 
 export function updateColorTexts() {
     const pickers = document.querySelectorAll('.color-picker');
@@ -31,15 +32,73 @@ export function updateColorTexts() {
     });
 }
 
-export function showThemeForm() {
+function setThemeManagerTab(tabName = 'local') {
+    const modal = document.getElementById('theme-manager-modal');
+    const localThemesView = document.getElementById('local-themes-view');
+    const marketplaceView = document.getElementById('marketplace-view');
+    const normalizedTab = String(tabName || 'local').trim().toLowerCase() === 'marketplace'
+        ? 'marketplace'
+        : 'local';
+    const showMarketplace = normalizedTab === 'marketplace';
+
+    if (localThemesView) {
+        localThemesView.style.display = showMarketplace ? 'none' : 'block';
+        localThemesView.classList.toggle('active', !showMarketplace);
+    }
+    if (marketplaceView) {
+        marketplaceView.style.display = showMarketplace ? 'block' : 'none';
+        marketplaceView.classList.toggle('active', showMarketplace);
+    }
+    if (modal) {
+        modal.querySelectorAll('.theme-manager-tabs .tab-btn[data-tab]').forEach((button) => {
+            const buttonTab = String(button.dataset.tab || '').trim().toLowerCase();
+            button.classList.toggle('active', buttonTab === normalizedTab);
+        });
+    }
+}
+
+function setThemeFormVisibility(visible) {
     const form = document.getElementById('theme-form');
-    if (form) form.style.display = 'flex';
+    const localThemesView = document.getElementById('local-themes-view');
+    const themeManagerBody = document.querySelector('.theme-manager-body');
+    const themeNameInput = document.getElementById('theme-name');
+
+    if (form) {
+        form.style.display = visible ? 'flex' : 'none';
+    }
+    if (localThemesView) {
+        localThemesView.classList.toggle('is-editor-active', !!visible);
+    }
+    if (visible) {
+        setThemeManagerTab('local');
+    }
+    if (themeManagerBody) {
+        themeManagerBody.scrollTo({
+            top: 0,
+            behavior: visible ? 'smooth' : 'auto'
+        });
+    }
+    if (visible && themeNameInput) {
+        window.requestAnimationFrame(() => {
+            themeNameInput.focus();
+            themeNameInput.select();
+        });
+    }
+}
+
+export function activateThemeManagerTab(tabName = 'local') {
+    setThemeManagerTab(tabName);
+}
+
+export function showThemeForm() {
+    setThemeManagerTab('local');
+    setThemeFormVisibility(true);
 }
 
 export function hideThemeForm(options = {}) {
     const { setTheme, currentTheme, setEditingThemeId } = options;
-    const form = document.getElementById('theme-form');
-    if (form) form.style.display = 'none';
+    setThemeFormVisibility(false);
+    setThemeManagerTab('local');
     if (typeof setEditingThemeId === 'function') {
         setEditingThemeId(null);
     }
@@ -88,6 +147,10 @@ export function resetThemeForm(options = {}) {
 
     const themeNameInput = document.getElementById('theme-name');
     if (themeNameInput) themeNameInput.value = '';
+    const themeForm = document.getElementById('theme-form');
+    if (themeForm) {
+        themeForm.dataset.generateMode = 'basic';
+    }
 
     const defaults = {
         'color-bg-primary': '#1e1e1e',
@@ -253,6 +316,11 @@ export function setupColorPickerListeners(options = {}) {
     } = options;
 
     const root = document.documentElement;
+    const shouldDriveBasicGenerator = () => {
+        const themeForm = document.getElementById('theme-form');
+        const generationMode = String(themeForm?.dataset.generateMode || 'basic').trim().toLowerCase();
+        return generationMode === 'basic' || getThemeEditorMode() === 'basic';
+    };
     const colorMap = {
         'color-bg-primary': '--bg-primary',
         'color-text-primary': '--text-primary',
@@ -290,14 +358,14 @@ export function setupColorPickerListeners(options = {}) {
             const id = newPicker.id;
 
             if (id === 'theme-base-color') {
-                if (getThemeEditorMode() === 'basic') {
+                if (shouldDriveBasicGenerator()) {
                     applyBasicPaletteToInputs();
                     return;
                 }
             }
 
             if (id === 'theme-basic-brand-color') {
-                if (getThemeEditorMode() === 'basic') {
+                if (shouldDriveBasicGenerator()) {
                     applyBasicPaletteToInputs();
                     return;
                 }

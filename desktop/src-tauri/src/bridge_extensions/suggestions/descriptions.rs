@@ -96,6 +96,53 @@ fn build_game_description_prompt(game: &Value, max_chars: usize) -> String {
     )
 }
 
+fn build_emulator_description_prompt(emulator: &Value, max_chars: usize) -> String {
+    let name = emulator.get("name").and_then(|v| v.as_str()).unwrap_or("").trim();
+    let file_path = emulator
+        .get("filePath")
+        .or_else(|| emulator.get("path"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .trim();
+    let platform = emulator
+        .get("platform")
+        .or_else(|| emulator.get("platformShortName"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .trim();
+    let emulator_type = emulator.get("type").and_then(|v| v.as_str()).unwrap_or("").trim();
+    let website = emulator.get("website").and_then(|v| v.as_str()).unwrap_or("").trim();
+    let existing = emulator
+        .get("description")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .trim();
+    let notes = emulator.get("notes").and_then(|v| v.as_str()).unwrap_or("").trim();
+    let installed = if emulator.get("isInstalled").and_then(|v| v.as_bool()).unwrap_or(false) {
+        "Installed"
+    } else {
+        "Not installed"
+    };
+
+    format!(
+        "Write a concise emulator description in plain text (no markdown, no bullets).\n\
+         Keep it between 2 and 4 sentences and under {max_chars} characters.\n\
+         Focus on what this emulator is for, the platforms or use cases it targets, and anything notable for users browsing a launcher.\n\
+         Do not invent unsupported features. If metadata is sparse, stay honest and general.\n\
+         \n\
+         Name: {name}\n\
+         Platform / system focus: {platform}\n\
+         Emulator type: {emulator_type}\n\
+         Installed status: {installed}\n\
+         Executable path (may be empty): {file_path}\n\
+         Website: {website}\n\
+         Existing description (may be empty): {existing}\n\
+         Local notes (may be empty): {notes}\n\
+         \n\
+         Return only the final description text."
+    )
+}
+
 fn truncate_for_prompt(raw: &str, max_chars: usize) -> String {
     let text = raw.trim();
     if text.chars().count() <= max_chars {
@@ -310,6 +357,69 @@ fn handle_generate_description_for_game(payload: &Value) -> Result<Value, String
     }))
 }
 
+fn handle_generate_description_for_emulator(payload: &Value) -> Result<Value, String> {
+    let emulator = payload.get("emulator").cloned().unwrap_or_else(|| json!({}));
+    let emulator_id = emulator.get("id").and_then(|v| v.as_i64()).unwrap_or(0);
+    let emulator_name = emulator
+        .get("name")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    if emulator_name.is_empty() {
+        return Ok(json!({
+            "success": false,
+            "message": "Emulator name is required."
+        }));
+    }
+
+    let max_chars = payload
+        .get("maxChars")
+        .and_then(|v| v.as_u64())
+        .map(|v| v.clamp(120, 1200) as usize)
+        .unwrap_or(420);
+    let prompt = build_emulator_description_prompt(&emulator, max_chars);
+    let raw_text = match super::request_provider_text(payload, &prompt) {
+        Ok(value) => value,
+        Err(error) => {
+            return Ok(json!({
+                "success": false,
+                "provider": super::normalize_provider(payload.get("provider").and_then(|v| v.as_str()).unwrap_or("")),
+                "emulatorId": emulator_id,
+                "emulatorName": emulator_name,
+                "description": "",
+                "fallback": false,
+                "reason": "Provider request failed.",
+                "message": error
+            }));
+        }
+    };
+    let description = sanitize_generated_description(&raw_text, max_chars);
+    if description.is_empty() {
+        return Ok(json!({
+            "success": false,
+            "provider": super::normalize_provider(payload.get("provider").and_then(|v| v.as_str()).unwrap_or("")),
+            "emulatorId": emulator_id,
+            "emulatorName": emulator_name,
+            "description": "",
+            "fallback": false,
+            "reason": "LLM response was empty after sanitization.",
+            "message": "The model returned no usable description text."
+        }));
+    }
+
+    Ok(json!({
+        "success": true,
+        "provider": super::normalize_provider(payload.get("provider").and_then(|v| v.as_str()).unwrap_or("")),
+        "emulatorId": emulator_id,
+        "emulatorName": emulator_name,
+        "description": description,
+        "fallback": false,
+        "reason": "Description generated from model output.",
+        "message": ""
+    }))
+}
+
 fn handle_generate_descriptions_for_games_batch(payload: &Value) -> Result<Value, String> {
     let games = payload
         .get("games")
@@ -383,6 +493,7 @@ pub(super) fn handle(channel: &str, args: &[Value]) -> Option<Result<Value, Stri
     let payload = args.get(0).cloned().unwrap_or_else(|| json!({}));
     let result = match channel {
         "suggestions:generate-description-for-game" => handle_generate_description_for_game(&payload),
+        "suggestions:generate-description-for-emulator" => handle_generate_description_for_emulator(&payload),
         "suggestions:generate-descriptions-for-games-batch" => {
             handle_generate_descriptions_for_games_batch(&payload)
         }

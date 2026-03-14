@@ -1,15 +1,28 @@
 {
   "name": "emubro-desktop",
   "private": true,
-  "version": "1.0.0-alpha.31",
+  "version": "1.0.0-alpha.32",
   "type": "module",
   "scripts": {
+    "scripts:help": "node -e \"console.log(['desktop workspace scripts:','  npm run app:desktop:dev        Start Tauri desktop dev (classic UI by default).','  npm run app:web:dev            Start the Vite shell only in the browser.','  npm run app:desktop:build      Build the desktop app installer/bundle.','  npm run app:web:build          Build the Vite shell assets.','  npm run ui:legacy:build        Build the legacy renderer bundle only.'].join('\\n'))\"",
+    "ui:legacy:build": "npm --prefix .. run ui:legacy:build",
+    "ui:legacy:watch": "npm --prefix .. run ui:legacy:watch",
     "build:legacy-ui": "npm --prefix .. run legacy:build",
     "cleanup:dev-ports": "node ../scripts/cleanup-dev-ports.js",
-    "dev": "npm run build:legacy-ui && node ../scripts/sync-bundle-resources.js && vite",
-    "dev:clean": "npm run cleanup:dev-ports && npm run dev",
-    "build": "npm run build:legacy-ui && vite build",
+    "app:web:dev": "npm run build:legacy-ui && node ../scripts/sync-bundle-resources.js && vite",
+    "app:web:dev:clean": "npm run cleanup:dev-ports && npm run app:web:dev",
+    "dev": "npm run app:web:dev",
+    "dev:clean": "npm run app:web:dev:clean",
+    "i18n:sync-shell": "node ../scripts/sync-shell-i18n-defaults.js",
+    "app:web:build": "npm run build:legacy-ui && vite build",
+    "build": "npm run app:web:build",
     "preview": "vite preview",
+    "app:desktop:dev": "npm run build:legacy-ui && node ../scripts/sync-bundle-resources.js && tauri dev",
+    "app:desktop:dev:clean": "npm run cleanup:dev-ports && npm run app:desktop:dev",
+    "app:desktop:build": "node ../scripts/sync-bundle-resources.js && node ../scripts/desktop-build.js",
+    "app:desktop:build:linux:appimage": "node ../scripts/sync-bundle-resources.js && node ../scripts/build-linux-portable-appimage.js",
+    "app:desktop:build:linux:flatpak": "node ../scripts/build-flatpak.js",
+    "app:desktop:build:mac": "node ../scripts/sync-bundle-resources.js && tauri build --bundles app,dmg",
     "desktop:dev": "npm run build:legacy-ui && node ../scripts/sync-bundle-resources.js && tauri dev",
     "desktop:dev:clean": "npm run cleanup:dev-ports && npm run desktop:dev",
     "desktop:build": "node ../scripts/sync-bundle-resources.js && node ../scripts/desktop-build.js",
@@ -26,6 +39,7 @@
   "devDependencies": {
     "@tauri-apps/cli": "^2.8.5",
     "@vitejs/plugin-vue": "^6.0.1",
+    "sass": "^1.97.3",
     "vite": "^7.1.7"
   }
 }

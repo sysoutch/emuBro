@@ -1,0 +1,165 @@
+/* Desktop shell tokens and global base */
+:root {
+  color-scheme: dark light;
+  --bg: #0b1220;
+  --bg-elev: #121c2f;
+  --text: #e7edf8;
+  --muted: #b9c7dc;
+  --accent: #32b8de;
+  --accent-rgb: 50, 184, 222;
+  --border: rgba(50, 184, 222, 0.22);
+  --app-gradient-angle: 160deg;
+  --app-gradient-a: #0b1528;
+  --app-gradient-b: #0f2236;
+  --app-gradient-c: #1d2f4a;
+  --app-font-body: "Montserrat", "Segoe UI", sans-serif;
+  --app-font-heading: "Quicksand", "Montserrat", "Segoe UI", sans-serif;
+  --shell-font-body: "Montserrat", "Segoe UI", sans-serif;
+  --shell-font-heading: "Quicksand", "Montserrat", "Segoe UI", sans-serif;
+  --shell-font-display: "Luckiest Guy", "Quicksand", "Montserrat", "Segoe UI", sans-serif;
+  --bg-primary: var(--bg);
+  --bg-secondary: var(--bg-elev);
+  --bg-tertiary: #1a263d;
+  --text-primary: var(--text);
+  --text-secondary: var(--muted);
+  --accent-color: var(--accent);
+  --accent-light-color: #8fe6ff;
+  --brand-color: #1ba6d8;
+  --border-color: rgba(var(--accent-rgb), 0.22);
+  --glass-border: rgba(var(--accent-rgb), 0.22);
+  --glass-shadow: rgba(0, 0, 0, 0.34);
+  --bg-sidebar: #14243b;
+  --radius-card: 18px;
+  --radius-window: 16px;
+  --radius-window-inner: 14px;
+}
+
+:root[data-theme="light"] {
+  --bg: #dfeaf6;
+  --bg-elev: #edf4fb;
+  --text: #17263a;
+  --muted: #5d7694;
+  --accent: #3db2d6;
+  --accent-rgb: 61, 178, 214;
+  --border: rgba(61, 178, 214, 0.18);
+  --app-gradient-angle: 160deg;
+  --app-gradient-a: #dbe9f7;
+  --app-gradient-b: #e7f3ff;
+  --app-gradient-c: #d2e3f5;
+  --bg-primary: var(--bg);
+  --bg-secondary: var(--bg-elev);
+  --bg-tertiary: #d2e3f5;
+  --text-primary: var(--text);
+  --text-secondary: var(--muted);
+  --accent-color: var(--accent);
+  --accent-light-color: #87dff6;
+  --brand-color: #1f9ecb;
+  --border-color: rgba(var(--accent-rgb), 0.18);
+  --glass-border: rgba(var(--accent-rgb), 0.18);
+  --glass-shadow: rgba(27, 54, 78, 0.18);
+  --bg-sidebar: #d8e6f4;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  font-family: var(--app-font-body, "Montserrat", "Segoe UI", sans-serif);
+  background:
+    radial-gradient(1200px 500px at 0% -10%, rgba(var(--accent-rgb), 0.2), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(var(--accent-rgb), 0.18), transparent 58%),
+    linear-gradient(var(--app-gradient-angle, 160deg), var(--app-gradient-a) 0%, var(--app-gradient-b) 52%, var(--app-gradient-c) 100%);
+  color: var(--text);
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: var(--app-font-body, "Montserrat", "Segoe UI", sans-serif);
+}
+
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  flex: 0 0 auto;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--border-color), transparent 8%);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-tertiary), white 4%), color-mix(in srgb, var(--bg-secondary), transparent 8%));
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.05) inset,
+    0 6px 14px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+input[type="checkbox"]:hover {
+  border-color: color-mix(in srgb, var(--accent-color), white 10%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 8px 18px rgba(0, 0, 0, 0.22);
+}
+
+input[type="checkbox"]:checked {
+  border-color: color-mix(in srgb, var(--accent-color), white 8%);
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2.2' d='M3.5 8.4 6.4 11.3 12.5 5.2'/%3E%3C/svg%3E") center / 12px 12px no-repeat,
+    linear-gradient(135deg, color-mix(in srgb, var(--accent-color), white 10%), color-mix(in srgb, var(--brand-color), var(--accent-color) 74%));
+  box-shadow:
+    0 0 0 1px rgba(var(--accent-rgb), 0.14) inset,
+    0 10px 18px rgba(var(--accent-rgb), 0.26);
+}
+
+input[type="checkbox"]:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 1px rgba(var(--accent-rgb), 0.32),
+    0 0 0 3px rgba(var(--accent-rgb), 0.18);
+}
+
+input[type="checkbox"]:disabled {
+  opacity: 0.56;
+  cursor: not-allowed;
+  filter: saturate(0.75);
+}
+
+.legacy-shell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background:
+    radial-gradient(100% 120% at 0% 0%, rgba(var(--accent-rgb), 0.24), transparent 66%),
+    radial-gradient(85% 90% at 100% 100%, rgba(var(--accent-rgb), 0.18), transparent 72%),
+    linear-gradient(var(--app-gradient-angle, 160deg), var(--app-gradient-a) 0%, var(--app-gradient-b) 52%, var(--app-gradient-c) 100%);
+}
+
+.legacy-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  opacity: 0;
+  transition: opacity 0.16s ease;
+}
+
+.legacy-frame.is-ready {
+  opacity: 1;
+}

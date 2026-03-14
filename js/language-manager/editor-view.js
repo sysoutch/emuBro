@@ -12,16 +12,26 @@ function getEditorGroupLabel(groupKey) {
     return String(groupKey || '').trim() || 'General';
 }
 
-function buildEditorRowMarkup({ key, baseVal, targetVal, escapeHtml }) {
+function buildEditorRowMarkup({ key, baseVal, targetVal, escapeHtml, translateLabel = 'Translate with LLM' }) {
     const safeKey = escapeHtml(key);
     const safeBaseVal = escapeHtml(baseVal);
     const safeTargetVal = escapeHtml(targetVal);
+    const safeTranslateLabel = escapeHtml(translateLabel);
     const missingClass = targetVal ? '' : ' missing';
     return `
         <div class="lang-key-row${missingClass}">
             <div class="key-label" title="${safeKey}">${safeKey}</div>
             <div class="base-value" title="${safeBaseVal}">${safeBaseVal}</div>
             <div class="target-value">
+                <div class="lang-row-actions">
+                    <button
+                        type="button"
+                        class="action-btn small lang-row-translate-btn"
+                        data-lang-translate-key="${safeKey}"
+                        title="${safeTranslateLabel}"
+                        aria-label="${safeTranslateLabel}"
+                    >${safeTranslateLabel}</button>
+                </div>
                 <textarea class="lang-input" data-key="${safeKey}">${safeTargetVal}</textarea>
             </div>
         </div>
@@ -60,7 +70,8 @@ export function renderEditorKeysView({
     escapeHtml,
     collapsedEditorGroups,
     maxRows = 500,
-    showingFirstLabel = 'Showing first rows'
+    showingFirstLabel = 'Showing first rows',
+    translateLabel = 'Translate with LLM'
 }) {
     const list = document.getElementById('lang-keys-list');
     if (!list || !currentLangData) return;
@@ -107,7 +118,7 @@ export function renderEditorKeysView({
 
         const groupLabel = getEditorGroupLabel(groupKey);
         const rowsMarkup = rows
-            .map((row) => buildEditorRowMarkup({ ...row, escapeHtml }))
+            .map((row) => buildEditorRowMarkup({ ...row, escapeHtml, translateLabel }))
             .join('');
 
         section.innerHTML = `

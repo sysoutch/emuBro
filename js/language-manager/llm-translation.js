@@ -9,6 +9,28 @@ export function normalizeLlmTranslationMode(mode, fallback = LLM_TRANSLATION_MOD
     return fallback;
 }
 
+function buildSingleEntryCandidate({
+    currentLangData,
+    key,
+    getBaseLanguage,
+    flattenObject
+}) {
+    if (!currentLangData) return null;
+    const normalizedKey = String(key || '').trim();
+    if (!normalizedKey) return null;
+
+    const baseFlat = flattenObject(getBaseLanguage().en || {});
+    const sourceRaw = baseFlat[normalizedKey];
+    if (typeof sourceRaw !== 'string') return null;
+    const sourceText = String(sourceRaw);
+    if (!sourceText.trim() || normalizedKey.endsWith('.flag')) return null;
+
+    return {
+        key: normalizedKey,
+        sourceText
+    };
+}
+
 function getLlmTranslationConfig({
     localStorageRef,
     loadSuggestionSettings,
@@ -82,7 +104,7 @@ function applyTranslatedEntries({
     return changed;
 }
 
-export async function translateMissingKeysWithLlm({
+async function translateEntriesWithLlm({
     buttonEl,
     currentLangData,
     emubro,
@@ -101,7 +123,11 @@ export async function translateMissingKeysWithLlm({
     onSyncAllTranslations,
     getTranslationMode,
     shouldRetranslateExistingTranslations,
-    getTranslationStyleHint
+    getTranslationStyleHint,
+    getTranslationPromptTemplate,
+    shouldIncludeExistingTranslationsInPrompt,
+    entries,
+    retranslateExistingOverride = null
 }) {
     if (!currentLangData) return;
     if (!emubro || typeof emubro.invoke !== 'function') {
@@ -142,13 +168,17 @@ export async function translateMissingKeysWithLlm({
         return;
     }
 
-    const retranslateExisting = !!shouldRetranslateExistingTranslations();
-    const candidates = getTranslationCandidates({
-        currentLangData,
-        getBaseLanguage,
-        flattenObject,
-        includeExisting: retranslateExisting
-    });
+    const retranslateExisting = retranslateExistingOverride == null
+        ? !!shouldRetranslateExistingTranslations()
+        : !!retranslateExistingOverride;
+    const candidates = Array.isArray(entries) && entries.length
+        ? entries
+        : getTranslationCandidates({
+            currentLangData,
+            getBaseLanguage,
+            flattenObject,
+            includeExisting: retranslateExisting
+        });
     if (!candidates.length) {
         onSetStatus(
             i18nRef.t(retranslateExisting ? 'language.translateLlmNothingEligible' : 'language.translateLlmNothingMissing'),
@@ -162,6 +192,10 @@ export async function translateMissingKeysWithLlm({
     let translatedCount = 0;
     const translationMode = getTranslationMode();
     const translationStyleHint = getTranslationStyleHint();
+    const translationPromptTemplate = getTranslationPromptTemplate ? getTranslationPromptTemplate() : '';
+    const includeExistingTranslationsInPrompt = shouldIncludeExistingTranslationsInPrompt
+        ? !!shouldIncludeExistingTranslationsInPrompt()
+        : true;
     const progressKey = retranslateExisting ? 'language.translateLlmProgressGeneric' : 'language.translateLlmProgress';
     const progressAllInOneKey = retranslateExisting ? 'language.translateLlmProgressAllInOneGeneric' : 'language.translateLlmProgressAllInOne';
 
@@ -183,9 +217,11 @@ export async function translateMissingKeysWithLlm({
                 targetLanguageCode: currentLangData.code,
                 targetLanguageName: targetName,
                 styleHint: translationStyleHint,
+                promptTemplate: translationPromptTemplate,
+                includeExistingTranslationsInPrompt,
                 retranslateExisting,
                 sourceLocaleObject: getBaseLanguage().en || {},
-                targetLocaleObject: currentLangData.data?.[currentLangData.code] || {},
+                targetLocaleObject: includeExistingTranslationsInPrompt ? (currentLangData.data?.[currentLangData.code] || {}) : {},
                 entries: candidates.map((entry) => ({ key: entry.key, text: entry.sourceText }))
             });
 
@@ -222,7 +258,11 @@ export async function translateMissingKeysWithLlm({
                     targetLanguageCode: currentLangData.code,
                     targetLanguageName: targetName,
                     styleHint: translationStyleHint,
+                    promptTemplate: translationPromptTemplate,
+                    includeExistingTranslationsInPrompt,
                     retranslateExisting,
+                    sourceLocaleObject: getBaseLanguage().en || {},
+                    targetLocaleObject: includeExistingTranslationsInPrompt ? (currentLangData.data?.[currentLangData.code] || {}) : {},
                     entries: [{ key: entry.key, text: entry.sourceText }]
                 });
 
@@ -253,4 +293,34 @@ export async function translateMissingKeysWithLlm({
     } finally {
         if (buttonEl) buttonEl.disabled = false;
     }
+}
+
+export async function translateMissingKeysWithLlm(options) {
+    return translateEntriesWithLlm(options);
+}
+
+export async function translateSpecificKeyWithLlm({
+    key,
+    ...options
+}) {
+    const candidate = buildSingleEntryCandidate({
+        currentLangData: options.currentLangData,
+        key,
+        getBaseLanguage: options.getBaseLanguage,
+        flattenObject: options.flattenObject
+    });
+
+    if (!candidate) {
+        options.onSetStatus?.(
+            options.i18nRef?.t('language.translateLlmInvalidResponse', 'Provider returned an invalid translation payload.'),
+            'error'
+        );
+        return;
+    }
+
+    return translateEntriesWithLlm({
+        ...options,
+        entries: [candidate],
+        retranslateExistingOverride: true
+    });
 }

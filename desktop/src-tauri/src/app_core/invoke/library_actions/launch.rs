@@ -222,12 +222,26 @@ pub(super) fn handle(ch: &str, args: &[Value], window: &Window) -> Result<Value,
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
+            let input_bindings = payload
+                .get("inputBindings")
+                .cloned()
+                .unwrap_or(Value::Null);
+            let gamepad_bindings = payload
+                .get("gamepadBindings")
+                .cloned()
+                .unwrap_or(Value::Null);
+            let run_commands_before = parse_run_commands_before_payload(
+                payload.get("runCommandsBefore").unwrap_or(&Value::Null),
+            );
             match launch_emulator_process(
                 Path::new(&emulator_path),
                 &emulator_args,
                 &working_directory,
                 run_as_admin,
                 &run_as_user,
+                &input_bindings,
+                &gamepad_bindings,
+                &run_commands_before,
             ) {
                 Ok(process_id) => {
                     let emulator_name = payload

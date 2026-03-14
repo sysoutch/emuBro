@@ -15,6 +15,8 @@ export function createCategoriesListRenderer(options = {}) {
     const clearCategorySelection = typeof options.clearCategorySelection === 'function' ? options.clearCategorySelection : () => {};
     const setCategorySelectionMode = typeof options.setCategorySelectionMode === 'function' ? options.setCategorySelectionMode : () => {};
     const getCategorySelectionMode = typeof options.getCategorySelectionMode === 'function' ? options.getCategorySelectionMode : () => 'multi';
+    const setCategoryMatchMode = typeof options.setCategoryMatchMode === 'function' ? options.setCategoryMatchMode : () => {};
+    const getCategoryMatchMode = typeof options.getCategoryMatchMode === 'function' ? options.getCategoryMatchMode : () => 'or';
     const syncCategoryStateFromSelectionSet = typeof options.syncCategoryStateFromSelectionSet === 'function' ? options.syncCategoryStateFromSelectionSet : () => {};
     const escapeHtml = typeof options.escapeHtml === 'function' ? options.escapeHtml : (value) => String(value || '');
     const isLlmHelpersEnabled = typeof options.isLlmHelpersEnabled === 'function' ? options.isLlmHelpersEnabled : () => true;
@@ -108,6 +110,8 @@ function t(key, fallback, data = {}) {
 function normalizeCategorySortMode(value) {
     const normalized = String(value || '').trim().toLowerCase();
     if (normalized === 'name-asc') return 'name-asc';
+    if (normalized === 'name-desc') return 'name-desc';
+    if (normalized === 'count-asc') return 'count-asc';
     return 'count-desc';
 }
 
@@ -118,18 +122,74 @@ function setCategorySortMode(nextMode, { persist = true } = {}) {
     }
 }
 
+function getCategorySortField() {
+    return categorySortMode.startsWith('name-') ? 'name' : 'count';
+}
+
+function getCategorySortDirection() {
+    return categorySortMode.endsWith('-asc') ? 'asc' : 'desc';
+}
+
 function sortCategoryRows(rows = []) {
     const list = Array.isArray(rows) ? [...rows] : [];
-    if (categorySortMode === 'count-desc') {
+    if (getCategorySortField() === 'count') {
         list.sort((a, b) => {
-            const countDiff = Number(b?.count || 0) - Number(a?.count || 0);
+            const direction = getCategorySortDirection() === 'asc' ? 1 : -1;
+            const countDiff = (Number(a?.count || 0) - Number(b?.count || 0)) * direction;
             if (countDiff !== 0) return countDiff;
-            return String(a?.label || a?.id || '').localeCompare(String(b?.label || b?.id || ''));
+            return String(a?.label || a?.id || '').localeCompare(String(b?.label || b?.id || '')) * direction;
         });
         return list;
     }
-    list.sort((a, b) => String(a?.label || a?.id || '').localeCompare(String(b?.label || b?.id || '')));
+    const direction = getCategorySortDirection() === 'asc' ? 1 : -1;
+    list.sort((a, b) => (
+        String(a?.label || a?.id || '').localeCompare(String(b?.label || b?.id || '')) * direction
+    ));
     return list;
+}
+
+function buildAndModeCategoryRows(rows = [], selectedSet = new Set()) {
+    const source = Array.isArray(rows) ? rows : [];
+    const selected = Array.from(selectedSet || [])
+        .map((tag) => normalizeTagCategory(tag))
+        .filter((tag) => tag !== 'all');
+
+    if (selected.length === 0) {
+        return getTagCategoryCounts(source, { getLabel: formatTagLabel });
+    }
+
+    const counts = new Map();
+    let currentMatchCount = 0;
+
+    source.forEach((game) => {
+        const tags = new Set(getGameTagIds(game));
+        const matchesSelected = selected.every((tag) => tags.has(tag));
+        if (!matchesSelected) return;
+
+        currentMatchCount += 1;
+        tags.forEach((tagId) => {
+            counts.set(tagId, (counts.get(tagId) || 0) + 1);
+        });
+    });
+
+    selected.forEach((tagId) => {
+        if (!counts.has(tagId)) {
+            counts.set(tagId, currentMatchCount);
+        }
+    });
+
+    return Array.from(counts.entries()).map(([id, count]) => ({
+        id,
+        count: Number(count) || 0,
+        label: formatTagLabel(id)
+    }));
+}
+
+function getRenderableCategoryRows(rows = [], selectedSet = new Set()) {
+    if (getCategorySelectionMode() === 'multi' && isCategoryAndModeEnabled()) {
+        return buildAndModeCategoryRows(rows, selectedSet);
+    }
+    return getTagCategoryCounts(rows, { getLabel: formatTagLabel });
 }
 
 async function loadTagLabelMap() {
@@ -189,6 +249,10 @@ function getSelectionModeButtonText({ forceMulti = false } = {}) {
     return isMulti
         ? t('sidebar.multiSelect', 'Multi Select')
         : t('sidebar.singleSelect', 'Single Select');
+}
+
+function isCategoryAndModeEnabled() {
+    return getCategoryMatchMode() === 'and';
 }
 
 function clearCategoryModePreviewHandlers() {
@@ -447,11 +511,12 @@ async function renderCategoriesList() {
     closeCategorySettingsMenu();
 
     await loadTagLabelMap();
-    const categories = sortCategoryRows(getTagCategoryCounts(getGames(), { getLabel: formatTagLabel }));
-    const available = new Set(categories.map((entry) => normalizeTagCategory(entry.id)));
+    const allCategories = getTagCategoryCounts(getGames(), { getLabel: formatTagLabel });
+    const available = new Set(allCategories.map((entry) => normalizeTagCategory(entry.id)));
     const selectedBeforePrune = getActiveCategorySelectionSet();
     const selectedAfterPrune = new Set(Array.from(selectedBeforePrune).filter((tag) => available.has(tag)));
     syncCategoryStateFromSelectionSet(selectedAfterPrune);
+    const categories = sortCategoryRows(getRenderableCategoryRows(getGames(), selectedAfterPrune));
 
     if (categories.length <= CATEGORY_VISIBLE_LIMIT) {
         categoriesShowAll = false;
@@ -518,13 +583,45 @@ async function renderCategoriesList() {
         <li><a href="#" data-category-tag="all">${escapeHtml(t('sidebar.all', 'All'))}</a></li>
         <li class="categories-llm-row categories-sort-row">
             <label class="categories-sort-label" for="category-sort-mode">${escapeHtml(t('sidebar.categoriesSortBy', 'Sort by'))}</label>
-            <select id="category-sort-mode" class="categories-sort-select" data-category-action="sort-mode">
-                <option value="name-asc"${categorySortMode === 'name-asc' ? ' selected' : ''}>${escapeHtml(t('sidebar.categoriesSortNameAsc', 'Name (A-Z)'))}</option>
-                <option value="count-desc"${categorySortMode === 'count-desc' ? ' selected' : ''}>${escapeHtml(t('sidebar.categoriesSortGameCount', 'Game Count'))}</option>
-            </select>
+            <div class="categories-sort-controls">
+                <select id="category-sort-mode" class="categories-sort-select" data-category-action="sort-mode">
+                    <option value="name"${getCategorySortField() === 'name' ? ' selected' : ''}>${escapeHtml(t('sidebar.categoriesSortName', 'Name'))}</option>
+                    <option value="count"${getCategorySortField() === 'count' ? ' selected' : ''}>${escapeHtml(t('sidebar.categoriesSortGameCount', 'Game Count'))}</option>
+                </select>
+                <button
+                    class="categories-sort-direction-btn"
+                    type="button"
+                    data-category-action="sort-direction"
+                    aria-label="${escapeHtml(getCategorySortDirection() === 'asc'
+                        ? t('sidebar.categoriesSortDescending', 'Sort descending')
+                        : t('sidebar.categoriesSortAscending', 'Sort ascending'))}"
+                    title="${escapeHtml(getCategorySortDirection() === 'asc'
+                        ? t('sidebar.categoriesSortDescending', 'Sort descending')
+                        : t('sidebar.categoriesSortAscending', 'Sort ascending'))}"
+                >
+                    <span class="categories-sort-direction-icon" aria-hidden="true">
+                        <svg viewBox="0 0 16 16">
+                            ${getCategorySortDirection() === 'asc'
+                                ? '<path d="M8 14V2"></path><path d="M4.5 5.5L8 2L11.5 5.5"></path>'
+                                : '<path d="M8 2V14"></path><path d="M4.5 10.5L8 14L11.5 10.5"></path>'}
+                        </svg>
+                    </span>
+                </button>
+            </div>
         </li>
         <li class="categories-llm-row">
             <button class="action-btn small" type="button" data-category-action="toggle-selection-mode">${escapeHtml(getSelectionModeButtonText())}</button>
+        </li>
+        <li class="categories-llm-row categories-match-mode-row${getCategorySelectionMode() !== 'multi' ? ' is-disabled' : ''}">
+            <label class="categories-match-mode-toggle">
+                <input
+                    type="checkbox"
+                    data-category-action="toggle-match-mode"
+                    ${isCategoryAndModeEnabled() ? 'checked' : ''}
+                    ${getCategorySelectionMode() !== 'multi' ? 'disabled' : ''}
+                >
+                <span>${escapeHtml(t('sidebar.categoriesMatchAllSelected', 'AND'))}</span>
+            </label>
         </li>
         ${categoryItems}
         ${showMoreMarkup}
@@ -564,7 +661,13 @@ async function renderCategoriesList() {
                 else next.add(nextTag);
                 syncCategoryStateFromSelectionSet(next);
             }
-            setActiveCategoryLinkState(listRoot);
+            const shouldRefreshSidebarCounts = nextTag === 'all'
+                || (getCategorySelectionMode() === 'multi' && isCategoryAndModeEnabled());
+            if (shouldRefreshSidebarCounts) {
+                await renderCategoriesList();
+            } else {
+                setActiveCategoryLinkState(listRoot);
+            }
             if (isLibraryTopSection() && !isEmulatorsSection()) {
                 await renderActiveLibraryView();
             }
@@ -594,10 +697,31 @@ async function renderCategoriesList() {
         });
     }
 
+    const matchModeToggle = listRoot.querySelector('[data-category-action="toggle-match-mode"]');
+    matchModeToggle.textContent = matchModeToggle.checked ? 'AND' : 'OR';
+    if (matchModeToggle) {
+        matchModeToggle.addEventListener('change', async () => {
+            setCategoryMatchMode(matchModeToggle.checked ? 'and' : 'or');
+            await renderCategoriesList();
+            if (isLibraryTopSection() && !isEmulatorsSection()) {
+                await renderActiveLibraryView();
+            }
+        });
+    }
+
     const sortModeSelect = listRoot.querySelector('[data-category-action="sort-mode"]');
     if (sortModeSelect) {
         sortModeSelect.addEventListener('change', async () => {
-            setCategorySortMode(sortModeSelect.value);
+            setCategorySortMode(`${sortModeSelect.value}-${getCategorySortDirection()}`);
+            await renderCategoriesList();
+        });
+    }
+
+    const sortDirectionBtn = listRoot.querySelector('[data-category-action="sort-direction"]');
+    if (sortDirectionBtn) {
+        sortDirectionBtn.addEventListener('click', async () => {
+            const nextDirection = getCategorySortDirection() === 'asc' ? 'desc' : 'asc';
+            setCategorySortMode(`${getCategorySortField()}-${nextDirection}`);
             await renderCategoriesList();
         });
     }

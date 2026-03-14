@@ -1,6 +1,20 @@
+import { isCustomGameCoverSource } from '../render-utils';
+import { createSlideshowLane, updateSlideshowItemOrientationClass } from './slideshow-lane';
+import { attachGameCardContextMenu } from '../game-card-context-menu';
+
 export function renderGamesAsSlideshow(gamesToRender, options = {}) {
     const gamesContainer = document.getElementById('games-container');
     if (!gamesContainer) return;
+    const normalizedCoverCardMode = String(options.coverCardMode || '').trim().toLowerCase();
+    const isCoverOnlyMode = normalizedCoverCardMode === 'cover-only'
+        || gamesContainer.classList.contains('cover-mode-cover-only');
+    const previousActiveElement = document.activeElement;
+    const shouldRestoreViewFocus = (() => {
+        if (!previousActiveElement || previousActiveElement === document.body) return true;
+        if (!(previousActiveElement instanceof HTMLElement)) return false;
+        if (gamesContainer.contains(previousActiveElement)) return true;
+        return false;
+    })();
     const renderToken = options.renderToken;
     const getRenderToken = typeof options.getRenderToken === 'function' ? options.getRenderToken : () => renderToken;
     const setGamesScrollDetach = typeof options.setGamesScrollDetach === 'function'
@@ -8,7 +22,9 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
         : () => {};
     const buildViewGamePool = typeof options.buildViewGamePool === 'function' ? options.buildViewGamePool : (rows) => rows;
     const maxPoolSize = Number(options.maxPoolSize) || 0;
+    const launchGame = typeof options.launchGame === 'function' ? options.launchGame : (async () => {});
     const showGameDetails = typeof options.showGameDetails === 'function' ? options.showGameDetails : () => {};
+    const removeGame = typeof options.removeGame === 'function' ? options.removeGame : (async () => {});
     const escapeHtml = typeof options.escapeHtml === 'function' ? options.escapeHtml : (value) => String(value ?? '');
     const initializeLazyGameImages = typeof options.initializeLazyGameImages === 'function'
         ? options.initializeLazyGameImages
@@ -18,6 +34,8 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
         : () => {};
     const lazyPlaceholderSrc = String(options.lazyPlaceholderSrc || '');
     const i18n = options.i18n;
+    const emubro = options.emubro || window.emubro;
+    const alertUser = typeof options.alertUser === 'function' ? options.alertUser : (message) => window.alert(String(message || ''));
     const t = (key, fallback = 'Unknown') => {
         try {
             if (i18n && typeof i18n.t === 'function') return i18n.t(key);
@@ -27,6 +45,8 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
 
     const slideshowContainer = document.createElement('div');
     slideshowContainer.className = 'slideshow-container slideshow-deck-layout';
+    slideshowContainer.classList.toggle('is-cover-mode-cover-only', isCoverOnlyMode);
+    slideshowContainer.classList.toggle('is-cover-mode-cover-title', !isCoverOnlyMode);
     slideshowContainer.tabIndex = 0;
     const slideshowGames = buildViewGamePool(gamesToRender, maxPoolSize);
 
@@ -39,6 +59,7 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
     const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const backdrops = [document.createElement('div'), document.createElement('div')];
     let activeBackdrop = 0;
+    let activeBackdropSource = '';
     backdrops.forEach((el, i) => {
         el.className = 'slideshow-backdrop' + (i === 0 ? ' is-active' : '');
         el.setAttribute('aria-hidden', 'true');
@@ -79,29 +100,51 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
         item.dataset.index = String(idx);
         item.setAttribute('aria-label', game.name || '');
 
-        // Click handler for direct selection
-        item.addEventListener('click', (e) => {
-            // Only handle click if we weren't just dragging
-            if (performance.now() < suppressStripClickUntil) return;
-            const targetIdx = parseInt(item.dataset.index);
-            if (targetIdx === currentIndex) {
-                showGameDetails(slideshowGames[targetIdx]);
-            } else {
-                scrollToItem(targetIdx);
-            }
-        });
-
         const safeImage = getGameImage(game);
+        item.classList.toggle('is-custom-cover-source', isCustomGameCoverSource(safeImage));
         const src = lazyPlaceholderSrc || safeImage;
 
         item.innerHTML = `
             <div class="slideshow-item-inner">
                 <img class="slideshow-item-image lazy-game-image is-pending" src="${src}" data-lazy-src="${safeImage}" alt="" loading="lazy" decoding="async" />
+                <button class="game-cover-play-btn slideshow-play-btn" type="button" aria-label="Play ${escapeHtml(game.name || '')}" title="Play ${escapeHtml(game.name || '')}">
+                    <span class="game-cover-play-icon" aria-hidden="true"></span>
+                </button>
                 <div class="slideshow-item-overlay">
                     <div class="slideshow-item-title">${escapeHtml(game.name)}</div>
                 </div>
             </div>
         `;
+        const imageEl = item.querySelector('.slideshow-item-image');
+        const playBtn = item.querySelector('.slideshow-play-btn');
+        if (playBtn) {
+            playBtn.addEventListener('click', async (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                await launchGame(game);
+            });
+            playBtn.addEventListener('pointerdown', (event) => {
+                event.stopPropagation();
+            });
+        }
+        if (imageEl) {
+            const updateOrientationClass = () => {
+                if (!updateSlideshowItemOrientationClass(item, imageEl)) return;
+                lane?.scheduleOrientationRefresh();
+            };
+            imageEl.addEventListener('load', updateOrientationClass);
+            if (imageEl.complete && imageEl.naturalWidth > 0) {
+                requestAnimationFrame(updateOrientationClass);
+            }
+        }
+        attachGameCardContextMenu(item, game, {
+            i18n,
+            emubro,
+            alertUser,
+            launchGame,
+            showGameDetails,
+            removeGame
+        });
         track.appendChild(item);
     });
 
@@ -123,7 +166,12 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
     slideshowContainer.appendChild(chrome);
     gamesContainer.appendChild(slideshowContainer);
 
-    initializeLazyGameImages(track);
+    requestAnimationFrame(() => {
+        initializeLazyGameImages(track);
+        lane?.scheduleOrientationRefresh();
+    });
+    window.setTimeout(() => lane?.scheduleOrientationRefresh(), 120);
+    window.setTimeout(() => lane?.scheduleOrientationRefresh(), 500);
 
     function getGameImage(game) {
         let gameImageToUse = game && game.image;
@@ -138,20 +186,65 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
         const game = slideshowGames[idx];
         if (!game) return;
         const heroImg = getGameImage(game);
+        const nextSource = String(heroImg || '');
+        if (nextSource === activeBackdropSource) return;
         const nextBackdrop = 1 - activeBackdrop;
         backdrops[nextBackdrop].style.backgroundImage = heroImg ? `url("${heroImg}")` : '';
         backdrops[nextBackdrop].classList.add('is-active');
         backdrops[activeBackdrop].classList.remove('is-active');
         activeBackdrop = nextBackdrop;
+        activeBackdropSource = nextSource;
     }
 
     const len = slideshowGames.length;
-    let currentIndex = 0;
-    let isMoving = false;
-    let scrollX = 0;
-    let suppressStripClickUntil = 0;
+    let activeInfoIndex = -1;
+
+    function forceLoadSlideImage(index, options = {}) {
+        const item = track.querySelector(`.slideshow-item[data-index="${index}"]`);
+        if (!item) return;
+        const imageEl = item.querySelector('.slideshow-item-image');
+        if (!imageEl) return;
+        const source = String(imageEl.dataset.lazySrc || '').trim();
+        if (!source) return;
+        const status = String(imageEl.dataset.lazyStatus || '').trim().toLowerCase();
+        if (status === 'loaded' || status === 'loading') return;
+
+        if (options.priority === 'high') {
+            imageEl.setAttribute('fetchpriority', 'high');
+        } else if (!imageEl.getAttribute('fetchpriority')) {
+            imageEl.setAttribute('fetchpriority', 'auto');
+        }
+
+        imageEl.dataset.lazyStatus = 'loading';
+        const settle = () => {
+            imageEl.dataset.lazyStatus = 'loaded';
+            imageEl.classList.remove('is-pending');
+            updateSlideshowItemOrientationClass(item, imageEl);
+            lane?.invalidateLayoutCache();
+            lane?.scheduleApplyTransforms();
+        };
+        imageEl.addEventListener('load', settle, { once: true });
+        imageEl.addEventListener('error', () => {
+            imageEl.classList.remove('is-pending');
+        }, { once: true });
+        imageEl.src = source;
+    }
+
+    function preloadNeighborhood(centerIndex) {
+        for (let offset = -2; offset <= 2; offset += 1) {
+            const idx = centerIndex + offset;
+            if (idx < 0 || idx >= len) continue;
+            forceLoadSlideImage(idx, {
+                priority: offset === 0 ? 'high' : 'auto'
+            });
+        }
+    }
 
     function updateInfo(idx) {
+        if (idx === activeInfoIndex) {
+            preloadNeighborhood(idx);
+            return;
+        }
         const game = slideshowGames[idx];
         if (!game) return;
         const titleEl = infoPanel.querySelector('.slideshow-active-title');
@@ -177,22 +270,9 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
                 : 'No description available for this game yet.';
         }
 
+        activeInfoIndex = idx;
         setBackdropForIndex(idx);
-    }
-
-    function getLayout() {
-        const carouselRect = carousel.getBoundingClientRect();
-        const firstItem = track.querySelector('.slideshow-item');
-        if (!firstItem) return { center: 0, itemWidth: 0, gap: 0 };
-        // Use offsetWidth to get unscaled dimensions
-        const itemWidth = firstItem.offsetWidth;
-        const style = window.getComputedStyle(track);
-        const gap = parseFloat(style.gap) || 0;
-        return {
-            center: carouselRect.width / 2,
-            itemWidth: itemWidth,
-            gap: gap
-        };
+        preloadNeighborhood(idx);
     }
 
     function applySlideshowMode(nextMode, options = {}) {
@@ -210,171 +290,41 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
                 localStorage.setItem(SLIDESHOW_MODE_STORAGE_KEY, slideshowMode);
             } catch (_error) {}
         }
-        applyTransforms();
+        lane?.setMode();
     }
-
-    function applyTransforms() {
-        if (renderToken !== getRenderToken()) return;
-        const { center, itemWidth, gap } = getLayout();
-        if (itemWidth === 0) return;
-
-        const items = track.querySelectorAll('.slideshow-item');
-        const fullStep = itemWidth + gap;
-
-        // Current offset based on scrollX
-        track.style.transform = `translate3d(${center - (itemWidth / 2) - scrollX}px, 0, 0)`;
-
-        items.forEach((item, i) => {
-            const itemX = i * fullStep;
-            const diffX = itemX - scrollX;
-            const dist = Math.abs(diffX);
-            
-            // Normalized distance: 0 at center, 1 at edges of focus range
-            const normalizedDist = Math.min(1, dist / (fullStep * 2.5));
-            
-            // Steam-like scaling: center is 1.15, edges are 0.85
-            const scale = 1.15 - (normalizedDist * 0.3);
-            const opacity = 1.0 - (normalizedDist * 0.6);
-            const zIndex = Math.round((1 - normalizedDist) * 100);
-
-            let transform = `scale(${scale})`;
-            if (slideshowMode === '3d') {
-                // Precision: ensure that when dist is very small, we snap to 0 deg
-                const rotateY = dist < 1 ? 0 : Math.max(-45, Math.min(45, (diffX / fullStep) * -20));
-                const translateZ = normalizedDist * -120;
-                transform += ` rotateY(${rotateY}deg) translateZ(${translateZ}px)`;
+    let lane = createSlideshowLane({
+        carousel,
+        track,
+        itemSelector: '.slideshow-item',
+        reduceMotion,
+        modeRef: {
+            get mode() {
+                return slideshowMode;
             }
-
-            item.style.transform = transform;
-            item.style.opacity = String(opacity);
-            item.style.zIndex = String(zIndex);
-            
-            // Update active state based on proximity to center
-            const isActive = dist < (fullStep / 2);
-            item.classList.toggle('is-active', isActive);
-            if (isActive && i !== currentIndex) {
-                currentIndex = i;
-                updateInfo(currentIndex);
+        },
+        renderToken,
+        getRenderToken,
+        refreshItems() {
+            let changed = false;
+            track.querySelectorAll('.slideshow-item').forEach((item) => {
+                const imageEl = item.querySelector('.slideshow-item-image');
+                if (!imageEl) return;
+                changed = updateSlideshowItemOrientationClass(item, imageEl) || changed;
+            });
+            return changed;
+        },
+        onNearestIndexChange(nextIndex, state) {
+            if (!state.isMoving && !state.isPointerDragging) {
+                updateInfo(nextIndex);
             }
-        });
-    }
-
-    function scrollToItem(idx, smooth = true) {
-        const { itemWidth, gap } = getLayout();
-        const targetX = idx * (itemWidth + gap);
-        
-        if (!smooth || reduceMotion) {
-            scrollX = targetX;
-            currentIndex = idx;
-            applyTransforms();
-            updateInfo(currentIndex);
-            return;
+        },
+        onSettledIndexChange(nextIndex) {
+            updateInfo(nextIndex);
+        },
+        onActiveClick(nextIndex) {
+            showGameDetails(slideshowGames[nextIndex]);
         }
-
-        const startX = scrollX;
-        const startTime = performance.now();
-        const duration = 450;
-
-        function animate(now) {
-            if (renderToken !== getRenderToken()) return;
-            const elapsed = now - startTime;
-            const t = Math.min(1, elapsed / duration);
-            const ease = 1 - Math.pow(1 - t, 4); // easeOutQuart
-            
-            scrollX = startX + (targetX - startX) * ease;
-            applyTransforms();
-
-            if (t < 1) {
-                requestAnimationFrame(animate);
-            } else {
-                scrollX = targetX;
-                currentIndex = idx;
-                applyTransforms();
-                updateInfo(currentIndex);
-                isMoving = false;
-            }
-        }
-
-        isMoving = true;
-        requestAnimationFrame(animate);
-    }
-
-    // Drag / Swipe Logic
-    (function initDragHandler() {
-        let isArmed = false;
-        let isDragging = false;
-        let startPointerX = 0;
-        let startScrollX = 0;
-        let lastPointerX = 0;
-        let velocity = 0;
-        let lastTimestamp = 0;
-
-        const onDown = (e) => {
-            if (e.pointerType === 'mouse' && e.button !== 0) return;
-            isArmed = true;
-            isDragging = false;
-            startPointerX = e.clientX;
-            lastPointerX = e.clientX;
-            startScrollX = scrollX;
-            lastTimestamp = performance.now();
-            velocity = 0;
-            carousel.setPointerCapture(e.pointerId);
-        };
-
-        const onMove = (e) => {
-            if (!isArmed) return;
-            const dx = e.clientX - startPointerX;
-            if (!isDragging && Math.abs(dx) > 5) {
-                isDragging = true;
-                carousel.classList.add('is-dragging');
-            }
-
-            if (isDragging) {
-                scrollX = startScrollX - dx;
-                
-                const now = performance.now();
-                const dt = now - lastTimestamp;
-                if (dt > 0) {
-                    velocity = (e.clientX - lastPointerX) / dt;
-                }
-                lastPointerX = e.clientX;
-                lastTimestamp = now;
-
-                applyTransforms();
-            }
-        };
-
-        const onUp = (e) => {
-            if (!isArmed) return;
-            isArmed = false;
-            carousel.classList.remove('is-dragging');
-            carousel.releasePointerCapture(e.pointerId);
-
-            if (!isDragging) {
-                return;
-            }
-
-            isDragging = false;
-            suppressStripClickUntil = performance.now() + 100;
-            
-            // Magnetic snap with velocity assistance
-            const { itemWidth, gap } = getLayout();
-            const step = itemWidth + gap;
-            
-            let targetIdx = Math.round(scrollX / step);
-            if (Math.abs(velocity) > 0.5) {
-                targetIdx -= Math.sign(velocity);
-            }
-            
-            targetIdx = Math.max(0, Math.min(len - 1, targetIdx));
-            scrollToItem(targetIdx);
-        };
-
-        carousel.addEventListener('pointerdown', onDown);
-        carousel.addEventListener('pointermove', onMove);
-        carousel.addEventListener('pointerup', onUp);
-        carousel.addEventListener('pointercancel', onUp);
-    })();
+    });
 
     carouselControls.addEventListener('click', (event) => {
         const button = event.target.closest('.slideshow-mode-tab[data-slideshow-mode]');
@@ -386,13 +336,13 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
     slideshowContainer.addEventListener('keydown', (e) => {
         if (e.key === 'ArrowLeft') {
             e.preventDefault();
-            scrollToItem(Math.max(0, currentIndex - 1));
+            lane.scrollToItem(Math.max(0, lane.getCurrentIndex() - 1));
         } else if (e.key === 'ArrowRight') {
             e.preventDefault();
-            scrollToItem(Math.min(len - 1, currentIndex + 1));
+            lane.scrollToItem(Math.min(len - 1, lane.getCurrentIndex() + 1));
         } else if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            showGameDetails(slideshowGames[currentIndex]);
+            showGameDetails(slideshowGames[lane.getCurrentIndex()]);
         }
     });
 
@@ -402,7 +352,9 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
             window.removeEventListener('resize', onResize);
             return;
         }
-        scrollToItem(currentIndex, false);
+        lane.invalidateLayoutCache();
+        lane.scheduleOrientationRefresh();
+        lane.scrollToItem(lane.getCurrentIndex(), false);
     };
     window.addEventListener('resize', onResize);
 
@@ -410,11 +362,16 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
     applySlideshowMode(slideshowMode, { persist: false });
     requestAnimationFrame(() => {
         if (renderToken !== getRenderToken()) return;
-        scrollToItem(0, false);
-        slideshowContainer.focus();
+        lane.scrollToItem(0, false);
+        updateInfo(0);
+        if (shouldRestoreViewFocus && document.activeElement !== slideshowContainer) {
+            slideshowContainer.focus();
+        }
     });
 
     setGamesScrollDetach(() => {
+        lane?.destroy();
+        lane = null;
         window.removeEventListener('resize', onResize);
         cleanupLazyGameImages(slideshowContainer);
     });

@@ -1,0 +1,177 @@
+{
+  "currentPhase": {
+    "label": "Post-Migration Stabilization / Pre-Beta",
+    "date": "2026-03-12",
+    "targetWindow": "March 2026 to April 2026",
+    "risk": "medium",
+    "confidence": "medium",
+    "summary": "The desktop app is usable, but it is still carrying migration debt, UI parity gaps, and some legacy/runtime overlap that should be cleaned up before calling it beta."
+  },
+  "releaseTargets": {
+    "beta": {
+      "targetWindow": "Q2 2026 (tentative)",
+      "note": "Only if pre-beta hardening criteria are broadly satisfied in practice."
+    },
+    "stable": {
+      "targetWindow": "Q3 2026 or later (tentative)",
+      "note": "Only after beta proves reliable as the default daily-use experience."
+    }
+  },
+  "whereWeAre": [
+    "Core flows are functional, but some UI behavior, persistence details, and shell/runtime overlap still need hardening.",
+    "The priority is making the migrated app feel complete, consistent, and reliable rather than expanding broad new feature scope.",
+    "Legacy fallback still exists as a safety net, which means the desktop shell is not yet the unquestioned default experience."
+  ],
+  "whereWeAreGoing": [
+    "Finish migration-recovery work until the current desktop runtime is clearly the primary experience.",
+    "Use pre-beta hardening to reduce overlap, fix regressions, and keep large files refactored while stabilizing behavior.",
+    "Enter beta only once daily-use workflows are reliable enough that the legacy fallback is optional instead of necessary."
+  ],
+  "milestones": [
+    {
+      "id": "migration-recovery",
+      "title": "Migration Recovery",
+      "workstream": "UI Parity",
+      "icon": "UX",
+      "state": "current",
+      "targetWindow": "March 2026 to April 2026",
+      "completion": 62,
+      "risk": "medium",
+      "confidence": "medium",
+      "goal": "Re-establish parity for the core Electron-era UX in the current desktop app.",
+      "blockers": [
+        "A few UI/layout bugs still only settle correctly after manual interaction or resize.",
+        "Some legacy/runtime overlap still makes ownership of behavior less clean than it should be.",
+        "Visual parity is improved but still not consistently at the historical standard across all views."
+      ],
+      "focus": [
+        "Finish missing behaviors in header, sidebar, docking, popups, support flows, theme manager, language manager, and window chrome.",
+        "Remove obviously redundant or temporary migration paths where the new implementation already exists.",
+        "Close obvious parity gaps that still force users back into the classic/legacy fallback."
+      ],
+      "exitCriteria": [
+        "Core desktop UX behaves close enough to the historical app for normal daily use.",
+        "Major parity bugs are no longer blocking confidence in the migrated runtime.",
+        "Remaining work is mostly stabilization and polish rather than missing baseline behavior."
+      ]
+    },
+    {
+      "id": "pre-beta-hardening",
+      "title": "Pre-Beta Hardening",
+      "workstream": "Runtime Hardening",
+      "icon": "CORE",
+      "state": "up-next",
+      "targetWindow": "April 2026 to May 2026",
+      "completion": 18,
+      "risk": "medium",
+      "confidence": "medium",
+      "goal": "Reduce runtime overlap and make the migrated app reliable enough for beta.",
+      "blockers": [
+        "Cannot start in earnest until migration-recovery issues stop forcing workarounds.",
+        "Large files and mixed responsibilities still need steady cleanup while behavior is stabilized."
+      ],
+      "focus": [
+        "Refactor large files continuously so stabilization does not create new monoliths.",
+        "Fix resize/layout bugs, persistence bugs, interaction regressions, and restart-only recovery issues.",
+        "Ensure the main user journeys work without manual recovery steps or hidden fallback behavior."
+      ],
+      "exitCriteria": [
+        "Core library, tools, themes, support, settings, and language flows work reliably.",
+        "Known issues are mostly edge cases or non-blocking polish items.",
+        "Major migration architecture decisions are no longer in flux."
+      ]
+    },
+    {
+      "id": "beta",
+      "title": "Beta",
+      "workstream": "Beta Validation",
+      "icon": "BETA",
+      "state": "future",
+      "targetWindow": "Q2 2026 (tentative)",
+      "completion": 0,
+      "risk": "medium",
+      "confidence": "low",
+      "goal": "Make the desktop runtime the feature-complete primary experience for normal users.",
+      "blockers": [
+        "Depends on pre-beta hardening being broadly complete.",
+        "Should not start while legacy fallback is still needed for core confidence."
+      ],
+      "focus": [
+        "Treat the desktop shell as the default runtime, not as a side path beside legacy.",
+        "Collect and fix real-world regressions from wider daily use.",
+        "Continue UX polish and structural cleanup without destabilizing core flows."
+      ],
+      "startCriteria": [
+        "Core library browsing, emulators, support, themes, languages, tools, and settings work reliably.",
+        "Main UI/UX parity is close enough that legacy/classic is optional, not required.",
+        "The desktop runtime is clearly the preferred experience for normal use."
+      ]
+    },
+    {
+      "id": "stable",
+      "title": "Stable",
+      "workstream": "Release Quality",
+      "icon": "SHIP",
+      "state": "future",
+      "targetWindow": "Q3 2026 or later (tentative)",
+      "completion": 0,
+      "risk": "high",
+      "confidence": "low",
+      "goal": "Make the desktop app the default recommended experience with no major fallback dependency.",
+      "blockers": [
+        "Requires beta to prove daily-use reliability over time.",
+        "Requires cross-platform and persistence quality to be consistently strong."
+      ],
+      "focus": [
+        "Keep the release boring in the good way: reliable persistence, launches, downloads, updates, and settings.",
+        "Treat cross-platform behavior and shell integration as part of release quality, not follow-up work.",
+        "Focus future updates on measured improvements rather than core recovery."
+      ],
+      "startCriteria": [
+        "No major workflow requires the legacy fallback.",
+        "Persistent data, downloads, launching, and settings survive restart cleanly.",
+        "Window behavior, responsiveness, and shell integration are consistent across supported setups."
+      ]
+    }
+  ],
+  "betaDefinition": [
+    "Feature-complete for normal daily use.",
+    "Legacy fallback is optional instead of required.",
+    "Remaining issues are mostly edge cases or polish."
+  ],
+  "stableDefinition": [
+    "Default recommended experience.",
+    "No major workflow depends on legacy fallback.",
+    "Reliability and persistence are strong enough that updates are incremental, not recovery-oriented."
+  ],
+  "futureUpdateTracks": [
+    "Stabilization fixes",
+    "Structural cleanup and continuous refactoring",
+    "Parity improvements where the historical UX still matters",
+    "UX polish and consistency",
+    "Only then broader feature expansion"
+  ],
+  "history": [
+    {
+      "date": "2026-03-12",
+      "title": "Roadmap baseline captured",
+      "summary": "Defined current phase, milestone gates, beta/stable meaning, and near-term priorities in repo notes and dashboard data."
+    },
+    {
+      "date": "2026-03-12",
+      "title": "Language manager stabilization continued",
+      "summary": "Improved live edit visibility, language card selection, style preset management, and initial layout/scroll fixes."
+    },
+    {
+      "date": "2026-03-12",
+      "title": "Runtime cleanup resumed",
+      "summary": "Started splitting language-manager runtime responsibilities back into feature-folder modules instead of growing one large runtime file."
+    }
+  ],
+  "nearTermTasks": [
+    "Keep shrinking legacy bootstrap/runtime responsibilities once migrated replacements are proven.",
+    "Review large files during normal work and split them into feature-folder modules early.",
+    "Verify installer, protocol handling, persistence, and resource-download flows after major changes.",
+    "Treat restart-only, resize-only, and manual-interaction-only bugs as high-priority stabilization issues."
+  ]
+}

@@ -69,6 +69,29 @@ function legacyUiSyncPlugin() {
   };
 }
 
+function createManualChunks(id) {
+  const normalized = String(id || "").replace(/\\/g, "/");
+
+  if (normalized.includes("/node_modules/")) {
+    if (
+      normalized.includes("/node_modules/vue/") ||
+      normalized.includes("/node_modules/@vue/") ||
+      normalized.includes("/node_modules/pinia/")
+    ) {
+      return "framework";
+    }
+    if (normalized.includes("/node_modules/@tauri-apps/")) {
+      return "tauri";
+    }
+    if (normalized.includes("/node_modules/gamepad.js/")) {
+      return "gamepad-vendor";
+    }
+    return undefined;
+  }
+
+  return undefined;
+}
+
 export default defineConfig(({ command }) => {
   const legacyEntryUrl =
     command === "serve" ? `/@fs/${legacyIndexPath}` : legacyBuildEntryPath;
@@ -91,7 +114,12 @@ export default defineConfig(({ command }) => {
     },
     envPrefix: ["VITE_", "TAURI_"],
     build: {
-      target: ["es2021", "chrome100", "safari13"]
+      target: ["es2021", "chrome100", "safari13"],
+      rollupOptions: {
+        output: {
+          manualChunks: createManualChunks
+        }
+      }
     }
   };
 });

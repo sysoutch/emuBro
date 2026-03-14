@@ -44,11 +44,70 @@
     border: 1px solid var(--glass-border);
     border-left: 0;
     border-right: 0;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     box-shadow: 0 4px 14px color-mix(in srgb, var(--glass-shadow), transparent 45%);
     position: relative;
     z-index: 5;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    white-space: nowrap;
+    scroll-behavior: smooth;
+    scroll-snap-type: x proximity;
+    overscroll-behavior-x: contain;
+    scroll-padding-inline: 18px;
+    --view-controls-edge-fade: 22px;
+    --view-controls-mask-left: 0px;
+    --view-controls-mask-right: 0px;
+    -webkit-mask-image: linear-gradient(
+        to right,
+        transparent 0,
+        #000 var(--view-controls-mask-left),
+        #000 calc(100% - var(--view-controls-mask-right)),
+        transparent 100%
+    );
+    mask-image: linear-gradient(
+        to right,
+        transparent 0,
+        #000 var(--view-controls-mask-left),
+        #000 calc(100% - var(--view-controls-mask-right)),
+        transparent 100%
+    );
+}
+
+.view-controls::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+}
+
+.view-controls.is-overflowing {
+    cursor: grab;
+    --view-controls-mask-left: var(--view-controls-edge-fade);
+    --view-controls-mask-right: var(--view-controls-edge-fade);
+}
+
+.view-controls.is-overflowing.is-at-start {
+    --view-controls-mask-left: 0px;
+}
+
+.view-controls.is-overflowing.is-at-end {
+    --view-controls-mask-right: 0px;
+}
+
+.view-controls.is-dragging {
+    cursor: grabbing;
+    scroll-behavior: auto;
+    user-select: none;
+}
+
+.view-controls > .filters {
+    margin-left: auto;
+    flex: 0 0 auto;
+    min-width: max-content;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
 }
 
 .game-content-wrapper > .view-controls {
@@ -69,6 +128,18 @@
     gap: 8px;
     font-size: 0.9rem;
     font-weight: 500;
+    min-width: 0;
+    flex: 0 0 auto;
+    max-width: clamp(92px, 11vw, 154px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    scroll-snap-align: start;
+}
+
+.view-controls .view-btn[data-view="slideshow"],
+.view-controls .view-btn[data-view="random"] {
+    max-width: clamp(96px, 12vw, 168px);
 }
 
 .view-btn:hover {
@@ -115,6 +186,10 @@
     text-transform: uppercase;
     cursor: pointer;
     transition: border-color 0.16s ease, background-color 0.16s ease, color 0.16s ease;
+    max-width: clamp(110px, 15vw, 170px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .cover-card-mode-tab:hover {
@@ -142,6 +217,9 @@
     border: 1px solid var(--border-color);
     border-radius: var(--radius-btn);
     background: color-mix(in srgb, var(--bg-secondary), transparent 18%);
+    flex: 0 0 auto;
+    white-space: nowrap;
+    scroll-snap-align: start;
 
     label {
         color: var(--text-secondary);
@@ -154,6 +232,16 @@
         width: 120px;
         accent-color: var(--accent-color);
     }
+}
+
+.view-controls .filters select,
+.view-controls .filters .filter-pair-toggle,
+.view-controls .filters .group-same-names-toggle,
+.view-controls .filters .emulators-installed-toggle,
+.view-controls .filters .filters-popup-btn {
+    flex: 0 0 auto;
+    min-width: 0;
+    scroll-snap-align: start;
 }
 
 .view-size-control.is-locked {
@@ -173,10 +261,20 @@
     font-weight: 600;
 
     input[type="checkbox"] {
-        accent-color: var(--accent-color);
         width: 15px;
         height: 15px;
     }
+}
+
+.emulators-installed-toggle:has(input[type="checkbox"]:checked) {
+    color: var(--text-primary);
+    border-color: color-mix(in srgb, var(--accent-color), white 10%);
+    background:
+        linear-gradient(135deg, rgba(var(--accent-color-rgb), 0.16), transparent 72%),
+        color-mix(in srgb, var(--bg-secondary), transparent 8%);
+    box-shadow:
+        0 0 0 1px rgba(var(--accent-color-rgb), 0.12) inset,
+        0 10px 18px rgba(0, 0, 0, 0.14);
 }
 
 .emulators-installed-toggle.is-hidden {
@@ -196,10 +294,20 @@
     font-weight: 600;
 
     input[type="checkbox"] {
-        accent-color: var(--accent-color);
         width: 15px;
         height: 15px;
     }
+}
+
+.group-same-names-toggle:has(input[type="checkbox"]:checked) {
+    color: var(--text-primary);
+    border-color: color-mix(in srgb, var(--accent-color), white 10%);
+    background:
+        linear-gradient(135deg, rgba(var(--accent-color-rgb), 0.16), transparent 72%),
+        color-mix(in srgb, var(--bg-secondary), transparent 8%);
+    box-shadow:
+        0 0 0 1px rgba(var(--accent-color-rgb), 0.12) inset,
+        0 10px 18px rgba(0, 0, 0, 0.14);
 }
 
 .group-same-names-toggle.is-hidden {
@@ -250,10 +358,8 @@
     }
 
     .view-size-control {
-        order: 10;
         margin-left: 0;
-        flex-grow: 1;
-        justify-content: space-between;
+        justify-content: flex-start;
     }
     
     #search-games-btn {
@@ -261,10 +367,106 @@
     }
 }
 
+@media (max-width: 1380px) {
+    .view-controls {
+        gap: 8px;
+        padding: 8px 10px;
+    }
+
+    .view-btn {
+        padding: 7px 12px;
+        font-size: 0.84rem;
+        max-width: clamp(74px, 9vw, 124px);
+    }
+
+    .view-controls .view-btn[data-view="slideshow"],
+    .view-controls .view-btn[data-view="random"] {
+        max-width: clamp(88px, 10vw, 136px);
+    }
+
+    .view-size-control {
+        gap: 6px;
+        padding: 5px 8px;
+    }
+
+    .view-size-control label,
+    #view-size-value {
+        font-size: 0.8rem;
+    }
+
+    .view-size-control input[type="range"] {
+        width: 98px;
+    }
+
+    .view-controls > .filters {
+        gap: 8px;
+    }
+}
+
+@media (max-width: 1180px) {
+    .view-btn {
+        padding: 7px 10px;
+        font-size: 0.8rem;
+    }
+
+    .view-controls .view-btn[data-view="slideshow"],
+    .view-controls .view-btn[data-view="random"] {
+        max-width: none;
+    }
+}
+
+@media (max-width: 1040px) {
+    .view-controls {
+        gap: 8px;
+        padding: 8px 10px;
+    }
+
+    .view-btn {
+        min-width: 0;
+        padding: 6px 8px;
+        font-size: 0;
+        letter-spacing: 0;
+    }
+
+    .view-btn::before {
+        content: attr(data-view-short);
+        display: inline-block;
+        font-size: 0.74rem;
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: 0.01em;
+    }
+
+    .view-size-control input[type="range"] {
+        width: 104px;
+    }
+}
+
 @media (max-width: 768px) {
     .view-controls {
         margin: 0;
-        justify-content: center;
+        gap: 6px;
+        padding: 8px;
+    }
+
+    .view-btn {
+        padding: 6px 9px;
+        font-size: 0;
+        max-width: none;
+        flex: 0 1 auto;
+    }
+
+    .view-btn::before {
+        content: attr(data-view-short);
+        display: inline-block;
+        font-size: 0.72rem;
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: 0.01em;
+    }
+
+    .view-size-control {
+        justify-content: flex-start;
     }
 
     .sidebar {
@@ -308,26 +510,36 @@
         align-items: stretch;
         gap: 8px;
     }
-    
-    .filters {
-        width: auto;
-        min-width: 0;
-        justify-content: flex-start;
-        flex-wrap: wrap;
+
+    .view-controls {
         gap: 6px;
-    }
-    
-    .filters select {
-        width: calc(50% - 6px);
+        padding: 8px 8px 10px;
     }
 
-    .filters .emulators-installed-toggle {
-        width: 100%;
-        justify-content: center;
+    .view-btn {
+        flex: 0 1 auto;
+        min-width: 0;
+        max-width: none;
+        padding: 6px 8px;
+        font-size: 0;
+        letter-spacing: 0;
     }
 
-    .filters .group-same-names-toggle {
-        width: 100%;
-        justify-content: center;
+    .view-btn::before {
+        content: attr(data-view-short);
+        font-size: 0.72rem;
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: 0.01em;
+    }
+
+    .view-size-control {
+        flex: 0 0 auto;
+        min-width: max-content;
+        justify-content: flex-start;
+    }
+
+    .view-size-control input[type="range"] {
+        width: min(100%, 110px);
     }
 }

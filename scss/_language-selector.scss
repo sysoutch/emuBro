@@ -164,6 +164,75 @@
     }
 }
 
+.lang-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 36px;
+    padding-inline: 12px;
+}
+
+.lang-action-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    flex: 0 0 14px;
+
+    svg {
+        width: 14px;
+        height: 14px;
+        display: block;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 1.9;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+}
+
+.lang-action-label {
+    display: inline-block;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.language-card.is-active {
+    border-color: color-mix(in srgb, var(--accent-color), white 10%);
+    box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--accent-color), transparent 58%),
+        0 10px 26px color-mix(in srgb, var(--accent-color), transparent 86%);
+}
+
+.language-card.is-selectable {
+    cursor: pointer;
+}
+
+.language-card.is-selectable:hover {
+    border-color: color-mix(in srgb, var(--accent-color), transparent 18%);
+}
+
+@container (max-width: 420px) {
+    .language-card .lang-actions {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        justify-content: stretch;
+    }
+
+    .language-card .lang-action-btn {
+        width: 100%;
+        min-width: 0;
+        padding-inline: 0;
+        gap: 0;
+    }
+
+    .language-card .lang-action-label {
+        display: none;
+    }
+}
+
 .lang-keys-list {
     flex: 1;
     overflow-y: auto;
@@ -183,6 +252,7 @@
     }
     
     #lang-list-view {
+        container-type: inline-size;
         overflow-y: auto;
     }
     
@@ -208,6 +278,93 @@
     }
 }
 
+.lang-translate-prompt-panel {
+    margin-bottom: 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--bg-secondary), transparent 12%);
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.lang-translate-prompt-summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 10px 14px;
+    font-size: 0.84rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    color: var(--text-primary);
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.lang-translate-prompt-summary::-webkit-details-marker {
+    display: none;
+}
+
+.lang-translate-prompt-summary::before {
+    content: "▸";
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    transition: transform 0.16s ease;
+}
+
+.lang-translate-prompt-panel[open] .lang-translate-prompt-summary::before {
+    transform: rotate(90deg);
+}
+
+.lang-translate-prompt-body {
+    display: grid;
+    gap: 12px;
+    padding: 0 14px 14px;
+    border-top: 1px solid color-mix(in srgb, var(--border-color), transparent 28%);
+}
+
+.lang-translate-prompt-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding-top: 12px;
+}
+
+.lang-translate-prompt-action-buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.lang-translate-prompt-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+.lang-translate-prompt-textarea {
+    width: 100%;
+    min-height: 180px;
+    resize: vertical;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
+.lang-translate-prompt-textarea:focus {
+    border-color: var(--accent-color);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(var(--accent-color-rgb), 0.18);
+}
+
 .lang-translate-mode {
     display: inline-flex;
     align-items: center;
@@ -228,13 +385,20 @@
 }
 
 .lang-translate-guidance {
-    display: inline-flex;
-    align-items: center;
+    display: grid;
     gap: 8px;
     min-width: min(340px, 100%);
     font-size: 0.8rem;
     color: var(--text-secondary);
     font-weight: 700;
+}
+
+.lang-translate-style-preset-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
 }
 
 .lang-translate-guidance input {
@@ -246,6 +410,15 @@
     color: var(--text-primary);
     padding: 0 9px;
     font-size: 0.8rem;
+}
+
+.lang-translate-style-preset-row input {
+    min-width: 0;
+    width: 100%;
+}
+
+.lang-translate-style-preset-row .action-btn {
+    white-space: nowrap;
 }
 
 .lang-llm-translate-status {
@@ -292,46 +465,43 @@ body.live-edit-mode [data-i18n]:hover {
     position: relative;
     outline: 1px dashed color-mix(in srgb, var(--accent-color), transparent 28%);
     outline-offset: 2px;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-color), transparent 70%);
 }
 
 body.live-edit-mode [data-i18n]:hover::after {
-    content: "\270E";
+    content: "";
     position: absolute;
     top: 2px;
     right: 2px;
     width: 16px;
     height: 16px;
     border-radius: 999px;
-    background: var(--accent-color);
-    color: var(--bg-primary);
-    font-size: 10px;
-    line-height: 16px;
-    text-align: center;
+    background-color: color-mix(in srgb, var(--accent-color) 88%, white 12%);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23111a22' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m12 20 8-8-4-4-8 8-1 5 5-1Z'/%3E%3Cpath d='m15 5 4 4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 10px 10px;
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.32);
     pointer-events: none;
 }
 
 body.live-edit-mode [data-i18n-placeholder]:hover {
-    position: relative;
     outline: 1px dashed color-mix(in srgb, var(--accent-color), transparent 28%);
     outline-offset: 2px;
+    box-shadow:
+        inset 0 0 0 1px color-mix(in srgb, var(--accent-color), transparent 74%),
+        0 0 0 1px color-mix(in srgb, var(--accent-color), transparent 78%);
+    background-image:
+        radial-gradient(circle at calc(100% - 10px) 10px, color-mix(in srgb, var(--accent-color) 88%, white 12%) 0 10px, transparent 10.5px),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23111a22' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m12 20 8-8-4-4-8 8-1 5 5-1Z'/%3E%3Cpath d='m15 5 4 4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat, no-repeat;
+    background-size: 20px 20px, 11px 11px;
+    background-position: right 0 top 0, calc(100% - 4.5px) 4.5px;
+    padding-right: 30px;
 }
 
 body.live-edit-mode [data-i18n-placeholder]:hover::after {
-    content: "\270E";
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    width: 16px;
-    height: 16px;
-    border-radius: 999px;
-    background: var(--accent-color);
-    color: var(--bg-primary);
-    font-size: 10px;
-    line-height: 16px;
-    text-align: center;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.32);
-    pointer-events: none;
+    content: none;
 }
 
 .lang-key-row {
@@ -394,6 +564,21 @@ body.live-edit-mode [data-i18n-placeholder]:hover::after {
     }
     
     .target-value {
+        min-width: 0;
+
+        .lang-row-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 6px;
+        }
+
+        .lang-row-translate-btn {
+            min-width: 0;
+            padding: 4px 9px;
+            font-size: 0.72rem;
+            line-height: 1.1;
+        }
+
         textarea {
             width: 100%;
             background-color: var(--bg-secondary);
@@ -413,6 +598,34 @@ body.live-edit-mode [data-i18n-placeholder]:hover::after {
                 box-shadow: 0 0 0 2px rgba(var(--accent-color-rgb), 0.2);
             }
         }
+    }
+}
+
+@container (max-width: 600px) {
+    .lang-key-row .target-value .lang-row-actions {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 860px) {
+    .lang-translate-prompt-actions {
+        align-items: stretch;
+    }
+
+    .lang-translate-prompt-action-buttons {
+        width: 100%;
+    }
+
+    .lang-translate-prompt-action-buttons .action-btn {
+        flex: 1 1 160px;
+    }
+
+    .lang-translate-style-preset-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .lang-translate-style-preset-row .action-btn {
+        width: 100%;
     }
 }
 

@@ -1,0 +1,482 @@
+/* Shared modal surfaces */
+.desktop-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(5, 10, 18, 0.68);
+  backdrop-filter: blur(10px);
+}
+
+.desktop-modal-card {
+  position: relative;
+  isolation: isolate;
+  width: min(980px, 100%);
+  max-height: min(88vh, 920px);
+  overflow: auto;
+  padding: 20px;
+  border-radius: 22px;
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(100% 140% at 0% 0%, rgba(var(--accent-rgb), 0.18), transparent 60%),
+    color-mix(in srgb, var(--bg-elev), transparent 4%);
+  box-shadow:
+    0 28px 64px rgba(0, 0, 0, 0.42),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+}
+
+.desktop-modal-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  background:
+    linear-gradient(135deg, rgba(var(--accent-rgb), 0.72), rgba(255, 255, 255, 0.1) 26%, rgba(var(--accent-rgb), 0.18) 58%, rgba(var(--accent-rgb), 0.5));
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0.85;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.desktop-modal-layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 18px;
+}
+
+.desktop-modal-layout-compact {
+  grid-template-columns: 180px minmax(0, 1fr);
+}
+
+.desktop-modal-cover {
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(100% 120% at 0% 0%, rgba(var(--accent-rgb), 0.18), transparent 58%),
+    color-mix(in srgb, var(--bg), transparent 4%);
+}
+
+.desktop-modal-cover img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.desktop-modal-cover-icon {
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+  padding: 24px;
+}
+
+.desktop-modal-cover-icon img {
+  width: min(120px, 100%);
+  height: min(120px, 100%);
+  object-fit: contain;
+}
+
+.desktop-modal-content {
+  display: grid;
+  gap: 14px;
+}
+
+.desktop-game-details-modal {
+  width: min(1100px, 100%);
+}
+
+.desktop-emulator-details-modal {
+  width: min(1040px, 100%);
+}
+
+.desktop-about-modal {
+  width: min(920px, 100%);
+}
+
+.desktop-about-layout {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 18px;
+}
+
+.desktop-about-hero {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(100% 120% at 0% 0%, rgba(var(--accent-rgb), 0.18), transparent 58%),
+    color-mix(in srgb, var(--bg-elev), transparent 8%);
+}
+
+.desktop-about-logo-wrap {
+  width: 78px;
+  height: 78px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(120% 120% at 30% 24%, rgba(255, 255, 255, 0.22), transparent 34%),
+    linear-gradient(145deg, color-mix(in srgb, var(--accent-color), white 20%), color-mix(in srgb, var(--brand-color), black 16%));
+  border: 1px solid color-mix(in srgb, var(--accent-color), white 10%);
+  box-shadow:
+    0 10px 22px rgba(0, 0, 0, 0.28),
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+}
+
+.desktop-about-logo {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+}
+
+.desktop-about-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.desktop-about-copy strong {
+  font-size: 1.8rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+}
+
+.desktop-about-copy em {
+  color: var(--brand-color);
+  font-style: normal;
+}
+
+.desktop-about-copy small {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.desktop-about-content {
+  display: grid;
+  gap: 14px;
+}
+
+.desktop-about-section {
+  display: grid;
+  gap: 12px;
+}
+
+.desktop-about-changelog {
+  margin: 0;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg), transparent 4%);
+  color: var(--text);
+  font: 0.9rem/1.55 Consolas, "Cascadia Code", monospace;
+  white-space: pre-wrap;
+}
+
+.desktop-modal-editor-section {
+  display: grid;
+  gap: 12px;
+}
+
+.desktop-modal-textarea {
+  width: 100%;
+  min-height: 156px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-elev), transparent 12%);
+  color: var(--text);
+  resize: vertical;
+  font: inherit;
+}
+
+.desktop-modal-textarea-compact {
+  min-height: 96px;
+}
+
+.desktop-modal-textarea-code {
+  min-height: 240px;
+  font: 0.9rem/1.55 Consolas, "Cascadia Code", monospace;
+}
+
+.desktop-runtime-rule-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.desktop-emulator-config-tabs {
+  width: 100%;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.desktop-emulator-binding-list {
+  display: grid;
+  gap: 10px;
+}
+
+.desktop-emulator-binding-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 220px) minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-elev), transparent 14%);
+}
+
+.desktop-emulator-binding-key {
+  color: var(--muted);
+  font-size: 0.85rem;
+  word-break: break-word;
+}
+
+.desktop-emulator-binding-input,
+.desktop-emulator-gamepad-input {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-elev), transparent 12%);
+  color: var(--text);
+}
+
+.desktop-emulator-gamepad-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.desktop-emulator-gamepad-header,
+.desktop-emulator-gamepad-row {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.desktop-emulator-gamepad-header {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0 4px;
+}
+
+.desktop-emulator-gamepad-row {
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-elev), transparent 14%);
+}
+
+.desktop-emulator-gamepad-action {
+  font-weight: 700;
+  padding-top: 10px;
+}
+
+.desktop-emulator-gamepad-cell {
+  display: grid;
+  gap: 8px;
+}
+
+.desktop-emulator-gamepad-platform {
+  color: var(--muted);
+  font-size: 0.78rem;
+  word-break: break-word;
+}
+
+.desktop-cover-search-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.desktop-cover-search-card {
+  text-align: left;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-elev), transparent 14%);
+  color: var(--text);
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.desktop-cover-search-card:hover {
+  border-color: rgba(var(--accent-rgb), 0.42);
+  box-shadow:
+    0 0 0 1px rgba(var(--accent-rgb), 0.22) inset,
+    0 12px 22px rgba(0, 0, 0, 0.18);
+  transform: translateY(-1px);
+}
+
+.desktop-cover-search-card:disabled {
+  opacity: 0.64;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.desktop-cover-search-card small {
+  color: var(--muted);
+}
+
+.desktop-cover-search-thumb-wrap {
+  display: block;
+  overflow: hidden;
+  aspect-ratio: 3 / 4;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--bg), transparent 6%);
+}
+
+.desktop-cover-search-thumb {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.desktop-tag-pill-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.desktop-tag-toggle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.desktop-tag-toggle {
+  text-align: left;
+  display: grid;
+  gap: 6px;
+  min-height: 72px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-elev), transparent 14%);
+  color: var(--text);
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.desktop-tag-toggle strong {
+  font-size: 0.94rem;
+}
+
+.desktop-tag-toggle small {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.desktop-tag-toggle:hover,
+.desktop-tag-toggle.is-active {
+  border-color: rgba(var(--accent-rgb), 0.42);
+  box-shadow:
+    0 0 0 1px rgba(var(--accent-rgb), 0.22) inset,
+    0 12px 22px rgba(0, 0, 0, 0.18);
+  transform: translateY(-1px);
+}
+
+.desktop-tag-toggle:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.desktop-modal-danger-row {
+  padding-top: 4px;
+}
+
+.desktop-emulator-os-links {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.desktop-download-option-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.desktop-download-option {
+  text-align: left;
+  display: grid;
+  gap: 8px;
+  min-height: 88px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-elev), transparent 14%);
+  color: var(--text);
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.desktop-download-option strong {
+  font-size: 0.95rem;
+}
+
+.desktop-download-option small {
+  color: var(--muted);
+  word-break: break-word;
+}
+
+.desktop-download-option:hover,
+.desktop-download-option.is-active {
+  border-color: rgba(var(--accent-rgb), 0.42);
+  box-shadow:
+    0 0 0 1px rgba(var(--accent-rgb), 0.22) inset,
+    0 12px 22px rgba(0, 0, 0, 0.18);
+  transform: translateY(-1px);
+}
+
+.desktop-emulator-path-list {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.legacy-fallback-note {
+  margin: 12px 0 0;
+  color: #ff9eb0;
+  font-size: 0.9rem;
+}

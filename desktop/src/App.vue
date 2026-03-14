@@ -1,17 +1,34 @@
 <script setup>
-import { computed, onMounted, ref } from "vue";
+import { computed, defineAsyncComponent, onMounted, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useAppStore } from "./stores/app";
+import ShellScaffold from "./components/ShellScaffold.vue";
+import { useShellThemeStore } from "./stores/shell-theme";
+
+const LegacyFrameHost = defineAsyncComponent(() => import("./components/LegacyFrameHost.vue"));
+const LibraryHeaderControls = defineAsyncComponent(() => import("./components/LibraryHeaderControls.vue"));
+const DesktopHomeView = defineAsyncComponent(() => import("./views/DesktopHomeView.vue"));
+const ThemeWindowView = defineAsyncComponent(() => import("./views/ThemeWindowView.vue"));
+const HeaderFiltersView = defineAsyncComponent(() => import("./views/HeaderFiltersView.vue"));
+const SettingsToolsView = defineAsyncComponent(() => import("./views/SettingsToolsView.vue"));
+const LibraryWorkspaceView = defineAsyncComponent(() => import("./views/LibraryWorkspaceView.vue"));
+const SupportCenterView = defineAsyncComponent(() => import("./views/SupportCenterView.vue"));
+const CommunityHubView = defineAsyncComponent(() => import("./views/CommunityHubView.vue"));
 
 const appStore = useAppStore();
-const { title, subtitle, ready, theme } = storeToRefs(appStore);
-const legacyFrameReady = ref(false);
-const legacyFrameError = ref(false);
-const legacyFrameUrl = ref("");
-
-const hasLegacyFrame = computed(
-  () => !!legacyFrameUrl.value && !legacyFrameError.value
-);
+const shellThemeStore = useShellThemeStore();
+const {
+  activeSection,
+  hasLegacyFrame,
+  legacyEntryUrl,
+  legacyFrameError,
+  legacyFrameReady,
+  ready,
+  shellSections,
+  theme,
+  windowMaximized,
+  windowStateReady
+} = storeToRefs(appStore);
 
 async function notifyRendererReady() {
   if (!window?.emubro || typeof window.emubro.invoke !== "function") {
@@ -25,71 +42,109 @@ async function notifyRendererReady() {
 }
 
 function onLegacyFrameLoad() {
-  legacyFrameReady.value = true;
+  appStore.markLegacyFrameReady();
   appStore.markReady();
   void notifyRendererReady();
 }
 
 function onLegacyFrameError() {
-  legacyFrameError.value = true;
-  legacyFrameReady.value = false;
+  appStore.markLegacyFrameError();
   appStore.markReady();
   void notifyRendererReady();
 }
 
-onMounted(() => {
-  document.documentElement.setAttribute("data-theme", theme.value);
-
+onMounted(async () => {
   const legacyEntry =
     typeof __EMUBRO_LEGACY_INDEX__ === "string"
       ? __EMUBRO_LEGACY_INDEX__.trim()
       : "";
-  if (legacyEntry) {
-    legacyFrameUrl.value = legacyEntry;
-    return;
+  await appStore.initializeShell({ legacyEntryUrl: legacyEntry });
+  void shellThemeStore.initialize();
+  void appStore.initializeWindowState();
+  document.documentElement.setAttribute("data-theme", theme.value);
+  if (!appStore.hasLegacyFrame) {
+    appStore.markReady();
+    void notifyRendererReady();
   }
-
-  appStore.markReady();
-  void notifyRendererReady();
 });
+
+watch(theme, (nextTheme) => {
+  document.documentElement.setAttribute("data-theme", nextTheme);
+});
+
+const shouldShowDesktopShell = computed(() => !hasLegacyFrame.value);
+
+const activeDesktopView = computed(() => {
+  switch (activeSection.value.id) {
+    case "theme-window":
+      return ThemeWindowView;
+    case "header-filters":
+      return HeaderFiltersView;
+    case "settings-tools":
+      return SettingsToolsView;
+    case "library-views":
+      return LibraryWorkspaceView;
+    case "support-center":
+      return SupportCenterView;
+    case "community-hub":
+      return CommunityHubView;
+    case "desktop-home":
+      return DesktopHomeView;
+    default:
+      return LibraryWorkspaceView;
+  }
+});
+
+const activeDesktopViewProps = computed(() =>
+  activeSection.value.id === "desktop-home" ? { legacyFrameError: legacyFrameError.value } : {}
+);
+
+const shouldShowLibraryToolbar = computed(() =>
+  activeSection.value.id === "header-filters" || activeSection.value.id === "library-views"
+);
 </script>
 
 <template>
-  <main v-if="hasLegacyFrame" class="legacy-shell">
-    <iframe
-      class="legacy-frame"
-      :class="{ 'is-ready': legacyFrameReady }"
-      :src="legacyFrameUrl"
-      title="emuBro Legacy UI"
-      @load="onLegacyFrameLoad"
-      @error="onLegacyFrameError"
-    />
-  </main>
+  <LegacyFrameHost
+    v-if="hasLegacyFrame"
+    :ready="legacyFrameReady"
+    :src="legacyEntryUrl"
+    @load="onLegacyFrameLoad"
+    @error="onLegacyFrameError"
+  />
 
-  <main v-else class="shell">
-    <header class="titlebar" data-tauri-drag-region>
-      <div class="brand" data-tauri-drag-region>
-        <h1>{{ title }}</h1>
-        <p>{{ subtitle }}</p>
+  <div v-else-if="!ready" class="desktop-shell-loading">
+    <div class="desktop-shell-loading-card">
+      <div class="desktop-shell-loading-brand">
+        <img src="/logo.png" alt="emuBro" />
+        <div>
+          <h1>EMUBRO</h1>
+          <p>Loading library, themes, and tools...</p>
+        </div>
       </div>
-      <div class="controls">
-        <button type="button" @click="appStore.toggleTheme">Theme</button>
-        <button type="button" @click="appStore.minimizeWindow">Min</button>
-        <button type="button" @click="appStore.maximizeWindow">Max</button>
-        <button type="button" class="danger" @click="appStore.closeWindow">Close</button>
+      <div class="desktop-shell-loading-progress">
+        <span class="desktop-shell-loading-progress-bar" />
       </div>
-    </header>
-    <section class="content">
-      <div class="card">
-        <h2>{{ ready ? "Desktop shell is running" : "Booting..." }}</h2>
-        <p>
-          This is the new desktop frontend foundation. Next steps are porting game/library,
-          settings, language, and theme modules to desktop commands + Pinia stores.
-        </p>
-        <p v-if="legacyFrameError" class="legacy-fallback-note">
-          Legacy UI bootstrap failed. Check dev console and Vite `/@fs` access.
-        </p>
-      </div>
-    </section>
-  </main>
+    </div>
+  </div>
+
+  <ShellScaffold
+    v-else-if="shouldShowDesktopShell"
+    :active-section="activeSection"
+    :ready="ready"
+    :shell-sections="shellSections"
+    :theme="theme"
+    :window-maximized="windowMaximized"
+    :window-state-ready="windowStateReady"
+    @select-section="appStore.setActiveSection"
+    @toggle-theme="shellThemeStore.toggleTone"
+    @minimize-window="appStore.minimizeWindow"
+    @maximize-window="appStore.maximizeWindow"
+    @close-window="appStore.closeWindow"
+  >
+    <template v-if="shouldShowLibraryToolbar" #toolbar>
+      <LibraryHeaderControls />
+    </template>
+    <component :is="activeDesktopView" v-bind="activeDesktopViewProps" />
+  </ShellScaffold>
 </template>

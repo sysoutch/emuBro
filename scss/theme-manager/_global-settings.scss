@@ -1,0 +1,333 @@
+.theme-manager-modal {
+    .global-settings {
+        min-width: 0;
+
+        .settings-grid--global {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+            gap: 16px 20px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            align-items: start;
+            min-width: 0;
+        }
+
+        .settings-grid--global > .form-group {
+            min-width: 0;
+            display: grid;
+            align-content: start;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid color-mix(in srgb, var(--border-color), transparent 18%);
+            background: color-mix(in srgb, var(--bg-tertiary), transparent 14%);
+        }
+
+        .settings-grid--global > .form-group label {
+            min-width: 0;
+            overflow-wrap: anywhere;
+        }
+
+        .settings-grid--global > .form-group .form-hint {
+            margin-top: 4px;
+            color: color-mix(in srgb, var(--text-secondary), transparent 6%);
+            font-size: 0.76rem;
+            line-height: 1.35;
+            overflow-wrap: anywhere;
+        }
+
+        .global-override-bg-group {
+            display: flex;
+            align-items: stretch;
+            min-width: 0;
+        }
+
+        .global-window-frame-color-group {
+            grid-column: 1 / -1;
+        }
+
+        .global-override-bg-label {
+            width: 100%;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            align-items: start;
+            column-gap: 10px;
+            cursor: pointer;
+            margin: 0;
+            padding: 8px 10px;
+            border-radius: 10px;
+            border: 1px solid transparent;
+            background: color-mix(in srgb, var(--bg-primary), transparent 82%);
+
+            input {
+                margin-top: 2px;
+            }
+
+            span {
+                font-weight: 700;
+                line-height: 1.25;
+                white-space: normal;
+                overflow-wrap: anywhere;
+            }
+        }
+
+        .global-override-bg-label:has(input[type="checkbox"]:checked) {
+            color: var(--text-primary);
+            border-color: color-mix(in srgb, var(--accent-color), white 10%);
+            background:
+                linear-gradient(135deg, rgba(var(--accent-color-rgb), 0.16), transparent 74%),
+                color-mix(in srgb, var(--bg-primary), transparent 74%);
+            box-shadow: 0 0 0 1px rgba(var(--accent-color-rgb), 0.12) inset;
+        }
+
+        .global-override-bg-group .form-hint,
+        .global-window-frame-toggle .form-hint {
+            margin-top: 10px;
+        }
+
+        .global-window-frame-color-group[hidden],
+        .global-window-frame-rotation-group[hidden],
+        .global-window-frame-hue-speed-group[hidden],
+        .global-window-frame-hue-span-group[hidden] {
+            display: none;
+        }
+
+        .global-window-frame-color-group .window-frame-color-palette {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(52px, 1fr));
+            gap: 10px;
+        }
+
+        .global-window-frame-color-group .window-frame-palette-chip {
+            display: grid;
+            gap: 8px;
+            justify-items: center;
+            min-width: 0;
+            padding: 10px 8px;
+            border-radius: 12px;
+            border: 1px solid color-mix(in srgb, var(--border-color), transparent 16%);
+            background: color-mix(in srgb, var(--bg-primary), transparent 78%);
+        }
+
+        .global-window-frame-color-group .window-frame-palette-chip span {
+            font-size: 0.76rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            color: var(--text-secondary);
+        }
+
+        .global-window-frame-color-group .window-frame-color-picker {
+            width: 100%;
+            min-width: 0;
+            height: 42px;
+            border: none;
+            background: none;
+            padding: 0;
+            cursor: pointer;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .global-window-frame-color-group .window-frame-alpha-control {
+            margin-top: 12px;
+        }
+
+        #global-window-frame-color-alpha-value,
+        #global-window-frame-rotation-speed-value,
+        #global-window-frame-hue-rotate-speed-value,
+        #global-window-frame-hue-rotate-span-value,
+        #global-window-frame-thickness-value,
+        #global-window-frame-shadow-value,
+        #global-window-frame-radius-value {
+            min-width: 52px;
+            text-align: right;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-size: 0.84rem;
+        }
+
+        .gradient-angle-control {
+            width: 100%;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: center;
+        }
+    }
+}
+
+.theme-manager-modal.docked-right {
+    .global-settings {
+        .settings-grid--global {
+            gap: 8px;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+
+        .settings-grid--global > .form-group {
+            gap: 5px;
+            padding: 8px;
+            border-radius: 10px;
+        }
+
+        .settings-grid--global > .form-group label {
+            font-size: 0.76rem;
+            letter-spacing: 0.03em;
+        }
+
+        .settings-grid--global > .form-group .form-hint {
+            display: none;
+        }
+
+        .global-override-bg-label {
+            padding: 7px 8px;
+            column-gap: 8px;
+        }
+
+        .global-override-bg-label span {
+            font-size: 0.82rem;
+        }
+
+        .global-window-frame-color-group {
+            grid-column: 1 / -1;
+        }
+
+        .global-window-frame-color-group .window-frame-color-palette {
+            gap: 8px;
+        }
+
+        .global-window-frame-color-group .window-frame-palette-chip {
+            gap: 6px;
+            padding: 7px 5px;
+            border-radius: 10px;
+        }
+
+        .global-window-frame-color-group .window-frame-palette-chip span {
+            font-size: 0.7rem;
+        }
+
+        .global-window-frame-color-group .window-frame-color-picker {
+            height: 34px;
+            border-radius: 8px;
+        }
+
+        select,
+        input[type="text"],
+        input[type="number"],
+        input[type="search"],
+        textarea {
+            width: 100%;
+            min-width: 0;
+            padding: 8px 10px;
+            font-size: 0.84rem;
+        }
+
+        input[type="range"] {
+            min-width: 0;
+        }
+
+        .gradient-angle-control {
+            gap: 8px;
+        }
+
+        #global-window-frame-color-alpha-value,
+        #global-window-frame-rotation-speed-value,
+        #global-window-frame-hue-rotate-speed-value,
+        #global-window-frame-hue-rotate-span-value,
+        #global-window-frame-thickness-value,
+        #global-window-frame-shadow-value,
+        #global-window-frame-radius-value {
+            min-width: 40px;
+            font-size: 0.78rem;
+        }
+    }
+}
+
+@container theme-dock (max-width: 360px) {
+    .global-settings {
+        min-width: 0;
+    }
+
+    .global-settings .settings-grid--global {
+        padding: 6px;
+        gap: 6px;
+        margin-bottom: 8px;
+    }
+
+    .global-settings .settings-grid--global > .form-group {
+        padding: 7px;
+        gap: 4px;
+    }
+
+    .global-settings .settings-grid--global > .form-group label {
+        font-size: 0.74rem;
+    }
+
+    .global-settings .global-override-bg-label {
+        padding: 6px 7px;
+        column-gap: 7px;
+    }
+
+    .global-settings .global-override-bg-label span {
+        font-size: 0.78rem;
+    }
+
+    .global-settings .gradient-angle-control {
+        grid-template-columns: 1fr;
+        gap: 5px;
+    }
+
+    .global-settings #global-window-frame-color-alpha-value,
+    .global-settings #global-window-frame-rotation-speed-value,
+    .global-settings #global-window-frame-hue-rotate-speed-value,
+    .global-settings #global-window-frame-hue-rotate-span-value,
+    .global-settings #global-window-frame-thickness-value,
+    .global-settings #global-window-frame-shadow-value,
+    .global-settings #global-window-frame-radius-value {
+        min-width: 0;
+        justify-self: end;
+        font-size: 0.75rem;
+    }
+
+    .global-settings .global-window-frame-color-group .window-frame-palette-chip {
+        padding: 6px 5px;
+    }
+
+    .global-settings .global-window-frame-color-group .window-frame-color-picker {
+        height: 30px;
+    }
+
+    .global-settings select,
+    .global-settings input[type="text"],
+    .global-settings input[type="number"],
+    .global-settings input[type="search"],
+    .global-settings textarea {
+        padding: 7px 9px;
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 1040px) {
+    .theme-manager-modal .global-settings .settings-grid--global {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 760px) {
+    .theme-manager-modal .global-settings .settings-grid--global {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        padding: 12px;
+    }
+
+    .theme-manager-modal .global-settings .settings-grid--global > .form-group {
+        padding: 10px;
+    }
+}
+
+@media (max-width: 520px) {
+    #theme-manager-modal .global-settings .global-window-frame-color-group .window-frame-color-palette {
+        grid-template-columns: repeat(auto-fit, minmax(52px, 1fr));
+    }
+}

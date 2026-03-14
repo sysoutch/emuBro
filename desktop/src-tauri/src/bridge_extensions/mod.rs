@@ -15,6 +15,7 @@ use zip::ZipArchive;
 
 mod core;
 mod covers;
+mod help_docs;
 mod locales;
 mod migration;
 mod memory_cards;
@@ -47,6 +48,7 @@ pub(crate) fn bootstrap_background_services() {
 pub(crate) fn handle_bridge_channel(channel: &str, args: &[Value]) -> Option<Result<Value, String>> {
     locales::handle(channel, args)
         .or_else(|| covers::handle(channel, args))
+        .or_else(|| help_docs::handle(channel, args))
         .or_else(|| youtube::handle(channel, args))
         .or_else(|| monitor::handle(channel, args))
         .or_else(|| system_tools::handle(channel, args))

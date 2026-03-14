@@ -10,6 +10,7 @@ export function createThemeModalUtils(deps = {}) {
     let startY = 0;
     let modalInitialX = 0;
     let modalInitialY = 0;
+    let highestManagedModalZ = 0;
 
     function resolveManagedModal(modalOrId) {
         if (!modalOrId) return null;
@@ -17,14 +18,70 @@ export function createThemeModalUtils(deps = {}) {
         return modalOrId instanceof HTMLElement ? modalOrId : null;
     }
 
+    function getManagedModalBaseZ(modal) {
+        if (!modal) return 2000;
+        const cached = Number.parseInt(String(modal.dataset.managedModalBaseZ || ''), 10);
+        if (Number.isFinite(cached) && cached > 0) {
+            return cached;
+        }
+        const computed = Number.parseInt(String(windowRef.getComputedStyle(modal).zIndex || ''), 10);
+        const baseZ = Number.isFinite(computed) && computed > 0 ? computed : 2000;
+        modal.dataset.managedModalBaseZ = String(baseZ);
+        return baseZ;
+    }
+
+    function focusManagedModal(modalOrId) {
+        const modal = resolveManagedModal(modalOrId);
+        if (!modal) return false;
+        if (modal.classList.contains('docked-right')) {
+            return false;
+        }
+
+        const baseZ = getManagedModalBaseZ(modal);
+        let maxZ = Math.max(highestManagedModalZ, baseZ);
+        documentRef.querySelectorAll('[data-managed-modal-base-z]').forEach((candidate) => {
+            if (!(candidate instanceof HTMLElement) || candidate === modal) return;
+            const currentZ = Number.parseInt(String(candidate.style.zIndex || candidate.dataset.managedModalZ || ''), 10);
+            const candidateBase = Number.parseInt(String(candidate.dataset.managedModalBaseZ || ''), 10);
+            if (Number.isFinite(currentZ)) {
+                maxZ = Math.max(maxZ, currentZ);
+            } else if (Number.isFinite(candidateBase)) {
+                maxZ = Math.max(maxZ, candidateBase);
+            }
+            candidate.removeAttribute('data-managed-modal-active');
+        });
+
+        const nextZ = Math.max(baseZ, maxZ + 1);
+        highestManagedModalZ = nextZ;
+        modal.style.zIndex = String(nextZ);
+        modal.dataset.managedModalZ = String(nextZ);
+        modal.setAttribute('data-managed-modal-active', '1');
+        return true;
+    }
+
     function makeDraggable(modalId, headerId) {
         const modal = documentRef.getElementById(modalId);
         const header = documentRef.getElementById(headerId);
         if (!modal || !header) return;
 
+        if (modal.dataset.managedModalDragBound === '1') {
+            focusManagedModal(modal);
+            return;
+        }
+        modal.dataset.managedModalDragBound = '1';
+
         header.style.cursor = 'move';
+        getManagedModalBaseZ(modal);
+
+        const focusModal = () => {
+            focusManagedModal(modal);
+        };
+
+        modal.addEventListener('mousedown', focusModal);
+        modal.addEventListener('focusin', focusModal);
 
         header.addEventListener('mousedown', (e) => {
+            focusManagedModal(modal);
             if (e.target.closest('button, input, select, textarea')) return;
 
             if (modal.classList.contains('accordion-collapsed')) {
@@ -129,6 +186,7 @@ export function createThemeModalUtils(deps = {}) {
     }
 
     return {
+        focusManagedModal,
         makeDraggable,
         resetManagedModalPosition,
         recenterManagedModalIfMostlyOutOfView

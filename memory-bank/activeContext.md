@@ -64,6 +64,144 @@ Priority order for moving from alpha churn to beta-readiness:
 - `js/theme-manager.js` â€” 839 LOC â€” 30.0 KB
 
 ## Recent Changes
+- Desktop shell library parity note (2026-03-07):
+  - Added shell-native tag/category filtering:
+    - `desktop/src/stores/library-categories.js`
+    - `desktop/src/components/LibraryCategoriesPanel.vue`
+  - Added shell-native browse/search and cover-download runtime state:
+    - `desktop/src/stores/library-browse.js`
+    - `desktop/src/components/LibraryBrowsePanel.vue`
+  - Extended normalized desktop game rows with `description` and `tags` in `desktop/src/utils/library-data.js`.
+  - `desktop/src/utils/library-query.js` now supports shell-side tag filtering (`activeTagIds`) in addition to platform/language/region/group filters.
+  - Expanded the shared shell header filter model:
+    - `desktop/src/stores/header-filters.js`
+    - `desktop/src/components/LibraryHeaderControls.vue`
+    - Added shell view modes: `focus`, `slideshow`, and `random` for games while keeping emulator mode constrained to `cover` / `list`.
+  - Added a new shell-native immersive game component:
+    - `desktop/src/components/LibraryImmersiveView.vue`
+  - Reworked `desktop/src/views/LibraryWorkspaceView.vue` into a fuller shell workspace:
+    - sidebar now hosts categories and browse/search panels
+    - game workspace now supports cover/list/focus/slideshow/random
+    - existing launch/details/folder/shortcut flows remain wired
+  - Validation after this pass:
+    - `node --check` passed for new/changed JS stores/utils
+    - `npm --prefix desktop run build` passed
+- Desktop shell support/community migration note (2026-03-07):
+  - Added two new shell-native top-level sections:
+    - `desktop/src/views/SupportCenterView.vue`
+    - `desktop/src/views/CommunityHubView.vue`
+  - Added corresponding Pinia stores:
+    - `desktop/src/stores/support-center.js`
+    - `desktop/src/stores/community-hub.js`
+  - Added shared shell support formatting helper:
+    - `desktop/src/utils/support-formatting.js`
+  - `desktop/src/shell/sections.js` now includes `support-center` and `community-hub`, and section aliases `support` / `community`.
+  - `desktop/src/App.vue` now routes those new desktop sections directly instead of forcing those top-level areas to stay legacy-only.
+  - `desktop/src/emubro-bridge.js` fallbacks were aligned with real channel shapes and now provide web/dev-safe behavior for:
+    - `help:docs:list`
+    - `help:docs:get`
+    - `help:docs:search`
+    - `suggestions:emulation-support`
+    - `system:get-specs`
+    - `open-external-url`
+    - `community:open-in-app-window`
+    - `community:close-in-app-windows`
+- Desktop shell migration baseline note (2026-03-07):
+  - Fixed the broken Vue shell startup by correcting the malformed `desktop/src/stores/app.js` store definition that caused the Vite import-analysis parse failure.
+  - The desktop shell now owns a first real set of migration slices instead of only a placeholder host:
+    - `desktop/src/stores/app.js`: shell section state, theme tone, and native window maximize state
+    - `desktop/src/stores/header-filters.js`: search/filter/group/sort/cover-size state persisted in localStorage
+    - `desktop/src/stores/workspace.js`: shared bridge-backed workspace data for games, emulators, locales, platforms, and library paths
+    - `desktop/src/views/ThemeWindowView.vue`, `HeaderFiltersView.vue`, `SettingsToolsView.vue`, `LibraryWorkspaceView.vue`: first desktop-owned views for the migration targets
+  - `desktop/src/shell/sections.js` now exposes the intended migration order as explicit shell sections: overview, theme/window, header/filters, settings/tools, library views.
+  - Important: this is still an incremental migration. Default startup remains `legacy-home` for stability; desktop sections are activated through shell section routing/query parameters, not by replacing the whole legacy runtime yet.
+- Desktop shell migration expansion note (2026-03-07):
+  - Added shared desktop normalization/query utilities:
+    - `desktop/src/utils/library-data.js`
+    - `desktop/src/utils/library-query.js`
+  - `desktop/src/stores/workspace.js` now carries normalized `games`, `emulators`, `platforms`, and `languages` data, plus a bridge-backed custom tool plugin scaffold action (`tools:plugin:create-files` / `tools:plugin:read-files`).
+  - `desktop/src/stores/header-filters.js` now uses platform/locale normalization from shared utilities and aligns region ids with the legacy runtime (`us`, `eu`, `jp`).
+  - Added shared migrated toolbar component:
+    - `desktop/src/components/LibraryHeaderControls.vue`
+  - The desktop shell now has the first real migrated library UI:
+    - `desktop/src/views/LibraryWorkspaceView.vue` renders actual cover/list cards from workspace store data using shared shell filter state.
+  - `desktop/src/views/SettingsToolsView.vue` now shows three bridge-backed panels:
+    - library path settings snapshot
+    - installed language catalog
+    - custom tool plugin scaffold generation
+  - `desktop/src/views/HeaderFiltersView.vue` now documents and reuses the same shared toolbar/store as the migrated library workspace instead of a standalone placeholder form.
+- Desktop shell migration interaction note (2026-03-07):
+  - Hoisted the shared shell library toolbar into `desktop/src/components/ShellScaffold.vue` via a named slot; `desktop/src/App.vue` now injects it only for desktop library sections (`header-filters`, `library-views`) so the shell owns the toolbar instead of each view duplicating it.
+  - `desktop/src/views/LibraryWorkspaceView.vue` now has real shell-side interactions:
+    - selected game details panel
+    - launch game via `launch-game`
+    - show item in folder via `show-item-in-folder`
+    - create desktop shortcut via `create-game-shortcut`
+  - Added a shell-side locale manager:
+    - `desktop/src/stores/locales.js`
+    - `desktop/src/components/LocaleManagerPanel.vue`
+  - `desktop/src/views/SettingsToolsView.vue` language panel now supports bridge-backed locale list/read/save/create/rename/delete flows instead of only showing a summary grid.
+- Desktop shell migration parity note (2026-03-07):
+  - Theme + Window slice is now persisted and shell-owned:
+    - `desktop/src/stores/shell-theme.js`
+    - `desktop/src/views/ThemeWindowView.vue`
+  - The shell now reads/writes `settings:get-splash-theme` / `settings:set-splash-theme`, applies live CSS variables to the desktop shell, and syncs the tone back into `desktop/src/stores/app.js`.
+  - Settings slice is no longer read-only:
+    - `desktop/src/components/LibraryPathsPanel.vue`
+    - `desktop/src/stores/workspace.js` now supports editable library path drafts, browse/add/remove/save flows, and `settings:set-library-paths`
+  - Update/resource flows are now exposed directly in the shell:
+    - `desktop/src/stores/update-center.js`
+    - `desktop/src/components/UpdateCenterPanel.vue`
+    - `desktop/src/views/SettingsToolsView.vue` now has an `Updates` panel that surfaces app update state, resource update state, and resources storage path config
+  - Shell library/details polish continued:
+    - added modal styling and theme/settings/update panel styling in `desktop/src/style.css`
+  - Important: default startup still remains on `legacy-home` for stability; migrated shell sections are now substantially more functional, but they are not yet the default runtime.
+- Desktop shell startup/hub note (2026-03-07):
+  - Added persisted preferred startup section support:
+    - `desktop/src/shell/sections.js`
+    - `desktop/src/stores/app.js`
+  - The shell can now remember a preferred startup section in localStorage instead of always falling back to legacy when no explicit query/hash is present.
+  - Replaced the old static overview page with a real shell home hub:
+    - `desktop/src/stores/home-hub.js`
+    - `desktop/src/views/DesktopHomeView.vue`
+  - The new home hub now provides:
+    - quick navigation into desktop sections
+    - startup preference controls (`Use As Startup`, `Restore Legacy Startup`)
+    - workspace/profile/update summaries
+    - shell-native community entry points
+    - shell-native support docs browser
+  - Fixed an incomplete bridge gap by implementing and registering a real help-docs bridge:
+    - `desktop/src-tauri/src/bridge_extensions/help_docs.rs`
+    - `desktop/src-tauri/src/bridge_extensions/mod.rs`
+  - Validation state after this pass:
+    - `npm --prefix desktop run build` passes
+    - `cargo check --manifest-path desktop/src-tauri/Cargo.toml` passes
+- Desktop shell library-section parity note (2026-03-07):
+  - Ported the legacy library section model into the desktop shell filter/runtime state:
+    - `desktop/src/stores/header-filters.js`
+    - `desktop/src/components/LibraryHeaderControls.vue`
+    - `desktop/src/utils/library-query.js`
+    - `desktop/src/views/LibraryWorkspaceView.vue`
+  - The shell library workspace now supports persisted section modes:
+    - `all`
+    - `favorite`
+    - `recent`
+    - `emulators`
+  - Added persisted emulator-type filtering for the shell emulator workspace:
+    - `all`
+    - `standalone`
+    - `core`
+    - `web`
+  - `LibraryWorkspaceView.vue` is no longer “games plus emulator preview”; it now behaves like a section-driven workspace with:
+    - game sections for all/favorite/recent
+    - emulator-focused cover/list workspace
+    - `Use Library As Startup` action
+  - The shell startup path is now materially more viable for normal library usage because the legacy library-section behavior is no longer exclusive to the old runtime.
+- Windows taskbar icon regression note (2026-03-07):
+  - Restored themed runtime taskbar icon behavior for `desktop/src-tauri/target/release/emuBro.exe` by removing the explicit Windows process AppUserModelID from `desktop/src-tauri/src/main.rs`.
+  - Important: do not reintroduce `SetCurrentProcessExplicitAppUserModelID("com.emubro.desktop")` casually; it caused Windows to collapse multiple launch modes (including VSCode/dev and release exe) back to the installed app/shortcut identity and show the default icon instead of the runtime themed icon.
+  - Current remaining bug is narrower: `C:\Users\rainer\AppData\Local\emuBro\emuBro.exe` still behaves differently from the release exe.
+  - Copying the working `emuBro.exe` into `AppData\Local\emuBro` does not fix it, which indicates the remaining issue is tied to Windows shell/install-path launch context or shortcut metadata, not the binary contents alone.
 - Continued `js/settings/library-settings-modal.js` refactor by extracting core/general/import/gamepad wiring into `js/settings/library-settings-modal/core-handlers.js`.
 - Continued `js/settings/library-settings-modal.js` refactor by extracting LLM tab event wiring into `js/settings/library-settings-modal/llm-handlers.js`.
 - Continued `js/settings/library-settings-modal.js` refactor by extracting app/resource update actions into `js/settings/library-settings-modal/update-actions.js`.
@@ -255,6 +393,10 @@ Priority order for moving from alpha churn to beta-readiness:
 - Keep household continuously: prefer ongoing cleanup/refactoring, reduce oversized files, remove duplication, and keep modules tidy as part of regular feature work
 
 ## Learnings and Project Insights
+- Windows taskbar icon behavior is extremely sensitive to launch identity:
+  - The same `emuBro.exe` binary can behave differently when launched from `desktop/src-tauri/target/release/emuBro.exe` versus `C:\Users\rainer\AppData\Local\emuBro\emuBro.exe`.
+  - If the release exe works but the installed AppData exe does not, treat it as a Windows shell/install-context problem first, not as proof that the icon-generation code is broken.
+  - The installer "Run emuBro" checkbox working once right after install is a distinct launch context and should not be treated as evidence that later direct launches are fixed.
 - When dynamically generating HTML classes in JS (e.g. `list-item-image`), ensure strict synchronization with SCSS selectors
 - `scss/_games.scss` serves as the central stylesheet for all game visualization modes, not just the default grid
 - The project requires careful consideration of backend vs renderer process architecture
@@ -287,3 +429,790 @@ Priority order for moving from alpha churn to beta-readiness:
 - Operator directive (from user):
   - Do not create commits unless the user explicitly asks for a commit.
 
+- Desktop shell migration update (2026-03-07):
+  - Switched the desktop shell off `desktop/src/style.css` and onto structured SCSS entrypoints under `desktop/src/styles/`.
+  - `desktop/src/main.js` now imports `desktop/src/styles/main.scss`; do not reintroduce direct shell CSS edits.
+  - Added shell SCSS partials: `_tokens.scss`, `_shell.scss`, `_shared.scss`, `_library.scss`, `_support.scss`, `_llm-settings.scss`, `_modals.scss`, `_responsive.scss`.
+  - Added `sass` to the desktop workspace and removed `desktop/src/style.css` from the runtime.
+  - Default shell startup now resolves to `library-views`; clearing startup preference means "use default shell startup", not legacy.
+  - Legacy startup remains explicit opt-in via `legacy-home` only.
+  - Added shell-owned AI / LLM settings migration:
+    - `desktop/src/utils/llm-settings.js`
+    - `desktop/src/stores/llm-settings.js`
+    - `desktop/src/components/LlmSettingsPanel.vue`
+  - `SettingsToolsView.vue` now exposes an `AI / LLM` panel in the shell.
+  - `support-center.js` now reads AI/provider settings through the new desktop LLM utility rather than importing legacy suggestion settings directly.
+  - `npm --prefix desktop run build` passed after the SCSS migration and AI settings migration.
+- Desktop shell migration update (2026-03-07, follow-up):
+  - Added `desktop/src/stores/settings-tools.js` to persist and deep-link the `Settings + Tools` subpanels.
+  - Supported stable shell route shape: `?section=settings-tools&panel=<settings|languages|ai|tools|updates>`.
+  - `desktop/src/stores/app.js` now clears `panel` when leaving `settings-tools` and removes stale `desktop=1` from shell-native URLs.
+  - `desktop/src/views/SettingsToolsView.vue` now uses the settings-tools store instead of local view-only panel state.
+  - Support can now jump directly into shell AI settings via `settingsToolsStore.openPanel("ai")`.
+  - Library workspace now exposes direct shell actions for Library Paths, AI / LLM, Updates, and Support, reducing dependence on `desktop-home` as the navigation hub.
+  - `desktop/src/components/LibraryBrowsePanel.vue` now detects an empty library-path configuration and offers a direct route to library path settings.
+  - `desktop/src/App.vue` now falls back to `LibraryWorkspaceView` instead of `DesktopHomeView` for non-explicit desktop section rendering.
+  - Reordered shell sections so `desktop-home` acts more like an optional overview hub than a primary runtime surface.
+  - Migrated library list rows now expose direct `Folder` actions for games and emulators.
+  - `npm --prefix desktop run build` passed after these routing and shell-flow changes.
+
+## 2026-03-07 - Shell Game Details Migration
+- Migrated `desktop/src/components/GameDetailsModal.vue` from a passive details panel into a shell-native metadata editor.
+- Shell modal now owns game description editing, AI description generation, tag assignment, AI tag suggestion, tag rename/delete, launch preference editing, and remove-from-library actions.
+- Added shell-native launch preference editing for platform override, emulator override, and `runAsMode` / `runAsUser`.
+- `desktop/src/views/LibraryWorkspaceView.vue` now refreshes both workspace data and category catalog after shell modal metadata changes.
+- `desktop/src/utils/library-data.js` now normalizes `emulatorOverridePath`, `runAsMode`, and `runAsUser` for migrated game rows.
+- Added browser/dev bridge fallbacks for `tags:list`, `update-game-metadata`, `tags:rename`, `tags:delete`, `remove-game`, `suggestions:suggest-tags-for-game`, and `suggestions:generate-description-for-game` in `desktop/src/emubro-bridge.js`.
+- Kept shell styling in SCSS only: modal editor styles live in `desktop/src/styles/_modals.scss`; status success color added in `desktop/src/styles/_shared.scss`.
+- Validation passed with `npm --prefix desktop run build`; only pre-existing legacy SCSS `@import` deprecation warnings and legacy webpack bundle-size warnings remain.
+
+## 2026-03-07 - Shell Emulator Management Migration
+- Migrated `desktop/src/components/EmulatorDetailsModal.vue` from a passive info panel into a shell-native emulator manager.
+- Shell modal now owns selected launch path persistence, direct OS download links, package option loading, direct download/install flow, Linux install method selection, Wayback fallback launch, and downloaded package folder access.
+- Reused the same localStorage keys from legacy where practical:
+  - `emuBro.emulatorPreferredLaunchPath.v1`
+  - `emuBro.downloadedEmulatorPackages.v1`
+  - `emuBro.linuxInstallMethod`
+  - `emuBro.linuxInstallMethodRemember`
+- Added shared emulator download utilities in `desktop/src/utils/emulator-downloads.js`.
+- Expanded `desktop/src/utils/library-data.js` normalization for emulators to include `filePaths`, `downloadUrl`, `startParameters`, pattern-matching config fields, and `installers`.
+- Added browser/dev bridge fallbacks for `get-emulator-download-options` and `download-install-emulator` in `desktop/src/emubro-bridge.js`.
+- Updated `desktop/src/views/LibraryWorkspaceView.vue` so non-installed emulator quick actions route into the shell download flow instead of pretending they can launch.
+- Kept styling in SCSS only; emulator manager UI lives in `desktop/src/styles/_modals.scss`.
+- Validation passed with `npm --prefix desktop run build`; remaining warnings are still the pre-existing legacy SCSS `@import` deprecations and webpack bundle-size warnings.
+
+## 2026-03-07 - Shell Emulator Config And Cover Migration
+- Added `desktop/src/components/EmulatorConfigPanel.vue` and embedded it into `desktop/src/components/EmulatorDetailsModal.vue`.
+- The shell emulator modal now owns:
+  - persisted emulator overrides via `desktop/src/utils/emulator-config.js`
+  - config file path editing
+  - config file read/write through `emulator:read-config-file` and `emulator:write-config-file`
+  - runtime backup rule editing (`directoryNames`, `fileExtensions`, `fileNameIncludes`)
+- Added shared emulator preference storage helpers in `desktop/src/utils/emulator-preferences.js` so launch-path and download-package preferences are no longer modal-local.
+- `desktop/src/views/LibraryWorkspaceView.vue` now respects the stored preferred emulator launch path for quick launch and folder-open actions instead of always using the first path from the row.
+- Added shell-native cover actions to `desktop/src/components/GameDetailsModal.vue`:
+  - direct `covers:download-for-game`
+  - web cover search via `covers:search-web`
+  - apply selected web result with `update-game-metadata`
+  - external browser handoff for image search
+- Added browser/dev bridge fallbacks for `covers:download-for-game` and `covers:search-web` in `desktop/src/emubro-bridge.js`.
+- Kept styling in SCSS only:
+  - `desktop/src/styles/_modals.scss` now contains config-editor and cover-search styles
+  - `desktop/src/styles/_responsive.scss` now collapses the runtime rule grid on narrow widths
+- Validation passed again with:
+  - `node --check desktop/src/utils/emulator-config.js`
+  - `node --check desktop/src/utils/emulator-preferences.js`
+  - `npm --prefix desktop run build`
+
+## 2026-03-07 - Shell Emulator Binding And Gamepad Parity
+- Added local desktop gamepad binding utilities in `desktop/src/utils/gamepad-bindings.js` so the shell no longer depends on the legacy root helper for this area.
+- Added config binding parsing/edit utilities in `desktop/src/utils/emulator-config-bindings.js`.
+- `desktop/src/components/EmulatorConfigPanel.vue` is now a tabbed shell editor with:
+  - `General`
+  - `Bindings`
+  - `Config File`
+  - `Gamepad`
+  - `Runtime`
+- The shell can now:
+  - detect editable binding entries from key/value and JSON config files
+  - apply keyboard/gamepad binding presets to detected control entries
+  - refresh the binding model from the current raw config text
+  - merge binding edits back into the raw config text on save
+  - edit emulator-local keyboard/gamepad override profiles on top of platform defaults
+- Extended `desktop/src/utils/emulator-config.js` to persist `gamepadBindings` in the same emulator override storage entry.
+- Extended `desktop/src/utils/library-data.js` to carry `gamepadBindings` through normalized emulator rows when present.
+- Added SCSS for the new tabbed config editor, binding list, and gamepad grid in `desktop/src/styles/_modals.scss`, with responsive collapse in `desktop/src/styles/_responsive.scss`.
+- Validation passed with:
+  - `node --check desktop/src/utils/gamepad-bindings.js`
+  - `node --check desktop/src/utils/emulator-config-bindings.js`
+  - `node --check desktop/src/utils/emulator-config.js`
+  - `npm --prefix desktop run build`
+
+## 2026-03-07 - Native Emulator Launch Payload Wiring
+- The shell now sends effective emulator launch metadata instead of only basic path/args:
+  - `inputBindings`
+  - `gamepadBindings`
+  - `runCommandsBefore`
+- `desktop/src/utils/emulator-config.js` now exposes `resolveEffectiveEmulatorConfig()` which merges local overrides with platform gamepad defaults and computes effective input bindings for launch.
+- Updated shell launch callers:
+  - `desktop/src/views/LibraryWorkspaceView.vue`
+  - `desktop/src/components/EmulatorDetailsModal.vue`
+- Native Tauri launch path now consumes those payloads in:
+  - `desktop/src-tauri/src/app_core/invoke/library_actions/launch.rs`
+  - `desktop/src-tauri/src/bridge_extensions/core_base/launch.rs`
+- Native launch changes:
+  - executes `runCommandsBefore` before spawning the emulator
+  - writes a runtime launch payload JSON file into `%TEMP%/emuBro/launch-payloads`
+  - exposes launch metadata to the spawned process via environment variables:
+    - `EMUBRO_EMULATOR_LAUNCH_PAYLOAD_FILE`
+    - `EMUBRO_EMULATOR_WORKING_DIRECTORY`
+    - `EMUBRO_INPUT_BINDINGS_JSON`
+    - `EMUBRO_GAMEPAD_BINDINGS_JSON`
+  - preserves those env vars for direct launches and attempts to carry them through elevated/user launch wrappers as well
+- Added one more shell bulk-library action:
+  - `desktop/src/components/LibraryBrowsePanel.vue` now exposes `Full Library Covers (...)` in addition to visible-selection cover downloads
+- Validation passed with:
+  - `cargo check --manifest-path desktop/src-tauri/Cargo.toml`
+  - `node --check desktop/src/utils/gamepad-bindings.js`
+  - `node --check desktop/src/utils/emulator-config-bindings.js`
+  - `node --check desktop/src/stores/library-browse.js`
+  - `npm --prefix desktop run build`
+
+## 2026-03-07 - Shell Launch Parity And Legacy-Look Pass
+- Fixed a direct emulator launch regression in the shell:
+  - `desktop/src/views/LibraryWorkspaceView.vue`
+  - `desktop/src/components/EmulatorDetailsModal.vue`
+- Direct emulator launch now uses only `config.launchArgs` for emulator-only runs, matching the legacy behavior and avoiding game-style placeholder arguments leaking into standalone emulator launches.
+- Started the shell GUI parity pass instead of leaving the migrated runtime on a generic scaffold:
+  - `desktop/src/components/ShellScaffold.vue` now uses a legacy-inspired top header + grouped navigation + left sidebar structure.
+  - Shell groups now map much closer to the old app flow:
+    - `Library`
+    - `Tools`
+    - `Support`
+    - `Community`
+    - `Overview`
+    - with `Legacy UI` moved to fallback access instead of being treated like the primary path.
+- The desktop shell now shares more of the old visual language:
+  - imported the same font families in `desktop/src/styles/main.scss`
+  - added legacy-style token aliases in `desktop/src/styles/_tokens.scss`
+  - `desktop/src/stores/shell-theme.js` now applies both shell tokens and legacy-style aliases like `--bg-primary`, `--text-primary`, `--accent-color`, `--brand-color`, and font variables
+  - rewrote shell chrome styling in `desktop/src/styles/_shell.scss`
+  - tightened responsive shell layout in `desktop/src/styles/_responsive.scss`
+  - pushed shared cards/buttons/segmented controls closer to the old app language in `desktop/src/styles/_shared.scss`
+  - widened and restyled the migrated library workspace in `desktop/src/styles/_library.scss`
+- This is the correct phase for visual parity work:
+  - after shell startup/runtime is real enough to be the main path
+  - before deleting legacy, so the shell still has the old app as a visual/behavior reference
+- Validation passed with:
+  - `npm --prefix desktop run build`
+  - `cargo check --manifest-path desktop/src-tauri/Cargo.toml`
+
+## 2026-03-07 - Settings Workspace And Library Sidebar Parity
+- Continued the shell GUI parity pass beyond chrome and into actual section structure.
+- `desktop/src/views/SettingsToolsView.vue` is no longer a flat stack of generic cards:
+  - now uses a dedicated two-column workspace layout
+  - left side acts like a real shell-native nav for:
+    - `Settings`
+    - `Languages`
+    - `AI / LLM`
+    - `Tools`
+    - `Updates`
+  - right side shows the active panel content with a dedicated overview header
+- `desktop/src/stores/settings-tools.js` panel metadata now carries richer labels/descriptions for that nav layout instead of only bare ids.
+- `desktop/src/views/LibraryWorkspaceView.vue` now mirrors the old library sidebar more closely:
+  - added shell-native library section links for:
+    - `All Games`
+    - `Favorite Games`
+    - `Recently Played`
+    - `Emulators`
+  - added a shell-native stats block for total games/emulators/locales
+  - kept shell quick actions for library paths, AI / LLM, updates, and support directly inside the sidebar area
+- `desktop/src/components/LibraryCategoriesPanel.vue` now includes an explicit `All` row so the migrated category panel behaves more like the old sidebar.
+- `desktop/src/components/LibraryBrowsePanel.vue` now separates discovery actions from cover actions, matching the old sidebar/tooling feel more closely instead of one flat button cluster.
+- Added the supporting SCSS layout/styling:
+  - `desktop/src/styles/_shared.scss`
+  - `desktop/src/styles/_responsive.scss`
+- Validation passed again with:
+  - `npm --prefix desktop run build`
+
+## 2026-03-07 - Theme Support Community Workspace Parity
+- Continued the shell parity pass into the remaining top-level shell views instead of leaving them as stacked demo cards.
+- `desktop/src/views/ThemeWindowView.vue` now uses a dedicated workspace layout:
+  - left sidebar for shell theme presets and native window controls
+  - right-side hero/editor/preview stack
+  - grouped theme editing sections for:
+    - surface colors
+    - text colors
+    - accent colors
+    - background gradients
+- `desktop/src/views/SupportCenterView.vue` now uses a shell workspace layout:
+  - left sidebar for support-mode selection (`Troubleshoot`, `Chat`, `Help Docs`)
+  - capability toggles moved into a dedicated side panel
+  - right-side hero + main support form/output workspace
+- `desktop/src/views/CommunityHubView.vue` now uses a shell workspace layout:
+  - left sidebar for platform selection and launch-mode state
+  - right-side hero, selected-platform summary, and all-destinations grid
+- Added shared workspace layout helpers in `desktop/src/styles/_shared.scss`:
+  - `desktop-workspace-layout`
+  - `desktop-workspace-sidebar`
+  - `desktop-workspace-main`
+  - `desktop-workspace-nav-card`
+  - `desktop-workspace-nav-list`
+  - `desktop-workspace-nav-button`
+  - `desktop-workspace-hero-card`
+- Extended styling for the refactored support/community/theme sections in:
+  - `desktop/src/styles/_shared.scss`
+  - `desktop/src/styles/_support.scss`
+  - `desktop/src/styles/_responsive.scss`
+- Validation passed again with:
+  - `npm --prefix desktop run build`
+
+## 2026-03-07 - Shell Navigation State Ownership
+- Continued migration by moving more top-level navigation intent out of legacy-style implicit DOM flow and into shell-owned store/query state.
+- `desktop/src/shell/sections.js`
+  - added section aliases so legacy-style targets route into shell sections:
+    - `tools -> settings-tools`
+    - `languages -> settings-tools`
+    - `ai -> settings-tools`
+    - `updates -> settings-tools`
+- `desktop/src/stores/settings-tools.js`
+  - now interprets direct section aliases like `?section=languages`, `?section=ai`, `?section=updates`, and `?section=tools`
+  - maps them into the correct `settings-tools` subpanel
+- `desktop/src/stores/header-filters.js`
+  - now reads and writes shell-native library/filter state from URL query params when running in library/header sections:
+    - `library`
+    - `view`
+    - `query`
+    - `platform`
+    - `region`
+    - `language`
+    - `group`
+    - `sort`
+    - `emulatorType`
+  - this makes the shell library/header behavior directly deep-linkable instead of relying only on localStorage and renderer assumptions
+- `desktop/src/components/LibraryHeaderControls.vue`
+  - now re-syncs library route state when the shell toolbar mounts, so returning to library/header sections restores URL state immediately
+- `desktop/src/stores/support-center.js`
+  - now owns and syncs `supportMode` in the URL for shell support routing
+- `desktop/src/stores/community-hub.js`
+  - now owns and syncs `communityPlatform` in the URL for shell community routing
+- `desktop/src/stores/app.js`
+  - now clears section-specific query params when leaving a shell section, preventing stale library/support/community state from leaking across sections
+- `desktop/src/components/ShellScaffold.vue`
+  - legacy UI is no longer shown as a normal fallback button in the shell navigation
+  - legacy still exists as an explicit fallback/debug route instead of being presented as a normal peer to migrated sections
+- Validation passed with:
+  - `node --check desktop/src/stores/header-filters.js`
+  - `node --check desktop/src/stores/support-center.js`
+  - `node --check desktop/src/stores/community-hub.js`
+  - `node --check desktop/src/stores/settings-tools.js`
+  - `node --check desktop/src/stores/app.js`
+  - `npm --prefix desktop run build`
+
+## 2026-03-07 - Shell Tools Workspace Migration
+- Replaced the old shell `Tools` subpanel that only exposed plugin scaffolding with a real tool workspace.
+- Added shell-owned tool routing in `desktop/src/stores/tools-workspace.js`:
+  - active tool state now persists in local storage
+  - active tool can deep-link through `?section=settings-tools&panel=tools&tool=...`
+  - current tool options:
+    - `overview`
+    - `bios`
+    - `covers`
+    - `remote`
+    - `plugins`
+- Added new shell-native tool stores:
+  - `desktop/src/stores/bios-manager.js`
+  - `desktop/src/stores/cover-downloader.js`
+  - `desktop/src/stores/remote-library.js`
+- Added new shell-native tool components:
+  - `desktop/src/components/ToolsWorkspacePanel.vue`
+  - `desktop/src/components/BiosManagerPanel.vue`
+  - `desktop/src/components/CoverDownloaderPanel.vue`
+  - `desktop/src/components/RemoteLibraryPanel.vue`
+  - `desktop/src/components/ToolPluginWorkspacePanel.vue`
+- Added shared cover-download utility logic in `desktop/src/utils/cover-downloader.js`.
+- `desktop/src/views/SettingsToolsView.vue` now mounts the dedicated tool workspace instead of embedding plugin-scaffold-only markup.
+- `desktop/src/stores/settings-tools.js` now describes the panel as a real desktop tools workspace.
+- `desktop/src/stores/app.js` and `desktop/src/stores/settings-tools.js` now clear stale `tool` query state when leaving the tools panel/section.
+- Added dedicated SCSS for the new tool workspace in `desktop/src/styles/_tools.scss` and imported it from `desktop/src/styles/main.scss`.
+- Extended `desktop/src/emubro-bridge.js` browser/dev fallbacks for the newly migrated tool channels:
+  - BIOS
+  - cover source config + library cover download
+  - remote host/client flows
+- Validation passed with:
+  - `node --check desktop/src/stores/tools-workspace.js`
+  - `node --check desktop/src/stores/bios-manager.js`
+  - `node --check desktop/src/stores/cover-downloader.js`
+  - `node --check desktop/src/stores/remote-library.js`
+  - `node --check desktop/src/utils/cover-downloader.js`
+  - `npm --prefix desktop run build`
+
+## 2026-03-07 - Shell Cue ECM Monitor Migration
+- Continued the shell tools migration by moving three more legacy-backed tools into the shell workspace:
+  - `Cue Maker`
+  - `ECM / UNECM`
+  - `Monitor Manager`
+- Added new shell-native stores:
+  - `desktop/src/stores/cue-maker.js`
+  - `desktop/src/stores/ecm-tool.js`
+  - `desktop/src/stores/monitor-manager.js`
+- Added new shell-native components:
+  - `desktop/src/components/CueMakerPanel.vue`
+  - `desktop/src/components/EcmToolPanel.vue`
+  - `desktop/src/components/MonitorManagerPanel.vue`
+- Updated `desktop/src/stores/tools-workspace.js`:
+  - tool routing now includes `cue`, `ecm`, and `monitor`
+  - legacy fallback list now mainly contains `memory-card`, `gamepad`, and the remaining placeholder tools
+- Updated `desktop/src/components/ToolsWorkspacePanel.vue`:
+  - overview card counts are no longer hard-coded
+  - current component routing now mounts the new shell-native tool panels
+- Extended `desktop/src/emubro-bridge.js` browser/dev fallbacks for:
+  - `cue:inspect-bin-files`
+  - `cue:generate-for-bin`
+  - `tools:ecm:*`
+  - monitor channels
+  - `show-item-in-folder`
+- Validation passed with:
+  - `node --check desktop/src/stores/cue-maker.js`
+  - `node --check desktop/src/stores/ecm-tool.js`
+  - `node --check desktop/src/stores/monitor-manager.js`
+  - `node --check desktop/src/emubro-bridge.js`
+  - `node --check desktop/src/stores/tools-workspace.js`
+  - `npm --prefix desktop run build`
+- Highest-value remaining legacy-heavy tool is still the memory card editor; it is much larger than the others and should be migrated as its own focused slice.
+
+## 2026-03-07 - Shell Memory Card Migration
+- Added a shell-native memory card editor:
+  - `desktop/src/stores/memory-card.js`
+  - `desktop/src/components/MemoryCardPanel.vue`
+- The tool workspace now routes `memory` directly and no longer treats memory cards as legacy-only:
+  - `desktop/src/stores/tools-workspace.js`
+  - `desktop/src/components/ToolsWorkspacePanel.vue`
+- Added browser/dev bridge fallbacks for the memory-card workflow in `desktop/src/emubro-bridge.js`:
+  - `read-memory-card`
+  - `delete-save`
+  - `rename-save`
+  - `format-card`
+  - `memory-card:create-empty`
+  - `copy-save`
+  - `export-save`
+  - `import-save`
+  - `undelete-save`
+  - `browse-memory-cards`
+- Added SCSS for memory-slot/save-list layout in:
+  - `desktop/src/styles/_tools.scss`
+  - `desktop/src/styles/_responsive.scss`
+- Validation passed with:
+  - `node --check desktop/src/stores/memory-card.js`
+  - `node --check desktop/src/emubro-bridge.js`
+  - `node --check desktop/src/stores/tools-workspace.js`
+  - `npm --prefix desktop run build`
+
+## 2026-03-07 - Shell Gamepad Migration
+- Promoted `Gamepad Tester` from legacy fallback to a shell-native tool:
+  - `desktop/src/components/GamepadTesterPanel.vue`
+  - `desktop/src/stores/gamepad-tester.js`
+  - `desktop/src/stores/tools-workspace.js`
+  - `desktop/src/components/ToolsWorkspacePanel.vue`
+- Added shell-native controller metadata helpers:
+  - `desktop/src/utils/gamepad-metadata.js`
+- The shell tester now exposes:
+  - connected pad selection
+  - live button pressure meters
+  - live axis movement meters
+  - controller family detection
+  - direct jump to shared gamepad profiles
+- Added a shell-native platform gamepad profiles settings panel:
+  - `desktop/src/stores/gamepad-profiles.js`
+  - `desktop/src/components/GamepadProfilesPanel.vue`
+  - `desktop/src/stores/settings-tools.js`
+  - `desktop/src/views/SettingsToolsView.vue`
+- Extended desktop gamepad binding utilities so the shell can persist platform defaults without falling back to legacy helpers:
+  - `desktop/src/utils/gamepad-bindings.js`
+- Added SCSS for the tester/profile layouts in:
+  - `desktop/src/styles/_tools.scss`
+  - `desktop/src/styles/_responsive.scss`
+- Added direct section alias support for `?section=gamepad` in:
+  - `desktop/src/shell/sections.js`
+- Validation passed with:
+  - `node --check desktop/src/stores/gamepad-profiles.js`
+  - `node --check desktop/src/utils/gamepad-bindings.js`
+  - `node --check desktop/src/utils/gamepad-metadata.js`
+  - `node --check desktop/src/stores/tools-workspace.js`
+  - `node --check desktop/src/stores/settings-tools.js`
+  - `npm --prefix desktop run build`
+
+## 2026-03-07 - Shell Library Settings Migration
+- Added a shell-native library settings store:
+  - `desktop/src/stores/library-settings.js`
+- Added a shell-native settings surface for:
+  - default library section
+  - default library view
+  - load-indicator behavior
+  - auto-open footer behavior
+  - AI helper toggles
+  - import behavior
+  - launcher discovery preferences
+  - launcher scan/import workflow
+  - files:
+    - `desktop/src/components/LibrarySettingsPanel.vue`
+    - `desktop/src/views/SettingsToolsView.vue`
+- Extended shell fallback bridge coverage for launcher migration/testing:
+  - `desktop/src/emubro-bridge.js`
+  - added:
+    - `launcher:scan-games`
+    - `launcher:import-games`
+- Updated the shell header filter bootstrap so legacy library defaults now seed the shell when no shell-specific state exists:
+  - `desktop/src/stores/header-filters.js`
+- Updated settings panel metadata so `Settings` now accurately represents the expanded shell-owned workspace:
+  - `desktop/src/stores/settings-tools.js`
+- Validation passed with:
+  - `node --check desktop/src/stores/library-settings.js`
+  - `node --check desktop/src/stores/header-filters.js`
+  - `node --check desktop/src/stores/settings-tools.js`
+  - `node --check desktop/src/emubro-bridge.js`
+  - `npm --prefix desktop run build`
+
+## 2026-03-07 - Shell Profile Migration
+- Added a shell-native profile store:
+  - `desktop/src/stores/profile.js`
+- Added a shell-native profile editor to the settings workspace:
+  - `desktop/src/components/ProfilePanel.vue`
+  - `desktop/src/views/SettingsToolsView.vue`
+- Profile behavior now mirrors the old modal contract:
+  - merges `get-user-info` bridge data with local `emuBro.profile`
+  - edits local avatar / identity / linked-account fields
+  - saves back to localStorage from the shell
+- Added web/dev fallback support for `get-user-info` in:
+  - `desktop/src/emubro-bridge.js`
+- Added SCSS for the shell profile layout in:
+  - `desktop/src/styles/_shared.scss`
+  - `desktop/src/styles/_responsive.scss`
+- Validation passed with:
+  - `node --check desktop/src/stores/profile.js`
+  - `node --check desktop/src/stores/library-settings.js`
+  - `node --check desktop/src/emubro-bridge.js`
+  - `npm --prefix desktop run build`
+
+## 2026-03-08 - Shell Window Chrome Migration
+- Added a shell-native window chrome store:
+  - `desktop/src/stores/window-chrome.js`
+- The shell header now owns update badge state and no longer relies on the legacy `win-update-btn` flow in `js/window-ui-manager.js`:
+  - `desktop/src/components/ShellScaffold.vue`
+- Added a shell-native about modal:
+  - `desktop/src/components/ShellAboutModal.vue`
+- The new shell about/update surface now:
+  - reads app/resource updater state from the desktop bridge
+  - exposes update availability directly in shell chrome
+  - opens the migrated `Settings + Tools -> Updates` panel
+  - opens releases/community links from the shell
+  - avoids falling back to the old DOM-built about dialog for normal desktop runtime use
+- Added shell SCSS for the new header badge and about modal:
+  - `desktop/src/styles/_shell.scss`
+  - `desktop/src/styles/_modals.scss`
+  - `desktop/src/styles/_responsive.scss`
+- Improved browser/dev fallback update payloads so shell chrome is stable outside packaged runtime:
+  - `desktop/src/emubro-bridge.js`
+- Validation passed with:
+  - `node --check desktop/src/stores/window-chrome.js`
+  - `node --check desktop/src/emubro-bridge.js`
+  - `npm --prefix desktop run build`
+
+## 2026-03-08 - Shell Header And Utility Parity Migration
+- Added a shell-native language preference store:
+  - `desktop/src/stores/shell-language.js`
+- Added shell-owned responsive header quick controls:
+  - `desktop/src/components/ShellQuickControls.vue`
+- Shell header now owns:
+  - quick theme tone switching
+  - quick language preference switching
+  - compact theme/language menus on narrower shell widths
+- Added direct shell utility actions in the sidebar for old rail-style targets:
+  - settings
+  - profile
+  - languages
+  - updates
+  - files:
+    - `desktop/src/components/ShellScaffold.vue`
+- Split `Profile` into a first-class shell settings panel instead of keeping it buried inside the generic settings stack:
+  - `desktop/src/stores/settings-tools.js`
+  - `desktop/src/views/SettingsToolsView.vue`
+  - `desktop/src/shell/sections.js`
+- Added SCSS for:
+  - shell quick controls
+  - compact header menus
+  - utility action rail parity
+  - files:
+    - `desktop/src/styles/_shell.scss`
+    - `desktop/src/styles/_responsive.scss`
+- Validation passed with:
+  - `node --check desktop/src/stores/shell-language.js`
+  - `node --check desktop/src/stores/settings-tools.js`
+  - `node --check desktop/src/shell/sections.js`
+  - `npm --prefix desktop run build`
+
+## 2026-03-08 - Shell I18n Bootstrap Migration
+- Added a shell-native translation runtime and fallback catalog:
+  - `desktop/src/stores/shell-i18n.js`
+  - `desktop/src/utils/shell-i18n-fallback.js`
+- The desktop shell now initializes translations before Vue mount in:
+  - `desktop/src/main.js`
+- Shell language preference now routes through the shell i18n store instead of assuming the legacy renderer already created `window.i18n`:
+  - `desktop/src/stores/shell-language.js`
+- Added translation metadata for shell sections and settings panels so shell navigation/workspaces can render translated labels without hardcoded English:
+  - `desktop/src/shell/sections.js`
+  - `desktop/src/stores/settings-tools.js`
+- Bound translated keys into the main shell surfaces:
+  - `desktop/src/components/ShellQuickControls.vue`
+  - `desktop/src/components/ShellScaffold.vue`
+  - `desktop/src/views/DesktopHomeView.vue`
+  - `desktop/src/views/ThemeWindowView.vue`
+  - `desktop/src/views/SettingsToolsView.vue`
+- Added the migrated shell keys to the real English locale catalog so the language manager can see them:
+  - `locales/en.json`
+- This removes the remaining shell dependency on legacy i18n bootstrap from `renderer.js` for header/home/theme/settings runtime copy.
+- Validation passed with:
+  - `node --check desktop/src/stores/shell-i18n.js`
+  - `node --check desktop/src/stores/shell-language.js`
+  - `node --check desktop/src/main.js`
+  - `npm --prefix desktop run build`
+
+## 2026-03-08 - Shell Surface I18n Rollout
+- Extended shell-owned translation usage deeper into normal runtime surfaces without depending on legacy bootstrap:
+  - `desktop/src/components/LibraryHeaderControls.vue`
+  - `desktop/src/views/LibraryWorkspaceView.vue`
+  - `desktop/src/views/SupportCenterView.vue`
+  - `desktop/src/views/CommunityHubView.vue`
+  - `desktop/src/components/ToolsWorkspacePanel.vue`
+- The shell toolbar now translates:
+  - library section tabs
+  - view mode tabs
+  - filter labels / placeholders
+  - reset / readiness copy
+- The migrated library workspace now translates its shell-owned headings, buttons, counts, and empty states instead of hardcoding those English strings.
+- The migrated support center now uses shell i18n for:
+  - mode labels/descriptions
+  - hero/sidebar/workspace copy
+  - field labels/placeholders
+  - action buttons
+  - chat/help/debug empty states
+- The migrated community hub now uses shell i18n for:
+  - hero/sidebar/workspace copy
+  - launch mode labels
+  - shell action labels
+  - status/selection headings
+  - translated platform labels/blurb lookup with fallback to existing store text
+- The shell tools workspace now translates its wrapper navigation/overview copy and uses translated tool metadata at render time instead of only raw English store metadata.
+- Validation passed with:
+  - `node --check desktop/src/stores/community-hub.js`
+  - `node --check desktop/src/stores/support-center.js`
+  - `npm --prefix desktop run build`
+- Remaining shell i18n gaps still include many nested tool panels/modals and some store-generated status text.
+
+## 2026-03-08 - Nested Shell Panel I18n Rollout
+- Extended shell i18n into nested migrated settings/tool panels so the shell no longer falls back to hardcoded English for several real workflows:
+  - `desktop/src/components/LibraryCategoriesPanel.vue`
+  - `desktop/src/components/UpdateCenterPanel.vue`
+  - `desktop/src/components/MemoryCardPanel.vue`
+  - `desktop/src/components/LocaleManagerPanel.vue`
+  - `desktop/src/components/LibrarySettingsPanel.vue`
+  - `desktop/src/components/ProfilePanel.vue`
+  - `desktop/src/components/GamepadProfilesPanel.vue`
+  - `desktop/src/components/LlmSettingsPanel.vue`
+  - `desktop/src/components/BiosManagerPanel.vue`
+  - `desktop/src/components/CoverDownloaderPanel.vue`
+  - `desktop/src/components/RemoteLibraryPanel.vue`
+- Moved shell-generated memory-card status text onto the shell i18n runtime in:
+  - `desktop/src/stores/memory-card.js`
+- Moved shell-generated updater/resource-center status text onto the shell i18n runtime in:
+  - `desktop/src/stores/update-center.js`
+- This pass specifically reduced English-only shell copy in:
+  - categories/tag sidebar
+  - updates/resources panel
+  - memory-card editor
+  - locale manager
+  - library defaults/import settings
+  - profile settings
+  - gamepad profile settings
+  - AI / LLM settings
+  - BIOS manager
+  - cover downloader
+  - remote library
+- Validation passed with:
+  - `node --check desktop/src/stores/memory-card.js`
+  - `node --check desktop/src/stores/update-center.js`
+  - `npm --prefix desktop run build`
+- Remaining migration/i18n gaps are still concentrated in untranslated nested tool panels/modals such as cue/ecm/monitor/gamepad tester/emulator-details/game-details and in untranslated default fallback keys that still rely on inline English defaults.
+
+## 2026-03-08 - Shell Tool Workspace I18n Expansion
+- Extended shell i18n into additional migrated tool panels:
+  - `desktop/src/components/CueMakerPanel.vue`
+  - `desktop/src/components/EcmToolPanel.vue`
+  - `desktop/src/components/MonitorManagerPanel.vue`
+  - `desktop/src/components/GamepadTesterPanel.vue`
+  - `desktop/src/components/ToolPluginWorkspacePanel.vue`
+- Moved shell-generated tool status text into the shell i18n runtime for:
+  - `desktop/src/stores/cue-maker.js`
+  - `desktop/src/stores/gamepad-tester.js`
+  - `desktop/src/stores/ecm-tool.js`
+  - `desktop/src/stores/monitor-manager.js`
+- This pass reduced hardcoded English in the migrated tool workspace for:
+  - cue inspection / CUE generation
+  - ECM / UNECM download/build workflow
+  - monitor manager
+  - gamepad tester
+  - plugin scaffold workspace
+- Validation passed with:
+  - `node --check desktop/src/stores/cue-maker.js`
+  - `node --check desktop/src/stores/gamepad-tester.js`
+  - `node --check desktop/src/stores/ecm-tool.js`
+  - `node --check desktop/src/stores/monitor-manager.js`
+  - `npm --prefix desktop run build`
+- Remaining shell i18n gaps are now concentrated more heavily in the large detail/config surfaces:
+  - `desktop/src/components/GameDetailsModal.vue`
+  - `desktop/src/components/EmulatorDetailsModal.vue`
+  - `desktop/src/components/EmulatorConfigPanel.vue`
+  - plus some remaining untranslated fallback keys that still rely on inline English defaults.
+
+## 2026-03-08 - Detail Modal Shell I18n Rollout
+- Extended shell i18n into the remaining high-value shell-owned detail/config surfaces:
+  - `desktop/src/components/GameDetailsModal.vue`
+  - `desktop/src/components/EmulatorDetailsModal.vue`
+  - `desktop/src/components/EmulatorConfigPanel.vue`
+- Moved hardcoded shell copy in these views onto the shell i18n runtime for:
+  - game detail metrics, cover workflow, description workflow, tag workflow, launch preferences, file-path/actions, and remove confirmation flow
+  - emulator detail metrics, launch control, download/install workflow, external-link/folder actions, Wayback fallback, and stored-path states
+  - emulator config tabs, general fields, bindings editor, config-file editor, gamepad overrides, runtime backup rules, and config status messaging
+- Also translated script-side shell-generated statuses/errors/prompts in those components so normal desktop runtime no longer depends on English-only modal strings.
+- Validation passed with:
+  - `npm --prefix desktop run build`
+- Remaining shell i18n gaps are now narrower and mostly limited to:
+  - untranslated fallback keys that still rely on inline English defaults
+  - store/backend-originated error strings returned verbatim from bridge/native calls
+
+## 2026-03-08 - Shell Detail Catalog Extraction And Language Store Cleanup
+- Extracted the newly added shell detail/config keys from the migrated modal components and merged them into both real English locale catalogs and shell fallback translations:
+  - `locales/en.json`
+  - `desktop/src/utils/shell-i18n-fallback.js`
+- This pass populated the catalog coverage for the recently migrated detail surfaces instead of leaving them mostly on inline English defaults:
+  - `desktop/src/components/GameDetailsModal.vue`
+  - `desktop/src/components/EmulatorDetailsModal.vue`
+  - `desktop/src/components/EmulatorConfigPanel.vue`
+- Added missing shared `common.*` shell runtime keys used by those views:
+  - `yes`
+  - `no`
+  - `windows`
+  - `linux`
+  - `mac`
+- Reduced one duplicated shell bootstrap/storage contract in:
+  - `desktop/src/stores/shell-language.js`
+- `shell-language` no longer maintains its own separate localStorage language persistence. It now defers to `shell-i18n` as the single source of truth for current language/persistence and only handles locale-row discovery plus shell language change dispatch.
+- Validation passed with:
+  - `npm --prefix desktop run build`
+- Spot checks confirmed the new keys now exist in both catalogs:
+  - `desktopShell.gameDetails.cover.title`
+  - `desktopShell.emulatorDetails.download.title`
+  - `desktopShell.emulatorConfig.title`
+  - `common.yes/no/windows/linux/mac`
+- Remaining migration work is now less about missing shell copy and more about:
+  - broader locale coverage for previously migrated non-detail sections
+  - further removal of normal-runtime assumptions tied to `renderer.js`
+  - visual parity/polish for migrated shell surfaces
+
+## 2026-03-08 - Automated Shell I18n Sync Workflow
+- Added a reusable shell i18n sync script at:
+  - `scripts/sync-shell-i18n-defaults.js`
+- The script scans `desktop/src` for `desktopShell.*` and `common.*` `t(...)` / `tf(...)` usage, extracts default fallback strings, and merges missing keys into both:
+  - `locales/en.json`
+  - `desktop/src/utils/shell-i18n-fallback.js`
+- Added npm entry points for the workflow:
+  - `package.json` -> `i18n:sync-shell`
+  - `desktop/package.json` -> `i18n:sync-shell`
+- Ran the sync across the full desktop shell source tree.
+- Result of the automated sync pass:
+  - scanned 80 desktop shell files
+  - extracted 788 shell/common translation keys
+  - added 375 previously missing keys to the real English locale catalog
+  - added the same 375 keys to shell fallback translations
+- This materially reduces drift between migrated shell source and locale catalogs, especially for new shell sections/modals where inline defaults were previously the only source of truth.
+- Validation passed with:
+  - `node scripts/sync-shell-i18n-defaults.js`
+  - `npm --prefix desktop run build`
+- Remaining high-value work after this pass is now more clearly focused on:
+  - reducing normal runtime dependence on `renderer.js`
+  - visual parity/polish for the migrated shell UI
+  - chunk-size / bundle-splitting improvements for the desktop shell build
+
+## 2026-03-08 - Native Shell State Persistence Cut
+- Added generic shell-state bridge channels backed by the desktop state DB:
+  - `shell-state:get`
+  - `shell-state:set`
+  - `shell-state:delete`
+- Added shared desktop helper:
+  - `desktop/src/utils/shell-state.js`
+- Moved shell persistence away from direct localStorage dependence for key runtime stores while still mirroring legacy localStorage keys as a migration fallback:
+  - startup section preference via `desktop/src/shell/sections.js` and `desktop/src/stores/app.js`
+  - shell language persistence via `desktop/src/stores/shell-i18n.js`
+  - settings/tools active panel via `desktop/src/stores/settings-tools.js`
+  - tools workspace active tool via `desktop/src/stores/tools-workspace.js`
+  - header/filter state via `desktop/src/stores/header-filters.js`
+  - library defaults/import settings via `desktop/src/stores/library-settings.js`
+  - community hub state via `desktop/src/stores/community-hub.js`
+  - support center draft/help/chat/flags via `desktop/src/stores/support-center.js`
+  - library browse scope + quick-search state via `desktop/src/stores/library-browse.js`
+- Updated the shell explainer copy in `desktop/src/views/HeaderFiltersView.vue` so it no longer incorrectly claims header/filter state lives in desktop localStorage.
+- Validation passed with:
+  - `node --check` on all changed desktop JS stores/utils
+  - `npm --prefix desktop run build`
+  - `cargo check --manifest-path desktop/src-tauri/Cargo.toml`
+- Chunk splitting remains effective after this pass; the main desktop entry stayed around ~118 kB while heavy views/modals remained split.
+- Remaining known warnings are unchanged and are still outside this migration slice:
+  - root legacy Sass `@import` deprecations
+  - legacy webpack bundle-size warnings for `renderer.bundle.js`
+  - unused icon helper warnings in `desktop/src-tauri/src/app_core/invoke/window.rs`
+
+## 2026-03-08 - Additional Shell Store Persistence Cut
+- Moved more shell-owned async stores onto the native shell state layer while keeping localStorage mirroring for compatibility/migration fallback:
+  - `desktop/src/stores/profile.js`
+  - `desktop/src/stores/gamepad-profiles.js`
+  - `desktop/src/stores/library-categories.js`
+- This means the remaining direct localStorage usage in `desktop/src` is now concentrated mostly in:
+  - browser/dev fallback infrastructure in `desktop/src/emubro-bridge.js`
+  - sync utility modules such as `emulator-config.js`, `emulator-preferences.js`, `gamepad-bindings.js`, `cover-downloader.js`, and `llm-settings.js`
+  - compatibility mirror helpers inside already-migrated stores
+- Validation passed again with:
+  - `node --check` on the changed store files
+  - `npm --prefix desktop run build`
+  - `cargo check --manifest-path desktop/src-tauri/Cargo.toml`
+
+## 2026-03-08 - Sync Shell Storage Adapter Cut
+- Added a preloaded native-backed sync storage adapter at:
+  - `desktop/src/utils/shell-storage-cache.js`
+- The adapter mirrors serialized storage values into native shell state while keeping localStorage compatibility mirroring, so synchronous utility modules can stop talking directly to browser storage without forcing async rewrites through modal/config flows.
+- The adapter is initialized before shell mount in:
+  - `desktop/src/main.js`
+- Migrated the last sync utility layer onto the adapter:
+  - `desktop/src/utils/gamepad-bindings.js`
+  - `desktop/src/utils/emulator-config.js`
+  - `desktop/src/utils/emulator-preferences.js`
+  - `desktop/src/utils/llm-settings.js`
+  - `desktop/src/utils/cover-downloader.js`
+- Then pushed the same adapter through the remaining shell store/browser-persistence helpers:
+  - `desktop/src/shell/sections.js`
+  - `desktop/src/stores/community-hub.js`
+  - `desktop/src/stores/library-browse.js`
+  - `desktop/src/stores/library-categories.js`
+  - `desktop/src/stores/header-filters.js`
+  - `desktop/src/stores/support-center.js`
+  - `desktop/src/stores/settings-tools.js`
+  - `desktop/src/stores/tools-workspace.js`
+  - `desktop/src/stores/profile.js`
+  - `desktop/src/stores/gamepad-profiles.js`
+  - `desktop/src/stores/library-settings.js`
+  - `desktop/src/stores/shell-i18n.js`
+  - `desktop/src/emubro-bridge.js` browser/dev fallback storage helpers
+- Practical result:
+  - raw browser storage is now centralized in the adapter itself instead of being scattered across shell stores/utils
+  - the desktop shell is materially less coupled to `window.localStorage`
+  - sync-heavy emulator/config/gamepad flows keep their existing call shape
+- Validation passed with:
+  - `node --check` on all changed desktop JS files
+  - `npm --prefix desktop run build`
+- Remaining direct browser-storage boundary is intentionally concentrated in:
+  - `desktop/src/utils/shell-storage-cache.js`
+
+## 2026-03-08 - Legacy Utility Import Cut
+- Removed the last desktop shell imports that still reached back into root legacy JS utility modules.
+- Added desktop-local replacements:
+  - `desktop/src/utils/tag-categories.js`
+  - `desktop/src/utils/suggestion-settings.js`
+- Updated desktop consumers to use the desktop-local versions instead of:
+  - `js/tag-categories.js`
+  - `js/suggestions-settings.js`
+- Practical result:
+  - the shell no longer imports root legacy JS for tag/category normalization
+  - the shell no longer imports root legacy JS for AI suggestion settings normalization/persistence
+  - the remaining legacy dependency line is now more about runtime fallback/bootstrap, not simple shared utility imports
+- Validation passed with:
+  - `node --check` on the new utility files and updated consumers
+  - `npm --prefix desktop run build`

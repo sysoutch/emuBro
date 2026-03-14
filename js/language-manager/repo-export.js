@@ -105,7 +105,8 @@ export async function exportAllLanguagesAsJson({ emubro, currentLangData, buildD
 export async function downloadLanguagesFromRepoFlow({
     emubro,
     showTextInputDialog,
-    reloadLanguages
+    reloadLanguages,
+    onRefreshRuntimeState
 }) {
     if (!emubro || !emubro.locales || typeof emubro.locales.fetchRepoCatalog !== 'function') {
         throw new Error('Locales repository API is not available.');
@@ -170,5 +171,11 @@ export async function downloadLanguagesFromRepoFlow({
         alert(`Installed ${installedCount} locale(s) from repository.`);
     }
 
-    reloadLanguages();
+    if (typeof onRefreshRuntimeState === 'function') {
+        await onRefreshRuntimeState();
+    }
+
+    if (typeof reloadLanguages === 'function') {
+        await reloadLanguages();
+    }
 }

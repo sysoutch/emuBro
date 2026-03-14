@@ -442,7 +442,7 @@ body.panel-docked .open-footer-btn {
 }
 
 [data-os="win32"] body.panel-docked .open-footer-btn {
-    right: calc(var(--dock-panel-width) + 24px + var(--win-border-w));
+    right: calc(var(--dock-panel-width) + 24px + var(--win-border-effective-w));
 }
 
 .open-footer-btn.is-hidden {

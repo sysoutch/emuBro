@@ -176,6 +176,33 @@ export function setupThemeCustomizationControls(options = {}) {
     const form = document.getElementById('theme-form');
     if (!form) return;
 
+    const shouldDriveBasicGenerator = () => {
+        const generationMode = String(form.dataset.generateMode || 'basic').trim().toLowerCase();
+        return generationMode === 'basic' || getThemeEditorMode() === 'basic';
+    };
+
+    const setGenerationMode = (nextMode = 'basic') => {
+        const normalizedMode = String(nextMode || '').trim().toLowerCase() === 'llm' ? 'llm' : 'basic';
+        form.dataset.generateMode = normalizedMode;
+        document.querySelectorAll('.theme-generation-tab[data-theme-generate-tab]').forEach((button) => {
+            const isActive = String(button.dataset.themeGenerateTab || '').trim().toLowerCase() === normalizedMode;
+            button.classList.toggle('active', isActive);
+            button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+        if (normalizedMode === 'basic') {
+            applyBasicPaletteToInputs({ markUnsaved: false });
+        }
+    };
+
+    document.querySelectorAll('.theme-generation-tab[data-theme-generate-tab]').forEach((button) => {
+        const clone = button.cloneNode(true);
+        button.parentNode.replaceChild(clone, button);
+        clone.addEventListener('click', () => {
+            setGenerationMode(clone.dataset.themeGenerateTab);
+        });
+    });
+    setGenerationMode(form.dataset.generateMode || 'basic');
+
     const modeButtons = Array.from(document.querySelectorAll('.theme-mode-btn[data-theme-mode]'));
     modeButtons.forEach((button) => {
         const clone = button.cloneNode(true);
@@ -192,7 +219,7 @@ export function setupThemeCustomizationControls(options = {}) {
         const clone = variantInput.cloneNode(true);
         variantInput.parentNode.replaceChild(clone, variantInput);
         clone.addEventListener('change', () => {
-            if (getThemeEditorMode() === 'basic') applyBasicPaletteToInputs();
+            if (shouldDriveBasicGenerator()) applyBasicPaletteToInputs();
         });
     }
 
@@ -202,7 +229,7 @@ export function setupThemeCustomizationControls(options = {}) {
         intensityInput.parentNode.replaceChild(clone, intensityInput);
         const onIntensityChange = () => {
             updateBasicIntensityValueLabel(clone.value);
-            if (getThemeEditorMode() === 'basic') applyBasicPaletteToInputs();
+            if (shouldDriveBasicGenerator()) applyBasicPaletteToInputs();
         };
         clone.addEventListener('input', onIntensityChange);
         clone.addEventListener('change', onIntensityChange);
@@ -216,7 +243,7 @@ export function setupThemeCustomizationControls(options = {}) {
         const onUseAccentChanged = (markUnsaved = true) => {
             const mode = getBasicBrandModeFromControls();
             setBasicBrandControlState(clone.checked, mode);
-            if (getThemeEditorMode() === 'basic') {
+            if (shouldDriveBasicGenerator()) {
                 applyBasicPaletteToInputs({ markUnsaved });
             } else {
                 applyBrandControlsToCurrentInputs({ markUnsaved });
@@ -233,7 +260,7 @@ export function setupThemeCustomizationControls(options = {}) {
         input.parentNode.replaceChild(clone, input);
         clone.addEventListener('change', () => {
             setBasicBrandControlState(document.getElementById('theme-basic-brand-use-accent')?.checked ?? true, clone.value);
-            if (getThemeEditorMode() === 'basic') {
+            if (shouldDriveBasicGenerator()) {
                 applyBasicPaletteToInputs();
             } else {
                 applyBrandControlsToCurrentInputs();
@@ -247,7 +274,7 @@ export function setupThemeCustomizationControls(options = {}) {
         basicBrandStrengthInput.parentNode.replaceChild(clone, basicBrandStrengthInput);
         const onStrengthChanged = () => {
             updateBasicBrandStrengthValueLabel(clone.value);
-            if (getThemeEditorMode() === 'basic') {
+            if (shouldDriveBasicGenerator()) {
                 applyBasicPaletteToInputs();
             } else {
                 applyBrandControlsToCurrentInputs();
@@ -466,6 +493,7 @@ export function setupThemeCustomizationControls(options = {}) {
             clone.disabled = true;
             setStatus('Generating theme...');
             try {
+                const beforeSnapshot = JSON.stringify(getCurrentThemeColorInputsSnapshot() || {});
                 const response = await emubro.invoke('suggestions:generate-theme', payload);
                 if (!response?.success) {
                     throw new Error(response?.message || 'Theme generation failed.');
@@ -474,7 +502,13 @@ export function setupThemeCustomizationControls(options = {}) {
                     colors: response.colors,
                     textEffect: response.textEffect
                 }, options);
-                setStatus(String(response.summary || 'AI theme applied.'), 'success');
+                const afterSnapshot = JSON.stringify(getCurrentThemeColorInputsSnapshot() || {});
+                const summary = String(response.summary || 'AI theme applied.');
+                const fallbackInfo = response?.debug?.fallback ? ' Provider fallback was used.' : '';
+                const samePaletteNotice = beforeSnapshot === afterSnapshot
+                    ? ' The returned palette matched the current colors very closely.'
+                    : '';
+                setStatus(`${summary}${fallbackInfo}${samePaletteNotice}`, 'success');
             } catch (error) {
                 setStatus(String(error?.message || error || 'Theme generation failed.'), 'error');
             } finally {

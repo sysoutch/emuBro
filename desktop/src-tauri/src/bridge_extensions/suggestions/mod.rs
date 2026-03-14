@@ -53,6 +53,15 @@ pub(super) fn request_provider_text(payload: &Value, prompt: &str) -> Result<Str
     provider::request_provider_text(payload, prompt)
 }
 
+pub(super) fn request_provider_chat_text(
+    payload: &Value,
+    system_prompt: &str,
+    user_prompt: &str,
+    expect_json: bool,
+) -> Result<String, String> {
+    provider::request_provider_chat_text(payload, system_prompt, user_prompt, expect_json)
+}
+
 pub(super) fn relay_status_payload(relay: &Value) -> Value {
     relay::relay_status_payload(relay)
 }

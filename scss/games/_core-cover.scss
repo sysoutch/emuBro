@@ -19,8 +19,8 @@
     --theme-title-strip-repeat: no-repeat;
     --theme-title-strip-position: center center;
     --theme-title-strip-opacity: 0;
-    --game-title-row-height: clamp(38px, calc(36px * var(--view-scale)), 54px);
-    --game-header-row-height: clamp(72px, calc(64px * var(--view-scale)), 96px);
+    --game-title-row-height: clamp(38px, 42px, 54px);
+    --game-header-row-height: clamp(72px, 82px, 96px);
 }
 
 .game-grid::before {
@@ -119,23 +119,24 @@
     font-size: clamp(1.55rem, 2.4vw, 2.1rem);
     font-family: var(--font-heading);
     letter-spacing: 0.02em;
-    flex: 0 1 auto;
+    flex: 1 1 auto;
     min-width: 0;
+    max-width: 100%;
 }
 
 .game-header-top {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     column-gap: 10px;
     row-gap: 8px;
     min-width: 0;
 }
 
 .game-header-top .filters {
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     min-width: 0;
-    margin-left: 0;
+    margin-left: auto;
     justify-content: flex-end;
 }
 
@@ -167,10 +168,15 @@
     display: none !important;
     align-items: center;
     gap: 8px;
+    flex: 0 0 auto;
+    min-width: fit-content;
+    white-space: nowrap;
 }
 
 /* Collapse filters when sidebar is expanded to preserve space */
 .filters.is-super-compact {
+    gap: 0;
+
     #platform-filter,
     .filter-pair-wrapper,
     .group-same-names-toggle {
@@ -179,6 +185,10 @@
 
     #library-filters-popup-btn {
         display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        min-height: 36px;
+        padding-inline: 12px;
     }
 }
 
@@ -274,6 +284,9 @@
 }
 
 .filter-pair-floating-menu .filter-pair-compact-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     border: 1px solid color-mix(in srgb, var(--border-color), var(--accent-color) 20%);
     border-radius: 999px;
     background: color-mix(in srgb, var(--bg-secondary), transparent 10%);
@@ -284,6 +297,23 @@
     cursor: pointer;
     transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
     white-space: nowrap;
+}
+
+.filter-pair-floating-menu .filter-pair-compact-option.has-leading-visual {
+    padding-left: 8px;
+}
+
+.filter-pair-floating-menu .filter-pair-compact-option .fi {
+    width: 18px;
+    min-width: 18px;
+    height: 13px;
+    border-radius: 999px;
+    overflow: hidden;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--border-color), transparent 18%);
+}
+
+.filter-pair-floating-menu .filter-pair-compact-option__label {
+    display: inline-block;
 }
 
 .filter-pair-floating-menu .filter-pair-compact-option:hover {
@@ -589,12 +619,32 @@
     align-items: center;
     gap: 8px;
     cursor: pointer;
+    padding: 8px 10px;
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--border-color), transparent 18%);
+    background: color-mix(in srgb, var(--bg-primary), transparent 14%);
+    transition:
+        border-color 0.18s ease,
+        background 0.18s ease,
+        box-shadow 0.18s ease,
+        color 0.18s ease;
 }
 
 .suggested-checkbox-label input[type="checkbox"] {
     width: 16px;
     height: 16px;
     margin: 0;
+}
+
+.suggested-checkbox-label:has(input[type="checkbox"]:checked) {
+    color: var(--text-primary);
+    border-color: color-mix(in srgb, var(--accent-color), white 10%);
+    background:
+        linear-gradient(135deg, rgba(var(--accent-color-rgb), 0.16), transparent 74%),
+        color-mix(in srgb, var(--bg-primary), transparent 6%);
+    box-shadow:
+        0 0 0 1px rgba(var(--accent-color-rgb), 0.12) inset,
+        0 10px 18px rgba(0, 0, 0, 0.14);
 }
 
 .suggested-panel-form input,
@@ -938,7 +988,7 @@ body.panel-docked .games-load-indicator {
 }
 
 [data-os="win32"] body.panel-docked .games-load-indicator {
-    right: calc(var(--dock-panel-width) + 34px + var(--win-border-w));
+    right: calc(var(--dock-panel-width) + 34px + var(--win-border-effective-w));
 }
 
 /* Cover View Card */
@@ -1401,6 +1451,104 @@ img.lazy-game-image[data-lazy-status="loaded"] {
 
 .game-row-clickable {
     cursor: pointer;
+}
+
+.game-card-context-menu {
+    position: fixed;
+    z-index: 3900;
+    min-width: 220px;
+    max-width: min(300px, calc(100vw - 24px));
+    padding: 8px;
+    border-radius: 18px;
+    border: 1px solid color-mix(in srgb, var(--border-color), var(--accent-color) 18%);
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--bg-secondary), transparent 2%), color-mix(in srgb, var(--bg-primary), transparent 4%)),
+        radial-gradient(circle at top left, color-mix(in srgb, var(--accent-color), transparent 88%), transparent 54%);
+    box-shadow:
+        0 22px 50px rgba(0, 0, 0, 0.44),
+        0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+    display: grid;
+    gap: 4px;
+    backdrop-filter: blur(16px) saturate(1.08);
+    -webkit-backdrop-filter: blur(16px) saturate(1.08);
+}
+
+.game-card-context-menu__item {
+    appearance: none;
+    -webkit-appearance: none;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--text-primary);
+    min-height: 42px;
+    padding: 10px 12px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.16s ease, color 0.16s ease, transform 0.16s ease;
+}
+
+.game-card-context-menu__item:hover:not(:disabled),
+.game-card-context-menu__item:focus-visible:not(:disabled) {
+    background: color-mix(in srgb, var(--accent-color), transparent 84%);
+    color: var(--text-primary);
+    transform: translateY(-1px);
+    outline: none;
+}
+
+.game-card-context-menu__item:disabled {
+    opacity: 0.42;
+    cursor: default;
+}
+
+.game-card-context-menu__item.is-danger {
+    color: color-mix(in srgb, var(--danger-color, #ff6b7a), white 18%);
+}
+
+.game-card-context-menu__item.is-danger:hover:not(:disabled),
+.game-card-context-menu__item.is-danger:focus-visible:not(:disabled) {
+    background: color-mix(in srgb, var(--danger-color, #ff6b7a), transparent 88%);
+    color: color-mix(in srgb, var(--danger-color, #ff6b7a), white 20%);
+}
+
+.game-card-context-menu__label {
+    min-width: 0;
+    font-size: 0.94rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.game-card-context-menu__icon {
+    width: 18px;
+    height: 18px;
+    color: var(--text-secondary);
+    opacity: 0.95;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.game-card-context-menu__item.is-danger .game-card-context-menu__icon {
+    color: inherit;
+}
+
+.game-card-context-menu__icon svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    stroke-width: 1.9;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+}
+
+.game-card-context-menu__separator {
+    height: 1px;
+    margin: 3px 4px;
+    background: color-mix(in srgb, var(--border-color), rgba(255,255,255,0.08));
 }
 
 .list-item.game-row-clickable:hover {

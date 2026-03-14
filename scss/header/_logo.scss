@@ -19,6 +19,16 @@
     pointer-events: none;
 }
 
+body.live-edit-mode .logo {
+    pointer-events: auto;
+}
+
+body.live-edit-mode .logo h1,
+body.live-edit-mode .logo h1 [data-i18n] {
+    -webkit-app-region: no-drag;
+    pointer-events: auto;
+}
+
 .logo img {
     height: 44px;
     -webkit-user-drag: none;
@@ -48,6 +58,10 @@
     color: var(--logo-brand-color, var(--brand-color));
     font-weight: bold;
     display: inline-block;
+}
+
+body.live-edit-mode .logo h1 [data-i18n] {
+    position: relative;
 }
 
 [data-logo-text-effect]:not([data-logo-text-effect="none"]) .logo-text-suffix {

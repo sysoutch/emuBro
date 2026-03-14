@@ -297,6 +297,76 @@ export function createGameDetailsPopupActions(deps = {}) {
         }).join('');
     }
 
+    function normalizeCompactText(value) {
+        return String(value || '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function buildCompactDescriptionPreview(text, expanded = false) {
+        const normalized = normalizeCompactText(text);
+        if (!normalized) {
+            return {
+                text: 'No description added yet.',
+                empty: true,
+                canExpand: false
+            };
+        }
+        if (expanded || normalized.length <= 50) {
+            return {
+                text: normalized,
+                empty: false,
+                canExpand: normalized.length > 50
+            };
+        }
+        return {
+            text: `${normalized.slice(0, 50).trimEnd()}...`,
+            empty: false,
+            canExpand: true
+        };
+    }
+
+    function renderCompactTagSummary(container, selectedTagIds, tagCatalog, expanded = false) {
+        if (!container) return { canExpand: false };
+        const selected = Array.isArray(selectedTagIds) ? selectedTagIds : [];
+        const catalog = Array.isArray(tagCatalog) ? tagCatalog : [];
+
+        if (selected.length === 0) {
+            container.innerHTML = '<span class="game-tag-pill is-empty">No tags assigned</span>';
+            container.classList.add('is-empty');
+            return { canExpand: false };
+        }
+
+        container.classList.remove('is-empty');
+        const visible = expanded ? selected : selected.slice(0, 3);
+        const pills = visible.map((tagId) => {
+            const info = catalog.find((row) => String(row?.id || '').toLowerCase() === String(tagId || '').toLowerCase());
+            const label = info?.label || tagId;
+            return `<span class="game-tag-pill">${escapeHtml(label)}</span>`;
+        });
+        if (!expanded && selected.length > visible.length) {
+            pills.push(`<span class="game-tag-pill game-tag-pill--overflow">+${selected.length - visible.length} more</span>`);
+        }
+        container.innerHTML = pills.join('');
+        return { canExpand: selected.length > 3 };
+    }
+
+    function setCompactSummaryExpanded(root, expanded) {
+        if (!root) return;
+        const preview = root.querySelector('[data-compact-preview]');
+        root.classList.toggle('is-summary-expanded', !!expanded);
+        if (preview) preview.classList.toggle('is-expanded', !!expanded);
+    }
+
+    function setCompactEditorOpen(root, open) {
+        if (!root) return;
+        const preview = root.querySelector('[data-compact-preview]');
+        const editor = root.querySelector('[data-compact-editor]');
+        root.classList.toggle('is-editing', !!open);
+        if (preview) preview.hidden = !!open;
+        if (editor) editor.hidden = !open;
+    }
+
     function applySelectedTagIdsToSelect(select, selectedTagIds) {
         if (!select) return;
         const selected = new Set((Array.isArray(selectedTagIds) ? selectedTagIds : [])
@@ -417,8 +487,31 @@ export function createGameDetailsPopupActions(deps = {}) {
         });
     }
 
-    async function bindDescriptionActions(textarea, saveBtn, llmBtn, statusEl, game) {
+    async function bindDescriptionActions(textarea, saveBtn, llmBtn, statusEl, game, options = {}) {
         if (!textarea || !saveBtn || !game) return;
+        const root = options.root || null;
+        const summaryPreview = options.summaryPreview || null;
+        const showMoreBtn = options.showMoreBtn || null;
+        const editBtn = options.editBtn || null;
+        const closeBtn = options.closeBtn || null;
+        let summaryExpanded = false;
+
+        const syncDescriptionPreview = (value = textarea.value) => {
+            let preview = buildCompactDescriptionPreview(value, summaryExpanded);
+            if (!preview.canExpand && summaryExpanded) {
+                summaryExpanded = false;
+                preview = buildCompactDescriptionPreview(value, false);
+            }
+            if (summaryPreview) {
+                summaryPreview.textContent = preview.text;
+                summaryPreview.classList.toggle('is-empty', preview.empty);
+            }
+            setCompactSummaryExpanded(root, summaryExpanded && preview.canExpand);
+            if (showMoreBtn) {
+                showMoreBtn.hidden = !preview.canExpand;
+                showMoreBtn.textContent = summaryExpanded ? 'Show Less' : 'Show More';
+            }
+        };
 
         const setStatus = (message, level = 'info') => {
             if (!statusEl) return;
@@ -435,10 +528,31 @@ export function createGameDetailsPopupActions(deps = {}) {
                 throw new Error(String(result?.message || 'Failed to save description.'));
             }
             game.description = String(description || '').trim();
+            syncDescriptionPreview(game.description);
             try {
                 await reloadGamesFromMainAndRender();
             } catch (_error) {}
         };
+
+        syncDescriptionPreview(String(game.description || textarea.value || ''));
+        textarea.addEventListener('input', () => {
+            syncDescriptionPreview(textarea.value);
+        });
+        summaryPreview?.addEventListener('click', () => {
+            setCompactEditorOpen(root, true);
+            textarea.focus();
+        });
+        editBtn?.addEventListener('click', () => {
+            setCompactEditorOpen(root, true);
+            textarea.focus();
+        });
+        closeBtn?.addEventListener('click', () => {
+            setCompactEditorOpen(root, false);
+        });
+        showMoreBtn?.addEventListener('click', () => {
+            summaryExpanded = !summaryExpanded;
+            syncDescriptionPreview(textarea.value);
+        });
 
         saveBtn.addEventListener('click', async () => {
             const description = String(textarea.value || '').trim();
@@ -512,6 +626,7 @@ export function createGameDetailsPopupActions(deps = {}) {
                 }
 
                 textarea.value = generated;
+                syncDescriptionPreview(generated);
                 await saveDescription(generated);
                 setStatus('Description generated and saved.', 'success');
             } catch (error) {
@@ -524,8 +639,14 @@ export function createGameDetailsPopupActions(deps = {}) {
         });
     }
 
-    async function bindTagAssignmentAction(select, saveBtn, clearBtn, renameBtn, deleteBtn, selectedPreview, game) {
+    async function bindTagAssignmentAction(select, saveBtn, clearBtn, renameBtn, deleteBtn, selectedPreview, game, options = {}) {
         if (!select || !saveBtn || !clearBtn || !selectedPreview || !game) return;
+        const root = options.root || null;
+        const summaryPreview = options.summaryPreview || null;
+        const showMoreBtn = options.showMoreBtn || null;
+        const editBtn = options.editBtn || null;
+        const closeBtn = options.closeBtn || null;
+        let summaryExpanded = false;
 
         const catalog = await getGameTagCatalog();
         const getAssignedTagIds = () => Array.from(new Set(
@@ -543,7 +664,14 @@ export function createGameDetailsPopupActions(deps = {}) {
             clearBtn.disabled = true;
             if (renameBtn) renameBtn.disabled = true;
             if (deleteBtn) deleteBtn.disabled = true;
-            renderSelectedTagPills(selectedPreview, [], []);
+            const currentTagIds = getAssignedTagIds();
+            renderSelectedTagPills(selectedPreview, currentTagIds, []);
+            const summaryState = renderCompactTagSummary(summaryPreview, currentTagIds, [], summaryExpanded);
+            setCompactSummaryExpanded(root, summaryExpanded && summaryState.canExpand);
+            if (showMoreBtn) {
+                showMoreBtn.hidden = !summaryState.canExpand;
+                showMoreBtn.textContent = summaryExpanded ? 'Show Less' : 'Show More';
+            }
             return;
         }
 
@@ -557,10 +685,36 @@ export function createGameDetailsPopupActions(deps = {}) {
             .filter(Boolean);
 
         const syncPreview = () => {
-            renderSelectedTagPills(selectedPreview, getSelectedTagIds(), catalog);
+            const selectedIds = getSelectedTagIds();
+            renderSelectedTagPills(selectedPreview, selectedIds, catalog);
+            let summaryState = renderCompactTagSummary(summaryPreview, selectedIds, catalog, summaryExpanded);
+            if (!summaryState.canExpand && summaryExpanded) {
+                summaryExpanded = false;
+                summaryState = renderCompactTagSummary(summaryPreview, selectedIds, catalog, false);
+            }
+            setCompactSummaryExpanded(root, summaryExpanded && summaryState.canExpand);
+            if (showMoreBtn) {
+                showMoreBtn.hidden = !summaryState.canExpand;
+                showMoreBtn.textContent = summaryExpanded ? 'Show Less' : 'Show More';
+            }
         };
 
         syncPreview();
+        summaryPreview?.addEventListener('click', () => {
+            setCompactEditorOpen(root, true);
+            select.focus();
+        });
+        editBtn?.addEventListener('click', () => {
+            setCompactEditorOpen(root, true);
+            select.focus();
+        });
+        closeBtn?.addEventListener('click', () => {
+            setCompactEditorOpen(root, false);
+        });
+        showMoreBtn?.addEventListener('click', () => {
+            summaryExpanded = !summaryExpanded;
+            syncPreview();
+        });
 
         select.addEventListener('change', syncPreview);
 
@@ -1546,7 +1700,14 @@ export function createGameDetailsPopupActions(deps = {}) {
             container.querySelector('[data-game-description-save]'),
             container.querySelector('[data-game-description-llm]'),
             container.querySelector('[data-game-description-status]'),
-            game
+            game,
+            {
+                root: container.querySelector('[data-game-description-section]'),
+                summaryPreview: container.querySelector('[data-game-description-preview]'),
+                showMoreBtn: container.querySelector('[data-game-description-show-more]'),
+                editBtn: container.querySelector('[data-game-description-edit]'),
+                closeBtn: container.querySelector('[data-game-description-close]')
+            }
         );
         bindCreateShortcutAction(container.querySelector('[data-create-shortcut]'), game);
         bindCoverDownloadAction(
@@ -1574,7 +1735,14 @@ export function createGameDetailsPopupActions(deps = {}) {
             container.querySelector('[data-game-tags-rename]'),
             container.querySelector('[data-game-tags-delete]'),
             tagsSelectedPreview,
-            game
+            game,
+            {
+                root: container.querySelector('[data-game-tags-section]'),
+                summaryPreview: container.querySelector('[data-game-tags-summary]'),
+                showMoreBtn: container.querySelector('[data-game-tags-show-more]'),
+                editBtn: container.querySelector('[data-game-tags-edit]'),
+                closeBtn: container.querySelector('[data-game-tags-close]')
+            }
         );
         bindLlmTagSuggestionAction(
             container.querySelector('[data-game-tags-llm]'),
@@ -1612,6 +1780,8 @@ export function createGameDetailsPopupActions(deps = {}) {
                 return '<svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
             case 'youtube':
                 return '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="3"/><path d="m10 9 6 3-6 3z" class="fill"/></svg>';
+            case 'swap':
+                return '<svg viewBox="0 0 24 24"><path d="M7 7h10"/><path d="m13 3 4 4-4 4"/><path d="M17 17H7"/><path d="m11 21-4-4 4-4"/></svg>';
             case 'remove':
                 return '<svg viewBox="0 0 24 24"><path d="M5 7h14"/><path d="M9 7V5h6v2"/><path d="M8 7l1 12h6l1-12"/></svg>';
             default:
@@ -1619,13 +1789,13 @@ export function createGameDetailsPopupActions(deps = {}) {
         }
     }
 
-    function buildGameDetailActionButton({ label, icon, attrs = '', extraClasses = '' }) {
+    function buildGameDetailActionButton({ label, icon, attrs = '', extraClasses = '', iconOnly = false }) {
         const safeLabel = escapeHtml(String(label || '').trim());
-        const className = `action-btn game-detail-icon-btn ${extraClasses}`.trim();
+        const className = `action-btn game-detail-icon-btn${iconOnly ? ' game-detail-icon-btn--icon-only' : ''} ${extraClasses}`.trim();
         return `
             <button class="${className}" ${attrs} title="${safeLabel}" aria-label="${safeLabel}">
                 <span class="game-detail-btn-icon" aria-hidden="true">${buildGameDetailButtonIcon(icon)}</span>
-                <span class="game-detail-btn-label">${safeLabel}</span>
+                ${iconOnly ? '' : `<span class="game-detail-btn-label">${safeLabel}</span>`}
             </button>
         `;
     }
@@ -1649,9 +1819,13 @@ export function createGameDetailsPopupActions(deps = {}) {
         const renameTagLabel = t('gameDetails.renameTag', 'Rename Tag');
         const deleteTagLabel = t('gameDetails.deleteTag', 'Delete Tag');
         const llmTagLabel = t('gameDetails.letLlmAddTags', 'Let LLM add tags');
-        const shortcutLabel = t('gameDetails.createDesktopShortcut', 'Create Desktop Shortcut');
-        const downloadCoverLabel = t('gameDetails.downloadCoverSerial', 'Download Cover (Serial)');
-        const searchCoverLabel = t('gameDetails.searchCoverWeb', 'Search Cover Web');
+        const editLabel = t('common.edit', 'Edit');
+        const showMoreLabel = t('common.showMore', 'Show More');
+        const doneLabel = t('common.done', 'Done');
+        const changePlatformLabel = t('gameDetails.changePlatform', 'Change Platform');
+        const shortcutLabel = t('gameDetails.createDesktopShortcut', 'Create Shortcut');
+        const downloadCoverLabel = t('gameDetails.downloadCoverSerial', 'Download Cover');
+        const searchCoverLabel = t('gameDetails.searchCoverWeb', 'Browse Cover');
         const showInExplorerLabel = t('gameDetails.showInExplorer', 'Show in Explorer');
         const youtubePreviewLabel = t('gameDetails.youtubePreview', 'YouTube Preview');
 
@@ -1675,14 +1849,24 @@ export function createGameDetailsPopupActions(deps = {}) {
             <p><strong>${platformLabel}:</strong> ${platformText}</p>
             <p><strong>${ratingLabel}:</strong> ${ratingText}</p>
         </div>
-        <div class="game-detail-row game-detail-description-control">
-            <label for="game-description-input-${Number(game.id)}">${descriptionLabel}</label>
-            <textarea id="game-description-input-${Number(game.id)}" data-game-description-input rows="4" placeholder="Add a game description...">${safeDescription}</textarea>
-            <div class="game-detail-description-actions">
-                ${buildGameDetailActionButton({ label: saveDescriptionLabel, icon: 'save', attrs: 'data-game-description-save type="button"' })}
-                ${buildGameDetailActionButton({ label: llmDescriptionLabel, icon: 'llm', attrs: 'data-game-description-llm type="button"', extraClasses: 'launch-btn' })}
+        <div class="game-detail-row game-detail-description-control" data-game-description-section>
+            <div class="game-detail-compact-header">
+                <label for="game-description-input-${Number(game.id)}">${descriptionLabel}</label>
+                <div class="game-detail-compact-toolbar">
+                    <button class="action-btn small" data-game-description-show-more type="button" hidden>${showMoreLabel}</button>
+                    <button class="action-btn small" data-game-description-edit type="button">${editLabel}</button>
+                </div>
             </div>
-            <small class="game-detail-description-status" data-game-description-status aria-live="polite"></small>
+            <button class="game-detail-compact-preview game-detail-description-preview${safeDescription ? '' : ' is-empty'}" data-compact-preview data-game-description-preview type="button"></button>
+            <div class="game-detail-description-editor" data-compact-editor data-game-description-editor hidden>
+                <textarea id="game-description-input-${Number(game.id)}" data-game-description-input rows="4" placeholder="Add a game description...">${safeDescription}</textarea>
+                <div class="game-detail-description-actions">
+                    ${buildGameDetailActionButton({ label: saveDescriptionLabel, icon: 'save', attrs: 'data-game-description-save type="button"' })}
+                    ${buildGameDetailActionButton({ label: llmDescriptionLabel, icon: 'llm', attrs: 'data-game-description-llm type="button"', extraClasses: 'launch-btn' })}
+                    <button class="action-btn" data-game-description-close type="button">${escapeHtml(doneLabel)}</button>
+                </div>
+                <small class="game-detail-description-status" data-game-description-status aria-live="polite"></small>
+            </div>
         </div>
         <div class="game-detail-row game-detail-emulator-control">
             <label for="game-emulator-override-${Number(game.id)}">Emulator</label>
@@ -1708,23 +1892,39 @@ export function createGameDetailsPopupActions(deps = {}) {
                 <select id="game-platform-select-${Number(game.id)}" data-game-platform-select>
                     <option value="">Loading platforms...</option>
                 </select>
-                <button class="action-btn" data-change-platform>Change Platform</button>
+                ${buildGameDetailActionButton({
+                    label: changePlatformLabel,
+                    icon: 'swap',
+                    attrs: 'data-change-platform type="button"',
+                    extraClasses: 'game-detail-platform-swap-btn',
+                    iconOnly: true
+                })}
             </div>
         </div>
-        <div class="game-detail-row game-detail-tags-control">
-            <label for="game-tags-select-${Number(game.id)}">Tags</label>
-            <select id="game-tags-select-${Number(game.id)}" data-game-tags-select multiple size="7">
-                <option value="">Loading tags...</option>
-            </select>
-            <div class="game-detail-tags-selected" data-game-tags-selected></div>
-            <div class="game-detail-tags-actions">
-                ${buildGameDetailActionButton({ label: saveTagsLabel, icon: 'save', attrs: 'data-game-tags-save type="button"' })}
-                ${buildGameDetailActionButton({ label: clearTagsLabel, icon: 'clear', attrs: 'data-game-tags-clear type="button"' })}
-                ${buildGameDetailActionButton({ label: renameTagLabel, icon: 'rename', attrs: 'data-game-tags-rename type="button"' })}
-                ${buildGameDetailActionButton({ label: deleteTagLabel, icon: 'delete', attrs: 'data-game-tags-delete type="button"', extraClasses: 'remove-btn' })}
-                ${llmButtonMarkup}
+        <div class="game-detail-row game-detail-tags-control" data-game-tags-section>
+            <div class="game-detail-compact-header">
+                <label for="game-tags-select-${Number(game.id)}">Tags</label>
+                <div class="game-detail-compact-toolbar">
+                    <button class="action-btn small" data-game-tags-show-more type="button" hidden>${showMoreLabel}</button>
+                    <button class="action-btn small" data-game-tags-edit type="button">${editLabel}</button>
+                </div>
             </div>
-            <small class="game-detail-tags-hint">Use Ctrl/Cmd + click to select multiple tags.</small>
+            <button class="game-detail-compact-preview game-detail-tags-summary" data-compact-preview data-game-tags-summary type="button"></button>
+            <div class="game-detail-tags-editor" data-compact-editor data-game-tags-editor hidden>
+                <select id="game-tags-select-${Number(game.id)}" data-game-tags-select multiple size="7">
+                    <option value="">Loading tags...</option>
+                </select>
+                <div class="game-detail-tags-selected" data-game-tags-selected></div>
+                <div class="game-detail-tags-actions">
+                    ${buildGameDetailActionButton({ label: saveTagsLabel, icon: 'save', attrs: 'data-game-tags-save type="button"' })}
+                    ${buildGameDetailActionButton({ label: clearTagsLabel, icon: 'clear', attrs: 'data-game-tags-clear type="button"' })}
+                    ${buildGameDetailActionButton({ label: renameTagLabel, icon: 'rename', attrs: 'data-game-tags-rename type="button"' })}
+                    ${buildGameDetailActionButton({ label: deleteTagLabel, icon: 'delete', attrs: 'data-game-tags-delete type="button"', extraClasses: 'remove-btn' })}
+                    ${llmButtonMarkup}
+                    <button class="action-btn" data-game-tags-close type="button">${escapeHtml(doneLabel)}</button>
+                </div>
+                <small class="game-detail-tags-hint">Use Ctrl/Cmd + click to select multiple tags.</small>
+            </div>
         </div>
         <div class="game-detail-row game-detail-actions">
             ${buildGameDetailActionButton({ label: shortcutLabel, icon: 'shortcut', attrs: 'data-create-shortcut type="button"' })}
@@ -1803,6 +2003,9 @@ export function createGameDetailsPopupActions(deps = {}) {
             popup.style.display = 'flex';
             popup.classList.add('active');
             import('../theme-manager').then((m) => {
+                if (typeof m.focusManagedModal === 'function') {
+                    m.focusManagedModal('game-info-modal');
+                }
                 if (typeof m.recenterManagedModalIfMostlyOutOfView === 'function') {
                     m.recenterManagedModalIfMostlyOutOfView('game-info-modal', {
                         padding: 24,

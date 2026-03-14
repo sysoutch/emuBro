@@ -21,6 +21,7 @@ export function setupRendererEventListeners(options = {}) {
     const getSectionFilteredGames = typeof options.getSectionFilteredGames === 'function' ? options.getSectionFilteredGames : () => [];
     const renderActiveLibraryView = typeof options.renderActiveLibraryView === 'function' ? options.renderActiveLibraryView : async () => {};
     const refreshEmulatorsState = typeof options.refreshEmulatorsState === 'function' ? options.refreshEmulatorsState : async () => {};
+    const renderPlatformsList = typeof options.renderPlatformsList === 'function' ? options.renderPlatformsList : async () => {};
 
     const gameLanguageFilterSelect = options.gameLanguageFilterSelect || null;
     const gameRegionFilterSelect = options.gameRegionFilterSelect || null;
@@ -47,13 +48,51 @@ export function setupRendererEventListeners(options = {}) {
     const completelyRemoveFromDock = typeof options.completelyRemoveFromDock === 'function' ? options.completelyRemoveFromDock : () => {};
     const removeFromDock = typeof options.removeFromDock === 'function' ? options.removeFromDock : () => {};
     const hideThemeForm = typeof options.hideThemeForm === 'function' ? options.hideThemeForm : () => {};
+    const showThemeForm = typeof options.showThemeForm === 'function'
+        ? options.showThemeForm
+        : () => {
+            const form = document.getElementById('theme-form');
+            if (form) form.style.display = 'flex';
+        };
     const setHasUnsavedChanges = typeof options.setHasUnsavedChanges === 'function' ? options.setHasUnsavedChanges : () => {};
     const toggleDock = typeof options.toggleDock === 'function' ? options.toggleDock : () => {};
 
     const applyCornerStyle = typeof options.applyCornerStyle === 'function' ? options.applyCornerStyle : () => {};
+    const getWindowFrameSettings = typeof options.getWindowFrameSettings === 'function'
+        ? options.getWindowFrameSettings
+        : () => ({
+            enabled: true,
+            motion: 'static',
+            colorMode: 'hue-rotate',
+            colors: ['#7CF2FF', '#7D8CFF', '#D171FF', '#FFE29A'],
+            colorAlpha: 100,
+            colorCount: 3,
+            rotationSpeed: 18,
+            hueRotateSpeed: 18,
+            hueRotateSpan: 360,
+            thickness: 3,
+            shadow: 55,
+            radius: 10
+        });
+    const updateGlobalWindowFrameSettings = typeof options.updateGlobalWindowFrameSettings === 'function'
+        ? options.updateGlobalWindowFrameSettings
+        : (settings) => settings;
     const setTheme = typeof options.setTheme === 'function' ? options.setTheme : () => {};
     const getCurrentTheme = typeof options.getCurrentTheme === 'function' ? options.getCurrentTheme : () => ({});
+    const activateThemeManagerTab = typeof options.activateThemeManagerTab === 'function'
+        ? options.activateThemeManagerTab
+        : () => {};
     const resetThemeForm = typeof options.resetThemeForm === 'function' ? options.resetThemeForm : () => {};
+    const startCreateTheme = typeof options.startCreateTheme === 'function'
+        ? options.startCreateTheme
+        : () => {
+            document.getElementById('form-title').textContent = i18n.t('theme.createTitle');
+            resetThemeForm();
+            showThemeForm();
+            setupThemeCustomizationControls();
+            setupColorPickerListeners();
+            setupBackgroundImageListeners();
+        };
     const setupThemeCustomizationControls = typeof options.setupThemeCustomizationControls === 'function' ? options.setupThemeCustomizationControls : () => {};
     const setupColorPickerListeners = typeof options.setupColorPickerListeners === 'function' ? options.setupColorPickerListeners : () => {};
     const setupBackgroundImageListeners = typeof options.setupBackgroundImageListeners === 'function' ? options.setupBackgroundImageListeners : () => {};
@@ -288,7 +327,9 @@ export function setupRendererEventListeners(options = {}) {
         });
     }
 
-    const contentWidthHost = document.querySelector('.game-content-wrapper')
+    const viewControlsEl = document.querySelector('.view-controls');
+    const contentWidthHost = viewControlsEl
+        || document.querySelector('.game-content-wrapper')
         || document.querySelector('.game-grid')
         || document.querySelector('.game-header')
         || document.body;
@@ -536,12 +577,12 @@ export function setupRendererEventListeners(options = {}) {
         return { close, isOpen, setOpenState, compactQuery };
     };
 
-    const superCompactQuery = createElementWidthQuery(850, contentWidthHost);
+    const superCompactQuery = createElementWidthQuery(1240, contentWidthHost);
     const filtersCompactQuery = createElementWidthQuery(1500, contentWidthHost);
     const regionLanguageCompactQuery = createElementWidthQuery(1500, contentWidthHost);
-    const groupSortCompactQuery = createElementWidthQuery(1200, contentWidthHost);
-    const gameHeaderEl = document.querySelector('.game-header');
-    const filtersEl = document.querySelector('.game-header .filters');
+    const groupSortCompactQuery = createElementWidthQuery(1360, contentWidthHost);
+    const compactLayoutHostEl = viewControlsEl || document.querySelector('.game-header');
+    const filtersEl = document.querySelector('.view-controls .filters') || document.querySelector('.game-header .filters');
 
     const applyFilterCompactClasses = () => {
         const superCompact = !!superCompactQuery.matches;
@@ -549,8 +590,8 @@ export function setupRendererEventListeners(options = {}) {
         const regionCompact = !!regionLanguageCompactQuery.matches;
         const groupCompact = !!groupSortCompactQuery.matches;
 
-        if (gameHeaderEl) {
-            gameHeaderEl.classList.toggle('is-content-compact', anyCompact);
+        if (compactLayoutHostEl) {
+            compactLayoutHostEl.classList.toggle('is-content-compact', anyCompact);
         }
         if (filtersEl) {
             filtersEl.classList.toggle('is-super-compact', superCompact);
@@ -692,7 +733,9 @@ export function setupRendererEventListeners(options = {}) {
     // Global Theme Settings
     const globalCornerStyle = document.getElementById('global-corner-style');
     if (globalCornerStyle) {
-        globalCornerStyle.value = localStorage.getItem('globalCornerStyle') || 'rounded';
+        const initialCornerStyle = localStorage.getItem('globalCornerStyle') || 'semi-rounded';
+        globalCornerStyle.value = initialCornerStyle;
+        applyCornerStyle(initialCornerStyle);
         globalCornerStyle.addEventListener('change', (e) => {
             const style = e.target.value;
             localStorage.setItem('globalCornerStyle', style);
@@ -710,15 +753,187 @@ export function setupRendererEventListeners(options = {}) {
         });
     }
 
+    const globalWindowFrameEnabled = document.getElementById('global-window-frame-enabled');
+    const globalWindowFrameMotion = document.getElementById('global-window-frame-motion');
+    const globalWindowFrameColorMode = document.getElementById('global-window-frame-color-mode');
+    const globalWindowFrameColorCount = document.getElementById('global-window-frame-color-count');
+    const globalWindowFrameColorGroup = document.querySelector('.global-window-frame-color-group');
+    const globalWindowFramePaletteInputs = [1, 2, 3, 4]
+        .map((index) => document.getElementById(`global-window-frame-color-${index}`))
+        .filter(Boolean);
+    const globalWindowFrameColorAlpha = document.getElementById('global-window-frame-color-alpha');
+    const globalWindowFrameColorAlphaValue = document.getElementById('global-window-frame-color-alpha-value');
+    const globalWindowFrameRotationGroup = document.querySelector('.global-window-frame-rotation-group');
+    const globalWindowFrameRotationSpeed = document.getElementById('global-window-frame-rotation-speed');
+    const globalWindowFrameRotationSpeedValue = document.getElementById('global-window-frame-rotation-speed-value');
+    const globalWindowFrameHueSpeedGroup = document.querySelector('.global-window-frame-hue-speed-group');
+    const globalWindowFrameHueRotateSpeed = document.getElementById('global-window-frame-hue-rotate-speed');
+    const globalWindowFrameHueRotateSpeedValue = document.getElementById('global-window-frame-hue-rotate-speed-value');
+    const globalWindowFrameHueSpanGroup = document.querySelector('.global-window-frame-hue-span-group');
+    const globalWindowFrameHueRotateSpan = document.getElementById('global-window-frame-hue-rotate-span');
+    const globalWindowFrameHueRotateSpanValue = document.getElementById('global-window-frame-hue-rotate-span-value');
+    const globalWindowFrameThickness = document.getElementById('global-window-frame-thickness');
+    const globalWindowFrameThicknessValue = document.getElementById('global-window-frame-thickness-value');
+    const globalWindowFrameShadow = document.getElementById('global-window-frame-shadow');
+    const globalWindowFrameShadowValue = document.getElementById('global-window-frame-shadow-value');
+    const globalWindowFrameRadius = document.getElementById('global-window-frame-radius');
+    const globalWindowFrameRadiusValue = document.getElementById('global-window-frame-radius-value');
+
+    const syncWindowFrameRangeLabel = (input, label, suffix = '') => {
+        if (!input || !label) return;
+        label.textContent = `${input.value}${suffix}`;
+    };
+
+    const normalizeWindowFrameColorValue = (value, fallback = '#FFE29A') => {
+        const normalized = String(value || '').trim().toUpperCase();
+        return /^#[0-9A-F]{6}$/.test(normalized) ? normalized : fallback;
+    };
+
+    const syncWindowFramePaletteInputs = (colors = [], count = 3) => {
+        const normalizedCount = Math.max(1, Math.min(4, Number.parseInt(String(count || '3'), 10) || 3));
+        globalWindowFramePaletteInputs.forEach((input, index) => {
+            const colorValue = normalizeWindowFrameColorValue(colors[index], input?.value || '#FFE29A');
+            input.value = colorValue;
+            const chip = input.closest('.window-frame-palette-chip');
+            if (chip) {
+                chip.hidden = index >= normalizedCount;
+            }
+        });
+    };
+
+    const getWindowFramePaletteFromControls = () =>
+        globalWindowFramePaletteInputs.map((input, index) => normalizeWindowFrameColorValue(input?.value, ['#7CF2FF', '#7D8CFF', '#D171FF', '#FFE29A'][index]));
+
+    const syncWindowFrameModeVisibility = () => {
+        const mode = String(globalWindowFrameColorMode?.value || '').trim().toLowerCase();
+        const showCustomPalette = mode === 'custom' || mode === 'hue-rotate';
+        const showRotation = mode === 'theme-sync' || mode === 'hue-rotate';
+        const showHueOptions = mode === 'hue-rotate';
+        if (globalWindowFrameColorGroup) {
+            globalWindowFrameColorGroup.hidden = !showCustomPalette;
+        }
+        if (globalWindowFrameRotationGroup) {
+            globalWindowFrameRotationGroup.hidden = !showRotation;
+        }
+        if (globalWindowFrameHueSpeedGroup) {
+            globalWindowFrameHueSpeedGroup.hidden = !showHueOptions;
+        }
+        if (globalWindowFrameHueSpanGroup) {
+            globalWindowFrameHueSpanGroup.hidden = !showHueOptions;
+        }
+        globalWindowFramePaletteInputs.forEach((input) => {
+            input.disabled = !showCustomPalette;
+        });
+        if (globalWindowFrameColorAlpha) globalWindowFrameColorAlpha.disabled = !showCustomPalette;
+        if (globalWindowFrameRotationSpeed) globalWindowFrameRotationSpeed.disabled = !showRotation;
+        if (globalWindowFrameHueRotateSpeed) globalWindowFrameHueRotateSpeed.disabled = !showHueOptions;
+        if (globalWindowFrameHueRotateSpan) globalWindowFrameHueRotateSpan.disabled = !showHueOptions;
+    };
+
+    const applyWindowFrameSettingsFromControls = () => {
+        const nextSettings = updateGlobalWindowFrameSettings({
+            enabled: !!globalWindowFrameEnabled?.checked,
+            motion: globalWindowFrameMotion?.value,
+            colorMode: globalWindowFrameColorMode?.value,
+            colorCount: globalWindowFrameColorCount?.value,
+            colors: getWindowFramePaletteFromControls(),
+            colorAlpha: globalWindowFrameColorAlpha?.value,
+            rotationSpeed: globalWindowFrameRotationSpeed?.value,
+            hueRotateSpeed: globalWindowFrameHueRotateSpeed?.value,
+            hueRotateSpan: globalWindowFrameHueRotateSpan?.value,
+            thickness: globalWindowFrameThickness?.value,
+            shadow: globalWindowFrameShadow?.value,
+            radius: globalWindowFrameRadius?.value
+        });
+        if (globalWindowFrameColorCount) {
+            globalWindowFrameColorCount.value = String(nextSettings.colorCount);
+        }
+        syncWindowFramePaletteInputs(nextSettings.colors, nextSettings.colorCount);
+        if (globalWindowFrameColorAlpha) {
+            globalWindowFrameColorAlpha.value = String(nextSettings.colorAlpha);
+        }
+        if (globalWindowFrameColorAlphaValue) {
+            globalWindowFrameColorAlphaValue.textContent = `${nextSettings.colorAlpha}%`;
+        }
+        if (globalWindowFrameRotationSpeed) {
+            globalWindowFrameRotationSpeed.value = String(nextSettings.rotationSpeed);
+        }
+        syncWindowFrameRangeLabel(globalWindowFrameRotationSpeed, globalWindowFrameRotationSpeedValue, 's');
+        if (globalWindowFrameHueRotateSpeed) {
+            globalWindowFrameHueRotateSpeed.value = String(nextSettings.hueRotateSpeed);
+        }
+        syncWindowFrameRangeLabel(globalWindowFrameHueRotateSpeed, globalWindowFrameHueRotateSpeedValue, 's');
+        if (globalWindowFrameHueRotateSpan) {
+            globalWindowFrameHueRotateSpan.value = String(nextSettings.hueRotateSpan);
+        }
+        syncWindowFrameRangeLabel(globalWindowFrameHueRotateSpan, globalWindowFrameHueRotateSpanValue, 'deg');
+        syncWindowFrameRangeLabel(globalWindowFrameThickness, globalWindowFrameThicknessValue, 'px');
+        syncWindowFrameRangeLabel(globalWindowFrameShadow, globalWindowFrameShadowValue, '%');
+        syncWindowFrameRangeLabel(globalWindowFrameRadius, globalWindowFrameRadiusValue, 'px');
+        syncWindowFrameModeVisibility();
+    };
+
+    if (
+        globalWindowFrameEnabled
+        && globalWindowFrameMotion
+        && globalWindowFrameColorMode
+        && globalWindowFrameColorCount
+        && globalWindowFramePaletteInputs.length === 4
+        && globalWindowFrameColorAlpha
+        && globalWindowFrameRotationSpeed
+        && globalWindowFrameHueRotateSpeed
+        && globalWindowFrameHueRotateSpan
+        && globalWindowFrameThickness
+        && globalWindowFrameShadow
+        && globalWindowFrameRadius
+    ) {
+        const frameSettings = getWindowFrameSettings();
+        globalWindowFrameEnabled.checked = !!frameSettings.enabled;
+        globalWindowFrameMotion.value = frameSettings.motion;
+        globalWindowFrameColorMode.value = frameSettings.colorMode;
+        globalWindowFrameColorCount.value = String(frameSettings.colorCount || 3);
+        syncWindowFramePaletteInputs(frameSettings.colors, frameSettings.colorCount);
+        globalWindowFrameColorAlpha.value = String(frameSettings.colorAlpha ?? 100);
+        globalWindowFrameRotationSpeed.value = String(frameSettings.rotationSpeed ?? 18);
+        globalWindowFrameHueRotateSpeed.value = String(frameSettings.hueRotateSpeed ?? 18);
+        globalWindowFrameHueRotateSpan.value = String(frameSettings.hueRotateSpan ?? 360);
+        globalWindowFrameThickness.value = String(frameSettings.thickness);
+        globalWindowFrameShadow.value = String(frameSettings.shadow);
+        globalWindowFrameRadius.value = String(frameSettings.radius);
+
+        if (globalWindowFrameColorAlphaValue) {
+            globalWindowFrameColorAlphaValue.textContent = `${frameSettings.colorAlpha ?? 100}%`;
+        }
+        syncWindowFrameRangeLabel(globalWindowFrameRotationSpeed, globalWindowFrameRotationSpeedValue, 's');
+        syncWindowFrameRangeLabel(globalWindowFrameHueRotateSpeed, globalWindowFrameHueRotateSpeedValue, 's');
+        syncWindowFrameRangeLabel(globalWindowFrameHueRotateSpan, globalWindowFrameHueRotateSpanValue, 'deg');
+        syncWindowFrameRangeLabel(globalWindowFrameThickness, globalWindowFrameThicknessValue, 'px');
+        syncWindowFrameRangeLabel(globalWindowFrameShadow, globalWindowFrameShadowValue, '%');
+        syncWindowFrameRangeLabel(globalWindowFrameRadius, globalWindowFrameRadiusValue, 'px');
+        syncWindowFrameModeVisibility();
+
+        globalWindowFrameEnabled.addEventListener('change', applyWindowFrameSettingsFromControls);
+        globalWindowFrameMotion.addEventListener('change', applyWindowFrameSettingsFromControls);
+        globalWindowFrameColorMode.addEventListener('change', applyWindowFrameSettingsFromControls);
+        globalWindowFrameColorCount.addEventListener('change', applyWindowFrameSettingsFromControls);
+        globalWindowFramePaletteInputs.forEach((input) => {
+            input.addEventListener('input', applyWindowFrameSettingsFromControls);
+            input.addEventListener('change', applyWindowFrameSettingsFromControls);
+        });
+        [globalWindowFrameColorAlpha, globalWindowFrameRotationSpeed, globalWindowFrameHueRotateSpeed, globalWindowFrameHueRotateSpan].forEach((input) => {
+            input.addEventListener('input', applyWindowFrameSettingsFromControls);
+            input.addEventListener('change', applyWindowFrameSettingsFromControls);
+        });
+        [globalWindowFrameThickness, globalWindowFrameShadow, globalWindowFrameRadius].forEach((input) => {
+            input.addEventListener('input', applyWindowFrameSettingsFromControls);
+            input.addEventListener('change', applyWindowFrameSettingsFromControls);
+        });
+    }
+
     // Theme Form Actions
     const createThemeBtn = document.getElementById('create-theme-btn');
     if (createThemeBtn) createThemeBtn.addEventListener('click', () => {
-        document.getElementById('form-title').textContent = i18n.t('theme.createTitle');
-        resetThemeForm();
-        document.getElementById('theme-form').style.display = 'flex';
-        setupThemeCustomizationControls();
-        setupColorPickerListeners();
-        setupBackgroundImageListeners();
+        startCreateTheme();
     });
 
     const saveThemeBtn = document.getElementById('save-theme-btn');
@@ -726,6 +941,9 @@ export function setupRendererEventListeners(options = {}) {
 
     const cancelThemeBtn = document.getElementById('cancel-theme-btn');
     if (cancelThemeBtn) cancelThemeBtn.addEventListener('click', hideThemeForm);
+
+    const themeFormBackBtn = document.getElementById('theme-form-back-btn');
+    if (themeFormBackBtn) themeFormBackBtn.addEventListener('click', hideThemeForm);
 
     const refreshThemesBtn = document.getElementById('refresh-themes-btn');
     if (refreshThemesBtn) {
@@ -735,19 +953,13 @@ export function setupRendererEventListeners(options = {}) {
     }
 
     // Marketplace Tabs
-    document.querySelectorAll('.tab-btn').forEach(btn => {
+    document.querySelectorAll('#theme-manager-modal .theme-manager-tabs .tab-btn[data-tab]').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            const target = e.target.dataset.tab;
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            e.target.classList.add('active');
+            const target = String(e.currentTarget?.dataset?.tab || 'local').trim().toLowerCase();
+            activateThemeManagerTab(target);
 
             if (target === 'marketplace') {
-                document.getElementById('local-themes-view').style.display = 'none';
-                document.getElementById('marketplace-view').style.display = 'block';
                 renderMarketplace();
-            } else {
-                document.getElementById('local-themes-view').style.display = 'block';
-                document.getElementById('marketplace-view').style.display = 'none';
             }
         });
     });
@@ -816,6 +1028,7 @@ export function setupRendererEventListeners(options = {}) {
     });
 
     window.addEventListener('emubro:games-updated', async () => {
+        await renderPlatformsList();
         await renderCategoriesList();
         if (getActiveTopSection() === 'library' && getActiveLibrarySection() !== 'emulators' && getActiveCategorySelectionSet().size > 0) {
             await renderActiveLibraryView();

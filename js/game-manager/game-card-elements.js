@@ -1,3 +1,5 @@
+import { attachGameCardContextMenu } from './game-card-context-menu';
+
 export function createGameCardElements(deps = {}) {
     const i18n = deps.i18n || window.i18n || { t: (key) => String(key || '') };
     const escapeHtml = deps.escapeHtml || ((value) => String(value ?? ''));
@@ -5,6 +7,20 @@ export function createGameCardElements(deps = {}) {
     const lazyPlaceholderSrc = String(deps.lazyPlaceholderSrc || '').trim();
     const launchGame = deps.launchGame || (async () => {});
     const showGameDetails = deps.showGameDetails || (() => {});
+    const removeGame = deps.removeGame || (async () => {});
+    const emubro = deps.emubro || window.emubro;
+    const alertUser = deps.alertUser || ((message) => window.alert(String(message || '')));
+
+    function bindContextMenu(target, game) {
+        attachGameCardContextMenu(target, game, {
+            i18n,
+            emubro,
+            alertUser,
+            launchGame,
+            showGameDetails,
+            removeGame
+        });
+    }
 
     function createGameCard(game) {
         const shell = document.createElement('div');
@@ -54,6 +70,8 @@ export function createGameCardElements(deps = {}) {
             showGameDetails(game);
         });
 
+        bindContextMenu(shell, game);
+
         return shell;
     }
 
@@ -87,6 +105,7 @@ export function createGameCardElements(deps = {}) {
 
         row.classList.add('game-row-clickable');
         row.addEventListener('click', () => showGameDetails(game));
+        bindContextMenu(row, game);
         return row;
     }
 
@@ -130,6 +149,7 @@ export function createGameCardElements(deps = {}) {
 
         listItem.classList.add('game-row-clickable');
         listItem.addEventListener('click', () => showGameDetails(game));
+        bindContextMenu(listItem, game);
         return listItem;
     }
 

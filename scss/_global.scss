@@ -1,5 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Montserrat:wght@400;500;600;700;800&family=Press+Start+2P&family=Quicksand:wght@400;500;600;700&display=swap');
 
+@property --window-frame-gradient-angle {
+    syntax: '<angle>';
+    inherits: false;
+    initial-value: 0deg;
+}
+
 /* Global Styles */
 * {
     margin: 0;
@@ -67,6 +73,14 @@ html.theme-transition-suspended *::after {
 [data-window-state="maximized"] {
     --radius-window: 0px;
     --radius-window-inner: 0px;
+    --radius-window-content: 0px;
+    --win-border-visual-overlap: 0px;
+    --win-border-content-inset: 0px;
+}
+
+html[data-window-frame-enabled="0"] {
+    --win-border-effective-w: 0px;
+    --win-border-content-inset: 0px;
 }
 
 body {
@@ -112,33 +126,48 @@ body {
     filter: saturate(1.06) brightness(1.04);
 }
 
-[data-os="win32"] body::after {
+[data-os="win32"] html::before {
     content: "";
     position: fixed;
     inset: 0;
     pointer-events: none;
+    z-index: 2;
+    padding: var(--win-border-effective-w);
+    border-radius: var(--radius-window);
+    background: transparent;
+    opacity: var(--window-frame-underlay-opacity);
+    transition: opacity 0.18s ease, padding 0.18s ease, border-radius 0.18s ease;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+}
+
+[data-os="win32"] body::after {
+    content: "";
+    position: fixed;
+    inset: calc(var(--win-border-visual-overlap) * -1);
+    pointer-events: none;
     z-index: 3;
 
-    padding: var(--win-border-w);
-    border-radius: var(--radius-window);
-
-    background: linear-gradient(
-        125deg,
-        color-mix(in srgb, #ffe29a 92%, white 8%) 0%,
-        color-mix(in srgb, #ffd57f 90%, white 10%) 32%,
-        color-mix(in srgb, #ffbe57 88%, white 12%) 64%,
-        color-mix(in srgb, #ffe6ad 90%, white 10%) 100%
+    padding: calc(var(--win-border-effective-w) + var(--win-border-visual-overlap));
+    border-radius: calc(var(--radius-window) + var(--win-border-visual-overlap));
+    background: conic-gradient(
+        from var(--window-frame-gradient-angle) at 50% 50%,
+        var(--window-frame-gradient-color-1) 0deg,
+        var(--window-frame-gradient-color-2) 110deg,
+        var(--window-frame-gradient-color-3) 220deg,
+        var(--window-frame-gradient-color-4) 320deg,
+        var(--window-frame-gradient-color-1) 360deg
     );
-
-    /* Smooth shimmer drift around the frame */
-    filter: hue-rotate(0deg) saturate(1.06);
-    will-change: filter;
-    animation: prism-window-hue 18s linear infinite;
+    opacity: var(--window-frame-main-opacity);
+    filter: saturate(1.06) brightness(1.04);
+    will-change: filter, opacity;
+    transition: opacity 0.18s ease, padding 0.18s ease, border-radius 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
 
     box-shadow:
-        0 0 0 1px rgba(255, 225, 156, 0.72) inset,
-        0 0 8px rgba(255, 196, 84, 0.52),
-        0 0 18px rgba(255, 186, 72, 0.34);
+        0 0 0 1px color-mix(in srgb, var(--window-frame-shadow-key-color), white 24%) inset,
+        0 0 var(--window-frame-glow-near-blur) color-mix(in srgb, var(--window-frame-shadow-key-color) var(--window-frame-glow-near-mix), transparent),
+        0 0 var(--window-frame-glow-far-blur) color-mix(in srgb, var(--window-frame-shadow-secondary-color) var(--window-frame-glow-far-mix), transparent);
 
     /* Border ring mask */
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -146,9 +175,132 @@ body {
     mask-composite: exclude;
 }
 
+[data-os="win32"][data-window-frame-color-mode="theme-sync"][data-window-frame-color-count="1"] {
+    --window-frame-gradient-color-1: color-mix(in srgb, var(--accent-color), white 18%);
+    --window-frame-gradient-color-2: color-mix(in srgb, var(--accent-color), white 6%);
+    --window-frame-gradient-color-3: color-mix(in srgb, var(--accent-color), var(--brand-color) 18%);
+    --window-frame-gradient-color-4: color-mix(in srgb, var(--accent-color), black 12%);
+    --window-frame-shadow-key-color: var(--accent-color);
+    --window-frame-shadow-secondary-color: var(--accent-color);
+}
+
+[data-os="win32"][data-window-frame-color-mode="theme-sync"][data-window-frame-color-count="2"] {
+    --window-frame-gradient-color-1: color-mix(in srgb, var(--accent-color), white 18%);
+    --window-frame-gradient-color-2: color-mix(in srgb, var(--accent-color), var(--brand-color) 26%);
+    --window-frame-gradient-color-3: color-mix(in srgb, var(--brand-color), var(--accent-hover) 18%);
+    --window-frame-gradient-color-4: color-mix(in srgb, var(--brand-color), black 10%);
+    --window-frame-shadow-key-color: var(--accent-color);
+    --window-frame-shadow-secondary-color: var(--brand-color);
+}
+
+[data-os="win32"][data-window-frame-color-mode="theme-sync"][data-window-frame-color-count="3"] {
+    --window-frame-gradient-color-1: color-mix(in srgb, var(--accent-color), white 18%);
+    --window-frame-gradient-color-2: color-mix(in srgb, var(--accent-color), var(--brand-color) 24%);
+    --window-frame-gradient-color-3: color-mix(in srgb, var(--brand-color), var(--text-secondary) 28%);
+    --window-frame-gradient-color-4: color-mix(in srgb, var(--text-secondary), black 8%);
+    --window-frame-shadow-key-color: var(--accent-color);
+    --window-frame-shadow-secondary-color: var(--brand-color);
+}
+
+[data-os="win32"][data-window-frame-color-mode="theme-sync"][data-window-frame-color-count="4"] {
+    --window-frame-gradient-color-1: color-mix(in srgb, var(--accent-color), white 18%);
+    --window-frame-gradient-color-2: color-mix(in srgb, var(--accent-color), var(--brand-color) 22%);
+    --window-frame-gradient-color-3: color-mix(in srgb, var(--brand-color), var(--text-secondary) 24%);
+    --window-frame-gradient-color-4: color-mix(in srgb, var(--bg-tertiary), var(--accent-color) 24%);
+    --window-frame-shadow-key-color: var(--accent-color);
+    --window-frame-shadow-secondary-color: var(--text-secondary);
+}
+
+[data-os="win32"][data-window-frame-color-mode="custom"][data-window-frame-color-count="1"],
+[data-os="win32"][data-window-frame-color-mode="hue-rotate"][data-window-frame-color-count="1"] {
+    --window-frame-gradient-color-1: color-mix(in srgb, var(--window-frame-custom-color-1), white 18%);
+    --window-frame-gradient-color-2: color-mix(in srgb, var(--window-frame-custom-color-1), white 4%);
+    --window-frame-gradient-color-3: color-mix(in srgb, var(--window-frame-custom-color-1), black 4%);
+    --window-frame-gradient-color-4: color-mix(in srgb, var(--window-frame-custom-color-1), black 12%);
+    --window-frame-shadow-key-color: var(--window-frame-custom-color-1);
+    --window-frame-shadow-secondary-color: var(--window-frame-custom-color-1);
+}
+
+[data-os="win32"][data-window-frame-color-mode="custom"][data-window-frame-color-count="2"],
+[data-os="win32"][data-window-frame-color-mode="hue-rotate"][data-window-frame-color-count="2"] {
+    --window-frame-gradient-color-1: color-mix(in srgb, var(--window-frame-custom-color-1), white 16%);
+    --window-frame-gradient-color-2: var(--window-frame-custom-color-1);
+    --window-frame-gradient-color-3: var(--window-frame-custom-color-2);
+    --window-frame-gradient-color-4: color-mix(in srgb, var(--window-frame-custom-color-2), black 10%);
+    --window-frame-shadow-key-color: var(--window-frame-custom-color-1);
+    --window-frame-shadow-secondary-color: var(--window-frame-custom-color-2);
+}
+
+[data-os="win32"][data-window-frame-color-mode="custom"][data-window-frame-color-count="3"],
+[data-os="win32"][data-window-frame-color-mode="hue-rotate"][data-window-frame-color-count="3"] {
+    --window-frame-gradient-color-1: color-mix(in srgb, var(--window-frame-custom-color-1), white 14%);
+    --window-frame-gradient-color-2: var(--window-frame-custom-color-1);
+    --window-frame-gradient-color-3: var(--window-frame-custom-color-2);
+    --window-frame-gradient-color-4: var(--window-frame-custom-color-3);
+    --window-frame-shadow-key-color: var(--window-frame-custom-color-1);
+    --window-frame-shadow-secondary-color: var(--window-frame-custom-color-3);
+}
+
+[data-os="win32"][data-window-frame-color-mode="custom"][data-window-frame-color-count="4"],
+[data-os="win32"][data-window-frame-color-mode="hue-rotate"][data-window-frame-color-count="4"] {
+    --window-frame-gradient-color-1: var(--window-frame-custom-color-1);
+    --window-frame-gradient-color-2: var(--window-frame-custom-color-2);
+    --window-frame-gradient-color-3: var(--window-frame-custom-color-3);
+    --window-frame-gradient-color-4: var(--window-frame-custom-color-4);
+    --window-frame-shadow-key-color: var(--window-frame-custom-color-1);
+    --window-frame-shadow-secondary-color: var(--window-frame-custom-color-4);
+}
+
+[data-os="win32"][data-window-frame-color-mode="theme-sync"] body::after {
+    animation: window-frame-orbit var(--window-frame-rotation-speed) linear infinite;
+}
+
+[data-os="win32"][data-window-frame-color-mode="hue-rotate"] body::after {
+    animation:
+        window-frame-orbit var(--window-frame-rotation-speed) linear infinite,
+        prism-window-hue var(--window-frame-hue-rotate-speed) linear infinite;
+}
+
+[data-os="win32"][data-window-frame-motion="pulse"] body::after {
+    animation: window-frame-pulse 2.8s ease-in-out infinite;
+}
+
+[data-os="win32"][data-window-frame-motion="pulse"][data-window-frame-color-mode="theme-sync"] body::after {
+    animation:
+        window-frame-orbit var(--window-frame-rotation-speed) linear infinite,
+        window-frame-pulse 2.8s ease-in-out infinite;
+}
+
+[data-os="win32"][data-window-frame-motion="pulse"][data-window-frame-color-mode="hue-rotate"] body::after {
+    animation:
+        window-frame-orbit var(--window-frame-rotation-speed) linear infinite,
+        prism-window-hue var(--window-frame-hue-rotate-speed) linear infinite,
+        window-frame-pulse 2.8s ease-in-out infinite;
+}
+
+[data-os="win32"][data-window-frame-enabled="0"] html::before,
+[data-os="win32"][data-window-frame-enabled="0"] body::after {
+    opacity: 0;
+}
+
+@keyframes window-frame-orbit {
+    from { --window-frame-gradient-angle: 0deg; }
+    to { --window-frame-gradient-angle: 360deg; }
+}
+
 @keyframes prism-window-hue {
-    from { filter: hue-rotate(0deg) saturate(1.05); }
-    to { filter: hue-rotate(360deg) saturate(1.05); }
+    from { filter: hue-rotate(0deg) saturate(1.05) brightness(1.04); }
+    to { filter: hue-rotate(var(--window-frame-hue-rotate-span)) saturate(1.05) brightness(1.04); }
+}
+
+@keyframes window-frame-pulse {
+    0%,
+    100% {
+        opacity: var(--window-frame-main-opacity);
+    }
+    50% {
+        opacity: 1;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -192,7 +344,7 @@ button {
     top: 0;
     left: 0;
     right: 0;
-    height: var(--win-border-w);
+    height: var(--win-border-effective-w);
     z-index: 40;
     -webkit-app-region: drag;
     pointer-events: auto;
@@ -310,6 +462,97 @@ input[type="email"],
 input[type="search"],
 textarea {
     border-radius: var(--radius-input-top-left) var(--radius-input-top-right) var(--radius-input-bottom-right) var(--radius-input-bottom-left);
+    border: 1px solid color-mix(in srgb, var(--border-color), transparent 8%);
+    background-color: color-mix(in srgb, var(--bg-secondary), transparent 10%);
+    color: var(--text-primary);
+    transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input[type="text"]::placeholder,
+input[type="number"]::placeholder,
+input[type="password"]::placeholder,
+input[type="email"]::placeholder,
+input[type="search"]::placeholder,
+textarea::placeholder {
+    color: color-mix(in srgb, var(--text-secondary), transparent 8%);
+}
+
+input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    flex: 0 0 auto;
+    border-radius: 6px;
+    border: 1px solid color-mix(in srgb, var(--border-color), transparent 8%);
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--bg-tertiary), white 2%), color-mix(in srgb, var(--bg-secondary), transparent 8%));
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.04) inset,
+        0 6px 14px rgba(0, 0, 0, 0.18);
+    cursor: pointer;
+    transition:
+        border-color 0.18s ease,
+        background 0.18s ease,
+        box-shadow 0.18s ease,
+        transform 0.18s ease;
+}
+
+input[type="checkbox"]:hover {
+    border-color: color-mix(in srgb, var(--accent-color), white 12%);
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.05) inset,
+        0 8px 18px rgba(0, 0, 0, 0.22);
+}
+
+input[type="checkbox"]:checked {
+    border-color: color-mix(in srgb, var(--accent-color), white 10%);
+    background:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2.2' d='M3.5 8.4 6.4 11.3 12.5 5.2'/%3E%3C/svg%3E") center / 12px 12px no-repeat,
+        linear-gradient(135deg, color-mix(in srgb, var(--accent-color), white 12%), color-mix(in srgb, var(--brand-color), var(--accent-color) 72%));
+    box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--accent-color), transparent 46%) inset,
+        0 10px 18px color-mix(in srgb, var(--accent-color), transparent 72%);
+}
+
+input[type="checkbox"]:focus-visible {
+    outline: none;
+    box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--accent-color), transparent 42%),
+        0 0 0 3px color-mix(in srgb, var(--accent-color), transparent 78%);
+}
+
+input[type="checkbox"]:disabled {
+    opacity: 0.56;
+    cursor: not-allowed;
+    filter: saturate(0.75);
+}
+
+.checkbox-group label,
+.theme-brand-enable,
+.theme-textfx-enable,
+.bg-layer-checkbox,
+.suggested-checkbox-label,
+.group-same-names-toggle,
+.emulators-installed-toggle,
+.global-override-bg-label {
+    transition:
+        border-color 0.18s ease,
+        background 0.18s ease,
+        box-shadow 0.18s ease,
+        color 0.18s ease;
+}
+
+.checkbox-group label:has(input[type="checkbox"]:checked),
+.theme-brand-enable:has(input[type="checkbox"]:checked),
+.theme-textfx-enable:has(input[type="checkbox"]:checked),
+.bg-layer-checkbox:has(input[type="checkbox"]:checked),
+.suggested-checkbox-label:has(input[type="checkbox"]:checked),
+.group-same-names-toggle:has(input[type="checkbox"]:checked),
+.emulators-installed-toggle:has(input[type="checkbox"]:checked),
+.global-override-bg-label:has(input[type="checkbox"]:checked) {
+    color: var(--text-primary);
 }
 
 /* App Container */
@@ -343,13 +586,14 @@ textarea {
     -webkit-backdrop-filter: blur(10px) saturate(1.15);
     backdrop-filter: blur(10px) saturate(1.15);
 
-    /* Inset the entire app so it sits exactly inside the glass border ring. */
-    margin: var(--win-border-w);
-    width: calc(100vw - (var(--win-border-w) * 2));
-    height: calc(100vh - (var(--win-border-w) * 2));
-
-    /* Match the inner edge radius of the border ring (outer radius minus border thickness). */
-    border-radius: var(--radius-window-inner);
+    /* Keep only a thin transparent native edge; the visible border overlaps it instead of stealing content space. */
+    margin: var(--win-border-content-inset);
+    width: calc(100vw - (var(--win-border-content-inset) * 2));
+    height: calc(100vh - (var(--win-border-content-inset) * 2));
+    border-radius: var(--radius-window-content);
+    border-width: var(--win-border-effective-w);
+    border-style: solid;
+    border-color: color-mix(in srgb, var(--window-frame-shadow-key-color), var(--glass-border) 56%);
 }
 
 [data-os="win32"] .app-container::before {
@@ -358,7 +602,7 @@ textarea {
     inset: 0;
     pointer-events: none;
     border-radius: inherit;
-    padding: 1px;
+    padding: var(--win-border-effective-w);
     background: linear-gradient(
         140deg,
         color-mix(in srgb, rgba(255,255,255,0.58), var(--prism-cyan)),

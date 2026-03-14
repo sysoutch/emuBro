@@ -26,9 +26,17 @@ export function getLanguageManagerModalElements(documentRef = document) {
         exportAllBtn: documentRef.getElementById('export-all-languages-btn'),
         exportCurrentBtn: documentRef.getElementById('export-current-lang-btn'),
         translateBtn: documentRef.getElementById('lang-translate-llm-btn'),
+        keysList: documentRef.getElementById('lang-keys-list'),
         translationModeSelect: documentRef.getElementById('lang-translate-llm-mode'),
         retranslateExistingToggle: documentRef.getElementById('lang-translate-llm-retranslate-existing'),
         translationStyleHintInput: documentRef.getElementById('lang-translate-llm-style-hint'),
+        translationStyleHintPresets: documentRef.getElementById('lang-translate-llm-style-hint-presets'),
+        saveStylePresetBtn: documentRef.getElementById('lang-translate-llm-style-save'),
+        deleteStylePresetBtn: documentRef.getElementById('lang-translate-llm-style-delete'),
+        translationPromptTemplateInput: documentRef.getElementById('lang-translate-llm-prompt-template'),
+        resetPromptTemplateBtn: documentRef.getElementById('lang-translate-llm-prompt-reset'),
+        translatePromptTemplateBtn: documentRef.getElementById('lang-translate-llm-prompt-translate'),
+        includeExistingInPromptToggle: documentRef.getElementById('lang-translate-llm-include-existing-in-prompt'),
         searchInput: documentRef.getElementById('lang-search-keys'),
         liveEditToggle: documentRef.getElementById('lang-live-edit-toggle')
     };
@@ -44,6 +52,11 @@ export function bindLanguageManagerModalEvents({
     onExportAll,
     onExportCurrent,
     onTranslate,
+    onTranslateKey,
+    onSaveStylePreset,
+    onDeleteStylePreset,
+    onTranslatePromptTemplate,
+    onResetPromptTemplate,
     onSearch,
     onLiveEditToggle,
     onAddLanguage,
@@ -59,9 +72,17 @@ export function bindLanguageManagerModalEvents({
         exportAllBtn,
         exportCurrentBtn,
         translateBtn,
+        keysList,
         translationModeSelect,
         retranslateExistingToggle,
         translationStyleHintInput,
+        translationStyleHintPresets,
+        saveStylePresetBtn,
+        deleteStylePresetBtn,
+        translationPromptTemplateInput,
+        resetPromptTemplateBtn,
+        translatePromptTemplateBtn,
+        includeExistingInPromptToggle,
         searchInput,
         liveEditToggle
     } = elements || {};
@@ -95,13 +116,55 @@ export function bindLanguageManagerModalEvents({
         ));
     }
 
+    if (keysList) {
+        keysList.addEventListener('click', (event) => {
+            const translateKeyButton = event.target?.closest?.('[data-lang-translate-key]');
+            if (!translateKeyButton) return;
+            runAsyncHandler(
+                () => onTranslateKey?.(event, translateKeyButton, String(translateKeyButton.dataset.langTranslateKey || '').trim()),
+                null
+            );
+        });
+    }
+
     if (typeof initializeTranslationControls === 'function') {
         initializeTranslationControls({
             translationModeSelect,
             retranslateExistingToggle,
             translationStyleHintInput,
+            translationStyleHintPresets,
+            translationPromptTemplateInput,
+            includeExistingInPromptToggle,
             ...(translationControlsConfig || {})
         });
+    }
+
+    if (saveStylePresetBtn) {
+        saveStylePresetBtn.addEventListener('click', () => runAsyncHandler(
+            () => onSaveStylePreset?.(),
+            null
+        ));
+    }
+
+    if (deleteStylePresetBtn) {
+        deleteStylePresetBtn.addEventListener('click', () => runAsyncHandler(
+            () => onDeleteStylePreset?.(),
+            null
+        ));
+    }
+
+    if (resetPromptTemplateBtn) {
+        resetPromptTemplateBtn.addEventListener('click', () => runAsyncHandler(
+            () => onResetPromptTemplate?.(),
+            null
+        ));
+    }
+
+    if (translatePromptTemplateBtn) {
+        translatePromptTemplateBtn.addEventListener('click', () => runAsyncHandler(
+            (event) => onTranslatePromptTemplate?.(event, translatePromptTemplateBtn),
+            null
+        ));
     }
 
     if (searchInput) {

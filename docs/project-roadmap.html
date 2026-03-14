@@ -1,0 +1,2799 @@
+<!doctype html>
+<html lang="en" data-layout="vertical">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>emuBro Roadmap</title>
+  <style>
+    :root {
+      --bg: #08111b;
+      --bg-panel: #0d1925;
+      --bg-panel-soft: #122233;
+      --text: #eaf2fb;
+      --muted: #97aabe;
+      --line: rgba(127, 180, 255, 0.2);
+      --accent: #66ccff;
+      --accent-strong: #44b7ff;
+      --warn: #f7b955;
+      --ok: #55d7a0;
+      --danger: #ff6b79;
+      --shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Inter, system-ui, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(68, 183, 255, 0.18), transparent 26%),
+        radial-gradient(circle at top right, rgba(132, 255, 214, 0.12), transparent 22%),
+        linear-gradient(180deg, #071019 0%, #09131f 50%, #08111b 100%);
+      min-height: 100vh;
+    }
+
+    .page {
+      width: min(1320px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 28px 0 48px;
+    }
+
+    .hero,
+    .panel {
+      background: linear-gradient(180deg, rgba(17, 31, 45, 0.96), rgba(11, 22, 34, 0.96));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.22);
+    }
+
+    .hero { padding: 24px 26px; margin-bottom: 16px; }
+    .panel { padding: 18px; margin-top: 16px; }
+
+    .hero-top,
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    h1, h2, h3, h4, p { margin: 0; }
+
+    h1 {
+      margin-top: 10px;
+      font-size: clamp(2rem, 4vw, 3rem);
+      line-height: 1;
+    }
+
+    .summary {
+      margin-top: 12px;
+      max-width: 860px;
+      color: var(--muted);
+      font-size: 0.96rem;
+      line-height: 1.5;
+    }
+
+    .hero-meta {
+      display: grid;
+      gap: 0;
+      min-width: 260px;
+    }
+
+    .meta-chip {
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(102, 204, 255, 0.05);
+    }
+
+    .hero-meta-card {
+      display: grid;
+      gap: 0;
+      overflow: hidden;
+    }
+
+    .hero-meta-row {
+      display: grid;
+      gap: 4px;
+      padding: 10px 0;
+    }
+
+    .hero-meta-row + .hero-meta-row {
+      border-top: 1px solid rgba(127, 180, 255, 0.12);
+    }
+
+    .meta-chip strong,
+    .minor-label {
+      display: block;
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .meta-chip span {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .section-title {
+      font-size: 1.08rem;
+      margin-bottom: 12px;
+    }
+
+    .section-head-with-tools,
+    .markdown-slot-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .markdown-slot-head h4 {
+      margin: 0;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+    }
+
+    .grid-two,
+    .grid-three {
+      display: grid;
+      gap: 18px;
+    }
+
+    .grid-two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+    ul {
+      margin: 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 10px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .danger-list li { color: #f4b7bf; }
+
+    .current-phase-metrics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 12px;
+    }
+
+    .metric-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .risk-low { border-color: rgba(85, 215, 160, 0.4); }
+    .risk-medium { border-color: rgba(247, 185, 85, 0.42); }
+    .risk-high { border-color: rgba(255, 107, 121, 0.42); }
+
+    .confidence-low { box-shadow: inset 0 0 0 1px rgba(255, 107, 121, 0.12); }
+    .confidence-medium { box-shadow: inset 0 0 0 1px rgba(247, 185, 85, 0.12); }
+    .confidence-high { box-shadow: inset 0 0 0 1px rgba(85, 215, 160, 0.12); }
+
+    .toolbar {
+      display: inline-flex;
+      gap: 8px;
+      padding: 6px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .toolbar input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .toolbar label {
+      border: 0;
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: transparent;
+      color: var(--muted);
+      font-weight: 700;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    #layout-vertical:checked + label,
+    #layout-horizontal:checked + label {
+      background: rgba(102, 204, 255, 0.15);
+      color: var(--text);
+    }
+
+    .workspace-panel {
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .workspace-head {
+      padding: 18px 18px 0;
+      margin-bottom: 12px;
+    }
+
+    .workspace-body {
+      padding: 0 18px 18px;
+    }
+
+    .roadmap-tabbar {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 6px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.035);
+    }
+
+    .roadmap-tab-btn {
+      border: 0;
+      border-radius: 999px;
+      padding: 9px 14px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+    }
+
+    .roadmap-tab-btn:hover {
+      color: var(--text);
+      transform: translateY(-1px);
+    }
+
+    .roadmap-tab-btn.is-active {
+      background: rgba(102, 204, 255, 0.14);
+      color: var(--text);
+      box-shadow: 0 0 0 1px rgba(102, 204, 255, 0.16) inset;
+    }
+
+    .roadmap-pane {
+      display: none;
+      gap: 16px;
+      animation: roadmap-pane-fade 180ms ease;
+    }
+
+    .roadmap-pane.is-active {
+      display: grid;
+    }
+
+    @keyframes roadmap-pane-fade {
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .mini-action,
+    .focus-chip {
+      border: 1px solid rgba(127, 180, 255, 0.18);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.035);
+      color: var(--text);
+      font-size: 0.74rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: transform 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+    }
+
+    .mini-action {
+      padding: 8px 12px;
+      width: fit-content;
+    }
+
+    .mini-action:hover,
+    .focus-chip:hover {
+      transform: translateY(-1px);
+      border-color: rgba(102, 204, 255, 0.34);
+      background: rgba(102, 204, 255, 0.1);
+    }
+
+    .subtle-inline-note {
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+
+    .focus-workspace {
+      display: grid;
+      gap: 14px;
+      padding: 18px;
+    }
+
+    .focus-chipbar {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .focus-chip {
+      padding: 9px 14px;
+      text-transform: uppercase;
+    }
+
+    .focus-chip.is-active {
+      background: rgba(102, 204, 255, 0.14);
+      border-color: rgba(102, 204, 255, 0.28);
+      box-shadow: 0 0 0 1px rgba(102, 204, 255, 0.16) inset;
+    }
+
+    .focus-panes {
+      display: grid;
+    }
+
+    .focus-pane {
+      display: none;
+      animation: roadmap-pane-fade 180ms ease;
+    }
+
+    .focus-pane.is-active {
+      display: grid;
+    }
+
+    .focus-hero-card,
+    .focus-summary-card,
+    .dependency-card,
+    .recent-change-card {
+      border: 1px solid rgba(127, 180, 255, 0.16);
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(15, 28, 40, 0.96), rgba(11, 22, 34, 0.92));
+      box-shadow: 0 12px 26px rgba(0, 0, 0, 0.14);
+    }
+
+    .focus-hero-card {
+      display: grid;
+      gap: 14px;
+      padding: 18px;
+    }
+
+    .focus-hero-card.current {
+      border-color: rgba(102, 204, 255, 0.24);
+    }
+
+    .focus-hero-card.up-next {
+      border-color: rgba(247, 185, 85, 0.28);
+    }
+
+    .focus-hero-top,
+    .focus-summary-head,
+    .dependency-card-head,
+    .focus-cta-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .focus-eyebrow,
+    .dependency-step,
+    .dependency-state {
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .focus-grid-two,
+    .focus-card-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .focus-list-shell {
+      display: grid;
+      gap: 8px;
+      padding: 14px;
+      border: 1px solid rgba(127, 180, 255, 0.12);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .focus-list-shell h4 {
+      margin: 0;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+    }
+
+    .focus-summary-card {
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+    }
+
+    .recent-change-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .recent-change-card {
+      display: grid;
+      gap: 8px;
+      padding: 14px;
+    }
+
+    .recent-change-card.is-latest {
+      border-color: rgba(102, 204, 255, 0.26);
+      background: linear-gradient(180deg, rgba(17, 35, 50, 0.98), rgba(11, 23, 36, 0.94));
+    }
+
+    .recent-change-date {
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .dependency-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .dependency-card {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+    }
+
+    .dependency-card h3,
+    .focus-hero-card h3,
+    .focus-summary-card h3 {
+      font-size: 1rem;
+      line-height: 1.25;
+    }
+
+    .dependency-card p,
+    .focus-hero-card p,
+    .focus-summary-card p {
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .dependency-card-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .dependency-arrow {
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 1.2rem;
+      font-weight: 900;
+    }
+
+    .roadmap-tools-panel {
+      display: grid;
+      gap: 14px;
+    }
+
+    .roadmap-tools-actions {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .roadmap-tools-actions input[type="file"] {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .roadmap-editor-shell {
+      border: 1px solid rgba(127, 180, 255, 0.12);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.025);
+      padding: 14px;
+    }
+
+    .roadmap-editor-toggle {
+      cursor: pointer;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+    }
+
+    .roadmap-editor-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-top: 14px;
+    }
+
+    .editor-field {
+      display: grid;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .editor-field-wide {
+      grid-column: 1 / -1;
+    }
+
+    .editor-field span {
+      font-size: 0.74rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .editor-field input,
+    .editor-field select,
+    .editor-field textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(127, 180, 255, 0.16);
+      background: rgba(6, 15, 24, 0.55);
+      color: var(--text);
+      font: inherit;
+    }
+
+    .roadmap-editor-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-top: 14px;
+    }
+
+    .roadmap-dropzone {
+      padding: 14px 16px;
+      border: 1px dashed rgba(127, 180, 255, 0.22);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--muted);
+      line-height: 1.5;
+      transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+    }
+
+    .roadmap-dropzone.is-active {
+      border-color: rgba(102, 204, 255, 0.42);
+      background: rgba(102, 204, 255, 0.08);
+      color: var(--text);
+    }
+
+    .timeline-stop-track {
+      display: inline-flex;
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .workstream-ui-parity .timeline-stop-card,
+    .workstream-ui-parity.focus-summary-card,
+    .workstream-ui-parity.focus-hero-card,
+    .workstream-ui-parity.dependency-card,
+    .workstream-ui-parity.milestone-card {
+      box-shadow: 0 0 0 1px rgba(102, 204, 255, 0.16);
+    }
+
+    .workstream-runtime-hardening .timeline-stop-card,
+    .workstream-runtime-hardening.focus-summary-card,
+    .workstream-runtime-hardening.focus-hero-card,
+    .workstream-runtime-hardening.dependency-card,
+    .workstream-runtime-hardening.milestone-card {
+      box-shadow: 0 0 0 1px rgba(247, 185, 85, 0.16);
+    }
+
+    .workstream-beta-validation .timeline-stop-card,
+    .workstream-beta-validation.focus-summary-card,
+    .workstream-beta-validation.focus-hero-card,
+    .workstream-beta-validation.dependency-card,
+    .workstream-beta-validation.milestone-card {
+      box-shadow: 0 0 0 1px rgba(173, 132, 255, 0.18);
+    }
+
+    .workstream-release-quality .timeline-stop-card,
+    .workstream-release-quality.focus-summary-card,
+    .workstream-release-quality.focus-hero-card,
+    .workstream-release-quality.dependency-card,
+    .workstream-release-quality.milestone-card {
+      box-shadow: 0 0 0 1px rgba(85, 215, 160, 0.18);
+    }
+
+    .markdown-tools {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .markdown-tools input[type="file"] {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .markdown-upload-btn,
+    .markdown-reset-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 30px;
+      padding: 0 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(127, 180, 255, 0.18);
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--muted);
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      user-select: none;
+      transition: border-color 0.16s ease, color 0.16s ease, background-color 0.16s ease;
+    }
+
+    .markdown-upload-btn:hover,
+    .markdown-reset-btn:hover {
+      border-color: rgba(102, 204, 255, 0.34);
+      color: var(--text);
+      background: rgba(102, 204, 255, 0.08);
+    }
+
+    .markdown-slot-shell {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .markdown-slot {
+      display: grid;
+      gap: 10px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .markdown-slot h1,
+    .markdown-slot h2,
+    .markdown-slot h3,
+    .markdown-slot h4 {
+      color: var(--text);
+      line-height: 1.2;
+      margin: 0;
+    }
+
+    .markdown-slot p {
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .markdown-slot ul,
+    .markdown-slot ol {
+      margin: 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .markdown-slot a {
+      color: var(--accent);
+    }
+
+    .markdown-slot blockquote {
+      margin: 0;
+      padding: 10px 12px;
+      border-left: 3px solid rgba(102, 204, 255, 0.38);
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 10px;
+      color: var(--text);
+    }
+
+    .markdown-slot code {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.9em;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 1px 5px;
+      border-radius: 6px;
+    }
+
+    .markdown-slot pre {
+      margin: 0;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.2);
+      overflow: auto;
+    }
+
+    .markdown-slot hr {
+      width: 100%;
+      height: 1px;
+      border: 0;
+      background: rgba(127, 180, 255, 0.16);
+      margin: 6px 0;
+    }
+
+    .markdown-image-wrap {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+    }
+
+    .markdown-image-wrap img {
+      width: 100%;
+      max-height: 320px;
+      object-fit: cover;
+      border-radius: 14px;
+      border: 1px solid rgba(127, 180, 255, 0.16);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .markdown-image-wrap figcaption {
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .markdown-frontmatter {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      border: 1px solid rgba(127, 180, 255, 0.16);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.025);
+      margin-bottom: 12px;
+    }
+
+    .markdown-slot[data-markdown-theme="warning"] .markdown-frontmatter {
+      border-color: rgba(247, 185, 85, 0.26);
+      background: rgba(247, 185, 85, 0.08);
+    }
+
+    .markdown-slot[data-markdown-theme="success"] .markdown-frontmatter {
+      border-color: rgba(85, 215, 160, 0.26);
+      background: rgba(85, 215, 160, 0.08);
+    }
+
+    .markdown-slot[data-markdown-theme="danger"] .markdown-frontmatter {
+      border-color: rgba(255, 107, 121, 0.26);
+      background: rgba(255, 107, 121, 0.08);
+    }
+
+    .markdown-slot pre code {
+      background: transparent;
+      padding: 0;
+    }
+
+    .markdown-slot-empty {
+      padding: 12px 14px;
+      border: 1px dashed rgba(127, 180, 255, 0.18);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .markdown-slot-inline {
+      margin-top: 0;
+    }
+
+    .markdown-empty-state {
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .timeline-stage {
+      padding: 20px 20px 18px;
+      overflow: hidden;
+    }
+
+    .timeline-scroll {
+      overflow-x: auto;
+      overflow-y: visible;
+      padding: 12px 2px 6px;
+    }
+
+    .timeline-scene {
+      --timeline-node-size: 78px;
+      --timeline-line-thickness: 22px;
+      position: relative;
+      min-width: max(960px, calc(240px * 4));
+      display: grid;
+      grid-template-columns: repeat(4, minmax(180px, 1fr));
+      gap: 10px;
+      align-items: center;
+      padding: 120px 18px 130px;
+    }
+
+    .timeline-scene-count-1 { grid-template-columns: repeat(1, minmax(180px, 1fr)); min-width: 280px; }
+    .timeline-scene-count-2 { grid-template-columns: repeat(2, minmax(180px, 1fr)); min-width: 520px; }
+    .timeline-scene-count-3 { grid-template-columns: repeat(3, minmax(180px, 1fr)); min-width: 760px; }
+    .timeline-scene-count-4 { grid-template-columns: repeat(4, minmax(180px, 1fr)); min-width: 980px; }
+    .timeline-scene-count-5 { grid-template-columns: repeat(5, minmax(180px, 1fr)); min-width: 1180px; }
+    .timeline-scene-count-6 { grid-template-columns: repeat(6, minmax(180px, 1fr)); min-width: 1380px; }
+
+    .timeline-scene::before {
+      content: "";
+      position: absolute;
+      left: 24px;
+      right: 24px;
+      top: 50%;
+      height: var(--timeline-line-thickness);
+      transform: translateY(-50%);
+      border-radius: 999px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.02) 44%, rgba(0, 0, 0, 0.12)),
+        linear-gradient(90deg, rgba(102, 204, 255, 0.92), rgba(68, 183, 255, 0.78));
+      box-shadow:
+        0 10px 24px rgba(0, 0, 0, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.14),
+        inset 0 -3px 0 rgba(0, 0, 0, 0.18);
+    }
+
+    .timeline-scene::after {
+      content: "";
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      border-top: 14px solid transparent;
+      border-bottom: 14px solid transparent;
+      border-left: 20px solid rgba(68, 183, 255, 0.84);
+      filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.18));
+    }
+
+    .timeline-stop {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-self: stretch;
+      z-index: 1;
+    }
+
+    .timeline-stop.top {
+      padding-bottom: 54px;
+    }
+
+    .timeline-stop.bottom {
+      padding-top: 54px;
+      flex-direction: column-reverse;
+    }
+
+    .timeline-stop-card {
+      width: min(200px, 100%);
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(127, 180, 255, 0.18);
+      background: linear-gradient(180deg, rgba(20, 36, 52, 0.94), rgba(12, 23, 36, 0.94));
+      box-shadow:
+        0 14px 24px rgba(0, 0, 0, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      display: grid;
+      gap: 5px;
+      text-align: left;
+    }
+
+    .timeline-stop-chip {
+      display: inline-flex;
+      width: fit-content;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(102, 204, 255, 0.12);
+      color: var(--accent);
+      font-size: 0.65rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .timeline-stop-card strong {
+      font-size: 0.96rem;
+      line-height: 1.2;
+    }
+
+    .timeline-stop-window {
+      color: var(--muted);
+      font-size: 0.75rem;
+      line-height: 1.35;
+    }
+
+    .timeline-stop-stem {
+      width: 3px;
+      height: 62px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(102, 204, 255, 0.42), rgba(255, 255, 255, 0.08));
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04);
+    }
+
+    .timeline-stop-node {
+      width: var(--timeline-node-size);
+      height: var(--timeline-node-size);
+      border: 0;
+      padding: 10px;
+      border-radius: 24px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.04)),
+        linear-gradient(135deg, rgba(102, 204, 255, 0.2), rgba(68, 183, 255, 0.08));
+      box-shadow:
+        0 16px 24px rgba(0, 0, 0, 0.22),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transform: rotate(45deg);
+      transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    }
+
+    .timeline-stop-node:hover {
+      transform: rotate(45deg) translateY(-2px);
+      box-shadow:
+        0 18px 28px rgba(0, 0, 0, 0.24),
+        0 0 0 1px rgba(102, 204, 255, 0.18) inset;
+    }
+
+    .timeline-stop-node-core {
+      width: 100%;
+      height: 100%;
+      border-radius: 18px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(180deg, rgba(68, 183, 255, 0.92), rgba(57, 160, 224, 0.88));
+      color: #04111b;
+      font-size: 1.15rem;
+      font-weight: 900;
+      transform: rotate(-45deg);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.26),
+        inset 0 -4px 0 rgba(0, 0, 0, 0.12);
+    }
+
+    .timeline-stop.current .timeline-stop-node-core {
+      background: linear-gradient(180deg, rgba(102, 204, 255, 1), rgba(82, 197, 255, 0.9));
+    }
+
+    .timeline-stop.up-next .timeline-stop-node-core {
+      background: linear-gradient(180deg, rgba(247, 185, 85, 0.98), rgba(230, 155, 52, 0.92));
+    }
+
+    .timeline-stop.future .timeline-stop-node-core {
+      background: linear-gradient(180deg, rgba(109, 147, 189, 0.86), rgba(81, 112, 147, 0.82));
+      color: #eaf2fb;
+    }
+
+    .timeline-stop.risk-high .timeline-stop-card {
+      border-color: rgba(255, 107, 121, 0.24);
+    }
+
+    .layout-switch {
+      display: grid;
+      gap: 12px;
+    }
+
+    .overview-grid,
+    .release-grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .overview-grid {
+      grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+      align-items: start;
+    }
+
+    .release-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .stack-panel {
+      display: grid;
+      gap: 16px;
+    }
+
+    .milestones {
+      display: grid;
+      gap: 12px;
+    }
+
+    #layout-horizontal:checked ~ .layout-switch .milestones {
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(340px, 1fr);
+      overflow-x: auto;
+      padding-bottom: 8px;
+    }
+
+    .milestone-card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(17, 31, 45, 0.92), rgba(11, 22, 34, 0.92));
+      overflow: hidden;
+    }
+
+    .milestone-card.current { box-shadow: 0 0 0 1px rgba(102, 204, 255, 0.2); }
+    .milestone-card.up-next { box-shadow: inset 0 0 0 1px rgba(247, 185, 85, 0.12); }
+    .milestone-card.risk-high { border-color: rgba(255, 107, 121, 0.4); }
+    .milestone-card.risk-medium { border-color: rgba(247, 185, 85, 0.32); }
+    .milestone-card.risk-low { border-color: rgba(85, 215, 160, 0.32); }
+
+    .milestone-toggle {
+      width: 100%;
+      background: transparent;
+      border: 0;
+      color: inherit;
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: center;
+      padding: 14px 16px;
+      cursor: pointer;
+      text-align: left;
+      list-style: none;
+    }
+
+    .milestone-toggle::-webkit-details-marker {
+      display: none;
+    }
+
+    .milestone-toggle-left {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      min-width: 0;
+    }
+
+    .milestone-step {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      background: rgba(102, 204, 255, 0.12);
+      color: var(--accent);
+      flex: 0 0 auto;
+    }
+
+    .milestone-head {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .milestone-state {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .milestone-head h3 {
+      font-size: 1.05rem;
+    }
+
+    .milestone-date {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    .milestone-chevron {
+      font-size: 1.4rem;
+      color: var(--accent);
+      line-height: 1;
+      flex: 0 0 auto;
+    }
+
+    .milestone-card[open] .milestone-chevron { transform: rotate(45deg); }
+    .milestone-body { display: none; padding: 0 16px 16px; }
+    .milestone-card[open] .milestone-body { display: grid; gap: 12px; }
+
+    .dependency-pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .dependency-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(127, 180, 255, 0.14);
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    .dependency-pill.unlocks {
+      border-color: rgba(85, 215, 160, 0.2);
+      color: #b6eacf;
+    }
+
+    .completion-bar {
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      overflow: hidden;
+    }
+
+    .completion-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+      border-radius: inherit;
+    }
+
+    .milestone-goal {
+      color: var(--text);
+      font-weight: 600;
+      line-height: 1.45;
+    }
+
+    .milestone-columns {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .milestone-columns section {
+      padding: 12px 12px 10px;
+      border: 1px solid rgba(127, 180, 255, 0.12);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .milestone-columns h4 {
+      margin-bottom: 8px;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+    }
+
+    .history-strip {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .history-entry {
+      display: grid;
+      grid-template-columns: 120px minmax(0, 1fr);
+      gap: 14px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .history-date {
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .history-content {
+      display: grid;
+      gap: 6px;
+    }
+
+    .history-content p { color: var(--muted); line-height: 1.5; }
+    .footer-note { margin-top: 16px; color: var(--muted); font-size: 0.76rem; }
+
+    @media (max-width: 980px) {
+      .grid-two,
+      .grid-three,
+      .milestone-columns,
+      .overview-grid,
+      .release-grid,
+      .focus-grid-two,
+      .focus-card-grid,
+      .roadmap-editor-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .history-entry {
+        grid-template-columns: 1fr;
+      }
+
+      .dependency-strip {
+        grid-template-columns: 1fr;
+      }
+
+      .timeline-scene,
+      .timeline-scene-count-1,
+      .timeline-scene-count-2,
+      .timeline-scene-count-3,
+      .timeline-scene-count-4,
+      .timeline-scene-count-5,
+      .timeline-scene-count-6 {
+        min-width: 760px;
+      }
+
+      #layout-horizontal:checked ~ .layout-switch .milestones {
+        grid-auto-flow: row;
+        grid-auto-columns: auto;
+        overflow-x: visible;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="eyebrow">emuBro roadmap</div>
+          <h1>Post-Migration Stabilization / Pre-Beta</h1>
+          <p class="summary">The desktop app is usable, but it is still carrying migration debt, UI parity gaps, and some legacy/runtime overlap that should be cleaned up before calling it beta.</p>
+          <div class="current-phase-metrics">
+            <span class="metric-badge risk-medium">Risk: Medium</span>
+            <span class="metric-badge confidence-medium">Confidence: Medium</span>
+            <span class="metric-badge">Target Window: March 2026 to April 2026</span>
+          </div>
+        </div>
+        <div class="hero-meta">
+          <div class="meta-chip hero-meta-card">
+            <div class="hero-meta-row">
+              <strong>Version</strong>
+              <span>1.0.0-alpha.32</span>
+            </div>
+            <div class="hero-meta-row">
+              <strong>Roadmap Date</strong>
+              <span>2026-03-12</span>
+            </div>
+            <div class="hero-meta-row">
+              <strong>Dashboard Updated</strong>
+              <span>14 Mar 2026, 17:40</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel workspace-panel">
+      <div class="panel-head workspace-head">
+        <div>
+          <h2 class="section-title" style="margin-bottom:6px;">Roadmap Workspace</h2>
+          <span class="minor-label">Focus on the layer you want right now instead of scanning one long page.</span>
+        </div>
+        <div class="roadmap-tabbar" role="tablist" aria-label="Roadmap sections">
+          <button class="roadmap-tab-btn is-active" type="button" data-roadmap-tab="overview">Overview</button>
+          <button class="roadmap-tab-btn" type="button" data-roadmap-tab="milestones">Milestones</button>
+          <button class="roadmap-tab-btn" type="button" data-roadmap-tab="gates">Release Gates</button>
+          <button class="roadmap-tab-btn" type="button" data-roadmap-tab="history">History</button>
+        </div>
+      </div>
+      <div class="workspace-body">
+        <section class="roadmap-pane is-active" data-roadmap-pane="overview">
+          
+        <section class="panel focus-workspace">
+            <div class="panel-head">
+                <div>
+                    <h2 class="section-title" style="margin-bottom:6px;">Focus Mode</h2>
+                    <span class="minor-label">Switch between the immediate plan, the next phase, later milestones, and the real blockers.</span>
+                </div>
+                <div class="focus-chipbar" role="tablist" aria-label="Focus modes">
+                    <button class="focus-chip is-active" type="button" data-focus-view="now">Now</button>
+                    <button class="focus-chip" type="button" data-focus-view="next">Next</button>
+                    <button class="focus-chip" type="button" data-focus-view="later">Later</button>
+                    <button class="focus-chip" type="button" data-focus-view="risks">Risks</button>
+                </div>
+            </div>
+            <div class="focus-panes">
+                <section class="focus-pane is-active" data-focus-pane="now">
+                    <div class="focus-hero-card current workstream-ui-parity" data-milestone-id="migration-recovery">
+                        <div class="focus-hero-top">
+                            <span class="focus-eyebrow">UI Parity</span>
+                            <span class="metric-badge completion" data-milestone-completion-plain="migration-recovery">62% complete</span>
+                        </div>
+                        <h3 data-milestone-title="migration-recovery">Migration Recovery</h3>
+                        <p data-milestone-goal="migration-recovery">Re-establish parity for the core Electron-era UX in the current desktop app.</p>
+                        <div class="focus-list-shell">
+                            <h4>Priority focus</h4>
+                            <ul><li>Finish missing behaviors in header, sidebar, docking, popups, support flows, theme manager, language manager, and window chrome.</li><li>Remove obviously redundant or temporary migration paths where the new implementation already exists.</li><li>Close obvious parity gaps that still force users back into the classic/legacy fallback.</li></ul>
+                        </div>
+                        <div class="focus-cta-row">
+                            <button class="mini-action" type="button" data-milestone-jump="milestone-migration-recovery">Open current milestone</button>
+                            <span class="subtle-inline-note" data-milestone-window="migration-recovery">March 2026 to April 2026</span>
+                        </div>
+                    </div>
+                </section>
+                <section class="focus-pane" data-focus-pane="next">
+                    <div class="focus-hero-card up-next workstream-runtime-hardening" data-milestone-id="pre-beta-hardening">
+                        <div class="focus-hero-top">
+                            <span class="focus-eyebrow">Runtime Hardening</span>
+                            <span class="metric-badge" data-current-milestone-title>Blocked by: Migration Recovery</span>
+                        </div>
+                        <h3 data-milestone-title="pre-beta-hardening">Pre-Beta Hardening</h3>
+                        <p data-milestone-goal="pre-beta-hardening">Reduce runtime overlap and make the migrated app reliable enough for beta.</p>
+                        <div class="focus-grid-two">
+                            <div class="focus-list-shell">
+                                <h4>What needs to clear first</h4>
+                                <ul><li>Migration Recovery</li><li>Cannot start in earnest until migration-recovery issues stop forcing workarounds.</li><li>Large files and mixed responsibilities still need steady cleanup while behavior is stabilized.</li></ul>
+                            </div>
+                            <div class="focus-list-shell">
+                                <h4>What this phase should deliver</h4>
+                                <ul><li>Refactor large files continuously so stabilization does not create new monoliths.</li><li>Fix resize/layout bugs, persistence bugs, interaction regressions, and restart-only recovery issues.</li><li>Ensure the main user journeys work without manual recovery steps or hidden fallback behavior.</li></ul>
+                            </div>
+                        </div>
+                        <div class="focus-cta-row">
+                            <button class="mini-action" type="button" data-milestone-jump="milestone-pre-beta-hardening">Open next milestone</button>
+                            <span class="subtle-inline-note" data-milestone-window="pre-beta-hardening">April 2026 to May 2026</span>
+                        </div>
+                    </div>
+                </section>
+                <section class="focus-pane" data-focus-pane="later">
+                    <div class="focus-card-grid">
+                        
+                            <article class="focus-summary-card state-future workstream-beta-validation" data-milestone-id="beta">
+                                <div class="focus-summary-head">
+                                    <span class="focus-eyebrow">Beta Validation</span>
+                                    <span class="metric-badge" data-milestone-window="beta">Q2 2026 (tentative)</span>
+                                </div>
+                                <h3 data-milestone-title="beta">Beta</h3>
+                                <p data-milestone-goal="beta">Make the desktop runtime the feature-complete primary experience for normal users.</p>
+                                <button class="mini-action" type="button" data-milestone-jump="milestone-beta">Open milestone</button>
+                            </article>
+                        
+                            <article class="focus-summary-card state-future workstream-release-quality" data-milestone-id="stable">
+                                <div class="focus-summary-head">
+                                    <span class="focus-eyebrow">Release Quality</span>
+                                    <span class="metric-badge" data-milestone-window="stable">Q3 2026 or later (tentative)</span>
+                                </div>
+                                <h3 data-milestone-title="stable">Stable</h3>
+                                <p data-milestone-goal="stable">Make the desktop app the default recommended experience with no major fallback dependency.</p>
+                                <button class="mini-action" type="button" data-milestone-jump="milestone-stable">Open milestone</button>
+                            </article>
+                        
+                    </div>
+                </section>
+                <section class="focus-pane" data-focus-pane="risks">
+                    <div class="focus-card-grid">
+                        
+                            <article class="focus-summary-card risk-medium workstream-ui-parity" data-milestone-id="migration-recovery">
+                                <div class="focus-summary-head">
+                                    <span class="focus-eyebrow">UI Parity</span>
+                                    <span class="metric-badge risk-medium" data-milestone-blockers="migration-recovery">Blockers: 3</span>
+                                </div>
+                                <h3 data-milestone-title="migration-recovery">Migration Recovery</h3>
+                                <div data-milestone-blocker-list="migration-recovery"><ul><li>A few UI/layout bugs still only settle correctly after manual interaction or resize.</li><li>Some legacy/runtime overlap still makes ownership of behavior less clean than it should be.</li><li>Visual parity is improved but still not consistently at the historical standard across all views.</li></ul></div>
+                                <button class="mini-action" type="button" data-milestone-jump="milestone-migration-recovery">Inspect blockers</button>
+                            </article>
+                        
+                            <article class="focus-summary-card risk-medium workstream-runtime-hardening" data-milestone-id="pre-beta-hardening">
+                                <div class="focus-summary-head">
+                                    <span class="focus-eyebrow">Runtime Hardening</span>
+                                    <span class="metric-badge risk-medium" data-milestone-blockers="pre-beta-hardening">Blockers: 2</span>
+                                </div>
+                                <h3 data-milestone-title="pre-beta-hardening">Pre-Beta Hardening</h3>
+                                <div data-milestone-blocker-list="pre-beta-hardening"><ul><li>Cannot start in earnest until migration-recovery issues stop forcing workarounds.</li><li>Large files and mixed responsibilities still need steady cleanup while behavior is stabilized.</li></ul></div>
+                                <button class="mini-action" type="button" data-milestone-jump="milestone-pre-beta-hardening">Inspect blockers</button>
+                            </article>
+                        
+                            <article class="focus-summary-card risk-medium workstream-beta-validation" data-milestone-id="beta">
+                                <div class="focus-summary-head">
+                                    <span class="focus-eyebrow">Beta Validation</span>
+                                    <span class="metric-badge risk-medium" data-milestone-blockers="beta">Blockers: 2</span>
+                                </div>
+                                <h3 data-milestone-title="beta">Beta</h3>
+                                <div data-milestone-blocker-list="beta"><ul><li>Depends on pre-beta hardening being broadly complete.</li><li>Should not start while legacy fallback is still needed for core confidence.</li></ul></div>
+                                <button class="mini-action" type="button" data-milestone-jump="milestone-beta">Inspect blockers</button>
+                            </article>
+                        
+                            <article class="focus-summary-card risk-high workstream-release-quality" data-milestone-id="stable">
+                                <div class="focus-summary-head">
+                                    <span class="focus-eyebrow">Release Quality</span>
+                                    <span class="metric-badge risk-high" data-milestone-blockers="stable">Blockers: 2</span>
+                                </div>
+                                <h3 data-milestone-title="stable">Stable</h3>
+                                <div data-milestone-blocker-list="stable"><ul><li>Requires beta to prove daily-use reliability over time.</li><li>Requires cross-platform and persistence quality to be consistently strong.</li></ul></div>
+                                <button class="mini-action" type="button" data-milestone-jump="milestone-stable">Inspect blockers</button>
+                            </article>
+                        
+                    </div>
+                </section>
+            </div>
+        </section>
+    
+
+          <section class="panel timeline-stage compact">
+            <div class="panel-head">
+              <div>
+                <h2 class="section-title" style="margin-bottom:6px;">Roadmap Timeline</h2>
+                <span class="minor-label">Select a milestone stop to jump straight into milestone details.</span>
+              </div>
+            </div>
+            
+        <div class="timeline-scroll">
+            <div class="timeline-scene timeline-scene-count-4">
+                
+                        <div class="timeline-stop top current risk-medium workstream-ui-parity" data-milestone-id="migration-recovery">
+                            <div class="timeline-stop-card">
+                                <span class="timeline-stop-chip">Current · 62%</span>
+                                <strong data-milestone-title="migration-recovery">Migration Recovery</strong>
+                                <span class="timeline-stop-window" data-milestone-window="migration-recovery">March 2026 to April 2026</span>
+                                <span class="timeline-stop-track">UI Parity</span>
+                            </div>
+                            <div class="timeline-stop-stem" aria-hidden="true"></div>
+                            <button class="timeline-stop-node" type="button" data-milestone-jump="milestone-migration-recovery" aria-controls="milestone-migration-recovery" aria-label="Open Migration Recovery details">
+                                <span class="timeline-stop-node-core" title="UI Parity">UX</span>
+                            </button>
+                        </div>
+                    
+                        <div class="timeline-stop bottom up-next risk-medium workstream-runtime-hardening" data-milestone-id="pre-beta-hardening">
+                            <div class="timeline-stop-card">
+                                <span class="timeline-stop-chip">Up Next · 18%</span>
+                                <strong data-milestone-title="pre-beta-hardening">Pre-Beta Hardening</strong>
+                                <span class="timeline-stop-window" data-milestone-window="pre-beta-hardening">April 2026 to May 2026</span>
+                                <span class="timeline-stop-track">Runtime Hardening</span>
+                            </div>
+                            <div class="timeline-stop-stem" aria-hidden="true"></div>
+                            <button class="timeline-stop-node" type="button" data-milestone-jump="milestone-pre-beta-hardening" aria-controls="milestone-pre-beta-hardening" aria-label="Open Pre-Beta Hardening details">
+                                <span class="timeline-stop-node-core" title="Runtime Hardening">CORE</span>
+                            </button>
+                        </div>
+                    
+                        <div class="timeline-stop top future risk-medium workstream-beta-validation" data-milestone-id="beta">
+                            <div class="timeline-stop-card">
+                                <span class="timeline-stop-chip">Future · 0%</span>
+                                <strong data-milestone-title="beta">Beta</strong>
+                                <span class="timeline-stop-window" data-milestone-window="beta">Q2 2026 (tentative)</span>
+                                <span class="timeline-stop-track">Beta Validation</span>
+                            </div>
+                            <div class="timeline-stop-stem" aria-hidden="true"></div>
+                            <button class="timeline-stop-node" type="button" data-milestone-jump="milestone-beta" aria-controls="milestone-beta" aria-label="Open Beta details">
+                                <span class="timeline-stop-node-core" title="Beta Validation">BETA</span>
+                            </button>
+                        </div>
+                    
+                        <div class="timeline-stop bottom future risk-high workstream-release-quality" data-milestone-id="stable">
+                            <div class="timeline-stop-card">
+                                <span class="timeline-stop-chip">Future · 0%</span>
+                                <strong data-milestone-title="stable">Stable</strong>
+                                <span class="timeline-stop-window" data-milestone-window="stable">Q3 2026 or later (tentative)</span>
+                                <span class="timeline-stop-track">Release Quality</span>
+                            </div>
+                            <div class="timeline-stop-stem" aria-hidden="true"></div>
+                            <button class="timeline-stop-node" type="button" data-milestone-jump="milestone-stable" aria-controls="milestone-stable" aria-label="Open Stable details">
+                                <span class="timeline-stop-node-core" title="Release Quality">SHIP</span>
+                            </button>
+                        </div>
+                    
+            </div>
+        </div>
+    
+          </section>
+
+          <div class="overview-grid">
+            <section class="panel stack-panel">
+              
+      <section>
+        <div class="section-head-with-tools">
+          <h2 class="section-title">Where We Are</h2>
+          
+        <div class="markdown-tools" data-markdown-tools="section-where-we-are">
+            <label class="markdown-upload-btn" for="section-where-we-are-input">Import Where We Are (.md)</label>
+            <input id="section-where-we-are-input" type="file" accept=".md,.markdown,text/markdown,text/plain" data-markdown-input="section-where-we-are" />
+            <button class="markdown-reset-btn" type="button" data-markdown-reset="section-where-we-are">Reset</button>
+        </div>
+    
+        </div>
+        <div id="section-where-we-are" class="markdown-slot" data-markdown-slot="section-where-we-are">
+          <ul><li>Core flows are functional, but some UI behavior, persistence details, and shell/runtime overlap still need hardening.</li><li>The priority is making the migrated app feel complete, consistent, and reliable rather than expanding broad new feature scope.</li><li>Legacy fallback still exists as a safety net, which means the desktop shell is not yet the unquestioned default experience.</li></ul>
+        </div>
+      </section>
+    
+              
+      <section>
+        <div class="section-head-with-tools">
+          <h2 class="section-title">Where We Are Going</h2>
+          
+        <div class="markdown-tools" data-markdown-tools="section-where-we-are-going">
+            <label class="markdown-upload-btn" for="section-where-we-are-going-input">Import Where We Are Going (.md)</label>
+            <input id="section-where-we-are-going-input" type="file" accept=".md,.markdown,text/markdown,text/plain" data-markdown-input="section-where-we-are-going" />
+            <button class="markdown-reset-btn" type="button" data-markdown-reset="section-where-we-are-going">Reset</button>
+        </div>
+    
+        </div>
+        <div id="section-where-we-are-going" class="markdown-slot" data-markdown-slot="section-where-we-are-going">
+          <ul><li>Finish migration-recovery work until the current desktop runtime is clearly the primary experience.</li><li>Use pre-beta hardening to reduce overlap, fix regressions, and keep large files refactored while stabilizing behavior.</li><li>Enter beta only once daily-use workflows are reliable enough that the legacy fallback is optional instead of necessary.</li></ul>
+        </div>
+      </section>
+    
+              <section>
+                <div class="section-head-with-tools">
+                  <h2 class="section-title">What Changed Since Last Update</h2>
+                </div>
+                <div data-history-recent>
+        <div class="recent-change-list">
+            
+                <article class="recent-change-card is-latest">
+                    <div class="recent-change-date">2026-03-12</div>
+                    <h3>Roadmap baseline captured</h3>
+                    <p>Defined current phase, milestone gates, beta/stable meaning, and near-term priorities in repo notes and dashboard data.</p>
+                </article>
+            
+                <article class="recent-change-card ">
+                    <div class="recent-change-date">2026-03-12</div>
+                    <h3>Language manager stabilization continued</h3>
+                    <p>Improved live edit visibility, language card selection, style preset management, and initial layout/scroll fixes.</p>
+                </article>
+            
+                <article class="recent-change-card ">
+                    <div class="recent-change-date">2026-03-12</div>
+                    <h3>Runtime cleanup resumed</h3>
+                    <p>Started splitting language-manager runtime responsibilities back into feature-folder modules instead of growing one large runtime file.</p>
+                </article>
+            
+        </div>
+    </div>
+              </section>
+            </section>
+
+            <section class="panel stack-panel">
+              <section>
+                <h2 class="section-title">Beta Target</h2>
+                <div class="meta-chip">
+                  <strong>Target Window</strong>
+                  <span>Q2 2026 (tentative)</span>
+                  <p class="summary" style="margin-top:8px;font-size:0.92rem;">Only if pre-beta hardening criteria are broadly satisfied in practice.</p>
+                </div>
+              </section>
+              <section>
+                <h2 class="section-title">Stable Target</h2>
+                <div class="meta-chip">
+                  <strong>Target Window</strong>
+                  <span>Q3 2026 or later (tentative)</span>
+                  <p class="summary" style="margin-top:8px;font-size:0.92rem;">Only after beta proves reliable as the default daily-use experience.</p>
+                </div>
+              </section>
+              <section>
+                <h2 class="section-title">Dependencies And Blockers</h2>
+                <p class="summary" style="margin-top:0;">See what each milestone is waiting on before it can move cleanly.</p>
+                
+        <div class="dependency-strip">
+            
+                <article class="dependency-card state-current risk-medium workstream-ui-parity" data-milestone-id="migration-recovery">
+                    <div class="dependency-card-head">
+                        <span class="dependency-step">Step 1</span>
+                        <span class="dependency-state">UI Parity</span>
+                    </div>
+                    <h3 data-milestone-title="migration-recovery">Migration Recovery</h3>
+                    <p data-milestone-dependency-summary="migration-recovery">Starting point for the current roadmap.</p>
+                    <div class="dependency-card-meta">
+                        <span class="metric-badge completion" data-milestone-blockers="migration-recovery">Blockers: 3</span>
+                        <span class="metric-badge" data-milestone-window-label="migration-recovery">Window: March 2026 to April 2026</span>
+                    </div>
+                    <button class="mini-action" type="button" data-milestone-jump="milestone-migration-recovery">Open details</button>
+                </article>
+                <div class="dependency-arrow" aria-hidden="true">→</div>
+            
+                <article class="dependency-card state-up-next risk-medium workstream-runtime-hardening" data-milestone-id="pre-beta-hardening">
+                    <div class="dependency-card-head">
+                        <span class="dependency-step">Step 2</span>
+                        <span class="dependency-state">Runtime Hardening</span>
+                    </div>
+                    <h3 data-milestone-title="pre-beta-hardening">Pre-Beta Hardening</h3>
+                    <p data-milestone-dependency-summary="pre-beta-hardening">Depends on Migration Recovery.</p>
+                    <div class="dependency-card-meta">
+                        <span class="metric-badge completion" data-milestone-blockers="pre-beta-hardening">Blockers: 2</span>
+                        <span class="metric-badge" data-milestone-window-label="pre-beta-hardening">Window: April 2026 to May 2026</span>
+                    </div>
+                    <button class="mini-action" type="button" data-milestone-jump="milestone-pre-beta-hardening">Open details</button>
+                </article>
+                <div class="dependency-arrow" aria-hidden="true">→</div>
+            
+                <article class="dependency-card state-future risk-medium workstream-beta-validation" data-milestone-id="beta">
+                    <div class="dependency-card-head">
+                        <span class="dependency-step">Step 3</span>
+                        <span class="dependency-state">Beta Validation</span>
+                    </div>
+                    <h3 data-milestone-title="beta">Beta</h3>
+                    <p data-milestone-dependency-summary="beta">Depends on Pre-Beta Hardening.</p>
+                    <div class="dependency-card-meta">
+                        <span class="metric-badge completion" data-milestone-blockers="beta">Blockers: 2</span>
+                        <span class="metric-badge" data-milestone-window-label="beta">Window: Q2 2026 (tentative)</span>
+                    </div>
+                    <button class="mini-action" type="button" data-milestone-jump="milestone-beta">Open details</button>
+                </article>
+                <div class="dependency-arrow" aria-hidden="true">→</div>
+            
+                <article class="dependency-card state-future risk-high workstream-release-quality" data-milestone-id="stable">
+                    <div class="dependency-card-head">
+                        <span class="dependency-step">Step 4</span>
+                        <span class="dependency-state">Release Quality</span>
+                    </div>
+                    <h3 data-milestone-title="stable">Stable</h3>
+                    <p data-milestone-dependency-summary="stable">Depends on Beta.</p>
+                    <div class="dependency-card-meta">
+                        <span class="metric-badge completion" data-milestone-blockers="stable">Blockers: 2</span>
+                        <span class="metric-badge" data-milestone-window-label="stable">Window: Q3 2026 or later (tentative)</span>
+                    </div>
+                    <button class="mini-action" type="button" data-milestone-jump="milestone-stable">Open details</button>
+                </article>
+                
+            
+        </div>
+    
+              </section>
+            </section>
+          </div>
+        </section>
+
+        <section class="roadmap-pane" data-roadmap-pane="milestones">
+          <div class="panel-head">
+            <div>
+              <h2 class="section-title" style="margin-bottom:6px;">Milestones</h2>
+              <span class="minor-label">Open one milestone at a time and keep the details focused.</span>
+            </div>
+            <div class="toolbar" role="group" aria-label="Layout toggle">
+              <input type="radio" name="layout-mode" id="layout-vertical" value="vertical" checked />
+              <label for="layout-vertical">Vertical</label>
+              <input type="radio" name="layout-mode" id="layout-horizontal" value="horizontal" />
+              <label for="layout-horizontal">Horizontal</label>
+            </div>
+          </div>
+          
+      <section class="panel roadmap-tools-panel">
+        <div class="panel-head">
+          <div>
+            <h2 class="section-title" style="margin-bottom:6px;">Roadmap Tools</h2>
+            <span class="minor-label">Import note bundles, tweak milestone drafts locally, and export the current roadmap JSON.</span>
+          </div>
+          <div class="roadmap-tools-actions">
+            <label class="markdown-upload-btn" for="roadmap-bundle-input">Import Markdown Bundle</label>
+            <input id="roadmap-bundle-input" type="file" multiple accept=".md,.markdown,text/markdown,text/plain" data-markdown-bundle />
+            <button class="markdown-reset-btn" type="button" data-roadmap-copy-json>Copy JSON</button>
+            <button class="markdown-reset-btn" type="button" data-roadmap-download-json>Download JSON</button>
+          </div>
+        </div>
+        <div class="roadmap-dropzone" data-roadmap-dropzone>
+          Drop a Markdown bundle here or use the import button. Filenames can target sections like <code>where-we-are.md</code> or milestones like <code>migration-recovery.md</code>.
+        </div>
+        <details class="roadmap-editor-shell">
+          <summary class="roadmap-editor-toggle">Milestone Draft Editor</summary>
+          <div class="roadmap-editor-grid">
+            <label class="editor-field">
+              <span>Title</span>
+              <input type="text" data-roadmap-editor-title />
+            </label>
+            <label class="editor-field">
+              <span>Milestone</span>
+              <select data-roadmap-editor-select>
+                
+        <option value="migration-recovery">Migration Recovery</option>
+    
+        <option value="pre-beta-hardening">Pre-Beta Hardening</option>
+    
+        <option value="beta">Beta</option>
+    
+        <option value="stable">Stable</option>
+    
+              </select>
+            </label>
+            <label class="editor-field">
+              <span>Target Window</span>
+              <input type="text" data-roadmap-editor-window />
+            </label>
+            <label class="editor-field">
+              <span>Completion</span>
+              <input type="number" min="0" max="100" step="1" data-roadmap-editor-completion />
+            </label>
+            <label class="editor-field">
+              <span>Risk</span>
+              <select data-roadmap-editor-risk>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </label>
+            <label class="editor-field">
+              <span>Confidence</span>
+              <select data-roadmap-editor-confidence>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </label>
+            <label class="editor-field editor-field-wide">
+              <span>Goal</span>
+              <textarea rows="4" data-roadmap-editor-goal></textarea>
+            </label>
+            <label class="editor-field editor-field-wide">
+              <span>Blockers (one per line)</span>
+              <textarea rows="6" data-roadmap-editor-blockers></textarea>
+            </label>
+          </div>
+          <div class="roadmap-editor-actions">
+            <button class="mini-action" type="button" data-roadmap-editor-save>Apply local draft</button>
+            <button class="mini-action" type="button" data-roadmap-editor-reset>Reset milestone draft</button>
+            <span class="subtle-inline-note" data-roadmap-editor-status>Local drafts are stored in this browser only.</span>
+          </div>
+        </details>
+        <details class="roadmap-editor-shell">
+          <summary class="roadmap-editor-toggle">History Editor</summary>
+          <div class="roadmap-editor-grid">
+            <label class="editor-field">
+              <span>Date</span>
+              <input type="text" placeholder="2026-03-14" data-roadmap-history-date />
+            </label>
+            <label class="editor-field">
+              <span>Title</span>
+              <input type="text" placeholder="What changed" data-roadmap-history-title />
+            </label>
+            <label class="editor-field editor-field-wide">
+              <span>Summary</span>
+              <textarea rows="4" data-roadmap-history-summary></textarea>
+            </label>
+          </div>
+          <div class="roadmap-editor-actions">
+            <button class="mini-action" type="button" data-roadmap-history-add>Add History Entry</button>
+            <button class="mini-action" type="button" data-roadmap-history-reset>Reset Local History Drafts</button>
+            <span class="subtle-inline-note" data-roadmap-history-status>History entries added here stay local until you export the JSON.</span>
+          </div>
+        </details>
+      </section>
+    
+          <div class="layout-switch">
+            <div class="milestones">
+              
+            <details id="milestone-migration-recovery" class="milestone-card current risk-medium confidence-medium workstream-ui-parity" data-milestone-id="migration-recovery" open>
+                <summary class="milestone-toggle">
+                    <div class="milestone-toggle-left">
+                        <div class="milestone-step">1</div>
+                        <div class="milestone-head">
+                            <span class="milestone-state">UI Parity · Current</span>
+                            <h3 data-milestone-title="migration-recovery">Migration Recovery</h3>
+                            <div class="milestone-date" data-milestone-window="migration-recovery">March 2026 to April 2026</div>
+                        </div>
+                    </div>
+                    <span class="milestone-chevron" aria-hidden="true">+</span>
+                </summary>
+
+                <div class="milestone-body">
+                    
+        <div class="metric-badges">
+            <span class="metric-badge risk-medium" data-milestone-risk="migration-recovery">Risk: Medium</span>
+            <span class="metric-badge confidence-medium" data-milestone-confidence="migration-recovery">Confidence: Medium</span>
+            <span class="metric-badge completion" data-milestone-completion="migration-recovery">Completion: 62%</span>
+        </div>
+    
+                    
+                <div class="dependency-pill-row">
+                    <span data-milestone-dependency-pills="migration-recovery"><span class="dependency-pill unlocks">Unlocks Pre-Beta Hardening</span></span>
+                </div>
+              
+                    <div class="completion-bar" aria-label="Completion 62%">
+                        <div class="completion-fill" data-milestone-completion-fill="migration-recovery" style="width:62%"></div>
+                    </div>
+                    <p class="milestone-goal" data-milestone-goal="migration-recovery">Re-establish parity for the core Electron-era UX in the current desktop app.</p>
+                    <div class="milestone-columns">
+                        <section>
+                            <h4>Focus</h4>
+                            <ul><li>Finish missing behaviors in header, sidebar, docking, popups, support flows, theme manager, language manager, and window chrome.</li><li>Remove obviously redundant or temporary migration paths where the new implementation already exists.</li><li>Close obvious parity gaps that still force users back into the classic/legacy fallback.</li></ul>
+                        </section>
+                        <section>
+                            <h4>Exit Criteria</h4>
+                            <ul><li>Core desktop UX behaves close enough to the historical app for normal daily use.</li><li>Major parity bugs are no longer blocking confidence in the migrated runtime.</li><li>Remaining work is mostly stabilization and polish rather than missing baseline behavior.</li></ul>
+                        </section>
+                        <section><h4>Blockers</h4><div data-milestone-blocker-list="migration-recovery"><ul class="danger-list"><li>A few UI/layout bugs still only settle correctly after manual interaction or resize.</li><li>Some legacy/runtime overlap still makes ownership of behavior less clean than it should be.</li><li>Visual parity is improved but still not consistently at the historical standard across all views.</li></ul></div></section>
+                    </div>
+                    <div class="markdown-slot-shell markdown-slot-shell-inline">
+                        <div class="markdown-slot-head">
+                            <h4>Custom Notes</h4>
+                            
+        <div class="markdown-tools" data-markdown-tools="milestone-migration-recovery-notes">
+            <label class="markdown-upload-btn" for="milestone-migration-recovery-notes-input">Import Milestone Notes (.md)</label>
+            <input id="milestone-migration-recovery-notes-input" type="file" accept=".md,.markdown,text/markdown,text/plain" data-markdown-input="milestone-migration-recovery-notes" />
+            <button class="markdown-reset-btn" type="button" data-markdown-reset="milestone-migration-recovery-notes">Reset</button>
+        </div>
+    
+                        </div>
+                        <div id="milestone-migration-recovery-notes" class="markdown-slot markdown-slot-empty markdown-slot-inline" data-markdown-slot="milestone-migration-recovery-notes">
+                            <p class="markdown-empty-state">Import an optional Markdown file to add milestone-specific notes, links, or commentary.</p>
+                        </div>
+                    </div>
+                </div>
+            </details>
+        
+            <details id="milestone-pre-beta-hardening" class="milestone-card up-next risk-medium confidence-medium workstream-runtime-hardening" data-milestone-id="pre-beta-hardening">
+                <summary class="milestone-toggle">
+                    <div class="milestone-toggle-left">
+                        <div class="milestone-step">2</div>
+                        <div class="milestone-head">
+                            <span class="milestone-state">Runtime Hardening · Up Next</span>
+                            <h3 data-milestone-title="pre-beta-hardening">Pre-Beta Hardening</h3>
+                            <div class="milestone-date" data-milestone-window="pre-beta-hardening">April 2026 to May 2026</div>
+                        </div>
+                    </div>
+                    <span class="milestone-chevron" aria-hidden="true">+</span>
+                </summary>
+
+                <div class="milestone-body">
+                    
+        <div class="metric-badges">
+            <span class="metric-badge risk-medium" data-milestone-risk="pre-beta-hardening">Risk: Medium</span>
+            <span class="metric-badge confidence-medium" data-milestone-confidence="pre-beta-hardening">Confidence: Medium</span>
+            <span class="metric-badge completion" data-milestone-completion="pre-beta-hardening">Completion: 18%</span>
+        </div>
+    
+                    
+                <div class="dependency-pill-row">
+                    <span data-milestone-dependency-pills="pre-beta-hardening"><span class="dependency-pill">Depends on Migration Recovery</span><span class="dependency-pill unlocks">Unlocks Beta</span></span>
+                </div>
+              
+                    <div class="completion-bar" aria-label="Completion 18%">
+                        <div class="completion-fill" data-milestone-completion-fill="pre-beta-hardening" style="width:18%"></div>
+                    </div>
+                    <p class="milestone-goal" data-milestone-goal="pre-beta-hardening">Reduce runtime overlap and make the migrated app reliable enough for beta.</p>
+                    <div class="milestone-columns">
+                        <section>
+                            <h4>Focus</h4>
+                            <ul><li>Refactor large files continuously so stabilization does not create new monoliths.</li><li>Fix resize/layout bugs, persistence bugs, interaction regressions, and restart-only recovery issues.</li><li>Ensure the main user journeys work without manual recovery steps or hidden fallback behavior.</li></ul>
+                        </section>
+                        <section>
+                            <h4>Exit Criteria</h4>
+                            <ul><li>Core library, tools, themes, support, settings, and language flows work reliably.</li><li>Known issues are mostly edge cases or non-blocking polish items.</li><li>Major migration architecture decisions are no longer in flux.</li></ul>
+                        </section>
+                        <section><h4>Blockers</h4><div data-milestone-blocker-list="pre-beta-hardening"><ul class="danger-list"><li>Cannot start in earnest until migration-recovery issues stop forcing workarounds.</li><li>Large files and mixed responsibilities still need steady cleanup while behavior is stabilized.</li></ul></div></section>
+                    </div>
+                    <div class="markdown-slot-shell markdown-slot-shell-inline">
+                        <div class="markdown-slot-head">
+                            <h4>Custom Notes</h4>
+                            
+        <div class="markdown-tools" data-markdown-tools="milestone-pre-beta-hardening-notes">
+            <label class="markdown-upload-btn" for="milestone-pre-beta-hardening-notes-input">Import Milestone Notes (.md)</label>
+            <input id="milestone-pre-beta-hardening-notes-input" type="file" accept=".md,.markdown,text/markdown,text/plain" data-markdown-input="milestone-pre-beta-hardening-notes" />
+            <button class="markdown-reset-btn" type="button" data-markdown-reset="milestone-pre-beta-hardening-notes">Reset</button>
+        </div>
+    
+                        </div>
+                        <div id="milestone-pre-beta-hardening-notes" class="markdown-slot markdown-slot-empty markdown-slot-inline" data-markdown-slot="milestone-pre-beta-hardening-notes">
+                            <p class="markdown-empty-state">Import an optional Markdown file to add milestone-specific notes, links, or commentary.</p>
+                        </div>
+                    </div>
+                </div>
+            </details>
+        
+            <details id="milestone-beta" class="milestone-card future risk-medium confidence-low workstream-beta-validation" data-milestone-id="beta">
+                <summary class="milestone-toggle">
+                    <div class="milestone-toggle-left">
+                        <div class="milestone-step">3</div>
+                        <div class="milestone-head">
+                            <span class="milestone-state">Beta Validation · Future</span>
+                            <h3 data-milestone-title="beta">Beta</h3>
+                            <div class="milestone-date" data-milestone-window="beta">Q2 2026 (tentative)</div>
+                        </div>
+                    </div>
+                    <span class="milestone-chevron" aria-hidden="true">+</span>
+                </summary>
+
+                <div class="milestone-body">
+                    
+        <div class="metric-badges">
+            <span class="metric-badge risk-medium" data-milestone-risk="beta">Risk: Medium</span>
+            <span class="metric-badge confidence-low" data-milestone-confidence="beta">Confidence: Low</span>
+            <span class="metric-badge completion" data-milestone-completion="beta">Completion: 0%</span>
+        </div>
+    
+                    
+                <div class="dependency-pill-row">
+                    <span data-milestone-dependency-pills="beta"><span class="dependency-pill">Depends on Pre-Beta Hardening</span><span class="dependency-pill unlocks">Unlocks Stable</span></span>
+                </div>
+              
+                    <div class="completion-bar" aria-label="Completion 0%">
+                        <div class="completion-fill" data-milestone-completion-fill="beta" style="width:0%"></div>
+                    </div>
+                    <p class="milestone-goal" data-milestone-goal="beta">Make the desktop runtime the feature-complete primary experience for normal users.</p>
+                    <div class="milestone-columns">
+                        <section>
+                            <h4>Focus</h4>
+                            <ul><li>Treat the desktop shell as the default runtime, not as a side path beside legacy.</li><li>Collect and fix real-world regressions from wider daily use.</li><li>Continue UX polish and structural cleanup without destabilizing core flows.</li></ul>
+                        </section>
+                        <section>
+                            <h4>Start Criteria</h4>
+                            <ul><li>Core library browsing, emulators, support, themes, languages, tools, and settings work reliably.</li><li>Main UI/UX parity is close enough that legacy/classic is optional, not required.</li><li>The desktop runtime is clearly the preferred experience for normal use.</li></ul>
+                        </section>
+                        <section><h4>Blockers</h4><div data-milestone-blocker-list="beta"><ul class="danger-list"><li>Depends on pre-beta hardening being broadly complete.</li><li>Should not start while legacy fallback is still needed for core confidence.</li></ul></div></section>
+                    </div>
+                    <div class="markdown-slot-shell markdown-slot-shell-inline">
+                        <div class="markdown-slot-head">
+                            <h4>Custom Notes</h4>
+                            
+        <div class="markdown-tools" data-markdown-tools="milestone-beta-notes">
+            <label class="markdown-upload-btn" for="milestone-beta-notes-input">Import Milestone Notes (.md)</label>
+            <input id="milestone-beta-notes-input" type="file" accept=".md,.markdown,text/markdown,text/plain" data-markdown-input="milestone-beta-notes" />
+            <button class="markdown-reset-btn" type="button" data-markdown-reset="milestone-beta-notes">Reset</button>
+        </div>
+    
+                        </div>
+                        <div id="milestone-beta-notes" class="markdown-slot markdown-slot-empty markdown-slot-inline" data-markdown-slot="milestone-beta-notes">
+                            <p class="markdown-empty-state">Import an optional Markdown file to add milestone-specific notes, links, or commentary.</p>
+                        </div>
+                    </div>
+                </div>
+            </details>
+        
+            <details id="milestone-stable" class="milestone-card future risk-high confidence-low workstream-release-quality" data-milestone-id="stable">
+                <summary class="milestone-toggle">
+                    <div class="milestone-toggle-left">
+                        <div class="milestone-step">4</div>
+                        <div class="milestone-head">
+                            <span class="milestone-state">Release Quality · Future</span>
+                            <h3 data-milestone-title="stable">Stable</h3>
+                            <div class="milestone-date" data-milestone-window="stable">Q3 2026 or later (tentative)</div>
+                        </div>
+                    </div>
+                    <span class="milestone-chevron" aria-hidden="true">+</span>
+                </summary>
+
+                <div class="milestone-body">
+                    
+        <div class="metric-badges">
+            <span class="metric-badge risk-high" data-milestone-risk="stable">Risk: High</span>
+            <span class="metric-badge confidence-low" data-milestone-confidence="stable">Confidence: Low</span>
+            <span class="metric-badge completion" data-milestone-completion="stable">Completion: 0%</span>
+        </div>
+    
+                    
+                <div class="dependency-pill-row">
+                    <span data-milestone-dependency-pills="stable"><span class="dependency-pill">Depends on Beta</span></span>
+                </div>
+              
+                    <div class="completion-bar" aria-label="Completion 0%">
+                        <div class="completion-fill" data-milestone-completion-fill="stable" style="width:0%"></div>
+                    </div>
+                    <p class="milestone-goal" data-milestone-goal="stable">Make the desktop app the default recommended experience with no major fallback dependency.</p>
+                    <div class="milestone-columns">
+                        <section>
+                            <h4>Focus</h4>
+                            <ul><li>Keep the release boring in the good way: reliable persistence, launches, downloads, updates, and settings.</li><li>Treat cross-platform behavior and shell integration as part of release quality, not follow-up work.</li><li>Focus future updates on measured improvements rather than core recovery.</li></ul>
+                        </section>
+                        <section>
+                            <h4>Start Criteria</h4>
+                            <ul><li>No major workflow requires the legacy fallback.</li><li>Persistent data, downloads, launching, and settings survive restart cleanly.</li><li>Window behavior, responsiveness, and shell integration are consistent across supported setups.</li></ul>
+                        </section>
+                        <section><h4>Blockers</h4><div data-milestone-blocker-list="stable"><ul class="danger-list"><li>Requires beta to prove daily-use reliability over time.</li><li>Requires cross-platform and persistence quality to be consistently strong.</li></ul></div></section>
+                    </div>
+                    <div class="markdown-slot-shell markdown-slot-shell-inline">
+                        <div class="markdown-slot-head">
+                            <h4>Custom Notes</h4>
+                            
+        <div class="markdown-tools" data-markdown-tools="milestone-stable-notes">
+            <label class="markdown-upload-btn" for="milestone-stable-notes-input">Import Milestone Notes (.md)</label>
+            <input id="milestone-stable-notes-input" type="file" accept=".md,.markdown,text/markdown,text/plain" data-markdown-input="milestone-stable-notes" />
+            <button class="markdown-reset-btn" type="button" data-markdown-reset="milestone-stable-notes">Reset</button>
+        </div>
+    
+                        </div>
+                        <div id="milestone-stable-notes" class="markdown-slot markdown-slot-empty markdown-slot-inline" data-markdown-slot="milestone-stable-notes">
+                            <p class="markdown-empty-state">Import an optional Markdown file to add milestone-specific notes, links, or commentary.</p>
+                        </div>
+                    </div>
+                </div>
+            </details>
+        
+            </div>
+          </div>
+        </section>
+
+        <section class="roadmap-pane" data-roadmap-pane="gates">
+          <div class="release-grid">
+            <section class="panel stack-panel">
+              
+      <section>
+        <div class="section-head-with-tools">
+          <h2 class="section-title">Beta Means</h2>
+          
+        <div class="markdown-tools" data-markdown-tools="section-beta-means">
+            <label class="markdown-upload-btn" for="section-beta-means-input">Import Beta Means (.md)</label>
+            <input id="section-beta-means-input" type="file" accept=".md,.markdown,text/markdown,text/plain" data-markdown-input="section-beta-means" />
+            <button class="markdown-reset-btn" type="button" data-markdown-reset="section-beta-means">Reset</button>
+        </div>
+    
+        </div>
+        <div id="section-beta-means" class="markdown-slot" data-markdown-slot="section-beta-means">
+          <ul><li>Feature-complete for normal daily use.</li><li>Legacy fallback is optional instead of required.</li><li>Remaining issues are mostly edge cases or polish.</li></ul>
+        </div>
+      </section>
+    
+              
+      <section>
+        <div class="section-head-with-tools">
+          <h2 class="section-title">Near-Term Tasks</h2>
+          
+        <div class="markdown-tools" data-markdown-tools="section-near-term-tasks">
+            <label class="markdown-upload-btn" for="section-near-term-tasks-input">Import Near-Term Tasks (.md)</label>
+            <input id="section-near-term-tasks-input" type="file" accept=".md,.markdown,text/markdown,text/plain" data-markdown-input="section-near-term-tasks" />
+            <button class="markdown-reset-btn" type="button" data-markdown-reset="section-near-term-tasks">Reset</button>
+        </div>
+    
+        </div>
+        <div id="section-near-term-tasks" class="markdown-slot" data-markdown-slot="section-near-term-tasks">
+          <ul><li>Keep shrinking legacy bootstrap/runtime responsibilities once migrated replacements are proven.</li><li>Review large files during normal work and split them into feature-folder modules early.</li><li>Verify installer, protocol handling, persistence, and resource-download flows after major changes.</li><li>Treat restart-only, resize-only, and manual-interaction-only bugs as high-priority stabilization issues.</li></ul>
+        </div>
+      </section>
+    
+            </section>
+
+            <section class="panel stack-panel">
+              
+      <section>
+        <div class="section-head-with-tools">
+          <h2 class="section-title">Stable Means</h2>
+          
+        <div class="markdown-tools" data-markdown-tools="section-stable-means">
+            <label class="markdown-upload-btn" for="section-stable-means-input">Import Stable Means (.md)</label>
+            <input id="section-stable-means-input" type="file" accept=".md,.markdown,text/markdown,text/plain" data-markdown-input="section-stable-means" />
+            <button class="markdown-reset-btn" type="button" data-markdown-reset="section-stable-means">Reset</button>
+        </div>
+    
+        </div>
+        <div id="section-stable-means" class="markdown-slot" data-markdown-slot="section-stable-means">
+          <ul><li>Default recommended experience.</li><li>No major workflow depends on legacy fallback.</li><li>Reliability and persistence are strong enough that updates are incremental, not recovery-oriented.</li></ul>
+        </div>
+      </section>
+    
+              
+      <section>
+        <div class="section-head-with-tools">
+          <h2 class="section-title">Future Update Tracks</h2>
+          
+        <div class="markdown-tools" data-markdown-tools="section-future-update-tracks">
+            <label class="markdown-upload-btn" for="section-future-update-tracks-input">Import Future Update Tracks (.md)</label>
+            <input id="section-future-update-tracks-input" type="file" accept=".md,.markdown,text/markdown,text/plain" data-markdown-input="section-future-update-tracks" />
+            <button class="markdown-reset-btn" type="button" data-markdown-reset="section-future-update-tracks">Reset</button>
+        </div>
+    
+        </div>
+        <div id="section-future-update-tracks" class="markdown-slot" data-markdown-slot="section-future-update-tracks">
+          <ul><li>Stabilization fixes</li><li>Structural cleanup and continuous refactoring</li><li>Parity improvements where the historical UX still matters</li><li>UX polish and consistency</li><li>Only then broader feature expansion</li></ul>
+        </div>
+      </section>
+    
+            </section>
+          </div>
+        </section>
+
+        <section class="roadmap-pane" data-roadmap-pane="history">
+          <section class="panel">
+            <div class="section-head-with-tools">
+              <h2 class="section-title">Changelog / History Strip</h2>
+              
+        <div class="markdown-tools" data-markdown-tools="section-history-strip">
+            <label class="markdown-upload-btn" for="section-history-strip-input">Import History (.md)</label>
+            <input id="section-history-strip-input" type="file" accept=".md,.markdown,text/markdown,text/plain" data-markdown-input="section-history-strip" />
+            <button class="markdown-reset-btn" type="button" data-markdown-reset="section-history-strip">Reset</button>
+        </div>
+    
+            </div>
+            <div id="section-history-strip" class="markdown-slot" data-markdown-slot="section-history-strip">
+              <div class="history-strip" data-history-strip>
+                
+        <article class="history-entry">
+            <div class="history-date">2026-03-12</div>
+            <div class="history-content">
+                <h3>Roadmap baseline captured</h3>
+                <p>Defined current phase, milestone gates, beta/stable meaning, and near-term priorities in repo notes and dashboard data.</p>
+            </div>
+        </article>
+    
+        <article class="history-entry">
+            <div class="history-date">2026-03-12</div>
+            <div class="history-content">
+                <h3>Language manager stabilization continued</h3>
+                <p>Improved live edit visibility, language card selection, style preset management, and initial layout/scroll fixes.</p>
+            </div>
+        </article>
+    
+        <article class="history-entry">
+            <div class="history-date">2026-03-12</div>
+            <div class="history-content">
+                <h3>Runtime cleanup resumed</h3>
+                <p>Started splitting language-manager runtime responsibilities back into feature-folder modules instead of growing one large runtime file.</p>
+            </div>
+        </article>
+    
+              </div>
+            </div>
+          </section>
+        </section>
+      </div>
+    </section>
+
+    <p class="footer-note">Source: docs/project-roadmap.json. Rebuild with <code>npm run roadmap:build</code>.</p>
+  </main>
+
+  <script>
+    (function () {
+      const storageKey = 'emubro.roadmap.layout';
+      const activeTabStorageKey = 'emubro.roadmap.activeTab';
+      const activeFocusStorageKey = 'emubro.roadmap.focus';
+      const markdownStoragePrefix = 'emubro.roadmap.markdown.';
+      const verticalInput = document.getElementById('layout-vertical');
+      const horizontalInput = document.getElementById('layout-horizontal');
+      if (!verticalInput || !horizontalInput) return;
+      const baseRoadmap = {"currentPhase":{"label":"Post-Migration Stabilization / Pre-Beta","date":"2026-03-12","targetWindow":"March 2026 to April 2026","risk":"medium","confidence":"medium","summary":"The desktop app is usable, but it is still carrying migration debt, UI parity gaps, and some legacy/runtime overlap that should be cleaned up before calling it beta."},"releaseTargets":{"beta":{"targetWindow":"Q2 2026 (tentative)","note":"Only if pre-beta hardening criteria are broadly satisfied in practice."},"stable":{"targetWindow":"Q3 2026 or later (tentative)","note":"Only after beta proves reliable as the default daily-use experience."}},"whereWeAre":["Core flows are functional, but some UI behavior, persistence details, and shell/runtime overlap still need hardening.","The priority is making the migrated app feel complete, consistent, and reliable rather than expanding broad new feature scope.","Legacy fallback still exists as a safety net, which means the desktop shell is not yet the unquestioned default experience."],"whereWeAreGoing":["Finish migration-recovery work until the current desktop runtime is clearly the primary experience.","Use pre-beta hardening to reduce overlap, fix regressions, and keep large files refactored while stabilizing behavior.","Enter beta only once daily-use workflows are reliable enough that the legacy fallback is optional instead of necessary."],"milestones":[{"id":"migration-recovery","title":"Migration Recovery","workstream":"UI Parity","icon":"UX","state":"current","targetWindow":"March 2026 to April 2026","completion":62,"risk":"medium","confidence":"medium","goal":"Re-establish parity for the core Electron-era UX in the current desktop app.","blockers":["A few UI/layout bugs still only settle correctly after manual interaction or resize.","Some legacy/runtime overlap still makes ownership of behavior less clean than it should be.","Visual parity is improved but still not consistently at the historical standard across all views."],"focus":["Finish missing behaviors in header, sidebar, docking, popups, support flows, theme manager, language manager, and window chrome.","Remove obviously redundant or temporary migration paths where the new implementation already exists.","Close obvious parity gaps that still force users back into the classic/legacy fallback."],"exitCriteria":["Core desktop UX behaves close enough to the historical app for normal daily use.","Major parity bugs are no longer blocking confidence in the migrated runtime.","Remaining work is mostly stabilization and polish rather than missing baseline behavior."]},{"id":"pre-beta-hardening","title":"Pre-Beta Hardening","workstream":"Runtime Hardening","icon":"CORE","state":"up-next","targetWindow":"April 2026 to May 2026","completion":18,"risk":"medium","confidence":"medium","goal":"Reduce runtime overlap and make the migrated app reliable enough for beta.","blockers":["Cannot start in earnest until migration-recovery issues stop forcing workarounds.","Large files and mixed responsibilities still need steady cleanup while behavior is stabilized."],"focus":["Refactor large files continuously so stabilization does not create new monoliths.","Fix resize/layout bugs, persistence bugs, interaction regressions, and restart-only recovery issues.","Ensure the main user journeys work without manual recovery steps or hidden fallback behavior."],"exitCriteria":["Core library, tools, themes, support, settings, and language flows work reliably.","Known issues are mostly edge cases or non-blocking polish items.","Major migration architecture decisions are no longer in flux."]},{"id":"beta","title":"Beta","workstream":"Beta Validation","icon":"BETA","state":"future","targetWindow":"Q2 2026 (tentative)","completion":0,"risk":"medium","confidence":"low","goal":"Make the desktop runtime the feature-complete primary experience for normal users.","blockers":["Depends on pre-beta hardening being broadly complete.","Should not start while legacy fallback is still needed for core confidence."],"focus":["Treat the desktop shell as the default runtime, not as a side path beside legacy.","Collect and fix real-world regressions from wider daily use.","Continue UX polish and structural cleanup without destabilizing core flows."],"startCriteria":["Core library browsing, emulators, support, themes, languages, tools, and settings work reliably.","Main UI/UX parity is close enough that legacy/classic is optional, not required.","The desktop runtime is clearly the preferred experience for normal use."]},{"id":"stable","title":"Stable","workstream":"Release Quality","icon":"SHIP","state":"future","targetWindow":"Q3 2026 or later (tentative)","completion":0,"risk":"high","confidence":"low","goal":"Make the desktop app the default recommended experience with no major fallback dependency.","blockers":["Requires beta to prove daily-use reliability over time.","Requires cross-platform and persistence quality to be consistently strong."],"focus":["Keep the release boring in the good way: reliable persistence, launches, downloads, updates, and settings.","Treat cross-platform behavior and shell integration as part of release quality, not follow-up work.","Focus future updates on measured improvements rather than core recovery."],"startCriteria":["No major workflow requires the legacy fallback.","Persistent data, downloads, launching, and settings survive restart cleanly.","Window behavior, responsiveness, and shell integration are consistent across supported setups."]}],"betaDefinition":["Feature-complete for normal daily use.","Legacy fallback is optional instead of required.","Remaining issues are mostly edge cases or polish."],"stableDefinition":["Default recommended experience.","No major workflow depends on legacy fallback.","Reliability and persistence are strong enough that updates are incremental, not recovery-oriented."],"futureUpdateTracks":["Stabilization fixes","Structural cleanup and continuous refactoring","Parity improvements where the historical UX still matters","UX polish and consistency","Only then broader feature expansion"],"history":[{"date":"2026-03-12","title":"Roadmap baseline captured","summary":"Defined current phase, milestone gates, beta/stable meaning, and near-term priorities in repo notes and dashboard data."},{"date":"2026-03-12","title":"Language manager stabilization continued","summary":"Improved live edit visibility, language card selection, style preset management, and initial layout/scroll fixes."},{"date":"2026-03-12","title":"Runtime cleanup resumed","summary":"Started splitting language-manager runtime responsibilities back into feature-folder modules instead of growing one large runtime file."}],"nearTermTasks":["Keep shrinking legacy bootstrap/runtime responsibilities once migrated replacements are proven.","Review large files during normal work and split them into feature-folder modules early.","Verify installer, protocol handling, persistence, and resource-download flows after major changes.","Treat restart-only, resize-only, and manual-interaction-only bugs as high-priority stabilization issues."]};
+      const draftStorageKey = 'emubro.roadmap.draft';
+      const tabButtons = Array.from(document.querySelectorAll('[data-roadmap-tab]'));
+      const tabPanes = Array.from(document.querySelectorAll('[data-roadmap-pane]'));
+      const focusButtons = Array.from(document.querySelectorAll('[data-focus-view]'));
+      const focusPanes = Array.from(document.querySelectorAll('[data-focus-pane]'));
+
+      const savedLayout = localStorage.getItem(storageKey);
+      if (savedLayout === 'horizontal') {
+        horizontalInput.checked = true;
+      } else {
+        verticalInput.checked = true;
+      }
+
+      [verticalInput, horizontalInput].forEach((input) => {
+        input.addEventListener('change', () => {
+          if (input.checked) {
+            localStorage.setItem(storageKey, input.value);
+          }
+        });
+      });
+
+      const activateRoadmapTab = (tabId) => {
+        const resolvedTabId = tabPanes.some((pane) => pane.getAttribute('data-roadmap-pane') === tabId)
+          ? tabId
+          : 'overview';
+        tabButtons.forEach((button) => {
+          button.classList.toggle('is-active', button.getAttribute('data-roadmap-tab') === resolvedTabId);
+        });
+        tabPanes.forEach((pane) => {
+          pane.classList.toggle('is-active', pane.getAttribute('data-roadmap-pane') === resolvedTabId);
+        });
+        localStorage.setItem(activeTabStorageKey, resolvedTabId);
+      };
+
+      const savedTab = localStorage.getItem(activeTabStorageKey) || 'overview';
+      activateRoadmapTab(savedTab);
+
+      const activateFocusPane = (focusId) => {
+        const resolvedFocusId = focusPanes.some((pane) => pane.getAttribute('data-focus-pane') === focusId)
+          ? focusId
+          : 'now';
+        focusButtons.forEach((button) => {
+          button.classList.toggle('is-active', button.getAttribute('data-focus-view') === resolvedFocusId);
+        });
+        focusPanes.forEach((pane) => {
+          pane.classList.toggle('is-active', pane.getAttribute('data-focus-pane') === resolvedFocusId);
+        });
+        localStorage.setItem(activeFocusStorageKey, resolvedFocusId);
+      };
+
+      const savedFocus = localStorage.getItem(activeFocusStorageKey) || 'now';
+      activateFocusPane(savedFocus);
+
+      tabButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          activateRoadmapTab(button.getAttribute('data-roadmap-tab') || 'overview');
+        });
+      });
+
+      focusButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          activateFocusPane(button.getAttribute('data-focus-view') || 'now');
+        });
+      });
+
+      const cloneJson = (value) => JSON.parse(JSON.stringify(value));
+      const stateLabel = (state) => {
+        if (state === 'current') return 'Current';
+        if (state === 'up-next') return 'Up Next';
+        if (state === 'past') return 'Past';
+        return 'Future';
+      };
+      const getDraftOverrides = () => {
+        try {
+          return JSON.parse(localStorage.getItem(draftStorageKey) || '{"milestones":{},"historyAppend":[]}');
+        } catch (error) {
+          return { milestones: {}, historyAppend: [] };
+        }
+      };
+
+      const mergeRoadmapDrafts = (base, draft) => {
+        const merged = cloneJson(base);
+        const milestoneDrafts = draft && draft.milestones ? draft.milestones : {};
+        merged.milestones = merged.milestones.map((milestone) => ({
+          ...milestone,
+          ...(milestoneDrafts[milestone.id] || {})
+        }));
+        if (Array.isArray(draft && draft.historyAppend) && draft.historyAppend.length) {
+          merged.history = draft.historyAppend.concat(merged.history || []);
+        }
+        return merged;
+      };
+
+      const deriveMilestones = (milestones) => milestones.map((milestone, index) => {
+        const previous = index > 0 ? milestones[index - 1] : null;
+        const next = index < milestones.length - 1 ? milestones[index + 1] : null;
+        return {
+          ...milestone,
+          dependsOn: previous ? [previous.title] : [],
+          unlocks: next ? [next.title] : []
+        };
+      });
+
+      let currentRoadmap = mergeRoadmapDrafts(baseRoadmap, getDraftOverrides());
+
+      const updateBadgeText = (node, classPrefix, value, label) => {
+        if (!node) return;
+        node.classList.remove(classPrefix + '-low', classPrefix + '-medium', classPrefix + '-high');
+        node.classList.add(classPrefix + '-' + value);
+        node.textContent = label + ': ' + value.charAt(0).toUpperCase() + value.slice(1);
+      };
+
+      const escapeInline = (value) => String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+      const renderListMarkup = (items, className) => {
+        const cls = className ? ' class="' + className + '"' : '';
+        return '<ul' + cls + '>' + items.map((item) => '<li>' + escapeInline(item) + '</li>').join('') + '</ul>';
+      };
+
+      const renderHistoryMarkup = (history) => (history || []).map((entry) =>
+        '<article class="history-entry"><div class="history-date">' + escapeInline(entry.date || '') + '</div><div class="history-content"><h3>' + escapeInline(entry.title || '') + '</h3><p>' + escapeInline(entry.summary || '') + '</p></div></article>'
+      ).join('');
+
+      const renderRecentChangesMarkup = (history) => (history || []).slice(0, 3).map((entry, index) =>
+        '<article class="recent-change-card' + (index === 0 ? ' is-latest' : '') + '"><div class="recent-change-date">' + escapeInline(entry.date || '') + '</div><h3>' + escapeInline(entry.title || '') + '</h3><p>' + escapeInline(entry.summary || '') + '</p></article>'
+      ).join('');
+
+      const applyRoadmapToDom = (roadmapData) => {
+        const derivedMilestones = deriveMilestones(roadmapData.milestones || []);
+        const currentMilestone = derivedMilestones.find((milestone) => milestone.state === 'current') || derivedMilestones[0];
+        document.querySelectorAll('[data-current-milestone-title]').forEach((node) => {
+          node.textContent = 'Blocked by: ' + (currentMilestone ? currentMilestone.title : 'Current milestone');
+        });
+        derivedMilestones.forEach((milestone) => {
+          const key = milestone.id;
+          const blockerItems = Array.isArray(milestone.blockers) ? milestone.blockers : [];
+          document.querySelectorAll('[data-milestone-id="' + key + '"]').forEach((node) => {
+            node.classList.remove('risk-low', 'risk-medium', 'risk-high');
+            node.classList.add('risk-' + (milestone.risk || 'medium'));
+          });
+          document.querySelectorAll('[data-milestone-title="' + key + '"]').forEach((node) => {
+            node.textContent = milestone.title || '';
+          });
+          document.querySelectorAll('[data-milestone-goal="' + key + '"]').forEach((node) => {
+            node.textContent = milestone.goal || '';
+          });
+          document.querySelectorAll('[data-milestone-window="' + key + '"]').forEach((node) => {
+            node.textContent = milestone.targetWindow || 'Date TBD';
+          });
+          document.querySelectorAll('[data-milestone-window-label="' + key + '"]').forEach((node) => {
+            node.textContent = 'Window: ' + (milestone.targetWindow || 'TBD');
+          });
+          document.querySelectorAll('[data-milestone-completion="' + key + '"]').forEach((node) => {
+            const isTimeline = node.classList.contains('timeline-stop-chip');
+            node.textContent = (isTimeline ? stateLabel(milestone.state) + ' · ' : 'Completion: ') + String(milestone.completion ?? 0) + '%';
+          });
+          document.querySelectorAll('[data-milestone-completion-plain="' + key + '"]').forEach((node) => {
+            node.textContent = String(milestone.completion ?? 0) + '% complete';
+          });
+          document.querySelectorAll('[data-milestone-completion-fill="' + key + '"]').forEach((node) => {
+            node.style.width = String(milestone.completion ?? 0) + '%';
+          });
+          document.querySelectorAll('[data-milestone-blockers="' + key + '"]').forEach((node) => {
+            node.textContent = 'Blockers: ' + String(blockerItems.length);
+          });
+          document.querySelectorAll('[data-milestone-risk="' + key + '"]').forEach((node) => {
+            updateBadgeText(node, 'risk', milestone.risk || 'medium', 'Risk');
+          });
+          document.querySelectorAll('[data-milestone-confidence="' + key + '"]').forEach((node) => {
+            updateBadgeText(node, 'confidence', milestone.confidence || 'medium', 'Confidence');
+          });
+          document.querySelectorAll('[data-milestone-dependency-summary="' + key + '"]').forEach((node) => {
+            node.textContent = milestone.dependsOn.length ? 'Depends on ' + milestone.dependsOn.join(', ') + '.' : 'Starting point for the current roadmap.';
+          });
+          document.querySelectorAll('[data-milestone-dependency-pills="' + key + '"]').forEach((node) => {
+            node.innerHTML =
+              milestone.dependsOn.map((title) => '<span class="dependency-pill">Depends on ' + escapeInline(title) + '</span>').join('') +
+              milestone.unlocks.map((title) => '<span class="dependency-pill unlocks">Unlocks ' + escapeInline(title) + '</span>').join('');
+          });
+          document.querySelectorAll('[data-milestone-blocker-list="' + key + '"]').forEach((node) => {
+            const listClass = node.closest('.milestone-columns') ? 'danger-list' : '';
+            node.innerHTML = renderListMarkup(blockerItems, listClass);
+          });
+        });
+        const historyStrip = document.querySelector('[data-history-strip]');
+        if (historyStrip) {
+          historyStrip.innerHTML = renderHistoryMarkup(roadmapData.history || []);
+        }
+        const historyRecent = document.querySelector('[data-history-recent]');
+        if (historyRecent) {
+          historyRecent.innerHTML = renderRecentChangesMarkup(roadmapData.history || []);
+        }
+      };
+
+      applyRoadmapToDom(currentRoadmap);
+
+      const escapeHtml = (value) => String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+      const parseMarkdownFrontmatter = (markdown) => {
+        const source = String(markdown || '');
+        if (!source.startsWith('---') && !source.startsWith('---')) {
+          return { meta: {}, body: source };
+        }
+        const normalized = source.replace(/'/g, '');
+        const endIndex = normalized.indexOf('---', 4);
+        if (endIndex === -1) {
+          return { meta: {}, body: source };
+        }
+        const rawMeta = normalized.slice(4, endIndex).split('');
+        const meta = {};
+        rawMeta.forEach((line) => {
+          const separatorIndex = line.indexOf(':');
+          if (separatorIndex <= 0) return;
+          const key = line.slice(0, separatorIndex).trim().toLowerCase();
+          const value = line.slice(separatorIndex + 1).trim();
+          if (key) meta[key] = value;
+        });
+        return {
+          meta,
+          body: normalized.slice(endIndex + 5)
+        };
+      };
+
+      const renderInlineMarkdown = (value) => escapeHtml(value)
+        .replace(/!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/g, (_, alt, src) => '<figure class="markdown-image-wrap"><img src="' + src + '" alt="' + alt + '" loading="lazy" />' + (alt ? '<figcaption>' + alt + '</figcaption>' : '') + '</figure>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+        .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
+
+      const parseMarkdownToHtml = (markdown) => {
+        const codeFence = String.fromCharCode(96, 96, 96);
+        const lineFeed = String.fromCharCode(10);
+        const carriageReturn = String.fromCharCode(13);
+        const lines = String(markdown || '').replaceAll(carriageReturn + lineFeed, lineFeed).split(lineFeed);
+        const chunks = [];
+        let listType = null;
+        let listItems = [];
+        let paragraph = [];
+        let inCodeBlock = false;
+        let codeBuffer = [];
+
+        const flushParagraph = () => {
+          if (!paragraph.length) return;
+          chunks.push('<p>' + renderInlineMarkdown(paragraph.join(' ')) + '</p>');
+          paragraph = [];
+        };
+
+        const flushList = () => {
+          if (!listType || !listItems.length) return;
+          const tag = listType === 'ol' ? 'ol' : 'ul';
+          chunks.push('<' + tag + '>' + listItems.map((item) => '<li>' + renderInlineMarkdown(item) + '</li>').join('') + '</' + tag + '>');
+          listType = null;
+          listItems = [];
+        };
+
+        const flushCode = () => {
+          if (!inCodeBlock) return;
+          chunks.push('<pre><code>' + escapeHtml(codeBuffer.join(lineFeed)) + '</code></pre>');
+          inCodeBlock = false;
+          codeBuffer = [];
+        };
+
+        lines.forEach((rawLine) => {
+          const line = rawLine.trimEnd();
+
+          if (line.trim().startsWith(codeFence)) {
+            flushParagraph();
+            flushList();
+            if (inCodeBlock) {
+              flushCode();
+            } else {
+              inCodeBlock = true;
+            }
+            return;
+          }
+
+          if (inCodeBlock) {
+            codeBuffer.push(rawLine);
+            return;
+          }
+
+          const trimmed = line.trim();
+          if (!trimmed) {
+            flushParagraph();
+            flushList();
+            return;
+          }
+
+          const headingMatch = trimmed.match(/^(#{1,4})\s+(.*)$/);
+          if (headingMatch) {
+            flushParagraph();
+            flushList();
+            const level = Math.min(4, headingMatch[1].length);
+            chunks.push('<h' + level + '>' + renderInlineMarkdown(headingMatch[2]) + '</h' + level + '>');
+            return;
+          }
+
+          const quoteMatch = trimmed.match(/^>\s?(.*)$/);
+          if (quoteMatch) {
+            flushParagraph();
+            flushList();
+            chunks.push('<blockquote>' + renderInlineMarkdown(quoteMatch[1]) + '</blockquote>');
+            return;
+          }
+
+          if (/^(-{3,}|_{3,}|*{3,})$/.test(trimmed)) {
+            flushParagraph();
+            flushList();
+            chunks.push('<hr />');
+            return;
+          }
+
+          const imageOnlyMatch = trimmed.match(/^!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)$/);
+          if (imageOnlyMatch) {
+            flushParagraph();
+            flushList();
+            chunks.push(renderInlineMarkdown(trimmed));
+            return;
+          }
+
+          const unorderedMatch = trimmed.match(/^[-*]\s+(.*)$/);
+          if (unorderedMatch) {
+            flushParagraph();
+            if (listType && listType !== 'ul') {
+              flushList();
+            }
+            listType = 'ul';
+            listItems.push(unorderedMatch[1]);
+            return;
+          }
+
+          const orderedMatch = trimmed.match(/^\d+\.\s+(.*)$/);
+          if (orderedMatch) {
+            flushParagraph();
+            if (listType && listType !== 'ol') {
+              flushList();
+            }
+            listType = 'ol';
+            listItems.push(orderedMatch[1]);
+            return;
+          }
+
+          if (listType) {
+            flushList();
+          }
+
+          paragraph.push(trimmed);
+        });
+
+        flushParagraph();
+        flushList();
+        flushCode();
+        return chunks.join('');
+      };
+
+      const renderMarkdownDocument = (markdown) => {
+        const parsed = parseMarkdownFrontmatter(markdown);
+        const meta = parsed.meta || {};
+        const themeAttr = meta.theme ? ' data-markdown-theme="' + escapeHtml(meta.theme) + '"' : '';
+        const headerParts = [];
+        if (meta.title) {
+          headerParts.push('<h2>' + escapeHtml(meta.title) + '</h2>');
+        }
+        if (meta.subtitle) {
+          headerParts.push('<p>' + escapeHtml(meta.subtitle) + '</p>');
+        }
+        if (meta.image) {
+          headerParts.push('<figure class="markdown-image-wrap"><img src="' + escapeHtml(meta.image) + '" alt="' + escapeHtml(meta.imagealt || meta.title || '') + '" loading="lazy" />' + (meta.imagealt ? '<figcaption>' + escapeHtml(meta.imagealt) + '</figcaption>' : '') + '</figure>');
+        }
+        const headerHtml = headerParts.length ? '<div class="markdown-frontmatter"' + themeAttr + '>' + headerParts.join('') + '</div>' : '';
+        return {
+          html: headerHtml + parseMarkdownToHtml(parsed.body || ''),
+          theme: meta.theme || ''
+        };
+      };
+
+      document.querySelectorAll('[data-markdown-slot]').forEach((slot) => {
+        const slotId = slot.getAttribute('data-markdown-slot');
+        if (!slotId) return;
+        slot.dataset.defaultHtml = slot.innerHTML;
+        const savedMarkdown = localStorage.getItem(markdownStoragePrefix + slotId);
+        if (savedMarkdown) {
+          const rendered = renderMarkdownDocument(savedMarkdown);
+          slot.innerHTML = rendered.html;
+          slot.dataset.markdownTheme = rendered.theme || '';
+          slot.classList.remove('markdown-slot-empty');
+        }
+      });
+
+      const applyMarkdownToSlot = (slotId, markdown) => {
+        const slot = slotId ? document.querySelector('[data-markdown-slot="' + slotId + '"]') : null;
+        if (!slot) return false;
+        localStorage.setItem(markdownStoragePrefix + slotId, markdown);
+        const rendered = renderMarkdownDocument(markdown);
+        slot.innerHTML = rendered.html;
+        slot.dataset.markdownTheme = rendered.theme || '';
+        slot.classList.remove('markdown-slot-empty');
+        return true;
+      };
+
+      document.querySelectorAll('[data-markdown-input]').forEach((input) => {
+        input.addEventListener('change', async () => {
+          const slotId = input.getAttribute('data-markdown-input');
+          const file = input.files && input.files[0];
+          if (!slotId || !file) return;
+          const markdown = await file.text();
+          applyMarkdownToSlot(slotId, markdown);
+          input.value = '';
+        });
+      });
+
+      document.querySelectorAll('[data-markdown-reset]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const slotId = button.getAttribute('data-markdown-reset');
+          const slot = slotId ? document.querySelector('[data-markdown-slot="' + slotId + '"]') : null;
+          if (!slot) return;
+          localStorage.removeItem(markdownStoragePrefix + slotId);
+          slot.innerHTML = slot.dataset.defaultHtml || '';
+          slot.dataset.markdownTheme = '';
+          if (slot.textContent.trim()) {
+            slot.classList.remove('markdown-slot-empty');
+          } else {
+            slot.classList.add('markdown-slot-empty');
+          }
+        });
+      });
+
+      const downloadTextFile = (filename, content) => {
+        const blob = new Blob([content], { type: 'application/json;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      };
+
+      const getMergedRoadmapForExport = () => mergeRoadmapDrafts(baseRoadmap, getDraftOverrides());
+
+      document.querySelector('[data-roadmap-copy-json]')?.addEventListener('click', async () => {
+        const json = JSON.stringify(getMergedRoadmapForExport(), null, 2);
+        try {
+          await navigator.clipboard.writeText(json);
+        } catch (error) {
+          downloadTextFile('project-roadmap.json', json);
+        }
+      });
+
+      document.querySelector('[data-roadmap-download-json]')?.addEventListener('click', () => {
+        downloadTextFile('project-roadmap.json', JSON.stringify(getMergedRoadmapForExport(), null, 2));
+      });
+
+      const normalizeBundleName = (name) => String(name || '')
+        .toLowerCase()
+        .replace(/.(md|markdown|txt)$/i, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+      const resolveBundleSlot = (normalizedName) => {
+        const directMap = {
+          'where-we-are': 'section-where-we-are',
+          'where-we-are-going': 'section-where-we-are-going',
+          'beta-means': 'section-beta-means',
+          'stable-means': 'section-stable-means',
+          'near-term-tasks': 'section-near-term-tasks',
+          'future-update-tracks': 'section-future-update-tracks',
+          'history': 'section-history-strip'
+        };
+        if (directMap[normalizedName]) return directMap[normalizedName];
+        if (normalizedName.startsWith('milestone-')) return normalizedName + '-notes';
+        const matchingMilestone = baseRoadmap.milestones.find((milestone) => normalizedName === milestone.id || normalizedName === normalizeBundleName(milestone.title));
+        return matchingMilestone ? 'milestone-' + matchingMilestone.id + '-notes' : null;
+      };
+
+      const applyMarkdownBundle = async (files) => {
+        for (const file of files) {
+          const normalizedName = normalizeBundleName(file.name);
+          const slotId = resolveBundleSlot(normalizedName);
+          if (!slotId) continue;
+          const markdown = await file.text();
+          applyMarkdownToSlot(slotId, markdown);
+        }
+      };
+
+      document.querySelector('[data-markdown-bundle]')?.addEventListener('change', async (event) => {
+        const files = Array.from(event.target.files || []);
+        await applyMarkdownBundle(files);
+        event.target.value = '';
+      });
+
+      const dropzone = document.querySelector('[data-roadmap-dropzone]');
+      ['dragenter', 'dragover'].forEach((eventName) => {
+        dropzone?.addEventListener(eventName, (event) => {
+          event.preventDefault();
+          dropzone.classList.add('is-active');
+        });
+      });
+      ['dragleave', 'dragend', 'drop'].forEach((eventName) => {
+        dropzone?.addEventListener(eventName, () => {
+          dropzone.classList.remove('is-active');
+        });
+      });
+      dropzone?.addEventListener('drop', async (event) => {
+        event.preventDefault();
+        const files = Array.from(event.dataTransfer?.files || []).filter((file) => /.(md|markdown|txt)$/i.test(file.name));
+        await applyMarkdownBundle(files);
+      });
+
+      const editorSelect = document.querySelector('[data-roadmap-editor-select]');
+      const editorTitle = document.querySelector('[data-roadmap-editor-title]');
+      const editorWindow = document.querySelector('[data-roadmap-editor-window]');
+      const editorCompletion = document.querySelector('[data-roadmap-editor-completion]');
+      const editorRisk = document.querySelector('[data-roadmap-editor-risk]');
+      const editorConfidence = document.querySelector('[data-roadmap-editor-confidence]');
+      const editorGoal = document.querySelector('[data-roadmap-editor-goal]');
+      const editorBlockers = document.querySelector('[data-roadmap-editor-blockers]');
+      const editorStatus = document.querySelector('[data-roadmap-editor-status]');
+      const historyDate = document.querySelector('[data-roadmap-history-date]');
+      const historyTitle = document.querySelector('[data-roadmap-history-title]');
+      const historySummary = document.querySelector('[data-roadmap-history-summary]');
+      const historyStatus = document.querySelector('[data-roadmap-history-status]');
+
+      const refreshEditorFields = () => {
+        if (!editorSelect) return;
+        currentRoadmap = mergeRoadmapDrafts(baseRoadmap, getDraftOverrides());
+        const milestone = currentRoadmap.milestones.find((entry) => entry.id === editorSelect.value) || currentRoadmap.milestones[0];
+        if (!milestone) return;
+        editorTitle.value = milestone.title || '';
+        editorWindow.value = milestone.targetWindow || '';
+        editorCompletion.value = String(milestone.completion ?? 0);
+        editorRisk.value = milestone.risk || 'medium';
+        editorConfidence.value = milestone.confidence || 'medium';
+        editorGoal.value = milestone.goal || '';
+        editorBlockers.value = Array.isArray(milestone.blockers) ? milestone.blockers.join('') : '';
+      };
+
+      editorSelect?.addEventListener('change', refreshEditorFields);
+      refreshEditorFields();
+
+      document.querySelector('[data-roadmap-editor-save]')?.addEventListener('click', () => {
+        if (!editorSelect) return;
+        const draft = getDraftOverrides();
+        draft.milestones = draft.milestones || {};
+        draft.milestones[editorSelect.value] = {
+          title: editorTitle.value.trim(),
+          targetWindow: editorWindow.value.trim(),
+          completion: Number(editorCompletion.value || 0),
+          risk: editorRisk.value,
+          confidence: editorConfidence.value,
+          goal: editorGoal.value.trim(),
+          blockers: editorBlockers.value.split(/?/).map((item) => item.trim()).filter(Boolean)
+        };
+        localStorage.setItem(draftStorageKey, JSON.stringify(draft));
+        currentRoadmap = mergeRoadmapDrafts(baseRoadmap, draft);
+        applyRoadmapToDom(currentRoadmap);
+        if (editorStatus) {
+          editorStatus.textContent = 'Local draft saved. Download or copy the JSON if you want to keep it outside this browser.';
+        }
+      });
+
+      document.querySelector('[data-roadmap-editor-reset]')?.addEventListener('click', () => {
+        if (!editorSelect) return;
+        const draft = getDraftOverrides();
+        if (draft.milestones) {
+          delete draft.milestones[editorSelect.value];
+        }
+        localStorage.setItem(draftStorageKey, JSON.stringify(draft));
+        currentRoadmap = mergeRoadmapDrafts(baseRoadmap, draft);
+        applyRoadmapToDom(currentRoadmap);
+        refreshEditorFields();
+        if (editorStatus) {
+          editorStatus.textContent = 'Local draft cleared for this milestone.';
+        }
+      });
+
+      document.querySelector('[data-roadmap-history-add]')?.addEventListener('click', () => {
+        const draft = getDraftOverrides();
+        draft.historyAppend = Array.isArray(draft.historyAppend) ? draft.historyAppend : [];
+        const entry = {
+          date: (historyDate?.value || '').trim() || new Date().toISOString().slice(0, 10),
+          title: (historyTitle?.value || '').trim() || 'Untitled update',
+          summary: (historySummary?.value || '').trim() || 'No summary provided.'
+        };
+        draft.historyAppend.unshift(entry);
+        localStorage.setItem(draftStorageKey, JSON.stringify(draft));
+        currentRoadmap = mergeRoadmapDrafts(baseRoadmap, draft);
+        applyRoadmapToDom(currentRoadmap);
+        if (historyDate) historyDate.value = entry.date;
+        if (historyTitle) historyTitle.value = '';
+        if (historySummary) historySummary.value = '';
+        if (historyStatus) {
+          historyStatus.textContent = 'History entry added to local draft.';
+        }
+      });
+
+      document.querySelector('[data-roadmap-history-reset]')?.addEventListener('click', () => {
+        const draft = getDraftOverrides();
+        draft.historyAppend = [];
+        localStorage.setItem(draftStorageKey, JSON.stringify(draft));
+        currentRoadmap = mergeRoadmapDrafts(baseRoadmap, draft);
+        applyRoadmapToDom(currentRoadmap);
+        if (historyStatus) {
+          historyStatus.textContent = 'Local history draft entries cleared.';
+        }
+      });
+
+      document.querySelectorAll('[data-milestone-jump]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const targetId = button.getAttribute('data-milestone-jump');
+          const target = targetId ? document.getElementById(targetId) : null;
+          if (!target) return;
+          activateRoadmapTab('milestones');
+          document.querySelectorAll('.milestone-card[open]').forEach((card) => {
+            if (card !== target) {
+              card.removeAttribute('open');
+            }
+          });
+          target.setAttribute('open', '');
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      });
+    }());
+  </script>
+</body>
+</html>

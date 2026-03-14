@@ -18,18 +18,26 @@ import {
     hueRotateColors,
     saveTheme, 
     hideThemeForm, 
+    showThemeForm,
     setupColorPickerListeners, 
     setupBackgroundImageListeners,
     getHasUnsavedChanges,
     setHasUnsavedChanges,
     renderThemeManager,
     resetThemeForm,
+    startCreateTheme,
     setupThemeCustomizationControls,
     applyCornerStyle,
+    getWindowFrameSettings,
+    updateGlobalWindowFrameSettings,
     getCurrentTheme,
+    activateThemeManagerTab,
     makeDraggable,
     openThemeManager,
-    recenterManagedModalIfMostlyOutOfView
+    recenterManagedModalIfMostlyOutOfView,
+    requestTaskbarIconSync,
+    getTaskbarIconColor,
+    setTaskbarIconStartupSuppressed
 } from './js/theme-manager';
 import { initDocking, toggleDock, removeFromDock, completelyRemoveFromDock } from './js/docking-manager';
 import { 
@@ -77,11 +85,14 @@ import { setupRendererEventListeners } from './js/events/setup-renderer-events';
 import { openProfileModalView } from './js/profile/profile-modal';
 import { openAboutDialog as openAboutDialogView } from './js/about-dialog';
 import { createCategoriesListRenderer } from './js/library/categories-list-renderer';
+import { createPlatformsListRenderer } from './js/library/platforms-list-renderer';
 import { createSuggestionsPanelController } from './js/suggestions/suggestions-panel-controller';
 import { createBrowseFooterController } from './js/library/browse-footer-controller';
 import { createLibraryViewController } from './js/library/library-view-controller';
+import { setupViewControlsRail } from './js/library/view-controls-rail';
 import { buildGamesContainerClass, getStoredCoverCardMode } from './js/game-manager/render-utils';
 import { setupGameSessionOverlay } from './js/game-session-overlay';
+import { initializeShellStorageCache } from './desktop/src/utils/shell-storage-cache';
 
 // ===== Global State & Elements =====
 const gamesContainer = document.getElementById('games-container');
@@ -112,6 +123,7 @@ let activeTagCategories = new Set();
 const QUICK_SEARCH_STATE_KEY = 'emuBro.quickSearchState.v1';
 const BROWSE_SCOPE_STORAGE_KEY = 'emuBro.browseScope.v1';
 const CATEGORY_SELECTION_MODE_KEY = 'emuBro.categorySelectionMode.v1';
+const CATEGORY_MATCH_MODE_KEY = 'emuBro.categoryMatchMode.v1';
 const LLM_HELPERS_ENABLED_KEY = 'emuBro.llmHelpersEnabled';
 const LLM_ALLOW_UNKNOWN_TAGS_KEY = 'emuBro.llmAllowUnknownTags';
 const GROUP_BY_MODE_KEY = 'emuBro.groupByMode';
@@ -122,15 +134,26 @@ const SUGGESTED_SECTION_KEY = 'suggested';
 const SUPPORTED_LIBRARY_SECTIONS = new Set(['all', 'favorite', 'recent', SUGGESTED_SECTION_KEY, 'emulators']);
 let suggestedCoverGames = [];
 let categorySelectionMode = normalizeCategorySelectionMode(localStorage.getItem(CATEGORY_SELECTION_MODE_KEY) || 'multi');
+let categoryMatchMode = normalizeCategoryMatchMode(localStorage.getItem(CATEGORY_MATCH_MODE_KEY) || 'or');
 let llmHelpersEnabled = localStorage.getItem(LLM_HELPERS_ENABLED_KEY) !== 'false';
 let llmAllowUnknownTags = localStorage.getItem(LLM_ALLOW_UNKNOWN_TAGS_KEY) === 'true';
 let categoriesShowAll = false;
+let platformsShowAll = false;
 const CATEGORY_VISIBLE_LIMIT = 10;
 let categoriesListRenderer = null;
+let platformsListRenderer = null;
 let suggestionsPanelController = null;
 let browseFooterController = null;
 let libraryViewController = null;
 let gameSessionOverlayController = null;
+let startupShellRevealAt = 0;
+let startupInteractionTrackingBound = false;
+let startupPointerInteractionActive = false;
+let startupLastInteractionAt = 0;
+let startupFirstPointerLogged = false;
+let startupFirstResizeLogged = false;
+let startupFirstWindowMoveLogged = false;
+const STARTUP_DEBUG_LOG_NAME = 'window-startup.log';
 
 // Forward declarations for functions that might be used before their full definition due to circular dependencies
 // This is a common pattern in large JS files that get refactored into modules
@@ -144,6 +167,22 @@ let updateLibraryCounters;
 function normalizeCategorySelectionMode(value) {
     const mode = String(value || "").trim().toLowerCase();
     return mode === "multi" ? "multi" : "single";
+}
+
+function normalizeCategoryMatchMode(value) {
+    const mode = String(value || '').trim().toLowerCase();
+    return mode === 'and' ? 'and' : 'or';
+}
+
+function emitStartupDebugLog(message) {
+    const text = String(message || '').trim();
+    if (!text || !emubro || typeof emubro.invoke !== 'function') return;
+    try {
+        void emubro.invoke('window:debug-log', {
+            log: STARTUP_DEBUG_LOG_NAME,
+            message: `renderer ${Math.round(performance.now())}ms ${text}`
+        });
+    } catch (_error) {}
 }
 
 // Redefine functions to ensure they are available before assignments
@@ -180,6 +219,13 @@ function setCategorySelectionMode(mode, { persist = true } = {}) {
     }
     if (persist) {
         localStorage.setItem(CATEGORY_SELECTION_MODE_KEY, categorySelectionMode);
+    }
+}
+
+function setCategoryMatchMode(mode, { persist = true } = {}) {
+    categoryMatchMode = normalizeCategoryMatchMode(mode);
+    if (persist) {
+        localStorage.setItem(CATEGORY_MATCH_MODE_KEY, categoryMatchMode);
     }
 }
 
@@ -296,6 +342,8 @@ categoriesListRenderer = createCategoriesListRenderer({
     clearCategorySelection,
     setCategorySelectionMode,
     getCategorySelectionMode: () => categorySelectionMode,
+    setCategoryMatchMode,
+    getCategoryMatchMode: () => categoryMatchMode,
     syncCategoryStateFromSelectionSet,
     escapeHtml,
     isLlmHelpersEnabled: () => llmHelpersEnabled,
@@ -315,16 +363,41 @@ categoriesListRenderer = createCategoriesListRenderer({
     initialCategoriesShowAll: categoriesShowAll
 });
 
+platformsListRenderer = createPlatformsListRenderer({
+    getGames,
+    renderActiveLibraryView: async () => {
+        if (typeof renderActiveLibraryView === 'function') {
+            await renderActiveLibraryView();
+        }
+    },
+    isLibraryTopSection: () => activeTopSection === 'library',
+    isEmulatorsSection: () => activeLibrarySection === 'emulators',
+    escapeHtml,
+    platformVisibleLimit: CATEGORY_VISIBLE_LIMIT
+});
+
 async function renderCategoriesList() {
     if (!categoriesListRenderer) return;
     await categoriesListRenderer.renderCategoriesList();
     categoriesShowAll = !!categoriesListRenderer.getCategoriesShowAll();
 }
 
+async function renderPlatformsList() {
+    if (!platformsListRenderer) return;
+    await platformsListRenderer.renderPlatformsList();
+    platformsShowAll = !!platformsListRenderer.getPlatformsShowAll();
+}
+
 function applyCategoryFilter(rows) {
     const source = Array.isArray(rows) ? rows : [];
     const selected = getActiveCategorySelectionSet();
     if (selected.size === 0) return source;
+    if (categoryMatchMode === 'and' && selected.size > 1) {
+        return source.filter((game) => {
+            const tags = new Set(getGameTagIds(game));
+            return Array.from(selected).every((tag) => tags.has(tag));
+        });
+    }
     return source.filter((game) => getGameTagIds(game).some((tag) => selected.has(tag)));
 }
 
@@ -805,7 +878,7 @@ function setGamesHeaderByLibrarySection(section) {
         return;
     }
 
-    gamesHeader.textContent = i18n.t('gameGrid.featuredGames') || 'Featured Games';
+    gamesHeader.textContent = i18n.t('gameGrid.allGames') || 'All Games';
 }
 
 function getSectionFilteredGames() {
@@ -881,6 +954,7 @@ libraryViewController = createLibraryViewController({
 
 renderActiveLibraryView = async () => {
     await libraryViewController.renderActiveLibraryView();
+    await renderPlatformsList();
 };
 
 setActiveLibrarySection = async (section) => {
@@ -896,15 +970,35 @@ refreshEmulatorsState = async () => {
 };
 
 // ===== IPC Listeners (via preload) =====
+let pendingWindowMovePaint = null;
+let pendingWindowMoveFrame = null;
+
+function getMainGameGrid() {
+    const existing = gamesContainer?.closest?.('main.game-grid');
+    if (existing) return existing;
+    return document.querySelector('main.game-grid');
+}
+
 emubro.onWindowMoved((position, screenGoal) => {
-    const { x, y } = position;
-    const { screenGoalX, screenGoalY } = screenGoal;
-    const gameGrid = document.querySelector('main.game-grid');
-    if (gameGrid) {
-        const bgX = screenGoalX - x - (window.innerWidth / 2);
-        const bgY = screenGoalY - y - (window.innerHeight / 2);
-        gameGrid.style.backgroundPosition = `${bgX}px ${bgY}px`;
+    if (!startupFirstWindowMoveLogged) {
+        startupFirstWindowMoveLogged = true;
+        emitStartupDebugLog(`first window-moved callback x=${Number(position?.x || 0)} y=${Number(position?.y || 0)}`);
     }
+    pendingWindowMovePaint = { position, screenGoal };
+    if (pendingWindowMoveFrame !== null) return;
+    pendingWindowMoveFrame = window.requestAnimationFrame(() => {
+        pendingWindowMoveFrame = null;
+        if (!pendingWindowMovePaint) return;
+        const { position: nextPosition, screenGoal: nextScreenGoal } = pendingWindowMovePaint;
+        pendingWindowMovePaint = null;
+        const { x, y } = nextPosition || {};
+        const { screenGoalX, screenGoalY } = nextScreenGoal || {};
+        const gameGrid = getMainGameGrid();
+        if (!gameGrid) return;
+        const bgX = Number(screenGoalX || 0) - Number(x || 0) - (window.innerWidth / 2);
+        const bgY = Number(screenGoalY || 0) - Number(y || 0) - (window.innerHeight / 2);
+        gameGrid.style.backgroundPosition = `${bgX}px ${bgY}px`;
+    });
 });
 
 async function waitForUiSettle(ms = 650) {
@@ -915,15 +1009,90 @@ async function waitForUiSettle(ms = 650) {
     }
 }
 
+async function waitForNextFrame() {
+    await new Promise((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+async function waitForBrowserIdle(timeout = 1200) {
+    if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+        await new Promise((resolve) => {
+            window.requestIdleCallback(() => resolve(), { timeout });
+        });
+        return;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 280));
+}
+
+function ensureStartupInteractionTracking() {
+    if (startupInteractionTrackingBound) return;
+    startupInteractionTrackingBound = true;
+    startupLastInteractionAt = performance.now();
+
+    const markInteraction = () => {
+        startupLastInteractionAt = performance.now();
+    };
+
+    document.addEventListener('pointerdown', () => {
+        startupPointerInteractionActive = true;
+        markInteraction();
+        if (!startupFirstPointerLogged) {
+            startupFirstPointerLogged = true;
+            emitStartupDebugLog('first pointerdown');
+        }
+    }, true);
+
+    const clearPointerInteraction = () => {
+        startupPointerInteractionActive = false;
+        markInteraction();
+    };
+
+    document.addEventListener('pointerup', clearPointerInteraction, true);
+    document.addEventListener('pointercancel', clearPointerInteraction, true);
+    document.addEventListener('keydown', markInteraction, true);
+    window.addEventListener('blur', clearPointerInteraction, true);
+    window.addEventListener('resize', () => {
+        if (startupFirstResizeLogged) return;
+        startupFirstResizeLogged = true;
+        emitStartupDebugLog(`first window resize event ${window.innerWidth}x${window.innerHeight}`);
+    }, { passive: true });
+}
+
+async function waitForStartupInteractionQuiet({
+    minDelayMs = 2200,
+    quietWindowMs = 650,
+    maxDelayMs = 5000
+} = {}) {
+    ensureStartupInteractionTracking();
+    const waitStart = performance.now();
+
+    while ((performance.now() - waitStart) < maxDelayMs) {
+        const now = performance.now();
+        const sinceReveal = startupShellRevealAt > 0 ? now - startupShellRevealAt : now - waitStart;
+        const sinceInteraction = now - startupLastInteractionAt;
+        if (sinceReveal >= minDelayMs && !startupPointerInteractionActive && sinceInteraction >= quietWindowMs) {
+            return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 120));
+    }
+}
+
 async function signalRendererReady() {
+    emitStartupDebugLog('signalRendererReady start');
     try {
         await emubro.invoke('app:renderer-ready');
     } catch (_e) {}
+    emitStartupDebugLog('signalRendererReady complete');
+    window.setTimeout(() => {
+        setTaskbarIconStartupSuppressed(false);
+    }, 12000);
 }
 
 function revealAppShell() {
     try {
         document.documentElement.removeAttribute('data-booting');
+        startupShellRevealAt = performance.now();
+        emitStartupDebugLog('shell revealed');
     } catch (_e) {}
 }
 
@@ -938,6 +1107,7 @@ function applyLibraryStats(stats) {
 }
 
 async function loadInitialLibraryDataInBackground() {
+    emitStartupDebugLog('library hydration start');
     try {
         const [statsResult, gamesResult] = await Promise.allSettled([
             emubro.invoke('get-library-stats'),
@@ -959,10 +1129,13 @@ async function loadInitialLibraryDataInBackground() {
 
         setGames(games);
         setFilteredGames([...games]);
+        await waitForNextFrame();
+        await renderPlatformsList();
         await renderCategoriesList();
 
         initializePlatformFilterOptions();
         updateLibraryCounters();
+        await waitForNextFrame();
         await renderActiveLibraryView();
 
         // Keep emulator catalog hydration out of the critical path.
@@ -977,14 +1150,27 @@ async function loadInitialLibraryDataInBackground() {
         }
 
         log.info('Library data hydration completed');
+        emitStartupDebugLog('library hydration complete');
     } catch (error) {
         log.error('Failed to hydrate startup library data:', error);
+        emitStartupDebugLog(`library hydration failed: ${String(error?.message || error || 'unknown error')}`);
     }
+}
+
+async function scheduleInitialLibraryHydration() {
+    emitStartupDebugLog('library hydration wait start');
+    await waitForStartupInteractionQuiet();
+    await waitForBrowserIdle(1400);
+    await waitForNextFrame();
+    emitStartupDebugLog('library hydration wait complete');
+    await loadInitialLibraryDataInBackground();
 }
 
 // ===== Initialization =====
 async function initializeApp() {
     try {
+        await initializeShellStorageCache().catch(() => {});
+
         // Let CSS target OS-specific chrome effects (frameless window frame, etc).
         if (emubro.platform) {
             document.documentElement.setAttribute('data-os', String(emubro.platform));
@@ -997,6 +1183,7 @@ async function initializeApp() {
         });
 
         // Initialize theme
+        setTaskbarIconStartupSuppressed(true);
         const savedTheme = localStorage.getItem('theme') || 'dark';
         setTheme(savedTheme);
         updateThemeSelector();
@@ -1040,6 +1227,8 @@ async function initializeApp() {
             groupSameNamesToggle.checked = localStorage.getItem(GROUP_SAME_NAMES_KEY) === 'true';
         }
         setupViewScaleControl();
+        setupViewControlsRail();
+        ensureStartupInteractionTracking();
         setAppMode('library');
 
         // Set up listeners before revealing the main window.
@@ -1061,7 +1250,7 @@ async function initializeApp() {
         await waitForUiSettle(0);
         await signalRendererReady();
 
-        void loadInitialLibraryDataInBackground();
+        void scheduleInitialLibraryHydration();
 
         log.info('App shell initialized; loading library data in background');
     } catch (error) {
@@ -1119,13 +1308,18 @@ function setupEventListeners() {
         completelyRemoveFromDock,
         removeFromDock,
         hideThemeForm,
+        showThemeForm,
         setHasUnsavedChanges,
         toggleDock,
 
         applyCornerStyle,
+        getWindowFrameSettings,
+        updateGlobalWindowFrameSettings,
         setTheme,
         getCurrentTheme,
+        activateThemeManagerTab,
         resetThemeForm,
+        startCreateTheme,
         setupThemeCustomizationControls,
         setupColorPickerListeners,
         setupBackgroundImageListeners,
@@ -1135,6 +1329,7 @@ function setupEventListeners() {
         updateViewSizeControlState,
         gamesContainer,
 
+        renderPlatformsList,
         renderCategoriesList,
         getActiveCategorySelectionSet,
 

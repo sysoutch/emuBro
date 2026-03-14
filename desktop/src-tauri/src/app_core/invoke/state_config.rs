@@ -51,6 +51,70 @@ pub(super) fn handle(ch: &str, args: &[Value], _window: &Window) -> Result<Value
             let theme = write_splash_theme_settings(args.get(0))?;
             Ok(json!({ "success": true, "theme": theme }))
         }
+        "shell-state:get" => {
+            let payload = args.get(0).cloned().unwrap_or_else(|| json!({}));
+            let key = payload
+                .get("key")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            if key.is_empty() {
+                return Ok(json!({
+                    "success": false,
+                    "message": "Missing shell state key.",
+                    "value": payload.get("fallback").cloned().unwrap_or(Value::Null)
+                }));
+            }
+            let fallback = payload.get("fallback").cloned().unwrap_or(Value::Null);
+            Ok(json!({
+                "success": true,
+                "key": key,
+                "value": read_shell_state_value(&key, fallback)
+            }))
+        }
+        "shell-state:set" => {
+            let payload = args.get(0).cloned().unwrap_or_else(|| json!({}));
+            let key = payload
+                .get("key")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            if key.is_empty() {
+                return Ok(json!({
+                    "success": false,
+                    "message": "Missing shell state key."
+                }));
+            }
+            let value = payload.get("value").cloned().unwrap_or(Value::Null);
+            let stored = write_shell_state_value(&key, &value)?;
+            Ok(json!({
+                "success": true,
+                "key": key,
+                "value": stored
+            }))
+        }
+        "shell-state:delete" => {
+            let payload = args.get(0).cloned().unwrap_or_else(|| json!({}));
+            let key = payload
+                .get("key")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            if key.is_empty() {
+                return Ok(json!({
+                    "success": false,
+                    "message": "Missing shell state key."
+                }));
+            }
+            delete_shell_state_value(&key)?;
+            Ok(json!({
+                "success": true,
+                "key": key
+            }))
+        }
         "get-all-translations" => Ok(read_all_translations_from_disk()),
         "locales:list" => {
             let translations = read_all_translations_from_disk();
@@ -673,6 +737,29 @@ fn write_splash_theme_settings(payload: Option<&Value>) -> Result<Value, String>
     let conn = open_state_db()?;
     db_set_state_value(&conn, SPLASH_THEME_STATE_KEY, &normalized)?;
     Ok(normalized)
+}
+
+fn shell_state_storage_key(key: &str) -> String {
+    format!("desktop:shell:{}", key.trim())
+}
+
+fn read_shell_state_value(key: &str, fallback: Value) -> Value {
+    read_state_value_or_default(&shell_state_storage_key(key), fallback)
+}
+
+fn write_shell_state_value(key: &str, value: &Value) -> Result<Value, String> {
+    write_state_value(&shell_state_storage_key(key), value)?;
+    Ok(value.clone())
+}
+
+fn delete_shell_state_value(key: &str) -> Result<(), String> {
+    let conn = open_state_db()?;
+    conn.execute(
+        "DELETE FROM app_state WHERE key = ?1",
+        [shell_state_storage_key(key)],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 fn sanitize_tool_plugin_segment(input: &str) -> String {

@@ -56,13 +56,13 @@ function isPointerInsideLiveEditHotspot(event, element) {
 
     const rect = element.getBoundingClientRect();
     // Keep this in sync with the pencil badge geometry from _language-selector.scss.
-    // Badge is rendered inside the element bounds (top-right corner).
-    const badgeSize = 16;
-    const inset = 2;
-    const hotspotPadding = 3;
+    // Badge is rendered near the top-right corner and may slightly overhang inline text.
+    const badgeSize = 20;
+    const inset = 0;
+    const hotspotPadding = 5;
     const hotspotLeft = rect.right - inset - badgeSize - hotspotPadding;
-    const hotspotRight = rect.right - inset + hotspotPadding;
-    const hotspotTop = rect.top + inset - hotspotPadding;
+    const hotspotRight = rect.right - inset + hotspotPadding + 10;
+    const hotspotTop = rect.top + inset - hotspotPadding - 10;
     const hotspotBottom = rect.top + inset + badgeSize + hotspotPadding;
 
     return event.clientX >= hotspotLeft

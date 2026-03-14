@@ -1,3 +1,5 @@
+import { attachGameCardContextMenu } from '../game-card-context-menu';
+
 export function renderGamesAsRandom(gamesToRender, options = {}) {
     const gamesContainer = document.getElementById('games-container');
     if (!gamesContainer) return;
@@ -9,6 +11,8 @@ export function renderGamesAsRandom(gamesToRender, options = {}) {
     const buildViewGamePool = typeof options.buildViewGamePool === 'function' ? options.buildViewGamePool : (rows) => rows;
     const maxPoolSize = Number(options.maxPoolSize) || 0;
     const showGameDetails = typeof options.showGameDetails === 'function' ? options.showGameDetails : () => {};
+    const launchGame = typeof options.launchGame === 'function' ? options.launchGame : (async () => {});
+    const removeGame = typeof options.removeGame === 'function' ? options.removeGame : (async () => {});
     const escapeHtml = typeof options.escapeHtml === 'function' ? options.escapeHtml : (value) => String(value ?? '');
     const cleanupLazyGameImages = typeof options.cleanupLazyGameImages === 'function' ? options.cleanupLazyGameImages : () => {};
     const initializeLazyGameImages = typeof options.initializeLazyGameImages === 'function'
@@ -16,6 +20,8 @@ export function renderGamesAsRandom(gamesToRender, options = {}) {
         : () => {};
     const lazyPlaceholderSrc = String(options.lazyPlaceholderSrc || '');
     const i18n = options.i18n;
+    const emubro = options.emubro || window.emubro;
+    const alertUser = typeof options.alertUser === 'function' ? options.alertUser : (message) => window.alert(String(message || ''));
 
     const randomContainer = document.createElement('div');
     randomContainer.className = 'random-container random-container--slot';
@@ -107,6 +113,18 @@ export function renderGamesAsRandom(gamesToRender, options = {}) {
     randomContainer.appendChild(machine);
     gamesContainer.appendChild(randomContainer);
 
+    function bindContextMenu(target, game) {
+        if (!(target instanceof Element) || !game) return;
+        attachGameCardContextMenu(target, game, {
+            i18n,
+            emubro,
+            alertUser,
+            launchGame,
+            showGameDetails,
+            removeGame
+        });
+    }
+
     function getGameImage(game) {
         let gameImageToUse = game && game.image;
         if (!gameImageToUse && game && game.platformShortName) {
@@ -144,6 +162,10 @@ export function renderGamesAsRandom(gamesToRender, options = {}) {
         }).join('');
 
         initializeLazyGameImages(stripTrack);
+        preview.forEach(({ gameIdx }) => {
+            const item = stripTrack.querySelector(`.slot-strip-item[data-slot-preview-index="${gameIdx}"]`);
+            if (item) bindContextMenu(item, spinGames[gameIdx]);
+        });
         const activeItem = stripTrack.querySelector('.slot-strip-item.is-active');
         if (activeItem && typeof activeItem.scrollIntoView === 'function') {
             activeItem.scrollIntoView({
@@ -182,6 +204,7 @@ export function renderGamesAsRandom(gamesToRender, options = {}) {
         }
 
         renderSelectionStrip(idx);
+        bindContextMenu(result, game);
     }
 
     const baseLen = spinGames.length;
@@ -217,6 +240,8 @@ export function renderGamesAsRandom(gamesToRender, options = {}) {
     let absPos = 0;
     let rafId = null;
     let retrySpinTimer = null;
+    let anticipationTimer = null;
+    let hitTimer = null;
     let spinning = false;
 
     function measure() {
@@ -252,6 +277,31 @@ export function renderGamesAsRandom(gamesToRender, options = {}) {
 
     function easeOutCubic(t) {
         return 1 - Math.pow(1 - t, 3);
+    }
+
+    function clearMotionTimers() {
+        if (retrySpinTimer) {
+            window.clearTimeout(retrySpinTimer);
+            retrySpinTimer = null;
+        }
+        if (anticipationTimer) {
+            window.clearTimeout(anticipationTimer);
+            anticipationTimer = null;
+        }
+        if (hitTimer) {
+            window.clearTimeout(hitTimer);
+            hitTimer = null;
+        }
+    }
+
+    function triggerHitPulse() {
+        machine.classList.remove('is-hit');
+        void machine.offsetWidth;
+        machine.classList.add('is-hit');
+        hitTimer = window.setTimeout(() => {
+            machine.classList.remove('is-hit');
+            hitTimer = null;
+        }, 860);
     }
 
     function animateTo(targetAbsPos, durationMs, onDone) {
@@ -318,27 +368,17 @@ export function renderGamesAsRandom(gamesToRender, options = {}) {
                 leverBtn.disabled = false;
                 leverBtn.textContent = 'SPIN';
                 setResult(gameIdx, { immediate: false });
+                triggerHitPulse();
             }
         }
 
         rafId = requestAnimationFrame(step);
     }
 
-    function startSpin() {
-        if (renderToken !== getRenderToken()) return;
-        if (!randomContainer.isConnected) return;
-        if (spinning) return;
-        spinning = true;
-        leverBtn.disabled = true;
-        leverBtn.textContent = 'SPINNING...';
+    function beginSpinCycle() {
+        machine.classList.remove('is-primed');
         machine.classList.add('is-spinning');
-        result.classList.remove('is-visible');
-
-        // Visual lever "pull" feedback
-        leverBtn.classList.add('is-active');
-        setTimeout(() => {
-            leverBtn.classList.remove('is-active');
-        }, 400);
+        leverBtn.classList.remove('is-active');
 
         if (!metricsReady) measure();
         if (!metricsReady) {
@@ -350,7 +390,7 @@ export function renderGamesAsRandom(gamesToRender, options = {}) {
                 if (renderToken !== getRenderToken()) return;
                 if (!randomContainer.isConnected) return;
                 measure();
-                startSpin();
+                beginSpinCycle();
             }, 50);
             return;
         }
@@ -388,6 +428,32 @@ export function renderGamesAsRandom(gamesToRender, options = {}) {
         }
 
         rafId = requestAnimationFrame(tick);
+    }
+
+    function startSpin() {
+        if (renderToken !== getRenderToken()) return;
+        if (!randomContainer.isConnected) return;
+        if (spinning) return;
+        spinning = true;
+        clearMotionTimers();
+        machine.classList.remove('is-hit');
+        machine.classList.add('is-primed');
+        leverBtn.disabled = true;
+        leverBtn.textContent = 'SPINNING...';
+        result.classList.remove('is-visible');
+
+        // Visual lever "pull" feedback
+        leverBtn.classList.add('is-active');
+        if (reduceMotion) {
+            beginSpinCycle();
+            return;
+        }
+        anticipationTimer = window.setTimeout(() => {
+            anticipationTimer = null;
+            if (renderToken !== getRenderToken()) return;
+            if (!randomContainer.isConnected) return;
+            beginSpinCycle();
+        }, 180);
     }
 
     leverBtn.addEventListener('click', startSpin);
@@ -454,6 +520,14 @@ export function renderGamesAsRandom(gamesToRender, options = {}) {
         if (retrySpinTimer) {
             window.clearTimeout(retrySpinTimer);
             retrySpinTimer = null;
+        }
+        if (anticipationTimer) {
+            window.clearTimeout(anticipationTimer);
+            anticipationTimer = null;
+        }
+        if (hitTimer) {
+            window.clearTimeout(hitTimer);
+            hitTimer = null;
         }
         cleanupLazyGameImages(randomContainer);
     });

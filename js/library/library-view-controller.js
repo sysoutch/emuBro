@@ -252,7 +252,7 @@ export function createLibraryViewController(options = {}) {
             return;
         }
 
-        gamesHeader.textContent = i18n.t('gameGrid.featuredGames') || 'Featured Games';
+        gamesHeader.textContent = i18n.t('gameGrid.allGames') || 'All Games';
     }
 
     function syncDefaultSortForLibrarySection(section) {

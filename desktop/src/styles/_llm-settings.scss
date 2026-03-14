@@ -1,0 +1,66 @@
+/* AI / LLM settings surfaces */
+
+.desktop-llm-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.desktop-llm-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.desktop-llm-checkbox {
+  min-height: 40px;
+  align-self: end;
+}
+
+.field textarea.desktop-llm-textarea,
+.field textarea.desktop-llm-prompt {
+  width: 100%;
+  min-height: 132px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-elev), transparent 12%);
+  color: var(--text);
+  resize: vertical;
+  font: 0.9rem/1.5 Consolas, "Cascadia Code", monospace;
+}
+
+.field textarea.desktop-llm-prompt {
+  min-height: 220px;
+}
+
+.field.is-dimmed {
+  opacity: 0.68;
+}
+
+.desktop-llm-results {
+  display: grid;
+  gap: 10px;
+}
+
+.desktop-llm-result-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(var(--accent-rgb), 0.12), transparent 64%),
+    color-mix(in srgb, var(--bg-elev), transparent 14%);
+}
+
+.desktop-llm-result-card strong {
+  display: block;
+  margin: 0 0 4px;
+}
+
+.desktop-llm-connection-card {
+  grid-template-columns: minmax(0, 1fr);
+}

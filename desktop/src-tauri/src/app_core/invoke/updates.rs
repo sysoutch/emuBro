@@ -1004,14 +1004,19 @@ fn install_app_update(window: &Window) -> Result<Value, String> {
                 let state = with_config(
                     json!({
                         "success": true,
-                        "installing": false,
+                        "installing": true,
                         "downloaded": true,
                         "lastError": "",
-                        "lastMessage": "Opened downloaded installer. Complete installation, then relaunch emuBro."
+                        "lastMessage": "Installer launched. emuBro will close so the update can continue."
                     }),
                     &current_state,
                 );
                 persist_app_update_state(&state);
+                let app_handle = window.app_handle().clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(Duration::from_millis(900));
+                    app_handle.exit(0);
+                });
                 return Ok(state);
             }
             Err(error) => {

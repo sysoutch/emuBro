@@ -1,3 +1,8 @@
+import {
+    renderEmulatorsAsSlideshow as renderEmulatorsAsImmersiveSlideshow,
+    renderEmulatorsAsFocus as renderEmulatorsAsImmersiveFocus
+} from './views/emulator-immersive-view';
+
 const DEFAULT_TYPE_TABS = ['standalone', 'core', 'web'];
 
 export function createEmulatorViewRenderer(deps = {}) {
@@ -661,147 +666,6 @@ export function createEmulatorViewRenderer(deps = {}) {
         });
     }
 
-    function renderEmulatorsAsSlideshow(emulatorsToRender, options = {}) {
-        const gamesContainer = document.getElementById('games-container');
-        const container = document.createElement('div');
-        container.className = 'slideshow-container';
-        container.tabIndex = 0;
-
-        if (emulatorsToRender.length === 0) {
-            container.innerHTML = '<div class="slideshow-empty">No emulators to display.</div>';
-            gamesContainer.appendChild(container);
-            return;
-        }
-
-        let currentIndex = 0;
-        const len = emulatorsToRender.length;
-        
-        const chrome = document.createElement('div');
-        chrome.className = 'slideshow-chrome';
-        
-        const titleRow = document.createElement('div');
-        titleRow.className = 'slideshow-title-row';
-        const heading = document.createElement('h2');
-        heading.className = 'slideshow-heading';
-        titleRow.appendChild(heading);
-
-        const wrapper = document.createElement('div');
-        wrapper.className = 'slideshow-carousel-wrapper';
-        const inner = document.createElement('div');
-        inner.className = 'slideshow-carousel-inner';
-        wrapper.appendChild(inner);
-
-        const controls = document.createElement('div');
-        controls.className = 'slideshow-controls';
-        const prevBtn = document.createElement('button');
-        prevBtn.className = 'slideshow-btn prev-btn';
-        prevBtn.textContent = 'Previous';
-        const nextBtn = document.createElement('button');
-        nextBtn.className = 'slideshow-btn next-btn';
-        nextBtn.textContent = 'Next';
-        controls.appendChild(prevBtn);
-        controls.appendChild(nextBtn);
-
-        const footer = document.createElement('div');
-        footer.className = 'slideshow-footer';
-        
-        const blurb = document.createElement('div');
-        blurb.className = 'slideshow-blurb glass';
-        const blurbMeta = document.createElement('div');
-        blurbMeta.className = 'slideshow-blurb-meta';
-        const blurbText = document.createElement('p');
-        blurbText.className = 'slideshow-blurb-text';
-        blurb.appendChild(blurbMeta);
-        blurb.appendChild(blurbText);
-
-        footer.appendChild(titleRow);
-        footer.appendChild(blurb);
-        footer.appendChild(controls);
-
-        chrome.appendChild(wrapper);
-        chrome.appendChild(footer);
-        container.appendChild(chrome);
-        gamesContainer.appendChild(container);
-
-        function updateCard(card, idx) {
-            const emulator = emulatorsToRender[idx];
-            const safeName = escapeHtml(emulator.name || 'Unknown');
-            const shortName = String(emulator.platformShortName || 'unknown').toLowerCase();
-            const iconSrc = `emubro-resources/platforms/${shortName}/logos/default.png`;
-            
-            card.innerHTML = `
-                <div class="emulator-card slideshow-emu-card" style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg-secondary);border-radius:18px;">
-                    <img src="${iconSrc}" alt="" style="max-width:64%;max-height:64%;object-fit:contain;" />
-                </div>
-            `;
-            applyPlatformColorBlurToEmulatorCards(card);
-        }
-
-        function updateHero(idx) {
-            const emulator = emulatorsToRender[idx];
-            heading.textContent = emulator.name;
-            const platform = emulator.platform || emulator.platformShortName || 'Unknown';
-            const installed = !!emulator.isInstalled ? 'Installed' : 'Not Installed';
-            const path = getEmulatorPathMarkup(emulator, !!emulator.isInstalled);
-            
-            blurbMeta.innerHTML = `
-                <span class="slideshow-meta-pill">${escapeHtml(platform)}</span>
-                <span class="slideshow-meta-pill">${installed}</span>
-                <span class="slideshow-meta-pill">${idx + 1} / ${len}</span>
-            `;
-            blurbText.innerHTML = path;
-        }
-
-        let slotOffsets = [-1, 0, 1];
-        if (len === 1) slotOffsets = [0];
-        
-        const cards = slotOffsets.map(offset => {
-            const btn = document.createElement('button');
-            btn.className = 'slideshow-card';
-            btn.dataset.offset = String(offset);
-            if (offset === 0) btn.setAttribute('aria-current', 'true');
-            const idx = (currentIndex + offset + len) % len;
-            updateCard(btn, idx);
-            btn.addEventListener('click', () => {
-                if (offset !== 0) shift(offset);
-                else showEmulatorDetails(emulatorsToRender[currentIndex], options);
-            });
-            inner.appendChild(btn);
-            return btn;
-        });
-
-        function shift(dir) {
-            currentIndex = (currentIndex + dir + len) % len;
-            updateHero(currentIndex);
-            
-            cards.forEach(card => {
-                const oldOffset = parseInt(card.dataset.offset, 10);
-                let newOffset = oldOffset - dir;
-                
-                // Simple wrap logic for 3 cards
-                if (newOffset < -1) newOffset = 1;
-                if (newOffset > 1) newOffset = -1;
-                
-                card.dataset.offset = String(newOffset);
-                if (newOffset === 0) card.setAttribute('aria-current', 'true');
-                else card.removeAttribute('aria-current');
-                
-                const idx = (currentIndex + newOffset + len) % len;
-                updateCard(card, idx);
-            });
-        }
-
-        prevBtn.addEventListener('click', () => shift(-1));
-        nextBtn.addEventListener('click', () => shift(1));
-        container.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft') shift(-1);
-            if (e.key === 'ArrowRight') shift(1);
-            if (e.key === 'Enter' || e.key === ' ') showEmulatorDetails(emulatorsToRender[currentIndex], options);
-        });
-
-        updateHero(currentIndex);
-    }
-
     function renderEmulatorsAsRandom(emulatorsToRender, options = {}) {
         const gamesContainer = document.getElementById('games-container');
         const container = document.createElement('div');
@@ -922,7 +786,34 @@ export function createEmulatorViewRenderer(deps = {}) {
         }
 
         if (activeView === 'slideshow') {
-            renderEmulatorsAsSlideshow(rows, options);
+            renderEmulatorsAsImmersiveSlideshow(rows, {
+                ...options,
+                i18n,
+                escapeHtml,
+                showEmulatorDetails,
+                launchEmulator,
+                downloadAndInstallEmulator,
+                applyPlatformColorBlurToEmulatorCards,
+                getEmulatorPathMarkup,
+                getEmulatorPathTitle,
+                getEmulatorCardHoverIconMarkup
+            });
+            return;
+        }
+
+        if (activeView === 'focus') {
+            renderEmulatorsAsImmersiveFocus(rows, {
+                ...options,
+                i18n,
+                escapeHtml,
+                showEmulatorDetails,
+                launchEmulator,
+                downloadAndInstallEmulator,
+                applyPlatformColorBlurToEmulatorCards,
+                getEmulatorPathMarkup,
+                getEmulatorPathTitle,
+                getEmulatorCardHoverIconMarkup
+            });
             return;
         }
 

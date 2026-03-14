@@ -40,7 +40,12 @@ fn join_windows_command_line(executable_path: &Path, args: &[String]) -> String 
 }
 
 #[cfg(windows)]
-fn launch_with_windows_admin(executable_path: &Path, args: &[String], working_directory: &str) -> Result<u32, String> {
+fn launch_with_windows_admin(
+    executable_path: &Path,
+    args: &[String],
+    working_directory: &str,
+    env_pairs: &[(String, String)],
+) -> Result<u32, String> {
     let escaped_path = escape_powershell_single_quotes(&executable_path.to_string_lossy());
     let escaped_args = args
         .iter()
@@ -61,25 +66,33 @@ fn launch_with_windows_admin(executable_path: &Path, args: &[String], working_di
         script.push_str(&format!(" -WorkingDirectory '{}'", escaped_working_dir));
     }
 
-    let child = Command::new("powershell")
-        .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &script])
-        .spawn()
-        .map_err(|e| e.to_string())?;
+    let mut command = Command::new("powershell");
+    command.args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &script]);
+    if !env_pairs.is_empty() {
+        command.envs(env_pairs.iter().map(|(key, value)| (key, value)));
+    }
+    let child = command.spawn().map_err(|e| e.to_string())?;
     Ok(child.id())
 }
 
 #[cfg(windows)]
-fn launch_with_windows_user(executable_path: &Path, args: &[String], run_as_user: &str) -> Result<u32, String> {
+fn launch_with_windows_user(
+    executable_path: &Path,
+    args: &[String],
+    run_as_user: &str,
+    env_pairs: &[(String, String)],
+) -> Result<u32, String> {
     let user = run_as_user.trim();
     if user.is_empty() {
         return Err("Run-as user is empty.".to_string());
     }
     let command_line = join_windows_command_line(executable_path, args);
-    let child = Command::new("runas")
-        .arg(format!("/user:{}", user))
-        .arg(command_line)
-        .spawn()
-        .map_err(|e| e.to_string())?;
+    let mut command = Command::new("runas");
+    command.arg(format!("/user:{}", user)).arg(command_line);
+    if !env_pairs.is_empty() {
+        command.envs(env_pairs.iter().map(|(key, value)| (key, value)));
+    }
+    let child = command.spawn().map_err(|e| e.to_string())?;
     Ok(child.id())
 }
 
@@ -263,26 +276,173 @@ pub(crate) fn launch_game_with_emulator(
     Ok(child.id())
 }
 
+fn determine_launch_working_directory<'a>(emulator_path: &'a Path, working_directory: &'a str) -> PathBuf {
+    let working_dir = working_directory.trim();
+    if !working_dir.is_empty() {
+        PathBuf::from(working_dir)
+    } else {
+        emulator_path
+            .parent()
+            .map(|path| path.to_path_buf())
+            .unwrap_or_else(|| PathBuf::from("."))
+    }
+}
+
+pub(crate) fn parse_run_commands_before_payload(payload: &Value) -> Vec<String> {
+    if let Some(array) = payload.as_array() {
+        return array
+            .iter()
+            .map(|value| value.as_str().unwrap_or("").trim().to_string())
+            .filter(|value| !value.is_empty())
+            .collect::<Vec<String>>();
+    }
+
+    if let Some(text) = payload.as_str() {
+        return text
+            .split(&['\r', '\n', ';'][..])
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty())
+            .collect::<Vec<String>>();
+    }
+
+    Vec::new()
+}
+
+fn has_nonempty_json_payload(value: &Value) -> bool {
+    match value {
+        Value::Null => false,
+        Value::Bool(_) | Value::Number(_) => true,
+        Value::String(text) => !text.trim().is_empty(),
+        Value::Array(rows) => !rows.is_empty(),
+        Value::Object(map) => !map.is_empty(),
+    }
+}
+
+fn run_prelaunch_commands(commands: &[String], working_directory: &Path) -> Result<(), String> {
+    for command_text in commands {
+        let trimmed = command_text.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+
+        #[cfg(windows)]
+        let mut command = {
+            let mut value = Command::new("cmd");
+            value.args(["/C", trimmed]);
+            apply_windows_hidden_process_flags(&mut value);
+            value
+        };
+
+        #[cfg(not(windows))]
+        let mut command = {
+            let mut value = Command::new("sh");
+            value.args(["-lc", trimmed]);
+            value
+        };
+
+        command.current_dir(working_directory);
+        let status = command.status().map_err(|error| error.to_string())?;
+        if !status.success() {
+            return Err(format!("Pre-launch command failed: {}", trimmed));
+        }
+    }
+    Ok(())
+}
+
+fn create_emulator_launch_env_pairs(
+    emulator_path: &Path,
+    args: &[String],
+    working_directory: &Path,
+    input_bindings: &Value,
+    gamepad_bindings: &Value,
+    run_commands_before: &[String],
+) -> Result<Vec<(String, String)>, String> {
+    let mut env_pairs = Vec::<(String, String)>::new();
+    let has_payload = has_nonempty_json_payload(input_bindings)
+        || has_nonempty_json_payload(gamepad_bindings)
+        || !run_commands_before.is_empty();
+
+    if !has_payload {
+        return Ok(env_pairs);
+    }
+
+    let runtime_dir = std::env::temp_dir().join("emuBro").join("launch-payloads");
+    fs::create_dir_all(&runtime_dir).map_err(|error| error.to_string())?;
+
+    let mut hasher = DefaultHasher::new();
+    emulator_path.to_string_lossy().hash(&mut hasher);
+    system_unix_timestamp_string().hash(&mut hasher);
+    let file_name = format!("emulator-launch-{:x}.json", hasher.finish());
+    let payload_path = runtime_dir.join(file_name);
+    let payload = json!({
+        "emulatorPath": emulator_path.to_string_lossy().to_string(),
+        "args": args,
+        "workingDirectory": working_directory.to_string_lossy().to_string(),
+        "inputBindings": input_bindings.clone(),
+        "gamepadBindings": gamepad_bindings.clone(),
+        "runCommandsBefore": run_commands_before
+    });
+    let contents = serde_json::to_vec_pretty(&payload).map_err(|error| error.to_string())?;
+    fs::write(&payload_path, contents).map_err(|error| error.to_string())?;
+
+    env_pairs.push((
+        "EMUBRO_EMULATOR_LAUNCH_PAYLOAD_FILE".to_string(),
+        payload_path.to_string_lossy().to_string(),
+    ));
+    env_pairs.push((
+        "EMUBRO_EMULATOR_WORKING_DIRECTORY".to_string(),
+        working_directory.to_string_lossy().to_string(),
+    ));
+    if has_nonempty_json_payload(input_bindings) {
+        env_pairs.push((
+            "EMUBRO_INPUT_BINDINGS_JSON".to_string(),
+            input_bindings.to_string(),
+        ));
+    }
+    if has_nonempty_json_payload(gamepad_bindings) {
+        env_pairs.push((
+            "EMUBRO_GAMEPAD_BINDINGS_JSON".to_string(),
+            gamepad_bindings.to_string(),
+        ));
+    }
+
+    Ok(env_pairs)
+}
+
 pub(crate) fn launch_emulator_process(
     emulator_path: &Path,
     emulator_args: &str,
     working_directory: &str,
     run_as_admin: bool,
     run_as_user: &str,
+    input_bindings: &Value,
+    gamepad_bindings: &Value,
+    run_commands_before: &[String],
 ) -> Result<u32, String> {
     if !emulator_path.exists() || !emulator_path.is_file() {
         return Err("Emulator executable not found".to_string());
     }
     let args = parse_command_args(emulator_args);
     let run_as_user_trimmed = run_as_user.trim();
+    let resolved_working_directory = determine_launch_working_directory(emulator_path, working_directory);
+
+    run_prelaunch_commands(run_commands_before, &resolved_working_directory)?;
+    let env_pairs = create_emulator_launch_env_pairs(
+        emulator_path,
+        &args,
+        &resolved_working_directory,
+        input_bindings,
+        gamepad_bindings,
+        run_commands_before,
+    )?;
 
     #[cfg(windows)]
     {
         if !run_as_user_trimmed.is_empty() {
-            return launch_with_windows_user(emulator_path, &args, run_as_user_trimmed);
+            return launch_with_windows_user(emulator_path, &args, run_as_user_trimmed, &env_pairs);
         }
         if run_as_admin {
-            return launch_with_windows_admin(emulator_path, &args, working_directory);
+            return launch_with_windows_admin(emulator_path, &args, working_directory, &env_pairs);
         }
     }
 
@@ -297,11 +457,10 @@ pub(crate) fn launch_emulator_process(
             if !args.is_empty() {
                 command.args(&args);
             }
-            if !working_directory.trim().is_empty() {
-                command.current_dir(PathBuf::from(working_directory.trim()));
-            } else if let Some(parent) = emulator_path.parent() {
-                command.current_dir(parent);
+            if !env_pairs.is_empty() {
+                command.envs(env_pairs.iter().map(|(key, value)| (key, value)));
             }
+            command.current_dir(&resolved_working_directory);
             let child = command.spawn().map_err(|e| e.to_string())?;
             return Ok(child.id());
         }
@@ -310,16 +469,15 @@ pub(crate) fn launch_emulator_process(
                 return Err("runuser is not available on this Linux system.".to_string());
             }
             let mut command = Command::new("runuser");
-            command.args(["-u", run_as_user_trimmed, "--"]);
+            command.args(["-m", "-u", run_as_user_trimmed, "--"]);
             command.arg(emulator_path);
             if !args.is_empty() {
                 command.args(&args);
             }
-            if !working_directory.trim().is_empty() {
-                command.current_dir(PathBuf::from(working_directory.trim()));
-            } else if let Some(parent) = emulator_path.parent() {
-                command.current_dir(parent);
+            if !env_pairs.is_empty() {
+                command.envs(env_pairs.iter().map(|(key, value)| (key, value)));
             }
+            command.current_dir(&resolved_working_directory);
             let child = command.spawn().map_err(|e| e.to_string())?;
             return Ok(child.id());
         }
@@ -329,13 +487,10 @@ pub(crate) fn launch_emulator_process(
     if !args.is_empty() {
         command.args(args);
     }
-
-    let working_dir = working_directory.trim();
-    if !working_dir.is_empty() {
-        command.current_dir(PathBuf::from(working_dir));
-    } else if let Some(parent) = emulator_path.parent() {
-        command.current_dir(parent);
+    if !env_pairs.is_empty() {
+        command.envs(env_pairs.iter().map(|(key, value)| (key, value)));
     }
+    command.current_dir(&resolved_working_directory);
 
     apply_windows_hidden_process_flags(&mut command);
     let child = command.spawn().map_err(|e| e.to_string())?;

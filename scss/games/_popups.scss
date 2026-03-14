@@ -281,6 +281,39 @@
     gap: 8px;
 }
 
+#game-info-modal .game-detail-compact-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+#game-info-modal .game-detail-compact-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+#game-info-modal .game-detail-compact-toolbar .action-btn.small {
+    width: auto;
+    min-width: 0;
+    min-height: 28px;
+    padding: 4px 9px;
+    border-color: transparent;
+    background: transparent;
+    color: var(--text-secondary);
+    box-shadow: none;
+}
+
+#game-info-modal .game-detail-compact-toolbar .action-btn.small:hover,
+#game-info-modal .game-detail-compact-toolbar .action-btn.small:focus-visible {
+    border-color: color-mix(in srgb, var(--accent-color), transparent 52%);
+    background: color-mix(in srgb, var(--bg-tertiary), transparent 36%);
+    color: var(--text-primary);
+}
+
 #game-info-modal .game-detail-description-control label {
     color: var(--text-secondary);
     font-size: 0.8rem;
@@ -288,10 +321,92 @@
     letter-spacing: 0.04em;
 }
 
+#game-info-modal .game-detail-compact-preview {
+    width: 100%;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 9px 12px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-primary);
+    text-align: left;
+    line-height: 1.45;
+    cursor: pointer;
+    box-shadow: none;
+    transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+#game-info-modal .game-detail-compact-preview.is-expanded {
+    border-color: color-mix(in srgb, var(--accent-color), transparent 36%);
+    background: color-mix(in srgb, var(--bg-tertiary), transparent 28%);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, rgba(255,255,255,0.08), transparent 55%);
+    transform: none;
+}
+
+#game-info-modal .game-detail-compact-preview:hover,
+#game-info-modal .game-detail-compact-preview:focus-visible {
+    border-color: color-mix(in srgb, var(--accent-color), transparent 34%);
+    background: color-mix(in srgb, var(--bg-tertiary), transparent 58%);
+    transform: translateY(-1px);
+}
+
+#game-info-modal .game-detail-compact-preview.is-empty {
+    color: var(--text-secondary);
+    opacity: 0.8;
+}
+
+#game-info-modal .game-detail-description-preview {
+    padding-left: 0;
+}
+
+#game-info-modal .game-detail-description-preview.is-expanded {
+    display: block;
+    padding-left: 12px;
+    white-space: normal;
+}
+
+#game-info-modal .game-detail-tags-summary {
+    padding-left: 0;
+}
+
+#game-info-modal .game-detail-tags-summary.is-expanded {
+    align-items: flex-start;
+    align-content: flex-start;
+    padding-left: 12px;
+    max-height: 132px;
+    overflow-y: auto;
+}
+
+#game-info-modal .game-detail-description-editor[hidden],
+#game-info-modal .game-detail-tags-editor[hidden] {
+    display: none !important;
+}
+
+#game-info-modal .game-detail-description-editor,
+#game-info-modal .game-detail-tags-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
 #game-info-modal .game-detail-description-control textarea {
     width: 100%;
     min-height: 104px;
     resize: vertical;
+    padding: 10px 12px;
+    border: 1px solid color-mix(in srgb, rgba(255,255,255,0.22), var(--border-color));
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--bg-tertiary), transparent 8%);
+    color: var(--text-primary);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, rgba(255,255,255,0.08), transparent 60%);
+}
+
+#game-info-modal .game-detail-description-control textarea::placeholder {
+    color: var(--text-tertiary);
 }
 
 #game-info-modal .game-detail-description-actions {
@@ -341,6 +456,15 @@
     width: auto;
 }
 
+#game-info-modal .game-detail-platform-inline .game-detail-icon-btn--icon-only {
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+    padding: 0;
+    justify-content: center;
+    gap: 0;
+}
+
 #game-info-modal .game-detail-tags-control {
     grid-column: 1 / -1;
     display: flex;
@@ -366,6 +490,10 @@
     gap: 6px;
 }
 
+#game-info-modal .game-detail-tags-summary {
+    min-height: 44px;
+}
+
 #game-info-modal .game-tag-pill {
     display: inline-flex;
     align-items: center;
@@ -380,6 +508,10 @@
 
 #game-info-modal .game-tag-pill.is-empty {
     opacity: 0.7;
+}
+
+#game-info-modal .game-tag-pill--overflow {
+    color: var(--text-secondary);
 }
 
 #game-info-modal .game-detail-tags-actions {
@@ -401,6 +533,10 @@
     gap: 8px;
     min-width: 0;
     width: 100%;
+}
+
+#game-info-modal .game-detail-icon-btn--icon-only .game-detail-btn-icon {
+    margin: 0;
 }
 
 #game-info-modal .game-detail-btn-icon {
@@ -729,6 +865,154 @@
 
 #emulator-info-modal .emulator-detail-actions .action-btn {
     min-width: 108px;
+}
+
+#emulator-info-modal .emulator-detail-description-control {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#emulator-info-modal .game-detail-compact-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+#emulator-info-modal .game-detail-compact-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+#emulator-info-modal .game-detail-compact-toolbar .action-btn.small {
+    width: auto;
+    min-width: 0;
+    min-height: 28px;
+    padding: 4px 9px;
+    border-color: transparent;
+    background: transparent;
+    color: var(--text-secondary);
+    box-shadow: none;
+}
+
+#emulator-info-modal .game-detail-compact-toolbar .action-btn.small:hover,
+#emulator-info-modal .game-detail-compact-toolbar .action-btn.small:focus-visible {
+    border-color: color-mix(in srgb, var(--accent-color), transparent 52%);
+    background: color-mix(in srgb, var(--bg-tertiary), transparent 36%);
+    color: var(--text-primary);
+}
+
+#emulator-info-modal .emulator-detail-description-control label {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+#emulator-info-modal .game-detail-compact-preview {
+    width: 100%;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 9px 12px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-primary);
+    text-align: left;
+    line-height: 1.45;
+    cursor: pointer;
+    box-shadow: none;
+    transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+#emulator-info-modal .game-detail-compact-preview.is-expanded {
+    border-color: color-mix(in srgb, var(--accent-color), transparent 36%);
+    background: color-mix(in srgb, var(--bg-tertiary), transparent 28%);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, rgba(255,255,255,0.08), transparent 55%);
+    transform: none;
+}
+
+#emulator-info-modal .game-detail-compact-preview:hover,
+#emulator-info-modal .game-detail-compact-preview:focus-visible {
+    border-color: color-mix(in srgb, var(--accent-color), transparent 34%);
+    background: color-mix(in srgb, var(--bg-tertiary), transparent 58%);
+    transform: translateY(-1px);
+}
+
+#emulator-info-modal .game-detail-compact-preview.is-empty {
+    color: var(--text-secondary);
+    opacity: 0.8;
+}
+
+#emulator-info-modal .emulator-detail-description-preview {
+    display: block;
+    padding-left: 0;
+    white-space: normal;
+}
+
+#emulator-info-modal .emulator-detail-description-preview.is-expanded {
+    padding-left: 12px;
+}
+
+#emulator-info-modal .emulator-detail-description-editor[hidden] {
+    display: none !important;
+}
+
+#emulator-info-modal .emulator-detail-description-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#emulator-info-modal .emulator-detail-description-editor textarea {
+    width: 100%;
+    min-height: 104px;
+    resize: vertical;
+    padding: 10px 12px;
+    border: 1px solid color-mix(in srgb, rgba(255,255,255,0.22), var(--border-color));
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--bg-tertiary), transparent 8%);
+    color: var(--text-primary);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, rgba(255,255,255,0.08), transparent 60%);
+}
+
+#emulator-info-modal .emulator-detail-description-editor textarea::placeholder {
+    color: var(--text-tertiary);
+}
+
+#emulator-info-modal .emulator-detail-description-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+#emulator-info-modal .emulator-detail-description-actions .action-btn {
+    width: auto;
+    min-width: 0;
+    padding-inline: 14px;
+}
+
+#emulator-info-modal .emulator-detail-description-status {
+    margin-top: 2px;
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    min-height: 1rem;
+}
+
+#emulator-info-modal .emulator-detail-description-status[data-level="success"] {
+    color: var(--success-color);
+}
+
+#emulator-info-modal .emulator-detail-description-status[data-level="error"] {
+    color: var(--danger-color);
 }
 
 #emulator-info-modal .emulator-detail-launch-path-control {
