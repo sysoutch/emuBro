@@ -7,6 +7,7 @@ const FILES = [
   path.join(ROOT_DIR, 'desktop', 'package.json'),
   path.join(ROOT_DIR, 'desktop', 'src-tauri', 'tauri.conf.json')
 ];
+const CARGO_TOML_PATH = path.join(ROOT_DIR, 'desktop', 'src-tauri', 'Cargo.toml');
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -15,6 +16,28 @@ function readJson(filePath) {
 function writeJson(filePath, data) {
   const content = JSON.stringify(data, null, 2) + '\n';
   fs.writeFileSync(filePath, content, 'utf8');
+}
+
+function readText(filePath) {
+  return fs.readFileSync(filePath, 'utf8');
+}
+
+function writeText(filePath, content) {
+  fs.writeFileSync(filePath, content, 'utf8');
+}
+
+function setCargoPackageVersion(version) {
+  const source = readText(CARGO_TOML_PATH);
+  const next = source.replace(
+    /(\[package\][\s\S]*?\bversion\s*=\s*")([^"]+)(")/,
+    `$1${version}$3`
+  );
+
+  if (next === source) {
+    throw new Error(`Failed to update Cargo package version in ${CARGO_TOML_PATH}`);
+  }
+
+  writeText(CARGO_TOML_PATH, next);
 }
 
 function getRootVersion() {
@@ -32,6 +55,8 @@ function setVersion(version) {
     data.version = version;
     writeJson(filePath, data);
   }
+
+  setCargoPackageVersion(version);
 }
 
 function syncVersion() {
@@ -44,6 +69,7 @@ function syncVersion() {
     data.version = version;
     writeJson(filePath, data);
   }
+  setCargoPackageVersion(version);
 }
 
 const arg = process.argv[2];

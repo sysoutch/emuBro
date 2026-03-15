@@ -1,10 +1,10 @@
 {
   "name": "emuBro",
-  "version": "1.0.0-alpha.32",
+  "version": "1.0.0-alpha.33",
   "description": " emuBro is an open source retro game launcher that associates your retro games with your emulators such as snes9x, epsxe, pcsx2, dolphin, cemu or whatever you like. ",
   "scripts": {
     "postinstall": "node -e \"console.log('Root postinstall: use npm run scripts:help for the main commands.')\"",
-    "scripts:help": "node -e \"console.log(['emuBro script shortcuts:','  npm run app:desktop:dev        Start the Tauri desktop app (classic UI by default).','  npm run app:web:dev            Start the Vite web shell only.','  npm run app:desktop:build      Build the desktop app bundle.','  npm run app:web:build          Build the Vite web shell bundle.','  npm run ui:legacy:build        Build the legacy renderer bundle only.','  npm run resources:sync         Sync app resources and game lists.'].join('\\n'))\"",
+    "scripts:help": "node -e \"console.log(['emuBro script shortcuts:','  npm run app:desktop:dev        Start the Tauri desktop app (classic UI by default).','  npm run app:web:dev            Start the Vite web shell only.','  npm run app:desktop:build      Build the desktop app bundle.','  npm run app:web:build          Build the Vite web shell bundle.','  npm run ui:legacy:build        Build the legacy renderer bundle only.','  npm run resources:sync         Sync app resources and game lists.','  npm run release:alpha          Bump alpha version, commit, push, and tag the current branch.'].join('\\n'))\"",
     "start": "npm run app:desktop:dev",
     "start:fast": "npm run app:desktop:dev",
     "cleanup:dev-ports": "node scripts/cleanup-dev-ports.js",
@@ -33,6 +33,7 @@
     "prebuild:win": "taskkill /F /IM emuBro.exe /T || exit 0",
     "version:set": "node scripts/bump-version.js",
     "version:sync": "node scripts/bump-version.js sync",
+    "release:alpha": "node scripts/release-workflow.js",
     "resources:sync": "npm run sync:resources && npm run sync:gamelist",
     "roadmap:build": "node scripts/generate-roadmap-dashboard.js",
     "sync:resources": "node scripts/sync-emubro-resources.js",

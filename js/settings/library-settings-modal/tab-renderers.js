@@ -161,9 +161,27 @@ export function renderUpdatesTab({
     const latestVersion = escapeAttr(updateState.latestVersion || '');
     const notes = String(updateState.releaseNotes || '').trim();
     const hasDownloadUrl = /^https?:\/\//i.test(String(updateState.downloadUrl || '').trim());
+    const hasReleaseUrl = /^https?:\/\//i.test(String(updateState.releaseUrl || '').trim());
     const canDownload = !!updateState.available && hasDownloadUrl && !updateState.downloaded && !updateState.downloading && !updateState.installing;
-    const canInstall = (!!updateState.downloaded || (!!updateState.available && !hasDownloadUrl)) && !updateState.downloading && !updateState.installing;
-    const installLabel = updateState.downloaded ? 'Install & Restart' : 'Open Release Page';
+    const canInstall = !!updateState.downloaded && !updateState.downloading && !updateState.installing;
+    const appStageClass = updateState.lastError
+        ? 'is-error'
+        : updateState.installing
+            ? 'is-installing'
+            : updateState.downloading
+                ? 'is-downloading'
+                : updateState.downloaded
+                    ? 'is-ready'
+                    : updateState.available
+                        ? 'is-available'
+                        : 'is-idle';
+    const progressPercent = Math.max(0, Math.min(100, Math.round(Number(updateState.progressPercent || 0))));
+    const appProgressWidth = `${progressPercent}%`;
+    const appDownloadHint = updateState.downloaded
+        ? 'Installer downloaded locally. Use "Install Downloaded Update" to continue.'
+        : hasDownloadUrl
+            ? 'A compatible installer asset was found for this platform.'
+            : 'No direct installer asset was found for this platform. Use the release page instead.';
     const resourcesStatus = escapeAttr(renderResourcesUpdateStatusText());
     const resourcesCurrentVersion = escapeAttr(resourcesUpdateState.currentVersion || '');
     const resourcesLatestVersion = escapeAttr(resourcesUpdateState.latestVersion || '');
@@ -208,14 +226,24 @@ export function renderUpdatesTab({
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;">
                     <div style="font-size:0.9rem;"><strong>Current:</strong> ${currentVersion || '-'}</div>
                     <div style="font-size:0.9rem;"><strong>Latest:</strong> ${latestVersion || '-'}</div>
+                    <div style="font-size:0.9rem;"><strong>Download:</strong> ${progressPercent}%</div>
                 </div>
-                <div style="font-size:0.9rem;color:var(--text-secondary);" data-update-status>${status}</div>
+                <div class="desktop-update-state-strip ${appStageClass}" style="margin:0;padding:10px 12px;border-radius:10px;border:1px solid var(--border-color);background:color-mix(in srgb, var(--bg-primary), transparent 18%);display:grid;gap:4px;" data-update-status-strip>
+                    <strong>${updateState.lastError ? 'Error' : updateState.installing ? 'Installing' : updateState.downloading ? 'Downloading' : updateState.downloaded ? 'Ready to install' : updateState.available ? 'Update available' : 'Ready'}</strong>
+                    <span data-update-status>${status}</span>
+                </div>
+                <div class="desktop-update-progress ${appStageClass}" style="margin:0;height:12px;border-radius:999px;border:1px solid var(--border-color);background:var(--bg-primary);overflow:hidden;">
+                    <div class="desktop-update-progress-bar" style="width:${appProgressWidth};height:100%;border-radius:999px;background:linear-gradient(90deg, var(--accent-color), color-mix(in srgb, var(--accent-color), white 20%));transition:width 180ms ease;"></div>
+                </div>
+                <div style="font-size:0.82rem;color:var(--text-secondary);">${escapeAttr(appDownloadHint)}</div>
                 <div style="font-size:0.82rem;color:var(--text-secondary);">${!updateState.currentVersion && !updateState.latestVersion ? 'If this app is not packaged or no GitHub release artifacts are published yet, check will report that directly.' : ''}</div>
                 <div style="display:flex;flex-wrap:wrap;gap:8px;">
                     <button type="button" class="action-btn" data-update-action="check"${(updateState.checking || updateState.downloading || updateState.installing) ? ' disabled' : ''}>Check for Updates</button>
                     <button type="button" class="action-btn" data-update-action="download"${canDownload ? '' : ' disabled'}>Download Update</button>
-                    <button type="button" class="action-btn launch-btn" data-update-action="install"${canInstall ? '' : ' disabled'}>${installLabel}</button>
+                    <button type="button" class="action-btn launch-btn" data-update-action="install"${canInstall ? '' : ' disabled'}>Install Downloaded Update</button>
+                    <button type="button" class="action-btn" data-update-action="open-release-page"${hasReleaseUrl ? '' : ' disabled'}>Open Release Page</button>
                 </div>
+                ${updateState.downloadedFilePath ? `<div style="font-size:0.8rem;color:var(--text-secondary);word-break:break-all;"><strong>Downloaded file:</strong> ${escapeAttr(updateState.downloadedFilePath)}</div>` : ''}
                 ${notes ? `<pre style="margin:0;padding:10px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-primary);white-space:pre-wrap;font-family:var(--font-body);font-size:0.85rem;">${escapeAttr(notes)}</pre>` : ''}
             </section>
             <section style="border:1px solid var(--border-color);border-radius:12px;padding:12px;display:grid;gap:10px;">

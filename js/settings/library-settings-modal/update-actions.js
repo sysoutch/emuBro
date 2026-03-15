@@ -89,6 +89,14 @@ export function bindUpdateActionHandlers({
                     });
                     render();
                 }
+                if (action === 'open-release-page') {
+                    const state = await emubro?.updates?.getState?.();
+                    const releaseUrl = String(state?.releaseUrl || '').trim();
+                    if (releaseUrl) {
+                        await emubro.invoke?.('open-external-url', releaseUrl);
+                    }
+                    return;
+                }
                 if (action === 'check') result = await emubro.updates?.check?.();
                 if (action === 'download') result = await emubro.updates?.download?.();
                 if (action === 'install') result = await emubro.updates?.install?.();

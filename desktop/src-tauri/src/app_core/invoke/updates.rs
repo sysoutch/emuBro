@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 const APP_UPDATE_CONFIG_KEY: &str = "app:update:config:v1";
 const APP_UPDATE_STATE_KEY: &str = "app:update:state:v1";
@@ -197,6 +197,15 @@ fn read_app_update_state(window: &Window) -> Value {
 
 fn persist_app_update_state(state: &Value) {
     let _ = write_state_value(APP_UPDATE_STATE_KEY, state);
+}
+
+fn emit_app_update_state(window: &Window, state: &Value) {
+    let _ = window.emit("app:update-status", state);
+}
+
+fn persist_and_emit_app_update_state(window: &Window, state: &Value) {
+    persist_app_update_state(state);
+    emit_app_update_state(window, state);
 }
 
 fn normalize_release_tag(version: &str) -> String {
@@ -430,7 +439,7 @@ fn check_app_update(window: &Window) -> Result<Value, String> {
                 }),
                 &config,
             );
-            persist_app_update_state(&state);
+            persist_and_emit_app_update_state(window, &state);
             Ok(state)
         }
         Err(error) => {
@@ -455,7 +464,7 @@ fn check_app_update(window: &Window) -> Result<Value, String> {
                 }),
                 &config,
             );
-            persist_app_update_state(&state);
+            persist_and_emit_app_update_state(window, &state);
             Ok(state)
         }
     }
@@ -771,7 +780,7 @@ fn download_app_update(window: &Window) -> Result<Value, String> {
             }),
             &current,
         );
-        persist_app_update_state(&state);
+        persist_and_emit_app_update_state(window, &state);
         return Ok(state);
     }
 
@@ -793,7 +802,7 @@ fn download_app_update(window: &Window) -> Result<Value, String> {
             }),
             &checked,
         );
-        persist_app_update_state(&state);
+        persist_and_emit_app_update_state(window, &state);
         return Ok(state);
     }
 
@@ -835,7 +844,7 @@ fn download_app_update(window: &Window) -> Result<Value, String> {
                 }),
                 &checked,
             );
-            persist_app_update_state(&state);
+            persist_and_emit_app_update_state(window, &state);
             return Ok(state);
         }
     };
@@ -857,7 +866,7 @@ fn download_app_update(window: &Window) -> Result<Value, String> {
             }),
             &current,
         );
-        persist_app_update_state(&state);
+        persist_and_emit_app_update_state(window, &state);
         return Ok(state);
     }
 
@@ -875,11 +884,12 @@ fn download_app_update(window: &Window) -> Result<Value, String> {
         }),
         &checked,
     );
-    persist_app_update_state(&started_state);
+    persist_and_emit_app_update_state(window, &started_state);
 
     let checked_for_thread = checked.clone();
     let download_url_for_thread = download_url.clone();
     let target_path_for_thread = target_path.clone();
+    let app_handle_for_thread = window.app_handle().clone();
 
     std::thread::spawn(move || {
         let mut last_percent = 0u64;
@@ -933,6 +943,7 @@ fn download_app_update(window: &Window) -> Result<Value, String> {
                     &checked_for_thread,
                 );
                 persist_app_update_state(&progress_state);
+                let _ = app_handle_for_thread.emit("app:update-status", &progress_state);
             },
         );
 
@@ -952,6 +963,7 @@ fn download_app_update(window: &Window) -> Result<Value, String> {
                     &checked_for_thread,
                 );
                 persist_app_update_state(&completed);
+                let _ = app_handle_for_thread.emit("app:update-status", &completed);
             }
             Err(error) => {
                 let failed = with_config(
@@ -967,6 +979,7 @@ fn download_app_update(window: &Window) -> Result<Value, String> {
                     &checked_for_thread,
                 );
                 persist_app_update_state(&failed);
+                let _ = app_handle_for_thread.emit("app:update-status", &failed);
             }
         }
 
@@ -992,7 +1005,7 @@ fn install_app_update(window: &Window) -> Result<Value, String> {
             }),
             &current_state,
         );
-        persist_app_update_state(&state);
+        persist_and_emit_app_update_state(window, &state);
         return Ok(state);
     }
 
@@ -1011,7 +1024,7 @@ fn install_app_update(window: &Window) -> Result<Value, String> {
                     }),
                     &current_state,
                 );
-                persist_app_update_state(&state);
+                persist_and_emit_app_update_state(window, &state);
                 let app_handle = window.app_handle().clone();
                 std::thread::spawn(move || {
                     std::thread::sleep(Duration::from_millis(900));
@@ -1029,7 +1042,7 @@ fn install_app_update(window: &Window) -> Result<Value, String> {
                     }),
                     &current_state,
                 );
-                persist_app_update_state(&state);
+                persist_and_emit_app_update_state(window, &state);
                 return Ok(state);
             }
         }
@@ -1052,7 +1065,7 @@ fn install_app_update(window: &Window) -> Result<Value, String> {
             }),
             &current_state,
         );
-        persist_app_update_state(&state);
+        persist_and_emit_app_update_state(window, &state);
         return Ok(state);
     }
 
@@ -1068,7 +1081,7 @@ fn install_app_update(window: &Window) -> Result<Value, String> {
                 }),
                 &current_state,
             );
-            persist_app_update_state(&state);
+            persist_and_emit_app_update_state(window, &state);
             Ok(state)
         }
         Err(error) => {
@@ -1081,7 +1094,7 @@ fn install_app_update(window: &Window) -> Result<Value, String> {
                 }),
                 &current_state,
             );
-            persist_app_update_state(&state);
+            persist_and_emit_app_update_state(window, &state);
             Ok(state)
         }
     }
