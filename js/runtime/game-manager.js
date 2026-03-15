@@ -742,6 +742,9 @@ export function renderGames(gamesToRender) {
             initializeLazyGameImages,
             cleanupLazyGameImages,
             lazyPlaceholderSrc: LAZY_PLACEHOLDER_SRC,
+            currentGroupBy,
+            normalizeGroupByValue,
+            getGroupValueForGame,
             i18n,
             emubro,
             alertUser: (message) => alert(message)

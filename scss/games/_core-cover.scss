@@ -814,6 +814,9 @@
 }
 
 .games-group-accordion {
+    --group-glow-1: color-mix(in srgb, var(--accent-color), transparent 62%);
+    --group-glow-2: color-mix(in srgb, var(--accent-color), transparent 72%);
+    --group-glow-3: color-mix(in srgb, var(--accent-color), transparent 78%);
     border: 1px solid color-mix(in srgb, var(--border-color), rgba(255,255,255,0.15));
     border-radius: var(--radius-card);
     background: color-mix(in srgb, var(--bg-secondary), transparent 28%);
@@ -822,41 +825,175 @@
 }
 
 .games-group-header {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
     width: 100%;
-    border: 0;
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-bottom: 1px solid color-mix(in srgb, var(--border-color), transparent 24%);
-    border-radius: 0;
-    background: color-mix(in srgb, var(--bg-quaternary), transparent 24%);
+    border-radius: 16px;
+    background:
+        linear-gradient(180deg, rgba(7, 14, 22, 0.26), rgba(7, 14, 22, 0.48)),
+        radial-gradient(circle at top, rgba(255, 255, 255, 0.06), transparent 56%);
     color: var(--text-primary);
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 11px 14px;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 72px;
+    padding: 10px 14px;
     text-transform: none;
     letter-spacing: 0.02em;
     font-size: 0.95rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    transition: border-color 220ms ease, transform 220ms ease, box-shadow 220ms ease, background-color 220ms ease;
+}
+
+.games-group-header::before {
+    content: "";
+    position: absolute;
+    inset: -34%;
+    pointer-events: none;
+    z-index: 0;
+    background:
+        radial-gradient(62% 58% at 10% 14%, var(--group-glow-1) 0%, transparent 72%),
+        radial-gradient(54% 54% at 90% 10%, var(--group-glow-2) 0%, transparent 70%),
+        linear-gradient(140deg, var(--group-glow-1) 0%, var(--group-glow-2) 45%, var(--group-glow-3) 100%);
+    background-size: 130% 130%, 135% 135%, 175% 175%;
+    background-position: 0% 0%, 100% 0%, 20% 24%;
+    filter: blur(18px) saturate(1.08);
+    opacity: 0.7;
+    transition: opacity 220ms ease, transform 300ms ease;
+}
+
+.games-group-header::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, white 18%, transparent) 0%,
+        color-mix(in srgb, var(--bg-primary), transparent 50%) 100%
+    );
+}
+
+.games-group-header > * {
+    position: relative;
+    z-index: 1;
 }
 
 .games-group-header:hover {
-    background: color-mix(in srgb, var(--bg-quaternary), transparent 12%);
+    border-color: color-mix(in srgb, var(--accent-color), rgba(255, 255, 255, 0.3));
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 12px 24px rgba(0, 0, 0, 0.18);
+}
+
+.games-group-header:hover::before {
+    opacity: 0.84;
+    transform: scale(1.02);
+}
+
+.games-group-accordion:not(.is-collapsed) .games-group-header::before {
+    opacity: 0.96;
+    animation: games-group-header-gradient-drift 5s ease-in-out infinite;
+}
+
+@keyframes games-group-header-gradient-drift {
+    0% {
+        background-position: 0% 0%, 100% 0%, 20% 24%;
+    }
+    50% {
+        background-position: 16% 10%, 84% 18%, 74% 68%;
+    }
+    100% {
+        background-position: 0% 0%, 100% 0%, 20% 24%;
+    }
+}
+
+.games-group-header-main {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.games-group-header-icon-wrap {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.08), transparent 58%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    flex: 0 0 auto;
+    overflow: hidden;
+}
+
+.games-group-header-icon {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+    display: block;
+}
+
+.games-group-header-badge {
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.games-group-header-badge.is-company {
+    background:
+        radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--accent-color), white 14%), color-mix(in srgb, var(--accent-color), transparent 28%));
+    color: var(--bg-primary);
+}
+
+.games-group-header-title-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    min-width: 0;
+    flex: 1 1 auto;
 }
 
 .games-group-header-title {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     min-width: 0;
     text-align: left;
     font-weight: 700;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .games-group-header-count {
     flex: 0 0 auto;
-    border: 1px solid color-mix(in srgb, var(--border-color), transparent 35%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 999px;
-    padding: 1px 8px;
-    font-size: 0.75rem;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 10px;
+    font-size: 0.78rem;
     font-weight: 700;
     color: var(--text-secondary);
-    background: color-mix(in srgb, var(--bg-secondary), transparent 26%);
+    background: color-mix(in srgb, var(--bg-secondary), transparent 14%);
 }
 
 .games-group-header-chevron {
@@ -868,6 +1005,7 @@
     transform: rotate(45deg);
     transition: transform 0.18s ease;
     opacity: 0.85;
+    margin-inline-start: auto;
 }
 
 .games-group-accordion.is-collapsed .games-group-header-chevron {

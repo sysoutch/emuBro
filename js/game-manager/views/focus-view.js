@@ -17,6 +17,13 @@ export function renderGamesAsFocus(gamesToRender, options = {}) {
         ? options.setGamesScrollDetach
         : () => {};
     const buildViewGamePool = typeof options.buildViewGamePool === 'function' ? options.buildViewGamePool : (rows) => rows;
+    const normalizeGroupByValue = typeof options.normalizeGroupByValue === 'function'
+        ? options.normalizeGroupByValue
+        : (value) => String(value || 'none').trim().toLowerCase();
+    const getGroupValueForGame = typeof options.getGroupValueForGame === 'function'
+        ? options.getGroupValueForGame
+        : () => '';
+    const activeGroupBy = normalizeGroupByValue(options.currentGroupBy || 'none');
     const maxPoolSize = Number(options.maxPoolSize) || 0;
     const launchGame = typeof options.launchGame === 'function' ? options.launchGame : (async () => {});
     const showGameDetails = typeof options.showGameDetails === 'function' ? options.showGameDetails : () => {};
@@ -66,7 +73,9 @@ export function renderGamesAsFocus(gamesToRender, options = {}) {
     listPanel.className = 'focus-list-panel glass';
     const listHeading = document.createElement('h3');
     listHeading.className = 'focus-list-heading';
-    listHeading.textContent = 'Browse Games';
+    listHeading.textContent = activeGroupBy === 'company'
+        ? 'Browse Games by Company'
+        : (activeGroupBy === 'platform' ? 'Browse Games by Platform' : 'Browse Games');
     const listEl = document.createElement('div');
     listEl.className = 'focus-list';
     listEl.setAttribute('role', 'listbox');
@@ -126,12 +135,29 @@ export function renderGamesAsFocus(gamesToRender, options = {}) {
 
     const platformMap = new Map();
     focusGames.forEach((game) => {
-        const key = getPlatformKey(game);
+        const key = activeGroupBy === 'none'
+            ? getPlatformKey(game)
+            : String(getGroupValueForGame(game, activeGroupBy) || 'Unknown').trim().toLowerCase();
         if (!key || platformMap.has(key)) return;
-        platformMap.set(key, getPlatformLabel(game));
+        const label = activeGroupBy === 'none'
+            ? getPlatformLabel(game)
+            : (String(getGroupValueForGame(game, activeGroupBy) || 'Unknown').trim() || 'Unknown');
+        platformMap.set(key, { label, count: 0 });
     });
-    const platformOptions = [{ key: 'all', label: 'All Platforms' }]
-        .concat(Array.from(platformMap.entries()).map(([key, label]) => ({ key, label })));
+    focusGames.forEach((game) => {
+        const key = activeGroupBy === 'none'
+            ? getPlatformKey(game)
+            : String(getGroupValueForGame(game, activeGroupBy) || 'Unknown').trim().toLowerCase();
+        const entry = platformMap.get(key);
+        if (entry) entry.count += 1;
+    });
+    const allLabel = activeGroupBy === 'company' ? 'All Companies' : 'All Platforms';
+    const platformOptions = [{ key: 'all', label: allLabel, count: focusGames.length }]
+        .concat(Array.from(platformMap.entries()).map(([key, entry]) => ({
+            key,
+            label: entry.label,
+            count: Number(entry.count || 0)
+        })));
 
     let selectedPlatformKey = 'all';
     let currentFilteredIndex = 0;
@@ -220,7 +246,9 @@ export function renderGamesAsFocus(gamesToRender, options = {}) {
             button.type = 'button';
             button.className = `focus-platform-btn${entry.key === selectedPlatformKey ? ' is-active' : ''}`;
             button.dataset.focusPlatform = entry.key;
-            button.textContent = entry.label;
+            button.textContent = entry.key === 'all'
+                ? entry.label
+                : `${entry.label} (${Number(entry.count || 0)})`;
             platformBar.appendChild(button);
         });
     }
@@ -228,7 +256,13 @@ export function renderGamesAsFocus(gamesToRender, options = {}) {
     function rebuildList(shouldScroll = false) {
         filteredIndices = focusGames
             .map((game, sourceIndex) => ({ game, sourceIndex }))
-            .filter(({ game }) => selectedPlatformKey === 'all' || getPlatformKey(game) === selectedPlatformKey)
+            .filter(({ game }) => {
+                if (selectedPlatformKey === 'all') return true;
+                const gameKey = activeGroupBy === 'none'
+                    ? getPlatformKey(game)
+                    : String(getGroupValueForGame(game, activeGroupBy) || 'Unknown').trim().toLowerCase();
+                return gameKey === selectedPlatformKey;
+            })
             .map(({ sourceIndex }) => sourceIndex);
 
         listEl.innerHTML = '';
@@ -251,11 +285,15 @@ export function renderGamesAsFocus(gamesToRender, options = {}) {
         });
 
         if (!filteredIndices.length) {
-            previewTitle.textContent = 'No games for this platform';
+            previewTitle.textContent = activeGroupBy === 'company'
+                ? 'No games for this company'
+                : 'No games for this platform';
             previewImage.src = '';
             previewImage.alt = '';
             previewMeta.innerHTML = '';
-            previewDesc.textContent = 'Try another platform filter.';
+            previewDesc.textContent = activeGroupBy === 'company'
+                ? 'Try another company filter.'
+                : 'Try another platform filter.';
             backdrop.style.backgroundImage = '';
             return;
         }
