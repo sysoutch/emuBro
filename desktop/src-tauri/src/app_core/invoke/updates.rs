@@ -174,9 +174,7 @@ fn read_app_update_state(window: &Window) -> Value {
         .get("downloaded")
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
-    let downloaded = if !available {
-        false
-    } else if downloaded_file_path.is_empty() {
+    let downloaded = if downloaded_file_path.is_empty() {
         stored_downloaded
     } else {
         has_local_download
@@ -203,18 +201,25 @@ fn read_app_update_state(window: &Window) -> Value {
             "downloadUrl": stored.get("downloadUrl").and_then(|v| v.as_str()).unwrap_or(""),
             "downloadFileName": stored.get("downloadFileName").and_then(|v| v.as_str()).unwrap_or(""),
             "downloadedFilePath": if downloaded { downloaded_file_path } else { "".to_string() },
-            "installTargetPath": if available {
+            "installTargetPath": if available || downloaded {
                 stored.get("installTargetPath").and_then(|v| v.as_str()).unwrap_or("").to_string()
             } else {
                 "".to_string()
             },
-            "installLaunchMethod": if available {
+            "installLaunchMethod": if available || downloaded {
                 stored.get("installLaunchMethod").and_then(|v| v.as_str()).unwrap_or("").to_string()
             } else {
                 "".to_string()
             },
             "lastError": stored.get("lastError").and_then(|v| v.as_str()).unwrap_or(""),
-            "lastMessage": if !available && !latest_version.is_empty() {
+            "lastMessage": if downloaded {
+                let existing = stored.get("lastMessage").and_then(|v| v.as_str()).unwrap_or("").trim().to_string();
+                if existing.is_empty() {
+                    "Update downloaded. Click \"Install Downloaded Update\" to continue.".to_string()
+                } else {
+                    existing
+                }
+            } else if !available && !latest_version.is_empty() {
                 "App is up to date.".to_string()
             } else {
                 stored.get("lastMessage").and_then(|v| v.as_str()).unwrap_or("Not checked yet.").to_string()
@@ -456,7 +461,9 @@ fn check_app_update(window: &Window) -> Result<Value, String> {
                     "downloadFileName": if !download_file_name.is_empty() { download_file_name } else { existing_download_file_name },
                     "downloadedFilePath": if already_downloaded && local_download_exists { existing_download_path } else { "".to_string() },
                     "lastError": "",
-                    "lastMessage": if available {
+                    "lastMessage": if already_downloaded {
+                        "Update installer already downloaded. Click \"Install Downloaded Update\" to continue."
+                    } else if available {
                         if download_url.is_empty() {
                             "App update available, but no compatible installer asset was found in this release. Use the release page."
                         } else {

@@ -78,3 +78,10 @@
 - current milestone
 - what was completed
 - what still blocks the next milestone
+
+## Collaboration Cadence
+
+- Assume active work can span up to three parallel task threads and maintain continuity across them.
+- In substantial progress updates, include short "next up" notes for non-current active tasks so context is not lost during task switching.
+- When switching away from a task midstream, leave a concise parked-state summary: what is done, what is pending, and the immediate next step.
+- Keep cross-task updates brief and practical, focused on unblock status and execution order rather than long plans.

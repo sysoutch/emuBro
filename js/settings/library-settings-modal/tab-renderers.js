@@ -164,9 +164,9 @@ export function renderUpdatesTab({
     const notes = String(updateState.releaseNotes || '').trim();
     const hasDownloadUrl = /^https?:\/\//i.test(String(updateState.downloadUrl || '').trim());
     const hasReleaseUrl = /^https?:\/\//i.test(String(updateState.releaseUrl || '').trim());
-    const isUpToDate = !!currentVersionRaw && !!latestVersionRaw && currentVersionRaw === latestVersionRaw && !updateState.available;
+    const isUpToDate = !!currentVersionRaw && !!latestVersionRaw && currentVersionRaw === latestVersionRaw && !updateState.available && !updateState.downloaded;
     const canDownload = !!updateState.available && hasDownloadUrl && !updateState.downloaded && !updateState.downloading && !updateState.installing;
-    const canInstall = !!updateState.available && !!updateState.downloaded && !updateState.downloading && !updateState.installing;
+    const canInstall = !!updateState.downloaded && !updateState.downloading && !updateState.installing;
     const installButtonClass = canInstall ? 'action-btn launch-btn' : 'action-btn';
     const appStageClass = updateState.lastError
         ? 'is-error'
@@ -196,10 +196,10 @@ export function renderUpdatesTab({
                         : isUpToDate
                             ? 'Up To Date'
                             : 'Updater Ready';
-    const appDownloadHint = isUpToDate
-        ? 'This version already matches the latest published release.'
-        : updateState.downloaded
+    const appDownloadHint = updateState.downloaded
         ? 'Installer downloaded locally. Use "Install Downloaded Update" to continue.'
+        : isUpToDate
+        ? 'This version already matches the latest published release.'
         : hasDownloadUrl
             ? 'A compatible installer asset was found for this platform.'
             : 'No direct installer asset was found for this platform. Use the release page instead.';
