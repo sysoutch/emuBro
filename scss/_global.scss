@@ -690,6 +690,23 @@ input[type="checkbox"]:disabled {
         font-size: 0.8rem;
         background: rgba(0,0,0,0.3);
     }
+
+    &:disabled,
+    &[disabled] {
+        opacity: 0.45;
+        cursor: not-allowed;
+        pointer-events: none;
+        transform: none;
+        box-shadow: none;
+        filter: grayscale(0.25);
+    }
+
+    &.launch-btn:disabled,
+    &.launch-btn[disabled] {
+        background: color-mix(in srgb, var(--bg-quaternary), var(--accent-color) 12%);
+        color: color-mix(in srgb, var(--text-primary), var(--accent-color) 18%);
+        border: 1px solid color-mix(in srgb, var(--border-color), var(--accent-color) 25%);
+    }
 }
 
 /* Color Input Grid */

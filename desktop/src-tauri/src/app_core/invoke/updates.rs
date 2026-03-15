@@ -5,7 +5,7 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tauri::{Emitter, Manager};
 
 #[cfg(windows)]
@@ -156,6 +156,13 @@ fn read_app_update_state(window: &Window) -> Value {
     let config = read_app_update_config();
     let current_version = current_app_version(window);
     let stored = read_state_value_or_default(APP_UPDATE_STATE_KEY, json!({}));
+    let latest_version = stored
+        .get("latestVersion")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    let available = semver_newer(&latest_version, &current_version);
     let downloaded_file_path = stored
         .get("downloadedFilePath")
         .and_then(|v| v.as_str())
@@ -167,7 +174,9 @@ fn read_app_update_state(window: &Window) -> Value {
         .get("downloaded")
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
-    let downloaded = if downloaded_file_path.is_empty() {
+    let downloaded = if !available {
+        false
+    } else if downloaded_file_path.is_empty() {
         stored_downloaded
     } else {
         has_local_download
@@ -181,23 +190,35 @@ fn read_app_update_state(window: &Window) -> Value {
     with_config(
         json!({
             "success": true,
-            "available": stored.get("available").and_then(|v| v.as_bool()).unwrap_or(false),
+            "available": available,
             "checking": stored.get("checking").and_then(|v| v.as_bool()).unwrap_or(false),
             "downloading": stored.get("downloading").and_then(|v| v.as_bool()).unwrap_or(false),
             "installing": stored.get("installing").and_then(|v| v.as_bool()).unwrap_or(false),
             "downloaded": downloaded,
             "progressPercent": progress_percent,
             "currentVersion": current_version,
-            "latestVersion": stored.get("latestVersion").and_then(|v| v.as_str()).unwrap_or(""),
+            "latestVersion": latest_version,
             "releaseNotes": stored.get("releaseNotes").and_then(|v| v.as_str()).unwrap_or(""),
             "releaseUrl": stored.get("releaseUrl").and_then(|v| v.as_str()).unwrap_or(""),
             "downloadUrl": stored.get("downloadUrl").and_then(|v| v.as_str()).unwrap_or(""),
             "downloadFileName": stored.get("downloadFileName").and_then(|v| v.as_str()).unwrap_or(""),
-            "downloadedFilePath": downloaded_file_path,
-            "installTargetPath": stored.get("installTargetPath").and_then(|v| v.as_str()).unwrap_or(""),
-            "installLaunchMethod": stored.get("installLaunchMethod").and_then(|v| v.as_str()).unwrap_or(""),
+            "downloadedFilePath": if downloaded { downloaded_file_path } else { "".to_string() },
+            "installTargetPath": if available {
+                stored.get("installTargetPath").and_then(|v| v.as_str()).unwrap_or("").to_string()
+            } else {
+                "".to_string()
+            },
+            "installLaunchMethod": if available {
+                stored.get("installLaunchMethod").and_then(|v| v.as_str()).unwrap_or("").to_string()
+            } else {
+                "".to_string()
+            },
             "lastError": stored.get("lastError").and_then(|v| v.as_str()).unwrap_or(""),
-            "lastMessage": stored.get("lastMessage").and_then(|v| v.as_str()).unwrap_or("Not checked yet.")
+            "lastMessage": if !available && !latest_version.is_empty() {
+                "App is up to date.".to_string()
+            } else {
+                stored.get("lastMessage").and_then(|v| v.as_str()).unwrap_or("Not checked yet.").to_string()
+            }
         }),
         &config,
     )
@@ -729,16 +750,18 @@ fn escape_powershell_single_quotes(value: &str) -> String {
 }
 
 #[cfg(windows)]
+fn escape_cmd_double_quotes(value: &str) -> String {
+    value.replace('"', "\"\"")
+}
+
+#[cfg(windows)]
 fn apply_windows_hidden_process_flags(command: &mut Command) {
     command.creation_flags(CREATE_NO_WINDOW);
 }
 
 #[cfg(windows)]
-fn spawn_delayed_windows_installer(path: &Path) -> Result<&'static str, String> {
-    let normalized_path = path
-        .canonicalize()
-        .unwrap_or_else(|_| path.to_path_buf());
-    let escaped_path = escape_powershell_single_quotes(&normalized_path.to_string_lossy());
+fn create_delayed_windows_installer_script(path: &Path) -> Result<(PathBuf, String), String> {
+    let normalized_path = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
     let extension = normalized_path
         .extension()
         .and_then(|value| value.to_str())
@@ -746,36 +769,100 @@ fn spawn_delayed_windows_installer(path: &Path) -> Result<&'static str, String> 
         .trim()
         .to_ascii_lowercase();
 
-    let launch_script = if extension == "msi" {
-        format!(
-            "Start-Sleep -Milliseconds 1400; Start-Process -FilePath 'msiexec.exe' -ArgumentList '/i','{}'",
-            escaped_path
-        )
+    let script_dir = app_update_downloads_dir();
+    ensure_directory(&script_dir)?;
+
+    let unique_suffix = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_millis())
+        .unwrap_or(0);
+    let script_path = script_dir.join(format!("launch-update-{}.cmd", unique_suffix));
+    let escaped_target = escape_cmd_double_quotes(&normalized_path.to_string_lossy());
+
+    let launch_line = if extension == "msi" {
+        format!("start \"\" msiexec /i \"{}\"", escaped_target)
     } else {
-        format!(
-            "Start-Sleep -Milliseconds 1400; Start-Process -FilePath '{}'",
-            escaped_path
-        )
+        format!("start \"\" \"{}\"", escaped_target)
     };
 
-    let mut command = Command::new("powershell");
+    let script_contents = format!(
+        "@echo off\r\n\
+setlocal\r\n\
+ping 127.0.0.1 -n 3 >nul\r\n\
+{}\r\n\
+start \"\" cmd /c del \"%~f0\"\r\n",
+        launch_line
+    );
+
+    fs::write(&script_path, script_contents).map_err(|e| e.to_string())?;
+
+    let launch_method = if extension == "msi" {
+        "cmd-delayed-script-msi".to_string()
+    } else if extension == "exe" {
+        "cmd-delayed-script-exe".to_string()
+    } else {
+        "cmd-delayed-script-open".to_string()
+    };
+
+    Ok((script_path, launch_method))
+}
+
+#[cfg(windows)]
+fn spawn_delayed_windows_installer(path: &Path) -> Result<&'static str, String> {
+    let (script_path, launch_method) = create_delayed_windows_installer_script(path)?;
+
+    let mut command = Command::new("cmd");
     command
-        .arg("-NoProfile")
-        .arg("-WindowStyle")
-        .arg("Hidden")
-        .arg("-ExecutionPolicy")
-        .arg("Bypass")
-        .arg("-Command")
-        .arg(launch_script);
+        .args(["/C", "start", "", "/MIN", "cmd", "/C"])
+        .arg(&script_path);
     apply_windows_hidden_process_flags(&mut command);
     command.spawn().map_err(|e| e.to_string())?;
 
-    if extension == "msi" {
-        Ok("powershell-delayed-msi")
-    } else if extension == "exe" {
-        Ok("powershell-delayed-exe")
-    } else {
-        Ok("powershell-delayed-open")
+    match launch_method.as_str() {
+        "cmd-delayed-script-msi" => Ok("cmd-delayed-script-msi"),
+        "cmd-delayed-script-exe" => Ok("cmd-delayed-script-exe"),
+        _ => {
+            let normalized_path = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+            let escaped_path = escape_powershell_single_quotes(&normalized_path.to_string_lossy());
+            let extension = normalized_path
+                .extension()
+                .and_then(|value| value.to_str())
+                .unwrap_or("")
+                .trim()
+                .to_ascii_lowercase();
+
+            let launch_script = if extension == "msi" {
+                format!(
+                    "Start-Sleep -Milliseconds 1400; Start-Process -FilePath 'msiexec.exe' -ArgumentList '/i','{}'",
+                    escaped_path
+                )
+            } else {
+                format!(
+                    "Start-Sleep -Milliseconds 1400; Start-Process -FilePath '{}'",
+                    escaped_path
+                )
+            };
+
+            let mut fallback = Command::new("powershell");
+            fallback
+                .arg("-NoProfile")
+                .arg("-WindowStyle")
+                .arg("Hidden")
+                .arg("-ExecutionPolicy")
+                .arg("Bypass")
+                .arg("-Command")
+                .arg(launch_script);
+            apply_windows_hidden_process_flags(&mut fallback);
+            fallback.spawn().map_err(|e| e.to_string())?;
+
+            if extension == "msi" {
+                Ok("powershell-delayed-msi")
+            } else if extension == "exe" {
+                Ok("powershell-delayed-exe")
+            } else {
+                Ok("powershell-delayed-open")
+            }
+        }
     }
 }
 
@@ -1084,6 +1171,10 @@ fn download_app_update(window: &Window) -> Result<Value, String> {
 
 fn install_app_update(window: &Window) -> Result<Value, String> {
     let current_state = read_app_update_state(window);
+    let available = current_state
+        .get("available")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
     let downloading = current_state
         .get("downloading")
         .and_then(|v| v.as_bool())
@@ -1095,6 +1186,24 @@ fn install_app_update(window: &Window) -> Result<Value, String> {
                 "installing": false,
                 "lastError": "Update is still downloading. Please wait for it to finish.",
                 "lastMessage": ""
+            }),
+            &current_state,
+        );
+        persist_and_emit_app_update_state(window, &state);
+        return Ok(state);
+    }
+
+    let already_downloaded = current_state
+        .get("downloaded")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    if !available && !already_downloaded {
+        let state = with_config(
+            json!({
+                "success": false,
+                "installing": false,
+                "lastError": "",
+                "lastMessage": "App is already up to date. Run \"Check for Updates\" if you want to verify again."
             }),
             &current_state,
         );

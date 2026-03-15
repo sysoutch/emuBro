@@ -157,13 +157,17 @@ export function renderUpdatesTab({
     renderResourcesUpdateStatusText
 }) {
     const status = escapeAttr(renderUpdateStatusText());
-    const currentVersion = escapeAttr(updateState.currentVersion || '');
-    const latestVersion = escapeAttr(updateState.latestVersion || '');
+    const currentVersionRaw = String(updateState.currentVersion || '').trim();
+    const latestVersionRaw = String(updateState.latestVersion || '').trim();
+    const currentVersion = escapeAttr(currentVersionRaw);
+    const latestVersion = escapeAttr(latestVersionRaw);
     const notes = String(updateState.releaseNotes || '').trim();
     const hasDownloadUrl = /^https?:\/\//i.test(String(updateState.downloadUrl || '').trim());
     const hasReleaseUrl = /^https?:\/\//i.test(String(updateState.releaseUrl || '').trim());
+    const isUpToDate = !!currentVersionRaw && !!latestVersionRaw && currentVersionRaw === latestVersionRaw && !updateState.available;
     const canDownload = !!updateState.available && hasDownloadUrl && !updateState.downloaded && !updateState.downloading && !updateState.installing;
-    const canInstall = !!updateState.downloaded && !updateState.downloading && !updateState.installing;
+    const canInstall = !!updateState.available && !!updateState.downloaded && !updateState.downloading && !updateState.installing;
+    const installButtonClass = canInstall ? 'action-btn launch-btn' : 'action-btn';
     const appStageClass = updateState.lastError
         ? 'is-error'
         : updateState.installing
@@ -174,7 +178,9 @@ export function renderUpdatesTab({
                     ? 'is-ready'
                     : updateState.available
                         ? 'is-available'
-                        : 'is-idle';
+                        : isUpToDate
+                            ? 'is-idle'
+                            : 'is-idle';
     const progressPercent = Math.max(0, Math.min(100, Math.round(Number(updateState.progressPercent || 0))));
     const appProgressWidth = `${progressPercent}%`;
     const appStageLabel = updateState.lastError
@@ -187,14 +193,18 @@ export function renderUpdatesTab({
                     ? 'Downloading Update'
                     : updateState.available
                         ? 'Update Available'
-                        : 'Updater Ready';
-    const appDownloadHint = updateState.downloaded
+                        : isUpToDate
+                            ? 'Up To Date'
+                            : 'Updater Ready';
+    const appDownloadHint = isUpToDate
+        ? 'This version already matches the latest published release.'
+        : updateState.downloaded
         ? 'Installer downloaded locally. Use "Install Downloaded Update" to continue.'
         : hasDownloadUrl
             ? 'A compatible installer asset was found for this platform.'
             : 'No direct installer asset was found for this platform. Use the release page instead.';
-    const installTargetPath = escapeAttr(updateState.installTargetPath || updateState.downloadedFilePath || '');
-    const installLaunchMethod = escapeAttr(updateState.installLaunchMethod || '');
+    const installTargetPath = escapeAttr(isUpToDate ? '' : (updateState.installTargetPath || updateState.downloadedFilePath || ''));
+    const installLaunchMethod = escapeAttr(isUpToDate ? '' : (updateState.installLaunchMethod || ''));
     const resourcesStatus = escapeAttr(renderResourcesUpdateStatusText());
     const resourcesCurrentVersion = escapeAttr(resourcesUpdateState.currentVersion || '');
     const resourcesLatestVersion = escapeAttr(resourcesUpdateState.latestVersion || '');
@@ -249,7 +259,7 @@ export function renderUpdatesTab({
                     <div class="desktop-update-progress-bar" style="width:${appProgressWidth};height:100%;border-radius:999px;background:linear-gradient(90deg, var(--accent-color), color-mix(in srgb, var(--accent-color), white 20%));transition:width 180ms ease;"></div>
                 </div>
                 <div style="font-size:0.82rem;color:var(--text-secondary);">${escapeAttr(appDownloadHint)}</div>
-                ${updateState.downloaded ? `
+                ${updateState.downloaded && !isUpToDate ? `
                 <div style="margin:0;padding:10px 12px;border-radius:10px;border:1px solid var(--border-color);background:color-mix(in srgb, var(--accent-color), transparent 88%);display:grid;gap:4px;">
                     <strong>Install is ready</strong>
                     <span style="font-size:0.86rem;color:var(--text-secondary);">The updater downloaded the installer successfully. Click <strong>Install Downloaded Update</strong> below. emuBro will close once the installer starts.</span>
@@ -259,10 +269,10 @@ export function renderUpdatesTab({
                 <div style="display:flex;flex-wrap:wrap;gap:8px;">
                     <button type="button" class="action-btn" data-update-action="check"${(updateState.checking || updateState.downloading || updateState.installing) ? ' disabled' : ''}>${updateState.checking ? 'Checking...' : 'Check for Updates'}</button>
                     <button type="button" class="action-btn" data-update-action="download"${canDownload ? '' : ' disabled'}>${updateState.downloading ? `Downloading... ${progressPercent}%` : 'Download Update'}</button>
-                    <button type="button" class="action-btn launch-btn" data-update-action="install"${canInstall ? '' : ' disabled'}>${updateState.installing ? 'Launching Installer...' : 'Install Downloaded Update'}</button>
+                    <button type="button" class="${installButtonClass}" data-update-action="install"${canInstall ? '' : ' disabled'}>${updateState.installing ? 'Launching Installer...' : 'Install Downloaded Update'}</button>
                     <button type="button" class="action-btn" data-update-action="open-release-page"${hasReleaseUrl ? '' : ' disabled'}>Open Release Page</button>
                 </div>
-                ${updateState.downloadedFilePath ? `<div style="font-size:0.8rem;color:var(--text-secondary);word-break:break-all;"><strong>Downloaded file:</strong> ${escapeAttr(updateState.downloadedFilePath)}</div>` : ''}
+                ${updateState.downloadedFilePath && !isUpToDate ? `<div style="font-size:0.8rem;color:var(--text-secondary);word-break:break-all;"><strong>Downloaded file:</strong> ${escapeAttr(updateState.downloadedFilePath)}</div>` : ''}
                 ${(installTargetPath || installLaunchMethod) ? `
                 <div style="display:grid;gap:4px;font-size:0.8rem;color:var(--text-secondary);padding:10px 12px;border:1px solid var(--border-color);border-radius:10px;background:color-mix(in srgb, var(--bg-primary), transparent 14%);">
                     <strong style="font-size:0.84rem;color:var(--text-primary);">Install Diagnostics</strong>
