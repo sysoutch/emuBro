@@ -170,14 +170,30 @@ fn read_app_update_state(window: &Window) -> Value {
         .trim()
         .to_string();
     let has_local_download = !downloaded_file_path.is_empty() && Path::new(&downloaded_file_path).exists();
+    let fallback_local_download_path = if has_local_download {
+        String::new()
+    } else {
+        find_latest_downloaded_installer(&latest_version)
+            .map(|path| path.to_string_lossy().to_string())
+            .unwrap_or_default()
+    };
+    let effective_downloaded_file_path = if has_local_download {
+        downloaded_file_path.clone()
+    } else if !fallback_local_download_path.is_empty() {
+        fallback_local_download_path.clone()
+    } else {
+        String::new()
+    };
     let stored_downloaded = stored
         .get("downloaded")
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
-    let downloaded = if downloaded_file_path.is_empty() {
+    let downloaded = if !effective_downloaded_file_path.is_empty() {
+        true
+    } else if downloaded_file_path.is_empty() {
         stored_downloaded
     } else {
-        has_local_download
+        false
     };
     let progress_percent = if downloaded {
         100
@@ -200,7 +216,7 @@ fn read_app_update_state(window: &Window) -> Value {
             "releaseUrl": stored.get("releaseUrl").and_then(|v| v.as_str()).unwrap_or(""),
             "downloadUrl": stored.get("downloadUrl").and_then(|v| v.as_str()).unwrap_or(""),
             "downloadFileName": stored.get("downloadFileName").and_then(|v| v.as_str()).unwrap_or(""),
-            "downloadedFilePath": if downloaded { downloaded_file_path } else { "".to_string() },
+            "downloadedFilePath": if downloaded { effective_downloaded_file_path } else { "".to_string() },
             "installTargetPath": if available || downloaded {
                 stored.get("installTargetPath").and_then(|v| v.as_str()).unwrap_or("").to_string()
             } else {
@@ -436,8 +452,20 @@ fn check_app_update(window: &Window) -> Result<Value, String> {
                 .to_string();
             let local_download_exists =
                 !existing_download_path.is_empty() && Path::new(&existing_download_path).exists();
+            let fallback_download_path = if local_download_exists {
+                String::new()
+            } else {
+                find_latest_downloaded_installer(&latest_version)
+                    .map(|path| path.to_string_lossy().to_string())
+                    .unwrap_or_default()
+            };
+            let effective_download_path = if local_download_exists {
+                existing_download_path.clone()
+            } else {
+                fallback_download_path.clone()
+            };
             let already_downloaded = existing_latest == latest_version
-                && ((!existing_download_path.is_empty() && local_download_exists)
+                && ((!effective_download_path.is_empty())
                     || (existing_download_path.is_empty()
                         && existing
                             .get("downloaded")
@@ -459,7 +487,7 @@ fn check_app_update(window: &Window) -> Result<Value, String> {
                     "releaseUrl": if release_url.is_empty() { fallback_release_page } else { release_url },
                     "downloadUrl": download_url,
                     "downloadFileName": if !download_file_name.is_empty() { download_file_name } else { existing_download_file_name },
-                    "downloadedFilePath": if already_downloaded && local_download_exists { existing_download_path } else { "".to_string() },
+                    "downloadedFilePath": if already_downloaded { effective_download_path } else { "".to_string() },
                     "lastError": "",
                     "lastMessage": if already_downloaded {
                         "Update installer already downloaded. Click \"Install Downloaded Update\" to continue."
@@ -611,6 +639,64 @@ fn resolve_download_target_path(state: &Value) -> Result<PathBuf, String> {
         format!("{}-{}", version_prefix, file_name)
     };
     Ok(dir.join(final_name))
+}
+
+fn has_supported_installer_extension(path: &Path) -> bool {
+    let ext = path
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or("")
+        .trim()
+        .to_ascii_lowercase();
+    if ext.is_empty() {
+        return false;
+    }
+    let dot_ext = format!(".{}", ext);
+    app_platform_asset_suffixes()
+        .into_iter()
+        .any(|suffix| suffix.eq_ignore_ascii_case(&dot_ext))
+}
+
+fn find_latest_downloaded_installer(latest_version: &str) -> Option<PathBuf> {
+    let dir = app_update_downloads_dir();
+    if !dir.exists() || !dir.is_dir() {
+        return None;
+    }
+
+    let latest_norm = sanitize_file_name(&normalize_release_tag(latest_version)).to_ascii_lowercase();
+    let mut candidates: Vec<(u128, PathBuf)> = Vec::new();
+
+    let entries = fs::read_dir(&dir).ok()?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_file() || !has_supported_installer_extension(&path) {
+            continue;
+        }
+
+        let file_name = path
+            .file_name()
+            .and_then(|value| value.to_str())
+            .unwrap_or("")
+            .trim()
+            .to_ascii_lowercase();
+        if file_name.is_empty() {
+            continue;
+        }
+        if !latest_norm.is_empty() && !file_name.contains(&latest_norm) {
+            continue;
+        }
+
+        let modified_millis = fs::metadata(&path)
+            .and_then(|meta| meta.modified())
+            .ok()
+            .and_then(|time| time.duration_since(UNIX_EPOCH).ok())
+            .map(|duration| duration.as_millis())
+            .unwrap_or(0);
+        candidates.push((modified_millis, path));
+    }
+
+    candidates.sort_by(|a, b| b.0.cmp(&a.0));
+    candidates.into_iter().next().map(|(_, path)| path)
 }
 
 fn is_supported_download_url(download_url: &str) -> bool {

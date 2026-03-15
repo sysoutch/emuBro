@@ -1,6 +1,6 @@
 [package]
 name = "emubro"
-version = "1.0.0-alpha.38"
+version = "1.0.0-alpha.39"
 description = "emuBro Desktop Shell"
 authors = ["sysout"]
 license = "MIT"

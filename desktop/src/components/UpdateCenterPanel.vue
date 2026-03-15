@@ -151,7 +151,7 @@ onMounted(() => {
         <button
           type="button"
           class="action-button"
-          :disabled="busyAction === 'app-install' || !appState.downloaded"
+          :disabled="busyAction === 'app-install' || appState.downloading || (!appState.downloaded && !appState.available)"
           @click="updateCenterStore.installApp"
         >
           {{ busyAction === "app-install" ? shellI18nStore.t("desktopShell.updates.installing", "Installing...") : shellI18nStore.t("desktopShell.updates.installDownloadedUpdate", "Install Downloaded Update") }}
@@ -161,6 +161,9 @@ onMounted(() => {
         </button>
       </div>
       <p class="meta-line">{{ appState.lastMessage || shellI18nStore.t("desktopShell.updates.noAppActionYet", "No app update action yet.") }}</p>
+      <p v-if="appState.downloadedFilePath" class="meta-line" style="word-break: break-all;">
+        Downloaded file: {{ appState.downloadedFilePath }}
+      </p>
       <p v-if="appInstallHint" class="meta-line meta-line-success">{{ appInstallHint }}</p>
       <p v-if="appState.lastError" class="legacy-fallback-note">{{ appState.lastError }}</p>
       <details v-if="appState.releaseNotes" class="desktop-update-notes">

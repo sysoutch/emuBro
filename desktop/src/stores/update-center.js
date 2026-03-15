@@ -21,6 +21,10 @@ function getDefaultAppState() {
     releaseNotes: "",
     releaseUrl: "",
     downloadUrl: "",
+    downloadFileName: "",
+    downloadedFilePath: "",
+    installTargetPath: "",
+    installLaunchMethod: "",
     lastError: "",
     lastMessage: "Not checked yet."
   };
@@ -131,7 +135,20 @@ export const useUpdateCenterStore = defineStore("updateCenter", {
           bridge.resourcesUpdates.getState(),
           bridge.resourcesUpdates.getConfig()
         ]);
-        this.appState = normalizeState(appState, getDefaultAppState());
+        const nextAppState = normalizeState(appState, getDefaultAppState());
+        const localInstallerPath = String(
+          nextAppState.downloadedFilePath || nextAppState.installTargetPath || ""
+        ).trim();
+        const inferredDownloaded =
+          !!nextAppState.downloaded ||
+          localInstallerPath.length > 0 ||
+          (!!nextAppState.available &&
+            !nextAppState.downloading &&
+            Number(nextAppState.progressPercent || 0) >= 100);
+        this.appState = {
+          ...nextAppState,
+          downloaded: inferredDownloaded
+        };
         this.resourcesState = normalizeState(resourcesState, getDefaultResourcesState());
         this.resourcesConfig = normalizeState(resourcesConfig, getDefaultResourcesConfig());
         this.resourcesStoragePathDraft = String(this.resourcesConfig.storagePath || "");
