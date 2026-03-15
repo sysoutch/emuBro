@@ -1,7 +1,9 @@
 use super::*;
 use serde_json::json;
 use std::net::UdpSocket;
-use std::process::{Child, Command, Stdio};
+use std::process::{Child, Command};
+#[cfg(windows)]
+use std::process::Stdio;
 use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 use tauri::{Manager, PhysicalPosition, Position, WebviewUrl};
@@ -31,10 +33,10 @@ struct OverlayIpcRuntime {
     addr: String,
 }
 
-fn apply_windows_hidden_process_flags(command: &mut Command) {
+fn apply_windows_hidden_process_flags(_command: &mut Command) {
     #[cfg(windows)]
     {
-        command.creation_flags(CREATE_NO_WINDOW);
+        _command.creation_flags(CREATE_NO_WINDOW);
     }
 }
 

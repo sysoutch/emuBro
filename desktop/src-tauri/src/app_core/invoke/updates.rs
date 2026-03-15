@@ -825,7 +825,7 @@ fn download_app_update(window: &Window) -> Result<Value, String> {
             }),
             &checked,
         );
-        persist_app_update_state(&state);
+        persist_and_emit_app_update_state(window, &state);
         return Ok(state);
     }
 
@@ -958,7 +958,7 @@ fn download_app_update(window: &Window) -> Result<Value, String> {
                         "progressPercent": 100,
                         "downloadedFilePath": target_path_for_thread.to_string_lossy().to_string(),
                         "lastError": "",
-                        "lastMessage": "Update downloaded. Click \"Install & Restart\" to continue."
+                        "lastMessage": "Update downloaded. Click \"Install Downloaded Update\" to continue."
                     }),
                     &checked_for_thread,
                 );

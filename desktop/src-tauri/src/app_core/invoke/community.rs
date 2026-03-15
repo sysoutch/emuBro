@@ -1,6 +1,8 @@
 use super::*;
 use serde_json::json;
 use tauri::Manager;
+#[cfg(target_os = "windows")]
+use std::process::Command;
 
 pub(super) fn handle(ch: &str, args: &[Value], window: &Window) -> Result<Value, String> {
     match ch {

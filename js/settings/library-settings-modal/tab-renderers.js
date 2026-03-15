@@ -177,6 +177,17 @@ export function renderUpdatesTab({
                         : 'is-idle';
     const progressPercent = Math.max(0, Math.min(100, Math.round(Number(updateState.progressPercent || 0))));
     const appProgressWidth = `${progressPercent}%`;
+    const appStageLabel = updateState.lastError
+        ? 'Update Error'
+        : updateState.installing
+            ? 'Installing Update'
+            : updateState.downloaded
+                ? 'Ready To Install'
+                : updateState.downloading
+                    ? 'Downloading Update'
+                    : updateState.available
+                        ? 'Update Available'
+                        : 'Updater Ready';
     const appDownloadHint = updateState.downloaded
         ? 'Installer downloaded locally. Use "Install Downloaded Update" to continue.'
         : hasDownloadUrl
@@ -229,18 +240,24 @@ export function renderUpdatesTab({
                     <div style="font-size:0.9rem;"><strong>Download:</strong> ${progressPercent}%</div>
                 </div>
                 <div class="desktop-update-state-strip ${appStageClass}" style="margin:0;padding:10px 12px;border-radius:10px;border:1px solid var(--border-color);background:color-mix(in srgb, var(--bg-primary), transparent 18%);display:grid;gap:4px;" data-update-status-strip>
-                    <strong>${updateState.lastError ? 'Error' : updateState.installing ? 'Installing' : updateState.downloading ? 'Downloading' : updateState.downloaded ? 'Ready to install' : updateState.available ? 'Update available' : 'Ready'}</strong>
+                    <strong>${appStageLabel}</strong>
                     <span data-update-status>${status}</span>
                 </div>
                 <div class="desktop-update-progress ${appStageClass}" style="margin:0;height:12px;border-radius:999px;border:1px solid var(--border-color);background:var(--bg-primary);overflow:hidden;">
                     <div class="desktop-update-progress-bar" style="width:${appProgressWidth};height:100%;border-radius:999px;background:linear-gradient(90deg, var(--accent-color), color-mix(in srgb, var(--accent-color), white 20%));transition:width 180ms ease;"></div>
                 </div>
                 <div style="font-size:0.82rem;color:var(--text-secondary);">${escapeAttr(appDownloadHint)}</div>
+                ${updateState.downloaded ? `
+                <div style="margin:0;padding:10px 12px;border-radius:10px;border:1px solid var(--border-color);background:color-mix(in srgb, var(--accent-color), transparent 88%);display:grid;gap:4px;">
+                    <strong>Install is ready</strong>
+                    <span style="font-size:0.86rem;color:var(--text-secondary);">The updater downloaded the installer successfully. Click <strong>Install Downloaded Update</strong> below. emuBro will close once the installer starts.</span>
+                </div>
+                ` : ''}
                 <div style="font-size:0.82rem;color:var(--text-secondary);">${!updateState.currentVersion && !updateState.latestVersion ? 'If this app is not packaged or no GitHub release artifacts are published yet, check will report that directly.' : ''}</div>
                 <div style="display:flex;flex-wrap:wrap;gap:8px;">
-                    <button type="button" class="action-btn" data-update-action="check"${(updateState.checking || updateState.downloading || updateState.installing) ? ' disabled' : ''}>Check for Updates</button>
-                    <button type="button" class="action-btn" data-update-action="download"${canDownload ? '' : ' disabled'}>Download Update</button>
-                    <button type="button" class="action-btn launch-btn" data-update-action="install"${canInstall ? '' : ' disabled'}>Install Downloaded Update</button>
+                    <button type="button" class="action-btn" data-update-action="check"${(updateState.checking || updateState.downloading || updateState.installing) ? ' disabled' : ''}>${updateState.checking ? 'Checking...' : 'Check for Updates'}</button>
+                    <button type="button" class="action-btn" data-update-action="download"${canDownload ? '' : ' disabled'}>${updateState.downloading ? `Downloading... ${progressPercent}%` : 'Download Update'}</button>
+                    <button type="button" class="action-btn launch-btn" data-update-action="install"${canInstall ? '' : ' disabled'}>${updateState.installing ? 'Launching Installer...' : 'Install Downloaded Update'}</button>
                     <button type="button" class="action-btn" data-update-action="open-release-page"${hasReleaseUrl ? '' : ' disabled'}>Open Release Page</button>
                 </div>
                 ${updateState.downloadedFilePath ? `<div style="font-size:0.8rem;color:var(--text-secondary);word-break:break-all;"><strong>Downloaded file:</strong> ${escapeAttr(updateState.downloadedFilePath)}</div>` : ''}

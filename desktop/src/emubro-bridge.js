@@ -1,4 +1,5 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
+import { listen as tauriListen } from "@tauri-apps/api/event";
 import { getShellStorageValue, setShellStorageValue } from "./utils/shell-storage-cache";
 
 const emitter = new EventTarget();
@@ -953,6 +954,31 @@ function dispatchEvent(eventName, detail) {
   emitter.dispatchEvent(new CustomEvent(eventName, { detail }));
 }
 
+let nativeEventBridgeInitialized = false;
+
+async function bindNativeEventBridge() {
+  if (!runningInDesktopShell || nativeEventBridgeInitialized) return;
+  nativeEventBridgeInitialized = true;
+
+  const eventNames = [
+    "emubro:launch",
+    "window-moved",
+    "window:maximized-changed",
+    "app:update-status",
+    "resources:update-status"
+  ];
+
+  await Promise.all(
+    eventNames.map(async (eventName) => {
+      try {
+        await tauriListen(eventName, (event) => {
+          dispatchEvent(eventName, event?.payload);
+        });
+      } catch (_error) {}
+    })
+  );
+}
+
 const emubro = {
   platform: runningInDesktopShell ? detectDesktopPlatform() : "web",
   invoke: invokeChannel,
@@ -1010,5 +1036,7 @@ if (!window.emubro) {
 }
 
 window.__emubroDispatchEvent = dispatchEvent;
+
+bindNativeEventBridge().catch(() => {});
 
 export { emubro, dispatchEvent };

@@ -16,6 +16,7 @@ const TASKBAR_BASE_ICON_PNG: &[u8] = include_bytes!("../../../icons/taskbar-base
 type IconImageData = (Vec<u8>, u32, u32);
 
 #[cfg(target_os = "windows")]
+#[allow(dead_code)]
 #[derive(Clone, Copy)]
 struct WindowIconHandles {
     big: isize,
@@ -23,6 +24,7 @@ struct WindowIconHandles {
 }
 
 #[cfg(target_os = "windows")]
+#[allow(dead_code)]
 static WINDOW_ICON_HANDLES: OnceLock<Mutex<HashMap<isize, WindowIconHandles>>> = OnceLock::new();
 
 pub(crate) fn append_window_debug_log(window: &Window, log_name: &str, message: &str) {
@@ -71,10 +73,8 @@ fn append_taskbar_debug_log(window: &Window, message: &str) {
 #[cfg(not(target_os = "windows"))]
 fn append_taskbar_debug_log(_window: &Window, _message: &str) {}
 
-#[cfg(not(target_os = "windows"))]
-pub(crate) fn append_window_debug_log(_window: &Window, _log_name: &str, _message: &str) {}
-
 #[cfg(target_os = "windows")]
+#[allow(dead_code)]
 fn window_icon_handles() -> &'static Mutex<HashMap<isize, WindowIconHandles>> {
     WINDOW_ICON_HANDLES.get_or_init(|| Mutex::new(HashMap::new()))
 }
@@ -263,6 +263,7 @@ fn build_tinted_icon_data(color: (u8, u8, u8)) -> Result<IconImageData, String> 
 }
 
 #[cfg(target_os = "windows")]
+#[allow(dead_code)]
 fn create_hicon_from_rgba(rgba: &[u8], width: u32, height: u32) -> Result<isize, String> {
     use windows::Win32::UI::WindowsAndMessaging::{CreateIcon, HICON};
 
@@ -295,6 +296,7 @@ fn create_hicon_from_rgba(rgba: &[u8], width: u32, height: u32) -> Result<isize,
 }
 
 #[cfg(target_os = "windows")]
+#[allow(dead_code)]
 fn resize_icon_rgba(rgba: &[u8], width: u32, height: u32, target_size: u32) -> Result<IconImageData, String> {
     let Some(src) = image::RgbaImage::from_raw(width, height, rgba.to_vec()) else {
         return Err("Failed to build source image for resize".into());
@@ -310,6 +312,7 @@ fn resize_icon_rgba(rgba: &[u8], width: u32, height: u32, target_size: u32) -> R
 }
 
 #[cfg(target_os = "windows")]
+#[allow(dead_code)]
 fn destroy_icon_handle(handle: isize) {
     use windows::Win32::UI::WindowsAndMessaging::{DestroyIcon, HICON};
 
@@ -321,6 +324,7 @@ fn destroy_icon_handle(handle: isize) {
 }
 
 #[cfg(target_os = "windows")]
+#[allow(dead_code)]
 fn apply_native_window_icons(window: &Window, rgba: &[u8], width: u32, height: u32) -> Result<(), String> {
     use windows::Win32::Foundation::{LPARAM, WPARAM};
     use windows::Win32::UI::WindowsAndMessaging::{

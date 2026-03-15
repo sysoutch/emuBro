@@ -236,6 +236,8 @@ export async function openLibraryPathSettingsModal(options = {}) {
         const hasAvailable = Object.prototype.hasOwnProperty.call(payload || {}, 'available');
         const hasDownloadFileName = Object.prototype.hasOwnProperty.call(payload || {}, 'downloadFileName');
         const hasDownloadedFilePath = Object.prototype.hasOwnProperty.call(payload || {}, 'downloadedFilePath');
+        const hasLastMessage = Object.prototype.hasOwnProperty.call(payload || {}, 'lastMessage');
+        const hasLastError = Object.prototype.hasOwnProperty.call(payload || {}, 'lastError');
         updateState = {
             ...updateState,
             checking: hasChecking ? !!payload?.checking : !!updateState.checking,
@@ -254,8 +256,12 @@ export async function openLibraryPathSettingsModal(options = {}) {
             downloadedFilePath: hasDownloadedFilePath
                 ? String(payload?.downloadedFilePath || '')
                 : String(updateState.downloadedFilePath || ''),
-            lastMessage: String(payload?.lastMessage || ''),
-            lastError: String(payload?.lastError || ''),
+            lastMessage: hasLastMessage
+                ? String(payload?.lastMessage || '')
+                : String(updateState.lastMessage || ''),
+            lastError: hasLastError
+                ? String(payload?.lastError || '')
+                : String(updateState.lastError || ''),
             progressPercent: Number.isFinite(Number(payload?.progressPercent))
                 ? Number(payload.progressPercent)
                 : Number(updateState.progressPercent || 0),
@@ -270,15 +276,15 @@ export async function openLibraryPathSettingsModal(options = {}) {
 
     const renderUpdateStatusText = () => {
         if (updateState.lastError) return `Error: ${updateState.lastError}`;
+        if (updateState.lastMessage) return updateState.lastMessage;
         if (updateState.installing) return 'Opening installer...';
         if (updateState.downloading) return `Downloading update... ${Math.round(updateState.progressPercent || 0)}%`;
-        if (updateState.downloaded) return 'Update downloaded. Click "Install & Restart".';
+        if (updateState.downloaded) return 'Update downloaded. Click "Install Downloaded Update".';
         if (updateState.available && !String(updateState.downloadUrl || '').trim()) {
             return `Update available${updateState.latestVersion ? `: ${updateState.latestVersion}` : ''}. No direct installer asset found; open the release page.`;
         }
         if (updateState.available) return `Update available${updateState.latestVersion ? `: ${updateState.latestVersion}` : ''}`;
         if (updateState.checking) return 'Checking for updates...';
-        if (updateState.lastMessage) return updateState.lastMessage;
         return 'Not checked yet.';
     };
 
