@@ -8,6 +8,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 use tauri::{Emitter, Manager};
 
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
 const APP_UPDATE_CONFIG_KEY: &str = "app:update:config:v1";
 const APP_UPDATE_STATE_KEY: &str = "app:update:state:v1";
 const DEFAULT_APP_RELEASE_API_URL: &str = "https://api.github.com/repos/sysoutch/emuBro/releases/latest";
@@ -16,6 +19,9 @@ const APP_UPDATE_DOWNLOADS_DIR_NAME: &str = "updates";
 const APP_UPDATE_DOWNLOAD_IN_PROGRESS_MSG: &str = "Update download already in progress.";
 
 static APP_UPDATE_DOWNLOAD_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
+
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 const RESOURCES_UPDATE_CONFIG_KEY: &str = "resources:update:config:v1";
 const DEFAULT_RESOURCES_REPO_URL: &str = "https://github.com/sysoutch/emubro-resources.git";
@@ -717,6 +723,62 @@ fn resolve_update_open_url(state: &Value, fallback_release_page: &str) -> String
     fallback_release_page.trim().to_string()
 }
 
+#[cfg(windows)]
+fn escape_powershell_single_quotes(value: &str) -> String {
+    value.replace('\'', "''")
+}
+
+#[cfg(windows)]
+fn apply_windows_hidden_process_flags(command: &mut Command) {
+    command.creation_flags(CREATE_NO_WINDOW);
+}
+
+#[cfg(windows)]
+fn spawn_delayed_windows_installer(path: &Path) -> Result<&'static str, String> {
+    let normalized_path = path
+        .canonicalize()
+        .unwrap_or_else(|_| path.to_path_buf());
+    let escaped_path = escape_powershell_single_quotes(&normalized_path.to_string_lossy());
+    let extension = normalized_path
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or("")
+        .trim()
+        .to_ascii_lowercase();
+
+    let launch_script = if extension == "msi" {
+        format!(
+            "Start-Sleep -Milliseconds 1400; Start-Process -FilePath 'msiexec.exe' -ArgumentList '/i','{}'",
+            escaped_path
+        )
+    } else {
+        format!(
+            "Start-Sleep -Milliseconds 1400; Start-Process -FilePath '{}'",
+            escaped_path
+        )
+    };
+
+    let mut command = Command::new("powershell");
+    command
+        .arg("-NoProfile")
+        .arg("-WindowStyle")
+        .arg("Hidden")
+        .arg("-ExecutionPolicy")
+        .arg("Bypass")
+        .arg("-Command")
+        .arg(launch_script);
+    apply_windows_hidden_process_flags(&mut command);
+    command.spawn().map_err(|e| e.to_string())?;
+
+    if extension == "msi" {
+        Ok("powershell-delayed-msi")
+    } else if extension == "exe" {
+        Ok("powershell-delayed-exe")
+    } else {
+        Ok("powershell-delayed-open")
+    }
+}
+
 #[cfg(target_os = "linux")]
 fn open_downloaded_installer(path: &Path) -> Result<&'static str, String> {
     let extension = path
@@ -742,6 +804,10 @@ fn open_downloaded_installer(path: &Path) -> Result<&'static str, String> {
 fn open_downloaded_installer(path: &Path) -> Result<&'static str, String> {
     if !path.exists() {
         return Err(format!("Installer file does not exist: {}", path.to_string_lossy()));
+    }
+
+    if let Ok(method) = spawn_delayed_windows_installer(path) {
+        return Ok(method);
     }
 
     let extension = path

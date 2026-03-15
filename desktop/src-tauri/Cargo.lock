@@ -974,7 +974,7 @@ checksum = "4ef6b89e5b37196644d8796de5268852ff179b44e96276cf4290264843743bb7"
 
 [[package]]
 name = "emubro"
-version = "1.0.0-alpha.34"
+version = "1.0.0-alpha.36"
 dependencies = [
  "base64 0.22.1",
  "ico 0.4.0",

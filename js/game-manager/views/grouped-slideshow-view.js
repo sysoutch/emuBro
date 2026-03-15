@@ -21,6 +21,151 @@ function getPlatformIcon(game) {
     return `emubro-resources/platforms/${getPlatformShortName(game)}/logos/default.png`;
 }
 
+function clampColorChannel(value) {
+    return Math.max(0, Math.min(255, Math.round(Number(value) || 0)));
+}
+
+function colorDistanceSq(a, b) {
+    const dr = Number(a?.r || 0) - Number(b?.r || 0);
+    const dg = Number(a?.g || 0) - Number(b?.g || 0);
+    const db = Number(a?.b || 0) - Number(b?.b || 0);
+    return (dr * dr) + (dg * dg) + (db * db);
+}
+
+function mixRgbColors(a, b, amount = 0.5) {
+    const mix = Math.max(0, Math.min(1, Number(amount) || 0));
+    return {
+        r: clampColorChannel((Number(a?.r || 0) * (1 - mix)) + (Number(b?.r || 0) * mix)),
+        g: clampColorChannel((Number(a?.g || 0) * (1 - mix)) + (Number(b?.g || 0) * mix)),
+        b: clampColorChannel((Number(a?.b || 0) * (1 - mix)) + (Number(b?.b || 0) * mix))
+    };
+}
+
+function toRgbaColor(color, alpha = 1) {
+    return `rgba(${clampColorChannel(color?.r)}, ${clampColorChannel(color?.g)}, ${clampColorChannel(color?.b)}, ${Math.max(0, Math.min(1, Number(alpha) || 0))})`;
+}
+
+function hashStringToSeed(value) {
+    const text = String(value || '');
+    let hash = 0;
+    for (let index = 0; index < text.length; index += 1) {
+        hash = ((hash << 5) - hash) + text.charCodeAt(index);
+        hash |= 0;
+    }
+    return Math.abs(hash);
+}
+
+function hslToRgb(h, s, l) {
+    const hue = ((((Number(h) || 0) % 360) + 360) % 360) / 360;
+    const sat = Math.max(0, Math.min(100, Number(s) || 0)) / 100;
+    const light = Math.max(0, Math.min(100, Number(l) || 0)) / 100;
+
+    if (sat === 0) {
+        const gray = clampColorChannel(light * 255);
+        return { r: gray, g: gray, b: gray };
+    }
+
+    const q = light < 0.5 ? light * (1 + sat) : light + sat - (light * sat);
+    const p = 2 * light - q;
+    const hueToChannel = (t) => {
+        let n = t;
+        if (n < 0) n += 1;
+        if (n > 1) n -= 1;
+        if (n < 1 / 6) return p + ((q - p) * 6 * n);
+        if (n < 1 / 2) return q;
+        if (n < 2 / 3) return p + ((q - p) * (2 / 3 - n) * 6);
+        return p;
+    };
+
+    return {
+        r: clampColorChannel(hueToChannel(hue + 1 / 3) * 255),
+        g: clampColorChannel(hueToChannel(hue) * 255),
+        b: clampColorChannel(hueToChannel(hue - 1 / 3) * 255)
+    };
+}
+
+function fallbackPaletteFromSource(source) {
+    const seed = hashStringToSeed(source || 'emubro-group');
+    const baseHue = seed % 360;
+    const colorA = hslToRgb(baseHue, 68, 56);
+    const colorB = hslToRgb((baseHue + 38) % 360, 64, 54);
+    const colorC = hslToRgb((baseHue + 320) % 360, 58, 46);
+    return [
+        toRgbaColor(colorA, 0.46),
+        toRgbaColor(colorB, 0.4),
+        toRgbaColor(colorC, 0.36)
+    ];
+}
+
+function extractPaletteFromImage(image) {
+    const width = Number(image?.naturalWidth || 0);
+    const height = Number(image?.naturalHeight || 0);
+    if (!width || !height) return null;
+
+    const maxSize = 40;
+    const scale = Math.min(1, maxSize / Math.max(width, height));
+    const canvasWidth = Math.max(1, Math.round(width * scale));
+    const canvasHeight = Math.max(1, Math.round(height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (!context) return null;
+
+    try {
+        context.drawImage(image, 0, 0, canvasWidth, canvasHeight);
+        const data = context.getImageData(0, 0, canvasWidth, canvasHeight).data;
+        const buckets = new Map();
+        for (let offset = 0; offset < data.length; offset += 16) {
+            const alpha = data[offset + 3];
+            if (alpha < 72) continue;
+            const r = Math.floor(data[offset] / 24) * 24;
+            const g = Math.floor(data[offset + 1] / 24) * 24;
+            const b = Math.floor(data[offset + 2] / 24) * 24;
+            const key = `${r},${g},${b}`;
+            buckets.set(key, (buckets.get(key) || 0) + 1);
+        }
+
+        const sorted = [...buckets.entries()].sort((a, b) => b[1] - a[1]);
+        if (!sorted.length) return null;
+
+        const palette = [];
+        for (const [bucketKey, count] of sorted) {
+            if (palette.length > 0 && count < 2) continue;
+            const parts = bucketKey.split(',').map((value) => clampColorChannel(Number(value)));
+            if (parts.length !== 3) continue;
+            const color = { r: parts[0], g: parts[1], b: parts[2] };
+            const tooClose = palette.some((existing) => colorDistanceSq(existing, color) < 2200);
+            if (tooClose) continue;
+            palette.push(color);
+            if (palette.length >= 3) break;
+        }
+
+        if (!palette.length) return null;
+        if (palette.length === 1) {
+            palette.push(mixRgbColors(palette[0], { r: 255, g: 255, b: 255 }, 0.34));
+        }
+        if (palette.length === 2) {
+            palette.push(mixRgbColors(palette[0], { r: 16, g: 26, b: 56 }, 0.42));
+        }
+
+        return [
+            toRgbaColor(palette[0], 0.48),
+            toRgbaColor(palette[1], 0.42),
+            toRgbaColor(palette[2], 0.36)
+        ];
+    } catch (_error) {
+        return null;
+    }
+}
+
+function applyPaletteToGroupSection(section, palette) {
+    if (!section || !Array.isArray(palette) || palette.length < 3) return;
+    section.style.setProperty('--group-glow-1', palette[0]);
+    section.style.setProperty('--group-glow-2', palette[1]);
+    section.style.setProperty('--group-glow-3', palette[2]);
+}
+
 function getGroupIdentity(groupBy, group, heroGame) {
     const label = String(group?.label || 'Unknown').trim() || 'Unknown';
     if (groupBy === 'platform') {
@@ -85,6 +230,11 @@ function createPlatformLane({
     const section = document.createElement('section');
     section.className = 'slideshow-platform-section glass';
     section.dataset.groupIndex = String(groupIndex);
+    applyPaletteToGroupSection(section, fallbackPaletteFromSource(
+        groupBy === 'platform'
+            ? (heroGame?.platformShortName || heroGame?.platform || identity.label)
+            : identity.label
+    ));
 
     const header = document.createElement('div');
     header.className = 'slideshow-platform-header';
@@ -248,9 +398,23 @@ function createPlatformLane({
     });
 
     const sideButton = header.querySelector('.slideshow-platform-side');
+    const iconEl = header.querySelector('.slideshow-platform-icon');
     sideButton?.addEventListener('click', () => {
         onSelectLane(groupIndex);
     });
+
+    if (iconEl) {
+        const applyExtractedPalette = () => {
+            const palette = extractPaletteFromImage(iconEl);
+            if (!palette) return;
+            applyPaletteToGroupSection(section, palette);
+        };
+        if (iconEl.complete && Number(iconEl.naturalWidth || 0) > 0) {
+            requestAnimationFrame(applyExtractedPalette);
+        } else {
+            iconEl.addEventListener('load', applyExtractedPalette, { once: true });
+        }
+    }
 
     return {
         section,
