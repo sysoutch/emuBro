@@ -80,6 +80,7 @@ function createPlatformLane({
     getRenderToken
 }) {
     const heroGame = group.rows[0] || null;
+    const initialIndex = Math.min(group.rows.length - 1, group.rows.length > 4 ? 2 : 1);
     const identity = getGroupIdentity(groupBy, group, heroGame);
     const section = document.createElement('section');
     section.className = 'slideshow-platform-section glass';
@@ -124,7 +125,7 @@ function createPlatformLane({
     section.appendChild(carousel);
 
     let lane = null;
-    let activeIndex = 0;
+    let activeIndex = Math.max(0, initialIndex);
 
     function updateRowBackdrop(index) {
         const game = group.rows[Math.max(0, Math.min(group.rows.length - 1, Number(index) || 0))] || null;
@@ -203,6 +204,7 @@ function createPlatformLane({
         modeRef,
         renderToken,
         getRenderToken,
+        initialIndex: activeIndex,
         refreshItems() {
             let changed = false;
             track.querySelectorAll('.slideshow-platform-item').forEach((item) => {
@@ -232,7 +234,7 @@ function createPlatformLane({
         initializeLazyGameImages(track);
         updateRowBackdrop(activeIndex);
         lane.scheduleOrientationRefresh();
-        lane.scrollToItem(0, false);
+        lane.scrollToItem(activeIndex, false);
     });
     window.setTimeout(() => lane?.scheduleOrientationRefresh(), 120);
     window.setTimeout(() => lane?.scheduleOrientationRefresh(), 500);
@@ -340,7 +342,7 @@ export function renderGamesAsGroupedSlideshow(gamesToRender, options = {}) {
     root.appendChild(lanesHost);
 
     const lanes = [];
-    let activeGroupIndex = 0;
+    let activeGroupIndex = groups.length > 1 ? 1 : 0;
 
     function updateGroupFocusState() {
         const lastIndex = Math.max(0, lanes.length - 1);

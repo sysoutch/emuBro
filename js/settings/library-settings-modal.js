@@ -145,6 +145,8 @@ export async function openLibraryPathSettingsModal(options = {}) {
         downloadUrl: '',
         downloadFileName: '',
         downloadedFilePath: '',
+        installTargetPath: '',
+        installLaunchMethod: '',
         lastMessage: '',
         lastError: '',
         progressPercent: 0,
@@ -236,6 +238,8 @@ export async function openLibraryPathSettingsModal(options = {}) {
         const hasAvailable = Object.prototype.hasOwnProperty.call(payload || {}, 'available');
         const hasDownloadFileName = Object.prototype.hasOwnProperty.call(payload || {}, 'downloadFileName');
         const hasDownloadedFilePath = Object.prototype.hasOwnProperty.call(payload || {}, 'downloadedFilePath');
+        const hasInstallTargetPath = Object.prototype.hasOwnProperty.call(payload || {}, 'installTargetPath');
+        const hasInstallLaunchMethod = Object.prototype.hasOwnProperty.call(payload || {}, 'installLaunchMethod');
         const hasLastMessage = Object.prototype.hasOwnProperty.call(payload || {}, 'lastMessage');
         const hasLastError = Object.prototype.hasOwnProperty.call(payload || {}, 'lastError');
         updateState = {
@@ -256,6 +260,12 @@ export async function openLibraryPathSettingsModal(options = {}) {
             downloadedFilePath: hasDownloadedFilePath
                 ? String(payload?.downloadedFilePath || '')
                 : String(updateState.downloadedFilePath || ''),
+            installTargetPath: hasInstallTargetPath
+                ? String(payload?.installTargetPath || '')
+                : String(updateState.installTargetPath || ''),
+            installLaunchMethod: hasInstallLaunchMethod
+                ? String(payload?.installLaunchMethod || '')
+                : String(updateState.installLaunchMethod || ''),
             lastMessage: hasLastMessage
                 ? String(payload?.lastMessage || '')
                 : String(updateState.lastMessage || ''),

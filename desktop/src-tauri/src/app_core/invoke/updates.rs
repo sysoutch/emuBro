@@ -188,6 +188,8 @@ fn read_app_update_state(window: &Window) -> Value {
             "downloadUrl": stored.get("downloadUrl").and_then(|v| v.as_str()).unwrap_or(""),
             "downloadFileName": stored.get("downloadFileName").and_then(|v| v.as_str()).unwrap_or(""),
             "downloadedFilePath": downloaded_file_path,
+            "installTargetPath": stored.get("installTargetPath").and_then(|v| v.as_str()).unwrap_or(""),
+            "installLaunchMethod": stored.get("installLaunchMethod").and_then(|v| v.as_str()).unwrap_or(""),
             "lastError": stored.get("lastError").and_then(|v| v.as_str()).unwrap_or(""),
             "lastMessage": stored.get("lastMessage").and_then(|v| v.as_str()).unwrap_or("Not checked yet.")
         }),
@@ -716,7 +718,7 @@ fn resolve_update_open_url(state: &Value, fallback_release_page: &str) -> String
 }
 
 #[cfg(target_os = "linux")]
-fn open_downloaded_installer(path: &Path) -> Result<(), String> {
+fn open_downloaded_installer(path: &Path) -> Result<&'static str, String> {
     let extension = path
         .extension()
         .and_then(|value| value.to_str())
@@ -727,15 +729,21 @@ fn open_downloaded_installer(path: &Path) -> Result<(), String> {
     if extension == "appimage" {
         maybe_make_download_executable(path)?;
         if Command::new(path).spawn().is_ok() {
-            return Ok(());
+            return Ok("direct-appimage");
         }
     }
 
-    open::that(path).map_err(|e| e.to_string())
+    open::that(path)
+        .map(|_| "shell-open")
+        .map_err(|e| e.to_string())
 }
 
 #[cfg(target_os = "windows")]
-fn open_downloaded_installer(path: &Path) -> Result<(), String> {
+fn open_downloaded_installer(path: &Path) -> Result<&'static str, String> {
+    if !path.exists() {
+        return Err(format!("Installer file does not exist: {}", path.to_string_lossy()));
+    }
+
     let extension = path
         .extension()
         .and_then(|value| value.to_str())
@@ -744,27 +752,46 @@ fn open_downloaded_installer(path: &Path) -> Result<(), String> {
         .to_ascii_lowercase();
 
     if extension == "exe" {
-        return Command::new(path)
+        if Command::new(path).spawn().is_ok() {
+            return Ok("direct-exe");
+        }
+
+        return Command::new("cmd")
+            .args(["/C", "start", ""])
+            .arg(path)
             .spawn()
-            .map(|_| ())
+            .map(|_| "cmd-start-exe")
             .map_err(|e| e.to_string());
     }
 
     if extension == "msi" {
-        return Command::new("msiexec")
+        if Command::new("msiexec")
             .arg("/i")
             .arg(path)
             .spawn()
-            .map(|_| ())
+            .is_ok()
+        {
+            return Ok("msiexec");
+        }
+
+        return Command::new("cmd")
+            .args(["/C", "start", "", "msiexec", "/i"])
+            .arg(path)
+            .spawn()
+            .map(|_| "cmd-start-msiexec")
             .map_err(|e| e.to_string());
     }
 
-    open::that(path).map_err(|e| e.to_string())
+    open::that(path)
+        .map(|_| "shell-open")
+        .map_err(|e| e.to_string())
 }
 
 #[cfg(all(not(target_os = "linux"), not(target_os = "windows")))]
-fn open_downloaded_installer(path: &Path) -> Result<(), String> {
-    open::that(path).map_err(|e| e.to_string())
+fn open_downloaded_installer(path: &Path) -> Result<&'static str, String> {
+    open::that(path)
+        .map(|_| "shell-open")
+        .map_err(|e| e.to_string())
 }
 
 fn download_app_update(window: &Window) -> Result<Value, String> {
@@ -1013,14 +1040,19 @@ fn install_app_update(window: &Window) -> Result<Value, String> {
     if !local_download_path.is_empty() && Path::new(&local_download_path).exists() {
         let local_path = PathBuf::from(&local_download_path);
         match open_downloaded_installer(&local_path) {
-            Ok(_) => {
+            Ok(launch_method) => {
                 let state = with_config(
                     json!({
                         "success": true,
                         "installing": true,
                         "downloaded": true,
+                        "installTargetPath": local_download_path,
+                        "installLaunchMethod": launch_method,
                         "lastError": "",
-                        "lastMessage": "Installer launched. emuBro will close so the update can continue."
+                        "lastMessage": format!(
+                            "Installer launched via {}. emuBro will close so the update can continue.",
+                            launch_method
+                        )
                     }),
                     &current_state,
                 );
@@ -1037,6 +1069,8 @@ fn install_app_update(window: &Window) -> Result<Value, String> {
                     json!({
                         "success": false,
                         "installing": false,
+                        "installTargetPath": local_download_path,
+                        "installLaunchMethod": "",
                         "lastError": format!("Failed to open downloaded installer: {}", error),
                         "lastMessage": ""
                     }),

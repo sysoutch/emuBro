@@ -193,6 +193,8 @@ export function renderUpdatesTab({
         : hasDownloadUrl
             ? 'A compatible installer asset was found for this platform.'
             : 'No direct installer asset was found for this platform. Use the release page instead.';
+    const installTargetPath = escapeAttr(updateState.installTargetPath || updateState.downloadedFilePath || '');
+    const installLaunchMethod = escapeAttr(updateState.installLaunchMethod || '');
     const resourcesStatus = escapeAttr(renderResourcesUpdateStatusText());
     const resourcesCurrentVersion = escapeAttr(resourcesUpdateState.currentVersion || '');
     const resourcesLatestVersion = escapeAttr(resourcesUpdateState.latestVersion || '');
@@ -261,6 +263,13 @@ export function renderUpdatesTab({
                     <button type="button" class="action-btn" data-update-action="open-release-page"${hasReleaseUrl ? '' : ' disabled'}>Open Release Page</button>
                 </div>
                 ${updateState.downloadedFilePath ? `<div style="font-size:0.8rem;color:var(--text-secondary);word-break:break-all;"><strong>Downloaded file:</strong> ${escapeAttr(updateState.downloadedFilePath)}</div>` : ''}
+                ${(installTargetPath || installLaunchMethod) ? `
+                <div style="display:grid;gap:4px;font-size:0.8rem;color:var(--text-secondary);padding:10px 12px;border:1px solid var(--border-color);border-radius:10px;background:color-mix(in srgb, var(--bg-primary), transparent 14%);">
+                    <strong style="font-size:0.84rem;color:var(--text-primary);">Install Diagnostics</strong>
+                    ${installLaunchMethod ? `<div><strong>Launch method:</strong> ${installLaunchMethod}</div>` : ''}
+                    ${installTargetPath ? `<div style="word-break:break-all;"><strong>Target file:</strong> ${installTargetPath}</div>` : ''}
+                </div>
+                ` : ''}
                 ${notes ? `<pre style="margin:0;padding:10px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-primary);white-space:pre-wrap;font-family:var(--font-body);font-size:0.85rem;">${escapeAttr(notes)}</pre>` : ''}
             </section>
             <section style="border:1px solid var(--border-color);border-radius:12px;padding:12px;display:grid;gap:10px;">
