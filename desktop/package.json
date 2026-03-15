@@ -1,7 +1,7 @@
 {
   "name": "emubro-desktop",
   "private": true,
-  "version": "1.1.0-alpha.1",
+  "version": "1.0.0-alpha.20260315",
   "type": "module",
   "scripts": {
     "scripts:help": "node -e \"console.log(['desktop workspace scripts:','  npm run app:desktop:dev        Start Tauri desktop dev (classic UI by default).','  npm run app:web:dev            Start the Vite shell only in the browser.','  npm run app:desktop:build      Build the desktop app installer/bundle.','  npm run app:web:build          Build the Vite shell assets.','  npm run ui:legacy:build        Build the legacy renderer bundle only.'].join('\\n'))\"",
