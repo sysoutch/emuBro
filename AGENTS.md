@@ -85,3 +85,9 @@
 - In substantial progress updates, include short "next up" notes for non-current active tasks so context is not lost during task switching.
 - When switching away from a task midstream, leave a concise parked-state summary: what is done, what is pending, and the immediate next step.
 - Keep cross-task updates brief and practical, focused on unblock status and execution order rather than long plans.
+
+## Commit Message Quality
+
+- Use descriptive commit messages by default.
+- Prefer a clear subject plus concise body when context matters (what changed, why, and any release/runtime impact).
+- For release commits, keep messages user-facing and structured in readable markdown-style sections.

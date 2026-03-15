@@ -339,19 +339,150 @@ fn pick_release_asset_info(release_json: &Value) -> (String, String) {
     (String::new(), String::new())
 }
 
+#[derive(Debug)]
+enum FetchJsonError {
+    Status {
+        url: String,
+        code: u16,
+        message: String,
+    },
+    Transport(String),
+    Parse(String),
+}
+
+impl std::fmt::Display for FetchJsonError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FetchJsonError::Status { url, code, message } => {
+                if message.is_empty() {
+                    write!(f, "{}: status code {}", url, code)
+                } else {
+                    write!(f, "{}: status code {} ({})", url, code, message)
+                }
+            }
+            FetchJsonError::Transport(message) => write!(f, "{}", message),
+            FetchJsonError::Parse(message) => write!(f, "{}", message),
+        }
+    }
+}
+
+fn fetch_json_from_url(url: &str) -> Result<Value, FetchJsonError> {
+    let trimmed = url.trim();
+    if trimmed.is_empty() {
+        return Err(FetchJsonError::Transport("URL is empty.".to_string()));
+    }
+
+    let response = match ureq::get(trimmed)
+        .set("User-Agent", "emuBro-Tauri")
+        .set("Accept", "application/vnd.github+json")
+        .call()
+    {
+        Ok(response) => response,
+        Err(ureq::Error::Status(code, response)) => {
+            let message = response
+                .into_string()
+                .ok()
+                .map(|value| value.trim().to_string())
+                .filter(|value| !value.is_empty())
+                .unwrap_or_default();
+            return Err(FetchJsonError::Status {
+                url: trimmed.to_string(),
+                code,
+                message,
+            });
+        }
+        Err(ureq::Error::Transport(error)) => {
+            return Err(FetchJsonError::Transport(error.to_string()));
+        }
+    };
+
+    let text = response
+        .into_string()
+        .map_err(|error| FetchJsonError::Transport(error.to_string()))?;
+    serde_json::from_str::<Value>(&text).map_err(|error| FetchJsonError::Parse(error.to_string()))
+}
+
+fn release_list_fallback_url_if_latest_endpoint(release_api_url: &str) -> Option<String> {
+    let trimmed = release_api_url.trim();
+    let lower = trimmed.to_ascii_lowercase();
+    if !lower.contains("api.github.com/repos/") || !lower.contains("/releases/latest") {
+        return None;
+    }
+    let replaced = trimmed.replace("/releases/latest", "/releases?per_page=20");
+    if replaced == trimmed {
+        None
+    } else {
+        Some(replaced)
+    }
+}
+
+fn pick_release_object_from_payload(payload: &Value) -> Option<Value> {
+    if payload.is_object() {
+        let is_draft = payload.get("draft").and_then(|value| value.as_bool()).unwrap_or(false);
+        if is_draft {
+            return None;
+        }
+        let tag_name = payload
+            .get("tag_name")
+            .and_then(|value| value.as_str())
+            .unwrap_or("")
+            .trim()
+            .to_string();
+        let version = normalize_release_tag(&tag_name);
+        if version.is_empty() {
+            return None;
+        }
+        return Some(payload.clone());
+    }
+
+    if let Some(list) = payload.as_array() {
+        for entry in list {
+            let is_draft = entry.get("draft").and_then(|value| value.as_bool()).unwrap_or(false);
+            if is_draft {
+                continue;
+            }
+            let tag_name = entry
+                .get("tag_name")
+                .and_then(|value| value.as_str())
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            let version = normalize_release_tag(&tag_name);
+            if version.is_empty() {
+                continue;
+            }
+            return Some(entry.clone());
+        }
+    }
+
+    None
+}
+
 fn fetch_latest_release(release_api_url: &str) -> Result<Value, String> {
     let trimmed = release_api_url.trim();
     if trimmed.is_empty() {
         return Err("Release API URL is empty.".to_string());
     }
 
-    let response = ureq::get(trimmed)
-        .set("User-Agent", "emuBro-Tauri")
-        .set("Accept", "application/vnd.github+json")
-        .call()
-        .map_err(|e| e.to_string())?;
-    let text = response.into_string().map_err(|e| e.to_string())?;
-    let release_json = serde_json::from_str::<Value>(&text).map_err(|e| e.to_string())?;
+    let release_payload = match fetch_json_from_url(trimmed) {
+        Ok(payload) => payload,
+        Err(FetchJsonError::Status { code: 404, .. }) => {
+            if let Some(fallback_url) = release_list_fallback_url_if_latest_endpoint(trimmed) {
+                fetch_json_from_url(&fallback_url)
+                    .map_err(|error| format!("{}; fallback failed: {}", trimmed, error))?
+            } else {
+                return Err(format!("{}", FetchJsonError::Status {
+                    url: trimmed.to_string(),
+                    code: 404,
+                    message: String::new(),
+                }));
+            }
+        }
+        Err(error) => return Err(error.to_string()),
+    };
+
+    let release_json = pick_release_object_from_payload(&release_payload)
+        .ok_or_else(|| "Release API response did not contain a valid release object.".to_string())?;
 
     let tag_name = release_json
         .get("tag_name")
