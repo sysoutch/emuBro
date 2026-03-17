@@ -5,7 +5,8 @@ const EMULATOR_SLIDESHOW_MODE_STORAGE_KEY = 'emuBro.emulatorSlideshowMode';
 function readStoredMode() {
     try {
         const stored = String(localStorage.getItem(EMULATOR_SLIDESHOW_MODE_STORAGE_KEY) || 'flat').trim().toLowerCase();
-        return stored === '3d' ? '3d' : 'flat';
+        if (stored === '3d' || stored === '3d-reverse') return stored;
+        return 'flat';
     } catch (_error) {
         return 'flat';
     }
@@ -13,7 +14,7 @@ function readStoredMode() {
 
 function writeStoredMode(mode) {
     try {
-        localStorage.setItem(EMULATOR_SLIDESHOW_MODE_STORAGE_KEY, mode === '3d' ? '3d' : 'flat');
+        localStorage.setItem(EMULATOR_SLIDESHOW_MODE_STORAGE_KEY, (mode === '3d' || mode === '3d-reverse') ? mode : 'flat');
     } catch (_error) {}
 }
 
@@ -139,6 +140,7 @@ export function renderEmulatorsAsSlideshow(emulatorsToRender, options = {}) {
         <div class="slideshow-mode-tabs">
             <button type="button" class="slideshow-mode-tab" data-slideshow-mode="flat">Flat</button>
             <button type="button" class="slideshow-mode-tab" data-slideshow-mode="3d">3D</button>
+            <button type="button" class="slideshow-mode-tab" data-slideshow-mode="3d-reverse">3D Reverse</button>
         </div>
     `;
 
@@ -225,9 +227,11 @@ export function renderEmulatorsAsSlideshow(emulatorsToRender, options = {}) {
     let lane = null;
 
     function applyMode(nextMode, persist = true) {
-        mode = nextMode === '3d' ? '3d' : 'flat';
+        const normalized = String(nextMode || '').trim().toLowerCase();
+        mode = (normalized === '3d' || normalized === '3d-reverse') ? normalized : 'flat';
         container.classList.toggle('is-mode-3d', mode === '3d');
-        container.classList.toggle('is-mode-flat', mode !== '3d');
+        container.classList.toggle('is-mode-3d-reverse', mode === '3d-reverse');
+        container.classList.toggle('is-mode-flat', mode === 'flat');
         controls.querySelectorAll('.slideshow-mode-tab').forEach((button) => {
             const isActive = String(button.dataset.slideshowMode || '') === mode;
             button.classList.toggle('is-active', isActive);

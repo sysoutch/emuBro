@@ -1161,15 +1161,33 @@ export function setupRendererEventListeners(options = {}) {
     const positionFiltersFloatingMenu = () => {
         if (!filtersFloatingMenuEl || !filtersPopupBtn) return;
         const rect = filtersPopupBtn.getBoundingClientRect();
+        const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
         const margin = 8;
-        
+
+        const maxWidth = Math.max(260, viewportWidth - (margin * 2));
+        const preferredWidth = Math.max(320, Math.min(460, Math.round(rect.width + 260)));
+        filtersFloatingMenuEl.style.width = `${Math.min(preferredWidth, maxWidth)}px`;
+        filtersFloatingMenuEl.style.maxWidth = `${maxWidth}px`;
+
         filtersFloatingMenuEl.style.left = `${Math.max(margin, rect.left)}px`;
-        filtersFloatingMenuEl.style.top = `${rect.bottom + 6}px`;
-        
+        filtersFloatingMenuEl.style.top = `${Math.max(margin, rect.bottom + 6)}px`;
+
         const menuRect = filtersFloatingMenuEl.getBoundingClientRect();
-        if (menuRect.right > window.innerWidth - margin) {
-            filtersFloatingMenuEl.style.left = `${window.innerWidth - menuRect.width - margin}px`;
+        let left = rect.left;
+        if (left + menuRect.width > viewportWidth - margin) {
+            left = viewportWidth - margin - menuRect.width;
         }
+        if (left < margin) left = margin;
+
+        let top = rect.bottom + 6;
+        if (top + menuRect.height > viewportHeight - margin) {
+            top = rect.top - menuRect.height - 6;
+        }
+        if (top < margin) top = margin;
+
+        filtersFloatingMenuEl.style.left = `${Math.round(left)}px`;
+        filtersFloatingMenuEl.style.top = `${Math.round(top)}px`;
     };
 
     const renderFiltersPopup = () => {
@@ -1225,51 +1243,6 @@ export function setupRendererEventListeners(options = {}) {
                 gameLanguageFilterSelect.dispatchEvent(new Event('change', { bubbles: true }));
             });
             menu.appendChild(createBlock('Language', clone));
-        }
-
-        // Group Filter
-        if (groupFilterSelect) {
-            const clone = groupFilterSelect.cloneNode(true);
-            clone.style.display = 'block';
-            clone.style.width = '100%';
-            clone.value = groupFilterSelect.value;
-            clone.addEventListener('change', (e) => {
-                groupFilterSelect.value = e.target.value;
-                groupFilterSelect.dispatchEvent(new Event('change', { bubbles: true }));
-            });
-            menu.appendChild(createBlock('Group By', clone));
-        }
-
-        // Sort Filter
-        if (sortFilter) {
-            const clone = sortFilter.cloneNode(true);
-            clone.style.display = 'block';
-            clone.style.width = '100%';
-            clone.value = sortFilter.value;
-            clone.addEventListener('change', (e) => {
-                sortFilter.value = e.target.value;
-                sortFilter.dispatchEvent(new Event('change', { bubbles: true }));
-            });
-            menu.appendChild(createBlock('Sort By', clone));
-        }
-
-        // Group Same Names Toggle
-        if (groupSameNamesToggle) {
-            const label = document.createElement('label');
-            label.className = 'group-same-names-toggle';
-            label.style.width = '100%';
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.checked = groupSameNamesToggle.checked;
-            checkbox.addEventListener('change', (e) => {
-                groupSameNamesToggle.checked = e.target.checked;
-                groupSameNamesToggle.dispatchEvent(new Event('change', { bubbles: true }));
-            });
-            const span = document.createElement('span');
-            span.textContent = 'Group same names';
-            label.appendChild(checkbox);
-            label.appendChild(span);
-            menu.appendChild(createBlock('Options', label));
         }
 
         document.body.appendChild(menu);

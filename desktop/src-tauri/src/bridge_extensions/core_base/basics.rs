@@ -121,6 +121,27 @@ pub(crate) fn find_platforms_dir() -> Option<PathBuf> {
     None
 }
 
+pub(crate) fn find_gamelist_dir() -> Option<PathBuf> {
+    for root in resource_search_roots() {
+        let candidates = [
+            root.join("gamelist"),
+            root.join("emubro-resources").join("gamelist"),
+            root.join("bundle-resources").join("gamelist"),
+            root.join("bundle-resources").join("emubro-resources").join("gamelist"),
+            root.join("resources").join("gamelist"),
+            root.join("resources").join("bundle-resources").join("gamelist"),
+            root.join("resources").join("emubro-resources").join("gamelist"),
+            root.join("resources").join("bundle-resources").join("emubro-resources").join("gamelist"),
+        ];
+        for path in candidates {
+            if path.exists() && path.is_dir() {
+                return Some(path);
+            }
+        }
+    }
+    None
+}
+
 fn resource_search_roots() -> Vec<PathBuf> {
     let mut roots = Vec::<PathBuf>::new();
     let mut seen = std::collections::HashSet::<String>::new();

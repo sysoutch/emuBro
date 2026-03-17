@@ -955,6 +955,23 @@ function dispatchEvent(eventName, detail) {
 }
 
 let nativeEventBridgeInitialized = false;
+const nativeDropDeduper = { key: "", at: 0 };
+
+function shouldSkipDuplicateNativeDrop(payload) {
+  const now = Date.now();
+  const paths = Array.isArray(payload)
+    ? payload
+    : payload && Array.isArray(payload.paths)
+      ? payload.paths
+      : [];
+  const normalized = paths.map((p) => String(p || "").trim()).filter(Boolean);
+  if (!normalized.length) return false;
+  const key = normalized.map((p) => p.toLowerCase()).sort().join("|");
+  const recent = nativeDropDeduper.key === key && now - nativeDropDeduper.at < 600;
+  nativeDropDeduper.key = key;
+  nativeDropDeduper.at = now;
+  return recent;
+}
 
 async function bindNativeEventBridge() {
   if (!runningInDesktopShell || nativeEventBridgeInitialized) return;
@@ -965,14 +982,46 @@ async function bindNativeEventBridge() {
     "window-moved",
     "window:maximized-changed",
     "app:update-status",
-    "resources:update-status"
+    "resources:update-status",
+    "tauri://file-drop",
+    "tauri://file-drop-hover",
+    "tauri://file-drop-cancelled",
+
+    // Tauri v2 drag/drop events (map to legacy file-drop events for existing UI code).
+    "tauri://drag-enter",
+    "tauri://drag-over",
+    "tauri://drag-drop",
+    "tauri://drag-leave"
   ];
 
   await Promise.all(
     eventNames.map(async (eventName) => {
       try {
         await tauriListen(eventName, (event) => {
-          dispatchEvent(eventName, event?.payload);
+          const payload = event?.payload;
+
+          if (eventName === "tauri://drag-enter" || eventName === "tauri://drag-over") {
+            dispatchEvent("tauri://file-drop-hover", payload);
+            return;
+          }
+
+          if (eventName === "tauri://drag-leave") {
+            dispatchEvent("tauri://file-drop-cancelled", payload);
+            return;
+          }
+
+          if (eventName === "tauri://drag-drop") {
+            if (!shouldSkipDuplicateNativeDrop(payload)) {
+              dispatchEvent("tauri://file-drop", payload);
+            }
+            return;
+          }
+
+          if (eventName === "tauri://file-drop" && shouldSkipDuplicateNativeDrop(payload)) {
+            return;
+          }
+
+          dispatchEvent(eventName, payload);
         });
       } catch (_error) {}
     })
@@ -989,6 +1038,9 @@ const emubro = {
   onWindowMaximizedChanged: (callback) => onEvent("window:maximized-changed", callback),
   onUpdateStatus: (callback) => onEvent("app:update-status", callback),
   onResourcesUpdateStatus: (callback) => onEvent("resources:update-status", callback),
+  onFileDrop: (callback) => onEvent("tauri://file-drop", callback),
+  onFileDropHover: (callback) => onEvent("tauri://file-drop-hover", callback),
+  onFileDropCancelled: (callback) => onEvent("tauri://file-drop-cancelled", callback),
   getAllTranslations: () => invokeChannel("get-all-translations"),
   locales: {
     list: () => invokeChannel("locales:list"),

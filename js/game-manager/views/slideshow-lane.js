@@ -153,20 +153,27 @@ export function createSlideshowLane(options = {}) {
         let nearestIndex = currentIndex;
         let nearestDistance = Number.POSITIVE_INFINITY;
 
+        const mode = String(modeRef.mode || 'flat');
+        const isThreeD = mode === '3d' || mode === '3d-reverse';
+        const isReverse = mode === '3d-reverse';
+        const scaleBase = isReverse ? 1.08 : 1.15;
+        const scaleDrop = isReverse ? 0.24 : 0.3;
+        const rotateDirection = isReverse ? 1 : -1;
+
         metrics.forEach(({ item, index, center: itemCenter, width }) => {
             const focusStep = Math.max(width + gap, 1);
             const diffX = itemCenter - scrollX;
             const normalizedDist = Math.min(1, Math.abs(diffX) / (focusStep * 2.25));
-            const scale = 1.15 - (normalizedDist * 0.3);
+            const scale = scaleBase - (normalizedDist * scaleDrop);
             const opacity = 1 - (normalizedDist * 0.6);
             const zIndex = Math.round((1 - normalizedDist) * 100);
 
             let transform = `scale(${scale})`;
-            if (modeRef.mode === '3d') {
+            if (isThreeD) {
                 const rotateMax = isEdgeLocked ? slightEdgeRotate : fullRotate;
                 const rotateY = Math.abs(diffX) < 1
                     ? 0
-                    : Math.max(-rotateMax, Math.min(rotateMax, (diffX / focusStep) * -rotateMax));
+                    : Math.max(-rotateMax, Math.min(rotateMax, (diffX / focusStep) * rotateMax * rotateDirection));
                 const translateZ = isEdgeLocked ? normalizedDist * -68 : normalizedDist * -120;
                 transform += ` rotateY(${rotateY}deg) translateZ(${translateZ}px)`;
             }

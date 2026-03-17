@@ -1,5 +1,7 @@
 use super::*;
+use regex::Regex;
 use serde_json::json;
+use std::io::Read;
 
 pub(super) fn handle(ch: &str, args: &[Value], _window: &Window) -> Result<Value, String> {
     match ch {
@@ -263,6 +265,12 @@ pub(super) fn handle(ch: &str, args: &[Value], _window: &Window) -> Result<Value
             if psn.is_empty() {
                 return Ok(json!({ "success": false, "message": "Missing platformShortName" }));
             }
+            let options = args.get(2).cloned().unwrap_or_else(|| json!({}));
+            let code_overrides = options
+                .get("codeOverrides")
+                .and_then(|v| v.as_object())
+                .cloned()
+                .unwrap_or_default();
             let platforms = load_platform_configs();
             let platform_name = find_platform_name(&platforms, &psn);
             let mut games = read_state_array("games");
@@ -291,7 +299,17 @@ pub(super) fn handle(ch: &str, args: &[Value], _window: &Window) -> Result<Value
                     skipped.push(json!({ "path": source_path, "reason": "game_exists" }));
                     continue;
                 }
-                let row = make_game_row(next_game_id, &source_path, &psn, &platform_name);
+                let mut row = make_game_row(next_game_id, &source_path, &psn, &platform_name);
+                if let Some(code_value) = code_overrides.get(&source_path) {
+                    if let Some(code_text) = code_value.as_str() {
+                        let trimmed = code_text.trim();
+                        if !trimmed.is_empty() {
+                            if let Some(obj) = row.as_object_mut() {
+                                obj.insert("code".to_string(), Value::String(trimmed.to_string()));
+                            }
+                        }
+                    }
+                }
                 next_game_id += 1;
                 games.push(row.clone());
                 added_games.push(row);
@@ -437,10 +455,11 @@ pub(super) fn handle(ch: &str, args: &[Value], _window: &Window) -> Result<Value
                 }
 
                 if archive_exts.contains(&ext) {
+                    let default_mode = if ext == ".iso" || ext == ".ciso" { "direct" } else { "extract" };
                     let mode = archive_modes_lookup
                         .get(&path_key(&source_path))
                         .map(|v| v.as_str())
-                        .unwrap_or("extract")
+                        .unwrap_or(default_mode)
                         .trim()
                         .to_lowercase();
                     if mode == "skip" {
@@ -729,9 +748,43 @@ pub(super) fn handle(ch: &str, args: &[Value], _window: &Window) -> Result<Value
         }
         "iso:detect-game-codes" => {
             let input_paths = read_path_list_arg(args.get(0));
+            let options = args.get(1).cloned().unwrap_or_else(|| json!({}));
+            let read_iso = options
+                .get("readIso")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(true);
+            let platform_short = normalize_platform_short_name(
+                options
+                    .get("platformShortName")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or(""),
+            );
+            let gamelist_map = if platform_short.is_empty() {
+                std::collections::HashMap::new()
+            } else {
+                load_gamelist_map(&platform_short)
+            };
+            let code_regex = Regex::new(
+                r"(?i)\b([A-Z]{4})[-_ ]?(\d{3})[.\-_ ]?(\d{2})\b|\b([A-Z]{4})[-_ ]?(\d{5})\b",
+            )
+            .map_err(|e| e.to_string())?;
             let mut codes_by_path = serde_json::Map::new();
             for source_path in input_paths {
-                codes_by_path.insert(source_path, Value::String(String::new()));
+                let mut code = String::new();
+                if let Some(found) = extract_code_from_filename(&source_path, &code_regex) {
+                    code = found;
+                }
+                if code.is_empty() && read_iso {
+                    if let Some(found) = scan_disc_image_for_code(&source_path, &code_regex) {
+                        code = found;
+                    }
+                }
+                if code.is_empty() && !gamelist_map.is_empty() {
+                    if let Some(found) = lookup_gamelist_code(&source_path, &gamelist_map) {
+                        code = found;
+                    }
+                }
+                codes_by_path.insert(source_path, Value::String(code));
             }
             Ok(json!({
                 "success": true,
@@ -744,4 +797,178 @@ pub(super) fn handle(ch: &str, args: &[Value], _window: &Window) -> Result<Value
         }
         _ => Ok(json!({ "success": false, "message": format!("Unsupported imports channel: {}", ch) })),
     }
+}
+
+fn strip_bracketed_segments(value: &str) -> String {
+    let mut out = String::new();
+    let mut depth = 0i32;
+    for ch in value.chars() {
+        match ch {
+            '(' | '[' | '{' => {
+                depth += 1;
+            }
+            ')' | ']' | '}' => {
+                if depth > 0 {
+                    depth -= 1;
+                }
+            }
+            _ => {
+                if depth == 0 {
+                    out.push(ch);
+                }
+            }
+        }
+    }
+    out
+}
+
+fn normalize_match_key(value: &str) -> String {
+    let stripped = strip_bracketed_segments(value);
+    let mut out = String::new();
+    for ch in stripped.chars() {
+        if ch.is_ascii_alphanumeric() {
+            out.push(ch.to_ascii_lowercase());
+        }
+    }
+    out
+}
+
+fn load_gamelist_map(platform_short_name: &str) -> std::collections::HashMap<String, String> {
+    let mut out = std::collections::HashMap::new();
+    let psn = normalize_platform_short_name(platform_short_name);
+    if psn.is_empty() {
+        return out;
+    }
+    let Some(dir) = find_gamelist_dir() else {
+        return out;
+    };
+    let path = dir.join(format!("{}.json", psn));
+    let Ok(text) = fs::read_to_string(&path) else {
+        return out;
+    };
+    let Ok(Value::Array(entries)) = serde_json::from_str::<Value>(&text) else {
+        return out;
+    };
+    for entry in entries {
+        let name = entry
+            .get("game_name")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .trim();
+        let code = entry
+            .get("game_gameCode")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .trim();
+        if name.is_empty() || code.is_empty() {
+            continue;
+        }
+        let key = normalize_match_key(name);
+        if key.is_empty() {
+            continue;
+        }
+        out.entry(key).or_insert_with(|| code.to_string());
+    }
+    out
+}
+
+fn lookup_gamelist_code(
+    source_path: &str,
+    gamelist_map: &std::collections::HashMap<String, String>,
+) -> Option<String> {
+    let stem = Path::new(source_path)
+        .file_stem()
+        .and_then(|v| v.to_str())
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    let key = normalize_match_key(&stem);
+    if key.is_empty() {
+        return None;
+    }
+    if let Some(code) = gamelist_map.get(&key) {
+        return Some(code.clone());
+    }
+
+    let mut best: Option<(usize, String)> = None;
+    for (name_key, code) in gamelist_map {
+        if name_key.is_empty() {
+            continue;
+        }
+        if name_key.contains(&key) || key.contains(name_key) {
+            let score = name_key.len().min(key.len());
+            match &best {
+                Some((best_score, _)) if *best_score >= score => {}
+                _ => best = Some((score, code.clone())),
+            }
+        }
+    }
+    best.map(|(_, code)| code)
+}
+
+fn extract_code_from_text(text: &str, regex: &Regex) -> Option<String> {
+    let caps = regex.captures(text)?;
+    if let (Some(prefix), Some(a), Some(b)) = (caps.get(1), caps.get(2), caps.get(3)) {
+        return Some(format!(
+            "{}-{}{}",
+            prefix.as_str().to_uppercase(),
+            a.as_str(),
+            b.as_str()
+        ));
+    }
+    if let (Some(prefix), Some(num)) = (caps.get(4), caps.get(5)) {
+        return Some(format!(
+            "{}-{}",
+            prefix.as_str().to_uppercase(),
+            num.as_str()
+        ));
+    }
+    None
+}
+
+fn extract_code_from_filename(path: &str, regex: &Regex) -> Option<String> {
+    let stem = Path::new(path)
+        .file_stem()
+        .and_then(|v| v.to_str())
+        .unwrap_or("")
+        .trim();
+    if stem.is_empty() {
+        return None;
+    }
+    extract_code_from_text(stem, regex)
+}
+
+fn scan_disc_image_for_code(path: &str, regex: &Regex) -> Option<String> {
+    let source = PathBuf::from(path);
+    if !source.exists() || !source.is_file() {
+        return None;
+    }
+    let ext = normalize_extension(source.extension().and_then(|v| v.to_str()).unwrap_or(""));
+    if ext != ".iso" && ext != ".bin" && ext != ".ciso" {
+        return None;
+    }
+
+    let file = fs::File::open(&source).ok()?;
+    let mut reader = std::io::BufReader::new(file);
+    let mut buffer = vec![0u8; 1024 * 1024];
+    let mut tail = String::new();
+
+    loop {
+        let read = reader.read(&mut buffer).ok()?;
+        if read == 0 {
+            break;
+        }
+        let chunk = String::from_utf8_lossy(&buffer[..read]);
+        let combined = if tail.is_empty() {
+            chunk.to_string()
+        } else {
+            format!("{}{}", tail, chunk)
+        };
+        if let Some(code) = extract_code_from_text(&combined, regex) {
+            return Some(code);
+        }
+        tail = combined.chars().rev().take(64).collect::<String>().chars().rev().collect();
+    }
+
+    None
 }

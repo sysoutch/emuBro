@@ -175,11 +175,11 @@
 
 /* Collapse filters when sidebar is expanded to preserve space */
 .filters.is-super-compact {
-    gap: 0;
+    gap: 6px;
 
     #platform-filter,
-    .filter-pair-wrapper,
-    .group-same-names-toggle {
+    .filter-pair-wrapper-region-language,
+    .emulators-installed-toggle {
         display: none !important;
     }
 

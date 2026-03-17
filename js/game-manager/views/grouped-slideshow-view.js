@@ -193,7 +193,8 @@ function getGroupIdentity(groupBy, group, heroGame) {
 function readStoredMode() {
     try {
         const stored = String(localStorage.getItem(SLIDESHOW_MODE_STORAGE_KEY) || 'flat').trim().toLowerCase();
-        return stored === '3d' ? '3d' : 'flat';
+        if (stored === '3d' || stored === '3d-reverse') return stored;
+        return 'flat';
     } catch (_error) {
         return 'flat';
     }
@@ -201,7 +202,7 @@ function readStoredMode() {
 
 function writeStoredMode(mode) {
     try {
-        localStorage.setItem(SLIDESHOW_MODE_STORAGE_KEY, mode === '3d' ? '3d' : 'flat');
+        localStorage.setItem(SLIDESHOW_MODE_STORAGE_KEY, (mode === '3d' || mode === '3d-reverse') ? mode : 'flat');
     } catch (_error) {}
 }
 
@@ -489,7 +490,8 @@ export function renderGamesAsGroupedSlideshow(gamesToRender, options = {}) {
     const root = document.createElement('div');
     root.className = 'slideshow-grouped-platforms';
     root.classList.toggle('is-mode-3d', modeRef.mode === '3d');
-    root.classList.toggle('is-mode-flat', modeRef.mode !== '3d');
+    root.classList.toggle('is-mode-3d-reverse', modeRef.mode === '3d-reverse');
+    root.classList.toggle('is-mode-flat', modeRef.mode === 'flat');
 
     const controls = document.createElement('div');
     controls.className = 'slideshow-grouped-controls';
@@ -497,6 +499,7 @@ export function renderGamesAsGroupedSlideshow(gamesToRender, options = {}) {
         <div class="slideshow-mode-tabs">
             <button type="button" class="slideshow-mode-tab${modeRef.mode === 'flat' ? ' is-active' : ''}" data-slideshow-mode="flat">Flat</button>
             <button type="button" class="slideshow-mode-tab${modeRef.mode === '3d' ? ' is-active' : ''}" data-slideshow-mode="3d">3D</button>
+            <button type="button" class="slideshow-mode-tab${modeRef.mode === '3d-reverse' ? ' is-active' : ''}" data-slideshow-mode="3d-reverse">3D Reverse</button>
         </div>
     `;
     root.appendChild(controls);
@@ -533,9 +536,11 @@ export function renderGamesAsGroupedSlideshow(gamesToRender, options = {}) {
     }
 
     function applyMode(nextMode, persist = true) {
-        modeRef.mode = nextMode === '3d' ? '3d' : 'flat';
+        const normalized = String(nextMode || '').trim().toLowerCase();
+        modeRef.mode = (normalized === '3d' || normalized === '3d-reverse') ? normalized : 'flat';
         root.classList.toggle('is-mode-3d', modeRef.mode === '3d');
-        root.classList.toggle('is-mode-flat', modeRef.mode !== '3d');
+        root.classList.toggle('is-mode-3d-reverse', modeRef.mode === '3d-reverse');
+        root.classList.toggle('is-mode-flat', modeRef.mode === 'flat');
         controls.querySelectorAll('.slideshow-mode-tab').forEach((button) => {
             const isActive = String(button.dataset.slideshowMode || '') === modeRef.mode;
             button.classList.toggle('is-active', isActive);

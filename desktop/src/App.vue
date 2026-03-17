@@ -4,6 +4,7 @@ import { storeToRefs } from "pinia";
 import { useAppStore } from "./stores/app";
 import ShellScaffold from "./components/ShellScaffold.vue";
 import { useShellThemeStore } from "./stores/shell-theme";
+import { setShellStorageValue } from "./utils/shell-storage-cache";
 
 const LegacyFrameHost = defineAsyncComponent(() => import("./components/LegacyFrameHost.vue"));
 const LibraryHeaderControls = defineAsyncComponent(() => import("./components/LibraryHeaderControls.vue"));
@@ -29,6 +30,43 @@ const {
   windowMaximized,
   windowStateReady
 } = storeToRefs(appStore);
+
+const PENDING_DROP_KEY = "emuBro.pendingDropPaths.v1";
+let fileDropBridgeBound = false;
+
+function normalizeFileDropPayload(payload) {
+  if (!payload) return [];
+  if (Array.isArray(payload)) return payload;
+  if (payload && Array.isArray(payload.paths)) return payload.paths;
+  if (typeof payload === "string") return [payload];
+  return [];
+}
+
+function queuePendingDrop(paths) {
+  const normalized = (Array.isArray(paths) ? paths : [])
+    .map((entry) => String(entry || "").trim())
+    .filter(Boolean);
+  if (!normalized.length) return;
+  setShellStorageValue(PENDING_DROP_KEY, JSON.stringify(normalized));
+}
+
+function bindShellFileDropBridge() {
+  if (fileDropBridgeBound || typeof window === "undefined") return;
+  const bridge = window.emubro;
+  if (!bridge || typeof bridge.onFileDrop !== "function") return;
+  fileDropBridgeBound = true;
+
+  bridge.onFileDrop((payload) => {
+    const paths = normalizeFileDropPayload(payload);
+    if (!paths.length) return;
+    if (hasLegacyFrame.value) return;
+    if (!legacyEntryUrl.value) return;
+    queuePendingDrop(paths);
+    if (appStore.activeSectionId !== "legacy-home") {
+      appStore.setActiveSection("legacy-home");
+    }
+  });
+}
 
 async function notifyRendererReady() {
   if (!window?.emubro || typeof window.emubro.invoke !== "function") {
@@ -66,6 +104,7 @@ onMounted(async () => {
     appStore.markReady();
     void notifyRendererReady();
   }
+  bindShellFileDropBridge();
 });
 
 watch(theme, (nextTheme) => {

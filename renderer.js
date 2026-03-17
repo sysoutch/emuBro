@@ -323,9 +323,33 @@ function syncCategoryStateFromSelectionSet(selectedSet) {
     activeTagCategory = normalized.size > 0 ? Array.from(normalized)[0] : 'all';
 }
 
+function getSelectedSidebarPlatforms() {
+    const listRoot = document.getElementById('platforms-list');
+    const raw = String(listRoot?.dataset?.selectedPlatforms || '').trim();
+    if (!raw) return new Set();
+    return new Set(
+        raw
+            .split(',')
+            .map((value) => String(value || '').trim().toLowerCase())
+            .filter(Boolean)
+    );
+}
+
+function getCategorySidebarSourceGames() {
+    const rows = Array.isArray(getGames()) ? getGames() : [];
+    const selectedPlatforms = getSelectedSidebarPlatforms();
+    if (selectedPlatforms.size === 0) return rows;
+    return rows.filter((game) => selectedPlatforms.has(String(game?.platformShortName || '').trim().toLowerCase()));
+}
+
+function getPlatformSidebarCountGames() {
+    return applyCategoryFilter(getGames());
+}
+
 categoriesListRenderer = createCategoriesListRenderer({
     emubro,
     getGames,
+    getCategoriesSourceGames: getCategorySidebarSourceGames,
     setGames,
     setFilteredGames,
     renderActiveLibraryView: async () => {
@@ -365,9 +389,15 @@ categoriesListRenderer = createCategoriesListRenderer({
 
 platformsListRenderer = createPlatformsListRenderer({
     getGames,
+    getPlatformCountGames: getPlatformSidebarCountGames,
     renderActiveLibraryView: async () => {
         if (typeof renderActiveLibraryView === 'function') {
             await renderActiveLibraryView();
+        }
+    },
+    renderCategoriesList: async () => {
+        if (typeof renderCategoriesList === 'function') {
+            await renderCategoriesList();
         }
     },
     isLibraryTopSection: () => activeTopSection === 'library',

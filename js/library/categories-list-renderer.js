@@ -3,6 +3,9 @@ import { showTextInputDialog } from '../ui/text-input-dialog';
 export function createCategoriesListRenderer(options = {}) {
     const emubro = options.emubro;
     const getGames = typeof options.getGames === 'function' ? options.getGames : () => [];
+    const getCategoriesSourceGames = typeof options.getCategoriesSourceGames === 'function'
+        ? options.getCategoriesSourceGames
+        : getGames;
     const setGames = typeof options.setGames === 'function' ? options.setGames : () => {};
     const setFilteredGames = typeof options.setFilteredGames === 'function' ? options.setFilteredGames : () => {};
     const renderActiveLibraryView = typeof options.renderActiveLibraryView === 'function' ? options.renderActiveLibraryView : async () => {};
@@ -511,12 +514,13 @@ async function renderCategoriesList() {
     closeCategorySettingsMenu();
 
     await loadTagLabelMap();
-    const allCategories = getTagCategoryCounts(getGames(), { getLabel: formatTagLabel });
+    const sourceGames = Array.isArray(getCategoriesSourceGames()) ? getCategoriesSourceGames() : [];
+    const allCategories = getTagCategoryCounts(sourceGames, { getLabel: formatTagLabel });
     const available = new Set(allCategories.map((entry) => normalizeTagCategory(entry.id)));
     const selectedBeforePrune = getActiveCategorySelectionSet();
     const selectedAfterPrune = new Set(Array.from(selectedBeforePrune).filter((tag) => available.has(tag)));
     syncCategoryStateFromSelectionSet(selectedAfterPrune);
-    const categories = sortCategoryRows(getRenderableCategoryRows(getGames(), selectedAfterPrune));
+    const categories = sortCategoryRows(getRenderableCategoryRows(sourceGames, selectedAfterPrune));
 
     if (categories.length <= CATEGORY_VISIBLE_LIMIT) {
         categoriesShowAll = false;
@@ -662,7 +666,7 @@ async function renderCategoriesList() {
                 syncCategoryStateFromSelectionSet(next);
             }
             const shouldRefreshSidebarCounts = nextTag === 'all'
-                || (getCategorySelectionMode() === 'multi' && isCategoryAndModeEnabled());
+                || (isCategoryAndModeEnabled() && (getCategorySelectionMode() === 'multi' || temporaryMultiSelect));
             if (shouldRefreshSidebarCounts) {
                 await renderCategoriesList();
             } else {

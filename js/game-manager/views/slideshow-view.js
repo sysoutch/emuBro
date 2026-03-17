@@ -69,7 +69,8 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
     let slideshowMode = (() => {
         try {
             const stored = String(localStorage.getItem(SLIDESHOW_MODE_STORAGE_KEY) || 'flat').trim().toLowerCase();
-            return stored === '3d' ? '3d' : 'flat';
+            if (stored === '3d' || stored === '3d-reverse') return stored;
+            return 'flat';
         } catch (_error) {
             return 'flat';
         }
@@ -84,6 +85,7 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
         <div class="slideshow-mode-tabs">
             <button type="button" class="slideshow-mode-tab" data-slideshow-mode="flat">Flat</button>
             <button type="button" class="slideshow-mode-tab" data-slideshow-mode="3d">3D</button>
+            <button type="button" class="slideshow-mode-tab" data-slideshow-mode="3d-reverse">3D Reverse</button>
         </div>
     `;
 
@@ -277,8 +279,10 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
 
     function applySlideshowMode(nextMode, options = {}) {
         const persist = options.persist !== false;
-        slideshowMode = nextMode === '3d' ? '3d' : 'flat';
+        const normalized = String(nextMode || '').trim().toLowerCase();
+        slideshowMode = (normalized === '3d' || normalized === '3d-reverse') ? normalized : 'flat';
         slideshowContainer.classList.toggle('is-mode-3d', slideshowMode === '3d');
+        slideshowContainer.classList.toggle('is-mode-3d-reverse', slideshowMode === '3d-reverse');
         slideshowContainer.classList.toggle('is-mode-flat', slideshowMode === 'flat');
         carouselControls.querySelectorAll('.slideshow-mode-tab').forEach((button) => {
             const isActive = String(button.dataset.slideshowMode || '') === slideshowMode;

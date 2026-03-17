@@ -1806,9 +1806,13 @@ export function createGameDetailsPopupActions(deps = {}) {
         const platformText = escapeHtml(game.platform || game.platformShortName || t('gameDetails.unknown', 'Unknown'));
         const ratingText = escapeHtml(game.rating !== undefined && game.rating !== null ? String(game.rating) : t('gameDetails.unknown', 'Unknown'));
         const safeDescription = escapeHtml(String(game.description || '').trim());
+        const gameCodeRaw = game?.code || game?.gameCode || game?.productCode || game?.serial || '';
+        const gameCodeText = escapeHtml(String(gameCodeRaw || '').trim());
         const platformLabel = escapeHtml(t('gameDetails.platform', 'Platform'));
         const ratingLabel = escapeHtml(t('gameDetails.rating', 'Rating'));
+        const gameCodeLabel = escapeHtml(t('gameDetails.gameCode', 'Game Code'));
         const descriptionLabel = escapeHtml(t('gameDetails.description', 'Description'));
+        const unknownText = escapeHtml(t('gameDetails.unknown', 'Unknown'));
         const removeGameActionLabel = t('gameDetails.removeGameAction', 'Remove Game');
         const runAsMode = normalizeRunAsMode(game.runAsMode || 'default');
         const runAsUser = escapeHtml(game.runAsUser || '');
@@ -1848,6 +1852,7 @@ export function createGameDetailsPopupActions(deps = {}) {
         <div class="game-detail-row game-detail-meta">
             <p><strong>${platformLabel}:</strong> ${platformText}</p>
             <p><strong>${ratingLabel}:</strong> ${ratingText}</p>
+            <p><strong>${gameCodeLabel}:</strong> ${gameCodeText || unknownText}</p>
         </div>
         <div class="game-detail-row game-detail-description-control" data-game-description-section>
             <div class="game-detail-compact-header">

@@ -1,6 +1,8 @@
 export function createPlatformsListRenderer(options = {}) {
     const getGames = typeof options.getGames === 'function' ? options.getGames : () => [];
+    const getPlatformCountGames = typeof options.getPlatformCountGames === 'function' ? options.getPlatformCountGames : getGames;
     const renderActiveLibraryView = typeof options.renderActiveLibraryView === 'function' ? options.renderActiveLibraryView : async () => {};
+    const renderCategoriesList = typeof options.renderCategoriesList === 'function' ? options.renderCategoriesList : async () => {};
     const isLibraryTopSection = typeof options.isLibraryTopSection === 'function' ? options.isLibraryTopSection : () => true;
     const isEmulatorsSection = typeof options.isEmulatorsSection === 'function' ? options.isEmulatorsSection : () => false;
     const escapeHtml = typeof options.escapeHtml === 'function' ? options.escapeHtml : (value) => String(value || '');
@@ -22,6 +24,9 @@ export function createPlatformsListRenderer(options = {}) {
     let platformSelectionMode = normalizeSelectionMode(localStorage.getItem(PLATFORM_SELECTION_MODE_KEY) || 'single');
     let platformSortMode = normalizeSortMode(localStorage.getItem(PLATFORM_SORT_MODE_KEY) || 'count-desc');
     let selectedPlatforms = loadSelectedPlatforms();
+    let platformModePreviewState = null;
+    let platformModeModifierHeld = false;
+    let platformModeModifierForceUntil = 0;
 
     function t(key, fallback, data = {}) {
         const i18nRef = window?.i18n && typeof window.i18n.t === 'function' ? window.i18n : null;
@@ -105,7 +110,7 @@ export function createPlatformsListRenderer(options = {}) {
     }
 
     function getPlatformRows() {
-        const rows = Array.isArray(getGames()) ? getGames() : [];
+        const rows = Array.isArray(getPlatformCountGames()) ? getPlatformCountGames() : [];
         const counts = new Map();
 
         rows.forEach((game) => {
@@ -137,10 +142,63 @@ export function createPlatformsListRenderer(options = {}) {
         return rows;
     }
 
-    function getSelectionModeButtonText() {
-        return platformSelectionMode === 'multi'
+    function getSelectionModeButtonText({ forceMulti = false } = {}) {
+        const isSingle = platformSelectionMode === 'single';
+        const forceWindowActive = Date.now() <= platformModeModifierForceUntil;
+        const isMulti = forceMulti || platformSelectionMode === 'multi' || (isSingle && (platformModeModifierHeld || forceWindowActive));
+        return isMulti
             ? t('sidebar.multiSelect', 'Multi Select')
             : t('sidebar.singleSelect', 'Single Select');
+    }
+
+    function clearPlatformModePreviewHandlers() {
+        if (!platformModePreviewState) return;
+        document.removeEventListener('keydown', platformModePreviewState.onKeyDown, true);
+        document.removeEventListener('keyup', platformModePreviewState.onKeyUp, true);
+        window.removeEventListener('blur', platformModePreviewState.onReset, true);
+        document.removeEventListener('visibilitychange', platformModePreviewState.onVisibilityChange, true);
+        platformModePreviewState = null;
+    }
+
+    function setupPlatformModePreviewHandlers(buttonEl) {
+        clearPlatformModePreviewHandlers();
+        if (!buttonEl) return;
+
+        const updateText = (forceMulti = false) => {
+            if (!buttonEl.isConnected) {
+                clearPlatformModePreviewHandlers();
+                return;
+            }
+            buttonEl.textContent = getSelectionModeButtonText({ forceMulti });
+        };
+
+        const onKeyDown = (event) => {
+            if (platformSelectionMode !== 'single') return;
+            if (event.ctrlKey || event.metaKey || event.key === 'Control' || event.key === 'Meta') {
+                platformModeModifierHeld = true;
+                updateText(true);
+            }
+        };
+        const onKeyUp = (event) => {
+            if (event.ctrlKey || event.metaKey) return;
+            platformModeModifierHeld = false;
+            updateText(false);
+        };
+        const onReset = () => {
+            platformModeModifierHeld = false;
+            platformModeModifierForceUntil = 0;
+            updateText(false);
+        };
+        const onVisibilityChange = () => {
+            if (document.visibilityState !== 'visible') onReset();
+        };
+
+        document.addEventListener('keydown', onKeyDown, true);
+        document.addEventListener('keyup', onKeyUp, true);
+        window.addEventListener('blur', onReset, true);
+        document.addEventListener('visibilitychange', onVisibilityChange, true);
+
+        platformModePreviewState = { onKeyDown, onKeyUp, onReset, onVisibilityChange };
     }
 
     function buildSortDirectionIcon() {
@@ -149,10 +207,18 @@ export function createPlatformsListRenderer(options = {}) {
             : `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 4v8"></path><path d="M5 9l3 3 3-3"></path></svg>`;
     }
 
-    async function handlePlatformSelection(platformId) {
+    async function handlePlatformSelection(platformId, options = {}) {
         const normalized = normalizePlatformKey(platformId);
+        const temporaryMultiSelect = !!options.temporaryMultiSelect;
         if (!normalized || normalized === 'all') {
             selectedPlatforms.clear();
+        } else if (temporaryMultiSelect && platformSelectionMode === 'single') {
+            platformModeModifierForceUntil = Date.now() + 240;
+            if (selectedPlatforms.has(normalized)) {
+                selectedPlatforms.delete(normalized);
+            } else {
+                selectedPlatforms.add(normalized);
+            }
         } else if (platformSelectionMode === 'single') {
             if (selectedPlatforms.size === 1 && selectedPlatforms.has(normalized)) {
                 selectedPlatforms.clear();
@@ -169,6 +235,7 @@ export function createPlatformsListRenderer(options = {}) {
         syncSelectionToDom();
         syncTopPlatformFilter();
         await renderPlatformsList();
+        await renderCategoriesList();
         if (isLibraryTopSection() && !isEmulatorsSection()) {
             await renderActiveLibraryView();
         }
@@ -275,12 +342,20 @@ export function createPlatformsListRenderer(options = {}) {
         listRoot.querySelectorAll('a[data-platform-id]').forEach((link) => {
             link.addEventListener('click', async (event) => {
                 event.preventDefault();
-                await handlePlatformSelection(link.dataset.platformId || 'all');
+                const temporaryMultiSelect = platformSelectionMode === 'single'
+                    && (
+                        !!event.ctrlKey
+                        || !!event.metaKey
+                        || !!event.getModifierState?.('Control')
+                        || !!event.getModifierState?.('Meta')
+                    );
+                await handlePlatformSelection(link.dataset.platformId || 'all', { temporaryMultiSelect });
             });
         });
 
         const selectionModeBtn = listRoot.querySelector('[data-platform-action="selection-mode"]');
         if (selectionModeBtn) {
+            setupPlatformModePreviewHandlers(selectionModeBtn);
             selectionModeBtn.addEventListener('click', async () => {
                 platformSelectionMode = platformSelectionMode === 'multi' ? 'single' : 'multi';
                 if (platformSelectionMode === 'single' && selectedPlatforms.size > 1) {
@@ -295,6 +370,8 @@ export function createPlatformsListRenderer(options = {}) {
                     await renderActiveLibraryView();
                 }
             });
+        } else {
+            clearPlatformModePreviewHandlers();
         }
 
         const sortModeSelect = listRoot.querySelector('[data-platform-action="sort-mode"]');
@@ -330,6 +407,9 @@ export function createPlatformsListRenderer(options = {}) {
 
     return {
         renderPlatformsList,
-        getPlatformsShowAll: () => platformsShowAll
+        getPlatformsShowAll: () => platformsShowAll,
+        dispose: () => {
+            clearPlatformModePreviewHandlers();
+        }
     };
 }

@@ -1,3 +1,5 @@
+import { getShellStorageValue, removeShellStorageValue } from '../../desktop/src/utils/shell-storage-cache';
+
 export function setupDragDropManager(options = {}) {
     const emubro = options.emubro;
     if (!emubro) return;
@@ -35,13 +37,54 @@ export function setupDragDropManager(options = {}) {
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
 
-    const mainContent = document.querySelector('.main-content');
+    const mainContent = options.mainContent || document.querySelector('.main-content') || document.querySelector('.shell') || document.body;
     if (!mainContent) return;
 
     let dragCounter = 0;
+    const PENDING_DROP_KEY = 'emuBro.pendingDropPaths.v1';
+    const dropDeduper = {
+        key: '',
+        at: 0
+    };
+    let pendingNativeDropTimer = null;
+
+    const clearPendingNativeDropTimer = () => {
+        if (!pendingNativeDropTimer) return;
+        clearTimeout(pendingNativeDropTimer);
+        pendingNativeDropTimer = null;
+    };
+
+    const schedulePendingNativeDropFallback = ({ fileCount = 0, itemCount = 0 } = {}) => {
+        clearPendingNativeDropTimer();
+        pendingNativeDropTimer = setTimeout(() => {
+            pendingNativeDropTimer = null;
+            addFooterNotification(
+                fileCount > 0
+                    ? `Drop failed: received ${fileCount} file(s) but the desktop shell did not provide readable file path(s).`
+                    : `Drop failed: no file path or URL found in dropped content (${itemCount} drop item(s)).`,
+                'warning'
+            );
+        }, 700);
+    };
+
+    const shouldSkipDuplicateDrop = (entries) => {
+        const now = Date.now();
+        const normalized = Array.isArray(entries)
+            ? entries.map((row) => String(row || '').trim()).filter(Boolean)
+            : [];
+        const key = normalized.length
+            ? normalized.map((row) => row.toLowerCase()).sort().join('|')
+            : '';
+        if (!key) return false;
+        const recent = dropDeduper.key === key && (now - dropDeduper.at) < 600;
+        dropDeduper.key = key;
+        dropDeduper.at = now;
+        return recent;
+    };
 
     const isLibraryDropContext = () => {
-        return String(getActiveTopSection() || '').trim().toLowerCase() === 'library';
+        const section = String(getActiveTopSection() || '').trim().toLowerCase();
+        return section === 'library' || section === 'library-views';
     };
 
     const resolveDroppedFilePath = (file) => {
@@ -144,6 +187,51 @@ export function setupDragDropManager(options = {}) {
         return rows;
     };
 
+    const collectDroppedTextEntriesFromItems = async (dataTransfer) => {
+        const rows = [];
+        const seen = new Set();
+        const add = (value) => {
+            const normalized = normalizeDroppedTextEntry(value);
+            if (!normalized) return;
+            const key = normalized.toLowerCase();
+            if (seen.has(key)) return;
+            seen.add(key);
+            rows.push(normalized);
+        };
+        const consume = (text) => {
+            String(text || '')
+                .split(/\r?\n/g)
+                .map((line) => line.trim())
+                .filter(Boolean)
+                .forEach((line) => add(line));
+        };
+
+        const items = Array.from(dataTransfer?.items || []);
+        if (!items.length) return rows;
+
+        const readers = items
+            .filter((item) => {
+                if (!item || item.kind !== 'string') return false;
+                const itemType = String(item.type || '').toLowerCase();
+                return itemType.includes('uri-list') || itemType.includes('text/plain') || itemType === 'text';
+            })
+            .map((item) => new Promise((resolve) => {
+                try {
+                    item.getAsString((value) => {
+                        consume(value);
+                        resolve();
+                    });
+                } catch (_error) {
+                    resolve();
+                }
+            }));
+
+        if (readers.length > 0) {
+            await Promise.all(readers);
+        }
+        return rows;
+    };
+
     const isTextDrag = (e) => {
         const dt = e && e.dataTransfer;
         if (!dt) return false;
@@ -222,6 +310,186 @@ export function setupDragDropManager(options = {}) {
         e.preventDefault();
     };
 
+    const coerceTauriDropPaths = (payload) => {
+        if (Array.isArray(payload)) return payload;
+        if (payload && Array.isArray(payload.paths)) return payload.paths;
+        if (typeof payload === 'string') return [payload];
+        return [];
+    };
+
+    const extractTauriEventPayload = (eventOrPayload) => {
+        if (!eventOrPayload) return eventOrPayload;
+        if (Array.isArray(eventOrPayload)) return eventOrPayload;
+        if (typeof eventOrPayload === 'object' && Object.prototype.hasOwnProperty.call(eventOrPayload, 'payload')) {
+            return eventOrPayload.payload;
+        }
+        return eventOrPayload;
+    };
+
+    const getTauriEventListen = () => {
+        const tauri = window.__TAURI__;
+        const globalListen = tauri && tauri.event && typeof tauri.event.listen === 'function' ? tauri.event.listen : null;
+        if (typeof globalListen === 'function') return globalListen;
+
+        // Fallback for legacy bundles where `@tauri-apps/api/event` isn't available and
+        // `app.withGlobalTauri` may be disabled.
+        const internals = window.__TAURI_INTERNALS__;
+        if (!internals || typeof internals.invoke !== 'function' || typeof internals.transformCallback !== 'function') {
+            return null;
+        }
+
+        return (event, handler, options) => {
+            const normalizedEvent = String(event || '').trim();
+            if (!normalizedEvent) return Promise.resolve(() => {});
+            const target = typeof options?.target === 'string'
+                ? { kind: 'AnyLabel', label: options.target }
+                : (options?.target ?? { kind: 'Any' });
+
+            return internals.invoke('plugin:event|listen', {
+                event: normalizedEvent,
+                target,
+                handler: internals.transformCallback(handler)
+            }).then((eventId) => {
+                return () => {
+                    try {
+                        window.__TAURI_EVENT_PLUGIN_INTERNALS__?.unregisterListener?.(normalizedEvent, eventId);
+                    } catch (_error) {}
+                    return internals.invoke('plugin:event|unlisten', {
+                        event: normalizedEvent,
+                        eventId
+                    }).catch(() => {});
+                };
+            });
+        };
+    };
+
+    const handleDroppedEntries = async (rawEntries) => {
+        const normalized = dedupePaths((rawEntries || []).map((row) => String(row || '').trim()).filter(Boolean));
+        if (normalized.length === 0) {
+            alert('Drop failed: no file path or URL found in dropped content.');
+            return;
+        }
+        if (shouldSkipDuplicateDrop(normalized)) return;
+
+        const resolvedWebSources = await resolveWebEmulatorDropSources(normalized);
+        if (resolvedWebSources?.canceled) return;
+        if (Array.isArray(resolvedWebSources?.imported) && resolvedWebSources.imported.length > 0) {
+            const downloadedCount = resolvedWebSources.imported.filter((row) => !!String(row.downloadedTo || '').trim()).length;
+            addFooterNotification(
+                downloadedCount > 0
+                    ? `Imported ${resolvedWebSources.imported.length} web emulator source(s) (${downloadedCount} local copy/copies).`
+                    : `Imported ${resolvedWebSources.imported.length} web emulator source(s).`,
+                'success'
+            );
+        }
+        let importEntries = dedupePaths(resolvedWebSources?.remainingPaths || normalized);
+        const unsupportedUrls = importEntries.filter((entry) => isHttpUrl(entry));
+        if (unsupportedUrls.length > 0) {
+            importEntries = importEntries.filter((entry) => !isHttpUrl(entry));
+            addFooterNotification(
+                `Skipped ${unsupportedUrls.length} URL drop entr${unsupportedUrls.length === 1 ? 'y' : 'ies'} (not importable as file path).`,
+                'warning'
+            );
+        }
+        if (!importEntries.length) {
+            const updatedGames = await emubro.invoke('get-games');
+            setGames(updatedGames);
+            setFilteredGames([...updatedGames]);
+            await refreshEmulatorsState();
+            await renderActiveLibraryView();
+            initializePlatformFilterOptions();
+            updateLibraryCounters();
+            return;
+        }
+
+        const staged = await promptImportStorageAction(importEntries);
+        if (!staged || staged.canceled) return;
+        const preparedCuePaths = await prepareCueBinPathsForImport(staged.paths);
+        if (!preparedCuePaths || preparedCuePaths.canceled) return;
+        const resolvedPaths = dedupePaths(preparedCuePaths.paths);
+        if (!resolvedPaths.length) {
+            alert('No valid files or folders to import.');
+            return;
+        }
+
+        // Ask once about recursion if a folder is included.
+        let recursive = true;
+        try {
+            const typeChecks = await Promise.all(resolvedPaths.map(p => emubro.invoke('check-path-type', p)));
+            const firstDir = typeChecks.find(t => t && t.isDirectory && t.path)?.path;
+            if (firstDir) {
+                const prompt = await emubro.promptScanSubfolders(firstDir);
+                if (prompt && prompt.canceled) return;
+                if (prompt && typeof prompt.recursive === 'boolean') recursive = prompt.recursive;
+            }
+        } catch (err) {
+            console.error('Failed to determine dropped path types:', err);
+        }
+
+        // Handle .exe drops with an explicit prompt (emulator/game/both).
+        const exePaths = resolvedPaths.filter(p => String(p).toLowerCase().endsWith('.exe'));
+        const otherPaths = resolvedPaths.filter(p => !String(p).toLowerCase().endsWith('.exe'));
+
+        try {
+            for (const exePath of exePaths) {
+                const choice = await promptExeImport(exePath);
+                if (choice?.canceled) continue;
+                const res = await emubro.invoke('import-exe', {
+                    path: exePath,
+                    addEmulator: !!choice.addEmulator,
+                    emulatorPlatformShortName: choice.emulatorPlatformShortName,
+                    addGame: !!choice.addGame,
+                    gamePlatformShortName: choice.gamePlatformShortName
+                });
+                if (!res?.success) {
+                    alert(`Import failed for ${exePath}:\n${res?.message || 'Unknown error'}`);
+                }
+            }
+
+            if (otherPaths.length > 0) {
+                const archiveModeDecision = await resolveArchiveImportModes(otherPaths);
+                if (!archiveModeDecision || archiveModeDecision.canceled) return;
+                await importAndRefresh(otherPaths, recursive, archiveModeDecision.archiveImportModes || {});
+            } else {
+                // Still refresh after importing executables.
+                const updatedGames = await emubro.invoke('get-games');
+                setGames(updatedGames);
+                setFilteredGames([...updatedGames]);
+                await refreshEmulatorsState();
+                await renderActiveLibraryView();
+                initializePlatformFilterOptions();
+                updateLibraryCounters();
+            }
+        } catch (err) {
+            console.error('Import failed:', err);
+            alert(`Import failed: ${err?.message || err}`);
+        }
+    };
+
+    const parsePendingDropValue = (rawValue) => {
+        if (!rawValue) return [];
+        if (Array.isArray(rawValue)) return rawValue;
+        if (typeof rawValue === 'string') {
+            const text = rawValue.trim();
+            if (!text) return [];
+            try {
+                const parsed = JSON.parse(text);
+                if (Array.isArray(parsed)) return parsed;
+                if (parsed && Array.isArray(parsed.paths)) return parsed.paths;
+            } catch (_error) {}
+            return [text];
+        }
+        if (rawValue && Array.isArray(rawValue.paths)) return rawValue.paths;
+        return [];
+    };
+
+    const consumePendingDrop = async (rawValue) => {
+        const parsed = parsePendingDropValue(rawValue);
+        if (!parsed.length) return;
+        if (shouldSkipDuplicateDrop(parsed)) return;
+        await handleDroppedEntries(parsed);
+    };
+
     async function getPlatformsCached() {
         if (window.__emubroPlatforms) return window.__emubroPlatforms;
         const platforms = await emubro.invoke('get-platforms');
@@ -237,6 +505,71 @@ export function setupDragDropManager(options = {}) {
             if (Array.isArray(rows) && rows.length > 0) return rows;
         } catch (_e) {}
         return [];
+    }
+
+    async function hasGamelistForPlatform(platformShortName) {
+        const psn = String(platformShortName || '').trim();
+        if (!psn) return false;
+        try {
+            const res = await emubro.invoke('gamelist:exists', psn);
+            return !!res;
+        } catch (_e) {
+            return false;
+        }
+    }
+
+    function normalizePlatformToken(value) {
+        return String(value || '')
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, '');
+    }
+
+    function getPathFolderTokens(value) {
+        const parts = String(value || '')
+            .replace(/\\/g, '/')
+            .split('/')
+            .filter(Boolean);
+        if (parts.length <= 1) return [];
+        const dirs = parts.slice(0, -1);
+        return dirs.map((entry) => normalizePlatformToken(entry)).filter(Boolean);
+    }
+
+    function inferPlatformFromPaths(paths, platforms) {
+        const platformRows = Array.isArray(platforms) ? platforms : [];
+        if (!platformRows.length) return '';
+        const candidates = platformRows.map((row) => ({
+            shortName: String(row?.shortName || '').trim(),
+            shortKey: normalizePlatformToken(row?.shortName || ''),
+            nameKey: normalizePlatformToken(row?.name || '')
+        })).filter((row) => row.shortName && (row.shortKey || row.nameKey));
+        if (!candidates.length) return '';
+
+        const scores = new Map();
+        (Array.isArray(paths) ? paths : []).forEach((path) => {
+            const tokens = getPathFolderTokens(path);
+            if (!tokens.length) return;
+            for (let idx = tokens.length - 1, depth = 0; idx >= 0; idx -= 1, depth += 1) {
+                const token = tokens[idx];
+                if (!token) continue;
+                const weight = Math.max(1, 6 - depth);
+                candidates.forEach((candidate) => {
+                    if (token === candidate.shortKey || token === candidate.nameKey) {
+                        scores.set(candidate.shortName, (scores.get(candidate.shortName) || 0) + weight);
+                    }
+                });
+            }
+        });
+
+        let best = '';
+        let bestScore = 0;
+        for (const [shortName, score] of scores.entries()) {
+            if (score > bestScore) {
+                best = shortName;
+                bestScore = score;
+            }
+        }
+        return best;
     }
 
     function createModal({ title, body, buttons }) {
@@ -339,6 +672,10 @@ export function setupDragDropManager(options = {}) {
         select.style.cssText = 'min-width:260px;';
         select.innerHTML = `<option value="">Select platform...</option>` + platforms.map(p => `<option value="${p.shortName}">${p.name} (${p.shortName})</option>`).join('');
         wrap.children[2].appendChild(select);
+        const inferred = inferPlatformFromPaths(filePaths, platforms);
+        if (inferred && select.querySelector(`option[value="${inferred}"]`)) {
+            select.value = inferred;
+        }
 
         const res = await createModal({
             title,
@@ -361,6 +698,98 @@ export function setupDragDropManager(options = {}) {
         });
 
         return res;
+    }
+
+    async function promptGameCodeMode({ platformName, fileCount, allowRead, allowGamelist }) {
+        const safePlatform = String(platformName || '').trim() || 'selected platform';
+        const count = Number(fileCount || 0);
+        const body = document.createElement('div');
+        body.innerHTML = `
+            <div style="display:grid;gap:10px;">
+                <div style="font-weight:700;">Game code detection</div>
+                <div style="opacity:0.9;">
+                    Choose how to detect game codes for <b>${escapeHtml(safePlatform)}</b>.
+                </div>
+                <div style="font-size:12px;opacity:0.8;">
+                    ${allowRead ? 'Reading disc images can take longer. ' : ''}
+                    ${allowGamelist ? 'Gamelist matching uses filenames to find known game codes. ' : ''}
+                    You can always leave codes empty and update later.
+                </div>
+            </div>
+        `;
+
+        const buttons = [
+            { label: 'Cancel Import', onClick: () => ({ canceled: true }) }
+        ];
+        if (allowGamelist) {
+            buttons.push({ label: 'Use Filename/Gamelist', onClick: () => ({ canceled: false, mode: 'gamelist' }) });
+        }
+        buttons.push({ label: 'Skip Game Codes', onClick: () => ({ canceled: false, mode: 'skip' }) });
+        if (allowRead) {
+            buttons.push({ label: 'Read Disc Image', primary: true, onClick: () => ({ canceled: false, mode: 'read' }) });
+        }
+
+        const choice = await createModal({
+            title: 'Disc Image Game Codes',
+            body,
+            buttons
+        });
+
+        if (!choice || choice.canceled) return { canceled: true, mode: 'skip' };
+        return { canceled: false, mode: String(choice.mode || 'skip') };
+    }
+
+    async function promptManualGameCodes(paths) {
+        const inputPaths = Array.isArray(paths) ? paths : [];
+        if (!inputPaths.length) return { canceled: true, codesByPath: {} };
+
+        const body = document.createElement('div');
+        body.innerHTML = `
+            <div style="display:grid;gap:10px;">
+                <div style="font-weight:700;">Manual game codes</div>
+                <div style="opacity:0.9;">
+                    Enter game codes for the files below. Leave blank to skip a file.
+                </div>
+                <div style="max-height:240px;overflow:auto;border:1px solid var(--border-color);border-radius:8px;padding:10px;display:grid;gap:8px;">
+                    ${inputPaths.map((p, index) => {
+                        const safePath = escapeHtml(String(p || ''));
+                        const id = `manual-code-${index}`;
+                        return `
+                            <label style="display:grid;gap:6px;">
+                                <span style="font-family:monospace;font-size:12px;opacity:0.9;">${safePath}</span>
+                                <input id="${id}" data-code-path="${safePath}" type="text" placeholder="SLUS-12345" class="glass-input" />
+                            </label>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+
+        const choice = await createModal({
+            title: 'Manual Game Codes',
+            body,
+            buttons: [
+                { label: 'Cancel', onClick: () => ({ canceled: true }) },
+                {
+                    label: 'Apply Codes',
+                    primary: true,
+                    onClick: () => {
+                        const codesByPath = {};
+                        body.querySelectorAll('input[data-code-path]').forEach((input) => {
+                            const path = String(input.getAttribute('data-code-path') || '').trim();
+                            const code = String(input.value || '').trim();
+                            if (path && code) {
+                                codesByPath[path] = code;
+                            }
+                        });
+                        return { canceled: false, codesByPath };
+                    }
+                }
+            ]
+        });
+
+        if (!choice || choice.canceled) return { canceled: true, codesByPath: {} };
+        return { canceled: false, codesByPath: choice.codesByPath || {} };
     }
 
     async function promptExeImport(exePath) {
@@ -725,7 +1154,7 @@ export function setupDragDropManager(options = {}) {
 
     function isArchiveCandidatePath(filePath) {
         const ext = pathExtension(filePath);
-        return ext === '.zip' || ext === '.rar' || ext === '.7z';
+        return ext === '.zip' || ext === '.rar' || ext === '.7z' || ext === '.iso' || ext === '.ciso';
     }
 
     async function analyzeDroppedArchives(paths) {
@@ -788,6 +1217,36 @@ export function setupDragDropManager(options = {}) {
         return { canceled: false, mode: choice.mode === 'direct' ? 'direct' : 'extract' };
     }
 
+    async function promptDiscImageMode(archiveRow) {
+        const row = archiveRow && typeof archiveRow === 'object' ? archiveRow : {};
+        const filePath = String(row.path || '').trim();
+        const extension = String(row.extension || pathExtension(filePath)).trim().toLowerCase() || 'disc image';
+
+        const body = document.createElement('div');
+        body.innerHTML = `
+            <div style="display:grid;gap:10px;">
+                <div style="font-weight:700;">Disc image import mode</div>
+                <div style="opacity:0.92;">Choose whether to keep ${escapeHtml(extension)} files as disc images or extract them before importing.</div>
+                <div style="max-height:180px;overflow:auto;border:1px solid var(--border-color);border-radius:8px;padding:8px;">
+                    <div style="font-family:monospace;font-size:12px;opacity:0.9;word-break:break-all;">${escapeHtml(filePath)}</div>
+                </div>
+                <div style="font-size:12px;opacity:0.8;">Recommended: keep as disc image unless you specifically need extracted files.</div>
+            </div>
+        `;
+
+        const choice = await createModal({
+            title: 'Disc Image Import Decision',
+            body,
+            buttons: [
+                { label: 'Cancel Import', onClick: () => ({ canceled: true }) },
+                { label: 'Keep Disc Image', primary: true, onClick: () => ({ canceled: false, mode: 'direct' }) },
+                { label: 'Extract + Import', onClick: () => ({ canceled: false, mode: 'extract' }) }
+            ]
+        });
+        if (!choice || choice.canceled) return { canceled: true, mode: 'direct' };
+        return { canceled: false, mode: choice.mode === 'extract' ? 'extract' : 'direct' };
+    }
+
     async function resolveArchiveImportModes(paths) {
         const archiveModes = {};
         const analysis = await analyzeDroppedArchives(paths);
@@ -800,6 +1259,17 @@ export function setupDragDropManager(options = {}) {
         for (const row of rows) {
             const filePath = String(row?.path || '').trim();
             if (!filePath) continue;
+            const extension = String(row?.extension || pathExtension(filePath)).trim().toLowerCase();
+            const archiveKind = String(row?.archiveKind || '').trim().toLowerCase();
+            const isDiscImage = extension === '.iso' || extension === '.ciso' || archiveKind === 'iso' || archiveKind === 'ciso';
+            if (isDiscImage) {
+                const choice = await promptDiscImageMode(row);
+                if (!choice || choice.canceled) {
+                    return { canceled: true, archiveImportModes: archiveModes };
+                }
+                archiveModes[filePath] = choice.mode || 'direct';
+                continue;
+            }
             if (!row?.directArchiveSupported) {
                 archiveModes[filePath] = 'extract';
                 continue;
@@ -990,15 +1460,17 @@ export function setupDragDropManager(options = {}) {
         // Unknown/unmatched: offer platform picker for direct file drops.
         const unmatched = (result?.skipped || []).filter(s => s && s.reason === 'unmatched').map(s => s.path).filter(Boolean);
         if (unmatched.length > 0) {
-            const discImageUnmatched = unmatched.filter((p) => /\.(iso|ciso)$/i.test(String(p || '').trim()));
-            const nonDiscUnmatched = unmatched.filter((p) => !/\.(iso|ciso)$/i.test(String(p || '').trim()));
+            const discImageUnmatched = unmatched.filter((p) => /\.(iso|ciso|bin)$/i.test(String(p || '').trim()));
+            const nonDiscUnmatched = unmatched.filter((p) => !/\.(iso|ciso|bin)$/i.test(String(p || '').trim()));
 
             if (discImageUnmatched.length > 0) {
                 const isoPlatforms = await getPlatformsByExtension('.iso');
                 const cisoPlatforms = await getPlatformsByExtension('.ciso');
+                const binPlatforms = await getPlatformsByExtension('.bin');
                 const allDiscPlatforms = dedupePaths([
                     ...isoPlatforms.map((row) => `${row.shortName}::${row.name}`),
-                    ...cisoPlatforms.map((row) => `${row.shortName}::${row.name}`)
+                    ...cisoPlatforms.map((row) => `${row.shortName}::${row.name}`),
+                    ...binPlatforms.map((row) => `${row.shortName}::${row.name}`)
                 ]).map((entry) => {
                     const parts = String(entry || '').split('::');
                     return { shortName: String(parts[0] || '').trim(), name: String(parts[1] || '').trim() };
@@ -1010,22 +1482,32 @@ export function setupDragDropManager(options = {}) {
                     platforms: allDiscPlatforms
                 });
                 if (discPick && !discPick.canceled && discPick.platformShortName) {
-                    let detectedCodesByPath = {};
-                    try {
-                        const onlyIso = discImageUnmatched.filter((entry) => String(entry || '').toLowerCase().endsWith('.iso'));
-                        const detection = await emubro.invoke('iso:detect-game-codes', onlyIso);
-                        detectedCodesByPath = detection?.success && detection?.codesByPath && typeof detection.codesByPath === 'object'
-                            ? detection.codesByPath
-                            : {};
-                        const detectedCount = Object.keys(detectedCodesByPath).length;
-                        if (detectedCount > 0) {
-                            addFooterNotification(`Detected ISO game code for ${detectedCount} file(s).`, 'info');
-                        }
-                    } catch (_e) {}
-
-                    await emubro.invoke('import-files-as-platform', discImageUnmatched, discPick.platformShortName, {
-                        codeOverrides: detectedCodesByPath
+                    const codeChoice = await promptIsoGameCodeMode({
+                        platformName: allDiscPlatforms.find((row) => row.shortName === discPick.platformShortName)?.name,
+                        fileCount: discImageUnmatched.length
                     });
+                    if (!codeChoice || codeChoice.canceled) {
+                        // Skip disc image import if the user cancels at the code detection step.
+                    } else {
+                        let detectedCodesByPath = {};
+                        try {
+                            const detection = await emubro.invoke('iso:detect-game-codes', discImageUnmatched, {
+                                platformShortName: discPick.platformShortName,
+                                readIso: !!codeChoice.readIso
+                            });
+                            detectedCodesByPath = detection?.success && detection?.codesByPath && typeof detection.codesByPath === 'object'
+                                ? detection.codesByPath
+                                : {};
+                            const detectedCount = Object.keys(detectedCodesByPath).length;
+                            if (detectedCount > 0) {
+                                addFooterNotification(`Detected ISO game code for ${detectedCount} file(s).`, 'info');
+                            }
+                        } catch (_e) {}
+
+                        await emubro.invoke('import-files-as-platform', discImageUnmatched, discPick.platformShortName, {
+                            codeOverrides: detectedCodesByPath
+                        });
+                    }
                 }
             }
 
@@ -1068,105 +1550,28 @@ export function setupDragDropManager(options = {}) {
 
         const filePaths = collectDroppedPaths(e.dataTransfer);
         const textEntries = collectDroppedTextEntries(e.dataTransfer);
-        const rawEntries = dedupePaths([...(filePaths || []), ...(textEntries || [])]);
+        const itemTextEntries = await collectDroppedTextEntriesFromItems(e.dataTransfer);
+        const rawEntries = dedupePaths([...(filePaths || []), ...(textEntries || []), ...(itemTextEntries || [])]);
         if (rawEntries.length === 0) {
-            alert('Drop failed: no file path or URL found in dropped content.');
-            return;
-        }
-
-        const resolvedWebSources = await resolveWebEmulatorDropSources(rawEntries);
-        if (resolvedWebSources?.canceled) return;
-        if (Array.isArray(resolvedWebSources?.imported) && resolvedWebSources.imported.length > 0) {
-            const downloadedCount = resolvedWebSources.imported.filter((row) => !!String(row.downloadedTo || '').trim()).length;
-            addFooterNotification(
-                downloadedCount > 0
-                    ? `Imported ${resolvedWebSources.imported.length} web emulator source(s) (${downloadedCount} local copy/copies).`
-                    : `Imported ${resolvedWebSources.imported.length} web emulator source(s).`,
-                'success'
+            const droppedFileCount = Number(e?.dataTransfer?.files?.length || 0);
+            const droppedItemCount = Number(e?.dataTransfer?.items?.length || 0);
+            if (
+                (droppedFileCount > 0 || droppedItemCount > 0) &&
+                (getTauriEventListen() || typeof emubro?.onFileDrop === 'function')
+            ) {
+                // In Tauri, the native file-drop event is the reliable way to receive absolute paths.
+                schedulePendingNativeDropFallback({ fileCount: droppedFileCount, itemCount: droppedItemCount });
+                return;
+            }
+            alert(
+                droppedFileCount > 0
+                    ? `Drop failed: received ${droppedFileCount} file(s) but no readable absolute path(s). Try dropping from a file manager window or use Browse.`
+                    : `Drop failed: no file path or URL found in dropped content (${droppedItemCount} drop item(s)).`
             );
-        }
-        let importEntries = dedupePaths(resolvedWebSources?.remainingPaths || rawEntries);
-        const unsupportedUrls = importEntries.filter((entry) => isHttpUrl(entry));
-        if (unsupportedUrls.length > 0) {
-            importEntries = importEntries.filter((entry) => !isHttpUrl(entry));
-            addFooterNotification(
-                `Skipped ${unsupportedUrls.length} URL drop entr${unsupportedUrls.length === 1 ? 'y' : 'ies'} (not importable as file path).`,
-                'warning'
-            );
-        }
-        if (!importEntries.length) {
-            const updatedGames = await emubro.invoke('get-games');
-            setGames(updatedGames);
-            setFilteredGames([...updatedGames]);
-            await refreshEmulatorsState();
-            await renderActiveLibraryView();
-            initializePlatformFilterOptions();
-            updateLibraryCounters();
             return;
         }
 
-        const staged = await promptImportStorageAction(importEntries);
-        if (!staged || staged.canceled) return;
-        const preparedCuePaths = await prepareCueBinPathsForImport(staged.paths);
-        if (!preparedCuePaths || preparedCuePaths.canceled) return;
-        const resolvedPaths = dedupePaths(preparedCuePaths.paths);
-        if (!resolvedPaths.length) {
-            alert('No valid files or folders to import.');
-            return;
-        }
-
-        // Ask once about recursion if a folder is included.
-        let recursive = true;
-        try {
-            const typeChecks = await Promise.all(resolvedPaths.map(p => emubro.invoke('check-path-type', p)));
-            const firstDir = typeChecks.find(t => t && t.isDirectory && t.path)?.path;
-            if (firstDir) {
-                const prompt = await emubro.promptScanSubfolders(firstDir);
-                if (prompt && prompt.canceled) return;
-                if (prompt && typeof prompt.recursive === 'boolean') recursive = prompt.recursive;
-            }
-        } catch (err) {
-            console.error('Failed to determine dropped path types:', err);
-        }
-
-        // Handle .exe drops with an explicit prompt (emulator/game/both).
-        const exePaths = resolvedPaths.filter(p => String(p).toLowerCase().endsWith('.exe'));
-        const otherPaths = resolvedPaths.filter(p => !String(p).toLowerCase().endsWith('.exe'));
-
-        try {
-            for (const exePath of exePaths) {
-                const choice = await promptExeImport(exePath);
-                if (choice?.canceled) continue;
-                const res = await emubro.invoke('import-exe', {
-                    path: exePath,
-                    addEmulator: !!choice.addEmulator,
-                    emulatorPlatformShortName: choice.emulatorPlatformShortName,
-                    addGame: !!choice.addGame,
-                    gamePlatformShortName: choice.gamePlatformShortName
-                });
-                if (!res?.success) {
-                    alert(`Import failed for ${exePath}:\n${res?.message || 'Unknown error'}`);
-                }
-            }
-
-            if (otherPaths.length > 0) {
-                const archiveModeDecision = await resolveArchiveImportModes(otherPaths);
-                if (!archiveModeDecision || archiveModeDecision.canceled) return;
-                await importAndRefresh(otherPaths, recursive, archiveModeDecision.archiveImportModes || {});
-            } else {
-                // Still refresh after importing executables.
-                const updatedGames = await emubro.invoke('get-games');
-                setGames(updatedGames);
-                setFilteredGames([...updatedGames]);
-                await refreshEmulatorsState();
-                await renderActiveLibraryView();
-                initializePlatformFilterOptions();
-                updateLibraryCounters();
-            }
-        } catch (err) {
-            console.error('Import failed:', err);
-            alert(`Import failed: ${err?.message || err}`);
-        }
+        await handleDroppedEntries(rawEntries);
     };
 
     // Bind to document (capture) so dropping works even if a child element intercepts events.
@@ -1174,5 +1579,98 @@ export function setupDragDropManager(options = {}) {
     document.addEventListener('dragleave', onLeave, true);
     document.addEventListener('dragover', onOver, true);
     document.addEventListener('drop', onDrop, true);
+
+    // Tauri webviews do not reliably expose absolute paths via DOM `DataTransfer` for security reasons.
+    // Bridge native file drop events into the existing import flow so the user still gets the same popups.
+    try {
+        const setDragOverlay = (active) => {
+            dragCounter = active ? 1 : 0;
+            mainContent.classList.toggle('drag-over', !!active);
+        };
+
+        if (typeof emubro?.onFileDrop === 'function') {
+            emubro.onFileDropHover(() => {
+                if (!isLibraryDropContext()) return;
+                setDragOverlay(true);
+            });
+            emubro.onFileDropCancelled(() => {
+                clearPendingNativeDropTimer();
+                setDragOverlay(false);
+            });
+            emubro.onFileDrop(async (event) => {
+                clearPendingNativeDropTimer();
+                setDragOverlay(false);
+                if (!isLibraryDropContext()) return;
+                const payload = extractTauriEventPayload(event);
+                const paths = coerceTauriDropPaths(payload);
+                await handleDroppedEntries(paths);
+            });
+            return;
+        }
+
+        const tauriListen = getTauriEventListen();
+        if (tauriListen) {
+            const subscribe = (eventName, handler) => {
+                const res = tauriListen(eventName, handler);
+                if (res && typeof res.then === 'function') {
+                    res.catch(() => {});
+                }
+            };
+
+            subscribe('tauri://file-drop-hover', () => {
+                if (!isLibraryDropContext()) return;
+                setDragOverlay(true);
+            });
+            subscribe('tauri://file-drop-cancelled', () => {
+                clearPendingNativeDropTimer();
+                setDragOverlay(false);
+            });
+            subscribe('tauri://file-drop', async (event) => {
+                clearPendingNativeDropTimer();
+                setDragOverlay(false);
+                if (!isLibraryDropContext()) return;
+                const payload = extractTauriEventPayload(event);
+                const paths = coerceTauriDropPaths(payload);
+                await handleDroppedEntries(paths);
+            });
+
+            // Tauri v2 drag/drop events (preferred; Windows often does not forward DOM DataTransfer paths).
+            subscribe('tauri://drag-enter', () => {
+                if (!isLibraryDropContext()) return;
+                setDragOverlay(true);
+            });
+            subscribe('tauri://drag-over', () => {
+                if (!isLibraryDropContext()) return;
+                setDragOverlay(true);
+            });
+            subscribe('tauri://drag-leave', () => {
+                clearPendingNativeDropTimer();
+                setDragOverlay(false);
+            });
+            subscribe('tauri://drag-drop', async (event) => {
+                clearPendingNativeDropTimer();
+                setDragOverlay(false);
+                if (!isLibraryDropContext()) return;
+                const payload = extractTauriEventPayload(event);
+                const paths = coerceTauriDropPaths(payload);
+                await handleDroppedEntries(paths);
+            });
+        }
+    } catch (_error) {}
+
+    try {
+        const initialPending = getShellStorageValue(PENDING_DROP_KEY, null);
+        if (initialPending) {
+            removeShellStorageValue(PENDING_DROP_KEY);
+            void consumePendingDrop(initialPending);
+        }
+    } catch (_error) {}
+
+    window.addEventListener('storage', (event) => {
+        if (!event || event.key !== PENDING_DROP_KEY) return;
+        if (!event.newValue) return;
+        removeShellStorageValue(PENDING_DROP_KEY);
+        void consumePendingDrop(event.newValue);
+    });
 
 }

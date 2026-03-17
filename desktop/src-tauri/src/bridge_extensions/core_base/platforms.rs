@@ -102,6 +102,12 @@ pub(crate) fn platform_matches_extension(platform: &Value, extension: &str) -> b
         return false;
     }
 
+    if let Some(search_for) = platform.get("searchFor").and_then(|v| v.as_str()) {
+        if search_for_extensions(search_for).contains(&ext) {
+            return true;
+        }
+    }
+
     let check_array = |arr: Option<&Vec<Value>>| -> bool {
         arr.map(|rows| {
             rows.iter().any(|item| {
@@ -191,6 +197,37 @@ pub(crate) fn read_string_array(input: Option<&Value>) -> std::collections::Hash
     out
 }
 
+pub(crate) fn search_for_extensions(raw: &str) -> std::collections::HashSet<String> {
+    let mut out = std::collections::HashSet::new();
+    let text = raw.trim();
+    if text.is_empty() {
+        return out;
+    }
+    let chars: Vec<char> = text.chars().collect();
+    let mut index = 0;
+    while index + 1 < chars.len() {
+        if chars[index] == '\\' && chars[index + 1] == '.' {
+            index += 2;
+            let mut ext = String::new();
+            while index < chars.len() {
+                let ch = chars[index];
+                if ch.is_ascii_alphanumeric() {
+                    ext.push(ch);
+                    index += 1;
+                    continue;
+                }
+                break;
+            }
+            if !ext.is_empty() {
+                out.insert(format!(".{}", ext.to_lowercase()));
+            }
+            continue;
+        }
+        index += 1;
+    }
+    out
+}
+
 pub(crate) fn extension_platform_map(platforms: &[Value]) -> std::collections::HashMap<String, Value> {
     let mut map = std::collections::HashMap::new();
     for platform in platforms {
@@ -213,21 +250,18 @@ pub(crate) fn extension_platform_map(platforms: &[Value]) -> std::collections::H
             "shortName": short,
             "name": name
         });
-        let mut supported = read_string_array(platform.get("supportedImageTypes"));
-        for ext in read_string_array(platform.get("supportedArchiveTypes")) {
-            supported.insert(ext);
-        }
-        for emulator in platform
-            .get("emulators")
-            .and_then(|v| v.as_array())
-            .cloned()
-            .unwrap_or_default()
-        {
-            for ext in read_string_array(emulator.get("supportedFileTypes")) {
-                supported.insert(ext);
+        let search_for = platform
+            .get("searchFor")
+            .and_then(|v| v.as_str())
+            .map(search_for_extensions)
+            .unwrap_or_default();
+        for ext in search_for {
+            if ext == ".exe" || ext == ".bat" || ext == ".cmd" || ext == ".ps1" {
+                continue;
             }
+            map.entry(ext).or_insert_with(|| platform_row.clone());
         }
-        for ext in supported {
+        for ext in read_string_array(platform.get("supportedArchiveTypes")) {
             if ext == ".exe" || ext == ".bat" || ext == ".cmd" || ext == ".ps1" {
                 continue;
             }
