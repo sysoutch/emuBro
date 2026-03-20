@@ -75,6 +75,31 @@ function dirFromPath(filePath) {
     return i > 0 ? value.slice(0, i) : '';
 }
 
+function normalizeTagId(value) {
+    const normalized = String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9-]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+    if (!normalized || normalized === 'all') return '';
+    return normalized;
+}
+
+function normalizeEmulatorTagList(values = []) {
+    const source = Array.isArray(values)
+        ? values
+        : String(values || '').split(/[\r\n,;]+/g);
+    const out = [];
+    const seen = new Set();
+    source.forEach((entry) => {
+        const normalized = normalizeTagId(entry);
+        if (!normalized || seen.has(normalized)) return;
+        seen.add(normalized);
+        out.push(normalized);
+    });
+    return out;
+}
+
 function normalizeRuntimeRuleList(values = []) {
     const out = [];
     const seen = new Set();
@@ -367,6 +392,7 @@ export function createEmulatorConfigActions(deps = {}) {
     function normalizeEditorConfig(input = {}) {
         return {
             description: String(input?.description || ''),
+            tags: normalizeEmulatorTagList(input?.tags || []),
             website: String(input?.website || '').trim(),
             startParameters: String(input?.startParameters || '').trim(),
             launchArgs: String(input?.launchArgs || '').trim(),
@@ -384,6 +410,7 @@ export function createEmulatorConfigActions(deps = {}) {
         if (!input || typeof input !== 'object') return {};
         const out = {};
         if (Object.prototype.hasOwnProperty.call(input, 'description')) out.description = String(input.description || '');
+        if (Object.prototype.hasOwnProperty.call(input, 'tags')) out.tags = normalizeEmulatorTagList(input.tags || []);
         if (Object.prototype.hasOwnProperty.call(input, 'website')) out.website = String(input.website || '').trim();
         if (Object.prototype.hasOwnProperty.call(input, 'startParameters')) out.startParameters = String(input.startParameters || '').trim();
         if (Object.prototype.hasOwnProperty.call(input, 'launchArgs')) out.launchArgs = String(input.launchArgs || '').trim();
@@ -400,6 +427,7 @@ export function createEmulatorConfigActions(deps = {}) {
     function defaultEditorConfig(emulator) {
         return {
             description: String(emulator?.description || ''),
+            tags: normalizeEmulatorTagList(emulator?.tags || []),
             website: String(emulator?.website || '').trim(),
             startParameters: String(emulator?.startParameters || '').trim(),
             launchArgs: '',
@@ -617,6 +645,14 @@ export function createEmulatorConfigActions(deps = {}) {
 
             const descriptionField = makeField(t('emulator.edit.description', 'Description'), base.description, 'description', true);
             descriptionField.input.rows = 4;
+            const tagsField = makeField(
+                t('emulator.edit.tags', 'Tags'),
+                (Array.isArray(base.tags) ? base.tags : []).join('\n'),
+                'tags',
+                true
+            );
+            tagsField.input.rows = 4;
+            tagsField.input.placeholder = t('emulator.edit.tagsPlaceholder', 'portable\nretroarch\nbios-required');
             const websiteField = makeField(t('emulator.edit.website', 'Website URL'), base.website, 'website');
             const startField = makeField(t('emulator.edit.startParameters', 'Start Parameters (from platform config)'), base.startParameters, 'startParameters');
             const launchField = makeField(t('emulator.edit.launchArgs', 'Launch Arguments (launch emulator now)'), base.launchArgs, 'launchArgs');
@@ -626,7 +662,7 @@ export function createEmulatorConfigActions(deps = {}) {
             const runBeforeField = makeField(t('emulator.edit.runBefore', 'Run Commands Before'), base.runCommandsBefore, 'runCommandsBefore', true);
             const notesField = makeField(t('emulator.edit.notes', 'Notes'), base.notes, 'notes', true);
 
-            [descriptionField, websiteField, startField, launchField, cwdField, cfgField, searchField, runBeforeField, notesField].forEach((field) => form.appendChild(field.row));
+            [descriptionField, tagsField, websiteField, startField, launchField, cwdField, cfgField, searchField, runBeforeField, notesField].forEach((field) => form.appendChild(field.row));
             panelGeneral.appendChild(form);
 
             const bindingsHint = document.createElement('div');

@@ -111,8 +111,8 @@
 
     &.active {
         border-color: var(--accent-color);
-        box-shadow: 0 0 15px rgba(102, 204, 255, 0.2);
-        background: rgba(102, 204, 255, 0.05);
+        box-shadow: 0 0 15px rgba(var(--accent-color-rgb), 0.2);
+        background: rgba(var(--accent-color-rgb), 0.05);
     }
 }
 

@@ -1,4 +1,5 @@
 import { getShellStorageValue, removeShellStorageValue } from '../../desktop/src/utils/shell-storage-cache';
+import { warnIfEmulatorFolderNotWritable } from '../game-manager/emulator-write-access';
 
 export function setupDragDropManager(options = {}) {
     const emubro = options.emubro;
@@ -443,6 +444,10 @@ export function setupDragDropManager(options = {}) {
                 });
                 if (!res?.success) {
                     alert(`Import failed for ${exePath}:\n${res?.message || 'Unknown error'}`);
+                    continue;
+                }
+                if (choice?.addEmulator && res?.addedEmulator) {
+                    await warnIfEmulatorFolderNotWritable(emubro, res.addedEmulator, alert, 'add');
                 }
             }
 
@@ -691,7 +696,8 @@ export function setupDragDropManager(options = {}) {
                             alert('Please select a platform.');
                             return { keepOpen: true };
                         }
-                        return { canceled: false, platformShortName: psn };
+                        const platform = platforms.find((row) => String(row?.shortName || '').trim() === psn) || null;
+                        return { canceled: false, platformShortName: psn, platform };
                     }
                 }
             ]
@@ -703,16 +709,20 @@ export function setupDragDropManager(options = {}) {
     async function promptGameCodeMode({ platformName, fileCount, allowRead, allowGamelist }) {
         const safePlatform = String(platformName || '').trim() || 'selected platform';
         const count = Number(fileCount || 0);
+        const largeBatchThreshold = 25;
+        const isLargeBatch = count >= largeBatchThreshold;
+        const preferFilenameGamelist = allowGamelist && isLargeBatch;
         const body = document.createElement('div');
         body.innerHTML = `
             <div style="display:grid;gap:10px;">
                 <div style="font-weight:700;">Game code detection</div>
                 <div style="opacity:0.9;">
-                    Choose how to detect game codes for <b>${escapeHtml(safePlatform)}</b>.
+                    Choose how to set game codes for ${count} file(s) in <b>${escapeHtml(safePlatform)}</b>.
                 </div>
                 <div style="font-size:12px;opacity:0.8;">
-                    ${allowRead ? 'Reading disc images can take longer. ' : ''}
-                    ${allowGamelist ? 'Gamelist matching uses filenames to find known game codes. ' : ''}
+                    ${preferFilenameGamelist ? `Large batch detected (${count} files): filename/gamelist is the fastest first pass. ` : ''}
+                    ${allowRead ? 'Read Disc Image tries to detect official serials inside files (slower). ' : ''}
+                    ${allowGamelist ? 'Filename/Gamelist is for lookup codes (for covers/metadata) and does not unpack archives. ' : ''}
                     You can always leave codes empty and update later.
                 </div>
             </div>
@@ -722,11 +732,20 @@ export function setupDragDropManager(options = {}) {
             { label: 'Cancel Import', onClick: () => ({ canceled: true }) }
         ];
         if (allowGamelist) {
-            buttons.push({ label: 'Use Filename/Gamelist', onClick: () => ({ canceled: false, mode: 'gamelist' }) });
+            buttons.push({
+                label: 'Use Filename/Gamelist',
+                primary: preferFilenameGamelist,
+                onClick: () => ({ canceled: false, mode: 'gamelist' })
+            });
         }
+        buttons.push({ label: 'Enter Manually', onClick: () => ({ canceled: false, mode: 'manual' }) });
         buttons.push({ label: 'Skip Game Codes', onClick: () => ({ canceled: false, mode: 'skip' }) });
         if (allowRead) {
-            buttons.push({ label: 'Read Disc Image', primary: true, onClick: () => ({ canceled: false, mode: 'read' }) });
+            buttons.push({
+                label: isLargeBatch ? 'Read Disc Image (Slower)' : 'Read Disc Image',
+                primary: !preferFilenameGamelist,
+                onClick: () => ({ canceled: false, mode: 'read' })
+            });
         }
 
         const choice = await createModal({
@@ -750,20 +769,31 @@ export function setupDragDropManager(options = {}) {
                 <div style="opacity:0.9;">
                     Enter game codes for the files below. Leave blank to skip a file.
                 </div>
-                <div style="max-height:240px;overflow:auto;border:1px solid var(--border-color);border-radius:8px;padding:10px;display:grid;gap:8px;">
-                    ${inputPaths.map((p, index) => {
-                        const safePath = escapeHtml(String(p || ''));
-                        const id = `manual-code-${index}`;
-                        return `
-                            <label style="display:grid;gap:6px;">
-                                <span style="font-family:monospace;font-size:12px;opacity:0.9;">${safePath}</span>
-                                <input id="${id}" data-code-path="${safePath}" type="text" placeholder="SLUS-12345" class="glass-input" />
-                            </label>
-                        `;
-                    }).join('')}
-                </div>
+                <div id="manual-game-code-list" style="max-height:240px;overflow:auto;border:1px solid var(--border-color);border-radius:8px;padding:10px;display:grid;gap:8px;"></div>
             </div>
         `;
+        const list = body.querySelector('#manual-game-code-list');
+        const inputRows = [];
+        inputPaths.forEach((path) => {
+            const safePath = String(path || '').trim();
+            if (!safePath) return;
+            const row = document.createElement('label');
+            row.style.cssText = 'display:grid;gap:6px;';
+
+            const title = document.createElement('span');
+            title.style.cssText = 'font-family:monospace;font-size:12px;opacity:0.9;';
+            title.textContent = safePath;
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = 'SLUS-12345';
+            input.className = 'glass-input';
+            inputRows.push({ path: safePath, input });
+
+            row.appendChild(title);
+            row.appendChild(input);
+            list.appendChild(row);
+        });
 
         const choice = await createModal({
             title: 'Manual Game Codes',
@@ -775,9 +805,8 @@ export function setupDragDropManager(options = {}) {
                     primary: true,
                     onClick: () => {
                         const codesByPath = {};
-                        body.querySelectorAll('input[data-code-path]').forEach((input) => {
-                            const path = String(input.getAttribute('data-code-path') || '').trim();
-                            const code = String(input.value || '').trim();
+                        inputRows.forEach(({ path, input }) => {
+                            const code = String(input?.value || '').trim();
                             if (path && code) {
                                 codesByPath[path] = code;
                             }
@@ -790,6 +819,132 @@ export function setupDragDropManager(options = {}) {
 
         if (!choice || choice.canceled) return { canceled: true, codesByPath: {} };
         return { canceled: false, codesByPath: choice.codesByPath || {} };
+    }
+
+    async function findPlatformByShortName(platformShortName) {
+        const psn = String(platformShortName || '').trim().toLowerCase();
+        if (!psn) return null;
+        const platforms = await getPlatformsCached();
+        return platforms.find((row) => String(row?.shortName || '').trim().toLowerCase() === psn) || null;
+    }
+
+    function platformHasGameCodes(platform) {
+        return !!(platform?.hasGameCodes || platform?.hasDiscGameCodes || platform?.hasCoverLookupCodes);
+    }
+
+    function platformSupportsDiscCodeRead(platform) {
+        if (!platform || typeof platform !== 'object') return false;
+        if (Object.prototype.hasOwnProperty.call(platform, 'hasDiscGameCodes')) {
+            return !!platform.hasDiscGameCodes;
+        }
+        const short = String(platform?.shortName || '').trim().toLowerCase();
+        return short === 'psx' || short === 'ps2' || short === 'ps3' || short === 'psp';
+    }
+
+    function platformSupportsCoverLookupCodes(platform) {
+        if (!platform || typeof platform !== 'object') return false;
+        if (Object.prototype.hasOwnProperty.call(platform, 'hasCoverLookupCodes')) {
+            return !!platform.hasCoverLookupCodes;
+        }
+        return !!platform.hasGameCodes;
+    }
+
+    function mergePlatformChoices(rows) {
+        const mergedByShortName = new Map();
+        (Array.isArray(rows) ? rows : []).forEach((row) => {
+            const shortName = String(row?.shortName || '').trim();
+            if (!shortName) return;
+            const existing = mergedByShortName.get(shortName) || {};
+            mergedByShortName.set(shortName, {
+                ...existing,
+                ...row,
+                shortName,
+                name: String(row?.name || existing?.name || shortName).trim(),
+                hasGameCodes: !!(existing?.hasGameCodes || row?.hasGameCodes),
+                hasDiscGameCodes: !!(existing?.hasDiscGameCodes || row?.hasDiscGameCodes),
+                hasCoverLookupCodes: !!(existing?.hasCoverLookupCodes || row?.hasCoverLookupCodes)
+            });
+        });
+        return Array.from(mergedByShortName.values());
+    }
+
+    async function promptManualFallbackForUnresolved(paths) {
+        const unresolved = Array.isArray(paths) ? paths.filter(Boolean) : [];
+        if (!unresolved.length) {
+            return { canceled: false, useManual: false };
+        }
+        const body = document.createElement('div');
+        body.innerHTML = `
+            <div style="display:grid;gap:10px;">
+                <div style="font-weight:700;">Some game codes were not found</div>
+                <div style="opacity:0.9;">${unresolved.length} file(s) still have no detected code.</div>
+                <div style="font-size:12px;opacity:0.8;">Do you want to enter missing codes manually now?</div>
+            </div>
+        `;
+        const choice = await createModal({
+            title: 'Missing Game Codes',
+            body,
+            buttons: [
+                { label: 'Continue Without Codes', onClick: () => ({ canceled: false, useManual: false }) },
+                { label: 'Enter Manually', primary: true, onClick: () => ({ canceled: false, useManual: true }) }
+            ]
+        });
+        if (!choice || choice.canceled) return { canceled: true, useManual: false };
+        return { canceled: false, useManual: !!choice.useManual };
+    }
+
+    async function collectGameCodeOverrides(paths, platform, options = {}) {
+        const filePaths = dedupePaths(Array.isArray(paths) ? paths : []);
+        if (!filePaths.length) return { canceled: false, codesByPath: {} };
+        if (!platformHasGameCodes(platform)) return { canceled: false, codesByPath: {} };
+
+        const allowRead = options.allowRead !== false
+            && platformSupportsDiscCodeRead(platform)
+            && filePaths.some((entry) => /\.(iso|ciso|bin)$/i.test(String(entry || '').trim()));
+        const allowGamelist = options.allowGamelist !== false
+            && platformSupportsCoverLookupCodes(platform);
+        const modePick = await promptGameCodeMode({
+            platformName: platform?.name || platform?.shortName || 'Platform',
+            fileCount: filePaths.length,
+            allowRead,
+            allowGamelist
+        });
+        if (!modePick || modePick.canceled) return { canceled: true, codesByPath: {} };
+        if (modePick.mode === 'skip') return { canceled: false, codesByPath: {} };
+        if (modePick.mode === 'manual') {
+            return promptManualGameCodes(filePaths);
+        }
+
+        let detectedCodesByPath = {};
+        try {
+            const detection = await emubro.invoke('iso:detect-game-codes', filePaths, {
+                platformShortName: platform?.shortName,
+                readIso: modePick.mode === 'read' && allowRead,
+                useGamelistMatch: modePick.mode === 'gamelist' || (modePick.mode === 'read' && allowGamelist),
+                useFilenameMatch: true
+            });
+            detectedCodesByPath = detection?.success && detection?.codesByPath && typeof detection.codesByPath === 'object'
+                ? detection.codesByPath
+                : {};
+        } catch (_error) {
+            detectedCodesByPath = {};
+        }
+
+        const unresolved = filePaths.filter((entry) => {
+            const code = String(detectedCodesByPath[entry] || '').trim();
+            return !code;
+        });
+        if (unresolved.length > 0) {
+            const fallback = await promptManualFallbackForUnresolved(unresolved);
+            if (fallback.canceled) return { canceled: true, codesByPath: {} };
+            if (fallback.useManual) {
+                const manual = await promptManualGameCodes(unresolved);
+                if (manual.canceled) return { canceled: true, codesByPath: {} };
+                detectedCodesByPath = { ...detectedCodesByPath, ...(manual.codesByPath || {}) };
+            }
+        }
+
+        return { canceled: false, codesByPath: detectedCodesByPath };
     }
 
     async function promptExeImport(exePath) {
@@ -1195,12 +1350,12 @@ export function setupDragDropManager(options = {}) {
         body.innerHTML = `
             <div style="display:grid;gap:10px;">
                 <div style="font-weight:700;">Archive import mode</div>
-                <div style="opacity:0.92;">This archive matches <b>${escapeHtml(platformName)}</b>. Some emulator(s) can launch ${escapeHtml(extension || 'this archive type')} directly.</div>
+                <div style="opacity:0.92;">Choose how to handle ${escapeHtml(extension || 'this archive')} for <b>${escapeHtml(platformName)}</b>.</div>
                 <div style="max-height:180px;overflow:auto;border:1px solid var(--border-color);border-radius:8px;padding:8px;">
                     <div style="font-family:monospace;font-size:12px;opacity:0.9;word-break:break-all;">${escapeHtml(filePath)}</div>
                     ${emulators.length ? `<div style=\"margin-top:8px;font-size:12px;opacity:0.85;\">Direct-run emulators: ${escapeHtml(emulators.join(', '))}</div>` : ''}
                 </div>
-                <div style="font-size:12px;opacity:0.8;">Recommended: extract and import actual files for better compatibility and metadata.</div>
+                <div style="font-size:12px;opacity:0.8;">Keeping direct avoids heavy unpacking by default.</div>
             </div>
         `;
 
@@ -1209,12 +1364,16 @@ export function setupDragDropManager(options = {}) {
             body,
             buttons: [
                 { label: 'Cancel Import', onClick: () => ({ canceled: true }) },
-                { label: 'Keep Archive Directly', onClick: () => ({ canceled: false, mode: 'direct' }) },
-                { label: 'Extract + Import', primary: true, onClick: () => ({ canceled: false, mode: 'extract' }) }
+                { label: 'Skip This File', onClick: () => ({ canceled: false, mode: 'skip' }) },
+                { label: 'Extract + Import', onClick: () => ({ canceled: false, mode: 'extract' }) },
+                { label: 'Keep Archive Directly', primary: true, onClick: () => ({ canceled: false, mode: 'direct' }) }
             ]
         });
-        if (!choice || choice.canceled) return { canceled: true, mode: 'extract' };
-        return { canceled: false, mode: choice.mode === 'direct' ? 'direct' : 'extract' };
+        if (!choice || choice.canceled) return { canceled: true, mode: 'direct' };
+        const normalizedMode = String(choice.mode || '').trim().toLowerCase();
+        if (normalizedMode === 'skip') return { canceled: false, mode: 'skip' };
+        if (normalizedMode === 'extract') return { canceled: false, mode: 'extract' };
+        return { canceled: false, mode: 'direct' };
     }
 
     async function promptDiscImageMode(archiveRow) {
@@ -1239,19 +1398,23 @@ export function setupDragDropManager(options = {}) {
             body,
             buttons: [
                 { label: 'Cancel Import', onClick: () => ({ canceled: true }) },
-                { label: 'Keep Disc Image', primary: true, onClick: () => ({ canceled: false, mode: 'direct' }) },
-                { label: 'Extract + Import', onClick: () => ({ canceled: false, mode: 'extract' }) }
+                { label: 'Skip This File', onClick: () => ({ canceled: false, mode: 'skip' }) },
+                { label: 'Extract + Import', onClick: () => ({ canceled: false, mode: 'extract' }) },
+                { label: 'Keep Disc Image', primary: true, onClick: () => ({ canceled: false, mode: 'direct' }) }
             ]
         });
         if (!choice || choice.canceled) return { canceled: true, mode: 'direct' };
-        return { canceled: false, mode: choice.mode === 'extract' ? 'extract' : 'direct' };
+        const normalizedMode = String(choice.mode || '').trim().toLowerCase();
+        if (normalizedMode === 'skip') return { canceled: false, mode: 'skip' };
+        if (normalizedMode === 'extract') return { canceled: false, mode: 'extract' };
+        return { canceled: false, mode: 'direct' };
     }
 
     async function resolveArchiveImportModes(paths) {
         const archiveModes = {};
         const analysis = await analyzeDroppedArchives(paths);
         if (!analysis?.success) {
-            addFooterNotification(analysis?.message || 'Archive analysis failed. Using extraction fallback.', 'warning');
+            addFooterNotification(analysis?.message || 'Archive analysis failed. Keeping archives direct by default.', 'warning');
             return { canceled: false, archiveImportModes: archiveModes };
         }
 
@@ -1270,15 +1433,11 @@ export function setupDragDropManager(options = {}) {
                 archiveModes[filePath] = choice.mode || 'direct';
                 continue;
             }
-            if (!row?.directArchiveSupported) {
-                archiveModes[filePath] = 'extract';
-                continue;
-            }
             const choice = await promptDirectArchiveMode(row);
             if (!choice || choice.canceled) {
                 return { canceled: true, archiveImportModes: archiveModes };
             }
-            archiveModes[filePath] = choice.mode || 'extract';
+            archiveModes[filePath] = choice.mode || 'direct';
         }
 
         return { canceled: false, archiveImportModes: archiveModes };
@@ -1467,45 +1626,36 @@ export function setupDragDropManager(options = {}) {
                 const isoPlatforms = await getPlatformsByExtension('.iso');
                 const cisoPlatforms = await getPlatformsByExtension('.ciso');
                 const binPlatforms = await getPlatformsByExtension('.bin');
-                const allDiscPlatforms = dedupePaths([
-                    ...isoPlatforms.map((row) => `${row.shortName}::${row.name}`),
-                    ...cisoPlatforms.map((row) => `${row.shortName}::${row.name}`),
-                    ...binPlatforms.map((row) => `${row.shortName}::${row.name}`)
-                ]).map((entry) => {
-                    const parts = String(entry || '').split('::');
-                    return { shortName: String(parts[0] || '').trim(), name: String(parts[1] || '').trim() };
-                });
+                const allDiscPlatforms = mergePlatformChoices([
+                    ...isoPlatforms,
+                    ...cisoPlatforms,
+                    ...binPlatforms
+                ]);
                 const discPick = await promptPlatformForFiles(discImageUnmatched, {
                     title: 'Import Disc Image Files',
                     heading: 'Disc image platform selection',
-                    message: 'These ISO/CISO files match multiple platforms. Select the target platform.',
+                    message: 'These ISO/CISO/BIN files can match multiple platforms. Select the target platform.',
                     platforms: allDiscPlatforms
                 });
                 if (discPick && !discPick.canceled && discPick.platformShortName) {
-                    const codeChoice = await promptIsoGameCodeMode({
-                        platformName: allDiscPlatforms.find((row) => row.shortName === discPick.platformShortName)?.name,
-                        fileCount: discImageUnmatched.length
+                    const selectedPlatform = discPick.platform
+                        || allDiscPlatforms.find((row) => row.shortName === discPick.platformShortName)
+                        || await findPlatformByShortName(discPick.platformShortName);
+                    const codeResult = await collectGameCodeOverrides(discImageUnmatched, selectedPlatform, {
+                        allowRead: true,
+                        allowGamelist: true
                     });
-                    if (!codeChoice || codeChoice.canceled) {
-                        // Skip disc image import if the user cancels at the code detection step.
+                    if (!codeResult || codeResult.canceled) {
+                        // Skip this import group when canceled in code workflow.
                     } else {
-                        let detectedCodesByPath = {};
-                        try {
-                            const detection = await emubro.invoke('iso:detect-game-codes', discImageUnmatched, {
-                                platformShortName: discPick.platformShortName,
-                                readIso: !!codeChoice.readIso
-                            });
-                            detectedCodesByPath = detection?.success && detection?.codesByPath && typeof detection.codesByPath === 'object'
-                                ? detection.codesByPath
-                                : {};
-                            const detectedCount = Object.keys(detectedCodesByPath).length;
-                            if (detectedCount > 0) {
-                                addFooterNotification(`Detected ISO game code for ${detectedCount} file(s).`, 'info');
-                            }
-                        } catch (_e) {}
-
+                        const detectedCount = Object.keys(codeResult.codesByPath || {}).filter((key) => {
+                            return String(codeResult.codesByPath[key] || '').trim().length > 0;
+                        }).length;
+                        if (detectedCount > 0) {
+                            addFooterNotification(`Detected game code for ${detectedCount} file(s).`, 'info');
+                        }
                         await emubro.invoke('import-files-as-platform', discImageUnmatched, discPick.platformShortName, {
-                            codeOverrides: detectedCodesByPath
+                            codeOverrides: codeResult.codesByPath || {}
                         });
                     }
                 }
@@ -1514,7 +1664,18 @@ export function setupDragDropManager(options = {}) {
             if (nonDiscUnmatched.length > 0) {
                 const pick = await promptPlatformForFiles(nonDiscUnmatched);
                 if (pick && !pick.canceled && pick.platformShortName) {
-                    await emubro.invoke('import-files-as-platform', nonDiscUnmatched, pick.platformShortName);
+                    const selectedPlatform = pick.platform || await findPlatformByShortName(pick.platformShortName);
+                    const codeResult = await collectGameCodeOverrides(nonDiscUnmatched, selectedPlatform, {
+                        allowRead: false,
+                        allowGamelist: true
+                    });
+                    if (!codeResult || codeResult.canceled) {
+                        // Skip this import group when canceled in code workflow.
+                    } else {
+                        await emubro.invoke('import-files-as-platform', nonDiscUnmatched, pick.platformShortName, {
+                            codeOverrides: codeResult.codesByPath || {}
+                        });
+                    }
                 }
             }
         }

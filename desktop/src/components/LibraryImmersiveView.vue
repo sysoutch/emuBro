@@ -9,7 +9,7 @@ const props = defineProps({
   },
   mode: {
     type: String,
-    default: "focus"
+    default: "cover"
   },
   selectedKey: {
     type: String,

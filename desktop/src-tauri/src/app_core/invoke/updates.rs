@@ -170,14 +170,16 @@ fn read_app_update_state(window: &Window) -> Value {
         .trim()
         .to_string();
     let has_local_download = !downloaded_file_path.is_empty() && Path::new(&downloaded_file_path).exists();
-    let fallback_local_download_path = if has_local_download {
+    let fallback_local_download_path = if !available || has_local_download {
         String::new()
     } else {
         find_latest_downloaded_installer(&latest_version)
             .map(|path| path.to_string_lossy().to_string())
             .unwrap_or_default()
     };
-    let effective_downloaded_file_path = if has_local_download {
+    let effective_downloaded_file_path = if !available {
+        String::new()
+    } else if has_local_download {
         downloaded_file_path.clone()
     } else if !fallback_local_download_path.is_empty() {
         fallback_local_download_path.clone()
@@ -188,7 +190,9 @@ fn read_app_update_state(window: &Window) -> Value {
         .get("downloaded")
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
-    let downloaded = if !effective_downloaded_file_path.is_empty() {
+    let downloaded = if !available {
+        false
+    } else if !effective_downloaded_file_path.is_empty() {
         true
     } else if downloaded_file_path.is_empty() {
         stored_downloaded
@@ -197,6 +201,8 @@ fn read_app_update_state(window: &Window) -> Value {
     };
     let progress_percent = if downloaded {
         100
+    } else if !available {
+        0
     } else {
         stored.get("progressPercent").and_then(|v| v.as_u64()).unwrap_or(0)
     };
@@ -583,19 +589,22 @@ fn check_app_update(window: &Window) -> Result<Value, String> {
                 .to_string();
             let local_download_exists =
                 !existing_download_path.is_empty() && Path::new(&existing_download_path).exists();
-            let fallback_download_path = if local_download_exists {
+            let fallback_download_path = if !available || local_download_exists {
                 String::new()
             } else {
                 find_latest_downloaded_installer(&latest_version)
                     .map(|path| path.to_string_lossy().to_string())
                     .unwrap_or_default()
             };
-            let effective_download_path = if local_download_exists {
+            let effective_download_path = if !available {
+                String::new()
+            } else if local_download_exists {
                 existing_download_path.clone()
             } else {
                 fallback_download_path.clone()
             };
-            let already_downloaded = existing_latest == latest_version
+            let already_downloaded = available
+                && existing_latest == latest_version
                 && ((!effective_download_path.is_empty())
                     || (existing_download_path.is_empty()
                         && existing
@@ -1639,16 +1648,69 @@ fn write_resources_update_config(payload: Option<&Value>) -> Result<Value, Strin
     Ok(next)
 }
 
+fn two_digit_token(raw: &str) -> Option<String> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    let value = trimmed.parse::<u32>().ok()?;
+    Some(format!("{:02}", value))
+}
+
+fn generated_at_to_compact_version(raw: &str) -> Option<String> {
+    let tokens = raw
+        .split(|ch: char| !ch.is_ascii_digit())
+        .filter(|token| !token.trim().is_empty())
+        .collect::<Vec<&str>>();
+    if tokens.len() < 6 {
+        return None;
+    }
+    let year = tokens[0].trim();
+    if year.len() != 4 || !year.chars().all(|ch| ch.is_ascii_digit()) {
+        return None;
+    }
+    let month = two_digit_token(tokens[1])?;
+    let day = two_digit_token(tokens[2])?;
+    let hour = two_digit_token(tokens[3])?;
+    let minute = two_digit_token(tokens[4])?;
+    let second = two_digit_token(tokens[5])?;
+    // Keep compatibility with existing resource version expectations:
+    // YYYYDDMMHHMMSS (day before month), e.g. 20261903193200.
+    Some(format!("{}{}{}{}{}{}", year, day, month, hour, minute, second))
+}
+
+fn manifest_version_string(parsed: &Value) -> String {
+    let mut version = match parsed.get("version") {
+        Some(Value::String(v)) => v.trim().to_string(),
+        Some(Value::Number(v)) => v.to_string(),
+        Some(Value::Bool(v)) => {
+            if *v {
+                "true".to_string()
+            } else {
+                "false".to_string()
+            }
+        }
+        _ => String::new(),
+    };
+
+    // If version is missing or looks like a placeholder (e.g. "1"), use generatedAt.
+    if version.is_empty() || version.len() < 8 {
+        if let Some(generated_at) = parsed.get("generatedAt").and_then(|v| v.as_str()) {
+            if let Some(compact) = generated_at_to_compact_version(generated_at) {
+                version = compact;
+            }
+        }
+    }
+
+    version
+}
+
 fn read_manifest_version(path: &PathBuf) -> Option<String> {
     let manifest_path = path.join("manifest.json");
     let raw = fs::read_to_string(manifest_path).ok()?;
     let parsed = serde_json::from_str::<Value>(&raw).ok()?;
-    let version = parsed.get("version").and_then(|v| v.as_str()).unwrap_or("").trim();
-    if version.is_empty() {
-        None
-    } else {
-        Some(version.to_string())
-    }
+    let version = manifest_version_string(&parsed);
+    if version.is_empty() { None } else { Some(version) }
 }
 
 fn resources_storage_flags(effective_storage_path: &str) -> (PathBuf, bool, bool) {
@@ -1674,12 +1736,7 @@ fn fetch_remote_manifest_version(manifest_url: &str) -> Result<String, String> {
         .map_err(|e| e.to_string())?;
     let text = response.into_string().map_err(|e| e.to_string())?;
     let parsed = serde_json::from_str::<Value>(&text).map_err(|e| e.to_string())?;
-    let version = parsed
-        .get("version")
-        .and_then(|v| v.as_str())
-        .unwrap_or("")
-        .trim()
-        .to_string();
+    let version = manifest_version_string(&parsed);
     Ok(version)
 }
 

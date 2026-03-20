@@ -455,7 +455,7 @@ pub(super) fn handle(ch: &str, args: &[Value], _window: &Window) -> Result<Value
                 }
 
                 if archive_exts.contains(&ext) {
-                    let default_mode = if ext == ".iso" || ext == ".ciso" { "direct" } else { "extract" };
+                    let default_mode = "direct";
                     let mode = archive_modes_lookup
                         .get(&path_key(&source_path))
                         .map(|v| v.as_str())
@@ -737,7 +737,7 @@ pub(super) fn handle(ch: &str, args: &[Value], _window: &Window) -> Result<Value
                     "platformName": platform_name,
                     "directArchiveSupported": direct_supported,
                     "directArchiveEmulators": direct_emulators,
-                    "recommendedMode": if direct_supported { "ask" } else { "extract" }
+                    "recommendedMode": "ask"
                 }));
             }
 
@@ -752,6 +752,14 @@ pub(super) fn handle(ch: &str, args: &[Value], _window: &Window) -> Result<Value
             let read_iso = options
                 .get("readIso")
                 .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let use_gamelist_match = options
+                .get("useGamelistMatch")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(true);
+            let use_filename_match = options
+                .get("useFilenameMatch")
+                .and_then(|v| v.as_bool())
                 .unwrap_or(true);
             let platform_short = normalize_platform_short_name(
                 options
@@ -759,7 +767,7 @@ pub(super) fn handle(ch: &str, args: &[Value], _window: &Window) -> Result<Value
                     .and_then(|v| v.as_str())
                     .unwrap_or(""),
             );
-            let gamelist_map = if platform_short.is_empty() {
+            let gamelist_map = if platform_short.is_empty() || !use_gamelist_match {
                 std::collections::HashMap::new()
             } else {
                 load_gamelist_map(&platform_short)
@@ -771,15 +779,17 @@ pub(super) fn handle(ch: &str, args: &[Value], _window: &Window) -> Result<Value
             let mut codes_by_path = serde_json::Map::new();
             for source_path in input_paths {
                 let mut code = String::new();
-                if let Some(found) = extract_code_from_filename(&source_path, &code_regex) {
-                    code = found;
+                if use_filename_match {
+                    if let Some(found) = extract_code_from_filename(&source_path, &code_regex) {
+                        code = found;
+                    }
                 }
                 if code.is_empty() && read_iso {
                     if let Some(found) = scan_disc_image_for_code(&source_path, &code_regex) {
                         code = found;
                     }
                 }
-                if code.is_empty() && !gamelist_map.is_empty() {
+                if code.is_empty() && use_gamelist_match && !gamelist_map.is_empty() {
                     if let Some(found) = lookup_gamelist_code(&source_path, &gamelist_map) {
                         code = found;
                     }
@@ -833,41 +843,64 @@ fn normalize_match_key(value: &str) -> String {
     out
 }
 
+fn platform_gamelist_candidates(platform_short_name: &str) -> Vec<String> {
+    let normalized = normalize_platform_short_name(platform_short_name);
+    if normalized.is_empty() {
+        return Vec::new();
+    }
+    let compact = normalized.replace(['-', '_', ' '], "");
+    let mut out = vec![normalized.clone()];
+    if !compact.is_empty() && compact != normalized {
+        out.push(compact);
+    }
+    match normalized.as_str() {
+        "dreamcast" => out.push("dc".to_string()),
+        "gameboy" => out.push("gb".to_string()),
+        "wii-u" => out.push("wiiu".to_string()),
+        _ => {}
+    }
+    out.sort();
+    out.dedup();
+    out
+}
+
 fn load_gamelist_map(platform_short_name: &str) -> std::collections::HashMap<String, String> {
     let mut out = std::collections::HashMap::new();
-    let psn = normalize_platform_short_name(platform_short_name);
-    if psn.is_empty() {
+    let candidates = platform_gamelist_candidates(platform_short_name);
+    if candidates.is_empty() {
         return out;
     }
     let Some(dir) = find_gamelist_dir() else {
         return out;
     };
-    let path = dir.join(format!("{}.json", psn));
-    let Ok(text) = fs::read_to_string(&path) else {
-        return out;
-    };
-    let Ok(Value::Array(entries)) = serde_json::from_str::<Value>(&text) else {
-        return out;
-    };
-    for entry in entries {
-        let name = entry
-            .get("game_name")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .trim();
-        let code = entry
-            .get("game_gameCode")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .trim();
-        if name.is_empty() || code.is_empty() {
+    for candidate in candidates {
+        let path = dir.join(format!("{}.json", candidate));
+        let Ok(text) = fs::read_to_string(&path) else {
             continue;
-        }
-        let key = normalize_match_key(name);
-        if key.is_empty() {
+        };
+        let Ok(Value::Array(entries)) = serde_json::from_str::<Value>(&text) else {
             continue;
+        };
+        for entry in entries {
+            let name = entry
+                .get("game_name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim();
+            let code = entry
+                .get("game_gameCode")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim();
+            if name.is_empty() || code.is_empty() {
+                continue;
+            }
+            let key = normalize_match_key(name);
+            if key.is_empty() {
+                continue;
+            }
+            out.entry(key).or_insert_with(|| code.to_string());
         }
-        out.entry(key).or_insert_with(|| code.to_string());
     }
     out
 }

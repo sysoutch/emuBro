@@ -3,6 +3,7 @@
 ## Technologies Used
 - Tauri (Rust desktop shell): Cross-platform desktop application framework
 - JavaScript/ES6+: Primary programming language
+- Vue 3 + Pinia (desktop shell): Shell-native workspace/views/stores layered on top of the migrated app runtime
 - HTML5/CSS3: UI structure and styling
 - i18n.js: Internationalization library
 - Webpack: Module bundling and build automation
@@ -24,6 +25,8 @@
 
 ## Dependencies
 - tauri + @tauri-apps/api: Desktop shell runtime and bridge
+- Rust-side bridge extensions for help docs, support suggestions, community browser windows, updates, covers, system tools, and remote library flows
+- Ollama / OpenAI / Gemini provider routing with host/client relay support for local-network LLM usage
 - i18n: Internationalization support
 - gamepad.js: Gamepad event handling and state management
 - webpack: Module bundler
@@ -43,6 +46,7 @@
 - Asynchronous operations for file system access
 - Error handling for game detection and emulator integration
 - Performance optimization for large game libraries
+- Shell support assistant currently uses a structured prompt/task envelope with live library match context and can now stream Ollama output chunks back into the UI while the final response is still being generated
 
 ## PS1 Memory Card Icon Rendering (Summary)
 

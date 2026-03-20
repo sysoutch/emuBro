@@ -9,6 +9,7 @@ emuBro-Reloaded is a desktop-shell emulator application designed to provide a St
 - Theme customization system with support for custom and community themes
 - Multi-language internationalization support
 - Steam-like user interface with game library, themes, and tools sections
+- AI / LLM-assisted workflows across support, themes, localization, and metadata authoring
 - Cross-platform compatibility (Windows, macOS, Linux)
 
 ## Goals
@@ -16,4 +17,5 @@ emuBro-Reloaded is a desktop-shell emulator application designed to provide a St
 - Provide seamless integration with multiple emulators
 - Enable extensive customization through themes
 - Support multiple languages for global accessibility
+- Make local-first AI features useful without forcing cloud-only workflows (especially via Ollama + relay modes)
 - Maintain high performance and stability

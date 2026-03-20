@@ -1,5 +1,6 @@
 import { isCustomGameCoverSource } from '../render-utils';
 import { createSlideshowLane, updateSlideshowItemOrientationClass } from './slideshow-lane';
+import { createSlideshowPerformanceMeter } from './slideshow-performance-meter';
 import { attachGameCardContextMenu } from '../game-card-context-menu';
 
 export function renderGamesAsSlideshow(gamesToRender, options = {}) {
@@ -88,6 +89,10 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
             <button type="button" class="slideshow-mode-tab" data-slideshow-mode="3d-reverse">3D Reverse</button>
         </div>
     `;
+    const perfMeter = createSlideshowPerformanceMeter({
+        host: carouselControls,
+        label: 'Deck'
+    });
 
     const carousel = document.createElement('div');
     carousel.className = 'slideshow-carousel';
@@ -327,6 +332,9 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
         },
         onActiveClick(nextIndex) {
             showGameDetails(slideshowGames[nextIndex]);
+        },
+        onFrameSample(sample) {
+            perfMeter.onRenderSample(sample);
         }
     });
 
@@ -378,5 +386,6 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
         lane = null;
         window.removeEventListener('resize', onResize);
         cleanupLazyGameImages(slideshowContainer);
+        perfMeter.destroy();
     });
 }

@@ -34,6 +34,27 @@
     background-color: var(--bg-tertiary);
 }
 
+.games-table tr.game-row-clickable {
+    transition: background-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.games-table tr.game-row-clickable.is-current-game td {
+    background:
+        linear-gradient(90deg, color-mix(in srgb, var(--accent-color), transparent 82%) 0%, transparent 26%),
+        color-mix(in srgb, var(--bg-tertiary), transparent 10%);
+    border-bottom-color: color-mix(in srgb, var(--accent-color), transparent 62%);
+    color: var(--text-primary);
+}
+
+.games-table tr.game-row-clickable.is-current-game td:first-child {
+    box-shadow: inset 4px 0 0 color-mix(in srgb, var(--accent-color), white 16%);
+}
+
+.games-table tr.game-row-clickable.is-current-game .table-title-text {
+    color: color-mix(in srgb, var(--text-primary), white 8%);
+    font-weight: 700;
+}
+
 .games-table .games-virtual-table-spacer td {
     padding: 0 !important;
     border: none !important;

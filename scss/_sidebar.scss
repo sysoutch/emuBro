@@ -140,6 +140,22 @@
     justify-content: center;
 }
 
+.rail-icon svg,
+.rail-icon i {
+    display: block;
+}
+
+.rail-icon svg {
+    width: 22px;
+    height: 22px;
+    flex: 0 0 auto;
+}
+
+.rail-icon i {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
 .rail-label {
     display: none;
     font-size: 0.72rem;
@@ -220,9 +236,9 @@
     }
 
     &.active {
-        background: rgba(102, 204, 255, 0.1);
+        background: rgba(var(--accent-color-rgb), 0.1);
         color: var(--accent-color);
-        box-shadow: inset 0 0 5px rgba(102, 204, 255, 0.2);
+        box-shadow: inset 0 0 5px rgba(var(--accent-color-rgb), 0.2);
     }
 }
 
@@ -506,14 +522,17 @@ body.panel-docked {
     color: var(--danger-color);
 }
 
+.tools-sidebar-list,
 #tools-list {
     margin-top: 10px;
 }
 
+.tools-sidebar-list li,
 #tools-list li {
     margin-bottom: 8px;
 }
 
+.tools-sidebar-list li a,
 #tools-list li a {
     color: var(--text-secondary);
     text-decoration: none;
@@ -523,7 +542,13 @@ body.panel-docked {
     font-size: 0.9rem;
 }
 
+.tools-sidebar-list li a:hover,
 #tools-list li a:hover {
+    color: var(--accent-color);
+}
+
+.tools-sidebar-list li a.active,
+#tools-list li a.active {
     color: var(--accent-color);
 }
 

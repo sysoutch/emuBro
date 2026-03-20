@@ -22,8 +22,8 @@ const DEFAULT_DARK_THEME = {
   bgTertiary: "#1a263d",
   textPrimary: "#e7edf8",
   textSecondary: "#b9c7dc",
-  accentColor: "#32b8de",
-  accentLight: "#8fe6ff",
+  accentColor: "#5c758d",
+  accentLight: "#8498ad",
   fontBody: "Segoe UI, Inter, sans-serif",
   appGradientA: "#0b1220",
   appGradientB: "#121c2f",
@@ -38,8 +38,8 @@ const DEFAULT_LIGHT_THEME = {
   bgTertiary: "#d2e3f5",
   textPrimary: "#17263a",
   textSecondary: "#5d7694",
-  accentColor: "#3db2d6",
-  accentLight: "#87dff6",
+  accentColor: "#5c758d",
+  accentLight: "#8498ad",
   fontBody: "Segoe UI, Inter, sans-serif",
   appGradientA: "#dbe9f7",
   appGradientB: "#e7f3ff",
@@ -73,7 +73,7 @@ function getDefaultThemeForTone(tone) {
 function hexToRgbString(value) {
   const raw = String(value || "").trim().replace("#", "");
   if (!raw) {
-    return "50, 184, 222";
+    return "92, 117, 141";
   }
 
   let hex = raw;
@@ -85,14 +85,14 @@ function hexToRgbString(value) {
       .join("");
   }
   if (hex.length < 6) {
-    return "50, 184, 222";
+    return "92, 117, 141";
   }
 
   const red = Number.parseInt(hex.slice(0, 2), 16);
   const green = Number.parseInt(hex.slice(2, 4), 16);
   const blue = Number.parseInt(hex.slice(4, 6), 16);
   if (![red, green, blue].every(Number.isFinite)) {
-    return "50, 184, 222";
+    return "92, 117, 141";
   }
   return `${red}, ${green}, ${blue}`;
 }

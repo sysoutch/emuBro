@@ -1280,7 +1280,7 @@
           <div class="meta-chip hero-meta-card">
             <div class="hero-meta-row">
               <strong>Version</strong>
-              <span>1.0.0-alpha.20260317</span>
+              <span>1.0.0-alpha.20260320</span>
             </div>
             <div class="hero-meta-row">
               <strong>Roadmap Date</strong>
@@ -1288,7 +1288,7 @@
             </div>
             <div class="hero-meta-row">
               <strong>Dashboard Updated</strong>
-              <span>15 Mar 2026, 20:39</span>
+              <span>20 Mar 2026, 23:22</span>
             </div>
           </div>
         </div>
@@ -2369,15 +2369,22 @@
 
       const parseMarkdownFrontmatter = (markdown) => {
         const source = String(markdown || '');
-        if (!source.startsWith('---') && !source.startsWith('---')) {
+        if (!source.startsWith('---
+') && !source.startsWith('---
+')) {
           return { meta: {}, body: source };
         }
-        const normalized = source.replace(/'/g, '');
-        const endIndex = normalized.indexOf('---', 4);
+        const normalized = source.replace(/
+/g, '
+');
+        const endIndex = normalized.indexOf('
+---
+', 4);
         if (endIndex === -1) {
           return { meta: {}, body: source };
         }
-        const rawMeta = normalized.slice(4, endIndex).split('');
+        const rawMeta = normalized.slice(4, endIndex).split('
+');
         const meta = {};
         rawMeta.forEach((line) => {
           const separatorIndex = line.indexOf(':');
@@ -2705,7 +2712,8 @@
         editorRisk.value = milestone.risk || 'medium';
         editorConfidence.value = milestone.confidence || 'medium';
         editorGoal.value = milestone.goal || '';
-        editorBlockers.value = Array.isArray(milestone.blockers) ? milestone.blockers.join('') : '';
+        editorBlockers.value = Array.isArray(milestone.blockers) ? milestone.blockers.join('
+') : '';
       };
 
       editorSelect?.addEventListener('change', refreshEditorFields);
@@ -2722,7 +2730,8 @@
           risk: editorRisk.value,
           confidence: editorConfidence.value,
           goal: editorGoal.value.trim(),
-          blockers: editorBlockers.value.split(/?/).map((item) => item.trim()).filter(Boolean)
+          blockers: editorBlockers.value.split(/?
+/).map((item) => item.trim()).filter(Boolean)
         };
         localStorage.setItem(draftStorageKey, JSON.stringify(draft));
         currentRoadmap = mergeRoadmapDrafts(baseRoadmap, draft);

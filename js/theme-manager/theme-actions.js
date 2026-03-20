@@ -401,7 +401,7 @@ export function editTheme(options = {}) {
     }
     const basicBrandColorInput = document.getElementById('theme-basic-brand-color');
     if (basicBrandColorInput) {
-        basicBrandColorInput.value = brandEditor.color || parseColorToHex(theme?.colors?.brandColor || '') || '#2f9ec0';
+        basicBrandColorInput.value = brandEditor.color || parseColorToHex(theme?.colors?.brandColor || '') || '#335371';
     }
     setBasicBrandControlState(brandEditor.enabled, brandEditor.source);
 

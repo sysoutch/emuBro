@@ -196,6 +196,15 @@ pub(super) fn handle(ch: &str, args: &[Value], _window: &Window) -> Result<Value
                 "isFile": is_file
             }))
         }
+        "check-path-write-access" => {
+            let target_path = args
+                .get(0)
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            Ok(check_path_write_access(&target_path))
+        }
 
         "prompt-scan-subfolders" => Ok(json!({ "canceled": false, "recursive": true })),
         "open-file-dialog" => {
@@ -231,6 +240,82 @@ pub(super) fn handle(ch: &str, args: &[Value], _window: &Window) -> Result<Value
         }
         _ => Ok(json!({ "success": false, "message": format!("Unsupported state_config channel: {}", ch) })),
     }
+}
+
+fn check_path_write_access(target_path: &str) -> Value {
+    let raw = target_path.trim();
+    if raw.is_empty() {
+        return json!({
+            "success": false,
+            "exists": false,
+            "writable": false,
+            "targetPath": "",
+            "resolvedDirectory": "",
+            "message": "Missing path"
+        });
+    }
+
+    let input = PathBuf::from(raw);
+    let metadata = match fs::metadata(&input) {
+        Ok(meta) => meta,
+        Err(err) => {
+            return json!({
+                "success": false,
+                "exists": false,
+                "writable": false,
+                "targetPath": raw,
+                "resolvedDirectory": "",
+                "message": err.to_string()
+            });
+        }
+    };
+
+    let resolved_directory = if metadata.is_dir() {
+        input.clone()
+    } else {
+        input.parent().map(Path::to_path_buf).unwrap_or_else(PathBuf::new)
+    };
+
+    if resolved_directory.as_os_str().is_empty() || !resolved_directory.exists() || !resolved_directory.is_dir() {
+        return json!({
+            "success": true,
+            "exists": true,
+            "writable": false,
+            "targetPath": raw,
+            "resolvedDirectory": resolved_directory.to_string_lossy().to_string(),
+            "message": "Resolved directory not found"
+        });
+    }
+
+    let nonce = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|v| v.as_nanos())
+        .unwrap_or(0);
+    let probe_path = resolved_directory.join(format!(".emubro-write-check-{}-{}.tmp", std::process::id(), nonce));
+    let writable = match fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&probe_path)
+    {
+        Ok(_) => {
+            let _ = fs::remove_file(&probe_path);
+            true
+        }
+        Err(_) => false
+    };
+
+    json!({
+        "success": true,
+        "exists": true,
+        "writable": writable,
+        "targetPath": raw,
+        "resolvedDirectory": resolved_directory.to_string_lossy().to_string(),
+        "message": if writable {
+            String::new()
+        } else {
+            "Directory is not writable".to_string()
+        }
+    })
 }
 
 fn list_emulators_for_library() -> Vec<Value> {
@@ -611,8 +696,8 @@ fn default_splash_theme_settings() -> Value {
         "bgTertiary": "#1a263d",
         "textPrimary": "#e7edf8",
         "textSecondary": "#b9c7dc",
-        "accentColor": "#32b8de",
-        "accentLight": "#8fe6ff",
+        "accentColor": "#5c758d",
+        "accentLight": "#8498ad",
         "fontBody": "Segoe UI, Inter, sans-serif",
         "appGradientA": "#0b1220",
         "appGradientB": "#121c2f",
@@ -683,11 +768,11 @@ fn normalize_splash_theme_settings(payload: Option<&Value>) -> Value {
     let default_accent = default_obj
         .get("accentColor")
         .and_then(|v| v.as_str())
-        .unwrap_or("#32b8de");
+        .unwrap_or("#5c758d");
     let default_accent_light = default_obj
         .get("accentLight")
         .and_then(|v| v.as_str())
-        .unwrap_or("#8fe6ff");
+        .unwrap_or("#8498ad");
 
     let bg_primary = read_color_field(payload, "bgPrimary", default_bg_primary);
     let bg_secondary = read_color_field(payload, "bgSecondary", default_bg_secondary);

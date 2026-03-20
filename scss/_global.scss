@@ -772,7 +772,7 @@ input[type="checkbox"]:disabled {
 .form-group select:focus {
     outline: none;
     border-color: var(--accent-color);
-    box-shadow: 0 0 0 2px rgba(102, 204, 255, 0.2);
+    box-shadow: 0 0 0 2px rgba(var(--accent-color-rgb), 0.2);
 }
 
 .form-actions {

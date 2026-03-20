@@ -1,0 +1,112 @@
+/* =========================================
+   RANDOM VIEW
+   ========================================= */
+.random-container {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: clamp(300px, calc(100vh - 250px), 560px);
+    gap: calc(30px * var(--view-scale));
+    padding: calc(20px * var(--view-scale));
+}
+
+.random-display {
+    background-color: var(--bg-secondary);
+    border-radius: var(--radius-card);
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    width: 100%;
+    max-width: clamp(220px, calc(32vw * var(--view-scale)), calc(350px * var(--view-scale)));
+    display: flex;
+    flex-direction: column;
+}
+
+.random-image {
+    width: 100%;
+    height: clamp(150px, calc(30vh * var(--view-scale)), calc(250px * var(--view-scale)));
+    object-fit: cover;
+    background-color: #000;
+}
+
+.random-info {
+    padding: calc(20px * var(--view-scale));
+    text-align: center;
+}
+
+.random-title {
+    color: var(--text-primary);
+    margin: 0 0 10px 0;
+    font-size: calc(1.3rem * var(--view-scale));
+    min-height: var(--game-title-row-height);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.random-platform-badge {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+}
+
+.random-platform-icon {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+}
+
+.random-controls {
+    display: flex;
+    gap: 15px;
+}
+
+.random-shuffle-btn {
+    background-color: var(--accent-color);
+    color: white;
+    font-size: calc(1.1rem * var(--view-scale));
+    padding: calc(12px * var(--view-scale)) calc(24px * var(--view-scale));
+    border-radius: 30px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    transition: transform 0.2s, background-color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.random-shuffle-btn:hover {
+    transform: scale(1.05);
+    background-color: var(--accent-hover);
+}
+
+.random-suggestion {
+    font-size: 1.2rem;
+    color: var(--accent-color);
+    font-weight: bold;
+    animation: fadeIn 0.5s ease;
+    text-align: center;
+}
+
+.random-genre {
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+}
+
+.random-rating {
+    color: var(--warning-color);
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+

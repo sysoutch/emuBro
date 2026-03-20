@@ -11,6 +11,11 @@ mod window;
 pub(super) fn emubro_invoke_impl(channel: String, args: Vec<Value>, window: Window) -> Result<Value, String> {
     let ch = channel.trim().to_lowercase();
 
+    if ch == "suggestions:emulation-support" {
+        let payload = args.get(0).cloned().unwrap_or_else(|| json!({}));
+        return handle_emulation_support_request(&payload, Some(&window));
+    }
+
     if let Some(result) = handle_bridge_channel(ch.as_str(), &args) {
         return result;
     }
@@ -48,6 +53,7 @@ pub(super) fn emubro_invoke_impl(channel: String, args: Vec<Value>, window: Wind
         | "get-platforms"
         | "get-platforms-for-extension"
         | "check-path-type"
+        | "check-path-write-access"
         | "prompt-scan-subfolders"
         | "open-file-dialog"
         | "save-file-dialog"
@@ -79,6 +85,7 @@ pub(super) fn emubro_invoke_impl(channel: String, args: Vec<Value>, window: Wind
         "open-external-url"
         | "community:open-in-app-window"
         | "community:close-in-app-windows"
+        | "community:get-platform-feed"
         | "show-item-in-folder" => community::handle(ch.as_str(), &args, &window),
 
         "game-session:get-status"

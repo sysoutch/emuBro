@@ -16,12 +16,40 @@
     background-color: var(--bg-secondary);
     padding: calc(15px * var(--view-scale));
     border-radius: var(--radius-card);
+    border: 1px solid transparent;
+    position: relative;
     transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .list-item:hover {
     transform: translateX(5px);
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.list-item.is-current-game {
+    border-color: color-mix(in srgb, var(--accent-color), white 18%);
+    background:
+        linear-gradient(90deg, color-mix(in srgb, var(--accent-color), transparent 82%) 0%, transparent 26%),
+        color-mix(in srgb, var(--bg-secondary), transparent 2%);
+    box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--accent-color), transparent 72%) inset,
+        0 12px 24px rgba(0, 0, 0, 0.18);
+    transform: translateX(0);
+}
+
+.list-item.is-current-game::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 10px;
+    bottom: 10px;
+    width: 4px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent-color), white 16%);
+}
+
+.list-item.is-current-game .list-item-title {
+    color: color-mix(in srgb, var(--text-primary), white 10%);
 }
 
 .list-item-image {

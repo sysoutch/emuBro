@@ -1,4 +1,7 @@
 use super::*;
+use tauri::Emitter;
+
+const SUPPORT_STREAM_EVENT: &str = "emubro:support-stream";
 
 pub(super) fn handle(channel: &str, args: &[Value]) -> Option<Result<Value, String>> {
     if let Some(result) = descriptions::handle(channel, args) {
@@ -141,27 +144,119 @@ pub(super) fn handle(channel: &str, args: &[Value]) -> Option<Result<Value, Stri
         }
         "suggestions:emulation-support" => {
             let payload = args.get(0).cloned().unwrap_or_else(|| json!({}));
-            let (system_prompt, user_prompt) = build_emulation_support_prompts(&payload);
-            match request_provider_chat_text(&payload, &system_prompt, &user_prompt, true) {
-                Ok(answer) => Ok(json!({
-                    "success": true,
-                    "provider": normalize_provider(payload.get("provider").and_then(|v| v.as_str()).unwrap_or("")),
-                    "answer": answer
-                })),
-                Err(error) => Ok(json!({
-                    "success": true,
-                    "provider": "local-fallback",
-                    "answer": build_emulation_support_fallback(&payload),
-                    "debug": {
-                        "fallback": true,
-                        "providerError": error
-                    }
-                })),
-            }
+            handle_emulation_support(&payload, None)
         }
         _ => return None,
     };
     Some(result)
+}
+
+pub(crate) fn handle_emulation_support(
+    payload: &Value,
+    window: Option<&tauri::Window>,
+) -> Result<Value, String> {
+    let (system_prompt, user_prompt) = build_emulation_support_prompts(payload);
+    let provider = normalize_provider(payload.get("provider").and_then(|v| v.as_str()).unwrap_or(""));
+    let stream_request_id = payload
+        .get("streamRequestId")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    let wants_stream = payload
+        .get("streamResponse")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false)
+        && provider == "ollama"
+        && !relay_enabled_for_payload(payload)
+        && !stream_request_id.is_empty();
+
+    if wants_stream {
+        if let Some(community_window) = window {
+            let _ = community_window.emit(
+                SUPPORT_STREAM_EVENT,
+                json!({
+                    "requestId": stream_request_id.as_str(),
+                    "state": "start",
+                    "provider": provider.as_str()
+                }),
+            );
+        }
+    }
+
+    let response = if wants_stream {
+        request_provider_chat_text_streaming(payload, &system_prompt, &user_prompt, true, |chunk| {
+            if let Some(stream_window) = window {
+                let _ = stream_window.emit(
+                    SUPPORT_STREAM_EVENT,
+                    json!({
+                        "requestId": stream_request_id.as_str(),
+                        "state": "chunk",
+                        "provider": provider.as_str(),
+                        "chunk": chunk
+                    }),
+                );
+            }
+        })
+    } else {
+        request_provider_chat_text(payload, &system_prompt, &user_prompt, true)
+    };
+
+    match response {
+        Ok(answer) => {
+            if wants_stream {
+                if let Some(stream_window) = window {
+                    let _ = stream_window.emit(
+                        SUPPORT_STREAM_EVENT,
+                        json!({
+                            "requestId": stream_request_id.as_str(),
+                            "state": "done",
+                            "provider": provider.as_str()
+                        }),
+                    );
+                }
+            }
+            Ok(json!({
+                "success": true,
+                "provider": provider,
+                "answer": answer
+            }))
+        }
+        Err(error) => {
+            if wants_stream {
+                if let Some(stream_window) = window {
+                    let _ = stream_window.emit(
+                        SUPPORT_STREAM_EVENT,
+                        json!({
+                            "requestId": stream_request_id.as_str(),
+                            "state": "error",
+                            "provider": provider.as_str(),
+                            "message": error.clone()
+                        }),
+                    );
+                }
+            }
+            Ok(json!({
+                "success": true,
+                "provider": "local-fallback",
+                "answer": build_emulation_support_fallback(payload),
+                "debug": {
+                    "fallback": true,
+                    "providerError": error
+                }
+            }))
+        }
+    }
+}
+
+fn build_support_feature_snapshot() -> &'static str {
+    "- emuBro has Library, Tools, Support, Community, Settings, Theme Manager, and Language Manager surfaces.\n\
+- Current AI / LLM features include provider selection (Ollama / OpenAI / Gemini), host or client relay mode, local network relay scanning, shell-native support chat/troubleshooting, LLM theme generation, locale translation, game description/tag suggestions, and custom tool draft generation.\n\
+- Support can see live local library matches for games/emulators and may ask to run shell-backed tasks like fetching specs, launching a game/emulator, or downloading an emulator.\n\
+- Community includes a shell-native hub plus an in-app browser window flow for Discord/Reddit/YouTube/Bluesky/X.\n\
+- Library supports drag/drop import, launcher import (Steam / Epic / GOG / Heroic paths depending on availability), cover download, categories/tags, platform filters, and multiple game views including cover/list/table/slideshow/focus/random.\n\
+- Tools currently include BIOS Manager, Memory Card Editor, Remote Library, Cover Downloader, CUE Maker, ECM / UNECM helper, and custom shortcut / plugin scaffolding tools.\n\
+- The app also has updater flows for both the main app and emubro-resources, plus shell-managed profile/settings popups and desktop window chrome.\n"
 }
 
 fn build_locale_translation_prompts(payload: &Value) -> (String, String) {
@@ -651,6 +746,9 @@ Never turn a casual greeting or general app question into a no-matches library a
             }
         }
 
+        user_prompt.push_str("\nCurrent emuBro feature snapshot:\n");
+        user_prompt.push_str(build_support_feature_snapshot());
+
         system_prompt.push_str(
             "\nResponse contract:\n\
 - Always return exactly one minified JSON object and nothing else.\n\
@@ -702,6 +800,8 @@ Return a short diagnosis, likely causes, and a numbered fix checklist.\n",
     user_prompt.push_str(&format!("- Extra details: {}\n", if details.is_empty() { "Not provided" } else { details }));
     user_prompt.push_str(&format!("- Auto specs fetch allowed: {}\n", if allow_auto_specs { "Yes" } else { "No" }));
     user_prompt.push_str(&format!("- Web access allowed: {}\n", if allow_web_access { "Yes" } else { "No" }));
+    user_prompt.push_str("\nCurrent emuBro feature snapshot:\n");
+    user_prompt.push_str(build_support_feature_snapshot());
 
     system_prompt.push_str(
         "\nResponse contract:\n\

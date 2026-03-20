@@ -24,6 +24,8 @@
 
 /* Tools Overview Grid */
 .games-container.tools-view {
+    --view-scale: 1;
+    --view-scale-user: 1;
     display: block;
     width: 100%;
     min-height: 0;

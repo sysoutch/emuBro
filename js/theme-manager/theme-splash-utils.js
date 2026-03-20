@@ -24,8 +24,8 @@ export function syncSplashThemePreference(themeId, options = {}) {
         bgTertiary: '#1a263d',
         textPrimary: '#e7edf8',
         textSecondary: '#b9c7dc',
-        accentColor: '#32b8de',
-        accentLight: '#8fe6ff'
+        accentColor: '#5c758d',
+        accentLight: '#8498ad'
     };
     const fallbackLight = {
         bgPrimary: '#dfeaf6',
@@ -33,8 +33,8 @@ export function syncSplashThemePreference(themeId, options = {}) {
         bgTertiary: '#d2e3f5',
         textPrimary: '#17263a',
         textSecondary: '#5d7694',
-        accentColor: '#3db2d6',
-        accentLight: '#87d8ef'
+        accentColor: '#5c758d',
+        accentLight: '#8498ad'
     };
     const fallback = tone === 'light' ? fallbackLight : fallbackDark;
 

@@ -1,0 +1,148 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 700" shape-rendering="crispEdges">
+  <defs>
+    <linearGradient id="woodOuter" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b47a3a"/>
+      <stop offset="0.38" stop-color="#875327"/>
+      <stop offset="1" stop-color="#3f2616"/>
+    </linearGradient>
+    <linearGradient id="woodInner" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8a5b2c"/>
+      <stop offset="1" stop-color="#5c381c"/>
+    </linearGradient>
+    <linearGradient id="woodPanel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#705033"/>
+      <stop offset="1" stop-color="#4a311d"/>
+    </linearGradient>
+    <linearGradient id="navy" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#213457"/>
+      <stop offset="1" stop-color="#121a31"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#101525"/>
+      <stop offset="1" stop-color="#04060e"/>
+    </linearGradient>
+    <linearGradient id="reelGlass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ebf5fd"/>
+      <stop offset="0.48" stop-color="#d3e3ef"/>
+      <stop offset="1" stop-color="#a3bed2"/>
+    </linearGradient>
+    <linearGradient id="goldTrim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff3bd"/>
+      <stop offset="0.35" stop-color="#f0cf77"/>
+      <stop offset="0.72" stop-color="#b67b2f"/>
+      <stop offset="1" stop-color="#6f451f"/>
+    </linearGradient>
+    <linearGradient id="blueButton" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#98e7fb"/>
+      <stop offset="0.42" stop-color="#58abd2"/>
+      <stop offset="1" stop-color="#2a4764"/>
+    </linearGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#edf3fb"/>
+      <stop offset="0.58" stop-color="#bcc8d8"/>
+      <stop offset="1" stop-color="#6d7888"/>
+    </linearGradient>
+    <radialGradient id="lampGold" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#fff2bc"/>
+      <stop offset="0.52" stop-color="#ffcf69"/>
+      <stop offset="1" stop-color="#8c5b1f"/>
+    </radialGradient>
+    <radialGradient id="lampRed" cx="38%" cy="38%" r="58%">
+      <stop offset="0" stop-color="#ffe0d6"/>
+      <stop offset="0.28" stop-color="#ff9678"/>
+      <stop offset="0.68" stop-color="#d0462b"/>
+      <stop offset="1" stop-color="#5f1f14"/>
+    </radialGradient>
+    <filter id="shadow" x="-18%" y="-18%" width="136%" height="145%">
+      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#000" flood-opacity="0.34"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#shadow)">
+    <rect x="194" y="22" width="392" height="126" rx="10" fill="#432415" stroke="#f8dc92" stroke-width="10"/>
+    <rect x="220" y="44" width="340" height="62" fill="url(#navy)" stroke="#88deff" stroke-width="6"/>
+    <rect x="292" y="104" width="196" height="34" fill="url(#navy)" stroke="#88deff" stroke-width="6"/>
+    <rect x="314" y="138" width="10" height="22" fill="#72ccf8"/>
+    <rect x="456" y="138" width="10" height="22" fill="#72ccf8"/>
+
+    <g fill="url(#lampGold)" stroke="#744a1d" stroke-width="4">
+      <rect x="204" y="32" width="14" height="14"/>
+      <rect x="230" y="32" width="14" height="14"/>
+      <rect x="256" y="32" width="14" height="14"/>
+      <rect x="282" y="32" width="14" height="14"/>
+      <rect x="308" y="32" width="14" height="14"/>
+      <rect x="334" y="32" width="14" height="14"/>
+      <rect x="360" y="32" width="14" height="14"/>
+      <rect x="386" y="32" width="14" height="14"/>
+      <rect x="412" y="32" width="14" height="14"/>
+      <rect x="438" y="32" width="14" height="14"/>
+      <rect x="464" y="32" width="14" height="14"/>
+      <rect x="490" y="32" width="14" height="14"/>
+      <rect x="516" y="32" width="14" height="14"/>
+      <rect x="542" y="32" width="14" height="14"/>
+      <rect x="568" y="32" width="14" height="14"/>
+
+      <rect x="204" y="114" width="14" height="14"/>
+      <rect x="230" y="114" width="14" height="14"/>
+      <rect x="256" y="114" width="14" height="14"/>
+      <rect x="282" y="114" width="14" height="14"/>
+      <rect x="308" y="114" width="14" height="14"/>
+      <rect x="334" y="114" width="14" height="14"/>
+      <rect x="360" y="114" width="14" height="14"/>
+      <rect x="386" y="114" width="14" height="14"/>
+      <rect x="412" y="114" width="14" height="14"/>
+      <rect x="438" y="114" width="14" height="14"/>
+      <rect x="464" y="114" width="14" height="14"/>
+      <rect x="490" y="114" width="14" height="14"/>
+      <rect x="516" y="114" width="14" height="14"/>
+      <rect x="542" y="114" width="14" height="14"/>
+      <rect x="568" y="114" width="14" height="14"/>
+    </g>
+
+    <circle cx="144" cy="86" r="27" fill="url(#lampRed)" stroke="#5d2418" stroke-width="8"/>
+    <circle cx="636" cy="86" r="27" fill="url(#lampRed)" stroke="#5d2418" stroke-width="8"/>
+
+    <path d="M78 176h600l40 42v322l-40 34H102l-42-34V218z" fill="url(#woodOuter)" stroke="#f6db95" stroke-width="10"/>
+    <path d="M102 204h552v282H102z" fill="url(#woodInner)" stroke="#8e5f30" stroke-width="14"/>
+    <rect x="136" y="234" width="488" height="228" fill="url(#screen)" stroke="#6d4721" stroke-width="14"/>
+
+    <rect x="170" y="208" width="16" height="278" fill="#7f5629" opacity="0.9"/>
+    <rect x="594" y="208" width="16" height="278" fill="#7f5629" opacity="0.9"/>
+
+    <g stroke="#f6e7ad" stroke-width="8" fill="url(#reelGlass)">
+      <rect x="166" y="214" width="118" height="234" rx="8"/>
+      <rect x="332" y="214" width="118" height="234" rx="8"/>
+      <rect x="498" y="214" width="118" height="234" rx="8"/>
+    </g>
+
+    <g stroke="#7c5830" stroke-width="5" fill="none">
+      <rect x="176" y="224" width="98" height="214" rx="8"/>
+      <rect x="342" y="224" width="98" height="214" rx="8"/>
+      <rect x="508" y="224" width="98" height="214" rx="8"/>
+    </g>
+
+    <rect x="154" y="484" width="126" height="72" rx="8" fill="url(#woodPanel)" stroke="#f6dc95" stroke-width="8"/>
+    <rect x="304" y="470" width="164" height="104" rx="10" fill="url(#blueButton)" stroke="#8fe1ff" stroke-width="10"/>
+    <rect x="492" y="484" width="142" height="84" rx="8" fill="url(#woodPanel)" stroke="#f6dc95" stroke-width="8"/>
+    <rect x="118" y="560" width="210" height="74" rx="8" fill="#261d35" stroke="#8bdcff" stroke-width="8"/>
+
+    <rect x="164" y="494" width="106" height="8" fill="#4b321c" opacity="0.55"/>
+    <rect x="316" y="482" width="140" height="10" fill="#ddfbff" opacity="0.26"/>
+    <rect x="506" y="494" width="114" height="8" fill="#43301d" opacity="0.5"/>
+
+    <g fill="#3a2415" opacity="0.65">
+      <rect x="322" y="598" width="8" height="8"/>
+      <rect x="336" y="598" width="8" height="8"/>
+      <rect x="350" y="598" width="8" height="8"/>
+      <rect x="364" y="598" width="8" height="8"/>
+      <rect x="378" y="598" width="8" height="8"/>
+      <rect x="392" y="598" width="8" height="8"/>
+      <rect x="406" y="598" width="8" height="8"/>
+      <rect x="420" y="598" width="8" height="8"/>
+      <rect x="434" y="598" width="8" height="8"/>
+      <rect x="448" y="598" width="8" height="8"/>
+    </g>
+
+    <path d="M668 236l26 10v202l-20 12-6-8z" fill="#2a2432" stroke="#a98343" stroke-width="8"/>
+  </g>
+</svg>

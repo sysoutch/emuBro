@@ -45,6 +45,13 @@ pub(crate) fn bootstrap_background_services() {
     remote::bootstrap_runtime_from_saved_config();
 }
 
+pub(crate) fn handle_emulation_support_request(
+    payload: &Value,
+    window: Option<&tauri::Window>,
+) -> Result<Value, String> {
+    suggestions::handle_emulation_support(payload, window)
+}
+
 pub(crate) fn handle_bridge_channel(channel: &str, args: &[Value]) -> Option<Result<Value, String>> {
     locales::handle(channel, args)
         .or_else(|| covers::handle(channel, args))

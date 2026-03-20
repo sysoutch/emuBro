@@ -8,8 +8,8 @@ export function normalizeTagCategory(value) {
     return tag;
 }
 
-export function getGameTagIds(game) {
-    const rows = Array.isArray(game?.tags) ? game.tags : [];
+export function getRowTagIds(row) {
+    const rows = Array.isArray(row?.tags) ? row.tags : [];
     const out = [];
     const seen = new Set();
     rows.forEach((tag) => {
@@ -21,14 +21,18 @@ export function getGameTagIds(game) {
     return out;
 }
 
+export function getGameTagIds(game) {
+    return getRowTagIds(game);
+}
+
 export function getTagCategoryCounts(rows, options = {}) {
     const source = Array.isArray(rows) ? rows : [];
     const getLabel = typeof options.getLabel === 'function'
         ? options.getLabel
         : ((tagId) => String(tagId || '').trim());
     const counts = new Map();
-    source.forEach((game) => {
-        getGameTagIds(game).forEach((tagId) => {
+    source.forEach((row) => {
+        getRowTagIds(row).forEach((tagId) => {
             counts.set(tagId, (counts.get(tagId) || 0) + 1);
         });
     });

@@ -100,6 +100,24 @@ function buildMenuItems(game, deps) {
         },
         { separator: true },
         {
+            id: 'shortcut',
+            label: t('gameDetails.createShortcut', 'Create Shortcut'),
+            icon: 'link',
+            disabled: !hasFilePath,
+            action: async () => {
+                const filePath = String(game?.filePath || '').trim();
+                if (!filePath) {
+                    deps.alertUser?.('Game file path is missing.');
+                    return;
+                }
+                const result = await deps.emubro.invoke('create-game-shortcut', game.id);
+                if (!result?.success) {
+                    deps.alertUser?.(result?.message || 'Failed to create shortcut.');
+                }
+            }
+        },
+        { separator: true },
+        {
             id: 'explorer',
             label: t('gameDetails.showInExplorer', 'Show in Explorer'),
             icon: 'folder',
@@ -133,6 +151,21 @@ function buildMenuItems(game, deps) {
             action: async () => {
                 const ok = await copyText(String(game?.filePath || ''));
                 if (!ok) deps.alertUser?.('Failed to copy file path.');
+            }
+        },
+        { separator: true },
+        {
+            id: 'youtube',
+            label: t('gameDetails.searchOnYouTube', 'Search on YouTube'),
+            icon: 'link',
+            action: () => {
+                const query = encodeURIComponent(String(game?.name || '').trim() || '');
+                if (!query) {
+                    deps.alertUser?.('Game name is missing.');
+                    return;
+                }
+                const url = `https://www.youtube.com/results?search_query=${query}`;
+                window.open(url, '_blank', 'noopener');
             }
         },
         { separator: true },

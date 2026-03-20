@@ -1,7 +1,7 @@
 # Active Context
 
 ## Current Work Focus
-Continuing oversized JS refactors with stable public APIs (`tools-manager`, `theme-manager`, `settings/library`, `language-manager`).
+Continuing post-migration stabilization with steady refactors plus support/community/LLM parity cleanup across the desktop shell and legacy runtime.
 
 ## Delivery Plan (2026-03-05)
 Priority order for moving from alpha churn to beta-readiness:
@@ -63,7 +63,46 @@ Priority order for moving from alpha churn to beta-readiness:
 - `js/game-manager/emulator-config-actions.js` â€” 1,030 LOC â€” 47.9 KB
 - `js/theme-manager.js` â€” 839 LOC â€” 30.0 KB
 
+## Refactor Backlog Snapshot (2026-03-20)
+The following large files should be prioritized for decomposition into feature folders/modules during pre-beta hardening:
+
+- `js/game-manager/game-details-popup-actions.js` - 2030 LOC
+- `scss/games/_core-cover.scss` - 1972 LOC
+- `js/runtime/drag-drop-manager.js` - 1838 LOC
+- `index.html` - 1786 LOC
+- `js/events/setup-renderer-events.js` - 1586 LOC
+- `renderer.js` - 1506 LOC
+- `js/runtime/support-manager.js` - 1443 LOC
+- `js/library/categories-list-renderer.js` - 1404 LOC
+- `desktop/src/stores/support-center.js` - 1334 LOC
+- `js/runtime/game-manager.js` - 1289 LOC
+- `desktop/src/components/GameDetailsModal.vue` - 1230 LOC
+- `js/runtime/theme-manager.js` - 1196 LOC
+- `desktop/src/emubro-bridge.js` - 1168 LOC
+- `desktop/src/views/LibraryWorkspaceView.vue` - 1159 LOC
+- `scss/games/_popups.scss` - 1130 LOC
+- `desktop/src/styles/_shell.scss` - 1103 LOC
+- `js/game-manager/emulator-config-actions.js` - 1083 LOC
+
 ## Recent Changes
+- Support + community + LLM context refresh note (2026-03-20):
+  - Refreshed the support helper knowledge snapshot so the shell-native assistant prompt now explicitly knows about current product capabilities instead of relying on older migration-era assumptions.
+  - Current feature snapshot now includes:
+    - AI / LLM settings with provider selection (`Ollama`, `OpenAI`, `Gemini`)
+    - host/client relay mode, relay scanning, and local-host Ollama usage
+    - shell-native support chat/troubleshooter with local library match context and shell task actions
+    - LLM-assisted theme generation, locale translation, game description/tagging, and tool draft generation
+    - shell-native community hub + in-app browser flow
+    - current tools set (`BIOS Manager`, `Memory Card Editor`, `Remote Library`, `Cover Downloader`, `CUE Maker`, `ECM / UNECM`, custom shortcuts/plugins)
+    - launcher import / drag-drop import / cover download / multi-view library browsing
+  - Also restored the community in-app window flow after the recent regression:
+    - removed the hidden-focus window path that could leave an invisible child window alive
+    - main-window close now closes lingering community child windows too
+    - this regression had side effects on app shutdown plus profile/settings modal behavior because the hidden community webview could outlive the main workspace
+- Support live-streaming note (2026-03-20):
+  - Added live Ollama response streaming for the shell support center.
+  - The desktop bridge now forwards `emubro:support-stream` chunk events from the Rust side while the support request is still running.
+  - The support chat/troubleshooter UI now surfaces live assistant drafting text instead of only showing a generic typing indicator or static `Thinking...`.
 - Desktop shell library parity note (2026-03-07):
   - Added shell-native tag/category filtering:
     - `desktop/src/stores/library-categories.js`

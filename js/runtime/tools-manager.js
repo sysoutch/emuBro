@@ -77,8 +77,12 @@ export function showToolView(tool) {
     document.querySelectorAll("[data-tool]").forEach(link => {
         link.classList.remove("active");
     });
-    const toolLink = document.querySelector(`[data-tool="${tool}"]`);
-    if (toolLink) toolLink.classList.add("active");
+    document.querySelectorAll("[data-tool-home]").forEach(link => {
+        link.classList.toggle("active", !tool);
+    });
+    document.querySelectorAll(`[data-tool="${tool}"]`).forEach(link => {
+        link.classList.add("active");
+    });
     
     // 3. Update Header Text
     if (gamesHeader) {

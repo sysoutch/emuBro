@@ -13,6 +13,9 @@ const SUPPORT_WEB_ACCESS_STORAGE_KEY = 'emuBro.supportWebAccess.v1';
 const SUPPORT_HELP_STATE_STORAGE_KEY = 'emuBro.supportHelpState.v1';
 const SUPPORT_ASSISTANT_TASK_FETCH_SPECS = 'FETCH_SPECS';
 const SUPPORT_ASSISTANT_TASK_MIN_CONFIDENCE = 0.72;
+const SUPPORT_RESPONSE_TYPE_REPLY = 'reply';
+const SUPPORT_RESPONSE_TYPE_TASK = 'task';
+const SUPPORT_RESPONSE_TYPE_BLOCKED = 'blocked';
 const PC_SPECS_BLOCK_HEADER = '[PC Specs]';
 let activeSupportViewDisposer = null;
 
@@ -175,6 +178,96 @@ function extractSupportAssistantTaskObject(rawValue) {
 
     if (rawValue.task && typeof rawValue.task === 'object' && !Array.isArray(rawValue.task)) {
         return extractSupportAssistantTaskObject(rawValue.task);
+    }
+
+    return null;
+}
+
+function extractSupportAssistantEnvelopeObject(rawValue) {
+    if (!rawValue || typeof rawValue !== 'object' || Array.isArray(rawValue)) return null;
+
+    const envelopeType = String(rawValue.type || rawValue.kind || '').trim().toLowerCase();
+    if (envelopeType === SUPPORT_RESPONSE_TYPE_REPLY) {
+        return {
+            kind: SUPPORT_RESPONSE_TYPE_REPLY,
+            message: String(rawValue.message || rawValue.reply || rawValue.answer || '').trim()
+        };
+    }
+
+    if (envelopeType === SUPPORT_RESPONSE_TYPE_TASK) {
+        const task = extractSupportAssistantTaskObject({
+            ...rawValue,
+            ...((rawValue.task && typeof rawValue.task === 'object' && !Array.isArray(rawValue.task)) ? rawValue.task : {})
+        });
+        if (!task || Number(task.confidence || 0) < SUPPORT_ASSISTANT_TASK_MIN_CONFIDENCE) return null;
+        return {
+            kind: SUPPORT_RESPONSE_TYPE_TASK,
+            task,
+            message: String(rawValue.message || '').trim()
+        };
+    }
+
+    if (envelopeType === SUPPORT_RESPONSE_TYPE_BLOCKED) {
+        const nextAction = rawValue.nextAction && typeof rawValue.nextAction === 'object' && !Array.isArray(rawValue.nextAction)
+            ? rawValue.nextAction
+            : {};
+        const task = extractSupportAssistantTaskObject({
+            ...nextAction,
+            task: nextAction.task || nextAction.name || nextAction.command || rawValue.task || ''
+        });
+        return {
+            kind: SUPPORT_RESPONSE_TYPE_BLOCKED,
+            message: String(rawValue.message || rawValue.reason || rawValue.answer || '').trim(),
+            reason: String(rawValue.reason || '').trim(),
+            task: task && Number(task.confidence || 0) >= SUPPORT_ASSISTANT_TASK_MIN_CONFIDENCE ? task : null
+        };
+    }
+
+    const task = extractSupportAssistantTaskObject(rawValue);
+    if (task && Number(task.confidence || 0) >= SUPPORT_ASSISTANT_TASK_MIN_CONFIDENCE) {
+        return {
+            kind: SUPPORT_RESPONSE_TYPE_TASK,
+            task,
+            message: ''
+        };
+    }
+
+    return null;
+}
+
+function parseSupportAssistantEnvelope(answerText) {
+    const normalized = String(answerText || '').trim();
+    if (!normalized) return null;
+
+    const stripped = normalized
+        .replace(/^```[a-z0-9_-]*\s*/i, '')
+        .replace(/\s*```$/i, '')
+        .trim();
+    if (!stripped) return null;
+
+    if (stripped.toUpperCase() === SUPPORT_ASSISTANT_TASK_FETCH_SPECS) {
+        return {
+            kind: SUPPORT_RESPONSE_TYPE_TASK,
+            task: { type: SUPPORT_ASSISTANT_TASK_FETCH_SPECS, confidence: 1, reason: '' },
+            message: ''
+        };
+    }
+
+    const candidates = [];
+    if ((stripped.startsWith('{') && stripped.endsWith('}')) || (stripped.startsWith('[') && stripped.endsWith(']'))) {
+        candidates.push(stripped);
+    }
+    const objectMatch = stripped.match(/\{[\s\S]*\}/);
+    if (objectMatch && objectMatch[0] !== stripped) {
+        candidates.push(objectMatch[0]);
+    }
+
+    for (const candidate of candidates) {
+        try {
+            const parsed = JSON.parse(candidate);
+            const envelope = extractSupportAssistantEnvelopeObject(parsed);
+            if (envelope) return envelope;
+        } catch (_error) {}
     }
 
     return null;
@@ -552,7 +645,7 @@ export function showSupportView() {
                         <span>${escapeHtml(t('support.debugContext', 'Debug Context'))}</span>
                     </label>
                 </div>
-                <div class="support-form-grid" data-support-llm-only>
+                <div class="support-form-grid" data-support-llm-only data-support-troubleshoot-only>
                     <label class="support-field" data-support-troubleshoot-only>
                         <span>${escapeHtml(t('support.issueTypeLabel', 'Issue Type'))}</span>
                         <select data-support-input="issue-type">
@@ -571,17 +664,17 @@ export function showSupportView() {
                     </label>
                 </div>
 
-                <label class="support-field" data-support-llm-only>
+                <label class="support-field" data-support-llm-only data-support-troubleshoot-only>
                     <span data-support-summary-label>${escapeHtml(t('support.issueSummaryLabel', 'Short problem summary'))}</span>
                     <input type="text" data-support-input="issue-summary" value="${escapeHtml(draft.issueSummary)}" placeholder="${escapeHtml(t('support.issueSummaryPlaceholder', 'e.g. Game boots to black screen after intro'))}" />
                 </label>
 
-                <label class="support-field" data-support-llm-only>
+                <label class="support-field" data-support-llm-only data-support-troubleshoot-only>
                     <span>${escapeHtml(t('support.errorTextOptionalLabel', 'Error message (optional)'))}</span>
                     <input type="text" data-support-input="error-text" value="${escapeHtml(draft.errorText)}" placeholder="${escapeHtml(t('support.errorTextPlaceholder', 'Paste exact error text if you have one'))}" />
                 </label>
 
-                <label class="support-field" data-support-llm-only>
+                <label class="support-field" data-support-llm-only data-support-troubleshoot-only>
                     <span>${escapeHtml(t('support.detailsLabel', 'Details'))}</span>
                     <textarea rows="7" data-support-input="details" placeholder="${escapeHtml(t('support.detailsPlaceholder', 'What did you try already? What changed recently? Any hardware/driver info?'))}">${escapeHtml(draft.details)}</textarea>
                 </label>
@@ -604,9 +697,9 @@ export function showSupportView() {
                 </div>
 
                 <div class="support-actions">
-                    <button type="button" class="action-btn small" data-support-action="insert-specs" data-support-llm-only>${escapeHtml(t('support.insertPcSpecs', 'Insert PC Specs'))}</button>
-                    <button type="button" class="action-btn small" data-support-action="voice-input" data-support-llm-only>${escapeHtml(t('support.voiceInput', 'Voice Input'))}</button>
-                    <button type="button" class="action-btn launch-btn" data-support-action="run" data-support-llm-only>${escapeHtml(t('support.getHelp', 'Get Help'))}</button>
+                    <button type="button" class="action-btn small" data-support-action="insert-specs" data-support-llm-only data-support-troubleshoot-only>${escapeHtml(t('support.insertPcSpecs', 'Insert PC Specs'))}</button>
+                    <button type="button" class="action-btn small" data-support-action="voice-input" data-support-llm-only data-support-troubleshoot-only>${escapeHtml(t('support.voiceInput', 'Voice Input'))}</button>
+                    <button type="button" class="action-btn launch-btn" data-support-action="run" data-support-llm-only data-support-troubleshoot-only>${escapeHtml(t('support.getHelp', 'Get Help'))}</button>
                     <button type="button" class="action-btn small" data-support-action="clear">${escapeHtml(t('support.clear', 'Clear'))}</button>
                 </div>
                 <p class="support-status" data-support-status aria-live="polite"></p>
@@ -616,6 +709,18 @@ export function showSupportView() {
                 <h3 data-support-output-title>${escapeHtml(t('support.suggestedFixSteps', 'Suggested Fix Steps'))}</h3>
                 <div class="support-output-pre support-output-markdown" data-support-output>${renderSupportMarkdown(t('support.initialOutput', 'Run a support request to get troubleshooting steps.'))}</div>
                 <div class="support-chat-thread" data-support-chat-thread></div>
+                <footer class="support-chat-composer" data-support-chat-composer>
+                    <div class="support-chat-composer-row">
+                        <textarea
+                            class="support-chat-input"
+                            data-support-chat-input
+                            rows="3"
+                            placeholder="${escapeHtml(t('support.chatMessagePlaceholder', 'Ask anything about emuBro features, settings, tools, launchers, or emulator setup...'))}"
+                        >${escapeHtml(draft.issueSummary)}</textarea>
+                        <button type="button" class="action-btn launch-btn" data-support-action="chat-send">${escapeHtml(t('support.send', 'Send'))}</button>
+                    </div>
+                    <p class="support-chat-composer-hint">${escapeHtml(t('support.enterToSendHint', 'Enter to send. Shift+Enter for newline.'))}</p>
+                </footer>
                 <details class="support-debug-panel" data-support-debug-panel ${debugSupportEnabled ? 'open' : ''}>
                     <summary>${escapeHtml(t('support.debugDetails', 'Planner / Retrieval Details'))}</summary>
                     <pre data-support-debug-content>${escapeHtml(t('support.debugEmpty', 'Debug output will appear after a request.'))}</pre>
@@ -635,6 +740,9 @@ export function showSupportView() {
     const chatThreadEl = gamesContainer.querySelector('[data-support-chat-thread]');
     const outputTitleEl = gamesContainer.querySelector('[data-support-output-title]');
     const summaryLabelEl = gamesContainer.querySelector('[data-support-summary-label]');
+    const chatComposerEl = gamesContainer.querySelector('[data-support-chat-composer]');
+    const chatInputEl = gamesContainer.querySelector('[data-support-chat-input]');
+    const chatSendBtn = gamesContainer.querySelector('[data-support-action="chat-send"]');
     const runBtn = gamesContainer.querySelector('[data-support-action="run"]');
     const clearBtn = gamesContainer.querySelector('[data-support-action="clear"]');
     const insertSpecsBtn = gamesContainer.querySelector('[data-support-action="insert-specs"]');
@@ -652,7 +760,7 @@ export function showSupportView() {
     const llmOnlyEls = Array.from(gamesContainer.querySelectorAll('[data-support-llm-only]'));
     const helpOnlyEls = Array.from(gamesContainer.querySelectorAll('[data-support-help-only]'));
 
-    if (!issueTypeSelect || !issueSummaryInput || !platformInput || !emulatorInput || !errorTextInput || !detailsInput || !statusEl || !outputEl || !runBtn || !clearBtn || !insertSpecsBtn || !voiceInputBtn || !chatThreadEl || !outputTitleEl || !summaryLabelEl || !debugToggleInput || !autoSpecsToggleInput || !webAccessToggleInput || !debugPanelEl || !debugContentEl || !helpQueryInput || !helpListEl || !searchHelpBtn || !reloadHelpBtn) {
+    if (!issueTypeSelect || !issueSummaryInput || !platformInput || !emulatorInput || !errorTextInput || !detailsInput || !statusEl || !outputEl || !runBtn || !clearBtn || !insertSpecsBtn || !voiceInputBtn || !chatThreadEl || !outputTitleEl || !summaryLabelEl || !chatComposerEl || !chatInputEl || !chatSendBtn || !debugToggleInput || !autoSpecsToggleInput || !webAccessToggleInput || !debugPanelEl || !debugContentEl || !helpQueryInput || !helpListEl || !searchHelpBtn || !reloadHelpBtn) {
         return;
     }
 
@@ -684,6 +792,7 @@ export function showSupportView() {
     let voiceRecognition = null;
     let voiceListening = false;
     let voiceStopRequested = false;
+    let runningRequest = false;
 
     const updateVoiceButtonState = () => {
         const unsupported = !SpeechRecognitionCtor;
@@ -826,8 +935,33 @@ export function showSupportView() {
         saveSupportDraft(collectFormState());
     };
 
+    const syncChatInputFromSummary = () => {
+        if (String(chatInputEl.value || '') === String(issueSummaryInput.value || '')) return;
+        chatInputEl.value = issueSummaryInput.value || '';
+    };
+
+    const updateChatComposerState = () => {
+        const isChat = currentMode === 'chat';
+        const hasMessage = !!String(chatInputEl.value || '').trim();
+        chatComposerEl.style.display = isChat ? '' : 'none';
+        chatInputEl.disabled = !isChat || runningRequest;
+        chatSendBtn.disabled = !isChat || runningRequest || !hasMessage;
+        chatSendBtn.textContent = runningRequest
+            ? t('suggested.status.running', 'Running...')
+            : t('support.send', 'Send');
+    };
+
+    const scrollChatThreadToBottom = (behavior = 'auto') => {
+        try {
+            chatThreadEl.scrollTo({ top: chatThreadEl.scrollHeight, behavior });
+        } catch (_error) {
+            chatThreadEl.scrollTop = chatThreadEl.scrollHeight;
+        }
+    };
+
     const renderChatThread = () => {
         chatThreadEl.innerHTML = renderSupportChatTranscript(chatHistory);
+        scrollChatThreadToBottom('auto');
     };
 
     const persistHelpState = () => {
@@ -977,6 +1111,7 @@ export function showSupportView() {
                 renderHelpDoc(null);
             }
         } else if (isChat) {
+            syncChatInputFromSummary();
             renderChatThread();
         } else if (!String(outputEl.textContent || '').trim()) {
             outputEl.innerHTML = renderSupportMarkdown(t('support.initialOutput', 'Run a support request to get troubleshooting steps.'));
@@ -985,6 +1120,7 @@ export function showSupportView() {
             persistDraft();
         }
         updateVoiceButtonState();
+        updateChatComposerState();
     };
 
     [issueTypeSelect, issueSummaryInput, platformInput, emulatorInput, errorTextInput, detailsInput].forEach((input) => {
@@ -1048,6 +1184,7 @@ export function showSupportView() {
         }
         issueTypeSelect.value = 'launch';
         issueSummaryInput.value = '';
+        chatInputEl.value = '';
         platformInput.value = '';
         emulatorInput.value = '';
         errorTextInput.value = '';
@@ -1070,6 +1207,7 @@ export function showSupportView() {
         }
         renderDebugPayload(null);
         persistDraft();
+        updateChatComposerState();
     });
 
     insertSpecsBtn.addEventListener('click', async () => {
@@ -1122,7 +1260,8 @@ export function showSupportView() {
             statusEl.textContent = currentMode === 'chat'
                 ? t('support.status.addQuestion', 'Type a question first.')
                 : t('support.status.addSummary', 'Add a short problem summary first.');
-            issueSummaryInput.focus();
+            if (currentMode === 'chat') chatInputEl.focus();
+            else issueSummaryInput.focus();
             return;
         }
 
@@ -1150,7 +1289,9 @@ export function showSupportView() {
             payload.chatHistory = chatHistory;
         }
 
+        runningRequest = true;
         runBtn.disabled = true;
+        updateChatComposerState();
         statusEl.textContent = currentMode === 'chat'
             ? t('support.status.generatingChat', 'Generating reply with {{provider}}...', { provider: providerLabel })
             : t('support.status.generating', 'Generating support steps with {{provider}}...', { provider: providerLabel });
@@ -1172,14 +1313,17 @@ export function showSupportView() {
             }
 
             const answerText = String(response?.answer || '').trim();
-            const assistantTask = parseSupportAssistantTask(answerText);
+            const assistantEnvelope = parseSupportAssistantEnvelope(answerText);
+            const assistantTask = assistantEnvelope?.kind === SUPPORT_RESPONSE_TYPE_TASK
+                ? assistantEnvelope.task
+                : parseSupportAssistantTask(answerText);
             if (assistantTask?.type === SUPPORT_ASSISTANT_TASK_FETCH_SPECS) {
                 if (taskDepth >= 1) {
-                    statusEl.textContent = 'Assistant requested system specs again even though they were already attached.';
+                    statusEl.textContent = assistantEnvelope?.message || 'Assistant requested system specs again even though they were already attached.';
                     return;
                 }
                 if (autoSpecsEnabled) {
-                    statusEl.textContent = t('support.status.collectingSpecs', 'Collecting system specs...');
+                    statusEl.textContent = assistantEnvelope?.message || t('support.status.collectingSpecs', 'Collecting system specs...');
                     const specsResult = await emubro.invoke('system:get-specs');
                     const specText = formatSupportSystemSpecsText(specsResult);
                     if (!specsResult?.success || !specText) {
@@ -1200,7 +1344,7 @@ export function showSupportView() {
                     statusEl.textContent = 'PC specs fetch was canceled.';
                     return;
                 }
-                statusEl.textContent = t('support.status.collectingSpecs', 'Collecting system specs...');
+                statusEl.textContent = assistantEnvelope?.message || t('support.status.collectingSpecs', 'Collecting system specs...');
                 const specsResult = await emubro.invoke('system:get-specs');
                 const specText = formatSupportSystemSpecsText(specsResult);
                 if (!specsResult?.success || !specText) {
@@ -1217,19 +1361,26 @@ export function showSupportView() {
                 return;
             }
 
+            const resolvedReplyText = assistantEnvelope?.kind === SUPPORT_RESPONSE_TYPE_REPLY
+                ? String(assistantEnvelope.message || '').trim()
+                : (assistantEnvelope?.kind === SUPPORT_RESPONSE_TYPE_BLOCKED
+                    ? String(assistantEnvelope.message || assistantEnvelope.reason || '').trim()
+                    : answerText);
+
             if (currentMode === 'chat') {
-                if (answerText) {
+                if (resolvedReplyText) {
                     chatHistory = normalizeSupportChatHistory([
                         ...chatHistory,
-                        { role: 'assistant', text: answerText }
+                        { role: 'assistant', text: resolvedReplyText }
                     ]);
                     saveSupportChatHistory(chatHistory);
                     renderChatThread();
                     issueSummaryInput.value = '';
+                    chatInputEl.value = '';
                     persistDraft();
                 }
             } else {
-                outputEl.innerHTML = renderSupportMarkdown(answerText || t('support.status.noSupportText', 'No support text returned.'));
+                outputEl.innerHTML = renderSupportMarkdown(resolvedReplyText || t('support.status.noSupportText', 'No support text returned.'));
             }
             if (debugSupportEnabled) {
                 renderDebugPayload(response?.debug || null);
@@ -1246,7 +1397,9 @@ export function showSupportView() {
                 outputEl.innerHTML = renderSupportMarkdown(t('support.status.noResponse', 'No response available.'));
             }
         } finally {
+            runningRequest = false;
             runBtn.disabled = false;
+            updateChatComposerState();
         }
     };
 
@@ -1254,9 +1407,28 @@ export function showSupportView() {
         await runSupportRequest();
     });
 
+    chatInputEl.addEventListener('input', () => {
+        issueSummaryInput.value = chatInputEl.value;
+        persistDraft();
+        updateChatComposerState();
+    });
+
+    chatInputEl.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' || event.shiftKey) return;
+        event.preventDefault();
+        if (chatSendBtn.disabled) return;
+        void runSupportRequest();
+    });
+
+    chatSendBtn.addEventListener('click', async () => {
+        if (chatSendBtn.disabled) return;
+        await runSupportRequest();
+    });
+
     setMode(currentMode, { persist: false });
     syncDebugToggleUi();
     updateVoiceButtonState();
+    updateChatComposerState();
     renderDebugPayload(null);
 
     activeSupportViewDisposer = () => {

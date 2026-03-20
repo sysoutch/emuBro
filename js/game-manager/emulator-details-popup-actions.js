@@ -369,6 +369,9 @@ export function createEmulatorDetailsPopupActions(deps = {}) {
         const safeName = escapeHtml(emulator.name || 'Unknown Emulator');
         const safePlatform = escapeHtml(emulator.platform || emulator.platformShortName || t('gameDetails.unknown', 'Unknown'));
         const safeDescription = escapeHtml(String(config?.description || '').trim());
+        const tagSummary = Array.isArray(config?.tags) && config.tags.length > 0
+            ? config.tags.map((tag) => String(tag || '').trim()).filter(Boolean).join(', ')
+            : t('emulator.details.noTagsAssigned', 'No tags assigned');
         const installed = !!emulator.isInstalled;
         const filePaths = getEmulatorFilePaths(emulator);
         const selectedLaunchPath = installed ? getSelectedLaunchPath(emulator, filePaths) : '';
@@ -409,6 +412,7 @@ export function createEmulatorDetailsPopupActions(deps = {}) {
                 <p><strong>${escapeHtml(t('common.name', 'Name'))}:</strong> ${safeName}</p>
                 <p><strong>${escapeHtml(t('gameDetails.platform', 'Platform'))}:</strong> ${safePlatform}</p>
                 <p><strong>${escapeHtml(t('common.status', 'Status'))}:</strong> <span class="emulator-install-status ${statusClass}">${escapeHtml(statusText)}</span></p>
+                <p><strong>${escapeHtml(t('common.tags', 'Tags'))}:</strong> ${escapeHtml(tagSummary)}</p>
                 <p><strong>${escapeHtml(t('common.path', 'Path'))}:</strong> <span class="emulator-detail-path">${safePathMarkup}</span></p>
                 ${launchPathControlMarkup}
             </div>

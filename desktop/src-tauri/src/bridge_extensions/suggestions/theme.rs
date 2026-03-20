@@ -7,7 +7,7 @@ pub(super) fn color_for_mood(mood: &str) -> &'static str {
         "retro" => "#f4b400",
         "dark" => "#8b5cf6",
         "aggressive" => "#ef4444",
-        _ => "#66ccff",
+        _ => "#5c758d",
     }
 }
 
@@ -18,11 +18,11 @@ fn clamp_u8(value: i32) -> u8 {
 fn hex_to_rgb(hex: &str) -> (u8, u8, u8) {
     let clean = hex.trim().trim_start_matches('#');
     if clean.len() != 6 {
-        return (102, 204, 255);
+        return (92, 117, 141);
     }
-    let r = u8::from_str_radix(&clean[0..2], 16).unwrap_or(102);
-    let g = u8::from_str_radix(&clean[2..4], 16).unwrap_or(204);
-    let b = u8::from_str_radix(&clean[4..6], 16).unwrap_or(255);
+    let r = u8::from_str_radix(&clean[0..2], 16).unwrap_or(92);
+    let g = u8::from_str_radix(&clean[2..4], 16).unwrap_or(117);
+    let b = u8::from_str_radix(&clean[4..6], 16).unwrap_or(141);
     (r, g, b)
 }
 

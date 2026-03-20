@@ -1,3 +1,5 @@
+import { checkEmulatorWriteAccess, buildEmulatorWriteAccessWarning } from './emulator-write-access';
+
 export function normalizeSearchScope(scope) {
     const value = String(scope || '').trim().toLowerCase();
     if (value === 'games' || value === 'emulators' || value === 'both') return value;
@@ -41,6 +43,7 @@ export function createGameSearchActions(deps = {}) {
             const foundEmulatorPaths = [];
             const foundArchives = [];
             const foundSetupFiles = [];
+            const unwritableEmulatorWarnings = [];
             let anySuccess = false;
 
             for (const target of dedupedTargets) {
@@ -59,6 +62,12 @@ export function createGameSearchActions(deps = {}) {
                     const filePath = String(emu?.filePath || '').trim();
                     if (filePath) foundEmulatorPaths.push(filePath);
                 });
+                for (const emulator of emulatorsFound) {
+                    const writeAccess = await checkEmulatorWriteAccess(emubro, emulator);
+                    if (!writeAccess.skipped && !writeAccess.writable) {
+                        unwritableEmulatorWarnings.push(buildEmulatorWriteAccessWarning(emulator, writeAccess, 'add'));
+                    }
+                }
                 (Array.isArray(result.archives) ? result.archives : []).forEach((archivePath) => {
                     const filePath = String(archivePath || '').trim();
                     if (filePath) foundArchives.push(filePath);
@@ -76,6 +85,9 @@ export function createGameSearchActions(deps = {}) {
                 renderGames(updatedGames);
                 initializePlatformFilterOptions();
                 alertUser(`Found ${totalFoundGames} games and ${totalFoundEmulators} emulators.`);
+                if (unwritableEmulatorWarnings.length > 0) {
+                    alertUser(unwritableEmulatorWarnings.join('\n\n'));
+                }
             }
 
             return {

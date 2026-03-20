@@ -213,7 +213,7 @@ let currentHueRotateDeg = 0;
 const getBackgroundSurfaceDraft = () => backgroundSurfaceDraft;
 const setBackgroundSurfaceDraft = (next) => { backgroundSurfaceDraft = next; };
 const setBackgroundLayerDraftsState = (next) => { backgroundLayerDrafts = next; };
-const TASKBAR_ICON_FALLBACK_COLOR = '#2f9ec0';
+const TASKBAR_ICON_FALLBACK_COLOR = '#335371';
 const buildBackgroundConfig = (overrides = {}) => getThemeBackgroundConfigFromForm(overrides, {
     currentBackgroundImage: window.currentBackgroundImage || null,
     currentTopBackgroundImage: window.currentTopBackgroundImage || null,

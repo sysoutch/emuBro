@@ -73,7 +73,7 @@ export async function openLibraryPathSettingsModal(options = {}) {
     };
     const generalDraft = {
         defaultSection: normalizeLibrarySection(localStorage.getItem('emuBro.defaultLibrarySection') || activeLibrarySection || 'all'),
-        defaultView: String(localStorage.getItem('emuBro.defaultLibraryView') || (document.querySelector('.view-btn.active')?.dataset.view || 'cover')).toLowerCase(),
+        defaultView: String(localStorage.getItem('emuBro.defaultLibraryView') || 'cover').toLowerCase(),
         showLoadIndicator: localStorage.getItem('emuBro.showLoadIndicator') !== 'false',
         autoOpenFooter: localStorage.getItem('emuBro.autoOpenFooter') !== 'false',
         llmHelpersEnabled: localStorage.getItem(LLM_HELPERS_ENABLED_KEY) !== 'false',

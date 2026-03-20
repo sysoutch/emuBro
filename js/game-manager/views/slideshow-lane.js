@@ -49,6 +49,9 @@ export function createSlideshowLane(options = {}) {
     const onLaneFocus = typeof options.onLaneFocus === 'function'
         ? options.onLaneFocus
         : () => {};
+    const onFrameSample = typeof options.onFrameSample === 'function'
+        ? options.onFrameSample
+        : null;
     const refreshItems = typeof options.refreshItems === 'function'
         ? options.refreshItems
         : () => false;
@@ -69,9 +72,16 @@ export function createSlideshowLane(options = {}) {
     let isMoving = false;
     let isPointerDragging = false;
     let scrollX = 0;
+    let activeClassIndex = -1;
     let suppressStripClickUntil = 0;
     let wheelDeltaCarry = 0;
     let lastWheelAt = 0;
+
+    function applyStyleIfChanged(item, key, value) {
+        if (!item || !item.style) return;
+        if (item.style[key] === value) return;
+        item.style[key] = value;
+    }
 
     function invalidateLayoutCache() {
         metricsDirty = true;
@@ -135,6 +145,7 @@ export function createSlideshowLane(options = {}) {
     }
 
     function applyTransforms() {
+        const frameStart = performance.now();
         if (renderToken !== getRenderToken()) return;
         const { center, gap, viewportWidth } = getLayout();
         const metrics = getItemMetrics();
@@ -159,10 +170,30 @@ export function createSlideshowLane(options = {}) {
         const scaleBase = isReverse ? 1.08 : 1.15;
         const scaleDrop = isReverse ? 0.24 : 0.3;
         const rotateDirection = isReverse ? 1 : -1;
+        const cullDistance = Math.max(viewportWidth * 0.96, (metrics[0]?.width || 0) * 6.2);
+        let nearestItem = null;
 
         metrics.forEach(({ item, index, center: itemCenter, width }) => {
             const focusStep = Math.max(width + gap, 1);
             const diffX = itemCenter - scrollX;
+            const distanceToCenter = Math.abs(diffX);
+            if (distanceToCenter > cullDistance) {
+                if (item.dataset.slideshowCulled !== '1') {
+                    item.dataset.slideshowCulled = '1';
+                    applyStyleIfChanged(item, 'transform', 'scale(0.8)');
+                    applyStyleIfChanged(item, 'opacity', '0');
+                    applyStyleIfChanged(item, 'zIndex', '0');
+                }
+                if (distanceToCenter < nearestDistance) {
+                    nearestDistance = distanceToCenter;
+                    nearestIndex = index;
+                    nearestItem = item;
+                }
+                return;
+            }
+            if (item.dataset.slideshowCulled === '1') {
+                item.dataset.slideshowCulled = '0';
+            }
             const normalizedDist = Math.min(1, Math.abs(diffX) / (focusStep * 2.25));
             const scale = scaleBase - (normalizedDist * scaleDrop);
             const opacity = 1 - (normalizedDist * 0.6);
@@ -178,24 +209,38 @@ export function createSlideshowLane(options = {}) {
                 transform += ` rotateY(${rotateY}deg) translateZ(${translateZ}px)`;
             }
 
-            item.style.transform = transform;
-            item.style.opacity = String(opacity);
-            item.style.zIndex = String(zIndex);
+            applyStyleIfChanged(item, 'transform', transform);
+            applyStyleIfChanged(item, 'opacity', String(opacity));
+            applyStyleIfChanged(item, 'zIndex', String(zIndex));
 
-            const distanceToCenter = Math.abs(diffX);
             if (distanceToCenter < nearestDistance) {
                 nearestDistance = distanceToCenter;
                 nearestIndex = index;
+                nearestItem = item;
             }
         });
 
-        metrics.forEach(({ item, index }) => {
-            item.classList.toggle('is-active', index === nearestIndex);
-        });
+        if (nearestIndex !== activeClassIndex) {
+            if (activeClassIndex >= 0) {
+                const previous = metrics.find((entry) => entry.index === activeClassIndex);
+                previous?.item?.classList.remove('is-active');
+            }
+            nearestItem?.classList.add('is-active');
+            activeClassIndex = nearestIndex;
+        }
 
         if (nearestIndex !== currentIndex) {
             currentIndex = nearestIndex;
             onNearestIndexChange(currentIndex, {
+                isMoving,
+                isPointerDragging
+            });
+        }
+        if (onFrameSample) {
+            const frameMs = performance.now() - frameStart;
+            onFrameSample({
+                frameMs,
+                itemCount: metrics.length,
                 isMoving,
                 isPointerDragging
             });
@@ -338,13 +383,16 @@ export function createSlideshowLane(options = {}) {
 
             const metrics = getItemMetrics();
             if (!metrics.length) return;
-            let targetIdx = metrics.reduce((bestIndex, entry, idx) => {
-                if (idx === 0) return entry.index;
-                const bestEntry = metrics.find((metric) => metric.index === bestIndex);
-                return Math.abs(entry.center - scrollX) < Math.abs((bestEntry?.center ?? 0) - scrollX)
-                    ? entry.index
-                    : bestIndex;
-            }, metrics[0].index);
+            let targetIdx = metrics[0].index;
+            let targetDistance = Math.abs((metrics[0]?.center ?? 0) - scrollX);
+            for (let idx = 1; idx < metrics.length; idx += 1) {
+                const entry = metrics[idx];
+                const entryDistance = Math.abs((entry?.center ?? 0) - scrollX);
+                if (entryDistance < targetDistance) {
+                    targetDistance = entryDistance;
+                    targetIdx = entry.index;
+                }
+            }
             if (Math.abs(velocity) > 0.5) {
                 targetIdx -= Math.sign(velocity);
             }

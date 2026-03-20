@@ -17,7 +17,7 @@ export function resolveThemeLogoBrandColor(theme, runtimeColors = {}, deps = {})
     if (!themeHasBrandEditorOverrides(theme)) {
         return parseColorToHex(runtimeColors.brandColor || '')
             || parseColorToHex(runtimeColors.accentColor || '')
-            || '#2f9ec0';
+            || '#335371';
     }
     const brandEditor = resolveBrandEditorConfig(theme?.editor || {});
     return resolveBasicBrandColor(runtimeColors.accentColor, brandEditor.color || runtimeColors.brandColor || '', {

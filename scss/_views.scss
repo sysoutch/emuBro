@@ -110,6 +110,10 @@
     flex-wrap: nowrap;
 }
 
+.view-controls > * {
+    flex: 0 0 auto;
+}
+
 .game-content-wrapper > .view-controls {
     flex: 0 0 auto;
 }
@@ -140,6 +144,39 @@
 .view-controls .view-btn[data-view="slideshow"],
 .view-controls .view-btn[data-view="random"] {
     max-width: clamp(96px, 12vw, 168px);
+}
+
+.view-modes-popup-btn {
+    display: none !important;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    padding-inline: 14px;
+    border: 1px solid var(--border-color);
+    background: color-mix(in srgb, var(--bg-secondary), transparent 14%);
+    color: var(--text-primary);
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    scroll-snap-align: start;
+}
+
+.view-modes-popup-btn.is-open {
+    border-color: color-mix(in srgb, var(--accent-color), white 12%);
+    background:
+        linear-gradient(135deg, rgba(var(--accent-color-rgb), 0.18), transparent 75%),
+        color-mix(in srgb, var(--bg-secondary), transparent 8%);
+    box-shadow:
+        0 0 0 1px rgba(var(--accent-color-rgb), 0.18) inset,
+        0 8px 18px rgba(0, 0, 0, 0.2);
+}
+
+.view-controls.is-views-compact .view-btn {
+    display: none;
+}
+
+.view-controls.is-views-compact .view-modes-popup-btn {
+    display: inline-flex !important;
 }
 
 .view-btn:hover {
@@ -232,6 +269,79 @@
         width: 120px;
         accent-color: var(--accent-color);
     }
+}
+
+.view-controls.is-layout-constrained {
+    gap: 8px;
+    padding: 8px 10px;
+}
+
+.view-controls.is-layout-constrained .view-btn {
+    padding: 7px 12px;
+    font-size: 0.84rem;
+    max-width: clamp(74px, 9vw, 124px);
+}
+
+.view-controls.is-layout-constrained .view-btn[data-view="slideshow"],
+.view-controls.is-layout-constrained .view-btn[data-view="random"] {
+    max-width: clamp(88px, 10vw, 136px);
+}
+
+.view-controls.is-layout-constrained .view-size-control {
+    gap: 6px;
+    padding: 5px 8px;
+}
+
+.view-controls.is-layout-constrained .view-size-control label,
+.view-controls.is-layout-constrained #view-size-value {
+    font-size: 0.8rem;
+}
+
+.view-controls.is-layout-constrained .view-size-control input[type="range"] {
+    width: 98px;
+}
+
+.view-controls.is-layout-constrained > .filters {
+    gap: 8px;
+}
+
+.filters.is-layout-constrained .group-same-names-toggle {
+    min-height: 32px;
+    padding: 4px 9px;
+    font-size: 0.8rem;
+    gap: 6px;
+}
+
+.filters.is-layout-constrained .group-same-names-toggle span {
+    max-width: 126px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.view-controls.is-layout-tight {
+    gap: 6px;
+    padding: 8px 8px 10px;
+}
+
+.view-controls.is-layout-tight > .filters {
+    gap: 6px;
+}
+
+.view-controls.is-layout-tight .view-size-control {
+    margin-left: 0;
+}
+
+.view-controls.is-layout-tight .view-size-control input[type="range"] {
+    width: 90px;
+}
+
+.filters.is-layout-tight #platform-filter {
+    width: clamp(122px, 14vw, 156px);
+}
+
+.filters.is-layout-tight .group-same-names-toggle span {
+    max-width: 108px;
 }
 
 .view-controls .filters select,
@@ -329,6 +439,46 @@
     color: var(--text-primary);
     font-size: 0.85rem;
     font-weight: 700;
+}
+
+.view-controls-floating-menu {
+    min-width: 220px;
+    width: min(260px, calc(100vw - 16px));
+}
+
+.view-controls-floating-menu .view-controls-floating-options {
+    display: grid;
+    gap: 6px;
+}
+
+.view-controls-floating-menu .view-controls-floating-option {
+    display: inline-flex;
+    width: 100%;
+    align-items: center;
+    justify-content: flex-start;
+    border: 1px solid color-mix(in srgb, var(--border-color), var(--accent-color) 20%);
+    border-radius: var(--radius-btn);
+    background: color-mix(in srgb, var(--bg-tertiary), transparent 12%);
+    color: var(--text-primary);
+    font-size: 0.84rem;
+    font-weight: 650;
+    letter-spacing: 0.01em;
+    padding: 7px 10px;
+    cursor: pointer;
+    transition: border-color 0.16s ease, background-color 0.16s ease, transform 0.16s ease;
+}
+
+.view-controls-floating-menu .view-controls-floating-option:hover {
+    border-color: color-mix(in srgb, var(--accent-color), white 12%);
+    background: color-mix(in srgb, var(--bg-tertiary), var(--accent-color) 12%);
+    transform: translateY(-1px);
+}
+
+.view-controls-floating-menu .view-controls-floating-option.is-active {
+    border-color: var(--accent-color);
+    background:
+        linear-gradient(135deg, rgba(var(--accent-color-rgb), 0.22), transparent 74%),
+        color-mix(in srgb, var(--bg-tertiary), transparent 6%);
 }
 
 .drive-selector {

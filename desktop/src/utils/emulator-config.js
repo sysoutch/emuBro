@@ -39,6 +39,31 @@ function dirFromPath(filePath) {
   return index > 0 ? value.slice(0, index) : "";
 }
 
+function normalizeTagId(value) {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  if (!normalized || normalized === "all") return "";
+  return normalized;
+}
+
+function normalizeEmulatorTagList(values = []) {
+  const source = Array.isArray(values)
+    ? values
+    : String(values || "").split(/[\r\n,;]+/g);
+  const out = [];
+  const seen = new Set();
+  source.forEach((entry) => {
+    const normalized = normalizeTagId(entry);
+    if (!normalized || seen.has(normalized)) return;
+    seen.add(normalized);
+    out.push(normalized);
+  });
+  return out;
+}
+
 export function getEmulatorConfigStorageKey(emulator) {
   const filePath = String(emulator?.filePath || "").trim();
   if (filePath) {
@@ -97,6 +122,7 @@ export function normalizeEmulatorRuntimeDataRules(input = {}) {
 export function createDefaultEmulatorConfig(emulator) {
   return {
     description: String(emulator?.description || "").trim(),
+    tags: normalizeEmulatorTagList(emulator?.tags || []),
     website: String(emulator?.website || "").trim(),
     startParameters: String(emulator?.startParameters || emulator?.args || "").trim(),
     launchArgs: "",
@@ -116,6 +142,7 @@ export function normalizeEmulatorStoredConfig(input = {}) {
   const source = input && typeof input === "object" ? input : {};
   return {
     description: String(source.description || "").trim(),
+    tags: normalizeEmulatorTagList(source.tags || []),
     website: String(source.website || "").trim(),
     startParameters: String(source.startParameters || "").trim(),
     launchArgs: String(source.launchArgs || "").trim(),

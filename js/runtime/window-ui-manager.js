@@ -842,9 +842,36 @@ export function setupSidebarRail(options = {}) {
     const sidebar = document.getElementById('sidebar');
     const toggleBtn = document.getElementById('sidebar-toggle');
     if (!sidebar || !toggleBtn) return;
+    const sidebarContent = document.getElementById('sidebar-content');
+    const contextualSections = Array.from(sidebar.querySelectorAll('.sidebar-section[data-sidebar-modes]'));
 
     const stored = localStorage.getItem('emuBro.sidebarExpanded');
     const initialExpanded = stored === null ? false : stored === 'true';
+
+    const normalizeSidebarContext = (value) => {
+        const normalized = String(value || 'library').trim().toLowerCase();
+        if (normalized === 'tools' || normalized === 'support' || normalized === 'community') {
+            return normalized;
+        }
+        return 'library';
+    };
+
+    const syncSidebarContext = (value) => {
+        const context = normalizeSidebarContext(value);
+        if (sidebarContent) {
+            sidebarContent.dataset.sidebarContext = context;
+        }
+        contextualSections.forEach((section) => {
+            const supportedModes = String(section.dataset.sidebarModes || '')
+                .split(/\s+/)
+                .map((entry) => entry.trim().toLowerCase())
+                .filter(Boolean);
+            const shouldShow = supportedModes.length === 0
+                || supportedModes.includes('all')
+                || supportedModes.includes(context);
+            section.classList.toggle('is-hidden', !shouldShow);
+        });
+    };
 
     const setExpanded = (expanded) => {
         sidebar.classList.toggle('sidebar--expanded', expanded);
@@ -861,10 +888,15 @@ export function setupSidebarRail(options = {}) {
     };
 
     setExpanded(initialExpanded);
+    syncSidebarContext('library');
 
     toggleBtn.addEventListener('click', () => {
         const expanded = sidebar.classList.contains('sidebar--expanded');
         setExpanded(!expanded);
+    });
+
+    window.addEventListener('emubro:app-mode-changed', (event) => {
+        syncSidebarContext(event?.detail?.mode || 'library');
     });
 
     const railButtons = document.querySelectorAll('.rail-btn.rail-nav[data-rail-target]');

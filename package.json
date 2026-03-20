@@ -1,6 +1,6 @@
 {
   "name": "emuBro",
-  "version": "1.0.0-alpha.20260317",
+  "version": "1.0.0-alpha.20260320",
   "description": " emuBro is an open source retro game launcher that associates your retro games with your emulators such as snes9x, epsxe, pcsx2, dolphin, cemu or whatever you like. ",
   "scripts": {
     "postinstall": "node -e \"console.log('Root postinstall: use npm run scripts:help for the main commands.')\"",
@@ -40,7 +40,8 @@
     "sync:gamelist": "node scripts/sync-gamelist.js",
     "sync:assets": "npm run sync:resources && npm run sync:gamelist",
     "sync:bundle-resources": "node scripts/sync-bundle-resources.js",
-    "resources:manifest:update": "node scripts/update-resources-manifest.js"
+    "resources:manifest:update": "node scripts/update-resources-manifest.js",
+    "big-files": "node scripts/big-files.js"
   },
   "keywords": [
     "desktop",

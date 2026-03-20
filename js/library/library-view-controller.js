@@ -24,6 +24,7 @@ export function createLibraryViewController(options = {}) {
     const getFilteredGames = typeof options.getFilteredGames === 'function' ? options.getFilteredGames : () => [];
     const setFilteredGames = typeof options.setFilteredGames === 'function' ? options.setFilteredGames : () => {};
     const getEmulators = typeof options.getEmulators === 'function' ? options.getEmulators : () => [];
+    const getEmulatorConfig = typeof options.getEmulatorConfig === 'function' ? options.getEmulatorConfig : (emulator) => emulator || {};
     const setEmulators = typeof options.setEmulators === 'function' ? options.setEmulators : () => {};
     const fetchEmulators = typeof options.fetchEmulators === 'function' ? options.fetchEmulators : async () => [];
     const renderGames = typeof options.renderGames === 'function' ? options.renderGames : () => {};
@@ -37,6 +38,8 @@ export function createLibraryViewController(options = {}) {
     const setActiveSidebarLibraryLink = typeof options.setActiveSidebarLibraryLink === 'function'
         ? options.setActiveSidebarLibraryLink
         : () => {};
+    const renderCategoriesList = typeof options.renderCategoriesList === 'function' ? options.renderCategoriesList : async () => {};
+    const renderPlatformsList = typeof options.renderPlatformsList === 'function' ? options.renderPlatformsList : async () => {};
     const updateSuggestedPanelVisibility = typeof options.updateSuggestedPanelVisibility === 'function'
         ? options.updateSuggestedPanelVisibility
         : () => {};
@@ -85,8 +88,21 @@ export function createLibraryViewController(options = {}) {
         return 'standalone';
     }
 
-    function getFilteredEmulatorsForSection(sourceRows = getEmulators()) {
-        let rows = Array.isArray(sourceRows) ? [...sourceRows] : [];
+    function getTaggedEmulatorRow(emulator) {
+        const config = getEmulatorConfig(emulator);
+        return {
+            ...emulator,
+            tags: Array.isArray(config?.tags) ? [...config.tags] : []
+        };
+    }
+
+    function getBaseEmulatorRowsForSection(sourceRows = getEmulators(), options = {}) {
+        const {
+            includeSearch = false,
+            includePlatformFilter = false
+        } = options && typeof options === 'object' ? options : {};
+
+        let rows = Array.isArray(sourceRows) ? sourceRows.map((emulator) => getTaggedEmulatorRow(emulator)) : [];
 
         const normalizedType = normalizeEmulatorType(getActiveEmulatorTypeTab()) || 'standalone';
         rows = rows.filter((emu) => inferEmulatorType(emu) === normalizedType);
@@ -95,21 +111,39 @@ export function createLibraryViewController(options = {}) {
             rows = rows.filter((emu) => !!emu.isInstalled);
         }
 
-        const searchTerm = String(document.getElementById('global-game-search')?.value || document.querySelector('.search-bar input')?.value || '').trim().toLowerCase();
-        if (searchTerm) {
-            rows = rows.filter((emu) => {
-                const name = String(emu.name || '').toLowerCase();
-                const platform = String(emu.platform || emu.platformShortName || '').toLowerCase();
-                const filePath = String(emu.filePath || '').toLowerCase();
-                return name.includes(searchTerm) || platform.includes(searchTerm) || filePath.includes(searchTerm);
-            });
+        if (includeSearch) {
+            const searchTerm = String(document.getElementById('global-game-search')?.value || document.querySelector('.search-bar input')?.value || '').trim().toLowerCase();
+            if (searchTerm) {
+                rows = rows.filter((emu) => {
+                    const name = String(emu.name || '').toLowerCase();
+                    const platform = String(emu.platform || emu.platformShortName || '').toLowerCase();
+                    const filePath = String(emu.filePath || '').toLowerCase();
+                    const tags = Array.isArray(emu?.tags) ? emu.tags : [];
+                    return name.includes(searchTerm)
+                        || platform.includes(searchTerm)
+                        || filePath.includes(searchTerm)
+                        || tags.some((tag) => String(tag || '').toLowerCase().includes(searchTerm));
+                });
+            }
         }
 
-        const platformFilter = document.getElementById('platform-filter');
-        const selectedPlatform = String(platformFilter?.value || 'all').trim().toLowerCase();
-        if (selectedPlatform && selectedPlatform !== 'all') {
-            rows = rows.filter((emu) => String(emu?.platformShortName || '').trim().toLowerCase() === selectedPlatform);
+        if (includePlatformFilter) {
+            const platformFilter = document.getElementById('platform-filter');
+            const selectedPlatform = String(platformFilter?.value || 'all').trim().toLowerCase();
+            if (selectedPlatform && selectedPlatform !== 'all') {
+                rows = rows.filter((emu) => String(emu?.platformShortName || '').trim().toLowerCase() === selectedPlatform);
+            }
         }
+
+        return rows;
+    }
+
+    function getFilteredEmulatorsForSection(sourceRows = getEmulators()) {
+        let rows = getBaseEmulatorRowsForSection(sourceRows, {
+            includeSearch: true,
+            includePlatformFilter: true
+        });
+        rows = applyCategoryFilter(rows);
 
         const sortFilter = document.getElementById('sort-filter');
         const selectedSort = String(sortFilter?.value || 'name').trim().toLowerCase();
@@ -142,9 +176,15 @@ export function createLibraryViewController(options = {}) {
             activeType: getActiveEmulatorTypeTab(),
             onTypeChange: (nextType) => {
                 setActiveEmulatorTypeTab(normalizeEmulatorType(nextType) || 'standalone');
+                initializePlatformFilterOptions(applyCategoryFilter(getBaseEmulatorRowsForSection()));
+                void renderCategoriesList();
+                void renderPlatformsList();
                 renderEmulators(getFilteredEmulatorsForSection(), getEmulatorRenderOptions());
             },
             onRefresh: () => {
+                initializePlatformFilterOptions(applyCategoryFilter(getBaseEmulatorRowsForSection()));
+                void renderCategoriesList();
+                void renderPlatformsList();
                 renderEmulators(getFilteredEmulatorsForSection(), getEmulatorRenderOptions());
             }
         };
@@ -192,8 +232,10 @@ export function createLibraryViewController(options = {}) {
         const slider = document.getElementById('view-size-slider');
         if (!slider) return;
 
-        const activeView = document.querySelector('.view-btn.active')?.dataset?.view || 'cover';
-        const isLocked = activeView === 'random';
+        const activeView = document.querySelector('.view-controls .view-btn.active')?.dataset?.view
+            || document.querySelector('.view-btn.active')?.dataset?.view
+            || 'cover';
+        const isLocked = getActiveTopSection() !== 'library' || activeView === 'random';
 
         slider.disabled = isLocked;
         const wrapper = slider.closest('.view-size-control');
@@ -316,23 +358,28 @@ export function createLibraryViewController(options = {}) {
         return rows;
     }
 
-    async function renderActiveLibraryView() {
+    async function renderActiveLibraryView(options = {}) {
         if (getActiveTopSection() !== 'library') return;
+        const renderOptions = options && typeof options === 'object' ? options : {};
+        const activeView = document.querySelector('.view-btn.active')?.dataset?.view || 'cover';
+        const isRandomView = String(activeView).trim().toLowerCase() === 'random';
         updateSuggestedPanelVisibility();
 
         if (getActiveLibrarySection() === 'emulators') {
             if (!getEmulators().length) await refreshEmulatorsState();
-            initializePlatformFilterOptions(getEmulators());
+            initializePlatformFilterOptions(applyCategoryFilter(getBaseEmulatorRowsForSection()));
             renderEmulators(getFilteredEmulatorsForSection(), getEmulatorRenderOptions());
             return;
         }
 
-        initializePlatformFilterOptions(getGames());
+        initializePlatformFilterOptions(applyCategoryFilter(getGames()));
         applyFilters(false);
         if (getActiveLibrarySection() === suggestedSectionKey) {
             const suggestedRows = getSectionFilteredGames();
             if (suggestedRows.length === 0) {
-                const activeView = document.querySelector('.view-btn.active')?.dataset?.view || 'cover';
+                const activeView = document.querySelector('.view-controls .view-btn.active')?.dataset?.view
+                    || document.querySelector('.view-btn.active')?.dataset?.view
+                    || 'cover';
                 if (gamesContainer) {
                     const coverCardMode = getStoredCoverCardMode(localStorage);
                     gamesContainer.className = buildGamesContainerClass(activeView, coverCardMode);
@@ -341,7 +388,13 @@ export function createLibraryViewController(options = {}) {
                 return;
             }
         }
-        renderGames(getSectionFilteredGames());
+        renderGames(getSectionFilteredGames(), {
+            preserveScroll: isRandomView ? false : !!renderOptions.preserveScroll,
+            scrollToCurrentGame: !!renderOptions.scrollToCurrentGame,
+            anchorGameId: Number(renderOptions.anchorGameId || 0),
+            preferCurrentGame: renderOptions.preferCurrentGame !== false,
+            currentGameBlock: String(renderOptions.currentGameBlock || 'center')
+        });
     }
 
     async function setActiveLibrarySection(section) {

@@ -1,7 +1,7 @@
 /* Theme Variables */
 :root {
     /* Dark Theme */
-    --brand-color: #2f9ec0;
+    --brand-color: #335371;
     --logo-brand-color: var(--brand-color);
     --bg-primary: #0b1220;
     --bg-secondary: #121c2f;
@@ -14,7 +14,7 @@
     --accent-color: color-mix(in srgb, var(--brand-color), white 20%);
     --accent-light: color-mix(in srgb, var(--brand-color), white 10%);
     --accent-hover: color-mix(in srgb, var(--accent-color), black 12%);
-    --accent-color-rgb: 102, 204, 255;
+    --accent-color-rgb: 92, 117, 141;
     --success-color: #4caf50;
     --success-dark: #45a049;
     --success-color-rgb: 76, 175, 80;
@@ -135,7 +135,7 @@
 
 /* Light Theme */
 [data-theme="light"] {
-    --brand-color: #2f9ec0;
+    --brand-color: #335371;
     --logo-brand-color: var(--brand-color);
     --bg-primary: #dfeaf6;
     --bg-secondary: #edf4fb;
@@ -148,7 +148,7 @@
     --accent-color: color-mix(in srgb, var(--brand-color), white 20%);
     --accent-light: color-mix(in srgb, var(--brand-color), white 10%);
     --accent-hover: color-mix(in srgb, var(--accent-color), black 8%);
-    --accent-color-rgb: 102, 204, 255;
+    --accent-color-rgb: 92, 117, 141;
     --success-color: #4caf50;
     --success-dark: #388e3c;
     --success-color-rgb: 76, 175, 80;

@@ -261,7 +261,7 @@ fn main() {
                 }
                 let _ = app_core::emubro_invoke_impl(
                     "window:set-taskbar-icon".to_string(),
-                    vec![json!({ "color": "#2f9ec0" })],
+                    vec![json!({ "color": "#335371" })],
                     main_window,
                 );
             }

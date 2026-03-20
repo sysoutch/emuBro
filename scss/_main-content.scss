@@ -49,7 +49,7 @@ body.dock-resizing {
 
 /* Drag and Drop Zone */
 .main-content.drag-over {
-    background: rgba(102, 204, 255, 0.1);
+    background: rgba(var(--accent-color-rgb), 0.1);
     border: 2px dashed var(--accent-color);
 }
 
@@ -59,7 +59,7 @@ body.dock-resizing {
     display: none;
     align-items: center;
     justify-content: center;
-    background: rgba(102, 204, 255, 0.2);
+    background: rgba(var(--accent-color-rgb), 0.2);
     border: 3px dashed var(--accent-color);
     border-radius: 8px;
     z-index: 1000;

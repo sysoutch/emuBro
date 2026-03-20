@@ -156,7 +156,7 @@ export function resetThemeForm(options = {}) {
         'color-bg-primary': '#1e1e1e',
         'color-text-primary': '#ffffff',
         'color-text-secondary': '#cccccc',
-        'color-accent': '#66ccff',
+        'color-accent': '#5c758d',
         'color-bg-secondary': '#2d2d2d',
         'color-border': '#444444',
         'color-bg-header': '#2d2d2d',
@@ -168,8 +168,8 @@ export function resetThemeForm(options = {}) {
         'color-danger': '#f44336',
         'color-text-tertiary': '#9fb0c9',
         'color-warning': '#ffcc00',
-        'color-brand': '#2f9ec0',
-        'color-accent-hover': '#2aa7cc',
+        'color-brand': '#335371',
+        'color-accent-hover': '#4f657a',
         'color-glass-surface': '#11213a',
         'color-glass-surface-strong': '#102037',
         'color-glass-border': '#4f6380',
@@ -189,7 +189,7 @@ export function resetThemeForm(options = {}) {
     if (glassToggle) glassToggle.checked = true;
 
     const baseColorInput = document.getElementById('theme-base-color');
-    if (baseColorInput) baseColorInput.value = '#5aa9ff';
+    if (baseColorInput) baseColorInput.value = '#335371';
     const variantInput = document.getElementById('theme-basic-variant');
     if (variantInput) variantInput.value = 'auto';
     const intensityInput = document.getElementById('theme-basic-intensity');
@@ -202,7 +202,7 @@ export function resetThemeForm(options = {}) {
     if (basicBrandStrengthInput) basicBrandStrengthInput.value = String(DEFAULT_BASIC_BRAND_STRENGTH);
     updateBasicBrandStrengthValueLabel(DEFAULT_BASIC_BRAND_STRENGTH);
     const basicBrandColorInput = document.getElementById('theme-basic-brand-color');
-    if (basicBrandColorInput) basicBrandColorInput.value = '#2f9ec0';
+    if (basicBrandColorInput) basicBrandColorInput.value = '#335371';
     setBasicBrandControlState(true, DEFAULT_BASIC_BRAND_MODE);
 
     const textFxEnabledInput = document.getElementById('theme-textfx-enabled');

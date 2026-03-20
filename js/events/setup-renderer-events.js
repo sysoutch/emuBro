@@ -328,11 +328,110 @@ export function setupRendererEventListeners(options = {}) {
     }
 
     const viewControlsEl = document.querySelector('.view-controls');
+    const viewModesPopupBtn = document.getElementById('view-modes-popup-btn');
+    const viewModesPopupBtnLabelEl = viewModesPopupBtn?.querySelector('span:last-child')
+        || viewModesPopupBtn?.querySelector('span')
+        || null;
+    let viewModesFloatingMenuEl = null;
     const contentWidthHost = viewControlsEl
         || document.querySelector('.game-content-wrapper')
         || document.querySelector('.game-grid')
         || document.querySelector('.game-header')
         || document.body;
+    const readViewLabel = (button) => {
+        if (!button) return '';
+        const text = String(button.textContent || '').replace(/\s+/g, ' ').trim();
+        return text || String(button.dataset?.view || '').trim();
+    };
+    const getViewButtons = () => Array.from(document.querySelectorAll('.view-controls .view-btn'));
+    const getActiveViewButton = () => document.querySelector('.view-controls .view-btn.active');
+    const syncViewModesPopupButtonLabel = () => {
+        if (!viewModesPopupBtn) return;
+        const activeLabel = readViewLabel(getActiveViewButton()) || 'Views';
+        viewModesPopupBtn.title = `View Modes (${activeLabel})`;
+        viewModesPopupBtn.setAttribute('aria-label', `View Modes (${activeLabel})`);
+        if (viewModesPopupBtnLabelEl) {
+            viewModesPopupBtnLabelEl.textContent = activeLabel;
+        }
+    };
+    const destroyViewModesFloatingMenu = () => {
+        if (!viewModesFloatingMenuEl) return;
+        try {
+            viewModesFloatingMenuEl.remove();
+        } catch (_error) {}
+        viewModesFloatingMenuEl = null;
+        viewModesPopupBtn?.classList.remove('is-open');
+        viewModesPopupBtn?.setAttribute('aria-expanded', 'false');
+    };
+    const positionViewModesFloatingMenu = () => {
+        if (!viewModesFloatingMenuEl || !viewModesPopupBtn) return;
+        const rect = viewModesPopupBtn.getBoundingClientRect();
+        const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+        const margin = 8;
+
+        const maxWidth = Math.max(220, viewportWidth - (margin * 2));
+        const preferredWidth = Math.max(220, Math.min(280, Math.round(rect.width + 120)));
+        viewModesFloatingMenuEl.style.width = `${Math.min(preferredWidth, maxWidth)}px`;
+        viewModesFloatingMenuEl.style.maxWidth = `${maxWidth}px`;
+        viewModesFloatingMenuEl.style.left = `${Math.max(margin, rect.left)}px`;
+        viewModesFloatingMenuEl.style.top = `${Math.max(margin, rect.bottom + 6)}px`;
+
+        const menuRect = viewModesFloatingMenuEl.getBoundingClientRect();
+        let left = rect.left;
+        if (left + menuRect.width > viewportWidth - margin) {
+            left = viewportWidth - margin - menuRect.width;
+        }
+        if (left < margin) left = margin;
+
+        let top = rect.bottom + 6;
+        if (top + menuRect.height > viewportHeight - margin) {
+            top = rect.top - menuRect.height - 6;
+        }
+        if (top < margin) top = margin;
+
+        viewModesFloatingMenuEl.style.left = `${Math.round(left)}px`;
+        viewModesFloatingMenuEl.style.top = `${Math.round(top)}px`;
+    };
+    const renderViewModesPopup = () => {
+        if (!viewControlsEl?.classList.contains('is-views-compact')) return;
+        destroyViewModesFloatingMenu();
+        const menu = document.createElement('div');
+        menu.className = 'filter-pair-floating-menu view-controls-floating-menu';
+        menu.setAttribute('role', 'dialog');
+        menu.setAttribute('aria-label', 'View modes');
+
+        const block = document.createElement('div');
+        block.className = 'filter-pair-compact-block';
+
+        const label = document.createElement('div');
+        label.className = 'filter-pair-compact-label';
+        label.textContent = 'Views';
+        block.appendChild(label);
+
+        const optionsWrap = document.createElement('div');
+        optionsWrap.className = 'view-controls-floating-options';
+        getViewButtons().forEach((viewBtn) => {
+            const optionBtn = document.createElement('button');
+            optionBtn.type = 'button';
+            optionBtn.className = 'view-controls-floating-option';
+            if (viewBtn.classList.contains('active')) optionBtn.classList.add('is-active');
+            optionBtn.textContent = readViewLabel(viewBtn);
+            optionBtn.addEventListener('click', () => {
+                destroyViewModesFloatingMenu();
+                viewBtn.click();
+            });
+            optionsWrap.appendChild(optionBtn);
+        });
+
+        block.appendChild(optionsWrap);
+        menu.appendChild(block);
+        document.body.appendChild(menu);
+        viewModesFloatingMenuEl = menu;
+        viewModesPopupBtn?.classList.add('is-open');
+        viewModesPopupBtn?.setAttribute('aria-expanded', 'true');
+        positionViewModesFloatingMenu();
+    };
     const createElementWidthQuery = (maxWidthPx, hostEl) => {
         const target = hostEl || document.body;
         const listeners = new Set();
@@ -577,28 +676,50 @@ export function setupRendererEventListeners(options = {}) {
         return { close, isOpen, setOpenState, compactQuery };
     };
 
+    // Keep the large library toolbar from drifting into horizontal overflow on
+    // the second-largest window state by compacting filter controls sooner
+    // than the old fixed breakpoints did.
+    const LARGE_VIEW_CONTROLS_COMPACT_WIDTH = 1680;
+    const LANGUAGE_CONTROLS_COLLAPSE_WIDTH = LARGE_VIEW_CONTROLS_COMPACT_WIDTH;
     const superCompactQuery = createElementWidthQuery(1240, contentWidthHost);
-    const filtersCompactQuery = createElementWidthQuery(1500, contentWidthHost);
-    const regionLanguageCompactQuery = createElementWidthQuery(1500, contentWidthHost);
-    const groupSortCompactQuery = createElementWidthQuery(1360, contentWidthHost);
+    const filtersCompactQuery = createElementWidthQuery(LARGE_VIEW_CONTROLS_COMPACT_WIDTH, contentWidthHost);
+    const regionLanguageCompactQuery = createElementWidthQuery(LANGUAGE_CONTROLS_COLLAPSE_WIDTH, contentWidthHost);
+    const groupSortCompactQuery = createElementWidthQuery(LANGUAGE_CONTROLS_COLLAPSE_WIDTH, contentWidthHost);
+    const viewModesCompactQuery = createElementWidthQuery(1360, contentWidthHost);
     const compactLayoutHostEl = viewControlsEl || document.querySelector('.game-header');
     const filtersEl = document.querySelector('.view-controls .filters') || document.querySelector('.game-header .filters');
 
     const applyFilterCompactClasses = () => {
+        const sidebarExpanded = document.body.classList.contains('sidebar-is-expanded');
+        const panelDocked = document.body.classList.contains('panel-docked');
+        const layoutConstrained = sidebarExpanded || panelDocked;
+        const layoutTight = sidebarExpanded && panelDocked;
         const superCompact = !!superCompactQuery.matches;
-        const anyCompact = !!filtersCompactQuery.matches;
-        const regionCompact = !!regionLanguageCompactQuery.matches;
-        const groupCompact = !!groupSortCompactQuery.matches;
+        const anyCompact = !!filtersCompactQuery.matches || layoutConstrained;
+        const regionCompact = !!regionLanguageCompactQuery.matches || layoutConstrained;
+        const groupCompact = !!groupSortCompactQuery.matches || layoutConstrained;
+        const viewsCompact = !!viewModesCompactQuery.matches || layoutTight;
 
         if (compactLayoutHostEl) {
             compactLayoutHostEl.classList.toggle('is-content-compact', anyCompact);
+        }
+        if (viewControlsEl) {
+            viewControlsEl.classList.toggle('is-views-compact', viewsCompact);
+            viewControlsEl.classList.toggle('is-layout-constrained', layoutConstrained);
+            viewControlsEl.classList.toggle('is-layout-tight', layoutTight);
         }
         if (filtersEl) {
             filtersEl.classList.toggle('is-super-compact', superCompact);
             filtersEl.classList.toggle('is-content-compact', anyCompact);
             filtersEl.classList.toggle('is-region-language-compact', regionCompact);
             filtersEl.classList.toggle('is-group-sort-compact', groupCompact);
+            filtersEl.classList.toggle('is-layout-constrained', layoutConstrained);
+            filtersEl.classList.toggle('is-layout-tight', layoutTight);
         }
+        if (!viewsCompact) {
+            destroyViewModesFloatingMenu();
+        }
+        syncViewModesPopupButtonLabel();
     };
 
     const regionLanguagePair = initCompactFilterPair({
@@ -637,6 +758,7 @@ export function setupRendererEventListeners(options = {}) {
         applyFilterCompactClasses();
         if (!regionLanguageCompactQuery.matches || !filtersCompactQuery.matches) regionLanguagePair.close();
         if (!groupSortCompactQuery.matches || !filtersCompactQuery.matches) groupSortPair.close();
+        if (!viewModesCompactQuery.matches) destroyViewModesFloatingMenu();
     };
 
     applyFilterCompactClasses();
@@ -645,7 +767,8 @@ export function setupRendererEventListeners(options = {}) {
         superCompactQuery,
         filtersCompactQuery,
         regionLanguagePair.compactQuery,
-        groupSortPair.compactQuery
+        groupSortPair.compactQuery,
+        viewModesCompactQuery
     ].filter(Boolean);
     queries.forEach((mq) => {
         if (typeof mq.addEventListener === 'function') {
@@ -655,10 +778,43 @@ export function setupRendererEventListeners(options = {}) {
         }
     });
 
+    viewModesPopupBtn?.addEventListener('click', (event) => {
+        if (!viewControlsEl?.classList.contains('is-views-compact')) return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (viewModesFloatingMenuEl) {
+            destroyViewModesFloatingMenu();
+            return;
+        }
+        renderViewModesPopup();
+    });
+
+    document.addEventListener('click', (event) => {
+        if (!viewModesFloatingMenuEl) return;
+        if (viewModesFloatingMenuEl.contains(event.target)) return;
+        if (viewModesPopupBtn && (event.target === viewModesPopupBtn || viewModesPopupBtn.contains(event.target))) return;
+        destroyViewModesFloatingMenu();
+    });
+
+    window.addEventListener('resize', () => {
+        if (!viewModesFloatingMenuEl) return;
+        if (!viewControlsEl?.classList.contains('is-views-compact')) {
+            destroyViewModesFloatingMenu();
+            return;
+        }
+        positionViewModesFloatingMenu();
+    });
+
+    window.addEventListener('scroll', () => {
+        if (!viewModesFloatingMenuEl) return;
+        positionViewModesFloatingMenu();
+    }, true);
+
     document.addEventListener('keydown', (event) => {
         if (event.key !== 'Escape') return;
         regionLanguagePair.close();
         groupSortPair.close();
+        destroyViewModesFloatingMenu();
     });
 
     // Theme Actions
@@ -970,11 +1126,19 @@ export function setupRendererEventListeners(options = {}) {
             const nextView = String(e.currentTarget?.dataset?.view || 'cover').trim().toLowerCase();
             document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
             e.currentTarget.classList.add('active');
+            syncViewModesPopupButtonLabel();
+            destroyViewModesFloatingMenu();
             updateViewSizeControlState();
             applyGamesContainerClass(nextView);
             syncCoverCardModeControls();
             if (getActiveTopSection() !== 'library') return;
-            await renderActiveLibraryView();
+            const isRandomView = nextView === 'random';
+            await renderActiveLibraryView({
+                preserveScroll: isRandomView ? false : true,
+                scrollToCurrentGame: true,
+                preferCurrentGame: true,
+                currentGameBlock: 'center'
+            });
         });
     });
 
@@ -987,12 +1151,17 @@ export function setupRendererEventListeners(options = {}) {
             applyGamesContainerClass();
             syncCoverCardModeControls();
             if (getActiveTopSection() !== 'library' || getActiveLibrarySection() === 'emulators') return;
-            void renderActiveLibraryView();
+            void renderActiveLibraryView({
+                preserveScroll: true,
+                scrollToCurrentGame: false,
+                preferCurrentGame: true
+            });
         });
     });
 
     applyGamesContainerClass();
     syncCoverCardModeControls();
+    syncViewModesPopupButtonLabel();
 
     // Header Navigation
     const navLinks = document.querySelectorAll('.navigation a');
@@ -1025,6 +1194,142 @@ export function setupRendererEventListeners(options = {}) {
             await setActiveLibrarySection(e.currentTarget.dataset.view || 'all');
             syncCoverCardModeControls();
         });
+    });
+
+    const sidebarContent = document.getElementById('sidebar-content');
+    const afterNextFrame = (callback) => {
+        if (typeof callback !== 'function') return;
+        if (typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(() => callback());
+            return;
+        }
+        window.setTimeout(callback, 0);
+    };
+    const normalizeSupportMode = (value) => {
+        const normalized = String(value || 'troubleshoot').trim().toLowerCase();
+        return normalized === 'chat' || normalized === 'help' ? normalized : 'troubleshoot';
+    };
+    const normalizeSupportIssue = (value) => String(value || '').trim().toLowerCase();
+    const normalizeCommunityPlatform = (value) => {
+        const normalized = String(value || '').trim().toLowerCase();
+        return normalized || '';
+    };
+    const syncSupportSidebarSelection = (mode = 'troubleshoot', issueType = '') => {
+        const normalizedMode = normalizeSupportMode(mode);
+        const normalizedIssue = normalizeSupportIssue(issueType);
+        if (sidebarContent) {
+            sidebarContent.dataset.activeSupportMode = normalizedMode;
+            sidebarContent.dataset.activeSupportIssue = normalizedIssue;
+        }
+        document.querySelectorAll('#sidebar-content a[data-support-mode-link]').forEach((link) => {
+            const linkMode = normalizeSupportMode(link.dataset.supportModeLink || 'troubleshoot');
+            const linkIssue = normalizeSupportIssue(link.dataset.supportIssue || '');
+            const isActive = normalizedIssue
+                ? linkMode === normalizedMode && linkIssue === normalizedIssue
+                : linkMode === normalizedMode && !linkIssue;
+            link.classList.toggle('active', isActive);
+        });
+    };
+    const syncCommunitySidebarSelection = (platform = '') => {
+        const normalizedPlatform = normalizeCommunityPlatform(platform);
+        if (sidebarContent) {
+            sidebarContent.dataset.activeCommunityPlatform = normalizedPlatform;
+        }
+        document.querySelectorAll('#sidebar-content a[data-community-overview-link]').forEach((link) => {
+            link.classList.toggle('active', !normalizedPlatform);
+        });
+        document.querySelectorAll('#sidebar-content a[data-community-platform-link]').forEach((link) => {
+            const linkPlatform = normalizeCommunityPlatform(link.dataset.communityPlatformLink || '');
+            link.classList.toggle('active', !!normalizedPlatform && linkPlatform === normalizedPlatform);
+        });
+    };
+    const openSupportSidebarRoute = ({ mode = 'troubleshoot', issueType = '' } = {}) => {
+        const normalizedMode = normalizeSupportMode(mode);
+        const normalizedIssue = normalizeSupportIssue(issueType);
+        syncSupportSidebarSelection(normalizedMode, normalizedIssue);
+        setAppMode('support');
+        showSupportView();
+        afterNextFrame(() => {
+            const modeBtn = document.querySelector(`[data-support-mode="${normalizedMode}"]`);
+            modeBtn?.click();
+            if (!normalizedIssue) return;
+            const issueSelect = document.querySelector('[data-support-input="issue-type"]');
+            if (!issueSelect) return;
+            issueSelect.value = normalizedIssue;
+            issueSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+    };
+    const openCommunitySidebarRoute = ({ platform = '' } = {}) => {
+        const normalizedPlatform = normalizeCommunityPlatform(platform);
+        syncCommunitySidebarSelection(normalizedPlatform);
+        setAppMode('community');
+        showCommunityView();
+        if (!normalizedPlatform) return;
+        afterNextFrame(() => {
+            const trigger = document.querySelector(`[data-community-open-platform="${normalizedPlatform}"]`)
+                || document.querySelector(`.community-tab-btn[data-community-platform="${normalizedPlatform}"]`);
+            trigger?.click();
+        });
+    };
+
+    document.querySelectorAll('#sidebar-content a[data-tool-home]').forEach((link) => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            setAppMode('tools');
+            showToolView();
+        });
+    });
+    document.querySelectorAll('#sidebar-content a[data-support-mode-link]').forEach((link) => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            openSupportSidebarRoute({
+                mode: e.currentTarget.dataset.supportModeLink || 'troubleshoot',
+                issueType: e.currentTarget.dataset.supportIssue || ''
+            });
+        });
+    });
+    document.querySelectorAll('#sidebar-content a[data-community-overview-link]').forEach((link) => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            openCommunitySidebarRoute();
+        });
+    });
+    document.querySelectorAll('#sidebar-content a[data-community-platform-link]').forEach((link) => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            openCommunitySidebarRoute({
+                platform: e.currentTarget.dataset.communityPlatformLink || ''
+            });
+        });
+    });
+
+    document.addEventListener('click', (event) => {
+        const supportModeButton = event.target.closest('[data-support-mode]');
+        if (supportModeButton) {
+            syncSupportSidebarSelection(supportModeButton.dataset.supportMode || 'troubleshoot');
+        }
+
+        const communityOverviewButton = event.target.closest('[data-community-action="back-overview"]');
+        if (communityOverviewButton) {
+            syncCommunitySidebarSelection('');
+        }
+
+        const communityOverviewOpenButton = event.target.closest('[data-community-open-platform]');
+        if (communityOverviewOpenButton) {
+            syncCommunitySidebarSelection(communityOverviewOpenButton.dataset.communityOpenPlatform || '');
+        }
+
+        const communityTabButton = event.target.closest('.community-tab-btn[data-community-platform]');
+        if (communityTabButton) {
+            syncCommunitySidebarSelection(communityTabButton.dataset.communityPlatform || '');
+        }
+    });
+
+    document.addEventListener('change', (event) => {
+        const supportIssueSelect = event.target.closest('[data-support-input="issue-type"]');
+        if (!supportIssueSelect || getActiveTopSection() !== 'support') return;
+        const activeMode = document.querySelector('[data-support-mode].is-active')?.dataset?.supportMode || 'troubleshoot';
+        syncSupportSidebarSelection(activeMode, supportIssueSelect.value || '');
     });
 
     window.addEventListener('emubro:games-updated', async () => {
@@ -1275,5 +1580,6 @@ export function setupRendererEventListeners(options = {}) {
 
     window.addEventListener('emubro:layout-width-changed', () => {
         destroyFiltersFloatingMenu();
+        destroyViewModesFloatingMenu();
     });
 }

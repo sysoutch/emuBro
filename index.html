@@ -15,7 +15,7 @@
                 bgTertiary: '#1a263d',
                 textPrimary: '#e7edf8',
                 textSecondary: '#b9c7dc',
-                accentColor: '#32b8de',
+                accentColor: '#5c758d',
                 appGradientAngle: '160deg',
                 appGradientA: '#0b1528',
                 appGradientB: '#0f2236',
@@ -28,7 +28,7 @@
                 bgTertiary: '#d2e3f5',
                 textPrimary: '#17263a',
                 textSecondary: '#5d7694',
-                accentColor: '#3db2d6',
+                accentColor: '#5c758d',
                 appGradientAngle: '160deg',
                 appGradientA: '#dbe9f7',
                 appGradientB: '#e7f3ff',
@@ -54,7 +54,7 @@
                     const b = parseInt(hex.slice(4, 6), 16);
                     return `${r}, ${g}, ${b}`;
                 }
-                return '50, 184, 222';
+                return '92, 117, 141';
             }
 
             function estimateTone(hex) {
@@ -137,8 +137,8 @@
         html[data-booting="1"],
         html[data-booting="1"] body {
             background:
-                radial-gradient(1200px 760px at 8% 8%, rgba(var(--accent-color-rgb, 50, 184, 222), 0.18), transparent 70%),
-                radial-gradient(1000px 700px at 92% 92%, rgba(var(--accent-color-rgb, 50, 184, 222), 0.12), transparent 72%),
+                radial-gradient(1200px 760px at 8% 8%, rgba(var(--accent-color-rgb, 92, 117, 141), 0.18), transparent 70%),
+                radial-gradient(1000px 700px at 92% 92%, rgba(var(--accent-color-rgb, 92, 117, 141), 0.12), transparent 72%),
                 linear-gradient(var(--app-gradient-angle, 160deg), var(--app-gradient-a, #0b1528) 0%, var(--app-gradient-b, #0f2236) 48%, var(--app-gradient-c, #1d2f4a) 100%);
             background-color: var(--bg-primary, #0b1220);
             overflow: hidden;
@@ -322,11 +322,11 @@
 
                         <button class="rail-btn rail-nav" type="button" data-rail-target="tools" title="Tools" data-i18n-title="header.tools">
                             <span class="rail-icon" aria-hidden="true">
-                                <!-- Rocket icon -->
-                                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M14 3c3 1 5 4 5 7-1 1-2 2-3 3l-3-3c1-1 2-2 3-3-1-2-2-3-2-4z"/>
-                                    <path d="M11 6c-3 3-5 6-6 10 4-1 7-3 10-6"/>
-                                    <path d="M9 15l-3 6 6-3"/>
+                                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3.5" y="7.5" width="17" height="11" rx="2.5"/>
+                                    <path d="M9 7.5v-1a3 3 0 0 1 6 0v1"/>
+                                    <path d="M3.5 12.5h17"/>
+                                    <path d="M11 12.5v2h2v-2"/>
                                 </svg>
                             </span>
                             <span class="rail-label" data-i18n="header.tools">Tools</span>
@@ -334,14 +334,10 @@
 
                         <button class="rail-btn rail-nav" type="button" data-rail-target="support" title="Support" data-i18n-title="header.support">
                             <span class="rail-icon" aria-hidden="true">
-                                <!-- Life buoy icon -->
-                                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                    <circle cx="12" cy="12" r="9"/>
-                                    <circle cx="12" cy="12" r="3"/>
-                                    <path d="M18.4 5.6 14 10"/>
-                                    <path d="M10 14 5.6 18.4"/>
-                                    <path d="M18.4 18.4 14 14"/>
-                                    <path d="M10 10 5.6 5.6"/>
+                                <svg viewBox="0 0 448 448" width="22" height="22" fill="currentColor">
+                                    <path d="M384,172.4C384,83.6,312.4,12,224,12S64,83.6,64,172c0,0,0,0,0,0.4C28.4,174.4,0,204,0,240v8c0,37.6,30.4,68,68,68h3.6l28.4,45.2c20,32,54,50.8,91.6,50.8h5.6c3.6,13.6,16,24,30.8,24c17.6,0,32-14.4,32-32c0-17.6-14.4-32-32-32c-14.8,0-27.2,10.4-30.8,24h-5.6c-32,0-61.2-16.4-78-43.6L90.4,316H96c8.8,0,16-7.2,16-16V188c0-8.8-7.2-16-16-16H80c0-79.6,64.4-144,144-144s144,64.4,144,144h-16c-8.8,0-16,7.2-16,16v112c0,8.8,7.2,16,16,16h28c37.6,0,68-30.4,68-68v-8C448,204,419.6,174.4,384,172.4z M228,388c8.8,0,16,7.2,16,16s-7.2,16-16,16s-16-7.2-16-16S219.2,388,228,388z M96,188v112H68c-28.8,0-52-23.2-52-52v-8c0-28.8,23.2-52,52-52H96z M432,248c0,28.8-23.2,52-52,52h-28V188h28c28.8,0,52,23.2,52,52V248z"/>
+                                    <path d="M290.4,72.4c-0.8-0.4-2-1.2-3.2-2c-1.2-0.8-2.4-1.6-3.2-2c-3.6-2.4-8.8-1.2-10.8,2.8S272,79.6,276,82c0.8,0.4,2,1.2,3.2,2s2.4,1.6,3.6,2c1.2,0.8,2.8,1.2,4,1.2c2.8,0,5.2-1.2,6.8-4C295.6,79.6,294.4,74.8,290.4,72.4z"/>
+                                    <path d="M224,52c-34,0-66,14.8-88,40.4c-2.8,3.2-2.4,8.4,0.8,11.2c1.6,1.2,3.2,2,5.2,2c2.4,0,4.4-0.8,6-2.8c19.2-22,46.8-34.8,76-34.8c7.2,0,14.4,0.8,21.6,2.4c4.4,0.8,8.4-2,9.6-6s-2-8.4-6-9.6C240.8,52.8,232.4,52,224,52z"/>
                                 </svg>
                             </span>
                             <span class="rail-label" data-i18n="header.support">Support</span>
@@ -349,9 +345,8 @@
 
                         <button class="rail-btn rail-nav" type="button" data-rail-target="community" title="Community" data-i18n-title="header.community">
                             <span class="rail-icon" aria-hidden="true">
-                                <!-- Chat icon -->
-                                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H8l-5 3 1.5-4.5A8.5 8.5 0 1 1 21 11.5z"/>
+                                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M7.5 18.5 4 20l1.2-3.4A7.5 7.5 0 1 1 19.5 12a7.4 7.4 0 0 1-2.2 5.3A7.4 7.4 0 0 1 12 19.5c-1.6 0-3.1-.4-4.5-1"/>
                                 </svg>
                             </span>
                             <span class="rail-label" data-i18n="header.community">Community</span>
@@ -373,10 +368,9 @@
 
                         <button class="rail-btn rail-nav" type="button" data-rail-target="settings" title="Settings" data-i18n-title="header.settings">
                             <span class="rail-icon" aria-hidden="true">
-                                <!-- Gear icon -->
-                                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/>
-                                    <path d="M19.4 15a7.8 7.8 0 0 0 .1-1l2-1.2-2-3.5-2.3.5a8 8 0 0 0-1.6-1l-.3-2.4H8.7l-.3 2.4a8 8 0 0 0-1.6 1l-2.3-.5-2 3.5 2 1.2a7.8 7.8 0 0 0 .1 1 7.8 7.8 0 0 0-.1 1l-2 1.2 2 3.5 2.3-.5a8 8 0 0 0 1.6 1l.3 2.4h6.6l.3-2.4a8 8 0 0 0 1.6-1l2.3.5 2-3.5-2-1.2a7.8 7.8 0 0 0-.1-1z"/>
+                                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 3.5 13.6 6l3 .4-.8 2.9 2.1 2.1-2.1 2.1.8 2.9-3 .4L12 20.5l-1.6-2.6-3-.4.8-2.9-2.1-2.1 2.1-2.1-.8-2.9 3-.4L12 3.5Z"/>
+                                    <circle cx="12" cy="12" r="2.9"/>
                                 </svg>
                             </span>
                             <span class="rail-label" data-i18n="header.settings">Settings</span>
@@ -384,8 +378,8 @@
                     </div>
                 </div>
 
-                <div class="sidebar-content" id="sidebar-content">
-                    <div class="sidebar-section">
+                <div class="sidebar-content" id="sidebar-content" data-sidebar-context="library">
+                    <div class="sidebar-section" data-sidebar-modes="library">
                         <h3 data-i18n="sidebar.library">Library</h3>
                         <ul>
                             <li class="active"><a href="#" data-view="all" data-i18n="sidebar.allGames">All Games</a></li>
@@ -395,11 +389,11 @@
                             <li><a href="#" data-view="emulators" data-i18n="sidebar.emulators">Emulators</a></li>
                         </ul>
                     </div>
-                    <div class="sidebar-section" id="platforms-sidebar-section">
+                    <div class="sidebar-section" id="platforms-sidebar-section" data-sidebar-modes="library">
                         <h3 data-i18n="sidebar.platforms">Platforms</h3>
                         <ul id="platforms-list"></ul>
                     </div>
-                    <div class="sidebar-section">
+                    <div class="sidebar-section" data-sidebar-modes="library">
                         <h3 data-i18n="sidebar.categories">Categories</h3>
                         <ul id="categories-list">
                             <li><a href="#" data-genre="all" data-i18n="sidebar.all">All</a></li>
@@ -411,7 +405,7 @@
                             <li><a href="#" data-genre="Fighting" data-i18n="sidebar.fighting">Fighting</a></li>
                         </ul>
                     </div>
-                    <div class="sidebar-section">
+                    <div class="sidebar-section" data-sidebar-modes="library">
                         <h3 data-i18n="sidebar.stats">Stats</h3>
                         <div class="stats">
                             <p><span data-i18n="sidebar.totalGames">Total Games</span>: <span id="total-games">0</span></p>
@@ -419,18 +413,61 @@
                             <p><span data-i18n="sidebar.playTime">Play Time</span>: <span id="play-time">0</span> <span data-i18n="sidebar.hours">hours</span></p>
                         </div>
                     </div>
-                    <div class="sidebar-section">
+                    <div class="sidebar-section is-hidden" data-sidebar-modes="tools">
                         <h3 data-i18n="sidebar.tools">Tools</h3>
-                        <ul id="tools-list">
-                            <li><a href="#" data-tool="memory-card" class="active" data-i18n="sidebar.memoryCardReader">Memory Card Reader</a></li>
+                        <ul class="tools-sidebar-list">
+                            <li><a href="#" data-tool-home="true" class="active">Tools Home</a></li>
+                            <li><a href="#" data-tool="remote-library" data-i18n="sidebar.remoteLibrary">Remote Library</a></li>
                             <li><a href="#" data-tool="cover-downloader" data-i18n="sidebar.coverDownloader">Cover Downloader</a></li>
+                            <li><a href="#" data-tool="bios" data-i18n="tools.biosManager">BIOS Manager</a></li>
+                        </ul>
+                    </div>
+                    <div class="sidebar-section is-hidden" data-sidebar-modes="tools">
+                        <h3>Disc + Save</h3>
+                        <ul class="tools-sidebar-list" id="tools-list">
+                            <li><a href="#" data-tool="memory-card" data-i18n="sidebar.memoryCardReader">Memory Card Reader</a></li>
                             <li><a href="#" data-tool="cue-maker" data-i18n="sidebar.cueMaker">CUE Maker</a></li>
                             <li><a href="#" data-tool="ecm-unecm" data-i18n="sidebar.ecmUnecm">ECM/UNECM</a></li>
-                            <li><a href="#" data-tool="remote-library" data-i18n="sidebar.remoteLibrary">Remote Library</a></li>
-                            <li><a href="#" data-tool="bios" data-i18n="tools.biosManager">BIOS Manager</a></li>
                             <li><a href="#" data-tool="rom-ripper" data-i18n="sidebar.romRipper">ROM Ripper</a></li>
+                        </ul>
+                    </div>
+                    <div class="sidebar-section is-hidden" data-sidebar-modes="tools">
+                        <h3>Utility</h3>
+                        <ul class="tools-sidebar-list">
                             <li><a href="#" data-tool="game-database" data-i18n="sidebar.gameDatabase">Game Database</a></li>
                             <li><a href="#" data-tool="cheat-codes" data-i18n="sidebar.cheatCodes">Cheat Codes</a></li>
+                            <li><a href="#" data-tool="gamepad" data-i18n="tools.gamepadTester">Gamepad Tester</a></li>
+                            <li><a href="#" data-tool="monitor" data-i18n="tools.monitorManager">Monitor Manager</a></li>
+                            <li><a href="#" data-tool="create-tool" data-i18n="tools.createNewTool">Create New Tool</a></li>
+                        </ul>
+                    </div>
+                    <div class="sidebar-section is-hidden" data-sidebar-modes="support">
+                        <h3 data-i18n="header.support">Support</h3>
+                        <ul>
+                            <li><a href="#" data-support-mode-link="troubleshoot" class="active" data-i18n="support.modeTroubleshoot">Troubleshoot</a></li>
+                            <li><a href="#" data-support-mode-link="chat" data-i18n="support.modeChat">General Chat</a></li>
+                            <li><a href="#" data-support-mode-link="help" data-i18n="support.modeHelp">Help Docs</a></li>
+                        </ul>
+                    </div>
+                    <div class="sidebar-section is-hidden" data-sidebar-modes="support">
+                        <h3>Common Issues</h3>
+                        <ul>
+                            <li><a href="#" data-support-mode-link="troubleshoot" data-support-issue="launch" data-i18n="support.issueTypes.launch">Game does not launch</a></li>
+                            <li><a href="#" data-support-mode-link="troubleshoot" data-support-issue="performance" data-i18n="support.issueTypes.performance">Low FPS / stutter</a></li>
+                            <li><a href="#" data-support-mode-link="troubleshoot" data-support-issue="controls" data-i18n="support.issueTypes.controls">Controller not detected</a></li>
+                            <li><a href="#" data-support-mode-link="troubleshoot" data-support-issue="save" data-i18n="support.issueTypes.save">Save or memory card issues</a></li>
+                            <li><a href="#" data-support-mode-link="troubleshoot" data-support-issue="bios" data-i18n="support.issueTypes.bios">BIOS missing / invalid</a></li>
+                        </ul>
+                    </div>
+                    <div class="sidebar-section is-hidden" data-sidebar-modes="community">
+                        <h3 data-i18n="header.community">Community</h3>
+                        <ul>
+                            <li><a href="#" data-community-overview-link="true" class="active">Overview</a></li>
+                            <li><a href="#" data-community-platform-link="discord">Discord</a></li>
+                            <li><a href="#" data-community-platform-link="reddit">Reddit</a></li>
+                            <li><a href="#" data-community-platform-link="youtube">YouTube</a></li>
+                            <li><a href="#" data-community-platform-link="bluesky">Bluesky</a></li>
+                            <li><a href="#" data-community-platform-link="twitter">Twitter</a></li>
                         </ul>
                     </div>
                 </div>
@@ -451,6 +488,9 @@
                     <button class="view-btn" data-view="slideshow" data-view-short="Slide" data-i18n="views.slideshow">Slideshow</button>
                     <button class="view-btn" data-view="focus" data-view-short="Focus" data-i18n="views.focus">Focus</button>
                     <button class="view-btn" data-view="random" data-view-short="Rnd" data-i18n="views.random">Random</button>
+                    <button type="button" id="view-modes-popup-btn" class="action-btn small view-modes-popup-btn" title="View Modes" aria-haspopup="dialog" aria-expanded="false">
+                        <span>Views</span>
+                    </button>
 
                     <div class="view-size-control">
                         <label for="view-size-slider" data-i18n="views.size">Size</label>
@@ -518,6 +558,10 @@
                                 </select>
                             </div>
                         </div>
+                        <label id="group-same-names-toggle-wrap" class="group-same-names-toggle">
+                            <input id="group-same-names-toggle" type="checkbox" />
+                            <span data-i18n="filters.groupSameNames">Group same names</span>
+                        </label>
                         <div class="filter-pair-wrapper filter-pair-wrapper-group-sort">
                             <button
                                 id="filters-group-sort-toggle"
@@ -540,10 +584,6 @@
                                 </select>
                             </div>
                         </div>
-                        <label id="group-same-names-toggle-wrap" class="group-same-names-toggle">
-                            <input id="group-same-names-toggle" type="checkbox" />
-                            <span data-i18n="filters.groupSameNames">Group same names</span>
-                        </label>
                     </div>
                 </div>
 
@@ -958,8 +998,8 @@
                                 </label>
                                 <div class="theme-brand-custom-color-row">
                                     <div class="color-input-group">
-                                        <input type="color" id="theme-basic-brand-color" class="color-picker" value="#2f9ec0">
-                                        <input type="text" class="color-text" placeholder="#2f9ec0" readonly>
+                                        <input type="color" id="theme-basic-brand-color" class="color-picker" value="#335371">
+                                        <input type="text" class="color-text" placeholder="#335371" readonly>
                                     </div>
                                 </div>
                             </div>
@@ -1104,7 +1144,7 @@
                                 <label for="color-accent">Accent Color:</label>
                                 <div class="color-input-group">
                                     <input type="color" id="color-accent" class="color-picker">
-                                    <input type="text" class="color-text" placeholder="#66ccff" readonly>
+                                    <input type="text" class="color-text" placeholder="#5C758D" readonly>
                                 </div>
                             </div>
 
@@ -1200,7 +1240,7 @@
                                 <label for="color-brand">Brand Color:</label>
                                 <div class="color-input-group">
                                     <input type="color" id="color-brand" class="color-picker">
-                                    <input type="text" class="color-text" placeholder="#2f9ec0" readonly>
+                                    <input type="text" class="color-text" placeholder="#335371" readonly>
                                 </div>
                             </div>
 

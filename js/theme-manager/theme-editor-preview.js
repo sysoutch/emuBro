@@ -157,7 +157,7 @@ export function createThemeEditorPreview(deps = {}) {
             textSecondary: palette.textSecondary
         });
         palette.logoBrandColor = logoBrandColor;
-        const globalBrandColor = parseColorToHex(palette.brandColor) || parseColorToHex(deriveThemeVisualVars(palette).brandColor) || '#2f9ec0';
+        const globalBrandColor = parseColorToHex(palette.brandColor) || parseColorToHex(deriveThemeVisualVars(palette).brandColor) || '#335371';
         if (basicBrandColorInput && brandEnabled && brandMode === 'custom') {
             basicBrandColorInput.value = parseColorToHex(manualBrandColor || logoBrandColor) || logoBrandColor;
         }

@@ -851,6 +851,77 @@ function getBridgeFallback(channel, args = []) {
       };
     case "community:close-in-app-windows":
       return { success: true, closed: 0 };
+    case "community:get-platform-feed": {
+      const platform = String(payload?.platform || "discord").trim().toLowerCase();
+      const base = {
+        success: true,
+        platform,
+        fetchedAt: new Date().toISOString(),
+        items: []
+      };
+      if (platform === "bluesky") {
+        return {
+          ...base,
+          mode: "feed",
+          items: [
+            {
+              id: "fallback-bsky-1",
+              title: "Shell fallback Bluesky post",
+              excerpt: "This preview appears because the native community feed bridge is unavailable in browser mode.",
+              url: "https://bsky.app/profile/emubro.bsky.social",
+              publishedAt: new Date().toISOString(),
+              author: "@emubro.bsky.social",
+              thumbnail: "",
+              badge: "Post",
+              stats: ["browser fallback"]
+            }
+          ]
+        };
+      }
+      if (platform === "reddit") {
+        return {
+          ...base,
+          mode: "feed",
+          items: [
+            {
+              id: "fallback-reddit-1",
+              title: "Shell fallback Reddit thread",
+              excerpt: "Open the subreddit in your browser for the full live feed when the desktop bridge is unavailable.",
+              url: "https://www.reddit.com/r/emuBro/",
+              publishedAt: Date.now(),
+              author: "u/emubro",
+              thumbnail: "",
+              badge: "Thread",
+              stats: ["browser fallback"]
+            }
+          ]
+        };
+      }
+      if (platform === "youtube") {
+        return {
+          ...base,
+          mode: "feed",
+          items: [
+            {
+              id: "fallback-youtube-1",
+              title: "Shell fallback YouTube upload",
+              excerpt: "The desktop bridge normally loads the latest channel uploads here.",
+              url: "https://www.youtube.com/channel/UC9zQuEiPjnRv2LXVqR57K1Q",
+              publishedAt: new Date().toISOString(),
+              author: "emuBro",
+              thumbnail: "",
+              badge: "Video",
+              stats: ["browser fallback"]
+            }
+          ]
+        };
+      }
+      return {
+        ...base,
+        mode: platform === "twitter" ? "limited" : "guide",
+        message: "This browser-mode fallback keeps the platform view alive, but live community feeds need the desktop bridge."
+      };
+    }
     case "system:get-specs":
       return {
         success: true,
@@ -861,23 +932,11 @@ function getBridgeFallback(channel, args = []) {
           ].join("\n")
         }
       };
-    case "suggestions:suggest-tags-for-game": {
-      const game = payload?.game || {};
-      const availableTags = Array.isArray(payload?.availableTags) ? payload.availableTags : buildFallbackTagCatalog();
-      const haystack = [
-        String(game?.name || ""),
-        String(game?.genre || ""),
-        String(game?.description || "")
-      ]
-        .join(" ")
-        .toLowerCase();
-      const tags = availableTags
-        .map((row) => normalizeFallbackTagId(row?.id || row?.label))
-        .filter(Boolean)
-        .filter((tagId) => haystack.includes(tagId.replace(/-/g, " ")))
-        .slice(0, Number(payload?.maxTags || 6));
-      return { success: true, tags };
-    }
+    case "suggestions:suggest-tags-for-game":
+      return {
+        success: false,
+        message: "LLM tag suggestion fallback is disabled. Use the desktop runtime with a configured AI/LLM provider."
+      };
     case "suggestions:generate-description-for-game": {
       const game = payload?.game || {};
       const name = String(game?.name || "This game").trim();
@@ -921,20 +980,9 @@ async function invokeChannel(channel, ...args) {
     }
 
     if (channel === "suggestions:emulation-support") {
-      const payload = args[0] || {};
       return {
-        success: true,
-        provider: String(payload?.provider || "web"),
-        answer: [
-          "## Quick Troubleshooting",
-          "- Verify ROM and emulator paths are valid.",
-          "- Confirm required BIOS files exist.",
-          "- Re-scan games and emulators after settings changes.",
-          "",
-          `Issue: ${String(payload?.issueSummary || "Not provided")}`,
-          `Platform: ${String(payload?.platform || "Not provided")}`,
-          `Emulator: ${String(payload?.emulator || "Not provided")}`
-        ].join("\n")
+        success: false,
+        message: "LLM support chat fallback is disabled. Use the desktop runtime with a configured AI/LLM provider."
       };
     }
 
@@ -979,6 +1027,7 @@ async function bindNativeEventBridge() {
 
   const eventNames = [
     "emubro:launch",
+    "emubro:support-stream",
     "window-moved",
     "window:maximized-changed",
     "app:update-status",
@@ -1034,6 +1083,7 @@ const emubro = {
   minimizeWindow: () => invokeChannel("window:minimize"),
   startWindowDragging: () => invokeChannel("window:start-dragging"),
   onLaunch: (callback) => onEvent("emubro:launch", callback),
+  onSupportStream: (callback) => onEvent("emubro:support-stream", callback),
   onWindowMoved: (callback) => onEvent("window-moved", callback),
   onWindowMaximizedChanged: (callback) => onEvent("window:maximized-changed", callback),
   onUpdateStatus: (callback) => onEvent("app:update-status", callback),

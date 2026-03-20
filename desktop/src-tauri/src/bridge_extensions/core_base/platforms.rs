@@ -1,5 +1,62 @@
 use super::*;
 
+fn platform_code_aliases(platform_short_name: &str) -> Vec<String> {
+    let normalized = normalize_platform_short_name(platform_short_name);
+    if normalized.is_empty() {
+        return Vec::new();
+    }
+    let compact = normalized.replace(['-', '_', ' '], "");
+    let mut out = vec![normalized.clone()];
+    if !compact.is_empty() && compact != normalized {
+        out.push(compact);
+    }
+    match normalized.as_str() {
+        "dreamcast" => out.push("dc".to_string()),
+        "gameboy" => out.push("gb".to_string()),
+        "wii-u" => out.push("wiiu".to_string()),
+        _ => {}
+    }
+    out.sort();
+    out.dedup();
+    out
+}
+
+fn gamelist_has_codes(platform_short_name: &str) -> bool {
+    let candidates = platform_code_aliases(platform_short_name);
+    if candidates.is_empty() {
+        return false;
+    }
+    let Some(gamelist_dir) = find_gamelist_dir() else {
+        return false;
+    };
+    for candidate in candidates {
+        let path = gamelist_dir.join(format!("{}.json", candidate));
+        let Ok(text) = fs::read_to_string(path) else {
+            continue;
+        };
+        let Ok(Value::Array(entries)) = serde_json::from_str::<Value>(&text) else {
+            continue;
+        };
+        if entries.iter().any(|entry| {
+            entry
+                .get("game_gameCode")
+                .and_then(|v| v.as_str())
+                .map(|v| !v.trim().is_empty())
+                .unwrap_or(false)
+        }) {
+            return true;
+        }
+    }
+    false
+}
+
+fn platform_has_disc_codes_default(platform_short_name: &str) -> bool {
+    matches!(
+        normalize_platform_short_name(platform_short_name).as_str(),
+        "psx" | "ps2" | "ps3" | "psp"
+    )
+}
+
 pub(crate) fn normalize_path_list(input: Option<&Value>) -> Vec<Value> {
     let mut out = Vec::<Value>::new();
     if let Some(Value::Array(values)) = input {
@@ -89,6 +146,37 @@ pub(crate) fn load_platform_configs() -> Vec<Value> {
             obj.insert("platformDir".to_string(), Value::String(platform_dir.clone()));
             if obj.get("shortName").is_none() {
                 obj.insert("shortName".to_string(), Value::String(platform_dir));
+            }
+            let short_name = obj
+                .get("shortName")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim()
+                .to_lowercase();
+            if !short_name.is_empty() {
+                let explicit_has_codes = obj.get("hasGameCodes").and_then(|v| v.as_bool());
+                let explicit_disc_codes = obj.get("hasDiscGameCodes").and_then(|v| v.as_bool());
+                let explicit_cover_codes = obj.get("hasCoverLookupCodes").and_then(|v| v.as_bool());
+                let resolved_cover_codes = explicit_cover_codes.unwrap_or_else(|| {
+                    if let Some(flag) = explicit_has_codes {
+                        if !flag {
+                            return false;
+                        }
+                    }
+                    gamelist_has_codes(&short_name)
+                });
+                let resolved_disc_codes = explicit_disc_codes.unwrap_or_else(|| {
+                    if let Some(flag) = explicit_has_codes {
+                        if !flag {
+                            return false;
+                        }
+                    }
+                    platform_has_disc_codes_default(&short_name)
+                });
+                let resolved_has_codes = explicit_has_codes.unwrap_or(resolved_disc_codes || resolved_cover_codes);
+                obj.insert("hasGameCodes".to_string(), Value::Bool(resolved_has_codes));
+                obj.insert("hasDiscGameCodes".to_string(), Value::Bool(resolved_disc_codes));
+                obj.insert("hasCoverLookupCodes".to_string(), Value::Bool(resolved_cover_codes));
             }
         }
         out.push(parsed);

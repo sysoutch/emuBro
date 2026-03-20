@@ -66,7 +66,7 @@ export function normalizeBasicBrandUseAccent(value) {
 }
 
 export function resolveBasicBrandColor(accentColor, manualBrandColor, options = {}) {
-    const accent = parseColorToHex(accentColor || '') || '#66ccff';
+    const accent = parseColorToHex(accentColor || '') || '#5c758d';
     const enabled = normalizeBasicBrandUseAccent(options.enabled);
     const fallbackText = parseColorToHex(options.textSecondary || '') || '#b9c7dc';
     if (!enabled) {
@@ -478,7 +478,7 @@ export function resolveThemeColorsForRuntime(theme) {
 }
 
 export function buildPaletteMatchedLogoTextEffect(colors = {}, options = {}) {
-    const accent = parseColorToHex(colors?.accentColor || '') || '#66ccff';
+    const accent = parseColorToHex(colors?.accentColor || '') || '#5c758d';
     const brand = parseColorToHex(colors?.brandColor || '') || darkenHex(accent, 24);
     const bgPrimary = parseColorToHex(colors?.bgPrimary || '') || '#0b1220';
     const tone = String(options.tone || inferUiToneFromColor(bgPrimary, 'dark')).toLowerCase() === 'light' ? 'light' : 'dark';

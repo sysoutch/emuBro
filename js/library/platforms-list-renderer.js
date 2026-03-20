@@ -9,6 +9,9 @@ export function createPlatformsListRenderer(options = {}) {
     const getPlatformFilterElement = typeof options.getPlatformFilterElement === 'function'
         ? options.getPlatformFilterElement
         : () => document.getElementById('platform-filter');
+    const refreshPlatformFilterOptions = typeof options.refreshPlatformFilterOptions === 'function'
+        ? options.refreshPlatformFilterOptions
+        : () => {};
 
     const LIST_ROOT_ID = String(options.listRootId || 'platforms-list');
     const SECTION_ID = String(options.sectionId || 'platforms-sidebar-section');
@@ -94,13 +97,59 @@ export function createPlatformsListRenderer(options = {}) {
     function syncTopPlatformFilter() {
         const platformFilter = getPlatformFilterElement();
         if (!platformFilter) return;
+        platformFilter.dataset.selectionMode = platformSelectionMode;
+        platformFilter.multiple = false;
+
+        const options = Array.from(platformFilter.options || []);
+        const selectedInOptions = Array.from(selectedPlatforms).filter((value) => options.some((option) => option.value === value));
+        const allOption = options.find((option) => option.value === 'all');
+
+        if (allOption && platformSelectionMode === 'multi') {
+            if (selectedInOptions.length === 1) {
+                const selectedOption = options.find((option) => option.value === selectedInOptions[0]);
+                allOption.textContent = String(selectedOption?.dataset?.baseLabel || selectedOption?.textContent || t('gameGrid.allPlatforms', 'All Platforms'));
+            } else if (selectedInOptions.length > 1) {
+                allOption.textContent = `${selectedInOptions.length} Platforms Selected`;
+            } else {
+                allOption.textContent = String(allOption.dataset.baseLabel || t('gameGrid.allPlatforms', 'All Platforms'));
+            }
+        } else if (allOption) {
+            allOption.textContent = String(allOption.dataset.baseLabel || t('gameGrid.allPlatforms', 'All Platforms'));
+        }
+
+        options.forEach((option) => {
+            if (option.value === 'all') return;
+            const baseLabel = String(option.dataset.baseLabel || option.textContent || '').trim();
+            option.textContent = platformSelectionMode === 'multi' && selectedInOptions.includes(option.value)
+                ? `* ${baseLabel}`
+                : baseLabel;
+        });
+
+        platformFilter.title = selectedInOptions.length > 0
+            ? selectedInOptions
+                .map((value) => {
+                    const option = options.find((entry) => entry.value === value);
+                    return String(option?.dataset?.baseLabel || option?.textContent || value).replace(/^\*\s*/, '').trim();
+                })
+                .filter(Boolean)
+                .join(', ')
+            : String(allOption?.dataset?.baseLabel || t('gameGrid.allPlatforms', 'All Platforms'));
+
+        if (platformSelectionMode === 'multi') {
+            platformFilter.value = 'all';
+            platformFilter.dispatchEvent(new Event('platform-filter-sync'));
+            return;
+        }
+
         if (selectedPlatforms.size === 1) {
             const [selected] = Array.from(selectedPlatforms);
-            const hasOption = Array.from(platformFilter.options || []).some((option) => option.value === selected);
+            const hasOption = options.some((option) => option.value === selected);
             platformFilter.value = hasOption ? selected : 'all';
+            platformFilter.dispatchEvent(new Event('platform-filter-sync'));
             return;
         }
         platformFilter.value = 'all';
+        platformFilter.dispatchEvent(new Event('platform-filter-sync'));
     }
 
     function formatPlatformLabel(row = {}) {
@@ -236,7 +285,7 @@ export function createPlatformsListRenderer(options = {}) {
         syncTopPlatformFilter();
         await renderPlatformsList();
         await renderCategoriesList();
-        if (isLibraryTopSection() && !isEmulatorsSection()) {
+        if (isLibraryTopSection()) {
             await renderActiveLibraryView();
         }
     }
@@ -246,12 +295,25 @@ export function createPlatformsListRenderer(options = {}) {
         if (!platformFilter || platformFilter.dataset.platformSidebarSyncBound === 'true') return;
         platformFilter.dataset.platformSidebarSyncBound = 'true';
         platformFilter.addEventListener('change', () => {
+            if (!isLibraryTopSection()) return;
             const selected = normalizePlatformKey(platformFilter.value);
-            selectedPlatforms = selected && selected !== 'all' ? new Set([selected]) : new Set();
+            if (platformSelectionMode === 'multi') {
+                if (!selected || selected === 'all') {
+                    selectedPlatforms.clear();
+                } else if (selectedPlatforms.has(selected)) {
+                    selectedPlatforms.delete(selected);
+                } else {
+                    selectedPlatforms.add(selected);
+                }
+            } else {
+                selectedPlatforms = selected && selected !== 'all' ? new Set([selected]) : new Set();
+            }
             persistSelectedPlatforms();
             syncSelectionToDom();
+            refreshPlatformFilterOptions();
             void renderPlatformsList();
-        });
+            void renderCategoriesList();
+        }, true);
     }
 
     async function renderPlatformsList() {
@@ -259,7 +321,7 @@ export function createPlatformsListRenderer(options = {}) {
         const listRoot = document.getElementById(LIST_ROOT_ID);
         if (!sectionEl || !listRoot) return;
 
-        const shouldHide = !isLibraryTopSection() || isEmulatorsSection();
+        const shouldHide = !isLibraryTopSection();
         sectionEl.classList.toggle('is-hidden', shouldHide);
         if (shouldHide) return;
 
@@ -366,7 +428,7 @@ export function createPlatformsListRenderer(options = {}) {
                 syncSelectionToDom();
                 syncTopPlatformFilter();
                 await renderPlatformsList();
-                if (isLibraryTopSection() && !isEmulatorsSection()) {
+                if (isLibraryTopSection()) {
                     await renderActiveLibraryView();
                 }
             });

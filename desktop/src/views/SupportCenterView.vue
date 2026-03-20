@@ -32,6 +32,7 @@ const {
   issueType,
   issueTypes,
   lastMatchedQuery,
+  liveResponseText,
   matchedEmulatorKeys,
   matchedEmulatorCount,
   matchedGameKeys,
@@ -251,7 +252,7 @@ function handleChatComposerKeydown(event) {
 }
 
 watch(
-  () => [mode.value, chatHistory.value.length, running.value, matchedGameCount.value, matchedEmulatorCount.value],
+  () => [mode.value, chatHistory.value.length, running.value, liveResponseText.value, matchedGameCount.value, matchedEmulatorCount.value],
   async (nextValue, previousValue = []) => {
     const activeMode = nextValue[0];
     const previousMode = previousValue[0];
@@ -382,7 +383,8 @@ onMounted(() => {
 
               <article v-if="running" class="desktop-support-chat-item is-assistant is-pending">
                 <strong>{{ shellI18nStore.t("support.roleAssistant", "Assistant") }}</strong>
-                <div class="desktop-support-chat-typing" aria-label="Thinking">
+                <div v-if="liveResponseText" class="desktop-support-markdown" v-html="renderSupportMarkdown(liveResponseText)" />
+                <div v-else class="desktop-support-chat-typing" aria-label="Thinking">
                   <span></span>
                   <span></span>
                   <span></span>

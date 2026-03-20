@@ -1,4 +1,5 @@
 use super::*;
+use std::io::{BufRead, BufReader};
 use std::time::Duration;
 
 pub(super) fn normalize_provider(value: &str) -> String {
@@ -528,6 +529,94 @@ pub(super) fn request_provider_chat_text(
             "Provider returned an empty response. Raw preview: {}",
             clipped
         ));
+    }
+    Ok(text)
+}
+
+pub(super) fn request_provider_chat_text_streaming<F>(
+    payload: &Value,
+    system_prompt: &str,
+    user_prompt: &str,
+    expect_json: bool,
+    mut on_chunk: F,
+) -> Result<String, String>
+where
+    F: FnMut(&str),
+{
+    if relay_enabled_for_payload(payload) {
+        return request_provider_chat_text(payload, system_prompt, user_prompt, expect_json);
+    }
+
+    let provider = normalize_provider(payload.get("provider").and_then(|v| v.as_str()).unwrap_or(""));
+    if provider != "ollama" {
+        return request_provider_chat_text(payload, system_prompt, user_prompt, expect_json);
+    }
+
+    let model = payload
+        .get("model")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    let base_url = payload
+        .get("baseUrl")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    let temperature = normalize_temperature(payload.get("temperature").and_then(|v| v.as_f64()), 0.8);
+
+    if model.is_empty() {
+        return Err("Model is required.".to_string());
+    }
+    if base_url.is_empty() {
+        return Err("Provider base URL is required.".to_string());
+    }
+
+    let url = format!("{}/api/generate", base_url.trim_end_matches('/'));
+    let body = json!({
+        "model": model,
+        "system": system_prompt,
+        "prompt": user_prompt,
+        "format": if expect_json { json!("json") } else { Value::Null },
+        "stream": true,
+        "options": { "temperature": temperature }
+    });
+
+    let agent = ureq::AgentBuilder::new().timeout(Duration::from_secs(90)).build();
+    let response = match agent.post(&url).send_json(body) {
+        Ok(value) => value,
+        Err(ureq::Error::Status(code, resp)) => {
+            let msg = resp.into_string().unwrap_or_default();
+            return Err(format!("HTTP {}: {}", code, msg.trim()));
+        }
+        Err(ureq::Error::Transport(err)) => return Err(err.to_string()),
+    };
+
+    let mut collected = String::new();
+    let reader = BufReader::new(response.into_reader());
+    for line in reader.lines() {
+        let raw_line = line.map_err(|e| e.to_string())?;
+        let trimmed = raw_line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let payload = serde_json::from_str::<Value>(trimmed)
+            .map_err(|e| format!("Invalid streaming chunk: {}", e))?;
+        if let Some(delta) = payload.get("response").and_then(|v| v.as_str()) {
+            if !delta.is_empty() {
+                collected.push_str(delta);
+                on_chunk(delta);
+            }
+        }
+        if payload.get("done").and_then(|v| v.as_bool()).unwrap_or(false) {
+            break;
+        }
+    }
+
+    let text = collected.trim().to_string();
+    if text.is_empty() {
+        return Err("Provider returned an empty streamed response.".to_string());
     }
     Ok(text)
 }

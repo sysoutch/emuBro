@@ -10,6 +10,7 @@ import { createEmulatorRuntimeActions } from '../game-manager/emulator-runtime-a
 import { createEmulatorViewRenderer } from '../game-manager/emulator-view-renderer';
 import { createGameCardElements } from '../game-manager/game-card-elements';
 import { createMissingGameRecoveryActions } from '../game-manager/missing-game-recovery';
+import { confirmWritableEmulatorFolderForLaunch } from '../game-manager/emulator-write-access';
 import { normalizeRuntimeDataRulesForLaunch } from '../game-manager/runtime-data-utils';
 import { escapeHtml, normalizeNameKey, getGameCompanyValue } from '../game-manager/game-utils';
 import {
@@ -88,20 +89,26 @@ let gameCardElements = null;
 let missingGameRecoveryActions = null;
 let gameSearchActions = null;
 let gameFilterActions = null;
+let platformFilterSourceRowsGetter = null;
 const groupAccordionState = new Map();
 let lastRenderSignature = '';
 let lastRenderAt = 0;
 let lastRenderedView = 'cover';
+let selectedGameId = 0;
 let launchCandidateResolver = null;
 let globalSizeWheelShortcutBound = false;
 const gameCoverCacheBusters = new Map();
 let cardShineInteractionsBound = false;
+let gamesScrollRestoreToken = 0;
 const shellStorage = getShellStorageAdapter(typeof window !== 'undefined' ? window.localStorage : null);
 
 function resolveGamesScrollRoot() {
+    const gamesContainer = document.getElementById('games-container');
+    const nearestScrollRoot = gamesContainer?.closest('.game-scroll-body');
+    if (nearestScrollRoot) return nearestScrollRoot;
     return document.querySelector('.game-scroll-body')
         || document.querySelector('main.game-grid')
-        || document.getElementById('games-container')?.parentElement
+        || gamesContainer?.parentElement
         || null;
 }
 
@@ -163,8 +170,10 @@ function captureGamesScrollPosition(options = {}) {
     };
 }
 
-function restoreGamesScrollPosition(snapshot, attempts = 3) {
+function restoreGamesScrollPosition(snapshot, attempts = 3, options = {}) {
     if (!snapshot || !snapshot.root || !snapshot.root.isConnected) return;
+    const isCanceled = typeof options?.isCanceled === 'function' ? options.isCanceled : null;
+    if (isCanceled && isCanceled()) return;
     const root = snapshot.root;
     const targetLeft = Math.max(0, Number(snapshot.left || 0));
     const anchorGameId = Number(snapshot.anchorGameId || 0);
@@ -195,7 +204,98 @@ function restoreGamesScrollPosition(snapshot, attempts = 3) {
     }
 
     if (attempts <= 1) return;
-    window.requestAnimationFrame(() => restoreGamesScrollPosition(snapshot, attempts - 1));
+    window.requestAnimationFrame(() => restoreGamesScrollPosition(snapshot, attempts - 1, options));
+}
+
+function normalizeGameId(value) {
+    const parsed = Number(value || 0);
+    return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
+}
+
+function resolveSelectedGameElement(root, gameId) {
+    const targetId = normalizeGameId(gameId);
+    if (!root || !targetId || typeof root.querySelector !== 'function') return null;
+    const selectors = [
+        `.game-card-stack[data-game-id="${targetId}"]`,
+        `.list-item[data-game-id="${targetId}"]`,
+        `tr[data-game-id="${targetId}"]`,
+        `[data-game-id="${targetId}"]`
+    ];
+    for (const selector of selectors) {
+        const match = root.querySelector(selector);
+        if (match) return match;
+    }
+    return null;
+}
+
+function isElementVisibleInScrollRoot(element, root) {
+    if (!element || !root || typeof element.getBoundingClientRect !== 'function') return false;
+    const elementRect = element.getBoundingClientRect();
+    const rootRect = root.getBoundingClientRect?.();
+    if (!rootRect) return false;
+    const topPadding = 8;
+    const bottomPadding = 8;
+    const viewportTop = Number(rootRect.top || 0) + topPadding;
+    const viewportBottom = Number(rootRect.bottom || 0) - bottomPadding;
+    return elementRect.top >= viewportTop && elementRect.bottom <= viewportBottom;
+}
+
+function scrollElementIntoGamesView(element, root, options = {}) {
+    if (!element || !root) return false;
+    const behavior = options.smooth ? 'smooth' : 'auto';
+    const block = String(options.block || 'center').trim().toLowerCase();
+    const maxTop = Math.max(0, Number(root.scrollHeight || 0) - Number(root.clientHeight || 0));
+    const elementTop = Number(element.offsetTop || 0);
+    const elementHeight = Math.max(1, Number(element.offsetHeight || 0));
+
+    let targetTop = elementTop;
+    if (block === 'center') {
+        targetTop = elementTop - ((Number(root.clientHeight || 0) - elementHeight) / 2);
+    } else if (block === 'end' || block === 'bottom') {
+        targetTop = elementTop - Number(root.clientHeight || 0) + elementHeight;
+    }
+    const nextTop = Math.max(0, Math.min(maxTop, Math.round(targetTop)));
+    root.scrollTo({ top: nextTop, behavior });
+    return true;
+}
+
+function applyCurrentGameSelection(root = null) {
+    const host = root && typeof root.querySelectorAll === 'function'
+        ? root
+        : (document.getElementById('games-container') || resolveGamesScrollRoot() || document);
+    if (!host || typeof host.querySelectorAll !== 'function') return;
+
+    host.querySelectorAll('.is-current-game').forEach((node) => {
+        node.classList.remove('is-current-game');
+    });
+
+    const targetId = normalizeGameId(selectedGameId);
+    if (!targetId) return;
+
+    host.querySelectorAll(`[data-game-id="${targetId}"]`).forEach((node) => {
+        node.classList.add('is-current-game');
+    });
+}
+
+function syncCurrentGameSelection(options = {}) {
+    const root = resolveGamesScrollRoot();
+    if (!root) return false;
+    applyCurrentGameSelection(root);
+
+    if (!options?.scrollToCurrentGame) return false;
+    const targetId = normalizeGameId(options.anchorGameId || selectedGameId);
+    if (!targetId) return false;
+    const target = resolveSelectedGameElement(root, targetId);
+    if (!target) return false;
+
+    const forceScroll = !!options.forceScroll;
+    if (!forceScroll && isElementVisibleInScrollRoot(target, root)) {
+        return true;
+    }
+    return scrollElementIntoGamesView(target, root, {
+        smooth: !!options.smooth,
+        block: options.block || 'center'
+    });
 }
 
 function getEmulatorDownloadActions() {
@@ -372,6 +472,12 @@ function getGameFilterActions() {
     if (!gameFilterActions) {
         gameFilterActions = createGameFilters({
             getGames,
+            getPlatformFilterSourceRows: () => {
+                if (typeof platformFilterSourceRowsGetter === 'function') {
+                    return platformFilterSourceRowsGetter();
+                }
+                return getGames();
+            },
             setFilteredGames,
             renderGames,
             getCurrentFilter: () => currentFilter,
@@ -630,11 +736,14 @@ function dispatchGamesUpdated(reason = 'updated') {
 }
 export function setGames(val) {
     games = Array.isArray(val) ? val : [];
+    const validIds = new Set(games.map((row) => Number(row?.id || 0)).filter((id) => id > 0));
     if (gameCoverCacheBusters.size > 0) {
-        const validIds = new Set(games.map((row) => Number(row?.id || 0)).filter((id) => id > 0));
         for (const key of gameCoverCacheBusters.keys()) {
             if (!validIds.has(Number(key || 0))) gameCoverCacheBusters.delete(key);
         }
+    }
+    if (selectedGameId > 0 && !validIds.has(selectedGameId)) {
+        selectedGameId = 0;
     }
     dispatchGamesUpdated('set-games');
 }
@@ -654,14 +763,80 @@ export async function fetchEmulators() {
     return emulators;
 }
 
-export function renderGames(gamesToRender) {
+export function renderGames(gamesToRender, options = {}) {
     setupGlobalSizeWheelShortcut();
 
     const gamesContainer = document.getElementById('games-container');
     if (!gamesContainer) return;
-
-    const activeViewBtn = document.querySelector('.view-btn.active');
+    const renderOptions = options && typeof options === 'object' ? options : {};
+    const activeViewBtn = document.querySelector('.view-controls .view-btn.active')
+        || document.querySelector('.view-btn.active');
     const activeView = activeViewBtn ? activeViewBtn.dataset.view : 'cover';
+    const forceRender = !!renderOptions.forceRender;
+    const shouldPreserveScroll = !!renderOptions.preserveScroll;
+    const shouldScrollToCurrentGame = !!renderOptions.scrollToCurrentGame;
+    const explicitAnchorGameId = normalizeGameId(renderOptions.anchorGameId);
+    const anchorGameId = explicitAnchorGameId || (renderOptions.preferCurrentGame === false ? 0 : normalizeGameId(selectedGameId));
+    const scrollSnapshot = shouldPreserveScroll
+        ? captureGamesScrollPosition({ anchorGameId })
+        : null;
+    let forcedScrollLeft = null;
+    const scrollRestoreToken = ++gamesScrollRestoreToken;
+    const isScrollRestoreCanceled = () => scrollRestoreToken !== gamesScrollRestoreToken;
+
+    const ensureRandomScrollLeftReset = () => {
+        if (activeView !== 'random') return;
+        const root = resolveGamesScrollRoot();
+        if (!root) return;
+        root.scrollLeft = 0;
+    };
+
+    ensureRandomScrollLeftReset();
+
+    const finalizeRender = ({ shouldBindShine = false } = {}) => {
+        if (shouldBindShine) {
+            bindInteractiveCardShine(gamesContainer);
+        }
+        applyCurrentGameSelection(gamesContainer);
+        ensureRandomScrollLeftReset();
+
+        if (scrollSnapshot) {
+            const restoreSnapshot = forcedScrollLeft === null
+                ? scrollSnapshot
+                : { ...scrollSnapshot, left: forcedScrollLeft };
+            window.requestAnimationFrame(() => {
+                if (isScrollRestoreCanceled()) return;
+                restoreGamesScrollPosition(restoreSnapshot, 4, {
+                    isCanceled: isScrollRestoreCanceled
+                });
+                ensureRandomScrollLeftReset();
+                if (shouldScrollToCurrentGame) {
+                    window.requestAnimationFrame(() => {
+                        if (isScrollRestoreCanceled()) return;
+                        syncCurrentGameSelection({
+                            scrollToCurrentGame: true,
+                            forceScroll: false,
+                            block: renderOptions.currentGameBlock || 'center'
+                        });
+                        ensureRandomScrollLeftReset();
+                    });
+                }
+            });
+        } else if (shouldScrollToCurrentGame) {
+            window.requestAnimationFrame(() => {
+                if (isScrollRestoreCanceled()) return;
+                syncCurrentGameSelection({
+                    scrollToCurrentGame: true,
+                    forceScroll: false,
+                    block: renderOptions.currentGameBlock || 'center'
+                });
+                ensureRandomScrollLeftReset();
+            });
+        }
+    };
+    if (activeView === 'random') {
+        forcedScrollLeft = 0;
+    }
     const coverCardMode = getStoredCoverCardMode(localStorage);
     const rootStyles = getComputedStyle(document.documentElement);
     const viewScaleSignature = String(
@@ -679,7 +854,8 @@ export function renderGames(gamesToRender) {
         coverCardMode,
         viewScale: viewScaleSignature
     });
-    if (signature === lastRenderSignature && (now - lastRenderAt) < 220) {
+    if (!forceRender && signature === lastRenderSignature && (now - lastRenderAt) < 220) {
+        finalizeRender({ shouldBindShine: true });
         return;
     }
     lastRenderSignature = signature;
@@ -695,6 +871,7 @@ export function renderGames(gamesToRender) {
     
     if (gamesToRender.length === 0) {
         gamesContainer.innerHTML = `<p>${i18n.t('gameGrid.noGamesFound')}</p>`;
+        finalizeRender({ shouldBindShine: false });
         lastRenderedView = activeView;
         return;
     }
@@ -723,6 +900,7 @@ export function renderGames(gamesToRender) {
             emubro,
             alertUser: (message) => alert(message)
         });
+        finalizeRender({ shouldBindShine: false });
         return;
     } else if (activeView === 'slideshow') {
         lastRenderedView = activeView;
@@ -749,6 +927,7 @@ export function renderGames(gamesToRender) {
             emubro,
             alertUser: (message) => alert(message)
         });
+        finalizeRender({ shouldBindShine: false });
         return;
     } else if (activeView === 'focus') {
         lastRenderedView = activeView;
@@ -771,6 +950,7 @@ export function renderGames(gamesToRender) {
             emubro,
             alertUser: (message) => alert(message)
         });
+        finalizeRender({ shouldBindShine: false });
         return;
     } else if (activeView === 'random') {
         lastRenderedView = activeView;
@@ -789,10 +969,20 @@ export function renderGames(gamesToRender) {
             cleanupLazyGameImages,
             initializeLazyGameImages,
             lazyPlaceholderSrc: LAZY_PLACEHOLDER_SRC,
+            requestRandomModeRerender: () => {
+                renderGames(gamesToRender, {
+                    forceRender: true,
+                    preserveScroll: false,
+                    scrollToCurrentGame: true,
+                    preferCurrentGame: true,
+                    currentGameBlock: 'center'
+                });
+            },
             i18n,
             emubro,
             alertUser: (message) => alert(message)
         });
+        finalizeRender({ shouldBindShine: false });
         return;
     } else if (currentGroupBy !== 'none') {
         renderGamesGroupedAccordion(gamesToRender, activeView, {
@@ -832,7 +1022,7 @@ export function renderGames(gamesToRender) {
     }
 
     initializeLazyGameImages(gamesContainer);
-    bindInteractiveCardShine(gamesContainer);
+    finalizeRender({ shouldBindShine: true });
     lastRenderedView = activeView;
 }
 
@@ -887,7 +1077,7 @@ function getEmulatorKey(emulator) {
     return getEmulatorConfigActions().getEmulatorKey(emulator);
 }
 
-function getEmulatorConfig(emulator) {
+export function getEmulatorConfig(emulator) {
     return getEmulatorConfigActions().getEmulatorConfig(emulator);
 }
 
@@ -1006,6 +1196,8 @@ async function removeGame(gameId) {
 }
 
 async function reloadGamesFromMainAndRender(options = {}) {
+    const scrollRestoreToken = ++gamesScrollRestoreToken;
+    const isScrollRestoreCanceled = () => scrollRestoreToken !== gamesScrollRestoreToken;
     const preserveScroll = Boolean(options?.preserveScroll);
     const anchorGameId = Number(options?.anchorGameId || 0);
     const scrollSnapshot = preserveScroll
@@ -1016,7 +1208,12 @@ async function reloadGamesFromMainAndRender(options = {}) {
 
     applyFilters();
     if (scrollSnapshot) {
-        window.requestAnimationFrame(() => restoreGamesScrollPosition(scrollSnapshot, 4));
+        window.requestAnimationFrame(() => {
+            if (isScrollRestoreCanceled()) return;
+            restoreGamesScrollPosition(scrollSnapshot, 4, {
+                isCanceled: isScrollRestoreCanceled
+            });
+        });
     }
 }
 
@@ -1036,6 +1233,20 @@ async function launchGame(gameOrId) {
     }
 
     if (!gameId) return { success: false, message: 'No game selected to launch.' };
+
+    const targetGame = getGameById(gameId);
+    const targetEmulator = targetGame ? resolveEmulatorForGame(targetGame) : null;
+    if (targetEmulator) {
+        const emulatorConfig = getEmulatorConfig(targetEmulator);
+        const canContinue = await confirmWritableEmulatorFolderForLaunch(emubro, {
+            ...targetEmulator,
+            workingDirectory: String(emulatorConfig?.workingDirectory || targetEmulator?.workingDirectory || '').trim()
+        });
+        if (!canContinue) {
+            return { success: false, message: 'Launch canceled because the emulator folder is not writable.' };
+        }
+    }
+
     return getMissingGameRecoveryActions().launchGame(gameId);
 }
 
@@ -1043,7 +1254,11 @@ export function applyFilters(shouldRender = true, sourceRows = null) {
     return getGameFilterActions().applyFilters(shouldRender, sourceRows);
 }
 
-export function initializePlatformFilterOptions(sourceRows = games) {
+export function setPlatformFilterSourceRowsGetter(getter) {
+    platformFilterSourceRowsGetter = typeof getter === 'function' ? getter : null;
+}
+
+export function initializePlatformFilterOptions(sourceRows = null) {
     return getGameFilterActions().initializePlatformFilterOptions(sourceRows);
 }
 
@@ -1064,5 +1279,10 @@ function showEmulatorDetails(emulator, options = {}) {
 }
 
 export function showGameDetails(game) {
+    const nextSelectedId = normalizeGameId(game?.id);
+    if (nextSelectedId > 0) {
+        selectedGameId = nextSelectedId;
+    }
+    applyCurrentGameSelection();
     getGameDetailsPopupActions().showGameDetails(game);
 }

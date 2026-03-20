@@ -1,5 +1,6 @@
 import { isCustomGameCoverSource } from '../render-utils';
 import { createSlideshowLane, updateSlideshowItemOrientationClass } from './slideshow-lane';
+import { createSlideshowPerformanceMeter } from './slideshow-performance-meter';
 import { attachGameCardContextMenu } from '../game-card-context-menu';
 
 const SLIDESHOW_MODE_STORAGE_KEY = 'emuBro.slideshowMode';
@@ -223,7 +224,8 @@ function createPlatformLane({
     alertUser,
     onSelectLane,
     renderToken,
-    getRenderToken
+    getRenderToken,
+    onFrameSample
 }) {
     const heroGame = group.rows[0] || null;
     const initialIndex = Math.min(group.rows.length - 1, group.rows.length > 4 ? 2 : 1);
@@ -378,6 +380,9 @@ function createPlatformLane({
         },
         onActiveClick(activeIndex) {
             showGameDetails(group.rows[activeIndex]);
+        },
+        onFrameSample(sample) {
+            onFrameSample?.(sample);
         }
     });
 
@@ -502,6 +507,10 @@ export function renderGamesAsGroupedSlideshow(gamesToRender, options = {}) {
             <button type="button" class="slideshow-mode-tab${modeRef.mode === '3d-reverse' ? ' is-active' : ''}" data-slideshow-mode="3d-reverse">3D Reverse</button>
         </div>
     `;
+    const perfMeter = createSlideshowPerformanceMeter({
+        host: controls,
+        label: 'Lanes'
+    });
     root.appendChild(controls);
 
     const lanesHost = document.createElement('div');
@@ -568,6 +577,7 @@ export function renderGamesAsGroupedSlideshow(gamesToRender, options = {}) {
             alertUser,
             renderToken,
             getRenderToken,
+            onFrameSample: (sample) => perfMeter.onRenderSample(sample),
             onSelectLane(nextIndex) {
                 activeGroupIndex = nextIndex;
                 updateGroupFocusState();
@@ -590,5 +600,6 @@ export function renderGamesAsGroupedSlideshow(gamesToRender, options = {}) {
     setGamesScrollDetach(() => {
         lanes.forEach((lane) => lane.destroy());
         cleanupLazyGameImages(root);
+        perfMeter.destroy();
     });
 }

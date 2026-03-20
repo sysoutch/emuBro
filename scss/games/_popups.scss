@@ -21,6 +21,100 @@
     box-shadow: none !important;
 }
 
+#game-info-modal.theme-manager-modal.docked-right .theme-manager-content {
+    background:
+        radial-gradient(180% 52% at 50% -8%, rgba(var(--accent-color-rgb), 0.2), transparent 56%),
+        linear-gradient(180deg, color-mix(in srgb, var(--bg-secondary), var(--bg-primary) 30%) 0%, color-mix(in srgb, var(--bg-primary), black 14%) 100%) !important;
+}
+
+#game-info-modal.theme-manager-modal.docked-right #game-info-header {
+    border-bottom: 1px solid color-mix(in srgb, var(--border-color), var(--accent-color) 32%);
+    background:
+        linear-gradient(90deg,
+            color-mix(in srgb, var(--accent-color), transparent 88%) 0%,
+            transparent 76%);
+    padding: 10px 12px !important;
+}
+
+#game-info-modal.theme-manager-modal.docked-right #game-info-header h2 {
+    font-size: 0.82rem;
+    letter-spacing: 0.08em;
+    color: color-mix(in srgb, var(--accent-color), white 18%);
+}
+
+#game-info-modal.theme-manager-modal.docked-right .theme-manager-body.game-info-popup-body {
+    padding: 12px;
+}
+
+#game-info-modal.theme-manager-modal.docked-right .game-details-info {
+    grid-template-columns: 1fr;
+    gap: 10px;
+}
+
+#game-info-modal.theme-manager-modal.docked-right .game-detail-media {
+    display: none;
+}
+
+#game-info-modal.theme-manager-modal.docked-right .game-detail-name {
+    font-size: clamp(1.55rem, 2.8vw, 2.2rem);
+    line-height: 1.06;
+    letter-spacing: 0.012em;
+    margin-bottom: 4px;
+}
+
+#game-info-modal.theme-manager-modal.docked-right .game-detail-meta {
+    display: grid;
+    gap: 2px;
+    padding: 8px 0 12px;
+}
+
+#game-info-modal.theme-manager-modal.docked-right .game-detail-meta p {
+    margin: 0;
+    color: color-mix(in srgb, var(--text-secondary), white 16%);
+    font-size: 0.96rem;
+    line-height: 1.34;
+}
+
+#game-info-modal.theme-manager-modal.docked-right .game-detail-meta p strong {
+    color: var(--text-primary);
+    font-weight: 760;
+}
+
+#game-info-modal.theme-manager-modal.docked-right .game-detail-description-control,
+#game-info-modal.theme-manager-modal.docked-right .game-detail-emulator-control,
+#game-info-modal.theme-manager-modal.docked-right .game-detail-runas-control,
+#game-info-modal.theme-manager-modal.docked-right .game-detail-platform-control,
+#game-info-modal.theme-manager-modal.docked-right .game-detail-tags-control {
+    border: 1px solid color-mix(in srgb, var(--border-color), var(--accent-color) 16%);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--bg-secondary), transparent 10%);
+    box-shadow:
+        0 1px 0 color-mix(in srgb, rgba(255,255,255,0.1), transparent 56%) inset,
+        0 8px 20px rgba(0, 0, 0, 0.2);
+    padding: 10px;
+}
+
+#game-info-modal.theme-manager-modal.docked-right .game-detail-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    align-items: stretch;
+}
+
+#game-info-modal.theme-manager-modal.docked-right .game-detail-actions .action-btn {
+    width: 100%;
+    min-height: 40px;
+    justify-content: center;
+    border-radius: 10px;
+    font-size: 0.78rem;
+    font-weight: 720;
+}
+
+#game-info-modal.theme-manager-modal.docked-right .game-detail-actions .remove-btn {
+    border-color: color-mix(in srgb, var(--danger-color), white 12%);
+    background: linear-gradient(130deg, color-mix(in srgb, var(--danger-color), black 14%), color-mix(in srgb, var(--danger-color), #280304 44%));
+    color: #fff;
+}
+
 #game-info-modal #game-info-header h2 {
     margin: 0;
     text-transform: uppercase;

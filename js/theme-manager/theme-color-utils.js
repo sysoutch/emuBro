@@ -33,7 +33,7 @@ export function collectThemeColorsFromInputs() {
         bgActionbar: pick('color-bg-actionbar', pick('color-bg-quaternary', '#0f1828')),
         textPrimary: pick('color-text-primary', '#e7edf8'),
         textSecondary: pick('color-text-secondary', '#b9c7dc'),
-        accentColor: pick('color-accent', '#66ccff'),
+        accentColor: pick('color-accent', '#5c758d'),
         borderColor: pick('color-border', '#2f4360'),
         successColor: pick('color-success', '#4caf50'),
         dangerColor: pick('color-danger', '#f44336'),
@@ -85,7 +85,7 @@ export function deriveThemeVisualVars(colors = {}) {
     const bgPrimary = parseColorToHex(colors.bgPrimary) || '#0b1220';
     const bgSecondary = parseColorToHex(colors.bgSecondary) || '#121c2f';
     const textSecondary = parseColorToHex(colors.textSecondary) || '#b9c7dc';
-    const accentColor = parseColorToHex(colors.accentColor) || '#66ccff';
+    const accentColor = parseColorToHex(colors.accentColor) || '#5c758d';
     const borderColor = parseColorToHex(colors.borderColor) || '#2f4360';
     const successColor = parseColorToHex(colors.successColor) || '#4caf50';
     const dangerColor = parseColorToHex(colors.dangerColor) || '#f44336';
@@ -110,7 +110,7 @@ export function deriveThemeVisualVars(colors = {}) {
     const accentHover = parseColorToHex(colors.accentHover)
         || shiftColorHsl(accentColor, { satAdd: isLightUi ? 4 : 6, lightAdd: isLightUi ? -8 : -6 });
 
-    const accentRgb = hexToRgb(accentColor) || { r: 102, g: 204, b: 255 };
+    const accentRgb = hexToRgb(accentColor) || { r: 92, g: 117, b: 141 };
     const dangerRgb = hexToRgb(dangerColor) || { r: 244, g: 67, b: 54 };
     const successRgb = hexToRgb(successColor) || { r: 76, g: 175, b: 80 };
 

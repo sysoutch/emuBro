@@ -101,7 +101,7 @@ export function renderThemeManager(options = {}) {
                 colors: {
                     appGradientA: '#0b1528',
                     appGradientB: '#0f2236',
-                    accentColor: '#66ccff'
+                    accentColor: '#5c758d'
                 }
             }
         },
@@ -113,7 +113,7 @@ export function renderThemeManager(options = {}) {
                 colors: {
                     appGradientA: '#dbe9f7',
                     appGradientB: '#e7f3ff',
-                    accentColor: '#3db2d6'
+                    accentColor: '#5c758d'
                 }
             }
         },
@@ -188,12 +188,12 @@ function createThemeItem(options = {}) {
             dots = [
                 themeData.colors.appGradientA || themeData.colors.bgPrimary || '#1e1e1e',
                 themeData.colors.appGradientB || themeData.colors.bgSecondary || '#2d2d2d',
-                themeData.colors.accentColor || '#66ccff'
+                themeData.colors.accentColor || '#5c758d'
             ];
         } else {
             dots = id === 'dark'
-                ? ['#1e1e1e', '#ffffff', '#66ccff']
-                : ['#f5f5f5', '#1a1a1a', '#0099cc'];
+                ? ['#1e1e1e', '#ffffff', '#5c758d']
+                : ['#f5f5f5', '#1a1a1a', '#5c758d'];
         }
     } else {
         dots = [

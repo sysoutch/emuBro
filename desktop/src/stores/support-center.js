@@ -28,6 +28,9 @@ const SUPPORT_ASSISTANT_TASK_RUN_EMULATOR = "RUN_EMULATOR";
 const SUPPORT_ASSISTANT_TASK_DOWNLOAD_INSTALL_EMULATOR = "DOWNLOAD_INSTALL_EMULATOR";
 const SUPPORT_ASSISTANT_TASK_MIN_CONFIDENCE = 0.72;
 const PC_SPECS_BLOCK_HEADER = "[PC Specs]";
+const SUPPORT_STREAM_EVENT_NAME = "emubro:support-stream";
+
+let supportStreamUnsubscribe = null;
 
 const ISSUE_TYPES = [
   { value: "launch", label: "Game does not launch" },
@@ -174,6 +177,110 @@ function getIssueTypeLabel(issueType) {
 
 function loadSupportSettings() {
   return buildSupportLlmSettings(loadDesktopLlmSettings());
+}
+
+function buildSupportStreamRequestId() {
+  return `support-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function shouldUseSupportStreaming(llmSettings, bridge) {
+  if (!bridge || typeof bridge.onSupportStream !== "function") {
+    return false;
+  }
+  if (String(llmSettings?.llmMode || "").trim().toLowerCase() === "client") {
+    return false;
+  }
+  return String(llmSettings?.provider || "").trim().toLowerCase() === "ollama";
+}
+
+function decodePartialJsonStringValue(rawText, fieldName) {
+  const source = String(rawText || "");
+  const marker = `"${String(fieldName || "").trim()}"`;
+  const markerIndex = source.indexOf(marker);
+  if (markerIndex < 0) {
+    return "";
+  }
+
+  let index = markerIndex + marker.length;
+  while (index < source.length && /\s/.test(source[index])) {
+    index += 1;
+  }
+  if (source[index] !== ":") {
+    return "";
+  }
+  index += 1;
+  while (index < source.length && /\s/.test(source[index])) {
+    index += 1;
+  }
+  if (source[index] !== "\"") {
+    return "";
+  }
+  index += 1;
+
+  let output = "";
+  let escaping = false;
+  for (; index < source.length; index += 1) {
+    const char = source[index];
+    if (escaping) {
+      if (char === "n") output += "\n";
+      else if (char === "r") output += "\r";
+      else if (char === "t") output += "\t";
+      else if (char === "\"") output += "\"";
+      else if (char === "\\") output += "\\";
+      else if (char === "/") output += "/";
+      else output += char;
+      escaping = false;
+      continue;
+    }
+    if (char === "\\") {
+      escaping = true;
+      continue;
+    }
+    if (char === "\"") {
+      break;
+    }
+    output += char;
+  }
+  return output;
+}
+
+function deriveSupportLiveResponseText(rawText) {
+  const source = String(rawText || "");
+  if (!source.trim()) {
+    return "";
+  }
+
+  const message = decodePartialJsonStringValue(source, "message").trim();
+  if (message) {
+    return message;
+  }
+
+  const reason = decodePartialJsonStringValue(source, "reason").trim();
+  if (reason) {
+    return reason;
+  }
+
+  if (/^\s*\{/.test(source)) {
+    return "";
+  }
+
+  return source.trim();
+}
+
+function ensureSupportStreamBridge(store) {
+  if (supportStreamUnsubscribe) {
+    return;
+  }
+  const bridge = getDesktopBridge();
+  if (!bridge || typeof bridge.onSupportStream !== "function") {
+    return;
+  }
+  supportStreamUnsubscribe = bridge.onSupportStream((payload) => {
+    if (!payload || typeof payload !== "object") {
+      return;
+    }
+    store.consumeSupportStreamEvent(payload);
+  });
 }
 
 function normalizeSupportTaskType(rawValue) {
@@ -499,6 +606,9 @@ export const useSupportCenterStore = defineStore("supportCenter", {
     details: "",
     outputTitle: "Suggested Fix Steps",
     outputMarkdown: "Run a support request to get troubleshooting steps.",
+    liveResponseText: "",
+    liveResponseRaw: "",
+    streamRequestId: "",
     debugPayload: null,
     pendingSupportTask: null,
     chatHistory: [],
@@ -578,6 +688,48 @@ export const useSupportCenterStore = defineStore("supportCenter", {
       writeStorageJson(SUPPORT_CHAT_HISTORY_STORAGE_KEY, this.chatHistory, normalizeSupportChatHistory);
       this.persistNativeState();
     },
+    resetLiveResponse() {
+      this.liveResponseText = "";
+      this.liveResponseRaw = "";
+      this.streamRequestId = "";
+    },
+    consumeSupportStreamEvent(event) {
+      const eventName = String(event?.event || event?.name || SUPPORT_STREAM_EVENT_NAME).trim();
+      if (eventName && eventName !== SUPPORT_STREAM_EVENT_NAME) {
+        return;
+      }
+
+      const requestId = String(event?.requestId || "").trim();
+      if (!requestId || requestId !== this.streamRequestId) {
+        return;
+      }
+
+      const state = String(event?.state || "").trim().toLowerCase();
+      if (state === "chunk") {
+        const chunk = String(event?.chunk || "");
+        if (!chunk) {
+          return;
+        }
+        this.liveResponseRaw += chunk;
+        this.liveResponseText = deriveSupportLiveResponseText(this.liveResponseRaw);
+        if (this.mode !== "chat" && this.liveResponseText) {
+          this.outputMarkdown = this.liveResponseText;
+        }
+        return;
+      }
+
+      if (state === "error") {
+        this.status = String(event?.message || "Support request failed while streaming.");
+        this.statusTone = "error";
+        return;
+      }
+
+      if (state === "done") {
+        if (this.mode !== "chat" && this.liveResponseText) {
+          this.outputMarkdown = this.liveResponseText;
+        }
+      }
+    },
     async hydrateFromStorage() {
       const persisted = normalizeSupportState(
         await readNativeShellState(SUPPORT_STATE_KEY, {
@@ -608,6 +760,7 @@ export const useSupportCenterStore = defineStore("supportCenter", {
       this.helpQuery = helpState.query;
       this.selectedHelpDocId = helpState.selectedDocId;
       this.chatHistory = persisted.chatHistory;
+      this.resetLiveResponse();
       this.debugSupportEnabled = persisted.flags.debugSupportEnabled;
       this.autoSpecsEnabled = persisted.flags.autoSpecsEnabled;
       this.webAccessEnabled = persisted.flags.webAccessEnabled;
@@ -680,6 +833,7 @@ export const useSupportCenterStore = defineStore("supportCenter", {
       this.statusTone = "";
       this.debugPayload = null;
       this.pendingSupportTask = null;
+      this.resetLiveResponse();
 
       if (this.mode === "chat") {
         this.chatHistory = [];
@@ -1016,6 +1170,8 @@ export const useSupportCenterStore = defineStore("supportCenter", {
       }
 
       const llm = loadSupportSettings();
+      const useLiveStream = shouldUseSupportStreaming(llm, bridge);
+      const streamRequestId = useLiveStream ? buildSupportStreamRequestId() : "";
       const payload = {
         provider: llm.provider,
         model: llm.model,
@@ -1039,6 +1195,11 @@ export const useSupportCenterStore = defineStore("supportCenter", {
         allowAutoSpecsFetch: this.autoSpecsEnabled,
         allowWebAccess: this.webAccessEnabled
       };
+      if (useLiveStream) {
+        ensureSupportStreamBridge(this);
+        payload.streamResponse = true;
+        payload.streamRequestId = streamRequestId;
+      }
       const providerLabel = String(payload.provider || (payload.llmMode === "client" ? "relay" : "support engine")).trim();
 
       if (this.mode === "chat" && !skipUserHistoryAppend) {
@@ -1063,6 +1224,9 @@ export const useSupportCenterStore = defineStore("supportCenter", {
 
       this.running = true;
       this.pendingSupportTask = null;
+      this.liveResponseText = "";
+      this.liveResponseRaw = "";
+      this.streamRequestId = streamRequestId;
       this.status =
         this.mode === "chat"
           ? `Generating reply with ${providerLabel}...`
@@ -1115,19 +1279,20 @@ export const useSupportCenterStore = defineStore("supportCenter", {
         const resolvedReply = assistantEnvelope?.kind === SUPPORT_RESPONSE_TYPE_REPLY
           ? String(assistantEnvelope.message || "").trim()
           : answerText;
+        const finalReplyText = resolvedReply || this.liveResponseText || "";
 
         if (this.mode === "chat") {
-          if (resolvedReply) {
+          if (finalReplyText) {
             this.chatHistory = normalizeSupportChatHistory([
               ...this.chatHistory,
-              { role: "assistant", text: resolvedReply }
+              { role: "assistant", text: finalReplyText }
             ]);
             this.issueSummary = "";
             this.persistDraft();
             this.persistChatHistory();
           }
         } else {
-          this.outputMarkdown = resolvedReply || "No support text returned.";
+          this.outputMarkdown = finalReplyText || "No support text returned.";
         }
 
         this.debugPayload = this.debugSupportEnabled ? response?.debug || null : null;
@@ -1143,6 +1308,7 @@ export const useSupportCenterStore = defineStore("supportCenter", {
           this.outputMarkdown = "No response available.";
         }
       } finally {
+        this.resetLiveResponse();
         this.running = false;
       }
     },

@@ -41,6 +41,7 @@ const shellI18nStore = useShellI18nStore();
 
 const activeTab = ref("general");
 const configDraft = ref(createDefaultEmulatorConfig(props.emulator));
+const emulatorTagsText = ref("");
 const runtimeDirectoryNamesText = ref("");
 const runtimeFileExtensionsText = ref("");
 const runtimeFileNameIncludesText = ref("");
@@ -100,6 +101,7 @@ function setConfigFeedback(message, tone = "") {
 function syncConfigEditorDraft() {
   const merged = mergeEmulatorConfig(props.emulator);
   configDraft.value = normalizeEmulatorConfigDraft(merged);
+  emulatorTagsText.value = (Array.isArray(merged.tags) ? merged.tags : []).join("\n");
   runtimeDirectoryNamesText.value = (merged.runtimeDataRules?.directoryNames || []).join("\n");
   runtimeFileExtensionsText.value = (merged.runtimeDataRules?.fileExtensions || []).join("\n");
   runtimeFileNameIncludesText.value = (merged.runtimeDataRules?.fileNameIncludes || []).join("\n");
@@ -119,6 +121,7 @@ function syncConfigEditorDraft() {
 function buildCurrentConfigDraft() {
   return normalizeEmulatorConfigDraft({
     ...configDraft.value,
+    tags: emulatorTagsText.value,
     gamepadBindings: normalizeInputBindingProfile(configDraft.value?.gamepadBindings || {}),
     runtimeDataRules: {
       directoryNames: parseEmulatorRuntimeRuleText(runtimeDirectoryNamesText.value),
@@ -428,6 +431,15 @@ watch(
           <label class="field">
             <span>{{ shellI18nStore.t("desktopShell.emulatorConfig.general.configFilePath", "Config File Path") }}</span>
             <input v-model="configDraft.configFilePath" :placeholder="shellI18nStore.t('desktopShell.emulatorConfig.general.configFilePathPlaceholder', 'config\\\\retroarch.cfg')" />
+          </label>
+          <label class="field field-wide">
+            <span>{{ shellI18nStore.t("desktopShell.emulatorConfig.general.tags", "Tags") }}</span>
+            <textarea
+              v-model="emulatorTagsText"
+              class="desktop-modal-textarea desktop-modal-textarea-compact"
+              rows="3"
+              :placeholder="shellI18nStore.t('desktopShell.emulatorConfig.general.tagsPlaceholder', 'portable\\nretroarch\\nbios-required')"
+            />
           </label>
           <label class="field field-wide">
             <span>{{ shellI18nStore.t("desktopShell.emulatorConfig.general.runCommandsBefore", "Run Commands Before") }}</span>

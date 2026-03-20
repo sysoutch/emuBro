@@ -37,6 +37,11 @@
 - Deployment procedures and packaging
 
 ## Recent Changes
+- Added a refreshed large-file refactor target snapshot to `memory-bank/activeContext.md` (2026-03-20) covering high-LOC runtime/UI/style files that should be split into feature folders during stabilization (`game-details-popup-actions`, `_core-cover.scss`, `drag-drop-manager`, `setup-renderer-events`, `support-manager`, `renderer`, shell support/library files, and related large modules).
+- Refreshed support/community/LLM knowledge and runtime behavior (2026-03-20):
+  - updated the support helper knowledge snapshot with current AI / LLM, tools, community, launcher import, and library capabilities
+  - added live Ollama response streaming to the shell support center so users can see the assistant drafting text while a request is still running
+  - fixed the community in-app browser regression that could leave a hidden child window alive and interfere with shutdown/modal behavior
 - Added a prioritized delivery roadmap to `memory-bank/activeContext.md` (2026-03-05) to guide next execution phase:
   - startup performance instrumentation + <3s Linux target
   - updater in-app progress/state restoration

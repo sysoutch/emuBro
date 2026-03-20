@@ -9,6 +9,7 @@ export function createCategoriesListRenderer(options = {}) {
     const setGames = typeof options.setGames === 'function' ? options.setGames : () => {};
     const setFilteredGames = typeof options.setFilteredGames === 'function' ? options.setFilteredGames : () => {};
     const renderActiveLibraryView = typeof options.renderActiveLibraryView === 'function' ? options.renderActiveLibraryView : async () => {};
+    const renderPlatformsList = typeof options.renderPlatformsList === 'function' ? options.renderPlatformsList : async () => {};
     const isLibraryTopSection = typeof options.isLibraryTopSection === 'function' ? options.isLibraryTopSection : () => true;
     const isEmulatorsSection = typeof options.isEmulatorsSection === 'function' ? options.isEmulatorsSection : () => false;
     const showGlassMessageDialog = typeof options.showGlassMessageDialog === 'function' ? options.showGlassMessageDialog : async () => {};
@@ -512,6 +513,11 @@ async function renderCategoriesList() {
     const listRoot = document.getElementById('categories-list');
     if (!listRoot) return;
     closeCategorySettingsMenu();
+    const sectionEl = listRoot.closest('.sidebar-section');
+    const isEmulatorCategories = isEmulatorsSection();
+    const shouldHide = !isLibraryTopSection();
+    sectionEl?.classList.toggle('is-hidden', shouldHide);
+    if (shouldHide) return;
 
     await loadTagLabelMap();
     const sourceGames = Array.isArray(getCategoriesSourceGames()) ? getCategoriesSourceGames() : [];
@@ -519,6 +525,7 @@ async function renderCategoriesList() {
     const available = new Set(allCategories.map((entry) => normalizeTagCategory(entry.id)));
     const selectedBeforePrune = getActiveCategorySelectionSet();
     const selectedAfterPrune = new Set(Array.from(selectedBeforePrune).filter((tag) => available.has(tag)));
+    const selectionPruned = selectedAfterPrune.size !== selectedBeforePrune.size;
     syncCategoryStateFromSelectionSet(selectedAfterPrune);
     const categories = sortCategoryRows(getRenderableCategoryRows(sourceGames, selectedAfterPrune));
 
@@ -546,12 +553,9 @@ async function renderCategoriesList() {
     }
 
     const categoryItems = visibleCategories.map((entry) => {
-        return `
-            <li class="category-item" data-category-item="${escapeHtml(entry.id)}">
-                <a href="#" data-category-tag="${escapeHtml(entry.id)}">
-                    <span>${escapeHtml(entry.label)}</span>
-                    <small>${entry.count}</small>
-                </a>
+        const settingsButtonMarkup = isEmulatorCategories
+            ? ''
+            : `
                 <button
                     class="category-settings-btn"
                     type="button"
@@ -567,6 +571,14 @@ async function renderCategoriesList() {
                         </svg>
                     </span>
                 </button>
+            `;
+        return `
+            <li class="category-item" data-category-item="${escapeHtml(entry.id)}">
+                <a href="#" data-category-tag="${escapeHtml(entry.id)}">
+                    <span>${escapeHtml(entry.label)}</span>
+                    <small>${entry.count}</small>
+                </a>
+                ${settingsButtonMarkup}
             </li>
         `;
     }).join('');
@@ -629,7 +641,7 @@ async function renderCategoriesList() {
         </li>
         ${categoryItems}
         ${showMoreMarkup}
-        ${isLlmHelpersEnabled()
+        ${isLlmHelpersEnabled() && !isEmulatorCategories
             ? `<li class="categories-llm-row"><button class="action-btn small" type="button" data-category-action="llm-global-tags">${escapeHtml(t('sidebar.addGlobalTagsWithLlm', 'Add Global Tags with LLM'))}</button></li>
                <li class="categories-llm-row"><button class="action-btn small" type="button" data-category-action="llm-global-descriptions">${escapeHtml(t('sidebar.addGlobalDescriptionsWithLlm', 'Add Global Descriptions with LLM'))}</button></li>`
             : ''}
@@ -672,7 +684,8 @@ async function renderCategoriesList() {
             } else {
                 setActiveCategoryLinkState(listRoot);
             }
-            if (isLibraryTopSection() && !isEmulatorsSection()) {
+            if (isLibraryTopSection()) {
+                await renderPlatformsList();
                 await renderActiveLibraryView();
             }
         });
@@ -695,7 +708,8 @@ async function renderCategoriesList() {
             const nextMode = getCategorySelectionMode() === 'single' ? 'multi' : 'single';
             setCategorySelectionMode(nextMode);
             await renderCategoriesList();
-            if (isLibraryTopSection() && !isEmulatorsSection()) {
+            if (isLibraryTopSection()) {
+                await renderPlatformsList();
                 await renderActiveLibraryView();
             }
         });
@@ -707,7 +721,8 @@ async function renderCategoriesList() {
         matchModeToggle.addEventListener('change', async () => {
             setCategoryMatchMode(matchModeToggle.checked ? 'and' : 'or');
             await renderCategoriesList();
-            if (isLibraryTopSection() && !isEmulatorsSection()) {
+            if (isLibraryTopSection()) {
+                await renderPlatformsList();
                 await renderActiveLibraryView();
             }
         });
@@ -1369,6 +1384,11 @@ async function renderCategoriesList() {
                 globalDescriptionBtn.textContent = previousLabel;
             }
         });
+    }
+
+    if (selectionPruned && isLibraryTopSection()) {
+        await renderPlatformsList();
+        await renderActiveLibraryView();
     }
 }
 

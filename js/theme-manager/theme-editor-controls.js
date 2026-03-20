@@ -75,7 +75,7 @@ export function applyGeneratedThemeToForm(result = {}, options = {}) {
         bgPrimary: parseColorToHex(document.getElementById('color-bg-primary')?.value || '') || '#0b1220',
         bgSecondary: parseColorToHex(document.getElementById('color-bg-secondary')?.value || '') || '#121c2f',
         textSecondary: parseColorToHex(document.getElementById('color-text-secondary')?.value || '') || '#b9c7dc',
-        accentColor: parseColorToHex(document.getElementById('color-accent')?.value || '') || '#66ccff',
+        accentColor: parseColorToHex(document.getElementById('color-accent')?.value || '') || '#5c758d',
         borderColor: parseColorToHex(document.getElementById('color-border')?.value || '') || '#2f4360',
         successColor: parseColorToHex(document.getElementById('color-success')?.value || '') || '#4caf50',
         dangerColor: parseColorToHex(document.getElementById('color-danger')?.value || '') || '#f44336'

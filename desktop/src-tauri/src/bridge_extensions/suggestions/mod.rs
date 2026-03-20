@@ -62,6 +62,25 @@ pub(super) fn request_provider_chat_text(
     provider::request_provider_chat_text(payload, system_prompt, user_prompt, expect_json)
 }
 
+pub(super) fn request_provider_chat_text_streaming<F>(
+    payload: &Value,
+    system_prompt: &str,
+    user_prompt: &str,
+    expect_json: bool,
+    on_chunk: F,
+) -> Result<String, String>
+where
+    F: FnMut(&str),
+{
+    provider::request_provider_chat_text_streaming(
+        payload,
+        system_prompt,
+        user_prompt,
+        expect_json,
+        on_chunk,
+    )
+}
+
 pub(super) fn relay_status_payload(relay: &Value) -> Value {
     relay::relay_status_payload(relay)
 }
@@ -96,6 +115,13 @@ pub(super) fn color_for_mood(mood: &str) -> &'static str {
 
 pub(super) fn mix(hex: &str, delta: i32) -> String {
     theme::mix(hex, delta)
+}
+
+pub(crate) fn handle_emulation_support(
+    payload: &Value,
+    window: Option<&tauri::Window>,
+) -> Result<Value, String> {
+    channels::handle_emulation_support(payload, window)
 }
 
 pub(crate) fn handle(channel: &str, args: &[Value]) -> Option<Result<Value, String>> {

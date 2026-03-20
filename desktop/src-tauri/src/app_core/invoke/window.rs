@@ -512,6 +512,10 @@ pub(super) fn handle(ch: &str, args: &[Value], window: &Window) -> Result<Value,
             Ok(Value::Null)
         }
         "window:close" => {
+            if window.label() == "main" {
+                let app_handle = window.app_handle();
+                let _ = crate::app_core::invoke::community::close_community_windows(&app_handle);
+            }
             window.close().map_err(|e| e.to_string())?;
             Ok(Value::Null)
         }

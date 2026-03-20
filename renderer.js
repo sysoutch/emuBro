@@ -40,12 +40,13 @@ import {
     setTaskbarIconStartupSuppressed
 } from './js/theme-manager';
 import { initDocking, toggleDock, removeFromDock, completelyRemoveFromDock } from './js/docking-manager';
-import { 
+import {
     getGames, 
     setGames, 
     getFilteredGames, 
     setFilteredGames, 
     getEmulators,
+    getEmulatorConfig,
     setEmulators,
     fetchEmulators,
     renderGames, 
@@ -53,12 +54,14 @@ import {
     applyFilters, 
     initializePlatformFilterOptions, 
     addPlatformFilterOption,
-    searchForGamesAndEmulators
+    searchForGamesAndEmulators,
+    setPlatformFilterSourceRowsGetter
 } from './js/game-manager';
 import { showToolView } from './js/tools-manager';
 import { showSupportView, teardownSupportView } from './js/support-manager';
 import { showCommunityView, teardownCommunityView } from './js/community-manager';
 import { showGlassMessageDialog } from './js/ui/glass-message-dialog';
+import { enhancePlatformFilterSelect } from './js/ui/platform-filter-enhancer';
 import { openGlobalLlmTaggingSetupModal, createGlobalLlmProgressDialog } from './js/ui/llm-tagging-dialogs';
 import { renderSuggestionResults as renderSuggestionResultsView } from './js/suggested-results-view';
 import {
@@ -335,16 +338,59 @@ function getSelectedSidebarPlatforms() {
     );
 }
 
+function getLibrarySectionSidebarBaseGames() {
+    const normalizedSection = normalizeLibrarySection(activeLibrarySection);
+
+    if (normalizedSection === SUGGESTED_SECTION_KEY) {
+        return Array.isArray(suggestedCoverGames) ? [...suggestedCoverGames] : [];
+    }
+
+    let rows = Array.isArray(getGames()) ? [...getGames()] : [];
+
+    if (normalizedSection === 'favorite') {
+        const hasRatingField = rows.some((game) =>
+            game && Object.prototype.hasOwnProperty.call(game, 'rating')
+        );
+        if (hasRatingField) {
+            rows = rows.filter((game) => Number(game?.rating || 0) > 0);
+        }
+        return rows;
+    }
+
+    if (normalizedSection === 'recent') {
+        return rows
+            .filter((game) => !!game?.lastPlayed)
+            .sort((a, b) => new Date(b.lastPlayed).getTime() - new Date(a.lastPlayed).getTime());
+    }
+
+    return rows;
+}
+
 function getCategorySidebarSourceGames() {
-    const rows = Array.isArray(getGames()) ? getGames() : [];
+    const normalizedSection = normalizeLibrarySection(activeLibrarySection);
+    const rows = normalizedSection === 'emulators'
+        ? getBaseEmulatorRowsForSection()
+        : getLibrarySectionSidebarBaseGames();
     const selectedPlatforms = getSelectedSidebarPlatforms();
     if (selectedPlatforms.size === 0) return rows;
-    return rows.filter((game) => selectedPlatforms.has(String(game?.platformShortName || '').trim().toLowerCase()));
+    return rows.filter((row) => selectedPlatforms.has(String(row?.platformShortName || '').trim().toLowerCase()));
 }
 
 function getPlatformSidebarCountGames() {
-    return applyCategoryFilter(getGames());
+    if (normalizeLibrarySection(activeLibrarySection) === 'emulators') {
+        return applyCategoryFilter(getBaseEmulatorRowsForSection());
+    }
+    return applyCategoryFilter(getLibrarySectionSidebarBaseGames());
 }
+
+function getPlatformFilterSourceGames() {
+    if (normalizeLibrarySection(activeLibrarySection) === 'emulators') {
+        return applyCategoryFilter(getBaseEmulatorRowsForSection());
+    }
+    return applyCategoryFilter(getLibrarySectionSidebarBaseGames());
+}
+
+setPlatformFilterSourceRowsGetter(getPlatformFilterSourceGames);
 
 categoriesListRenderer = createCategoriesListRenderer({
     emubro,
@@ -355,6 +401,11 @@ categoriesListRenderer = createCategoriesListRenderer({
     renderActiveLibraryView: async () => {
         if (typeof renderActiveLibraryView === 'function') {
             await renderActiveLibraryView();
+        }
+    },
+    renderPlatformsList: async () => {
+        if (typeof renderPlatformsList === 'function') {
+            await renderPlatformsList();
         }
     },
     isLibraryTopSection: () => activeTopSection === 'library',
@@ -394,6 +445,9 @@ platformsListRenderer = createPlatformsListRenderer({
         if (typeof renderActiveLibraryView === 'function') {
             await renderActiveLibraryView();
         }
+    },
+    refreshPlatformFilterOptions: () => {
+        initializePlatformFilterOptions(getPlatformFilterSourceGames());
     },
     renderCategoriesList: async () => {
         if (typeof renderCategoriesList === 'function') {
@@ -604,9 +658,19 @@ function setAppMode(mode) {
         setActiveRailTarget(activeTopSection);
     }
 
+    try {
+        window.dispatchEvent(new CustomEvent('emubro:app-mode-changed', {
+            detail: {
+                mode: activeTopSection,
+                previousMode: previousTopSection
+            }
+        }));
+    } catch (_error) {}
+
     updateEmulatorsInstalledToggleVisibility();
     updateGroupingControlsVisibility();
     updateSuggestedPanelVisibility();
+    updateViewSizeControlState();
 }
 
 async function getLibraryPathSettings() {
@@ -732,6 +796,55 @@ function inferEmulatorType(emulator) {
     return 'standalone';
 }
 
+function getTaggedEmulatorRow(emulator) {
+    const config = getEmulatorConfig(emulator);
+    return {
+        ...emulator,
+        tags: Array.isArray(config?.tags) ? [...config.tags] : []
+    };
+}
+
+function getBaseEmulatorRowsForSection(sourceRows = getEmulators(), options = {}) {
+    const {
+        includeSearch = false,
+        includePlatformFilter = false
+    } = options && typeof options === 'object' ? options : {};
+
+    let rows = Array.isArray(sourceRows) ? sourceRows.map((emulator) => getTaggedEmulatorRow(emulator)) : [];
+    const normalizedType = normalizeEmulatorType(activeEmulatorTypeTab) || 'standalone';
+    rows = rows.filter((emu) => inferEmulatorType(emu) === normalizedType);
+
+    if (emulatorsInstalledToggle && emulatorsInstalledToggle.checked) {
+        rows = rows.filter((emu) => !!emu.isInstalled);
+    }
+
+    if (includeSearch) {
+        const searchTerm = String(document.getElementById('global-game-search')?.value || document.querySelector('.search-bar input')?.value || '').trim().toLowerCase();
+        if (searchTerm) {
+            rows = rows.filter((emu) => {
+                const name = String(emu.name || '').toLowerCase();
+                const platform = String(emu.platform || emu.platformShortName || '').toLowerCase();
+                const filePath = String(emu.filePath || '').toLowerCase();
+                const tags = Array.isArray(emu?.tags) ? emu.tags : [];
+                return name.includes(searchTerm)
+                    || platform.includes(searchTerm)
+                    || filePath.includes(searchTerm)
+                    || tags.some((tag) => String(tag || '').toLowerCase().includes(searchTerm));
+            });
+        }
+    }
+
+    if (includePlatformFilter) {
+        const platformFilter = document.getElementById('platform-filter');
+        const selectedPlatform = String(platformFilter?.value || 'all').trim().toLowerCase();
+        if (selectedPlatform && selectedPlatform !== 'all') {
+            rows = rows.filter((emu) => String(emu?.platformShortName || '').trim().toLowerCase() === selectedPlatform);
+        }
+    }
+
+    return rows;
+}
+
 function getEmulatorRenderOptions() {
     return {
         activeType: activeEmulatorTypeTab,
@@ -740,6 +853,9 @@ function getEmulatorRenderOptions() {
             renderEmulators(getFilteredEmulatorsForSection(), getEmulatorRenderOptions());
         },
         onRefresh: () => {
+            void renderCategoriesList();
+            void renderPlatformsList();
+            initializePlatformFilterOptions(getPlatformFilterSourceGames());
             renderEmulators(getFilteredEmulatorsForSection(), getEmulatorRenderOptions());
         }
     };
@@ -768,30 +884,11 @@ function updateGroupingControlsVisibility() {
 }
 
 function getFilteredEmulatorsForSection(sourceRows = getEmulators()) {
-    let rows = Array.isArray(sourceRows) ? [...sourceRows] : [];
-
-    const normalizedType = normalizeEmulatorType(activeEmulatorTypeTab) || 'standalone';
-    rows = rows.filter((emu) => inferEmulatorType(emu) === normalizedType);
-
-    if (emulatorsInstalledToggle && emulatorsInstalledToggle.checked) {
-        rows = rows.filter((emu) => !!emu.isInstalled);
-    }
-
-    const searchTerm = String(document.getElementById('global-game-search')?.value || document.querySelector('.search-bar input')?.value || '').trim().toLowerCase();
-    if (searchTerm) {
-        rows = rows.filter((emu) => {
-            const name = String(emu.name || '').toLowerCase();
-            const platform = String(emu.platform || emu.platformShortName || '').toLowerCase();
-            const filePath = String(emu.filePath || '').toLowerCase();
-            return name.includes(searchTerm) || platform.includes(searchTerm) || filePath.includes(searchTerm);
-        });
-    }
-
-    const platformFilter = document.getElementById('platform-filter');
-    const selectedPlatform = String(platformFilter?.value || 'all').trim().toLowerCase();
-    if (selectedPlatform && selectedPlatform !== 'all') {
-        rows = rows.filter((emu) => String(emu?.platformShortName || '').trim().toLowerCase() === selectedPlatform);
-    }
+    let rows = getBaseEmulatorRowsForSection(sourceRows, {
+        includeSearch: true,
+        includePlatformFilter: true
+    });
+    rows = applyCategoryFilter(rows);
 
     const sortFilter = document.getElementById('sort-filter');
     const selectedSort = String(sortFilter?.value || 'name').trim().toLowerCase();
@@ -840,7 +937,7 @@ function updateViewSizeControlState() {
     if (!slider) return;
 
     const activeView = document.querySelector('.view-btn.active')?.dataset?.view || 'cover';
-    const isLocked = activeView === 'random';
+    const isLocked = activeTopSection !== 'library' || activeView === 'random';
 
     slider.disabled = isLocked;
     const wrapper = slider.closest('.view-size-control');
@@ -958,10 +1055,13 @@ libraryViewController = createLibraryViewController({
     getFilteredGames,
     setFilteredGames,
     getEmulators,
+    getEmulatorConfig,
     setEmulators,
     fetchEmulators,
     initializePlatformFilterOptions,
     renderEmulators,
+    renderCategoriesList,
+    renderPlatformsList,
     applyFilters,
     applyCategoryFilter,
     renderGames,
@@ -982,13 +1082,15 @@ libraryViewController = createLibraryViewController({
     suggestedSectionKey: SUGGESTED_SECTION_KEY,
 });
 
-renderActiveLibraryView = async () => {
-    await libraryViewController.renderActiveLibraryView();
+renderActiveLibraryView = async (options = {}) => {
+    await libraryViewController.renderActiveLibraryView(options);
     await renderPlatformsList();
 };
 
 setActiveLibrarySection = async (section) => {
     await libraryViewController.setActiveLibrarySection(section);
+    await renderPlatformsList();
+    await renderCategoriesList();
 };
 
 updateLibraryCounters = () => {
@@ -1248,6 +1350,7 @@ async function initializeApp() {
         const savedDefaultSection = normalizeLibrarySection(localStorage.getItem('emuBro.defaultLibrarySection') || 'all');
         if (savedDefaultSection) activeLibrarySection = savedDefaultSection;
         setActiveViewButton(localStorage.getItem('emuBro.defaultLibraryView') || 'cover');
+        enhancePlatformFilterSelect(document);
         if (groupFilterSelect) {
             groupFilterSelect.value = normalizeGroupByMode(localStorage.getItem(GROUP_BY_MODE_KEY) || 'none');
         }

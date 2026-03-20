@@ -197,7 +197,7 @@
 
 .theme-manager-header {
     padding: 15px 20px;
-    background: linear-gradient(to right, rgba(102, 204, 255, 0.1), transparent);
+    background: linear-gradient(to right, rgba(var(--accent-color-rgb), 0.1), transparent);
     border-bottom: 1px solid var(--border-color);
     display: flex;
     justify-content: space-between;
@@ -263,7 +263,7 @@
 
         &.active {
             color: var(--accent-color);
-            background: rgba(102, 204, 255, 0.1);
+            background: rgba(var(--accent-color-rgb), 0.1);
         }
 
         &:hover:not(.active) {
@@ -297,7 +297,7 @@
     .author-tag {
         font-size: 0.75rem;
         color: var(--accent-color);
-        background: rgba(102, 204, 255, 0.1);
+        background: rgba(var(--accent-color-rgb), 0.1);
         padding: 2px 8px;
         border-radius: 10px;
         align-self: flex-start;

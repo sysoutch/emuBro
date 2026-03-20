@@ -216,7 +216,7 @@ function getInitialState() {
   const persisted = readPersistedState();
   const locationState = readLocationState();
   const legacyDefaults = readLegacyLibraryDefaults();
-  const source = { ...legacyDefaults, ...persisted, ...locationState };
+  const source = { ...persisted, ...legacyDefaults, ...locationState };
   const persistedRegion = String(persisted.selectedRegion || "all")
     .trim()
     .toLowerCase();
@@ -345,8 +345,10 @@ export const useHeaderFiltersStore = defineStore("headerFilters", {
       this.loading = true;
       try {
         const persistedState = await readNativeShellState(STATE_KEY, readPersistedState());
+        const legacyDefaults = readLegacyLibraryDefaults();
         applyPersistedSnapshot(this, {
           ...persistedState,
+          ...legacyDefaults,
           ...readLocationState()
         });
 

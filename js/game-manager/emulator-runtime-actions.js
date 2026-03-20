@@ -1,4 +1,5 @@
 import { normalizeInputBindingProfile } from '../gamepad-binding-utils';
+import { confirmWritableEmulatorFolderForLaunch } from './emulator-write-access';
 
 export function createEmulatorRuntimeActions(deps = {}) {
     const emubro = deps.emubro || window.emubro;
@@ -38,6 +39,13 @@ export function createEmulatorRuntimeActions(deps = {}) {
 
         try {
             const config = getEmulatorConfig(emulator);
+            const canContinue = await confirmWritableEmulatorFolderForLaunch(emubro, {
+                ...emulator,
+                workingDirectory: config.workingDirectory || emulator?.workingDirectory || ''
+            });
+            if (!canContinue) {
+                return;
+            }
             const effectiveInputBindings = normalizeInputBindingProfile(
                 (config?.effectiveInputBindings && typeof config.effectiveInputBindings === 'object')
                     ? config.effectiveInputBindings
