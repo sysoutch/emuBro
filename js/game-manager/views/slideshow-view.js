@@ -6,6 +6,15 @@ import { attachGameCardContextMenu } from '../game-card-context-menu';
 export function renderGamesAsSlideshow(gamesToRender, options = {}) {
     const gamesContainer = document.getElementById('games-container');
     if (!gamesContainer) return;
+    const scrollRoot = gamesContainer.closest('.game-scroll-body');
+    const releaseSlideshowScrollLock = () => {
+        if (scrollRoot && scrollRoot.classList) {
+            scrollRoot.classList.remove('slideshow-scroll-lock');
+        }
+    };
+    if (scrollRoot && scrollRoot.classList) {
+        scrollRoot.classList.add('slideshow-scroll-lock');
+    }
     const normalizedCoverCardMode = String(options.coverCardMode || '').trim().toLowerCase();
     const isCoverOnlyMode = normalizedCoverCardMode === 'cover-only'
         || gamesContainer.classList.contains('cover-mode-cover-only');
@@ -54,6 +63,10 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
     if (!slideshowGames || slideshowGames.length === 0) {
         slideshowContainer.innerHTML = '<div class="slideshow-empty">No games to display.</div>';
         gamesContainer.appendChild(slideshowContainer);
+        setGamesScrollDetach(() => {
+            releaseSlideshowScrollLock();
+            cleanupLazyGameImages(slideshowContainer);
+        });
         return;
     }
 
@@ -382,6 +395,7 @@ export function renderGamesAsSlideshow(gamesToRender, options = {}) {
     });
 
     setGamesScrollDetach(() => {
+        releaseSlideshowScrollLock();
         lane?.destroy();
         lane = null;
         window.removeEventListener('resize', onResize);

@@ -18,6 +18,7 @@ import { openLauncherImportModal as openLauncherImportModalDialog } from './libr
 import { resolveLibrarySettingsModalOptions } from './library-settings-modal/options-resolver.js';
 import {
     normalizeLlmMode,
+    normalizeSupportContextWindowMessages,
     normalizeRelayAccessMode,
     normalizeRelayAddressList,
     normalizeRelayPort,
@@ -444,6 +445,7 @@ export async function openLibraryPathSettingsModal(options = {}) {
         llmRelayHostStatus,
         llmRelayConnections,
         normalizeLlmMode,
+        normalizeSupportContextWindowMessages,
         normalizeRelayPort,
         normalizeRelayAccessMode,
         normalizeRelayAddressList,
@@ -592,6 +594,7 @@ export async function openLibraryPathSettingsModal(options = {}) {
             modal,
             llmDraft,
             normalizeLlmMode,
+            normalizeSupportContextWindowMessages,
             normalizeRelayPort,
             normalizeRelayAccessMode,
             normalizeRelayAddressList,
@@ -672,7 +675,7 @@ export async function openLibraryPathSettingsModal(options = {}) {
         });
     };
 
-    overlay.addEventListener('click', (event) => {
+    overlay.addEventListener('mousedown', (event) => {
         if (event.target === overlay) closeModal();
     });
 

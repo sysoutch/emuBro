@@ -132,6 +132,19 @@
   .desktop-tools-summary {
     justify-content: flex-start;
   }
+
+  .desktop-library-main-card.is-immersive-mode {
+    --desktop-library-immersive-height: auto;
+  }
+
+  .desktop-immersive-focus,
+  .desktop-immersive-slideshow,
+  .desktop-immersive-random,
+  .desktop-immersive-slide {
+    min-height: 0;
+    max-height: none;
+    height: auto;
+  }
 }
 
 @media (max-width: 680px) {

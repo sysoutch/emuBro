@@ -1,4 +1,4 @@
-﻿export async function openProfileModalView(options = {}) {
+export async function openProfileModalView(options = {}) {
     const emubro = options.emubro;
     const openLibraryPathSettingsModal = typeof options.openLibraryPathSettingsModal === "function"
         ? options.openLibraryPathSettingsModal
@@ -216,7 +216,7 @@
         });
     }
 
-    overlay.addEventListener("click", (event) => {
+    overlay.addEventListener("mousedown", (event) => {
         if (event.target === overlay) overlay.remove();
     });
 

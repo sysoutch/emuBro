@@ -2,6 +2,7 @@ export function bindLlmHandlers({
     modal,
     llmDraft,
     normalizeLlmMode,
+    normalizeSupportContextWindowMessages,
     normalizeRelayPort,
     normalizeRelayAccessMode,
     normalizeRelayAddressList,
@@ -24,6 +25,13 @@ export function bindLlmHandlers({
         llmModeSelect.addEventListener('change', () => {
             llmDraft.llmMode = normalizeLlmMode(llmModeSelect.value);
             render();
+        });
+    }
+
+    const llmContextWindowSelect = modal.querySelector('[data-llm="support-context-window"]');
+    if (llmContextWindowSelect) {
+        llmContextWindowSelect.addEventListener('change', () => {
+            llmDraft.contextWindowMessages = normalizeSupportContextWindowMessages(llmContextWindowSelect.value, llmDraft.contextWindowMessages || 20);
         });
     }
 

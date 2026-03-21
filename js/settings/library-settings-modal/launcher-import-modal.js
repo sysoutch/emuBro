@@ -113,7 +113,7 @@ export async function openLauncherImportModal({
     `;
 
     const close = () => overlay.remove();
-    overlay.addEventListener('click', (event) => {
+    overlay.addEventListener('mousedown', (event) => {
         if (event.target === overlay) close();
     });
     modal.querySelector('[data-launcher-close]')?.addEventListener('click', close);

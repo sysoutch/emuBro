@@ -4,6 +4,15 @@ import { attachGameCardContextMenu } from '../game-card-context-menu';
 export function renderGamesAsFocus(gamesToRender, options = {}) {
     const gamesContainer = document.getElementById('games-container');
     if (!gamesContainer) return;
+    const scrollRoot = gamesContainer.closest('.game-scroll-body');
+    const releaseFocusScrollLock = () => {
+        if (scrollRoot && scrollRoot.classList) {
+            scrollRoot.classList.remove('focus-scroll-lock');
+        }
+    };
+    if (scrollRoot && scrollRoot.classList) {
+        scrollRoot.classList.add('focus-scroll-lock');
+    }
     const previousActiveElement = document.activeElement;
     const shouldRestoreViewFocus = (() => {
         if (!previousActiveElement || previousActiveElement === document.body) return true;
@@ -47,6 +56,10 @@ export function renderGamesAsFocus(gamesToRender, options = {}) {
     if (!focusGames || focusGames.length === 0) {
         focusContainer.innerHTML = '<div class="focus-empty">No games to display.</div>';
         gamesContainer.appendChild(focusContainer);
+        setGamesScrollDetach(() => {
+            releaseFocusScrollLock();
+            cleanupLazyGameImages(focusContainer);
+        });
         return;
     }
 
@@ -378,6 +391,7 @@ export function renderGamesAsFocus(gamesToRender, options = {}) {
     }
 
     setGamesScrollDetach(() => {
+        releaseFocusScrollLock();
         cleanupLazyGameImages(focusContainer);
     });
 }

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import LazyArtwork from "../components/LazyArtwork.vue";
 import { renderSupportDoc, renderSupportMarkdown } from "../utils/support-formatting";
@@ -8,17 +8,21 @@ import { loadSelectedLaunchPath } from "../utils/emulator-preferences";
 import { useAppStore } from "../stores/app";
 import { useShellI18nStore } from "../stores/shell-i18n";
 import { useSettingsToolsStore } from "../stores/settings-tools";
+import { useLlmSettingsStore } from "../stores/llm-settings";
 import { useSupportCenterStore } from "../stores/support-center";
 import { useWorkspaceStore } from "../stores/workspace";
 
 const appStore = useAppStore();
 const shellI18nStore = useShellI18nStore();
 const settingsToolsStore = useSettingsToolsStore();
+const llmSettingsStore = useLlmSettingsStore();
 const supportStore = useSupportCenterStore();
 const workspaceStore = useWorkspaceStore();
+const { contextWindowMessages: llmContextWindowMessages } = storeToRefs(llmSettingsStore);
 
 const {
   autoSpecsEnabled,
+  chatContextWindowSize,
   chatHistory,
   debugPayload,
   debugSupportEnabled,
@@ -40,6 +44,7 @@ const {
   mode,
   outputMarkdown,
   pendingSupportTask,
+  pendingTaskBusy,
   platform,
   running,
   selectedHelpDoc,
@@ -54,6 +59,12 @@ const { emulators, games } = storeToRefs(workspaceStore);
 const matchActionStatus = ref("");
 const matchActionTone = ref("");
 const chatScrollRef = ref(null);
+const activeAttachmentLightbox = ref(null);
+const activeAttachmentLightboxSrc = ref("");
+const activeAttachmentLightboxFallbackSrc = ref("");
+const hasActiveAttachmentLightbox = computed(
+  () => !!activeAttachmentLightbox.value && !!String(activeAttachmentLightboxSrc.value || "").trim()
+);
 
 const renderedOutput = computed(() =>
   mode.value === "help"
@@ -61,8 +72,92 @@ const renderedOutput = computed(() =>
     : renderSupportMarkdown(outputMarkdown.value)
 );
 
-const debugText = computed(() =>
-  debugPayload.value ? JSON.stringify(debugPayload.value, null, 2) : shellI18nStore.t("support.debugEmpty", "Debug output will appear after a request.")
+function stringifySupportDebugValue(value) {
+  if (typeof value === "string") {
+    return value;
+  }
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch (_error) {
+    return String(value ?? "");
+  }
+}
+
+function buildSupportDebugSections(payload, translate) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return [];
+  }
+
+  const sections = [];
+  const promptEntries = Array.isArray(payload.prompts)
+    ? payload.prompts
+    : [
+        payload.systemPrompt ? { label: "System Prompt", text: payload.systemPrompt } : null,
+        payload.userPrompt ? { label: "User Prompt", text: payload.userPrompt } : null
+      ].filter(Boolean);
+
+  promptEntries.forEach((entry, index) => {
+    const title = String(entry?.label || entry?.title || `Prompt ${index + 1}`).trim();
+    const text = String(entry?.text || entry?.prompt || "").trim();
+    if (!title || !text) {
+      return;
+    }
+    sections.push({
+      key: `prompt-${index}`,
+      title,
+      body: text
+    });
+  });
+
+  const providerError = String(payload.providerError || "").trim();
+  if (providerError) {
+    sections.push({
+      key: "provider-error",
+      title: translate("support.debugProviderError", "Provider Error"),
+      body: providerError
+    });
+  }
+
+  const exceptionText = String(payload.exception || "").trim();
+  if (exceptionText) {
+    sections.push({
+      key: "exception",
+      title: translate("support.debugException", "Exception"),
+      body: exceptionText
+    });
+  }
+
+  if (payload.streaming && typeof payload.streaming === "object" && !Array.isArray(payload.streaming)) {
+    sections.push({
+      key: "streaming",
+      title: translate("support.debugStreamingState", "Streaming State"),
+      body: stringifySupportDebugValue(payload.streaming)
+    });
+  }
+
+  if (payload.envelope && typeof payload.envelope === "object" && !Array.isArray(payload.envelope)) {
+    sections.push({
+      key: "envelope",
+      title: translate("support.debugAssistantEnvelope", "Assistant Envelope"),
+      body: stringifySupportDebugValue(payload.envelope)
+    });
+  }
+
+  sections.push({
+    key: "raw-json",
+    title: translate("support.debugRawJson", "Raw Debug JSON"),
+    body: stringifySupportDebugValue(payload)
+  });
+
+  return sections.filter((section) => String(section?.body || "").trim());
+}
+
+const debugSections = computed(() =>
+  buildSupportDebugSections(debugPayload.value, (key, fallback, params) => shellI18nStore.t(key, fallback, params))
+);
+
+const debugEmptyText = computed(() =>
+  shellI18nStore.t("support.debugEmpty", "Debug output will appear after a request.")
 );
 
 const supportModes = computed(() => [
@@ -152,6 +247,61 @@ function handleSupportMatchArtworkError(event, row, kind = "game") {
   image.dataset.fallbackApplied = "1";
   image.classList.add("is-artwork-fallback");
   image.src = fallback;
+}
+
+function supportAttachmentKey(entry, entryIndex, attachment, attachmentIndex) {
+  return [
+    String(entry?.role || "assistant").trim(),
+    entryIndex,
+    String(attachment?.kind || "attachment").trim(),
+    String(attachment?.gameKey || attachment?.gameId || attachment?.imageUrl || attachment?.thumbnailUrl || attachmentIndex).trim()
+  ].join(":");
+}
+
+function supportAttachmentAlt(attachment) {
+  return String(attachment?.title || attachment?.subtitle || shellI18nStore.t("desktopShell.support.coverAttachmentAlt", "Support cover result")).trim();
+}
+
+function setSupportLightboxDocumentState(isOpen) {
+  if (typeof document === "undefined") {
+    return;
+  }
+  const method = isOpen ? "add" : "remove";
+  document.documentElement.classList[method]("desktop-support-lightbox-open");
+  document.body?.classList[method]?.("desktop-support-lightbox-open");
+}
+
+function openSupportAttachmentLightbox(attachment) {
+  if (!attachment || !String(attachment?.imageUrl || attachment?.thumbnailUrl || "").trim()) {
+    return;
+  }
+  activeAttachmentLightbox.value = attachment;
+  activeAttachmentLightboxSrc.value = String(attachment?.imageUrl || attachment?.thumbnailUrl || "").trim();
+  activeAttachmentLightboxFallbackSrc.value = String(attachment?.thumbnailUrl || attachment?.imageUrl || "").trim();
+  setSupportLightboxDocumentState(true);
+}
+
+function closeSupportAttachmentLightbox() {
+  activeAttachmentLightbox.value = null;
+  activeAttachmentLightboxSrc.value = "";
+  activeAttachmentLightboxFallbackSrc.value = "";
+  setSupportLightboxDocumentState(false);
+}
+
+function handleSupportLightboxKeydown(event) {
+  if (event.key === "Escape") {
+    closeSupportAttachmentLightbox();
+  }
+}
+
+function handleSupportLightboxImageError() {
+  const fallback = String(activeAttachmentLightboxFallbackSrc.value || "").trim();
+  const current = String(activeAttachmentLightboxSrc.value || "").trim();
+  if (fallback && fallback !== current) {
+    activeAttachmentLightboxSrc.value = fallback;
+    return;
+  }
+  closeSupportAttachmentLightbox();
 }
 
 async function launchMatchedGame(row) {
@@ -263,8 +413,35 @@ watch(
   }
 );
 
+watch(
+  () => llmContextWindowMessages.value,
+  (nextValue) => {
+    supportStore.refreshChatContextWindowSize({ contextWindowMessages: nextValue });
+  }
+);
+
+watch(
+  () => initialized.value,
+  (nextValue) => {
+    if (nextValue) {
+      closeSupportAttachmentLightbox();
+    }
+  }
+);
+
 onMounted(() => {
-  void Promise.all([supportStore.initialize(), settingsToolsStore.initialize(), workspaceStore.initialize()]);
+  closeSupportAttachmentLightbox();
+  if (typeof window !== "undefined") {
+    window.addEventListener("keydown", handleSupportLightboxKeydown);
+  }
+  void Promise.all([supportStore.initialize(), settingsToolsStore.initialize(), workspaceStore.initialize(), llmSettingsStore.initialize()]);
+});
+
+onBeforeUnmount(() => {
+  closeSupportAttachmentLightbox();
+  if (typeof window !== "undefined") {
+    window.removeEventListener("keydown", handleSupportLightboxKeydown);
+  }
 });
 </script>
 
@@ -351,6 +528,9 @@ onMounted(() => {
             <p class="meta-line">{{ activeModeMeta.description }}</p>
           </div>
           <div class="desktop-support-chat-shell-actions">
+            <span class="desktop-support-context-badge">
+              {{ shellI18nStore.t("desktopShell.support.contextWindowLabel", "Context window") }}: {{ chatContextWindowSize }} msgs
+            </span>
             <button type="button" class="action-button" :disabled="specsBusy" @click="supportStore.insertSystemSpecs">
               {{ specsBusy ? shellI18nStore.t("support.status.collectingSpecs", "Collecting system specs...") : shellI18nStore.t("support.insertPcSpecs", "Insert PC Specs") }}
             </button>
@@ -379,6 +559,31 @@ onMounted(() => {
               >
                 <strong>{{ entry.role === "assistant" ? shellI18nStore.t("support.roleAssistant", "Assistant") : shellI18nStore.t("support.roleUser", "You") }}</strong>
                 <div class="desktop-support-markdown" v-html="renderSupportMarkdown(entry.text)" />
+                <div v-if="Array.isArray(entry.attachments) && entry.attachments.length" class="desktop-support-attachment-grid">
+                  <article
+                    v-for="(attachment, attachmentIndex) in entry.attachments"
+                    :key="supportAttachmentKey(entry, index, attachment, attachmentIndex)"
+                    class="desktop-support-attachment-card"
+                    :class="`is-${attachment.kind || 'attachment'}`"
+                    tabindex="0"
+                    role="button"
+                    @click="openSupportAttachmentLightbox(attachment)"
+                    @keydown.enter.prevent="openSupportAttachmentLightbox(attachment)"
+                    @keydown.space.prevent="openSupportAttachmentLightbox(attachment)"
+                  >
+                    <div class="desktop-support-attachment-image">
+                      <LazyArtwork
+                        :src="attachment.thumbnailUrl || attachment.imageUrl"
+                        :alt="supportAttachmentAlt(attachment)"
+                      />
+                    </div>
+                    <div class="desktop-support-attachment-copy">
+                      <strong>{{ attachment.title || shellI18nStore.t("desktopShell.support.coverAttachmentFallbackTitle", "Cover") }}</strong>
+                      <small v-if="attachment.subtitle">{{ attachment.subtitle }}</small>
+                      <span v-if="attachment.source" class="pill">{{ attachment.source }}</span>
+                    </div>
+                  </article>
+                </div>
               </article>
 
               <article v-if="running" class="desktop-support-chat-item is-assistant is-pending">
@@ -398,14 +603,14 @@ onMounted(() => {
                 <p>{{ pendingSupportTask?.message || shellI18nStore.t("desktopShell.support.taskApprovalSpecs", "The assistant wants to fetch your PC specs before continuing.") }}</p>
               </div>
               <div class="desktop-support-task-approval-actions">
-                <button type="button" class="action-button" :disabled="running || specsBusy" @click="supportStore.approvePendingSupportTask()">
+                <button type="button" class="action-button" :disabled="running || specsBusy || pendingTaskBusy" @click="supportStore.approvePendingSupportTask()">
                   {{
                     specsBusy
                       ? shellI18nStore.t("support.status.collectingSpecs", "Collecting system specs...")
                       : (pendingSupportTask?.actionLabel || shellI18nStore.t("desktopShell.support.approveSpecsFetch", "Approve"))
                   }}
                 </button>
-                <button type="button" class="action-button ghost-button" :disabled="running || specsBusy" @click="supportStore.dismissPendingSupportTask()">
+                <button type="button" class="action-button ghost-button" :disabled="running || specsBusy || pendingTaskBusy" @click="supportStore.dismissPendingSupportTask()">
                   {{ shellI18nStore.t("desktopShell.support.dismissTaskRequest", "Not now") }}
                 </button>
               </div>
@@ -517,9 +722,15 @@ onMounted(() => {
               </p>
             </section>
 
-            <details v-if="debugSupportEnabled" class="desktop-update-notes" :open="!!debugPayload">
+            <details v-if="debugSupportEnabled" class="desktop-update-notes">
               <summary>{{ shellI18nStore.t("support.debugDetails", "Planner / Retrieval Details") }}</summary>
-              <pre>{{ debugText }}</pre>
+              <div v-if="debugSections.length" class="desktop-support-debug-stack">
+                <details v-for="section in debugSections" :key="section.key" class="desktop-support-debug-section">
+                  <summary>{{ section.title }}</summary>
+                  <pre>{{ section.body }}</pre>
+                </details>
+              </div>
+              <p v-else class="desktop-support-debug-empty">{{ debugEmptyText }}</p>
             </details>
           </div>
         </div>
@@ -540,7 +751,12 @@ onMounted(() => {
           <div class="desktop-support-chat-footer-meta">
             <p v-if="status" class="meta-line" :class="{ 'meta-line-error': statusTone === 'error' }">{{ status }}</p>
             <p v-else class="meta-line">{{ shellI18nStore.t("desktopShell.support.enterToSend", "Enter to send. Shift+Enter for newline.") }}</p>
-            <span class="pill">{{ chatHistory.length }} {{ shellI18nStore.t("desktopShell.support.messages", "messages") }}</span>
+            <div class="desktop-support-chat-footer-badges">
+              <span class="pill">{{ chatHistory.length }} {{ shellI18nStore.t("desktopShell.support.messages", "messages") }}</span>
+              <span class="desktop-support-context-badge">
+                {{ shellI18nStore.t("desktopShell.support.contextWindowLabel", "Context window") }}: {{ chatContextWindowSize }} msgs
+              </span>
+            </div>
           </div>
         </footer>
       </section>
@@ -717,14 +933,14 @@ onMounted(() => {
               <p>{{ pendingSupportTask?.message || shellI18nStore.t("desktopShell.support.taskApprovalSpecs", "The assistant wants to fetch your PC specs before continuing.") }}</p>
             </div>
             <div class="desktop-support-task-approval-actions">
-              <button type="button" class="action-button" :disabled="running || specsBusy" @click="supportStore.approvePendingSupportTask()">
+              <button type="button" class="action-button" :disabled="running || specsBusy || pendingTaskBusy" @click="supportStore.approvePendingSupportTask()">
                 {{
                   specsBusy
                     ? shellI18nStore.t("support.status.collectingSpecs", "Collecting system specs...")
                     : (pendingSupportTask?.actionLabel || shellI18nStore.t("desktopShell.support.approveSpecsFetch", "Approve"))
                 }}
               </button>
-              <button type="button" class="action-button ghost-button" :disabled="running || specsBusy" @click="supportStore.dismissPendingSupportTask()">
+              <button type="button" class="action-button ghost-button" :disabled="running || specsBusy || pendingTaskBusy" @click="supportStore.dismissPendingSupportTask()">
                 {{ shellI18nStore.t("desktopShell.support.dismissTaskRequest", "Not now") }}
               </button>
             </div>
@@ -836,13 +1052,41 @@ onMounted(() => {
             </p>
           </section>
 
-          <details v-if="debugSupportEnabled" class="desktop-update-notes" :open="!!debugPayload">
+          <details v-if="debugSupportEnabled" class="desktop-update-notes">
             <summary>{{ shellI18nStore.t("support.debugDetails", "Planner / Retrieval Details") }}</summary>
-            <pre>{{ debugText }}</pre>
+            <div v-if="debugSections.length" class="desktop-support-debug-stack">
+              <details v-for="section in debugSections" :key="section.key" class="desktop-support-debug-section">
+                <summary>{{ section.title }}</summary>
+                <pre>{{ section.body }}</pre>
+              </details>
+            </div>
+            <p v-else class="desktop-support-debug-empty">{{ debugEmptyText }}</p>
           </details>
         </article>
         </section>
       </template>
     </section>
+
+    <div
+      v-if="hasActiveAttachmentLightbox"
+      class="desktop-support-lightbox"
+      @click.self="closeSupportAttachmentLightbox"
+    >
+      <button type="button" class="action-button desktop-support-lightbox-close" @click="closeSupportAttachmentLightbox">
+        {{ shellI18nStore.t("buttons.close", "Close") }}
+      </button>
+      <div class="desktop-support-lightbox-card">
+        <img
+          class="desktop-support-lightbox-image"
+          :src="activeAttachmentLightboxSrc"
+          :alt="supportAttachmentAlt(activeAttachmentLightbox)"
+          @error="handleSupportLightboxImageError"
+        />
+        <div class="desktop-support-lightbox-copy">
+          <strong>{{ activeAttachmentLightbox.title || shellI18nStore.t("desktopShell.support.coverAttachmentFallbackTitle", "Cover") }}</strong>
+          <small v-if="activeAttachmentLightbox.subtitle">{{ activeAttachmentLightbox.subtitle }}</small>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

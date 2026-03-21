@@ -1,10 +1,10 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "emuBro",
-  "version": "1.0.0-alpha.20260320",
+  "version": "1.0.0-alpha.20260321",
   "identifier": "com.emubro.desktop",
   "build": {
-    "beforeDevCommand": "npm run dev",
+    "beforeDevCommand": "node ./node_modules/vite/bin/vite.js",
     "beforeBuildCommand": "npm run build",
     "devUrl": "http://localhost:1420",
     "frontendDist": "../dist"

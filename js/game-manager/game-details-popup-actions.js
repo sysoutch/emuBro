@@ -1103,14 +1103,14 @@ export function createGameDetailsPopupActions(deps = {}) {
                 }
 
                 markGameCoverUpdated(game.id);
-                await reloadGamesFromMainAndRender();
+                await reloadGamesFromMainAndRender({ preserveScroll: true, anchorGameId: game.id });
                 let refreshedGame = getGames().find((row) => Number(row.id) === Number(game.id));
                 let groupedCoverResult = { updated: 0, failed: 0, total: 0 };
                 const refreshedImage = String(refreshedGame?.image || '').trim();
                 if (refreshedImage) {
                     groupedCoverResult = await applyCoverToGroupedGames(refreshedGame || game, refreshedImage, getGames());
                     if (groupedCoverResult.updated > 0) {
-                        await reloadGamesFromMainAndRender();
+                        await reloadGamesFromMainAndRender({ preserveScroll: true, anchorGameId: game.id });
                         refreshedGame = getGames().find((row) => Number(row.id) === Number(game.id)) || refreshedGame;
                     }
                 }
@@ -1296,7 +1296,7 @@ export function createGameDetailsPopupActions(deps = {}) {
                     }
                     markGameCoverUpdated(game.id);
                     const groupedCoverResult = await applyCoverToGroupedGames(game, imageUrl, getGames());
-                    await reloadGamesFromMainAndRender();
+                    await reloadGamesFromMainAndRender({ preserveScroll: true, anchorGameId: game.id });
                     const refreshedGame = getGames().find((rowItem) => Number(rowItem.id) === Number(game.id));
                     if (refreshedGame) {
                         showGameDetails(refreshedGame);

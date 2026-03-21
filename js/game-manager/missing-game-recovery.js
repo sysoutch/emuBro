@@ -142,7 +142,7 @@ export function createMissingGameRecoveryActions(deps = {}) {
                 resolve(action);
             };
 
-            overlay.addEventListener('click', (event) => {
+            overlay.addEventListener('mousedown', (event) => {
                 if (event.target === overlay) close('cancel');
             });
 
@@ -213,7 +213,7 @@ export function createMissingGameRecoveryActions(deps = {}) {
                 });
             };
 
-            overlay.addEventListener('click', (event) => {
+            overlay.addEventListener('mousedown', (event) => {
                 if (event.target === overlay) close('cancel');
             });
             modal.querySelector('.close-btn')?.addEventListener('click', () => close('cancel'));

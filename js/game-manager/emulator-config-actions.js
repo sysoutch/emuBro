@@ -1021,7 +1021,7 @@ export function createEmulatorConfigActions(deps = {}) {
             });
             cfgField.input.addEventListener('input', updateConfigMeta);
             tabButtons.forEach((btn) => btn.addEventListener('click', () => setActiveTab(btn.dataset.tabTarget)));
-            overlay.addEventListener('click', (event) => {
+            overlay.addEventListener('mousedown', (event) => {
                 if (event.target === overlay) close(null);
             });
             document.addEventListener('keydown', onKeyDown, true);

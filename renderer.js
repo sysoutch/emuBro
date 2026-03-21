@@ -61,6 +61,7 @@ import { showToolView } from './js/tools-manager';
 import { showSupportView, teardownSupportView } from './js/support-manager';
 import { showCommunityView, teardownCommunityView } from './js/community-manager';
 import { showGlassMessageDialog } from './js/ui/glass-message-dialog';
+import { setupSlashCommandPalette } from './js/ui/slash-command-palette';
 import { enhancePlatformFilterSelect } from './js/ui/platform-filter-enhancer';
 import { openGlobalLlmTaggingSetupModal, createGlobalLlmProgressDialog } from './js/ui/llm-tagging-dialogs';
 import { renderSuggestionResults as renderSuggestionResultsView } from './js/suggested-results-view';
@@ -95,7 +96,9 @@ import { createLibraryViewController } from './js/library/library-view-controlle
 import { setupViewControlsRail } from './js/library/view-controls-rail';
 import { buildGamesContainerClass, getStoredCoverCardMode } from './js/game-manager/render-utils';
 import { setupGameSessionOverlay } from './js/game-session-overlay';
+import { setupKonamiEasterEgg } from './js/runtime/konami-easter-egg';
 import { initializeShellStorageCache } from './desktop/src/utils/shell-storage-cache';
+import { showGameDetails, showEmulatorDetails } from './js/runtime/game-manager';
 
 // ===== Global State & Elements =====
 const gamesContainer = document.getElementById('games-container');
@@ -156,6 +159,9 @@ let startupLastInteractionAt = 0;
 let startupFirstPointerLogged = false;
 let startupFirstResizeLogged = false;
 let startupFirstWindowMoveLogged = false;
+let teardownKonamiEasterEgg = null;
+let teardownSlashCommandPalette = null;
+let nativeAlertFallback = null;
 const STARTUP_DEBUG_LOG_NAME = 'window-startup.log';
 
 // Forward declarations for functions that might be used before their full definition due to circular dependencies
@@ -186,6 +192,30 @@ function emitStartupDebugLog(message) {
             message: `renderer ${Math.round(performance.now())}ms ${text}`
         });
     } catch (_error) {}
+}
+
+function installAlertDialogOverride() {
+    if (typeof window === 'undefined' || typeof window.alert !== 'function') return;
+    if (window.__emuBroAlertOverrideInstalled === true) return;
+    nativeAlertFallback = window.alert.bind(window);
+    window.alert = (message) => {
+        const text = String(message || '').trim();
+        if (!text) return;
+        const lower = text.toLowerCase();
+        const level = lower.includes('failed') || lower.includes('error')
+            ? 'error'
+            : (lower.includes('warning') || lower.includes('warn') ? 'warning' : 'info');
+        void showGlassMessageDialog({
+            title: i18n?.t?.('messages.notice') || 'emuBro',
+            message: text,
+            level
+        }).catch(() => {
+            try {
+                nativeAlertFallback?.(text);
+            } catch (_error) {}
+        });
+    };
+    window.__emuBroAlertOverrideInstalled = true;
 }
 
 // Redefine functions to ensure they are available before assignments
@@ -950,7 +980,7 @@ function setupViewScaleControl() {
     if (!slider || !valueEl) return;
 
     const applyScale = (raw, persist = true) => {
-        const clamped = Math.max(70, Math.min(140, Number(raw) || 100));
+        const clamped = Math.max(42, Math.min(200, Number(raw) || 100));
         const scale = clamped / 100;
         document.documentElement.style.setProperty('--view-scale', String(scale));
         document.documentElement.style.setProperty('--view-scale-user', String(scale));
@@ -1100,6 +1130,186 @@ updateLibraryCounters = () => {
 refreshEmulatorsState = async () => {
     return libraryViewController.refreshEmulatorsState();
 };
+
+function getLibrarySearchInput() {
+    return document.getElementById('global-game-search')
+        || document.querySelector('.search-bar input');
+}
+
+function dispatchLibrarySelfTaskResult(requestId, result = {}) {
+    try {
+        window.dispatchEvent(new CustomEvent('emubro:library-self-task-result', {
+            detail: {
+                requestId: String(requestId || '').trim(),
+                result: result && typeof result === 'object' ? result : { success: false, message: 'Invalid library self-task result.' }
+            }
+        }));
+    } catch (_error) {}
+}
+
+async function handleLibrarySelfTaskRequest(detail = {}) {
+    const action = String(detail?.action || '').trim().toLowerCase();
+    const payload = detail?.payload && typeof detail.payload === 'object' ? detail.payload : {};
+    if (!action) {
+        return { success: false, message: 'Missing library workspace action.' };
+    }
+
+    const renderWorkspace = async () => {
+        await renderActiveLibraryView();
+        await renderPlatformsList();
+        await renderCategoriesList();
+    };
+
+    setAppMode('library');
+
+    switch (action) {
+        case 'change-section': {
+            const nextSection = normalizeLibrarySection(payload.section || 'all');
+            await setActiveLibrarySection(nextSection);
+            return { success: true, message: `Library section changed to ${nextSection}.` };
+        }
+        case 'change-view': {
+            const nextView = String(payload.viewMode || '').trim().toLowerCase();
+            if (!nextView || !libraryViewController.setActiveViewButton(nextView)) {
+                return { success: false, message: 'Unsupported library view mode.' };
+            }
+            await renderWorkspace();
+            return { success: true, message: `Library view changed to ${nextView}.` };
+        }
+        case 'change-search': {
+            const input = getLibrarySearchInput();
+            if (!input) {
+                return { success: false, message: 'Library search input is unavailable.' };
+            }
+            input.value = String(payload.query || '').trim();
+            await renderWorkspace();
+            return {
+                success: true,
+                message: input.value
+                    ? `Library search changed to "${input.value}".`
+                    : 'Library search cleared.'
+            };
+        }
+        case 'change-platform-filter': {
+            const platformFilter = document.getElementById('platform-filter');
+            if (!(platformFilter instanceof HTMLSelectElement)) {
+                return { success: false, message: 'Library platform filter is unavailable.' };
+            }
+            const requested = String(payload.platform || 'all').trim().toLowerCase() || 'all';
+            const hasOption = Array.from(platformFilter.options).some((option) => String(option.value || '').trim().toLowerCase() === requested);
+            if (!hasOption) {
+                return { success: false, message: `Platform filter "${requested}" was not found.` };
+            }
+            platformFilter.value = requested;
+            await renderWorkspace();
+            return {
+                success: true,
+                message: requested === 'all'
+                    ? 'Library platform filter cleared.'
+                    : `Library platform filter changed to ${requested}.`
+            };
+        }
+        case 'change-sort': {
+            const sortFilter = document.getElementById('sort-filter');
+            if (!(sortFilter instanceof HTMLSelectElement)) {
+                return { success: false, message: 'Library sort control is unavailable.' };
+            }
+            const requested = String(payload.sortBy || '').trim().toLowerCase();
+            if (!requested) {
+                return { success: false, message: 'Missing library sort target.' };
+            }
+            const hasOption = Array.from(sortFilter.options).some((option) => String(option.value || '').trim().toLowerCase() === requested);
+            if (!hasOption) {
+                return { success: false, message: `Library sort "${requested}" was not found.` };
+            }
+            sortFilter.value = requested;
+            await renderWorkspace();
+            return { success: true, message: `Library sort changed to ${requested}.` };
+        }
+        case 'change-emulator-type': {
+            const nextType = String(payload.emulatorType || '').trim().toLowerCase();
+            if (!nextType || !['standalone', 'core', 'web'].includes(nextType)) {
+                return { success: false, message: 'Unsupported emulator type filter.' };
+            }
+            activeEmulatorTypeTab = nextType;
+            await setActiveLibrarySection('emulators');
+            return { success: true, message: `Emulator type filter changed to ${nextType}.` };
+        }
+        case 'clear-filters': {
+            const fields = Array.isArray(payload.fields) ? payload.fields.map((value) => String(value || '').trim().toLowerCase()) : ['all'];
+            const clearAll = fields.length === 0 || fields.includes('all');
+            if (clearAll || fields.includes('query')) {
+                const input = getLibrarySearchInput();
+                if (input) input.value = '';
+            }
+            const platformFilter = document.getElementById('platform-filter');
+            if (platformFilter instanceof HTMLSelectElement && (clearAll || fields.includes('platform'))) {
+                platformFilter.value = 'all';
+            }
+            const sortFilter = document.getElementById('sort-filter');
+            if (sortFilter instanceof HTMLSelectElement && (clearAll || fields.includes('sort'))) {
+                sortFilter.value = 'name';
+            }
+            if (clearAll || fields.includes('section')) {
+                activeEmulatorTypeTab = 'standalone';
+                await setActiveLibrarySection('all');
+            }
+            if (clearAll || fields.includes('view')) {
+                libraryViewController.setActiveViewButton('cover');
+            }
+            if (clearAll || fields.includes('emulatortype')) {
+                activeEmulatorTypeTab = 'standalone';
+            }
+            await renderWorkspace();
+            return { success: true, message: 'Library filters cleared.' };
+        }
+        case 'open-game-details': {
+            const gameId = Number(payload.gameId || payload.rowId || 0);
+            const gameKey = String(payload.gameKey || payload.rowKey || '').trim().toLowerCase();
+            const game = getGames().find((row) =>
+                (gameId > 0 && Number(row?.id || 0) === gameId)
+                || (gameKey && String(row?.key || '').trim().toLowerCase() === gameKey)
+            );
+            if (!game) {
+                return { success: false, message: 'Matching game details target was not found.' };
+            }
+            await setActiveLibrarySection(normalizeLibrarySection(activeLibrarySection || 'all'));
+            showGameDetails(game);
+            return { success: true, message: `Opened details for ${String(game?.name || 'game').trim()}.` };
+        }
+        case 'open-emulator-details': {
+            const emulatorId = Number(payload.emulatorId || payload.rowId || 0);
+            const emulatorKey = String(payload.emulatorKey || payload.rowKey || '').trim().toLowerCase();
+            const emulator = getEmulators().find((row) =>
+                (emulatorId > 0 && Number(row?.id || 0) === emulatorId)
+                || (emulatorKey && String(row?.key || '').trim().toLowerCase() === emulatorKey)
+            );
+            if (!emulator) {
+                return { success: false, message: 'Matching emulator details target was not found.' };
+            }
+            await setActiveLibrarySection('emulators');
+            showEmulatorDetails(emulator);
+            return { success: true, message: `Opened details for ${String(emulator?.name || 'emulator').trim()}.` };
+        }
+        default:
+            return { success: false, message: `Unsupported library workspace action: ${action}` };
+    }
+}
+
+window.addEventListener('emubro:library-self-task', (event) => {
+    const detail = event?.detail && typeof event.detail === 'object' ? event.detail : {};
+    const requestId = String(detail.requestId || '').trim();
+    void handleLibrarySelfTaskRequest(detail)
+        .then((result) => {
+            dispatchLibrarySelfTaskResult(requestId, result);
+        })
+        .catch((error) => {
+            dispatchLibrarySelfTaskResult(requestId, {
+                success: false,
+                message: String(error?.message || error || 'Library workspace action failed.')
+            });
+        });
+});
 
 // ===== IPC Listeners (via preload) =====
 let pendingWindowMovePaint = null;
@@ -1302,6 +1512,7 @@ async function scheduleInitialLibraryHydration() {
 async function initializeApp() {
     try {
         await initializeShellStorageCache().catch(() => {});
+        installAlertDialogOverride();
 
         // Let CSS target OS-specific chrome effects (frameless window frame, etc).
         if (emubro.platform) {
@@ -1372,6 +1583,29 @@ async function initializeApp() {
                 i18n: window.i18n || null,
                 onNotify: (message, level) => addFooterNotification(message, level),
                 setAppMode
+            });
+        }
+        if (!teardownKonamiEasterEgg) {
+            teardownKonamiEasterEgg = setupKonamiEasterEgg({
+                message: i18n?.t?.('messages.konamiUnlocked') || 'Konami code unlocked. Retro boost enabled.'
+            });
+        }
+        if (!teardownSlashCommandPalette) {
+            teardownSlashCommandPalette = setupSlashCommandPalette({
+                emubro,
+                addFooterNotification,
+                setAppMode,
+                setActiveLibrarySection,
+                showSupportView,
+                showCommunityView,
+                showToolView,
+                openLibraryPathSettingsModal,
+                openThemeManager,
+                openLanguageManager,
+                openProfileModal,
+                openAboutDialog,
+                showGameDetails,
+                showEmulatorDetails
             });
         }
         void setActiveLibrarySection(activeLibrarySection).catch((error) => {

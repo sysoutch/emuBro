@@ -396,6 +396,7 @@ export function renderLlmTab({
     llmRelayHostStatus,
     llmRelayConnections,
     normalizeLlmMode,
+    normalizeSupportContextWindowMessages,
     normalizeRelayPort,
     normalizeRelayAccessMode,
     normalizeRelayAddressList,
@@ -407,6 +408,7 @@ export function renderLlmTab({
     const apiKey = llmDraft.apiKeys[provider] || '';
     const isOllama = provider === 'ollama';
     const llmMode = normalizeLlmMode(llmDraft.llmMode);
+    const contextWindowMessages = normalizeSupportContextWindowMessages(llmDraft.contextWindowMessages, 20);
     const relayPort = normalizeRelayPort(llmDraft.relay?.port, 42141);
     const relayHostUrl = String(llmDraft.relay?.hostUrl || '').trim();
     const relayAuthToken = String(llmDraft.relay?.authToken || '').trim();
@@ -475,6 +477,15 @@ export function renderLlmTab({
                             <option value="ollama"${provider === 'ollama' ? ' selected' : ''}>Ollama (Local)</option>
                             <option value="openai"${provider === 'openai' ? ' selected' : ''}>ChatGPT (OpenAI)</option>
                             <option value="gemini"${provider === 'gemini' ? ' selected' : ''}>Gemini (Google)</option>
+                        </select>
+                    </label>
+                    <label style="display:flex;flex-direction:column;gap:6px;">
+                        <span style="font-size:0.82rem;color:var(--text-secondary);">Support Context Window</span>
+                        <select data-llm="support-context-window">
+                            <option value="10"${contextWindowMessages === 10 ? ' selected' : ''}>10 msgs</option>
+                            <option value="20"${contextWindowMessages === 20 ? ' selected' : ''}>20 msgs</option>
+                            <option value="40"${contextWindowMessages === 40 ? ' selected' : ''}>40 msgs</option>
+                            <option value="80"${contextWindowMessages === 80 ? ' selected' : ''}>80 msgs</option>
                         </select>
                     </label>
                     <label style="display:flex;flex-direction:column;gap:6px;">

@@ -52,6 +52,28 @@ export function createEmulatorDownloadActions(deps = {}) {
         saveDownloadedPackageMap(map);
     }
 
+    function applyInstalledEmulatorResult(emulator, result) {
+        if (!emulator || !result || typeof result !== 'object') return;
+        const installedFlag = result.installed === true;
+        if (installedFlag) {
+            emulator.isInstalled = true;
+        }
+        const installedPath = String(result.installedPath || result.filePath || '').trim();
+        if (installedPath) {
+            emulator.filePath = installedPath;
+        }
+        const upserted = result.emulator && typeof result.emulator === 'object' ? result.emulator : null;
+        if (upserted) {
+            const upsertedPath = String(upserted.filePath || '').trim();
+            if (upsertedPath) emulator.filePath = upsertedPath;
+            if (Object.prototype.hasOwnProperty.call(upserted, 'isInstalled')) {
+                emulator.isInstalled = !!upserted.isInstalled;
+            } else if (upsertedPath) {
+                emulator.isInstalled = true;
+            }
+        }
+    }
+
     function normalizeDownloadPackageType(packageType) {
         const value = String(packageType || '').trim().toLowerCase();
         if (value === 'setup' || value === 'install') return 'installer';
@@ -177,7 +199,7 @@ export function createEmulatorDownloadActions(deps = {}) {
                 resolve(value || '');
             };
 
-            overlay.addEventListener('click', (event) => {
+            overlay.addEventListener('mousedown', (event) => {
                 if (event.target === overlay) close('');
             });
             cancelBtn.addEventListener('click', () => close(''));
@@ -276,7 +298,7 @@ export function createEmulatorDownloadActions(deps = {}) {
                 resolve(value || '');
             };
 
-            overlay.addEventListener('click', (event) => {
+            overlay.addEventListener('mousedown', (event) => {
                 if (event.target === overlay) close('');
             });
             cancelBtn.addEventListener('click', () => close(''));
@@ -328,10 +350,16 @@ export function createEmulatorDownloadActions(deps = {}) {
                         useWaybackFallback: false
                     });
                     if (!result?.success) {
+                        if (result?.manual) {
+                            alertUser(result?.message || 'Opened download page.');
+                            return false;
+                        }
                         alertUser(result?.message || 'Failed to install emulator.');
                         return false;
                     }
-                    alertUser(result?.message || 'Emulator install finished.');
+                    applyInstalledEmulatorResult(emulator, result);
+                    await fetchEmulators();
+                    alertUser(result?.message || (result?.installed ? 'Emulator installed.' : 'Installer finished. Check emulator path if it is still marked as not installed.'));
                     return true;
                 }
                 const optionsResult = await emubro.invoke('get-emulator-download-options', payload);
@@ -350,6 +378,7 @@ export function createEmulatorDownloadActions(deps = {}) {
                     const optionCount = Array.isArray(optionsResult?.options) ? optionsResult.options.length : 0;
                     const hadUserChoice = optionCount > 1 || (optionCount === 0 && !!waybackUrl);
                     if (!selection && hadUserChoice) {
+                        log.info('Emulator download cancelled by user selection dialog.', { emulator: emulator?.name || '' });
                         return false;
                     }
                 }
@@ -366,11 +395,12 @@ export function createEmulatorDownloadActions(deps = {}) {
                 waybackUrl
             });
 
+            if (result?.manual) {
+                alertUser(result?.message || 'Opened download page.');
+                return false;
+            }
+
             if (!result?.success) {
-                if (result?.manual) {
-                    alertUser(result?.message || 'Opened download page.');
-                    return false;
-                }
                 alertUser(result?.message || 'Failed to download emulator.');
                 return false;
             }
@@ -379,8 +409,13 @@ export function createEmulatorDownloadActions(deps = {}) {
                 setDownloadedPackagePath(emulator, result.packagePath);
             }
 
+            applyInstalledEmulatorResult(emulator, result);
             await fetchEmulators();
-            alertUser(result?.message || 'Emulator download finished.');
+            if (result?.installed) {
+                alertUser(result?.message || 'Downloaded and installed emulator.');
+            } else {
+                alertUser(result?.message || 'Download finished, but emulator is not marked installed yet. Set executable path in emulator settings.');
+            }
             return true;
         } catch (error) {
             log.error('Failed to download/install emulator:', error);

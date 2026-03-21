@@ -17,6 +17,29 @@
   font: 0.86rem/1.5 Consolas, "Cascadia Code", monospace;
 }
 
+.desktop-support-debug-empty {
+  margin: 10px 0 0;
+  color: var(--text-secondary);
+}
+
+.desktop-support-debug-stack {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.desktop-support-debug-section {
+  padding: 0 12px 12px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--border-color), transparent 8%);
+  background: color-mix(in srgb, var(--bg-secondary), transparent 14%);
+}
+
+.desktop-support-debug-section summary {
+  padding-top: 12px;
+  font-weight: 600;
+}
+
 .desktop-docs-layout {
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr);
@@ -97,7 +120,10 @@
   margin: 0;
 }
 
-.desktop-support-form-card,
+.desktop-support-form-card {
+  width: 220px;
+}
+
 .desktop-support-output-card {
   width: 100%;
 }
@@ -184,6 +210,119 @@
   font-size: 0.78rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+  color: var(--muted);
+}
+
+.desktop-support-attachment-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.desktop-support-attachment-card {
+  display: grid;
+  gap: 10px;
+  width: fit-content;
+  max-width: 220px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--border-color), transparent 8%);
+  background: color-mix(in srgb, var(--bg-secondary), transparent 8%);
+  cursor: zoom-in;
+}
+
+.desktop-support-attachment-image {
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-primary), transparent 12%);
+  padding: 8px;
+}
+
+.desktop-support-attachment-image img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: min(180px, 100%);
+  max-height: 220px;
+  object-fit: contain;
+  object-position: center;
+}
+
+.desktop-support-attachment-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.desktop-support-attachment-copy strong {
+  font-size: 0.92rem;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--text-primary);
+}
+
+.desktop-support-attachment-copy small {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.desktop-support-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(7, 10, 16, 0.82);
+  backdrop-filter: blur(10px);
+}
+
+.desktop-support-lightbox-open .shell-header,
+.desktop-support-lightbox-open .shell-stage-header {
+  filter: blur(14px);
+  transition: filter 0.18s ease;
+}
+
+.desktop-support-lightbox-close {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+}
+
+.desktop-support-lightbox-card {
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  max-width: min(92vw, 1200px);
+  max-height: min(90vh, 1000px);
+}
+
+.desktop-support-lightbox-image {
+  display: block;
+  max-width: min(92vw, 1200px);
+  max-height: min(82vh, 900px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 18px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+}
+
+.desktop-support-lightbox-copy {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  text-align: center;
+}
+
+.desktop-support-lightbox-copy strong {
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.desktop-support-lightbox-copy small {
   color: var(--muted);
 }
 
@@ -344,6 +483,26 @@
   margin: 0;
 }
 
+.desktop-support-chat-footer-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.desktop-support-context-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--accent-rgb), 0.28);
+  background: rgba(var(--accent-rgb), 0.12);
+  color: rgba(var(--accent-rgb), 0.96);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+
 @keyframes desktop-support-chat-bounce {
   0%,
   80%,
@@ -395,6 +554,10 @@
   .desktop-support-chat-footer-meta {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .desktop-support-chat-footer-badges {
+    flex-wrap: wrap;
   }
 }
 

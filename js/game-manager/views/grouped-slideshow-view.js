@@ -355,6 +355,7 @@ function createPlatformLane({
         itemSelector: '.slideshow-platform-item',
         reduceMotion,
         modeRef,
+        allowVerticalWheelPassThrough: true,
         renderToken,
         getRenderToken,
         initialIndex: activeIndex,
@@ -440,6 +441,7 @@ function createPlatformLane({
 export function renderGamesAsGroupedSlideshow(gamesToRender, options = {}) {
     const gamesContainer = document.getElementById('games-container');
     if (!gamesContainer) return;
+    gamesContainer.classList.add('slideshow-grouped-mode');
 
     const launchGame = typeof options.launchGame === 'function' ? options.launchGame : (async () => {});
     const showGameDetails = typeof options.showGameDetails === 'function' ? options.showGameDetails : () => {};

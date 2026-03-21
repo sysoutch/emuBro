@@ -677,18 +677,32 @@ pub(super) fn handle(ch: &str, args: &[Value], window: &Window) -> Result<Value,
             if raw_path.is_empty() {
                 return Ok(json!({ "success": false, "message": "Missing path" }));
             }
-            let target = PathBuf::from(&raw_path);
+            let normalized_input = if cfg!(target_os = "windows") {
+                raw_path.replace('/', "\\")
+            } else {
+                raw_path.clone()
+            };
+            let target = PathBuf::from(&normalized_input);
             if !target.exists() {
                 return Ok(json!({ "success": false, "message": "Path not found" }));
             }
             #[cfg(target_os = "windows")]
             {
+                let explorer_target = std::fs::canonicalize(&target)
+                    .unwrap_or_else(|_| target.clone())
+                    .to_string_lossy()
+                    .replace('/', "\\");
+                let explorer_target = explorer_target
+                    .strip_prefix(r"\\?\")
+                    .map(str::to_string)
+                    .unwrap_or(explorer_target);
+
                 let status = if target.is_file() {
                     Command::new("explorer")
-                        .arg(format!("/select,{}", raw_path))
+                        .arg(format!("/select,\"{}\"", explorer_target))
                         .status()
                 } else {
-                    Command::new("explorer").arg(&raw_path).status()
+                    Command::new("explorer").arg(&explorer_target).status()
                 };
                 match status {
                     Ok(_) => return Ok(json!({ "success": true })),

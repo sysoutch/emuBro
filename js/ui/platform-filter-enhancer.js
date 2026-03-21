@@ -114,7 +114,7 @@ export function enhancePlatformFilterSelect(documentRef = document) {
 
         menu.style.minWidth = `${Math.min(rect.width, targetWidth)}px`;
         menu.style.maxWidth = `${Math.min(360, availableWidth)}px`;
-        menu.style.width = `${targetWidth}px`;
+        // menu.style.width = `${targetWidth}px`;
 
         const measuredWidth = menu.offsetWidth || targetWidth;
         const spaceBelow = viewportHeight - rect.bottom - gap - sideMargin;

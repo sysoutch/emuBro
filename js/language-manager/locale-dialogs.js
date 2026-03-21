@@ -133,7 +133,7 @@ export function showAddLanguageDialog({
 
         confirmBtn?.addEventListener('click', tryConfirm);
         cancelBtn?.addEventListener('click', () => closeWith(null));
-        overlay.addEventListener('click', (event) => {
+        overlay.addEventListener('mousedown', (event) => {
             if (event.target === overlay) closeWith(null);
         });
         flagSelect?.addEventListener('change', updateFlagPreview);
@@ -240,7 +240,7 @@ export function showRenameLanguageDialog({
             close({ code, name, abbreviation, flag });
         });
 
-        overlay.addEventListener('click', (event) => {
+        overlay.addEventListener('mousedown', (event) => {
             if (event.target === overlay) close(null);
         });
 

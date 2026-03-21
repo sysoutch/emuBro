@@ -981,6 +981,16 @@
   padding: 0 4px 4px;
 }
 
+.shell-stage-content:has(> .desktop-library-workspace-shell.is-immersive-mode) {
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
+.shell-stage-content.is-library-immersive-mode {
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
 .shell[data-header-density="compact"] .shell-header-top {
   grid-template-columns: auto minmax(0, 1fr) minmax(170px, 220px) auto;
   gap: 10px;

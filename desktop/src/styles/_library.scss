@@ -25,12 +25,31 @@
   justify-items: start;
 }
 
+.desktop-library-workspace-shell {
+  width: 100%;
+  min-height: 100%;
+}
+
+.desktop-library-workspace-shell.is-immersive-mode {
+  height: 100%;
+  overflow: hidden;
+}
+
 .desktop-library-workspace-layout {
   width: 100%;
   max-width: 1520px;
   display: grid;
   grid-template-columns: 308px minmax(0, 1fr);
   gap: 16px;
+}
+
+.desktop-library-workspace-layout.is-immersive-mode {
+  min-height: var(--desktop-library-immersive-height, auto);
+  height: var(--desktop-library-immersive-height, auto);
+  max-height: var(--desktop-library-immersive-height, none);
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+  overflow: hidden;
 }
 
 .desktop-library-workspace-layout.has-docked-inspector {
@@ -42,6 +61,7 @@
   display: grid;
   gap: 16px;
   align-content: start;
+  min-height: 0;
 }
 
 .desktop-library-inspector {
@@ -49,6 +69,23 @@
   gap: 16px;
   align-content: start;
   min-width: 0;
+  min-height: 0;
+}
+
+.desktop-library-workspace-layout.is-immersive-mode .desktop-library-sidebar,
+.desktop-library-workspace-layout.is-immersive-mode .desktop-library-inspector {
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.desktop-library-workspace-layout.is-immersive-mode .desktop-library-main-card {
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
 }
 
 .desktop-library-inspector-shell {
@@ -60,6 +97,26 @@
 .desktop-library-sidebar-card,
 .desktop-library-main-card {
   width: 100%;
+}
+
+.desktop-library-main-card {
+  min-height: 0;
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.desktop-library-main-card.is-immersive-mode {
+  grid-template-rows: auto auto minmax(0, 1fr);
+  height: 100%;
+  max-height: 100%;
+  align-content: stretch;
+  overflow: hidden;
+}
+
+.desktop-library-immersive-shell {
+  min-height: 0;
+  height: 100%;
 }
 
 .desktop-library-sidebar-card {
@@ -479,6 +536,98 @@
   transform: translateX(14%) rotate(10deg);
 }
 
+.desktop-context-menu {
+  position: fixed;
+  z-index: 12000;
+  min-width: 220px;
+  max-width: min(320px, calc(100vw - 24px));
+  padding: 8px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--border-color), transparent 12%);
+  background:
+    radial-gradient(120% 150% at 0% 0%, rgba(var(--accent-rgb), 0.14), transparent 62%),
+    color-mix(in srgb, var(--bg-secondary), transparent 4%);
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.32),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  backdrop-filter: blur(18px);
+}
+
+.desktop-context-menu__item {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.desktop-context-menu__item:hover:not(:disabled),
+.desktop-context-menu__item:focus-visible:not(:disabled) {
+  background: color-mix(in srgb, rgba(var(--accent-rgb), 0.18), var(--bg-tertiary) 72%);
+  color: var(--accent-color);
+  outline: none;
+}
+
+.desktop-context-menu__item:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.desktop-context-menu__item.is-danger {
+  color: #ff7f93;
+}
+
+.desktop-context-menu__item.is-danger:hover:not(:disabled),
+.desktop-context-menu__item.is-danger:focus-visible:not(:disabled) {
+  background: rgba(255, 102, 132, 0.14);
+  color: #ff9aae;
+}
+
+.desktop-context-menu__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.desktop-context-menu__icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: currentColor;
+  opacity: 0.9;
+}
+
+.desktop-context-menu__icon svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.85;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.desktop-context-menu__separator {
+  height: 1px;
+  margin: 7px 4px;
+  background: color-mix(in srgb, var(--border-color), transparent 30%);
+}
+
 .desktop-library-card:hover .desktop-library-card-image img,
 .desktop-library-card.is-selected .desktop-library-card-image img {
   transform: scale(1.03);
@@ -761,12 +910,17 @@
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
   gap: 16px;
+  min-height: var(--desktop-library-immersive-height, auto);
+  max-height: var(--desktop-library-immersive-height, none);
+  align-items: stretch;
 }
 
 .desktop-immersive-focus-list {
   display: grid;
   gap: 8px;
-  max-height: 760px;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
   overflow: auto;
   padding-right: 4px;
 }
@@ -805,6 +959,9 @@
 .desktop-immersive-slideshow,
 .desktop-immersive-random {
   min-width: 0;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
 }
 
 .desktop-immersive-hero,
@@ -818,12 +975,15 @@
   background:
     radial-gradient(120% 140% at 0% 0%, rgba(var(--accent-rgb), 0.14), transparent 62%),
     color-mix(in srgb, var(--bg-elev), transparent 8%);
+  min-height: 100%;
 }
 
 .desktop-immersive-hero-image,
 .desktop-immersive-random-image {
   width: 100%;
-  max-height: 560px;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
   object-fit: cover;
   border-radius: 18px;
   display: block;
@@ -851,7 +1011,9 @@
 .desktop-immersive-slide {
   position: relative;
   overflow: hidden;
-  min-height: 560px;
+  min-height: var(--desktop-library-immersive-height, 560px);
+  height: var(--desktop-library-immersive-height, 560px);
+  max-height: var(--desktop-library-immersive-height, 560px);
   border-radius: 24px;
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--bg-elev), transparent 8%);
@@ -860,7 +1022,7 @@
 .desktop-immersive-slide-image {
   width: 100%;
   height: 100%;
-  max-height: 720px;
+  max-height: none;
   object-fit: cover;
   display: block;
 }

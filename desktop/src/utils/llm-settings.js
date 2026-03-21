@@ -6,6 +6,7 @@ import {
   normalizeSuggestionProvider,
   normalizeSuggestionRelayConfig,
   normalizeSuggestionRelayPort,
+  normalizeSupportContextWindowMessages,
   normalizeSuggestionScope,
   saveSuggestionSettings
 } from "./suggestion-settings";
@@ -44,6 +45,7 @@ export function normalizeDesktopLlmSettings(rawSettings = {}) {
     llmMode: normalizeSuggestionLlmMode(source.llmMode || defaults.llmMode),
     scope: normalizeSuggestionScope(source.scope || defaults.scope),
     query: String(source.query || ""),
+    contextWindowMessages: normalizeSupportContextWindowMessages(source.contextWindowMessages, defaults.contextWindowMessages),
     promptTemplate: String(source.promptTemplate || defaults.promptTemplate || "").trim() || defaults.promptTemplate,
     selectedPlatformOnly: !!source.selectedPlatformOnly,
     relay: {
@@ -120,6 +122,7 @@ export function buildSupportLlmSettings(settings) {
     },
     scope: normalized.scope,
     query: normalized.query,
+    contextWindowMessages: normalized.contextWindowMessages,
     promptTemplate: normalized.promptTemplate,
     selectedPlatformOnly: normalized.selectedPlatformOnly
   };

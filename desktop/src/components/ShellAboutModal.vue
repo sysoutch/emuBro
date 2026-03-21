@@ -22,7 +22,7 @@ const {
 </script>
 
 <template>
-  <div v-if="aboutOpen" class="desktop-modal-backdrop" @click.self="windowChromeStore.closeAbout()">
+  <div v-if="aboutOpen" class="desktop-modal-backdrop" @mousedown.self="windowChromeStore.closeAbout()">
     <section class="desktop-modal-card desktop-about-modal">
       <div class="card-header-row">
         <div>

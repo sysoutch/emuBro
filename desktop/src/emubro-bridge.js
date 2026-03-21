@@ -401,8 +401,12 @@ function getBridgeFallback(channel, args = []) {
       return { success: false, doc: null };
     case "help:docs:search":
       return { success: true, rows: [] };
+    case "support:self-task-docs:list":
+      return { success: true, docs: [] };
+    case "support:self-task-docs:get":
+      return { success: false, doc: null };
     case "suggestions:list-ollama-models":
-      return { success: true, models: ["llama3.1"], baseUrl: "http://127.0.0.1:11434" };
+      return { success: true, models: ["llama3.1:8b"], baseUrl: "http://127.0.0.1:11434" };
     case "suggestions:relay:get-status":
       return {
         success: true,
@@ -1126,6 +1130,10 @@ const emubro = {
     list: (payload) => invokeChannel("help:docs:list", payload),
     get: (payload) => invokeChannel("help:docs:get", payload),
     search: (payload) => invokeChannel("help:docs:search", payload)
+  },
+  supportTaskDocs: {
+    list: (payload) => invokeChannel("support:self-task-docs:list", payload),
+    get: (payload) => invokeChannel("support:self-task-docs:get", payload)
   },
   promptScanSubfolders: (folderPath) => invokeChannel("prompt-scan-subfolders", folderPath),
   importPaths: (paths, options) => invokeChannel("import-paths", paths, options),

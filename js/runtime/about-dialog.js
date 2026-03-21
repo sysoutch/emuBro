@@ -101,7 +101,7 @@ export async function openAboutDialog(options = {}) {
         window.removeEventListener('keydown', onEsc);
         overlay.remove();
     };
-    overlay.addEventListener('click', (event) => {
+    overlay.addEventListener('mousedown', (event) => {
         if (event.target === overlay) close();
     });
     modal.querySelector('[data-about-close]')?.addEventListener('click', close);

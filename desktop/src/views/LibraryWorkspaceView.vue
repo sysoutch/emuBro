@@ -1,5 +1,5 @@
 <script setup>
-import { computed, defineAsyncComponent, onMounted, ref, watch } from "vue";
+import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useAppStore } from "../stores/app";
 import { useHeaderFiltersStore } from "../stores/header-filters";
@@ -12,6 +12,7 @@ import { resolveEffectiveEmulatorConfig } from "../utils/emulator-config";
 import { loadSelectedLaunchPath } from "../utils/emulator-preferences";
 import { buildGameSections, filterEmulatorRows } from "../utils/library-query";
 import LazyArtwork from "../components/LazyArtwork.vue";
+import DesktopContextMenu from "../components/DesktopContextMenu.vue";
 
 const EmulatorDetailsModal = defineAsyncComponent(() => import("../components/EmulatorDetailsModal.vue"));
 const GameDetailsModal = defineAsyncComponent(() => import("../components/GameDetailsModal.vue"));
@@ -45,6 +46,9 @@ const {
 const { emulators, games, loading, refreshError, stats } = storeToRefs(workspaceStore);
 const { activeTagIds, hasSelection } = storeToRefs(categoriesStore);
 
+const workspaceRootEl = ref(null);
+const workspaceLayoutEl = ref(null);
+const mainCardEl = ref(null);
 const selectedGameKey = ref("");
 const launchStatus = ref("");
 const launchStatusTone = ref("");
@@ -55,6 +59,12 @@ const emulatorStatus = ref("");
 const emulatorStatusTone = ref("");
 const isEmulatorModalOpen = ref(false);
 const selectionPanelDocked = ref(readSelectionPanelDockedPreference());
+const emulatorContextMenu = ref({
+  visible: false,
+  x: 0,
+  y: 0,
+  row: null
+});
 
 const showEmulatorsView = computed(() => librarySection.value === "emulators");
 
@@ -172,6 +182,85 @@ const workspaceLayoutClasses = computed(() => ({
 const shouldShowDockedInspector = computed(() =>
   selectionPanelDocked.value && (showEmulatorsView.value ? !!selectedEmulator.value : !!selectedGame.value)
 );
+const isImmersiveGameView = computed(() =>
+  !showEmulatorsView.value && ["focus", "slideshow", "random"].includes(String(viewMode.value || "").trim().toLowerCase())
+);
+const immersiveCardStyle = computed(() =>
+  isImmersiveGameView.value && immersiveViewportHeight.value > 0
+    ? { "--desktop-library-immersive-height": `${immersiveViewportHeight.value}px` }
+    : null
+);
+const immersiveLayoutStyle = computed(() =>
+  isImmersiveGameView.value && immersiveViewportHeight.value > 0
+    ? { "--desktop-library-immersive-height": `${immersiveViewportHeight.value}px` }
+    : null
+);
+const immersiveViewportHeight = ref(0);
+let immersiveLayoutFrame = 0;
+let immersiveResizeObserver = null;
+let immersiveScrollRootEl = null;
+const emulatorContextMenuItems = computed(() => {
+  const row = emulatorContextMenu.value?.row;
+  if (!row) {
+    return [];
+  }
+
+  const hasPath = Boolean(String(row.filePath || "").trim());
+  const hasWebsite = Boolean(String(row.website || row.downloadUrl || "").trim());
+  return [
+    {
+      id: "launch",
+      label: row.installed ? shellI18nStore.t("gameCard.launch", "Launch") : shellI18nStore.t("desktopShell.library.download", "Download"),
+      icon: row.installed ? "play" : "download",
+      onSelect: () => {
+        if (row.installed) {
+          void launchEmulator(row);
+          return;
+        }
+        openEmulatorDetails(row);
+      }
+    },
+    {
+      id: "details",
+      label: shellI18nStore.t("desktopShell.library.details", "Details"),
+      icon: "details",
+      onSelect: () => openEmulatorDetails(row)
+    },
+    { separator: true },
+    {
+      id: "folder",
+      label: shellI18nStore.t("desktopShell.library.folder", "Folder"),
+      icon: "folder",
+      disabled: !hasPath,
+      onSelect: () => void showEmulatorInFolder(row)
+    },
+    {
+      id: "website",
+      label: shellI18nStore.t("desktopShell.library.website", "Website"),
+      icon: "link",
+      disabled: !hasWebsite,
+      onSelect: () => void openEmulatorWebsite(row)
+    },
+    { separator: true },
+    {
+      id: "copy-name",
+      label: shellI18nStore.t("buttons.copyName", "Copy Name"),
+      icon: "copy",
+      onSelect: () => void copyTextToClipboard(row.name, shellI18nStore.t("desktopShell.library.copyNameFailed", "Failed to copy name."))
+    },
+    {
+      id: "copy-path",
+      label: shellI18nStore.t("buttons.copyPath", "Copy File Path"),
+      icon: "copy",
+      disabled: !hasPath,
+      onSelect: () =>
+        void copyTextToClipboard(
+          row.filePath,
+          shellI18nStore.t("desktopShell.library.copyPathFailed", "Failed to copy file path.")
+        )
+    }
+  ];
+});
 
 function readSelectionPanelDockedPreference() {
   if (typeof window === "undefined") {
@@ -201,9 +290,71 @@ function getDesktopBridge() {
   return window.emubro;
 }
 
+async function copyTextToClipboard(value, failureMessage = "Failed to copy.") {
+  const text = String(value || "").trim();
+  if (!text) {
+    return false;
+  }
+
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (_error) {}
+
+  try {
+    const helper = document.createElement("textarea");
+    helper.value = text;
+    helper.setAttribute("readonly", "true");
+    helper.style.position = "fixed";
+    helper.style.opacity = "0";
+    helper.style.pointerEvents = "none";
+    document.body.appendChild(helper);
+    helper.select();
+    document.execCommand("copy");
+    helper.remove();
+    return true;
+  } catch (_error) {
+    const normalizedMessage = String(failureMessage || "Failed to copy.");
+    if (showEmulatorsView.value) {
+      emulatorStatus.value = normalizedMessage;
+      emulatorStatusTone.value = "error";
+    } else {
+      launchStatus.value = normalizedMessage;
+      launchStatusTone.value = "error";
+    }
+    return false;
+  }
+}
+
 function toggleSelectionPanelDocked() {
   selectionPanelDocked.value = !selectionPanelDocked.value;
   persistSelectionPanelDockedPreference(selectionPanelDocked.value);
+}
+
+function closeEmulatorContextMenu() {
+  emulatorContextMenu.value = {
+    visible: false,
+    x: 0,
+    y: 0,
+    row: null
+  };
+}
+
+function openEmulatorContextMenu(event, row) {
+  if (!row) {
+    return;
+  }
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+  selectEmulator(row);
+  emulatorContextMenu.value = {
+    visible: true,
+    x: Number(event?.clientX || 0),
+    y: Number(event?.clientY || 0),
+    row
+  };
 }
 
 function applyEmulatorPalette(event) {
@@ -419,6 +570,54 @@ async function openEmulatorWebsite(row) {
   emulatorStatusTone.value = result?.success ? "success" : "error";
 }
 
+function resolvePendingLibraryDetailRow(kind = "", payload = null) {
+  const detail = payload && typeof payload === "object" ? payload : {};
+  const rowKey = String(detail.rowKey || "").trim();
+  const rowId = Number(detail.rowId || 0);
+  if (String(kind || "").trim().toLowerCase() === "game") {
+    return games.value.find((row) =>
+      (rowKey && String(row?.key || "").trim() === rowKey)
+      || (rowId > 0 && Number(row?.id || 0) === rowId)
+    ) || null;
+  }
+  if (String(kind || "").trim().toLowerCase() === "emulator") {
+    return emulators.value.find((row) =>
+      (rowKey && String(row?.key || "").trim() === rowKey)
+      || (rowId > 0 && Number(row?.id || 0) === rowId)
+    ) || null;
+  }
+  return null;
+}
+
+function consumeLibraryDetailRequest(payload = null) {
+  const detail = payload && typeof payload === "object"
+    ? payload
+    : (typeof window !== "undefined" ? window.__EMU_BRO_LIBRARY_DETAIL_REQUEST__ : null);
+  if (!detail || typeof detail !== "object") {
+    return false;
+  }
+  const kind = String(detail.kind || "").trim().toLowerCase();
+  const row = resolvePendingLibraryDetailRow(kind, detail);
+  if (!row) {
+    return false;
+  }
+  if (kind === "game") {
+    openGameDetails(row);
+  } else if (kind === "emulator") {
+    openEmulatorDetails(row);
+  } else {
+    return false;
+  }
+  if (typeof window !== "undefined") {
+    window.__EMU_BRO_LIBRARY_DETAIL_REQUEST__ = null;
+  }
+  return true;
+}
+
+function handleLibraryDetailRequest(event) {
+  consumeLibraryDetailRequest(event?.detail);
+}
+
 function setLibraryStartup() {
   appStore.setPreferredStartupSection("library-views");
 }
@@ -447,6 +646,139 @@ async function refreshLibraryMetadata() {
   await Promise.all([workspaceStore.refresh(), categoriesStore.refreshCatalog()]);
 }
 
+function queueImmersiveLayoutSync() {
+  syncImmersiveScrollRootState();
+  if (typeof window === "undefined") {
+    return;
+  }
+  if (immersiveLayoutFrame) {
+    window.cancelAnimationFrame(immersiveLayoutFrame);
+  }
+  immersiveLayoutFrame = window.requestAnimationFrame(() => {
+    immersiveLayoutFrame = 0;
+    updateImmersiveViewportHeight();
+  });
+}
+
+function resolveWorkspaceScrollContainer() {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  const shellStageContent = workspaceRootEl.value?.closest?.(".shell-stage-content");
+  if (shellStageContent instanceof HTMLElement) {
+    return shellStageContent;
+  }
+
+  return document.scrollingElement || document.documentElement || document.body || null;
+}
+
+function syncImmersiveScrollRootState() {
+  const nextRoot = resolveWorkspaceScrollContainer();
+  if (immersiveScrollRootEl && immersiveScrollRootEl !== nextRoot) {
+    immersiveScrollRootEl.classList.remove("is-library-immersive-mode");
+  }
+  immersiveScrollRootEl = nextRoot instanceof HTMLElement ? nextRoot : null;
+  if (!immersiveScrollRootEl) {
+    return;
+  }
+  immersiveScrollRootEl.classList.toggle("is-library-immersive-mode", Boolean(isImmersiveGameView.value));
+}
+
+function updateImmersiveViewportHeight() {
+  if (!isImmersiveGameView.value) {
+    immersiveViewportHeight.value = 0;
+    return;
+  }
+
+  const scrollRoot = resolveWorkspaceScrollContainer();
+  const workspaceLayout = workspaceLayoutEl.value;
+  if (!(scrollRoot instanceof HTMLElement) || !(workspaceLayout instanceof HTMLElement)) {
+    immersiveViewportHeight.value = 0;
+    return;
+  }
+
+  const scrollRect = scrollRoot.getBoundingClientRect();
+  const layoutRect = workspaceLayout.getBoundingClientRect();
+  const availableHeight = Math.floor(scrollRect.bottom - layoutRect.top - 8);
+  immersiveViewportHeight.value = Math.max(320, availableHeight);
+}
+
+function escapeAttributeValue(value = "") {
+  const text = String(value || "");
+  if (typeof window !== "undefined" && window.CSS && typeof window.CSS.escape === "function") {
+    return window.CSS.escape(text);
+  }
+  return text.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
+function resolveGameAnchorElement(anchorKey = "") {
+  const key = String(anchorKey || "").trim();
+  if (!key || !workspaceRootEl.value || typeof workspaceRootEl.value.querySelector !== "function") {
+    return null;
+  }
+  return workspaceRootEl.value.querySelector(`[data-library-row-key="${escapeAttributeValue(key)}"]`);
+}
+
+function getRelativeScrollOffset(root, element) {
+  if (!(root instanceof HTMLElement) || !(element instanceof HTMLElement)) {
+    return null;
+  }
+  const rootRect = root.getBoundingClientRect();
+  const elementRect = element.getBoundingClientRect();
+  return elementRect.top - rootRect.top;
+}
+
+function captureWorkspaceScrollState() {
+  const root = resolveWorkspaceScrollContainer();
+  if (!root) return null;
+  const anchorKey = String(selectedGameKey.value || "").trim();
+  const anchorElement = resolveGameAnchorElement(anchorKey);
+  return {
+    top: Number(root.scrollTop || 0),
+    left: Number(root.scrollLeft || 0),
+    anchorKey,
+    anchorOffset: getRelativeScrollOffset(root, anchorElement)
+  };
+}
+
+function restoreWorkspaceScrollState(snapshot) {
+  if (!snapshot || typeof window === "undefined") return;
+  const root = resolveWorkspaceScrollContainer();
+  if (!root) return;
+  const top = Number(snapshot.top || 0);
+  const left = Number(snapshot.left || 0);
+  const applyScroll = () => {
+    root.scrollTop = top;
+    root.scrollLeft = left;
+  };
+  const applyAnchorScroll = () => {
+    const anchorElement = resolveGameAnchorElement(snapshot.anchorKey);
+    const anchorOffset = getRelativeScrollOffset(root, anchorElement);
+    if (anchorOffset == null || snapshot.anchorOffset == null) {
+      return false;
+    }
+    root.scrollTop += anchorOffset - Number(snapshot.anchorOffset || 0);
+    return true;
+  };
+  window.requestAnimationFrame(() => {
+    applyScroll();
+    applyAnchorScroll();
+    window.requestAnimationFrame(() => {
+      applyScroll();
+      applyAnchorScroll();
+    });
+  });
+}
+
+async function refreshLibraryMetadataPreservingScroll() {
+  const snapshot = captureWorkspaceScrollState();
+  await refreshLibraryMetadata();
+  await nextTick();
+  queueImmersiveLayoutSync();
+  restoreWorkspaceScrollState(snapshot);
+}
+
 watch(
   () => flattenedVisibleRows.value.map((row) => row.key).join("|"),
   () => {
@@ -473,13 +805,75 @@ onMounted(() => {
     workspaceStore.initialize(),
     categoriesStore.initialize(),
     settingsToolsStore.initialize()
-  ]);
+  ]).then(() => {
+    consumeLibraryDetailRequest();
+    queueImmersiveLayoutSync();
+  });
+  if (typeof window !== "undefined") {
+    window.addEventListener("emubro:library-detail-request", handleLibraryDetailRequest);
+    window.addEventListener("resize", queueImmersiveLayoutSync);
+    if (typeof window.ResizeObserver === "function") {
+      immersiveResizeObserver = new window.ResizeObserver(() => {
+        queueImmersiveLayoutSync();
+      });
+      if (workspaceRootEl.value) {
+        immersiveResizeObserver.observe(workspaceRootEl.value);
+      }
+      const scrollRoot = resolveWorkspaceScrollContainer();
+      if (scrollRoot) {
+        immersiveResizeObserver.observe(scrollRoot);
+      }
+      if (mainCardEl.value) {
+        immersiveResizeObserver.observe(mainCardEl.value);
+      }
+    }
+    syncImmersiveScrollRootState();
+  }
 });
+
+onUnmounted(() => {
+  closeEmulatorContextMenu();
+  if (immersiveScrollRootEl) {
+    immersiveScrollRootEl.classList.remove("is-library-immersive-mode");
+    immersiveScrollRootEl = null;
+  }
+  if (typeof window !== "undefined") {
+    window.removeEventListener("emubro:library-detail-request", handleLibraryDetailRequest);
+    window.removeEventListener("resize", queueImmersiveLayoutSync);
+    if (immersiveLayoutFrame) {
+      window.cancelAnimationFrame(immersiveLayoutFrame);
+      immersiveLayoutFrame = 0;
+    }
+  }
+  if (immersiveResizeObserver) {
+    immersiveResizeObserver.disconnect();
+    immersiveResizeObserver = null;
+  }
+});
+
+watch(isImmersiveGameView, async () => {
+  syncImmersiveScrollRootState();
+  await nextTick();
+  queueImmersiveLayoutSync();
+}, { immediate: true });
+
+watch(
+  () => [selectionPanelDocked.value, loading.value, refreshError.value, viewMode.value, librarySection.value],
+  async () => {
+    await nextTick();
+    queueImmersiveLayoutSync();
+  }
+);
 </script>
 
 <template>
-  <div class="stack">
-    <section class="desktop-library-workspace-layout" :class="workspaceLayoutClasses">
+  <div ref="workspaceRootEl" class="stack desktop-library-workspace-shell" :class="{ 'is-immersive-mode': isImmersiveGameView }">
+    <section
+      ref="workspaceLayoutEl"
+      class="desktop-library-workspace-layout"
+      :class="[workspaceLayoutClasses, { 'is-immersive-mode': isImmersiveGameView }]"
+      :style="immersiveLayoutStyle"
+    >
       <aside class="desktop-library-sidebar">
         <section class="subcard desktop-library-sidebar-card">
           <div class="card-header-row">
@@ -537,7 +931,12 @@ onMounted(() => {
         <LibraryBrowsePanel :visible-game-ids="visibleGameIds" :all-game-ids="allGameIds" />
       </aside>
 
-      <section class="card desktop-library-main-card">
+      <section
+        ref="mainCardEl"
+        class="card desktop-library-main-card"
+        :class="{ 'is-immersive-mode': isImmersiveGameView }"
+        :style="immersiveCardStyle"
+      >
         <div class="card-header-row">
           <div>
             <h3>
@@ -677,6 +1076,7 @@ onMounted(() => {
               :key="row.key"
               class="desktop-library-card desktop-emulator-card"
               :class="{ 'is-selected': selectedEmulator?.key === row.key }"
+              @contextmenu="openEmulatorContextMenu($event, row)"
               @click="selectEmulator(row)"
               @dblclick="row.installed ? launchEmulator(row) : openEmulatorDetails(row)"
               @focus="selectEmulator(row)"
@@ -724,6 +1124,7 @@ onMounted(() => {
               :key="row.key"
               class="desktop-library-list-row"
               :class="{ 'is-selected': selectedEmulator?.key === row.key }"
+              @contextmenu="openEmulatorContextMenu($event, row)"
               @click="selectEmulator(row)"
               @dblclick="row.installed ? launchEmulator(row) : openEmulatorDetails(row)"
               @focus="selectEmulator(row)"
@@ -762,7 +1163,7 @@ onMounted(() => {
         </template>
 
         <template v-else>
-          <article v-if="selectedGame && !selectionPanelDocked" class="subcard desktop-library-selection-card">
+          <article v-if="selectedGame && !selectionPanelDocked && !isImmersiveGameView" class="subcard desktop-library-selection-card">
             <div class="desktop-library-selection-media">
               <LazyArtwork :src="selectedGame.image" :alt="selectedGame.name" eager @error="handleArtworkError($event, selectedGame, 'game')" />
             </div>
@@ -863,6 +1264,7 @@ onMounted(() => {
 
           <LibraryImmersiveView
             v-else-if="viewMode === 'focus' || viewMode === 'slideshow' || viewMode === 'random'"
+            class="desktop-library-immersive-shell"
             :mode="viewMode"
             :rows="immersiveRows"
             :selected-key="selectedGameKey"
@@ -885,6 +1287,7 @@ onMounted(() => {
                 :key="row.key"
                 class="desktop-library-card"
                 :class="{ 'is-selected': selectedGame?.key === row.key }"
+                :data-library-row-key="row.key"
                 @click="selectGame(row)"
                 @dblclick="launchGame(row)"
                 @focus="selectGame(row)"
@@ -918,6 +1321,7 @@ onMounted(() => {
                 :key="row.key"
                 class="desktop-library-list-row"
                 :class="{ 'is-selected': selectedGame?.key === row.key }"
+                :data-library-row-key="row.key"
                 @click="selectGame(row)"
                 @dblclick="launchGame(row)"
                 @focus="selectGame(row)"
@@ -1142,7 +1546,7 @@ onMounted(() => {
       @launch="launchGame(selectedGame)"
       @show-folder="showGameInFolder(selectedGame)"
       @create-shortcut="createShortcut(selectedGame)"
-      @refresh-game="refreshLibraryMetadata"
+      @refresh-game="refreshLibraryMetadataPreservingScroll"
       @open-ai-settings="openAiSettings"
     />
 
@@ -1153,6 +1557,15 @@ onMounted(() => {
       :status-tone="emulatorStatusTone"
       @close="closeEmulatorDetails"
       @refresh-emulator="refreshLibraryMetadata"
+    />
+
+    <DesktopContextMenu
+      :visible="emulatorContextMenu.visible"
+      :x="emulatorContextMenu.x"
+      :y="emulatorContextMenu.y"
+      :items="emulatorContextMenuItems"
+      :aria-label="shellI18nStore.t('desktopShell.library.emulatorContextMenu', 'Emulator actions')"
+      @close="closeEmulatorContextMenu"
     />
   </div>
 </template>

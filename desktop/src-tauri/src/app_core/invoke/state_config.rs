@@ -5,6 +5,10 @@ pub(super) fn handle(ch: &str, args: &[Value], _window: &Window) -> Result<Value
     match ch {
         "get-games" => Ok(Value::Array(read_state_array("games"))),
         "get-emulators" => Ok(Value::Array(list_emulators_for_library())),
+        "support:query-library" => {
+            let payload = args.get(0).cloned().unwrap_or_else(|| json!({}));
+            Ok(query_support_library(&payload))
+        }
         "tags:list" => Ok(json!({ "tags": read_state_array("tags") })),
         "get-library-stats" => Ok(json!({
             "totalGames": read_state_array("games").len(),
@@ -314,6 +318,568 @@ fn check_path_write_access(target_path: &str) -> Value {
             String::new()
         } else {
             "Directory is not writable".to_string()
+        }
+    })
+}
+
+fn normalize_support_library_query_text(value: &str) -> String {
+    let mut out = String::new();
+    let mut previous_was_space = false;
+
+    for ch in value.trim().chars() {
+        if ch.is_ascii_alphanumeric() {
+            out.push(ch.to_ascii_lowercase());
+            previous_was_space = false;
+        } else if !previous_was_space {
+            out.push(' ');
+            previous_was_space = true;
+        }
+    }
+
+    out.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+fn tokenize_support_library_query(value: &str) -> Vec<String> {
+    let normalized = normalize_support_library_query_text(value);
+    let mut tokens = Vec::<String>::new();
+    let mut seen = std::collections::HashSet::<String>::new();
+
+    for token in normalized.split_whitespace() {
+        let trimmed = token.trim();
+        if trimmed.len() < 2 {
+            continue;
+        }
+        if seen.insert(trimmed.to_string()) {
+            tokens.push(trimmed.to_string());
+        }
+    }
+
+    tokens
+}
+
+fn build_support_library_search_text(row: &Value) -> String {
+    let mut parts = Vec::<String>::new();
+    for key in [
+        "name",
+        "title",
+        "displayName",
+        "platform",
+        "platformShortName",
+        "description",
+        "company",
+        "genre",
+        "type",
+        "searchString",
+        "serial",
+        "code",
+        "gameCode",
+    ] {
+        let value = row.get(key).and_then(|v| v.as_str()).unwrap_or("").trim();
+        if !value.is_empty() {
+            parts.push(value.to_string());
+        }
+    }
+
+    if let Some(tags) = row.get("tags").and_then(|v| v.as_array()) {
+        for tag in tags {
+            let text = match tag {
+                Value::String(value) => value.trim().to_string(),
+                Value::Number(value) => value.to_string(),
+                _ => String::new(),
+            };
+            if !text.is_empty() {
+                parts.push(text);
+            }
+        }
+    }
+
+    normalize_support_library_query_text(&parts.join(" "))
+}
+
+fn support_library_row_name(row: &Value) -> String {
+    row.get("name")
+        .or_else(|| row.get("title"))
+        .or_else(|| row.get("displayName"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .trim()
+        .to_string()
+}
+
+fn support_library_row_platform(row: &Value) -> String {
+    row.get("platform")
+        .or_else(|| row.get("platformShortName"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .trim()
+        .to_string()
+}
+
+fn build_support_tag_label_map() -> std::collections::HashMap<String, String> {
+    let mut map = std::collections::HashMap::<String, String>::new();
+    for row in read_state_array("tags") {
+        let id = row
+            .get("id")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .trim()
+            .to_string();
+        if id.is_empty() {
+            continue;
+        }
+        let key = id.to_ascii_lowercase();
+        let label = row
+            .get("label")
+            .or_else(|| row.get("name"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .trim()
+            .to_string();
+        map.insert(key, if label.is_empty() { id } else { label });
+    }
+    map
+}
+
+fn enrich_support_game_row_tags(
+    row: Value,
+    tag_labels: &std::collections::HashMap<String, String>,
+) -> Value {
+    let mut obj = row.as_object().cloned().unwrap_or_default();
+    let existing = obj
+        .get("tags")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+
+    let mut tag_ids = Vec::<Value>::new();
+    let mut label_values = Vec::<Value>::new();
+    let mut seen_ids = std::collections::HashSet::<String>::new();
+    let mut seen_labels = std::collections::HashSet::<String>::new();
+
+    for entry in existing {
+        let text = match entry {
+            Value::String(value) => value.trim().to_string(),
+            Value::Number(value) => value.to_string(),
+            _ => String::new(),
+        };
+        if text.is_empty() {
+            continue;
+        }
+        let id_key = text.to_ascii_lowercase();
+        if seen_ids.insert(id_key.clone()) {
+            tag_ids.push(Value::String(text.clone()));
+        }
+        let label = tag_labels
+            .get(&id_key)
+            .cloned()
+            .unwrap_or_else(|| text.clone());
+        let label_key = label.to_ascii_lowercase();
+        if !label.is_empty() && seen_labels.insert(label_key) {
+            label_values.push(Value::String(label));
+        }
+    }
+
+    obj.insert("tags".to_string(), Value::Array(tag_ids));
+    obj.insert("tagLabels".to_string(), Value::Array(label_values));
+    Value::Object(obj)
+}
+
+fn enrich_support_game_rows_with_tags(
+    rows: Vec<Value>,
+    tag_labels: &std::collections::HashMap<String, String>,
+) -> Vec<Value> {
+    rows.into_iter()
+        .map(|row| enrich_support_game_row_tags(row, tag_labels))
+        .collect::<Vec<_>>()
+}
+
+fn query_support_rows(rows: Vec<Value>, normalized_query: &str, query_tokens: &[String], limit: usize) -> (usize, Vec<Value>) {
+    if normalized_query.is_empty() {
+        return (0, Vec::new());
+    }
+
+    let mut ranked = rows
+        .into_iter()
+        .filter_map(|row| {
+            let search_text = build_support_library_search_text(&row);
+            if search_text.is_empty() {
+                return None;
+            }
+
+            let phrase_hit = search_text.contains(normalized_query);
+            let token_hits = query_tokens
+                .iter()
+                .filter(|token| search_text.contains(token.as_str()))
+                .count();
+            let matches = if phrase_hit {
+                true
+            } else if query_tokens.is_empty() {
+                false
+            } else {
+                token_hits == query_tokens.len()
+            };
+
+            if !matches {
+                return None;
+            }
+
+            let platform = support_library_row_platform(&row);
+            let name = support_library_row_name(&row);
+            Some((row, phrase_hit, token_hits, platform, name))
+        })
+        .collect::<Vec<_>>();
+
+    ranked.sort_by(|a, b| {
+        if a.1 != b.1 {
+            return b.1.cmp(&a.1);
+        }
+        if a.2 != b.2 {
+            return b.2.cmp(&a.2);
+        }
+        let platform_cmp = a.3.cmp(&b.3);
+        if platform_cmp != std::cmp::Ordering::Equal {
+            return platform_cmp;
+        }
+        a.4.cmp(&b.4)
+    });
+
+    let total = ranked.len();
+    let rows = ranked
+        .into_iter()
+        .take(limit)
+        .map(|entry| entry.0)
+        .collect::<Vec<_>>();
+
+    (total, rows)
+}
+
+fn summarize_support_catalog_rows(rows: Vec<Value>, limit: usize) -> Vec<Value> {
+    let mut sorted = rows;
+    sorted.sort_by(|a, b| {
+        let platform_cmp = support_library_row_platform(a).cmp(&support_library_row_platform(b));
+        if platform_cmp != std::cmp::Ordering::Equal {
+            return platform_cmp;
+        }
+        support_library_row_name(a).cmp(&support_library_row_name(b))
+    });
+    sorted.into_iter().take(limit).collect::<Vec<_>>()
+}
+
+fn build_support_library_platform_counts(rows: &[Value]) -> Vec<Value> {
+    let mut counter = std::collections::HashMap::<String, usize>::new();
+    for row in rows {
+        let platform = support_library_row_platform(row);
+        if platform.is_empty() {
+            continue;
+        }
+        *counter.entry(platform).or_insert(0usize) += 1;
+    }
+
+    let mut entries = counter.into_iter().collect::<Vec<_>>();
+    entries.sort_by(|a, b| {
+        if a.1 != b.1 {
+            return b.1.cmp(&a.1);
+        }
+        a.0.cmp(&b.0)
+    });
+
+    entries
+        .into_iter()
+        .take(40)
+        .map(|(platform, count)| json!({
+            "platform": platform,
+            "count": count
+        }))
+        .collect::<Vec<_>>()
+}
+
+fn normalize_support_library_kind(value: &str) -> &'static str {
+    match value.trim().to_ascii_lowercase().as_str() {
+        "game" | "games" | "title" | "titles" | "rom" | "roms" => "games",
+        "emulator" | "emulators" => "emulators",
+        _ => "all",
+    }
+}
+
+fn push_support_library_query_values(value: &Value, out: &mut Vec<String>) {
+    match value {
+        Value::Array(rows) => {
+            for entry in rows {
+                push_support_library_query_values(entry, out);
+            }
+        }
+        Value::String(text) => {
+            let trimmed = text.trim();
+            if !trimmed.is_empty() {
+                out.push(trimmed.to_string());
+            }
+        }
+        _ => {
+            if let Some(text) = value.as_str() {
+                let trimmed = text.trim();
+                if !trimmed.is_empty() {
+                    out.push(trimmed.to_string());
+                }
+            }
+        }
+    }
+}
+
+fn read_support_library_queries(payload: &Value) -> Vec<String> {
+    let mut rows = Vec::<String>::new();
+
+    for field in ["queries", "titles", "names", "games"] {
+        if let Some(value) = payload.get(field) {
+            push_support_library_query_values(value, &mut rows);
+        }
+    }
+
+    if rows.is_empty() {
+        if let Some(value) = payload
+            .get("query")
+            .or_else(|| payload.get("search"))
+            .or_else(|| payload.get("searchQuery"))
+            .or_else(|| payload.get("title"))
+            .or_else(|| payload.get("name"))
+        {
+            push_support_library_query_values(value, &mut rows);
+        }
+    }
+
+    let mut seen = std::collections::HashSet::<String>::new();
+    rows.into_iter()
+        .filter_map(|value| {
+            let trimmed = value.trim().to_string();
+            if trimmed.is_empty() {
+                return None;
+            }
+            let key = trimmed.to_ascii_lowercase();
+            if !seen.insert(key) {
+                return None;
+            }
+            Some(trimmed)
+        })
+        .take(24)
+        .collect::<Vec<_>>()
+}
+
+fn support_library_row_identity_key(row: &Value) -> String {
+    if let Some(key) = row.get("key").and_then(|v| v.as_str()).map(|v| v.trim()).filter(|v| !v.is_empty()) {
+        return format!("key:{key}");
+    }
+    if let Some(id) = row.get("id").and_then(|v| v.as_u64()) {
+        return format!("id:{id}");
+    }
+    let name = support_library_row_name(row);
+    let platform = support_library_row_platform(row);
+    format!(
+        "name:{}|platform:{}",
+        name.trim().to_ascii_lowercase(),
+        platform.trim().to_ascii_lowercase()
+    )
+}
+
+fn merge_support_library_batch_rows(query_results: &[Value], field: &str, limit: usize) -> Vec<Value> {
+    let mut merged = Vec::<Value>::new();
+    let mut seen = std::collections::HashSet::<String>::new();
+
+    for entry in query_results {
+        let Some(rows) = entry.get(field).and_then(|v| v.as_array()) else {
+            continue;
+        };
+        for row in rows {
+            let identity = support_library_row_identity_key(row);
+            if identity.is_empty() || !seen.insert(identity) {
+                continue;
+            }
+            merged.push(row.clone());
+            if merged.len() >= limit {
+                return merged;
+            }
+        }
+    }
+
+    merged
+}
+
+fn query_support_library(payload: &Value) -> Value {
+    let queries = read_support_library_queries(payload);
+    let query = queries.first().cloned().unwrap_or_default();
+    let batch_query = queries.len() > 1;
+    let normalized_query = normalize_support_library_query_text(&query);
+    let query_tokens = tokenize_support_library_query(&query);
+    let kind = normalize_support_library_kind(
+        payload
+            .get("kind")
+            .or_else(|| payload.get("target"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("all"),
+    );
+    let limit = payload
+        .get("limit")
+        .and_then(|v| v.as_u64())
+        .map(|value| value.clamp(1, 5000) as usize)
+        .unwrap_or(1200);
+
+    let support_tag_labels = build_support_tag_label_map();
+    let all_games = enrich_support_game_rows_with_tags(read_state_array("games"), &support_tag_labels);
+    let all_emulators = list_emulators_for_library();
+    let catalog_sample_limit = limit.clamp(1, 220);
+    let game_platforms = build_support_library_platform_counts(&all_games);
+    let emulator_platforms = build_support_library_platform_counts(&all_emulators);
+    let catalog_games = summarize_support_catalog_rows(all_games.clone(), catalog_sample_limit);
+    let catalog_emulators = summarize_support_catalog_rows(all_emulators.clone(), catalog_sample_limit);
+    let whole_catalog = normalized_query.is_empty();
+    let reason = if whole_catalog { "task-catalog" } else { "task-query" };
+
+    let mut query_results = Vec::<Value>::new();
+    if batch_query {
+        for query_value in &queries {
+            let normalized_value = normalize_support_library_query_text(query_value);
+            let tokens = tokenize_support_library_query(query_value);
+            let (game_count, games) = if kind == "emulators" {
+                (0usize, Vec::new())
+            } else {
+                query_support_rows(all_games.clone(), &normalized_value, &tokens, limit)
+            };
+            let (emulator_count, emulators) = if kind == "games" {
+                (0usize, Vec::new())
+            } else {
+                query_support_rows(all_emulators.clone(), &normalized_value, &tokens, limit)
+            };
+            query_results.push(json!({
+                "query": query_value,
+                "gameCount": game_count,
+                "emulatorCount": emulator_count,
+                "gameRowsReturned": games.len(),
+                "emulatorRowsReturned": emulators.len(),
+                "gameRowsTruncated": game_count > games.len(),
+                "emulatorRowsTruncated": emulator_count > emulators.len(),
+                "games": games,
+                "emulators": emulators
+            }));
+        }
+    }
+
+    let (game_count, games, emulator_count, emulators, game_rows_returned, emulator_rows_returned, game_rows_truncated, emulator_rows_truncated) =
+        if kind == "emulators" && whole_catalog {
+            (
+                0usize,
+                Vec::new(),
+                all_emulators.len(),
+                summarize_support_catalog_rows(all_emulators.clone(), limit),
+                0usize,
+                limit.min(all_emulators.len()),
+                false,
+                all_emulators.len() > limit.min(all_emulators.len()),
+            )
+        } else if kind == "games" && whole_catalog {
+            (
+                all_games.len(),
+                summarize_support_catalog_rows(all_games.clone(), limit),
+                0usize,
+                Vec::new(),
+                limit.min(all_games.len()),
+                0usize,
+                all_games.len() > limit.min(all_games.len()),
+                false,
+            )
+        } else if whole_catalog {
+            let games = summarize_support_catalog_rows(all_games.clone(), limit);
+            let emulators = summarize_support_catalog_rows(all_emulators.clone(), limit);
+            (
+                all_games.len(),
+                games.clone(),
+                all_emulators.len(),
+                emulators.clone(),
+                games.len(),
+                emulators.len(),
+                all_games.len() > games.len(),
+                all_emulators.len() > emulators.len(),
+            )
+        } else if batch_query {
+            let merged_games = if kind == "emulators" {
+                Vec::new()
+            } else {
+                merge_support_library_batch_rows(&query_results, "games", limit)
+            };
+            let merged_emulators = if kind == "games" {
+                Vec::new()
+            } else {
+                merge_support_library_batch_rows(&query_results, "emulators", limit)
+            };
+            let total_games = query_results
+                .iter()
+                .map(|entry| entry.get("gameCount").and_then(|v| v.as_u64()).unwrap_or(0) as usize)
+                .sum::<usize>();
+            let total_emulators = query_results
+                .iter()
+                .map(|entry| entry.get("emulatorCount").and_then(|v| v.as_u64()).unwrap_or(0) as usize)
+                .sum::<usize>();
+            let games_truncated = query_results
+                .iter()
+                .any(|entry| entry.get("gameRowsTruncated").and_then(|v| v.as_bool()).unwrap_or(false));
+            let emulators_truncated = query_results
+                .iter()
+                .any(|entry| entry.get("emulatorRowsTruncated").and_then(|v| v.as_bool()).unwrap_or(false));
+            (
+                total_games,
+                merged_games.clone(),
+                total_emulators,
+                merged_emulators.clone(),
+                merged_games.len(),
+                merged_emulators.len(),
+                games_truncated || total_games > merged_games.len(),
+                emulators_truncated || total_emulators > merged_emulators.len(),
+            )
+        } else {
+            let (game_count, games) = if kind == "emulators" {
+                (0usize, Vec::new())
+            } else {
+                query_support_rows(all_games.clone(), &normalized_query, &query_tokens, limit)
+            };
+            let (emulator_count, emulators) = if kind == "games" {
+                (0usize, Vec::new())
+            } else {
+                query_support_rows(all_emulators.clone(), &normalized_query, &query_tokens, limit)
+            };
+            (
+                game_count,
+                games.clone(),
+                emulator_count,
+                emulators.clone(),
+                games.len(),
+                emulators.len(),
+                game_count > games.len(),
+                emulator_count > emulators.len(),
+            )
+        };
+
+    json!({
+        "success": true,
+        "active": true,
+        "reason": reason,
+        "query": query,
+        "queries": queries,
+        "batchQuery": batch_query,
+        "kind": kind,
+        "limit": limit,
+        "gameCount": game_count,
+        "emulatorCount": emulator_count,
+        "gameRowsReturned": game_rows_returned,
+        "emulatorRowsReturned": emulator_rows_returned,
+        "gameRowsTruncated": game_rows_truncated,
+        "emulatorRowsTruncated": emulator_rows_truncated,
+        "games": games,
+        "emulators": emulators,
+        "queryResults": query_results,
+        "catalog": {
+            "gameTotal": all_games.len(),
+            "emulatorTotal": all_emulators.len(),
+            "gamePlatforms": game_platforms,
+            "emulatorPlatforms": emulator_platforms,
+            "games": catalog_games,
+            "emulators": catalog_emulators
         }
     })
 }

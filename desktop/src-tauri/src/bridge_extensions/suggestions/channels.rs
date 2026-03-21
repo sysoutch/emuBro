@@ -2,6 +2,12 @@ use super::*;
 use tauri::Emitter;
 
 const SUPPORT_STREAM_EVENT: &str = "emubro:support-stream";
+const SUPPORT_PROMPT_AGENT: &str =
+    include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/prompts/support/AGENT.md"));
+const SUPPORT_PROMPT_CHAT_SYSTEM: &str =
+    include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/prompts/support/CHAT_SYSTEM.md"));
+const SUPPORT_PROMPT_TROUBLESHOOT_SYSTEM: &str =
+    include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/prompts/support/TROUBLESHOOT_SYSTEM.md"));
 
 pub(super) fn handle(channel: &str, args: &[Value]) -> Option<Result<Value, String>> {
     if let Some(result) = descriptions::handle(channel, args) {
@@ -204,6 +210,15 @@ pub(crate) fn handle_emulation_support(
 
     match response {
         Ok(answer) => {
+            let debug_payload = build_support_debug_payload(
+                payload,
+                provider.as_str(),
+                &system_prompt,
+                &user_prompt,
+                wants_stream,
+                stream_request_id.as_str(),
+                None,
+            );
             if wants_stream {
                 if let Some(stream_window) = window {
                     let _ = stream_window.emit(
@@ -219,10 +234,26 @@ pub(crate) fn handle_emulation_support(
             Ok(json!({
                 "success": true,
                 "provider": provider,
-                "answer": answer
+                "answer": answer,
+                "debug": debug_payload
             }))
         }
         Err(error) => {
+            eprintln!(
+                "[support-llm] provider={} stream={} error={}",
+                provider.as_str(),
+                wants_stream,
+                error
+            );
+            let debug_payload = build_support_debug_payload(
+                payload,
+                provider.as_str(),
+                &system_prompt,
+                &user_prompt,
+                wants_stream,
+                stream_request_id.as_str(),
+                Some(error.as_str()),
+            );
             if wants_stream {
                 if let Some(stream_window) = window {
                     let _ = stream_window.emit(
@@ -239,14 +270,71 @@ pub(crate) fn handle_emulation_support(
             Ok(json!({
                 "success": true,
                 "provider": "local-fallback",
+                "providerError": error,
                 "answer": build_emulation_support_fallback(payload),
-                "debug": {
-                    "fallback": true,
-                    "providerError": error
-                }
+                "debug": debug_payload
             }))
         }
     }
+}
+
+fn build_support_debug_payload(
+    payload: &Value,
+    provider: &str,
+    system_prompt: &str,
+    user_prompt: &str,
+    wants_stream: bool,
+    stream_request_id: &str,
+    provider_error: Option<&str>,
+) -> Value {
+    let debug_enabled = payload
+        .get("debugSupport")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    if !debug_enabled && provider_error.is_none() {
+        return Value::Null;
+    }
+
+    let mut debug = json!({
+        "provider": provider,
+        "supportMode": payload
+            .get("supportMode")
+            .and_then(|v| v.as_str())
+            .unwrap_or("troubleshoot"),
+        "taskProtocol": payload
+            .get("supportTaskProtocol")
+            .and_then(|v| v.as_str())
+            .unwrap_or(""),
+        "streaming": {
+            "requested": payload
+                .get("streamResponse")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false),
+            "active": wants_stream,
+            "requestId": stream_request_id
+        },
+        "prompts": [
+            {
+                "id": "system",
+                "label": "System Prompt",
+                "role": "system",
+                "text": system_prompt
+            },
+            {
+                "id": "user",
+                "label": "User Prompt",
+                "role": "user",
+                "text": user_prompt
+            }
+        ]
+    });
+
+    if let (Some(error), Some(obj)) = (provider_error, debug.as_object_mut()) {
+        obj.insert("fallback".to_string(), json!(true));
+        obj.insert("providerError".to_string(), json!(error));
+    }
+
+    debug
 }
 
 fn build_support_feature_snapshot() -> &'static str {
@@ -257,6 +345,41 @@ fn build_support_feature_snapshot() -> &'static str {
 - Library supports drag/drop import, launcher import (Steam / Epic / GOG / Heroic paths depending on availability), cover download, categories/tags, platform filters, and multiple game views including cover/list/table/slideshow/focus/random.\n\
 - Tools currently include BIOS Manager, Memory Card Editor, Remote Library, Cover Downloader, CUE Maker, ECM / UNECM helper, and custom shortcut / plugin scaffolding tools.\n\
 - The app also has updater flows for both the main app and emubro-resources, plus shell-managed profile/settings popups and desktop window chrome.\n"
+}
+
+fn append_prompt_section(prompt: &mut String, label: &str, body: &str) {
+    let trimmed = body.trim();
+    if trimmed.is_empty() {
+        return;
+    }
+    if !prompt.trim().is_empty() {
+        prompt.push_str("\n\n");
+    }
+    prompt.push_str(&format!("[{}]\n{}\n", label, trimmed));
+}
+
+fn format_support_chat_history_for_prompt(history: &[Value], latest_user_message: &str) -> String {
+    let lines = history
+        .iter()
+        .filter_map(|entry| {
+            let role = entry
+                .get("role")
+                .and_then(|v| v.as_str())
+                .unwrap_or("user")
+                .trim()
+                .to_lowercase();
+            let text = entry
+                .get("text")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim();
+            if text.is_empty() || (role == "user" && text == latest_user_message) {
+                return None;
+            }
+            Some(format!("[{}] {}", role, text))
+        })
+        .collect::<Vec<String>>();
+    lines.join("\n")
 }
 
 fn build_locale_translation_prompts(payload: &Value) -> (String, String) {
@@ -629,6 +752,18 @@ fn build_emulation_support_prompts(payload: &Value) -> (String, String) {
         .and_then(|v| v.as_str())
         .unwrap_or("")
         .trim();
+    let library_queries = library_matches
+        .get("queries")
+        .cloned()
+        .unwrap_or_else(|| json!([]));
+    let library_batch_query = library_matches
+        .get("batchQuery")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let library_query_results = library_matches
+        .get("queryResults")
+        .cloned()
+        .unwrap_or_else(|| json!([]));
     let matched_game_count = library_matches
         .get("gameCount")
         .and_then(|v| v.as_u64())
@@ -647,189 +782,246 @@ fn build_emulation_support_prompts(payload: &Value) -> (String, String) {
         .and_then(|v| v.as_array())
         .cloned()
         .unwrap_or_default();
+    let matched_game_rows_returned = library_matches
+        .get("gameRowsReturned")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(matched_games.len() as u64);
+    let matched_emulator_rows_returned = library_matches
+        .get("emulatorRowsReturned")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(matched_emulators.len() as u64);
+    let matched_game_rows_truncated = library_matches
+        .get("gameRowsTruncated")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(matched_game_count > matched_games.len() as u64);
+    let matched_emulator_rows_truncated = library_matches
+        .get("emulatorRowsTruncated")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(matched_emulator_count > matched_emulators.len() as u64);
+    let library_catalog = library_matches.get("catalog").cloned().unwrap_or_else(|| json!({}));
+    let catalog_game_total = library_catalog
+        .get("gameTotal")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    let catalog_emulator_total = library_catalog
+        .get("emulatorTotal")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    let catalog_game_platforms = library_catalog
+        .get("gamePlatforms")
+        .cloned()
+        .unwrap_or_else(|| json!([]));
+    let catalog_emulator_platforms = library_catalog
+        .get("emulatorPlatforms")
+        .cloned()
+        .unwrap_or_else(|| json!([]));
+    let catalog_games = library_catalog
+        .get("games")
+        .cloned()
+        .unwrap_or_else(|| json!([]));
+    let catalog_emulators = library_catalog
+        .get("emulators")
+        .cloned()
+        .unwrap_or_else(|| json!([]));
+    let last_task_result = payload
+        .get("lastTaskResult")
+        .cloned()
+        .unwrap_or_else(|| json!({}));
+    let last_task_result_active = last_task_result
+        .get("active")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false);
 
     if support_mode == "chat" {
-        let mut system_prompt = String::from(
-            "You are the emuBro chat assistant inside the user's local app.\n\
-Respond with JSON only.\n\
-Directly answer the latest user message instead of turning it into a troubleshooting form or a library search.\n\
-Have a normal conversation first.\n\
-Do not ask for emulator, platform, BIOS, renderer, logs, or other diagnostic details unless the latest message is actually about diagnosing a technical problem.\n\
-Only use local library counts or names when the library lookup is explicitly active below.\n\
-If the library lookup is not active, ignore empty library counts and answer the message normally.\n\
-If the user asks how many matching games or emulators they have and the library lookup is active, answer with the exact provided count in the first sentence.\n\
-Never turn a casual greeting or general app question into a no-matches library answer.\n",
+        let mut system_prompt = String::new();
+        system_prompt.push_str(SUPPORT_PROMPT_AGENT.trim());
+        system_prompt.push_str("\n\n");
+        system_prompt.push_str(SUPPORT_PROMPT_CHAT_SYSTEM.trim());
+
+        let mut user_prompt = String::new();
+        append_prompt_section(
+            &mut user_prompt,
+            "NEW_PROMPT",
+            if issue_summary.is_empty() { "Not provided" } else { issue_summary }
         );
 
-        let mut user_prompt = String::from("Latest user message:\n");
-        user_prompt.push_str(&format!(
-            "{}\n",
-            if issue_summary.is_empty() { "Not provided" } else { issue_summary }
-        ));
-
         if let Some(history) = payload.get("chatHistory").and_then(|v| v.as_array()) {
-            if !history.is_empty() {
-                user_prompt.push_str("\nConversation so far:\n");
-                for entry in history {
-                    let role = entry.get("role").and_then(|v| v.as_str()).unwrap_or("user").trim();
-                    let text = entry.get("text").and_then(|v| v.as_str()).unwrap_or("").trim();
-                    if text.is_empty() || (role == "user" && text == issue_summary) {
-                        continue;
-                    }
-                    user_prompt.push_str(&format!("- {}: {}\n", role, text));
-                }
-            }
+            let history_block = format_support_chat_history_for_prompt(history, issue_summary);
+            append_prompt_section(&mut user_prompt, "PAST_MESSAGES", &history_block);
         }
 
-        user_prompt.push_str("\nLocal library lookup:\n");
-        user_prompt.push_str(&format!("- Active: {}\n", if library_active { "Yes" } else { "No" }));
+        let mut library_context = String::new();
+        library_context.push_str(&format!("- Active: {}\n", if library_active { "Yes" } else { "No" }));
         if !library_reason.is_empty() {
-            user_prompt.push_str(&format!("- Reason: {}\n", library_reason));
+            library_context.push_str(&format!("- Reason: {}\n", library_reason));
         }
         if library_active {
-            user_prompt.push_str(&format!(
+            library_context.push_str(&format!(
                 "- Match query: {}\n",
                 if library_query.is_empty() { issue_summary } else { library_query }
             ));
-            user_prompt.push_str(&format!("- Matching games count: {}\n", matched_game_count));
-            user_prompt.push_str(&format!("- Matching emulators count: {}\n", matched_emulator_count));
+            library_context.push_str(&format!("- Batch query: {}\n", if library_batch_query { "Yes" } else { "No" }));
+            library_context.push_str(&format!("- Matching games count: {}\n", matched_game_count));
+            library_context.push_str(&format!("- Matching emulators count: {}\n", matched_emulator_count));
+            library_context.push_str(&format!("- Matching games rows returned: {}\n", matched_game_rows_returned));
+            library_context.push_str(&format!("- Matching emulators rows returned: {}\n", matched_emulator_rows_returned));
+            library_context.push_str(&format!("- Matching games rows truncated: {}\n", if matched_game_rows_truncated { "Yes" } else { "No" }));
+            library_context.push_str(&format!("- Matching emulators rows truncated: {}\n", if matched_emulator_rows_truncated { "Yes" } else { "No" }));
+            if library_batch_query {
+                library_context.push_str("- Requested library queries JSON:\n");
+                library_context.push_str(&format!(
+                    "{}\n",
+                    serde_json::to_string(&library_queries).unwrap_or_else(|_| "[]".to_string())
+                ));
+                library_context.push_str("- Per-query library results JSON:\n");
+                library_context.push_str(&format!(
+                    "{}\n",
+                    serde_json::to_string(&library_query_results).unwrap_or_else(|_| "[]".to_string())
+                ));
+            }
             if !matched_games.is_empty() {
-                let game_names = matched_games
-                    .iter()
-                    .filter_map(|row| {
-                        let name = row.get("name").and_then(|v| v.as_str()).unwrap_or("").trim();
-                        let platform = row.get("platform").and_then(|v| v.as_str()).unwrap_or("").trim();
-                        if name.is_empty() {
-                            None
-                        } else if platform.is_empty() {
-                            Some(name.to_string())
-                        } else {
-                            Some(format!("{} ({})", name, platform))
-                        }
-                    })
-                    .collect::<Vec<_>>();
-                if !game_names.is_empty() {
-                    user_prompt.push_str(&format!("- Matching games sample: {}\n", game_names.join(", ")));
-                }
+                library_context.push_str("- Matching games rows JSON:\n");
+                library_context.push_str(&format!(
+                    "{}\n",
+                    serde_json::to_string(&matched_games).unwrap_or_else(|_| "[]".to_string())
+                ));
             }
             if !matched_emulators.is_empty() {
-                let emulator_names = matched_emulators
-                    .iter()
-                    .filter_map(|row| {
-                        let name = row.get("name").and_then(|v| v.as_str()).unwrap_or("").trim();
-                        let platform = row.get("platform").and_then(|v| v.as_str()).unwrap_or("").trim();
-                        if name.is_empty() {
-                            None
-                        } else if platform.is_empty() {
-                            Some(name.to_string())
-                        } else {
-                            Some(format!("{} ({})", name, platform))
-                        }
-                    })
-                    .collect::<Vec<_>>();
-                if !emulator_names.is_empty() {
-                    user_prompt.push_str(&format!("- Matching emulators sample: {}\n", emulator_names.join(", ")));
-                }
+                library_context.push_str("- Matching emulators rows JSON:\n");
+                library_context.push_str(&format!(
+                    "{}\n",
+                    serde_json::to_string(&matched_emulators).unwrap_or_else(|_| "[]".to_string())
+                ));
+                library_context.push_str("- Emulator row hint: matching emulator rows may contain `isInstalled`, `filePath`, and `filePaths`. If the user asks for installed emulator locations, answer directly from those fields when they are present.\n");
             }
+            library_context.push_str(&format!("- Catalog game total: {}\n", catalog_game_total));
+            library_context.push_str(&format!("- Catalog emulator total: {}\n", catalog_emulator_total));
+            library_context.push_str("- Catalog platforms (games):\n");
+            library_context.push_str(&format!(
+                "{}\n",
+                serde_json::to_string(&catalog_game_platforms).unwrap_or_else(|_| "[]".to_string())
+            ));
+            library_context.push_str("- Catalog platforms (emulators):\n");
+            library_context.push_str(&format!(
+                "{}\n",
+                serde_json::to_string(&catalog_emulator_platforms).unwrap_or_else(|_| "[]".to_string())
+            ));
+            library_context.push_str("- Catalog rows (games):\n");
+            library_context.push_str(&format!(
+                "{}\n",
+                serde_json::to_string(&catalog_games).unwrap_or_else(|_| "[]".to_string())
+            ));
+            library_context.push_str("- Catalog rows (emulators):\n");
+            library_context.push_str(&format!(
+                "{}\n",
+                serde_json::to_string(&catalog_emulators).unwrap_or_else(|_| "[]".to_string())
+            ));
+            library_context.push_str("- Emulator catalog hint: catalog emulator rows may include `isInstalled`, `filePath`, and `filePaths` as recorded local emulator data.\n");
         }
+        append_prompt_section(&mut user_prompt, "LIBRARY_CONTEXT", &library_context);
 
         if !platform.is_empty() || !emulator.is_empty() || !details.is_empty() {
-            user_prompt.push_str("\nOptional support profile:\n");
+            let mut support_profile = String::new();
             if !platform.is_empty() {
-                user_prompt.push_str(&format!("- Platform preference: {}\n", platform));
+                support_profile.push_str(&format!("- Platform preference: {}\n", platform));
             }
             if !emulator.is_empty() {
-                user_prompt.push_str(&format!("- Emulator preference: {}\n", emulator));
+                support_profile.push_str(&format!("- Emulator preference: {}\n", emulator));
             }
             if !details.is_empty() {
-                user_prompt.push_str(&format!("- Extra details: {}\n", details));
+                support_profile.push_str(&format!("- Extra details: {}\n", details));
+            }
+            append_prompt_section(&mut user_prompt, "SUPPORT_PROFILE", &support_profile);
+        }
+
+        if last_task_result_active {
+            let mut last_task_context = String::new();
+            last_task_context.push_str(&format!(
+                "{}\n",
+                serde_json::to_string(&last_task_result).unwrap_or_else(|_| "{}".to_string())
+            ));
+            last_task_context.push_str("- The runtime already executed that self task successfully. Acknowledge the completed action to the user and do not repeat the same task unless a new additional task is still required.\n");
+            append_prompt_section(&mut user_prompt, "LAST_TASK_RESULT", &last_task_context);
+        }
+
+        append_prompt_section(&mut user_prompt, "FEATURE_SNAPSHOT", build_support_feature_snapshot());
+
+        if support_task_protocol == "shell-v1" {
+            system_prompt.push_str("\n\n");
+            system_prompt.push_str(support_self_task_prompt_index().trim());
+            let selected_self_task_docs = build_support_self_task_prompt_examples(
+                payload,
+                issue_summary,
+                details,
+                platform,
+                emulator,
+                "chat",
+                library_active,
+            );
+            if !selected_self_task_docs.trim().is_empty() {
+                system_prompt.push_str("\n\n");
+                system_prompt.push_str(selected_self_task_docs.trim());
             }
         }
 
-        user_prompt.push_str("\nCurrent emuBro feature snapshot:\n");
-        user_prompt.push_str(build_support_feature_snapshot());
-
-        system_prompt.push_str(
-            "\nResponse contract:\n\
-- Always return exactly one minified JSON object and nothing else.\n\
-- For a normal assistant response use: {\"type\":\"reply\",\"message\":\"...markdown text...\"}.\n\
-- For a direct executable action use: {\"type\":\"task\",\"task\":\"FETCH_SPECS\",\"confidence\":0.92,\"reason\":\"...\",\"args\":{}}.\n\
-- For a blocked response that still proposes the next action use: {\"type\":\"blocked\",\"message\":\"...\",\"confidence\":0.84,\"reason\":\"...\",\"nextAction\":{\"task\":\"FETCH_SPECS\",\"action\":\"invoke\",\"command\":\"system:get-specs\",\"args\":{}}}.\n\
-- Treat local library context as optional supplemental data, not the main mode.\n\
-- Only answer from the local library context first when the library lookup is active and relevant.\n\
-- Only suggest troubleshooting steps when the user is actually describing a problem.\n\
-- Avoid filler and avoid asking for irrelevant technical details.\n",
-        );
-
-        if support_task_protocol == "shell-v1" {
-            system_prompt.push_str(
-                "\nShell task protocol:\n\
-- You have access to shell actions backed by the app runtime.\n\
-- Local library rows and counts in the prompt come from the app's live state/database and can be trusted as current app context.\n\
-- Allowed tasks are:\n\
-- `FETCH_SPECS` -> command `system:get-specs`.\n\
-- `RUN_GAME` -> command `launch-game`, use `args.gameId` or `args.gameKey` from the provided library rows.\n\
-- `RUN_EMULATOR` -> command `launch-emulator`, use `args.emulatorId` or `args.emulatorKey` from the provided emulator rows.\n\
-- `DOWNLOAD_INSTALL_EMULATOR` -> command `download-install-emulator`, use `args.emulatorId` or `args.emulatorKey` from the provided emulator rows.\n\
-- Decide yourself whether the latest request belongs to the `FETCH_SPECS` task category.\n\
-- Estimate your confidence for that task decision as a value from 0.00 to 1.00.\n\
-- Only use a task when it is actually necessary or directly requested by the user.\n\
-- If details already contain a `[PC Specs]` block, do not ask for `FETCH_SPECS` again.\n\
-- Never say that you cannot access, fetch, inspect, or view the user's system specs. Use the task JSON instead.\n",
-            );
+        let loaded_self_task_docs_context = build_loaded_support_self_task_docs_context(payload);
+        if !loaded_self_task_docs_context.trim().is_empty() {
+            append_prompt_section(&mut user_prompt, "LOADED_SELF_TASK_DOCS", &loaded_self_task_docs_context);
         }
 
         return (system_prompt, user_prompt);
     }
 
-    let mut system_prompt = String::from(
-        "You are the emuBro support assistant. Help with emulator, BIOS, controller, game launch, and performance issues.\n\
-Respond with JSON only.\n\
-Do not invent settings, file paths, installed software, or successful fixes.\n\
-If information is missing, say exactly what to verify next.\n\
-Mode: troubleshoot\n\
-Return a short diagnosis, likely causes, and a numbered fix checklist.\n",
-    );
+    let mut system_prompt = String::new();
+    system_prompt.push_str(SUPPORT_PROMPT_AGENT.trim());
+    system_prompt.push_str("\n\n");
+    system_prompt.push_str(SUPPORT_PROMPT_TROUBLESHOOT_SYSTEM.trim());
 
-    let mut user_prompt = String::from("Context:\n");
-    user_prompt.push_str(&format!("- Issue type: {}\n", if issue_type.is_empty() { "Not provided" } else { issue_type }));
-    user_prompt.push_str(&format!("- Issue summary: {}\n", if issue_summary.is_empty() { "Not provided" } else { issue_summary }));
-    user_prompt.push_str(&format!("- Platform: {}\n", if platform.is_empty() { "Not provided" } else { platform }));
-    user_prompt.push_str(&format!("- Emulator: {}\n", if emulator.is_empty() { "Not provided" } else { emulator }));
-    user_prompt.push_str(&format!("- Error text: {}\n", if error_text.is_empty() { "Not provided" } else { error_text }));
-    user_prompt.push_str(&format!("- Extra details: {}\n", if details.is_empty() { "Not provided" } else { details }));
-    user_prompt.push_str(&format!("- Auto specs fetch allowed: {}\n", if allow_auto_specs { "Yes" } else { "No" }));
-    user_prompt.push_str(&format!("- Web access allowed: {}\n", if allow_web_access { "Yes" } else { "No" }));
-    user_prompt.push_str("\nCurrent emuBro feature snapshot:\n");
-    user_prompt.push_str(build_support_feature_snapshot());
-
-    system_prompt.push_str(
-        "\nResponse contract:\n\
-- Always return exactly one minified JSON object and nothing else.\n\
-- For a normal assistant response use: {\"type\":\"reply\",\"message\":\"...markdown text...\"}.\n\
-- For a direct executable action use: {\"type\":\"task\",\"task\":\"FETCH_SPECS\",\"confidence\":0.92,\"reason\":\"...\",\"args\":{}}.\n\
-- For a blocked response that still proposes the next action use: {\"type\":\"blocked\",\"message\":\"...\",\"confidence\":0.84,\"reason\":\"...\",\"nextAction\":{\"task\":\"FETCH_SPECS\",\"action\":\"invoke\",\"command\":\"system:get-specs\",\"args\":{}}}.\n\
-- Prefer concrete emulator-oriented steps.\n\
-- Mention BIOS, paths, controller mapping, graphics backend, renderer, and rescan checks only when relevant.\n\
-- Keep the answer compact and avoid filler.\n",
-    );
+    let mut user_prompt = String::new();
+    let mut troubleshoot_context = String::new();
+    troubleshoot_context.push_str(&format!("- Issue type: {}\n", if issue_type.is_empty() { "Not provided" } else { issue_type }));
+    troubleshoot_context.push_str(&format!("- Issue summary: {}\n", if issue_summary.is_empty() { "Not provided" } else { issue_summary }));
+    troubleshoot_context.push_str(&format!("- Platform: {}\n", if platform.is_empty() { "Not provided" } else { platform }));
+    troubleshoot_context.push_str(&format!("- Emulator: {}\n", if emulator.is_empty() { "Not provided" } else { emulator }));
+    troubleshoot_context.push_str(&format!("- Error text: {}\n", if error_text.is_empty() { "Not provided" } else { error_text }));
+    troubleshoot_context.push_str(&format!("- Extra details: {}\n", if details.is_empty() { "Not provided" } else { details }));
+    troubleshoot_context.push_str(&format!("- Auto specs fetch allowed: {}\n", if allow_auto_specs { "Yes" } else { "No" }));
+    troubleshoot_context.push_str(&format!("- Web access allowed: {}\n", if allow_web_access { "Yes" } else { "No" }));
+    append_prompt_section(&mut user_prompt, "NEW_PROMPT", issue_summary);
+    append_prompt_section(&mut user_prompt, "CONTEXT", &troubleshoot_context);
+    if last_task_result_active {
+        let mut last_task_context = String::new();
+        last_task_context.push_str("- Recent completed self task result JSON:\n");
+        last_task_context.push_str(&format!(
+            "{}\n",
+            serde_json::to_string(&last_task_result).unwrap_or_else(|_| "{}".to_string())
+        ));
+        last_task_context.push_str("- The runtime already executed that self task successfully. Acknowledge the completed action and do not repeat the same task unless a new additional task is still required.\n");
+        append_prompt_section(&mut user_prompt, "LAST_TASK_RESULT", &last_task_context);
+    }
+    append_prompt_section(&mut user_prompt, "FEATURE_SNAPSHOT", build_support_feature_snapshot());
 
     if support_task_protocol == "shell-v1" {
-        system_prompt.push_str(
-            "\nShell task protocol:\n\
-- You have access to shell actions backed by the app runtime.\n\
-- Local library rows and counts in the prompt come from the app's live state/database and can be trusted as current app context.\n\
-- Allowed tasks are:\n\
-- `FETCH_SPECS` -> command `system:get-specs`.\n\
-- `RUN_GAME` -> command `launch-game`, use `args.gameId` or `args.gameKey` from the provided library rows.\n\
-- `RUN_EMULATOR` -> command `launch-emulator`, use `args.emulatorId` or `args.emulatorKey` from the provided emulator rows.\n\
-- `DOWNLOAD_INSTALL_EMULATOR` -> command `download-install-emulator`, use `args.emulatorId` or `args.emulatorKey` from the provided emulator rows.\n\
-- Decide yourself whether the latest request belongs to the `FETCH_SPECS` task category.\n\
-- Estimate your confidence for that task decision as a value from 0.00 to 1.00.\n\
-- Only use a task when it is actually necessary or directly requested by the user.\n\
-- If details already contain a `[PC Specs]` block, do not ask for `FETCH_SPECS` again.\n\
-- Never say that you cannot access, fetch, inspect, or view the user's system specs. Use the task JSON instead.\n",
+        system_prompt.push_str("\n\n");
+        system_prompt.push_str(support_self_task_prompt_index().trim());
+        let selected_self_task_docs = build_support_self_task_prompt_examples(
+            payload,
+            issue_summary,
+            details,
+            platform,
+            emulator,
+            "troubleshoot",
+            library_active,
         );
+        if !selected_self_task_docs.trim().is_empty() {
+            system_prompt.push_str("\n\n");
+            system_prompt.push_str(selected_self_task_docs.trim());
+        }
+    }
+
+    let loaded_self_task_docs_context = build_loaded_support_self_task_docs_context(payload);
+    if !loaded_self_task_docs_context.trim().is_empty() {
+        append_prompt_section(&mut user_prompt, "LOADED_SELF_TASK_DOCS", &loaded_self_task_docs_context);
     }
 
     (system_prompt, user_prompt)
@@ -853,21 +1045,6 @@ fn build_emulation_support_fallback(payload: &Value) -> String {
         .unwrap_or(false);
 
     if support_mode == "chat" {
-        let lower_issue = issue.to_lowercase();
-        let normalized_issue = lower_issue.split_whitespace().collect::<Vec<_>>().join(" ");
-        let is_count_question = lower_issue.contains("how many")
-            || lower_issue.contains("count")
-            || lower_issue.contains("number of");
-        let is_list_question = is_count_question
-            || lower_issue.contains("which")
-            || lower_issue.contains("what")
-            || lower_issue.contains("show")
-            || lower_issue.contains("list");
-        let is_greeting = normalized_issue.is_empty()
-            || matches!(
-                normalized_issue.as_str(),
-                "hi" | "hello" | "hey" | "yo" | "sup" | "thanks" | "thank you" | "thx" | "good morning" | "good afternoon" | "good evening"
-            );
         let game_count = library_matches
             .get("gameCount")
             .and_then(|v| v.as_u64())
@@ -905,27 +1082,17 @@ fn build_emulation_support_fallback(payload: &Value) -> String {
         };
 
         if !library_active {
-            if is_greeting {
-                return "Hi. Ask me anything about emuBro, emulator setup, troubleshooting, tools, themes, or your library.".to_string();
-            }
-            if issue.is_empty() {
-                return "Ask me anything about emuBro, emulator setup, troubleshooting, tools, themes, or your library.".to_string();
-            }
             return format!(
-                "I couldn't reach the configured LLM for a full reply right now. Ask again in a moment. If you want a library lookup, mention a title or platform and ask for a count, list, or match."
+                "I couldn't reach the configured LLM for a full reply right now. Ask again in a moment."
             );
         }
 
         if game_count > 0 || emulator_count > 0 {
             let mut answer = String::new();
             if game_count > 0 && emulator_count == 0 {
-                if is_count_question {
-                    answer.push_str(&format!("You have **{}** matching game{} in your library.", game_count, if game_count == 1 { "" } else { "s" }));
-                } else {
-                    answer.push_str(&format!("I found **{}** matching game{} in your library.", game_count, if game_count == 1 { "" } else { "s" }));
-                }
+                answer.push_str(&format!("I found **{}** matching game{} in your library.", game_count, if game_count == 1 { "" } else { "s" }));
                 let names = format_names(&games);
-                if is_list_question && !names.is_empty() {
+                if !names.is_empty() {
                     answer.push_str("\n\nExamples:\n");
                     for name in names {
                         answer.push_str(&format!("- {}\n", name));
@@ -934,13 +1101,9 @@ fn build_emulation_support_fallback(payload: &Value) -> String {
                 return answer;
             }
             if emulator_count > 0 && game_count == 0 {
-                if is_count_question {
-                    answer.push_str(&format!("You have **{}** matching emulator{} in your library.", emulator_count, if emulator_count == 1 { "" } else { "s" }));
-                } else {
-                    answer.push_str(&format!("I found **{}** matching emulator{} in your library.", emulator_count, if emulator_count == 1 { "" } else { "s" }));
-                }
+                answer.push_str(&format!("I found **{}** matching emulator{} in your library.", emulator_count, if emulator_count == 1 { "" } else { "s" }));
                 let names = format_names(&emulators);
-                if is_list_question && !names.is_empty() {
+                if !names.is_empty() {
                     answer.push_str("\n\nExamples:\n");
                     for name in names {
                         answer.push_str(&format!("- {}\n", name));

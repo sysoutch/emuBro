@@ -34,10 +34,20 @@ export function normalizeRelayPort(value, fallback = 42141) {
     return rounded;
 }
 
+export function normalizeSupportContextWindowMessages(value, fallback = 20) {
+    const allowed = [10, 20, 40, 80];
+    const normalizedFallback = allowed.includes(Number(fallback)) ? Number(fallback) : 20;
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return normalizedFallback;
+    const rounded = Math.round(parsed);
+    return allowed.includes(rounded) ? rounded : normalizedFallback;
+}
+
 export function createInitialLlmDraft(llmSettings = {}) {
     return {
         provider: String(llmSettings.provider || 'ollama'),
         llmMode: normalizeLlmMode(llmSettings.llmMode),
+        contextWindowMessages: normalizeSupportContextWindowMessages(llmSettings.contextWindowMessages, 20),
         models: llmSettings.models || {},
         baseUrls: llmSettings.baseUrls || {},
         apiKeys: llmSettings.apiKeys || {},

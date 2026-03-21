@@ -218,7 +218,7 @@ export function openGlobalLlmTaggingSetupModal({
             });
         });
 
-        overlay.addEventListener('click', (event) => {
+        overlay.addEventListener('mousedown', (event) => {
             if (event.target === overlay) close(null);
         });
 
@@ -379,7 +379,7 @@ export function createGlobalLlmProgressDialog({
         closeDialog();
     });
     closeFinalBtn?.addEventListener('click', closeDialog);
-    overlay.addEventListener('click', (event) => {
+    overlay.addEventListener('mousedown', (event) => {
         if (event.target !== overlay) return;
         if (!completed) return;
         closeDialog();

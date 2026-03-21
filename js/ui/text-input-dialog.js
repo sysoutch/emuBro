@@ -106,7 +106,7 @@ export function showTextInputDialog({
 
         confirmBtn?.addEventListener('click', tryConfirm);
         cancelBtn?.addEventListener('click', () => closeWith(null));
-        overlay.addEventListener('click', (event) => {
+        overlay.addEventListener('mousedown', (event) => {
             if (event.target === overlay) closeWith(null);
         });
         document.addEventListener('keydown', onKeyDown, true);

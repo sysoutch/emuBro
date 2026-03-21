@@ -78,7 +78,7 @@ export function showGroupedLaunchPicker(game, candidates) {
             }
         };
 
-        overlay.addEventListener('click', (event) => {
+        overlay.addEventListener('mousedown', (event) => {
             if (event.target === overlay) close(0);
         });
 

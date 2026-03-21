@@ -2,6 +2,9 @@ use super::*;
 use std::io::{BufRead, BufReader};
 use std::time::Duration;
 
+const PROVIDER_REQUEST_TIMEOUT_SECS: u64 = 180;
+const PROVIDER_STREAM_REQUEST_TIMEOUT_SECS: u64 = 600;
+
 pub(super) fn normalize_provider(value: &str) -> String {
     match value.trim().to_lowercase().as_str() {
         "openai" => "openai".to_string(),
@@ -171,7 +174,9 @@ fn ureq_json_request(
     headers: &[(&str, &str)],
     body: Option<&Value>,
 ) -> Result<Value, String> {
-    let agent = ureq::AgentBuilder::new().timeout(Duration::from_secs(45)).build();
+    let agent = ureq::AgentBuilder::new()
+        .timeout(Duration::from_secs(PROVIDER_REQUEST_TIMEOUT_SECS))
+        .build();
     let mut req = match method {
         "POST" => agent.post(url),
         _ => agent.get(url),
@@ -208,7 +213,9 @@ pub(super) fn relay_post_json(payload: &Value, path: &str, body: &Value) -> Resu
     );
     let token = relay_auth_token_from_payload(payload);
     let client_host = super::relay::relay_client_name();
-    let agent = ureq::AgentBuilder::new().timeout(Duration::from_secs(45)).build();
+    let agent = ureq::AgentBuilder::new()
+        .timeout(Duration::from_secs(PROVIDER_REQUEST_TIMEOUT_SECS))
+        .build();
     let mut request = agent.post(&url).set("content-type", "application/json");
     if !token.is_empty() {
         request = request.set("x-emubro-relay-token", &token);
@@ -583,7 +590,9 @@ where
         "options": { "temperature": temperature }
     });
 
-    let agent = ureq::AgentBuilder::new().timeout(Duration::from_secs(90)).build();
+    let agent = ureq::AgentBuilder::new()
+        .timeout(Duration::from_secs(PROVIDER_STREAM_REQUEST_TIMEOUT_SECS))
+        .build();
     let response = match agent.post(&url).send_json(body) {
         Ok(value) => value,
         Err(ureq::Error::Status(code, resp)) => {

@@ -52,7 +52,7 @@ export function showGlassMessageDialog({ title = 'emuBro', message = '', level =
             resolve();
         };
         overlay.querySelector('[data-dialog-ok]')?.addEventListener('click', close);
-        overlay.addEventListener('click', (event) => {
+        overlay.addEventListener('mousedown', (event) => {
             if (event.target === overlay) close();
         });
         const onKeyDown = (event) => {

@@ -5,6 +5,7 @@ mod descriptions;
 mod provider;
 mod recommendations;
 mod relay;
+mod support_task_docs;
 mod tags;
 mod theme;
 mod tool_draft;
@@ -117,6 +118,34 @@ pub(super) fn mix(hex: &str, delta: i32) -> String {
     theme::mix(hex, delta)
 }
 
+pub(super) fn support_self_task_prompt_index() -> &'static str {
+    support_task_docs::support_self_task_prompt_index()
+}
+
+pub(super) fn build_support_self_task_prompt_examples(
+    payload: &Value,
+    issue_summary: &str,
+    details: &str,
+    platform: &str,
+    emulator: &str,
+    support_mode: &str,
+    library_active: bool,
+) -> String {
+    support_task_docs::build_support_self_task_prompt_examples(
+        payload,
+        issue_summary,
+        details,
+        platform,
+        emulator,
+        support_mode,
+        library_active,
+    )
+}
+
+pub(super) fn build_loaded_support_self_task_docs_context(payload: &Value) -> String {
+    support_task_docs::build_loaded_support_self_task_docs_context(payload)
+}
+
 pub(crate) fn handle_emulation_support(
     payload: &Value,
     window: Option<&tauri::Window>,
@@ -125,5 +154,5 @@ pub(crate) fn handle_emulation_support(
 }
 
 pub(crate) fn handle(channel: &str, args: &[Value]) -> Option<Result<Value, String>> {
-    channels::handle(channel, args)
+    support_task_docs::handle(channel, args).or_else(|| channels::handle(channel, args))
 }

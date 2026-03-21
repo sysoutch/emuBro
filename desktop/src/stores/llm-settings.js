@@ -8,6 +8,7 @@ import {
   normalizeRelayAddressList,
   saveDesktopLlmSettings
 } from "../utils/llm-settings";
+import { getSupportContextWindowOptions, normalizeSupportContextWindowMessages } from "../utils/suggestion-settings";
 
 function getDesktopBridge() {
   if (typeof window === "undefined" || !window.emubro) {
@@ -49,6 +50,9 @@ export const useLlmSettingsStore = defineStore("llmSettings", {
     },
     requiresApiKey(state) {
       return state.provider === "openai" || state.provider === "gemini";
+    },
+    supportContextWindowOptions() {
+      return getSupportContextWindowOptions();
     }
   },
   actions: {
@@ -58,6 +62,7 @@ export const useLlmSettingsStore = defineStore("llmSettings", {
         llmMode: this.llmMode,
         scope: this.scope,
         query: this.query,
+        contextWindowMessages: this.contextWindowMessages,
         promptTemplate: this.promptTemplate,
         selectedPlatformOnly: this.selectedPlatformOnly,
         relay: this.relay,
@@ -72,6 +77,7 @@ export const useLlmSettingsStore = defineStore("llmSettings", {
       this.llmMode = normalized.llmMode;
       this.scope = normalized.scope;
       this.query = normalized.query;
+      this.contextWindowMessages = normalized.contextWindowMessages;
       this.promptTemplate = normalized.promptTemplate;
       this.selectedPlatformOnly = normalized.selectedPlatformOnly;
       this.relay = normalized.relay;
@@ -111,6 +117,10 @@ export const useLlmSettingsStore = defineStore("llmSettings", {
         ...this.getSnapshot(),
         scope
       });
+      this.clearStatus();
+    },
+    setContextWindowMessages(value) {
+      this.contextWindowMessages = normalizeSupportContextWindowMessages(value, this.contextWindowMessages);
       this.clearStatus();
     },
     setSelectedPlatformOnly(value) {

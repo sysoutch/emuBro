@@ -2,7 +2,8 @@ use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use tauri::Window;
+use std::time::Duration;
+use tauri::{AppHandle, Manager, Window};
 use url::Url;
 
 #[path = "bridge_extensions/mod.rs"]
@@ -13,6 +14,7 @@ use bridge_extensions::*;
 mod invoke;
 
 static START_HIDDEN_FOR_GAME_LAUNCH: AtomicBool = AtomicBool::new(false);
+static APP_SHUTDOWN_REQUESTED: AtomicBool = AtomicBool::new(false);
 
 pub(crate) fn app_version_impl() -> String {
     env!("CARGO_PKG_VERSION").to_string()
@@ -26,12 +28,43 @@ pub(crate) fn should_keep_main_window_hidden() -> bool {
     START_HIDDEN_FOR_GAME_LAUNCH.load(Ordering::SeqCst)
 }
 
+pub(crate) fn is_app_shutdown_requested() -> bool {
+    APP_SHUTDOWN_REQUESTED.load(Ordering::SeqCst)
+}
+
 pub(crate) fn bootstrap_background_services() {
     bridge_extensions::bootstrap_background_services();
 }
 
 pub(crate) fn emubro_invoke_impl(channel: String, args: Vec<Value>, window: Window) -> Result<Value, String> {
     invoke::emubro_invoke_impl(channel, args, window)
+}
+
+pub(crate) fn request_app_shutdown(app_handle: &AppHandle) {
+    if APP_SHUTDOWN_REQUESTED.swap(true, Ordering::SeqCst) {
+        return;
+    }
+
+    for (label, webview_window) in app_handle.webview_windows() {
+        if label == "main" {
+            continue;
+        }
+        let _ = webview_window.close();
+    }
+
+    if let Some(main_window) = app_handle.get_webview_window("main") {
+        let _ = main_window.close();
+    }
+    if let Some(splashscreen) = app_handle.get_webview_window("splashscreen") {
+        let _ = splashscreen.close();
+    }
+
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(1500));
+        std::process::exit(0);
+    });
+
+    app_handle.exit(0);
 }
 
 fn trim_wrapping_quotes(value: &str) -> &str {

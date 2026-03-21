@@ -17,7 +17,15 @@ fn app_version() -> String {
 }
 
 #[tauri::command]
-fn emubro_invoke(channel: String, args: Vec<Value>, window: Window) -> Result<Value, String> {
+async fn emubro_invoke(channel: String, args: Vec<Value>, window: Window) -> Result<Value, String> {
+    if channel.trim().eq_ignore_ascii_case("suggestions:emulation-support") {
+        return tauri::async_runtime::spawn_blocking(move || {
+            app_core::emubro_invoke_impl(channel, args, window)
+        })
+        .await
+        .map_err(|error| error.to_string())?;
+    }
+
     app_core::emubro_invoke_impl(channel, args, window)
 }
 
@@ -236,7 +244,7 @@ fn main() {
     }
     app_core::set_start_hidden_for_game_launch(startup_launch_game_id.is_some());
 
-    tauri::Builder::default()
+    let app = match tauri::Builder::default()
         .setup(move |app| {
             append_startup_debug_log(&app.handle().clone(), "setup start");
             if let Ok(resources_dir) = app.path().resource_dir() {
@@ -254,6 +262,18 @@ fn main() {
                 if should_force_decorated_window() {
                     append_startup_debug_log(&app.handle().clone(), "forcing decorated main window for debug");
                     let _ = main_window.set_decorations(true);
+                }
+                {
+                    let app_handle = app.handle().clone();
+                    main_window.on_window_event(move |event| {
+                        if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                            if app_core::is_app_shutdown_requested() {
+                                return;
+                            }
+                            api.prevent_close();
+                            app_core::request_app_shutdown(&app_handle);
+                        }
+                    });
                 }
                 if should_show_main_window_early() && !app_core::should_keep_main_window_hidden() {
                     append_startup_debug_log(&app.handle().clone(), "showing main window early for debug");
@@ -311,6 +331,27 @@ fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![app_version, emubro_invoke])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+    {
+        Ok(app) => app,
+        Err(error) => {
+            eprintln!("[tauri] failed to build app: {}", error);
+            std::process::exit(1);
+        }
+    };
+
+    app.run(|app_handle, event| match event {
+        tauri::RunEvent::ExitRequested { code, .. } => {
+            append_startup_debug_log(
+                app_handle,
+                &format!("run event exit requested code={}", code.unwrap_or(0)),
+            );
+            app_handle.cleanup_before_exit();
+            std::process::exit(code.unwrap_or(0));
+        }
+        tauri::RunEvent::Exit => {
+            append_startup_debug_log(app_handle, "run event exit");
+        }
+        _ => {}
+    });
 }

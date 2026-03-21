@@ -514,7 +514,12 @@ pub(super) fn handle(ch: &str, args: &[Value], window: &Window) -> Result<Value,
         "window:close" => {
             if window.label() == "main" {
                 let app_handle = window.app_handle();
+                if crate::app_core::is_app_shutdown_requested() {
+                    return Ok(json!({ "success": true, "closeRequested": true, "alreadyClosing": true }));
+                }
                 let _ = crate::app_core::invoke::community::close_community_windows(&app_handle);
+                crate::app_core::request_app_shutdown(&app_handle);
+                return Ok(json!({ "success": true, "closeRequested": true }));
             }
             window.close().map_err(|e| e.to_string())?;
             Ok(Value::Null)

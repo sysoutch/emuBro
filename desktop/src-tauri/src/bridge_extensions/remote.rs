@@ -283,6 +283,54 @@ fn remote_local_urls(port: u16) -> Vec<String> {
     out
 }
 
+fn remote_host_matches_local_self(row: &Value, config: &Value) -> bool {
+    let local_host_id = local_host_id();
+    let host_port = normalize_port(config.get("port"), DEFAULT_REMOTE_HOST_PORT);
+    let local_urls = remote_local_urls(host_port)
+        .into_iter()
+        .map(|value| value.trim().to_lowercase())
+        .collect::<HashSet<String>>();
+
+    let host_id = row
+        .get("hostId")
+        .and_then(|value| value.as_str())
+        .unwrap_or("")
+        .trim();
+    if !host_id.is_empty() && host_id.eq_ignore_ascii_case(&local_host_id) {
+        return true;
+    }
+
+    let url = row
+        .get("url")
+        .and_then(|value| value.as_str())
+        .unwrap_or("")
+        .trim()
+        .to_lowercase();
+    if !url.is_empty() && local_urls.contains(&url) {
+        return true;
+    }
+
+    let address = row
+        .get("address")
+        .and_then(|value| value.as_str())
+        .unwrap_or("")
+        .trim()
+        .to_lowercase();
+    let port = normalize_port(row.get("port"), DEFAULT_REMOTE_HOST_PORT);
+    if port == host_port {
+        if address == "127.0.0.1" || address == "localhost" {
+            return true;
+        }
+        if let Some(local) = primary_ipv4() {
+            if address == local.to_string().to_lowercase() {
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
 fn remote_start_or_update_runtime(config: &Value) -> Result<Value, String> {
     let enabled = config.get("enabled").and_then(|v| v.as_bool()).unwrap_or(false);
     let host_port = normalize_port(config.get("port"), DEFAULT_REMOTE_HOST_PORT);
@@ -1186,6 +1234,9 @@ fn remote_scan_hosts(payload: &Value) -> Value {
     };
 
     for row in &existing {
+        if !include_local_self && remote_host_matches_local_self(row, &config) {
+            continue;
+        }
         let Some(normalized) = normalize_remote_client_host_row(row) else {
             continue;
         };
@@ -1197,6 +1248,9 @@ fn remote_scan_hosts(payload: &Value) -> Value {
     }
 
     for row in discovered {
+        if !include_local_self && remote_host_matches_local_self(&row, &config) {
+            continue;
+        }
         let Some(normalized) = normalize_remote_client_host_row(&row) else {
             continue;
         };

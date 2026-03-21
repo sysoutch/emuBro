@@ -88,6 +88,13 @@ export function setupDragDropManager(options = {}) {
         return section === 'library' || section === 'library-views';
     };
 
+    const isScopedDropTarget = (event, scopeName) => {
+        if (!event?.target || !scopeName) return false;
+        const target = event.target;
+        if (!(target instanceof Element)) return false;
+        return !!target.closest(`[data-drop-scope="${String(scopeName).trim().toLowerCase()}"]`);
+    };
+
     const resolveDroppedFilePath = (file) => {
         const directPath = String(file && file.path ? file.path : '').trim();
         if (directPath) return directPath;
@@ -281,6 +288,11 @@ export function setupDragDropManager(options = {}) {
 
     const onEnter = (e) => {
         if (!shouldHandleDropGesture(e)) return;
+        if (isScopedDropTarget(e, 'covers')) {
+            dragCounter = 0;
+            mainContent.classList.remove('drag-over');
+            return;
+        }
         if (!isLibraryDropContext()) {
             dragCounter = 0;
             mainContent.classList.remove('drag-over');
@@ -293,6 +305,11 @@ export function setupDragDropManager(options = {}) {
 
     const onLeave = (e) => {
         if (!shouldHandleDropGesture(e)) return;
+        if (isScopedDropTarget(e, 'covers')) {
+            dragCounter = 0;
+            mainContent.classList.remove('drag-over');
+            return;
+        }
         if (!isLibraryDropContext()) {
             dragCounter = 0;
             mainContent.classList.remove('drag-over');
@@ -308,6 +325,7 @@ export function setupDragDropManager(options = {}) {
 
     const onOver = (e) => {
         if (!shouldHandleDropGesture(e)) return;
+        if (isScopedDropTarget(e, 'covers')) return;
         e.preventDefault();
     };
 
@@ -642,7 +660,7 @@ export function setupDragDropManager(options = {}) {
             content.appendChild(bodyWrap);
             content.appendChild(footer);
             overlay.appendChild(content);
-            overlay.addEventListener('click', (e) => {
+            overlay.addEventListener('mousedown', (e) => {
                 if (e.target === overlay) {
                     overlay.remove();
                     resolve({ canceled: true });
@@ -1699,6 +1717,10 @@ export function setupDragDropManager(options = {}) {
 
     const onDrop = async (e) => {
         if (!shouldHandleDropGesture(e)) return;
+        if (isScopedDropTarget(e, 'covers')) {
+            // Allow footer covers drop-zone handlers to consume this drop.
+            return;
+        }
         e.preventDefault();
         dragCounter = 0;
         mainContent.classList.remove('drag-over');

@@ -76,10 +76,37 @@
         gap: 12px;
       }
 
+      .brand-mark {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 58px;
+        height: 58px;
+        flex: 0 0 auto;
+      }
+
+      .brand-circle {
+        position: absolute;
+        inset: 3px;
+        border-radius: 999px;
+        background:
+          radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.26), transparent 32%),
+          linear-gradient(145deg, color-mix(in srgb, var(--accent-light) 56%, white 12%), color-mix(in srgb, var(--accent-color) 80%, #091222 20%));
+        box-shadow:
+          0 0 0 1px rgba(var(--accent-rgb), 0.34),
+          0 0 22px rgba(var(--accent-rgb), 0.28),
+          0 10px 22px rgba(0, 0, 0, 0.24);
+      }
+
       .brand img {
+        position: relative;
         width: 52px;
         height: 52px;
-        filter: drop-shadow(0 0 10px rgba(var(--accent-rgb), 0.45));
+        filter:
+          brightness(0.98)
+          drop-shadow(0 0 10px rgba(var(--accent-rgb), 0.34))
+          drop-shadow(0 6px 14px rgba(0, 0, 0, 0.18));
       }
 
       .brand h1 {
@@ -329,7 +356,10 @@
     <main class="shell">
       <section class="card" aria-live="polite">
         <div class="brand">
-          <img src="/logo.png" alt="emuBro" />
+          <span class="brand-mark" aria-hidden="true">
+            <span class="brand-circle"></span>
+            <img src="/logo.png" alt="emuBro" />
+          </span>
           <h1><span class="prefix">EMU</span><span class="suffix">BRO</span></h1>
         </div>
         <p class="subtitle">Loading library, themes, and tools...</p>

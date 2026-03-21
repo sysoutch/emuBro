@@ -52,6 +52,7 @@ export function createSlideshowLane(options = {}) {
     const onFrameSample = typeof options.onFrameSample === 'function'
         ? options.onFrameSample
         : null;
+    const allowVerticalWheelPassThrough = Boolean(options.allowVerticalWheelPassThrough);
     const refreshItems = typeof options.refreshItems === 'function'
         ? options.refreshItems
         : () => false;
@@ -409,6 +410,11 @@ export function createSlideshowLane(options = {}) {
     carousel.addEventListener('wheel', (event) => {
         const length = getLength();
         if (length <= 1) return;
+        const verticalIntent = Math.abs(event.deltaY) >= Math.abs(event.deltaX);
+        if (allowVerticalWheelPassThrough && verticalIntent && !event.shiftKey) {
+            // Let parent grouped slideshow containers keep natural vertical scrolling.
+            return;
+        }
         onLaneFocus();
         event.preventDefault();
         const dominantDelta = Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? event.deltaY : event.deltaX;

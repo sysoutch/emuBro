@@ -860,7 +860,7 @@ watch(
 </script>
 
 <template>
-  <div v-if="game" class="desktop-modal-backdrop" @click.self="$emit('close')">
+  <div v-if="game" class="desktop-modal-backdrop" @mousedown.self="$emit('close')">
     <section class="desktop-modal-card desktop-game-details-modal">
       <div class="card-header-row">
         <div>

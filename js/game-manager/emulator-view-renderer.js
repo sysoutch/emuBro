@@ -16,6 +16,9 @@ export function createEmulatorViewRenderer(deps = {}) {
     const downloadAndInstallEmulator = typeof deps.downloadAndInstallEmulatorAction === 'function'
         ? deps.downloadAndInstallEmulatorAction
         : null;
+    const onEmulatorInstallStateChanged = typeof deps.onEmulatorInstallStateChanged === 'function'
+        ? deps.onEmulatorInstallStateChanged
+        : null;
     const emulatorTypeTabs = Array.isArray(deps.emulatorTypeTabs) && deps.emulatorTypeTabs.length > 0
         ? deps.emulatorTypeTabs
         : DEFAULT_TYPE_TABS;
@@ -625,7 +628,11 @@ export function createEmulatorViewRenderer(deps = {}) {
                     return;
                 }
                 if (!installed && downloadAndInstallEmulator) {
-                    await downloadAndInstallEmulator(emulator);
+                    const changed = await downloadAndInstallEmulator(emulator);
+                    if (changed) {
+                        await Promise.resolve(onEmulatorInstallStateChanged?.(emulator, { options }));
+                        renderEmulators(emulatorsToRender, options);
+                    }
                     return;
                 }
                 showEmulatorDetails(emulator, options);

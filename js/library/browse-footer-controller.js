@@ -80,8 +80,11 @@ export function createBrowseFooterController(options = {}) {
     }
 
     function setupCoversTabListeners() {
+        const coversPanel = document.querySelector('.game-details-tab-panel[data-footer-panel="covers"]');
         const coversPlaceholder = document.querySelector('.footer-covers-placeholder');
-        if (!coversPlaceholder) return;
+        if (!coversPanel || !coversPlaceholder) return;
+
+        coversPanel.setAttribute('data-drop-scope', 'covers');
 
         const prevent = (e) => {
             e.preventDefault();
@@ -110,10 +113,10 @@ export function createBrowseFooterController(options = {}) {
             }
         };
 
-        coversPlaceholder.addEventListener('dragenter', onEnter);
-        coversPlaceholder.addEventListener('dragover', onEnter);
-        coversPlaceholder.addEventListener('dragleave', onLeave);
-        coversPlaceholder.addEventListener('drop', onDrop);
+        coversPanel.addEventListener('dragenter', onEnter);
+        coversPanel.addEventListener('dragover', onEnter);
+        coversPanel.addEventListener('dragleave', onLeave);
+        coversPanel.addEventListener('drop', onDrop);
 
         coversPlaceholder.addEventListener('click', async () => {
             try {
@@ -390,7 +393,7 @@ export function createBrowseFooterController(options = {}) {
             });
         });
 
-        overlay.addEventListener('click', (event) => {
+        overlay.addEventListener('mousedown', (event) => {
             if (event.target === overlay) close();
         });
         overlay.appendChild(modal);

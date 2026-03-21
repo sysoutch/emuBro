@@ -34,6 +34,7 @@ pub(super) fn emubro_invoke_impl(channel: String, args: Vec<Value>, window: Wind
 
         "get-games"
         | "get-emulators"
+        | "support:query-library"
         | "tags:list"
         | "get-library-stats"
         | "get-user-info"

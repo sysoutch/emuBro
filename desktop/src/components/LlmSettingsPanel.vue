@@ -28,7 +28,9 @@ const {
   status,
   statusTone,
   syncingRelay,
-  llmMode
+  llmMode,
+  contextWindowMessages,
+  supportContextWindowOptions
 } = storeToRefs(llmSettingsStore);
 
 const currentModel = computed(() => activeProviderState.value?.model || "");
@@ -105,6 +107,15 @@ onMounted(() => {
           />
           <span>{{ shellI18nStore.t("desktopShell.llm.preferCurrentPlatformOnly", "Prefer current platform only") }}</span>
         </label>
+
+        <label class="field">
+          <span>{{ shellI18nStore.t("desktopShell.llm.supportContextWindow", "Support Chat Context Window") }}</span>
+          <select :value="contextWindowMessages" @change="llmSettingsStore.setContextWindowMessages($event.target.value)">
+            <option v-for="size in supportContextWindowOptions" :key="size" :value="size">
+              {{ size }} msgs
+            </option>
+          </select>
+        </label>
       </div>
 
       <div class="desktop-llm-grid">
@@ -113,7 +124,7 @@ onMounted(() => {
           <input
             :value="currentModel"
             type="text"
-            :placeholder="isOllamaProvider ? 'llama3.1' : 'gpt-4o-mini / gemini-1.5-flash'"
+            :placeholder="isOllamaProvider ? 'llama3.1:8b' : 'gpt-4o-mini / gemini-1.5-flash'"
             @input="llmSettingsStore.setModel($event.target.value)"
           />
         </label>

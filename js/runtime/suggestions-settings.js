@@ -1,4 +1,6 @@
 const SUGGESTIONS_SETTINGS_KEY = 'emuBro.suggestionsSettings.v1';
+const SUPPORT_CONTEXT_WINDOW_OPTIONS = [10, 20, 40, 80];
+const SUPPORT_CONTEXT_WINDOW_DEFAULT = 20;
 
 function getStorage(localStorageRef) {
     if (localStorageRef) return localStorageRef;
@@ -56,6 +58,22 @@ export function normalizeSuggestionRelayConfig(relay) {
     };
 }
 
+export function normalizeSupportContextWindowMessages(value, fallback = SUPPORT_CONTEXT_WINDOW_DEFAULT) {
+    const parsed = Number(value);
+    const normalizedFallback = SUPPORT_CONTEXT_WINDOW_OPTIONS.includes(Number(fallback))
+        ? Number(fallback)
+        : SUPPORT_CONTEXT_WINDOW_DEFAULT;
+    if (!Number.isFinite(parsed)) return normalizedFallback;
+    const rounded = Math.round(parsed);
+    return SUPPORT_CONTEXT_WINDOW_OPTIONS.includes(rounded)
+        ? rounded
+        : normalizedFallback;
+}
+
+export function getSupportContextWindowOptions() {
+    return [...SUPPORT_CONTEXT_WINDOW_OPTIONS];
+}
+
 export function getSuggestionLlmRoutingSettings(settings = {}) {
     const source = settings && typeof settings === 'object' ? settings : {};
     const relay = normalizeSuggestionRelayConfig(source.relay);
@@ -109,6 +127,7 @@ export function getDefaultSuggestionSettings() {
         llmMode: 'host',
         scope: 'library-plus-missing',
         query: '',
+        contextWindowMessages: SUPPORT_CONTEXT_WINDOW_DEFAULT,
         promptTemplate: getDefaultSuggestionPromptTemplate(),
         selectedPlatformOnly: false,
         relay: {
@@ -121,7 +140,7 @@ export function getDefaultSuggestionSettings() {
             blacklist: []
         },
         models: {
-            ollama: 'llama3.1',
+            ollama: 'llama3.1:8b',
             openai: 'gpt-4o-mini',
             gemini: 'gemini-1.5-flash'
         },
@@ -151,6 +170,7 @@ export function loadSuggestionSettings(localStorageRef, storageKey = SUGGESTIONS
             llmMode: normalizeSuggestionLlmMode(parsed.llmMode),
             scope: normalizeSuggestionScope(parsed.scope),
             query: String(parsed.query || ''),
+            contextWindowMessages: normalizeSupportContextWindowMessages(parsed.contextWindowMessages, defaults.contextWindowMessages),
             promptTemplate: String(parsed.promptTemplate || defaults.promptTemplate || '').trim() || defaults.promptTemplate,
             selectedPlatformOnly: !!parsed.selectedPlatformOnly,
             relay: {
@@ -183,6 +203,7 @@ export function saveSuggestionSettings(settings, localStorageRef, storageKey = S
         llmMode: normalizeSuggestionLlmMode(settings?.llmMode),
         scope: normalizeSuggestionScope(settings?.scope),
         query: String(settings?.query || ''),
+        contextWindowMessages: normalizeSupportContextWindowMessages(settings?.contextWindowMessages, defaults.contextWindowMessages),
         promptTemplate: String(settings?.promptTemplate || defaults.promptTemplate || '').trim() || defaults.promptTemplate,
         selectedPlatformOnly: !!settings?.selectedPlatformOnly,
         relay: {

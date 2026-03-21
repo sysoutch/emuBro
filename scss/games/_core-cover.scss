@@ -123,6 +123,19 @@
     margin-inline: auto;
 }
 
+.game-scroll-body:has(.games-container.support-view) {
+    overflow-y: hidden;
+    overflow-x: hidden;
+    display: flex;
+    align-items: stretch;
+}
+
+.game-scroll-body:has(.games-container.support-view) .games-container.support-view {
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+}
+
 .game-scroll-body.random-scroll-lock-x {
     overflow-x: clip !important;
     overflow-y: hidden !important;
@@ -131,6 +144,25 @@
 
 .game-scroll-body.random-scroll-lock-x > .games-container.random-view {
     margin-inline: auto;
+}
+
+.game-scroll-body.focus-scroll-lock,
+.game-scroll-body.slideshow-scroll-lock {
+    overflow-x: hidden !important;
+    overflow-y: hidden !important;
+    display: flex;
+    align-items: stretch;
+    padding-bottom: 0;
+}
+
+.game-scroll-body.focus-scroll-lock > .games-container.focus-view,
+.game-scroll-body.slideshow-scroll-lock > .games-container.slideshow-view {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+    max-height: 100%;
+    width: calc(100% + 40px);
+    margin: 0 -20px 0;
 }
 
 .game-header h2 {

@@ -427,7 +427,7 @@ export function createSuggestionsPanelController(options = {}) {
                 deduped.unshift(current);
             }
             if (deduped.length === 0) {
-                deduped.push(current || 'llama3.1');
+                deduped.push(current || 'llama3.1:8b');
             }
 
             modelSelect.innerHTML = deduped
@@ -457,15 +457,15 @@ export function createSuggestionsPanelController(options = {}) {
             try {
                 const result = await fetchOllamaModels(baseUrl, { force, routing });
                 if (!result?.success) {
-                    populateOllamaModelSelect([], currentModel || 'llama3.1');
+                    populateOllamaModelSelect([], currentModel || 'llama3.1:8b');
                     if (status) status.textContent = String(result?.message || t('suggested.status.failedFetchOllamaModels', 'Failed to fetch Ollama models.'));
                     return;
                 }
 
-                populateOllamaModelSelect(result.models, currentModel || result.models?.[0] || 'llama3.1');
+                populateOllamaModelSelect(result.models, currentModel || result.models?.[0] || 'llama3.1:8b');
                 if (status) status.textContent = t('suggested.status.loadedOllamaModels', 'Loaded {{count}} Ollama model(s).', { count: result.models.length });
             } catch (error) {
-                populateOllamaModelSelect([], currentModel || 'llama3.1');
+                populateOllamaModelSelect([], currentModel || 'llama3.1:8b');
                 if (status) status.textContent = String(error?.message || t('suggested.status.failedFetchOllamaModels', 'Failed to fetch Ollama models.'));
             } finally {
                 if (refreshModelsBtn) refreshModelsBtn.disabled = false;

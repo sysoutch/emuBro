@@ -797,3 +797,531 @@ input[type="checkbox"]:disabled {
 ::-webkit-scrollbar-thumb:hover {
     background-color: var(--accent-light);
 }
+
+.konami-boost-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.28s ease;
+    background:
+        repeating-linear-gradient(
+            0deg,
+            color-mix(in srgb, var(--accent-color), transparent 96%) 0px,
+            color-mix(in srgb, var(--accent-color), transparent 96%) 2px,
+            transparent 2px,
+            transparent 6px
+        ),
+        radial-gradient(
+            900px 520px at 50% 10%,
+            color-mix(in srgb, var(--accent-color), transparent 74%),
+            transparent 72%
+        );
+    mix-blend-mode: screen;
+}
+
+.konami-boost-toast {
+    position: fixed;
+    right: 22px;
+    bottom: 22px;
+    z-index: 46;
+    max-width: min(460px, calc(100vw - 40px));
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--accent-color), white 16%);
+    background: color-mix(in srgb, var(--bg-secondary), var(--accent-color) 18%);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    box-shadow:
+        0 12px 24px color-mix(in srgb, var(--accent-color), transparent 76%),
+        0 0 0 1px color-mix(in srgb, var(--accent-color), transparent 62%) inset;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    pointer-events: none;
+}
+
+.konami-boost-toast.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+body.konami-boost-active .konami-boost-overlay {
+    opacity: 1;
+}
+
+body.konami-boost-active .app-container {
+    animation: konami-boost-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes konami-boost-pulse {
+    0%,
+    100% {
+        filter: saturate(1) brightness(1);
+    }
+    45% {
+        filter: saturate(1.2) brightness(1.07);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.konami-boost-active .app-container {
+        animation: none;
+    }
+}
+
+.slash-command-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 4050;
+    display: grid;
+    place-items: start center;
+    padding: 8vh 20px 20px;
+    background: color-mix(in srgb, #02070c 74%, transparent);
+    backdrop-filter: blur(14px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+}
+
+.slash-command-palette {
+    width: min(1100px, 100%);
+    max-height: min(78vh, 860px);
+    display: grid;
+    grid-template-columns: minmax(0, 1.12fr) minmax(320px, 0.88fr);
+    gap: 16px;
+    padding: 18px;
+    border-radius: 18px;
+    border: 1px solid color-mix(in srgb, var(--accent-color) 28%, var(--border-color));
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--bg-secondary) 94%, white 6%), color-mix(in srgb, var(--bg-primary) 92%, black 8%));
+    box-shadow:
+        0 24px 80px rgba(0, 0, 0, 0.42),
+        0 0 0 1px color-mix(in srgb, var(--accent-color) 22%, transparent) inset;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.slash-command-main,
+.slash-command-side {
+    min-height: 0;
+    display: grid;
+    gap: 14px;
+}
+
+.slash-command-main {
+    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+}
+
+.slash-command-side {
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.slash-command-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.slash-command-head strong {
+    display: block;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+}
+
+.slash-command-head span {
+    display: block;
+    margin-top: 3px;
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+}
+
+.slash-command-head kbd,
+.slash-command-hints kbd {
+    min-width: 2rem;
+    padding: 0.22rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--accent-color) 24%, var(--border-color));
+    background: color-mix(in srgb, var(--bg-primary) 82%, black 18%);
+    color: var(--accent-color);
+    font-size: 0.84rem;
+    text-align: center;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+}
+
+.slash-command-input-wrap {
+    padding: 10px 12px;
+    border-radius: 16px;
+    border: 1px solid color-mix(in srgb, var(--accent-color) 20%, var(--border-color));
+    background: color-mix(in srgb, var(--bg-primary) 86%, black 14%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.slash-command-input {
+    width: 100%;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 1.02rem;
+    font-family: var(--font-body);
+}
+
+.slash-command-input::placeholder {
+    color: var(--text-secondary);
+}
+
+.slash-command-results {
+    min-height: 220px;
+    max-height: none;
+    overflow: auto;
+    display: grid;
+    gap: 10px;
+    padding-right: 4px;
+}
+
+.slash-command-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.slash-command-chip-row.is-empty {
+    display: block;
+}
+
+.slash-command-chip {
+    display: inline-grid;
+    gap: 3px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 1px solid color-mix(in srgb, var(--accent-color) 24%, var(--border-color));
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--accent-color) 12%, var(--bg-tertiary)), color-mix(in srgb, var(--bg-primary) 92%, transparent));
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    text-align: left;
+}
+
+.slash-command-chip strong {
+    font-size: 0.88rem;
+    color: var(--accent-color);
+}
+
+.slash-command-chip span {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    line-height: 1.35;
+}
+
+.slash-command-chip:hover {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--accent-color) 44%, var(--border-color));
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
+}
+
+.slash-command-chip-empty {
+    display: block;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 1px dashed color-mix(in srgb, var(--accent-color) 22%, var(--border-color));
+    color: var(--text-secondary);
+    background: color-mix(in srgb, var(--bg-primary) 82%, black 18%);
+}
+
+.slash-command-item {
+    display: grid;
+    gap: 8px;
+    padding: 14px 15px;
+    border-radius: 16px;
+    border: 1px solid color-mix(in srgb, var(--border-color) 88%, transparent);
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--bg-tertiary) 82%, transparent), color-mix(in srgb, var(--bg-primary) 92%, transparent));
+    color: var(--text-primary);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.18s ease, transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.slash-command-item:hover,
+.slash-command-item.is-active {
+    border-color: color-mix(in srgb, var(--accent-color) 44%, var(--border-color));
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--accent-color) 16%, var(--bg-tertiary)), color-mix(in srgb, var(--accent-color) 10%, var(--bg-primary)));
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+.slash-command-item-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.slash-command-item-top strong {
+    font-size: 0.98rem;
+    color: var(--accent-color);
+}
+
+.slash-command-item-top span {
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+}
+
+.slash-command-item-body {
+    color: var(--text-primary);
+    line-height: 1.45;
+}
+
+.slash-command-item-meta {
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+}
+
+.slash-command-empty {
+    display: grid;
+    gap: 8px;
+    padding: 16px;
+    border-radius: 16px;
+    border: 1px dashed color-mix(in srgb, var(--accent-color) 26%, var(--border-color));
+    background: color-mix(in srgb, var(--bg-primary) 82%, black 18%);
+    color: var(--text-secondary);
+}
+
+.slash-command-empty code {
+    color: var(--accent-color);
+}
+
+.slash-command-placeholder,
+.slash-command-detail-card,
+.slash-command-result-card {
+    padding: 16px;
+    border-radius: 16px;
+    border: 1px solid color-mix(in srgb, var(--accent-color) 20%, var(--border-color));
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--bg-tertiary) 84%, transparent), color-mix(in srgb, var(--bg-primary) 92%, transparent));
+}
+
+.slash-command-placeholder {
+    display: grid;
+    gap: 6px;
+    color: var(--text-secondary);
+}
+
+.slash-command-placeholder strong {
+    color: var(--text-primary);
+}
+
+.slash-command-detail,
+.slash-command-result {
+    min-height: 0;
+}
+
+.slash-command-result {
+    overflow: auto;
+    padding-right: 4px;
+}
+
+.slash-command-detail-card {
+    display: grid;
+    gap: 12px;
+}
+
+.slash-command-detail-head,
+.slash-command-result-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.slash-command-detail-head strong,
+.slash-command-result-head strong {
+    display: block;
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
+.slash-command-detail-head span,
+.slash-command-result-head span {
+    display: block;
+    margin-top: 4px;
+    color: var(--text-secondary);
+    line-height: 1.45;
+}
+
+.slash-command-detail-head em,
+.slash-command-result-head em {
+    padding: 4px 9px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--accent-color) 24%, var(--border-color));
+    color: var(--accent-color);
+    font-style: normal;
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.slash-command-detail-meta {
+    display: grid;
+    gap: 6px;
+    color: var(--text-secondary);
+    font-size: 0.84rem;
+}
+
+.slash-command-detail-meta strong {
+    color: var(--text-primary);
+    margin-right: 6px;
+}
+
+.slash-command-inline-hint {
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--accent-color) 10%, var(--bg-primary));
+    color: var(--text-secondary);
+    font-size: 0.84rem;
+}
+
+.slash-command-detail-chips {
+    display: grid;
+    gap: 8px;
+}
+
+.slash-command-detail-label {
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.slash-command-result-card {
+    display: grid;
+    gap: 14px;
+}
+
+.slash-command-result-card.is-success {
+    border-color: color-mix(in srgb, var(--success-color, #3ac36d) 36%, var(--border-color));
+}
+
+.slash-command-result-card.is-error {
+    border-color: color-mix(in srgb, var(--danger-color, #ff5a5f) 42%, var(--border-color));
+}
+
+.slash-command-result-card.is-info {
+    border-color: color-mix(in srgb, var(--accent-color) 36%, var(--border-color));
+}
+
+.slash-command-result-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.slash-command-stat {
+    padding: 12px;
+    border-radius: 14px;
+    border: 1px solid color-mix(in srgb, var(--accent-color) 16%, var(--border-color));
+    background: color-mix(in srgb, var(--bg-primary) 82%, black 18%);
+}
+
+.slash-command-stat small {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+}
+
+.slash-command-stat strong {
+    display: block;
+    margin-top: 4px;
+    color: var(--text-primary);
+    font-size: 0.96rem;
+}
+
+.slash-command-result-section {
+    display: grid;
+    gap: 8px;
+}
+
+.slash-command-result-section h4 {
+    color: var(--accent-color);
+    font-size: 0.84rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+}
+
+.slash-command-result-section ul {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding-left: 18px;
+}
+
+.slash-command-result-section li,
+.slash-command-result-text,
+.slash-command-result-empty {
+    color: var(--text-primary);
+    line-height: 1.5;
+}
+
+.slash-command-result-empty {
+    color: var(--text-secondary);
+}
+
+.slash-command-result-section pre {
+    margin: 0;
+    padding: 12px;
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--bg-primary) 80%, black 20%);
+    border: 1px solid color-mix(in srgb, var(--accent-color) 16%, var(--border-color));
+    color: var(--text-primary);
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+.slash-command-hints {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    color: var(--text-secondary);
+    font-size: 0.84rem;
+}
+
+.slash-command-hints span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+@media (max-width: 640px) {
+    .slash-command-overlay {
+        padding: 16px;
+        place-items: stretch;
+    }
+
+    .slash-command-palette {
+        width: 100%;
+        max-height: none;
+        align-self: start;
+        grid-template-columns: 1fr;
+    }
+
+    .slash-command-item-top {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .slash-command-result-stats {
+        grid-template-columns: 1fr;
+    }
+}

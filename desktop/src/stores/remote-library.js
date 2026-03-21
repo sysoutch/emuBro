@@ -227,8 +227,23 @@ export const useRemoteLibraryStore = defineStore("remoteLibrary", {
           return null;
         }
 
+        const runtimeStatus = response?.status || {};
         await this.loadHostConfig();
-        this.setStatus("Host settings saved.", "success");
+
+        if (this.hostConfig.enabled) {
+          if (runtimeStatus?.running) {
+            const hostPort = Number(runtimeStatus?.port || this.hostConfig.port || 38477);
+            this.setStatus(`Host started on port ${hostPort}.`, "success");
+          } else {
+            const runtimeError = String(runtimeStatus?.error || "").trim();
+            this.setStatus(
+              runtimeError || "Host settings were saved, but the host runtime did not start.",
+              "error"
+            );
+          }
+        } else {
+          this.setStatus("Host disabled and settings saved.", "success");
+        }
         return response;
       } catch (error) {
         this.setStatus(error instanceof Error ? error.message : String(error || "Failed to save host settings."), "error");
@@ -312,13 +327,7 @@ export const useRemoteLibraryStore = defineStore("remoteLibrary", {
           return [];
         }
 
-        const mergedByKey = new Map(this.clientHosts.map((row) => [row.hostId || row.url, row]));
-        normalizeHostRows(response?.hosts).forEach((host) => {
-          const key = host.hostId || host.url;
-          const current = mergedByKey.get(key) || {};
-          mergedByKey.set(key, { ...current, ...host, token: current.token || host.token });
-        });
-        this.clientHosts = Array.from(mergedByKey.values());
+        this.clientHosts = normalizeHostRows(response?.hosts);
         if (!this.activeHostId && this.clientHosts[0]) {
           this.activeHostId = this.clientHosts[0].hostId;
         }

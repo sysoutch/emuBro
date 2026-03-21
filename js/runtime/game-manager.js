@@ -431,6 +431,9 @@ function getEmulatorViewRenderer() {
             showEmulatorDetails: (emulator, options) => showEmulatorDetails(emulator, options),
             launchEmulatorAction: (emulator) => launchEmulatorAction(emulator),
             downloadAndInstallEmulatorAction: (emulator) => downloadAndInstallEmulatorAction(emulator),
+            onEmulatorInstallStateChanged: async () => {
+                await fetchEmulators();
+            },
             emulatorTypeTabs: EMULATOR_TYPE_TABS
         });
     }
@@ -564,8 +567,8 @@ function setupGlobalSizeWheelShortcut() {
         const current = Number.parseInt(String(slider.value || ''), 10);
         if (!Number.isFinite(current)) return false;
 
-        const min = Number.parseInt(String(slider.min || '70'), 10);
-        const max = Number.parseInt(String(slider.max || '140'), 10);
+        const min = Number.parseInt(String(slider.min || '42'), 10);
+        const max = Number.parseInt(String(slider.max || '200'), 10);
         const step = Math.max(1, Number.parseInt(String(slider.step || '5'), 10) || 5);
         const direction = deltaY < 0 ? 1 : -1;
         const next = Math.max(min, Math.min(max, current + (direction * step)));
@@ -772,6 +775,14 @@ export function renderGames(gamesToRender, options = {}) {
     const activeViewBtn = document.querySelector('.view-controls .view-btn.active')
         || document.querySelector('.view-btn.active');
     const activeView = activeViewBtn ? activeViewBtn.dataset.view : 'cover';
+    const isGroupedSlideshow = activeView === 'slideshow'
+        && normalizeGroupByValue(currentGroupBy) !== 'none';
+    const scrollLockRoot = resolveGamesScrollRoot();
+    if (scrollLockRoot && scrollLockRoot.classList) {
+        // Keep immersive views from leaking a parent scrollbar, including empty-result renders.
+        scrollLockRoot.classList.toggle('focus-scroll-lock', activeView === 'focus');
+        scrollLockRoot.classList.toggle('slideshow-scroll-lock', activeView === 'slideshow' && !isGroupedSlideshow);
+    }
     const forceRender = !!renderOptions.forceRender;
     const shouldPreserveScroll = !!renderOptions.preserveScroll;
     const shouldScrollToCurrentGame = !!renderOptions.scrollToCurrentGame;
@@ -1274,7 +1285,7 @@ function createGameListItem(game) {
     return getGameCardElements().createGameListItem(game);
 }
 
-function showEmulatorDetails(emulator, options = {}) {
+export function showEmulatorDetails(emulator, options = {}) {
     getEmulatorDetailsPopupActions().showEmulatorDetails(emulator, options);
 }
 
